@@ -1,0 +1,23 @@
+# Environment and secrets
+.env
+.env.*
+*.secret
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Solution artifacts (local testing)
+*.zip
