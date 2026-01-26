@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0] - January 2026
+## [2.0.0] - January 2025
 
 ### Breaking Changes
 

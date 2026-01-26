@@ -108,29 +108,78 @@ Add action: **Parse JSON**
 }
 ```
 
-## Step 5: Loop Through Messages
+## Step 5: Handle Pagination (Important)
+
+Microsoft Graph API returns paged results. Without handling pagination, you may only get the first page (~100 posts) and miss older messages.
+
+### Understanding `@odata.nextLink`
+
+When more results exist than fit in one response, Graph API includes `@odata.nextLink` - a URL to fetch the next page. You must loop until this value is absent.
+
+### Pattern: Do Until Loop
+
+1. **Initialize variable** `nextLink` (String) = `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
+2. **Initialize variable** `allMessages` (Array) = `[]`
+3. **Do Until** `@empty(variables('nextLink'))`:
+   - HTTP GET to `@{variables('nextLink')}` (with same authentication)
+   - **Append to array** `allMessages`: `@{body('HTTP')?['value']}`
+   - **Set variable** `nextLink` = `@{coalesce(body('HTTP')?['@odata.nextLink'], '')}`
+4. Process `allMessages` in the Apply to each loop
+
+### Simplified Flow Diagram
+
+```
+┌─ Initialize nextLink = Graph URL
+├─ Initialize allMessages = []
+│
+├─ Do Until (nextLink is empty)
+│   ├─ HTTP GET nextLink
+│   ├─ Append value to allMessages
+│   └─ Set nextLink = @odata.nextLink (or empty)
+│
+└─ Apply to each (allMessages)
+    └─ Process message...
+```
+
+> **Note:** For new deployments, this pattern is recommended. However, if you're processing daily and your tenant has fewer than 100 active posts, the basic single-request approach will work.
+
+---
+
+## Step 6: Loop Through Messages
 
 Add action: **Apply to each**
 
-- **Select an output from previous steps:** `@{body('Parse_JSON')?['value']}`
+- **Select an output from previous steps:** `@{variables('allMessages')}` (if using pagination) or `@{body('Parse_JSON')?['value']}` (basic)
 
 Inside the loop, add these actions:
 
-### 5a: Compose Message ID
+### 6a: Compose Message ID
 
 Add action: **Compose**
 - **Inputs:** `@{items('Apply_to_each')?['id']}`
 
-### 5b: Compose Severity
+### 6b: Compose Severity
 
 Add action: **Compose**
 - **Inputs:** `@{items('Apply_to_each')?['severity']}`
 
-### 5c: Upsert to Dataverse
+### 6c: Upsert to Dataverse
 
-Add action: **Dataverse - Update a row**
+**Recommended: Alternate Key Approach**
 
-If the row doesn't exist, use **Add a row** first, or use this pattern:
+If you can configure an alternate key on your Dataverse table, use the simpler "Upsert a row" action:
+
+1. In Power Apps > Tables > MessageCenterLog > Keys
+2. Create a new key using `messagecenterId` column
+3. In your flow, use **Dataverse - Update or insert (upsert) a row**
+   - Table: MessageCenterLog
+   - Alternate Key: messagecenterId = `@{items('Apply_to_each')?['id']}`
+
+This eliminates the need for List + Condition logic.
+
+**Alternative: Manual Check Pattern**
+
+If you cannot modify the table schema, use this pattern:
 
 1. Add action: **Dataverse - List rows**
    - Table: MessageCenterLog
@@ -162,16 +211,47 @@ If the row doesn't exist, use **Add a row** first, or use this pattern:
 - high → High
 - normal → Normal
 
-## Step 6: Teams Notification for High Severity
+## Step 7: Teams Notification for High Severity
 
 Inside the Apply to each loop, after the Dataverse action:
 
-Add **Condition**:
+Add **Condition** to notify when action is truly needed:
+
+**Option A: Basic Check**
 - `@{items('Apply_to_each')?['severity']}` is equal to `high`
 
 OR
 
 - `@{items('Apply_to_each')?['actionRequiredByDateTime']}` is not equal to `null`
+
+**Option B: Refined Check (Recommended)**
+
+Use an expression to only notify when `actionRequiredByDateTime` is in the future:
+
+```
+@or(
+  equals(items('Apply_to_each')?['severity'], 'high'),
+  and(
+    not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
+    greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+  )
+)
+```
+
+This prevents notifications for posts with past deadlines.
+
+**Optional Enhancement:** Also check `isMajorChange`:
+
+```
+@or(
+  equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['isMajorChange'], true),
+  and(
+    not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
+    greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+  )
+)
+```
 
 **If yes:**
 
@@ -191,7 +271,7 @@ Replace placeholders in the card with dynamic content:
 - `{actionRequiredByDateTime}` → `@{items('Apply_to_each')?['actionRequiredByDateTime']}`
 - `{id}` → `@{items('Apply_to_each')?['id']}`
 
-## Step 7: Error Handling
+## Step 8: Error Handling
 
 ### Configure Run After
 
@@ -210,7 +290,7 @@ Wrap the HTTP and Parse JSON in a **Scope** action:
 5. In "Catch", add a Teams notification for errors:
    - Post a message: "Message Center Monitor flow failed. Check run history."
 
-## Step 8: Save and Test
+## Step 9: Save and Test
 
 1. Click **Save**
 2. Click **Test** > **Manually** > **Test**
@@ -226,16 +306,22 @@ Wrap the HTTP and Parse JSON in a **Scope** action:
 │
 ├─ [Scope: Try]
 │   ├─ Get secret (Azure Key Vault)
-│   ├─ HTTP (GET Message Center)
-│   └─ Parse JSON
-│
-├─ Apply to each (messages)
-│   ├─ List rows (check if exists)
-│   ├─ Condition (exists?)
-│   │   ├─ Yes: Update a row
-│   │   └─ No: Add a row
+│   ├─ Initialize variables (nextLink, allMessages)
 │   │
-│   └─ Condition (high severity OR action required?)
+│   ├─ Do Until (nextLink is empty)
+│   │   ├─ HTTP GET nextLink
+│   │   ├─ Append to allMessages
+│   │   └─ Set nextLink = @odata.nextLink
+│   │
+│   └─ Parse JSON (optional, for schema validation)
+│
+├─ Apply to each (allMessages)
+│   ├─ Upsert row (alternate key)
+│   │   OR
+│   │   ├─ List rows (check if exists)
+│   │   └─ Condition → Add or Update
+│   │
+│   └─ Condition (high severity OR future action required?)
 │       └─ Yes: Post adaptive card to Teams
 │
 └─ [Scope: Catch] (runs on failure)
@@ -281,3 +367,50 @@ Microsoft Graph API has rate limits:
 - Per-tenant: 150,000 requests per 5 minutes
 
 Daily polling is well within these limits. Even hourly polling (not recommended) would only use ~24 requests/day.
+
+---
+
+## Optional Optimizations
+
+### Delta Tracking with lastModifiedDateTime
+
+After your first sync, you can filter to only retrieve recently modified posts. This reduces processing time and API payload size.
+
+**Pattern:**
+
+1. Store the timestamp of your last successful sync (options):
+   - Dataverse config table row
+   - Environment variable
+   - Flow variable persisted to a file/SharePoint
+
+2. On subsequent runs, filter the API call:
+   ```
+   https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$filter=lastModifiedDateTime ge 2025-01-25T00:00:00Z
+   ```
+
+3. Update the stored timestamp after successful processing
+
+**Expression for filter:**
+```
+$filter=lastModifiedDateTime ge @{variables('lastSyncTime')}
+```
+
+**First Run vs. Subsequent Runs:**
+
+- First run: No filter, retrieve all posts
+- Subsequent runs: Filter by `lastModifiedDateTime`
+- Suggested: Also run a full sync weekly to catch any edge cases
+
+### Combining Optimizations
+
+For busy tenants, combine pagination with delta tracking:
+
+```
+┌─ Get lastSyncTime from config
+├─ Set API URL with $filter parameter
+├─ Do Until (pagination loop)
+│   └─ Process new/updated messages
+└─ Update lastSyncTime in config
+```
+
+This approach minimizes both API calls and processing time while ensuring you don't miss any posts.

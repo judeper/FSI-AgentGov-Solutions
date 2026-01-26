@@ -196,6 +196,7 @@ This solution is designed to be modified:
 - **Change notifications:** Route to Slack, email, or ServiceNow
 - **Add views:** Filter by service, category, or date
 - **Integrate:** Connect to your change management system
+- **Plain-text body:** The `body` field stores HTML from Microsoft. For search or cleaner display, add a `bodyPlainText` column and use Power Automate's `stripHtml()` expression or a custom function to convert content
 
 ## Troubleshooting
 
@@ -219,7 +220,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.0.0 - January 2026
+2.0.0 - January 2025
 
 ## License
 
