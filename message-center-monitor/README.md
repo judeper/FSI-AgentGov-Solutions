@@ -55,7 +55,8 @@ If your environment has DLP policies:
 
 1. Go to Power Platform Admin Center > Data policies
 2. Ensure HTTP connector can access `graph.microsoft.com`
-3. Or add HTTP connector to the "Business" group
+3. Ensure Azure Key Vault connector is allowed (if using Key Vault for secrets)
+4. Or add both connectors to the "Business" group
 
 ## Quick Start
 

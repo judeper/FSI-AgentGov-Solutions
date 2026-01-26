@@ -222,8 +222,67 @@ Use a **Switch** action based on the services array, or multiple conditions.
 ### Use Actionable Cards
 
 - Include a direct link to the Admin Center post
-- Include a link to your Dataverse record (for assessment)
+- Include a link to your Dataverse record (for assessment) - see [Dataverse Record Link](#dataverse-record-link-optional) below
 - Consider adding quick actions (e.g., "Mark as Reviewed")
+
+## Dataverse Record Link (Optional)
+
+The adaptive card template includes an "Assess Record" button that links directly to the Dataverse record. This enables faster triage by letting your team jump straight to the assessment form.
+
+### Prerequisites
+
+To use this feature, you need:
+- A model-driven app or canvas app that displays MessageCenterLog records
+- The Dataverse row GUID from the upsert operation in your flow
+
+### Getting the Record ID
+
+After upserting to Dataverse, the response includes the row GUID:
+
+1. In your flow, after the Dataverse upsert action, add a **Compose** action
+2. Set the input to: `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}`
+   - Replace `cr123_` with your environment's publisher prefix
+3. Use this value for `{recordId}` in the adaptive card URL
+
+### URL Format
+
+The Dataverse record URL follows this pattern:
+
+```
+https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=entityrecord&etn=[table-logical-name]&id=[record-guid]
+```
+
+**Components:**
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `[your-environment]` | Your Dataverse environment name | `contoso` |
+| `[app-id]` | GUID of your model-driven app | `12345678-1234-1234-1234-123456789abc` |
+| `[table-logical-name]` | Logical name of MessageCenterLog table | `cr123_messagecenterlog` |
+| `[record-guid]` | Row GUID from upsert response | Dynamic from flow |
+
+### Finding Your App ID
+
+1. Open Power Apps (make.powerapps.com)
+2. Navigate to your model-driven app
+3. Click **...** > **Details**
+4. Copy the **App ID** (GUID)
+
+Or use the URL when the app is open - the `appid` parameter is in the URL.
+
+### Example Card Configuration
+
+In your Power Automate flow, replace the placeholder URL:
+
+```json
+{
+  "type": "Action.OpenUrl",
+  "title": "Assess Record",
+  "url": "https://contoso.crm.dynamics.com/main.aspx?appid=12345678-1234-1234-1234-123456789abc&pagetype=entityrecord&etn=cr123_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}"
+}
+```
+
+**Note:** If you don't have a model-driven app deployed, you can remove this action from the card template or leave it as a placeholder for future use.
 
 ### Monitor Flow Health
 

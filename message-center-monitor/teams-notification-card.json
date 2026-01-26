@@ -102,6 +102,11 @@
       "type": "Action.OpenUrl",
       "title": "View Documentation",
       "url": "https://learn.microsoft.com/en-us/microsoft-365/admin/manage/message-center"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Assess Record",
+      "url": "https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=entityrecord&etn=cr123_messagecenterlog&id={recordId}"
     }
   ]
 }
