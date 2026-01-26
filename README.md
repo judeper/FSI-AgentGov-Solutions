@@ -6,18 +6,23 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 | Solution | Description | Status |
 |----------|-------------|--------|
-| [Platform Change Governance](./platform-change-governance/) | Message Center change tracking for regulated FSI | v1.0.0 |
+| [Message Center Monitor](./message-center-monitor/) | Monitor M365 Message Center for platform changes affecting AI agents | v2.0.0 |
 
 ## How to Use
 
 1. Navigate to the solution folder
-2. Download the .zip file
-3. Import via Power Apps Maker Portal
-4. Follow the README for post-import steps
+2. Follow the README for prerequisites
+3. Set up Azure AD app registration
+4. Create Power Automate flow
+5. Configure Teams notifications
 
 ## Documentation
 
-All detailed documentation lives in the main FSI-AgentGov repository:
+All detailed documentation lives in each solution folder:
+
+- [Message Center Monitor](./message-center-monitor/README.md)
+
+Framework documentation:
 
 - [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov)
 

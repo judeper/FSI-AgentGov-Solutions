@@ -3,8 +3,8 @@
 ## Purpose
 
 Reference implementations for the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/).
-These solutions help Financial Services organizations implement governance controls for AI agents
-(Copilot Studio, Agent Builder) in compliance with SOX, FINRA, SEC, and other regulations.
+These solutions help Financial Services organizations implement operational controls and monitoring for AI agents
+(Copilot Studio, Agent Builder).
 
 ## Relationship to Framework
 
@@ -19,36 +19,34 @@ Solutions here may address one or multiple controls from the framework.
 ## Target Audience
 
 - **Power Platform Administrators**: Deploy and configure solutions
-- **Compliance Officers**: Evaluate governance capabilities
-- **Microsoft Partners**: Customize for FSI client environments
+- **Agent Platform Teams**: Monitor platform changes affecting agents
+- **Microsoft Partners**: Customize for client environments
 
 ## Solutions
 
 | Solution | Description | Type |
 |----------|-------------|------|
-| platform-change-governance | M365 Message Center governance workflow | Python/Dataverse |
+| message-center-monitor | M365 Message Center monitoring for platform changes | Power Automate/Dataverse |
 
 ## Conventions
 
 ### Folder Structure
 - Folder names: `kebab-case`
-- Structure flexible by solution type (Python, PowerShell, Power Automate)
+- Structure flexible by solution type (Power Automate, PowerShell, Python)
 
 ### Deployment
-Solutions should provide both:
-1. Script-based deployment (programmatic)
-2. Solution packages (Power Platform import)
+Solutions provide setup guides for:
+1. Power Automate flows
+2. Dataverse tables
+3. Azure resources (Key Vault, App Registrations)
 
 ### Documentation
 - Each solution: README.md with prerequisites, deployment, usage
-- Compliance mapping: Single document at repository root (not per-solution)
+- Supporting guides: Flow setup, Teams integration, secrets management
 
 ## Roadmap
 
 Planned solution areas:
 - Agent lifecycle management
-- Compliance reporting & dashboards
 - Environment governance
 - Integration templates (Power Automate)
-
-Roadmap driven by framework requirements and FSI regulatory needs.

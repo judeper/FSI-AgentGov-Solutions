@@ -1,0 +1,107 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Message Center Alert",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "color": "Attention"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "{severity}",
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "{title}",
+          "weight": "Bolder",
+          "size": "Medium",
+          "wrap": true,
+          "spacing": "Medium"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Category",
+              "value": "{category}"
+            },
+            {
+              "title": "Services",
+              "value": "{services}"
+            },
+            {
+              "title": "Published",
+              "value": "{startDateTime}"
+            },
+            {
+              "title": "Action Required By",
+              "value": "{actionRequiredByDateTime}"
+            },
+            {
+              "title": "Message ID",
+              "value": "{id}"
+            }
+          ],
+          "spacing": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "This post may impact your AI agent deployments. Please review and assess.",
+          "wrap": true,
+          "spacing": "Medium",
+          "isSubtle": true
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View in Admin Center",
+      "url": "https://admin.microsoft.com/Adminportal/Home#/MessageCenter/{id}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Documentation",
+      "url": "https://learn.microsoft.com/en-us/microsoft-365/admin/manage/message-center"
+    }
+  ]
+}
