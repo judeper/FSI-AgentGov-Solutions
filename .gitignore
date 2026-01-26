@@ -21,3 +21,6 @@ Thumbs.db
 
 # Solution artifacts (local testing)
 *.zip
+
+# Working documents
+GAP_ANALYSIS_REPORT.md
