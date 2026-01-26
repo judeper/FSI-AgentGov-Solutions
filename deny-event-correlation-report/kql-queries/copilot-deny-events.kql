@@ -1,0 +1,183 @@
+// ============================================================================
+// Copilot Deny Events - KQL Query for Log Analytics
+// FSI Agent Governance Framework
+// ============================================================================
+//
+// Purpose: Query CopilotInteraction audit events where access was denied
+// Data Source: OfficeActivity table in Log Analytics (requires M365 audit connector)
+//
+// Prerequisites:
+//   - Azure Log Analytics workspace with Office 365 audit data connector
+//   - Microsoft 365 E5 or E5 Compliance license
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Query 1: All CopilotInteraction Deny Events (Last 24 Hours)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(24h)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| where AccessedResources.Status == "failure"
+    or isnotempty(AccessedResources.PolicyDetails)
+    or AccessedResources.XPIADetected == true
+| extend
+    ResourceId = tostring(AccessedResources.ID),
+    ResourceName = tostring(AccessedResources.Name),
+    ResourceStatus = tostring(AccessedResources.Status),
+    PolicyName = tostring(AccessedResources.PolicyDetails.PolicyName),
+    PolicyAction = tostring(AccessedResources.PolicyDetails.Action),
+    XPIADetected = tobool(AccessedResources.XPIADetected),
+    SensitivityLabelId = tostring(AccessedResources.SensitivityLabelId),
+    AgentId = tostring(AuditData.AgentId),
+    AgentName = tostring(AuditData.AgentName),
+    AppHost = tostring(AuditData.AppHost)
+| project
+    TimeGenerated,
+    UserId,
+    AgentId,
+    AgentName,
+    AppHost,
+    ResourceId,
+    ResourceName,
+    ResourceStatus,
+    PolicyName,
+    PolicyAction,
+    XPIADetected,
+    SensitivityLabelId
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 2: Deny Events Summary by Category (Last 7 Days)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| extend
+    IsFailure = AccessedResources.Status == "failure",
+    HasPolicy = isnotempty(AccessedResources.PolicyDetails),
+    IsXPIA = tobool(AccessedResources.XPIADetected)
+| where IsFailure or HasPolicy or IsXPIA
+| extend DenyCategory = case(
+    IsXPIA, "XPIA Detection",
+    HasPolicy, "Policy Block",
+    IsFailure, "Resource Failure",
+    "Unknown"
+)
+| summarize
+    EventCount = count(),
+    UniqueUsers = dcount(UserId),
+    UniqueAgents = dcount(tostring(AuditData.AgentId))
+    by DenyCategory, bin(TimeGenerated, 1d)
+| order by TimeGenerated desc, EventCount desc
+
+// -----------------------------------------------------------------------------
+// Query 3: XPIA (Cross-Prompt Injection) Detections
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(30d)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| where AccessedResources.XPIADetected == true
+| extend
+    AgentId = tostring(AuditData.AgentId),
+    AgentName = tostring(AuditData.AgentName),
+    AppHost = tostring(AuditData.AppHost),
+    ResourceId = tostring(AccessedResources.ID)
+| project
+    TimeGenerated,
+    UserId,
+    AgentId,
+    AgentName,
+    AppHost,
+    ResourceId
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 4: Jailbreak Attempt Detections
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(30d)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend Messages = AuditData.Messages
+| mv-expand Messages
+| where Messages.JailbreakDetected == true
+| extend
+    AgentId = tostring(AuditData.AgentId),
+    AgentName = tostring(AuditData.AgentName),
+    AppHost = tostring(AuditData.AppHost)
+| project
+    TimeGenerated,
+    UserId,
+    AgentId,
+    AgentName,
+    AppHost
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 5: Top Agents by Deny Event Count
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| where AccessedResources.Status == "failure"
+    or isnotempty(AccessedResources.PolicyDetails)
+    or AccessedResources.XPIADetected == true
+| extend
+    AgentId = tostring(AuditData.AgentId),
+    AgentName = tostring(AuditData.AgentName)
+| summarize
+    DenyCount = count(),
+    UniqueUsers = dcount(UserId),
+    LastOccurrence = max(TimeGenerated)
+    by AgentId, AgentName
+| order by DenyCount desc
+| take 20
+
+// -----------------------------------------------------------------------------
+// Query 6: Deny Events by Hour (for Alerting)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(1h)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| where AccessedResources.Status == "failure"
+    or isnotempty(AccessedResources.PolicyDetails)
+    or AccessedResources.XPIADetected == true
+| summarize DenyCount = count() by bin(TimeGenerated, 5m)
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 7: Policy Block Details
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == "CopilotInteraction"
+| extend AuditData = parse_json(OfficeObjectId)
+| extend AccessedResources = AuditData.AccessedResources
+| mv-expand AccessedResources
+| where isnotempty(AccessedResources.PolicyDetails)
+| extend
+    PolicyId = tostring(AccessedResources.PolicyDetails.PolicyId),
+    PolicyName = tostring(AccessedResources.PolicyDetails.PolicyName),
+    PolicyAction = tostring(AccessedResources.PolicyDetails.Action),
+    AgentName = tostring(AuditData.AgentName)
+| summarize
+    BlockCount = count(),
+    UniqueUsers = dcount(UserId),
+    UniqueAgents = dcount(tostring(AuditData.AgentId))
+    by PolicyName, PolicyAction
+| order by BlockCount desc

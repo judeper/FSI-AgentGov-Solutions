@@ -1,0 +1,183 @@
+// ============================================================================
+// DLP Copilot Matches - KQL Query for Log Analytics
+// FSI Agent Governance Framework
+// ============================================================================
+//
+// Purpose: Query DLP rule match events for Microsoft 365 Copilot policy location
+// Data Source: OfficeActivity table in Log Analytics (requires M365 audit connector)
+//
+// Prerequisites:
+//   - Azure Log Analytics workspace with Office 365 audit data connector
+//   - DLP policies configured for "Microsoft 365 Copilot and Copilot Chat" location
+//   - Microsoft 365 E5 or E5 Compliance license
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Query 1: All DLP Matches for Copilot (Last 24 Hours)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(24h)
+| where RecordType == 55  // DlpRuleMatch
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend
+    PolicyDetails = AuditData.PolicyDetails,
+    SensitiveInfoTypes = AuditData.SensitiveInfoTypeData
+| mv-expand PolicyDetails
+| extend
+    PolicyId = tostring(PolicyDetails.PolicyId),
+    PolicyName = tostring(PolicyDetails.PolicyName),
+    Rules = PolicyDetails.Rules
+| mv-expand Rules
+| extend
+    RuleName = tostring(Rules.RuleName),
+    RuleActions = tostring(Rules.Actions),
+    RuleSeverity = tostring(Rules.Severity)
+| project
+    TimeGenerated,
+    UserId,
+    Workload = tostring(AuditData.Workload),
+    PolicyName,
+    RuleName,
+    RuleActions,
+    RuleSeverity,
+    SensitiveInfoTypes
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 2: DLP Summary by Policy (Last 7 Days)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend PolicyDetails = AuditData.PolicyDetails
+| mv-expand PolicyDetails
+| extend PolicyName = tostring(PolicyDetails.PolicyName)
+| summarize
+    MatchCount = count(),
+    UniqueUsers = dcount(UserId),
+    FirstOccurrence = min(TimeGenerated),
+    LastOccurrence = max(TimeGenerated)
+    by PolicyName
+| order by MatchCount desc
+
+// -----------------------------------------------------------------------------
+// Query 3: Sensitive Information Type Detections
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend SensitiveInfoTypes = AuditData.SensitiveInfoTypeData
+| mv-expand SensitiveInfoTypes
+| extend
+    SitName = tostring(SensitiveInfoTypes.SensitiveInfoTypeName),
+    SitCount = toint(SensitiveInfoTypes.Count),
+    SitConfidence = toint(SensitiveInfoTypes.Confidence)
+| summarize
+    TotalMatches = count(),
+    TotalDetections = sum(SitCount),
+    AvgConfidence = avg(SitConfidence),
+    UniqueUsers = dcount(UserId)
+    by SitName
+| order by TotalMatches desc
+
+// -----------------------------------------------------------------------------
+// Query 4: High Severity DLP Matches (for Alerting)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(1h)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend PolicyDetails = AuditData.PolicyDetails
+| mv-expand PolicyDetails
+| extend Rules = PolicyDetails.Rules
+| mv-expand Rules
+| where Rules.Severity == "High"
+| extend
+    PolicyName = tostring(PolicyDetails.PolicyName),
+    RuleName = tostring(Rules.RuleName),
+    RuleActions = tostring(Rules.Actions)
+| project
+    TimeGenerated,
+    UserId,
+    PolicyName,
+    RuleName,
+    RuleActions
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 5: Override Usage Analysis
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(30d)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend
+    HasOverride = isnotempty(AuditData.ExceptionInfo),
+    OverrideJustification = tostring(AuditData.ExceptionInfo)
+| where HasOverride
+| extend PolicyDetails = AuditData.PolicyDetails
+| mv-expand PolicyDetails
+| extend PolicyName = tostring(PolicyDetails.PolicyName)
+| summarize
+    OverrideCount = count(),
+    UniqueUsers = dcount(UserId)
+    by PolicyName, bin(TimeGenerated, 1d)
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 6: DLP Trend by Action Type (Last 30 Days)
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(30d)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend PolicyDetails = AuditData.PolicyDetails
+| mv-expand PolicyDetails
+| extend Rules = PolicyDetails.Rules
+| mv-expand Rules
+| extend ActionType = case(
+    tostring(Rules.Actions) contains "Block", "Block",
+    tostring(Rules.Actions) contains "Warn", "Warn",
+    tostring(Rules.Actions) contains "Override", "Override",
+    "Other"
+)
+| summarize Count = count() by ActionType, bin(TimeGenerated, 1d)
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 7: DLP Block vs Allow Ratio by User
+// -----------------------------------------------------------------------------
+OfficeActivity
+| where TimeGenerated > ago(7d)
+| where RecordType == 55
+| extend AuditData = parse_json(OfficeObjectId)
+| where AuditData.Workload == "MicrosoftCopilot"
+    or tostring(AuditData.PolicyDetails) contains "Copilot"
+| extend PolicyDetails = AuditData.PolicyDetails
+| mv-expand PolicyDetails
+| extend Rules = PolicyDetails.Rules
+| mv-expand Rules
+| extend IsBlock = tostring(Rules.Actions) contains "Block"
+| summarize
+    TotalEvents = count(),
+    BlockEvents = countif(IsBlock),
+    NonBlockEvents = countif(not(IsBlock))
+    by UserId
+| extend BlockRatio = round(todouble(BlockEvents) / TotalEvents * 100, 2)
+| where TotalEvents >= 5  // Filter to users with significant activity
+| order by BlockRatio desc
+| take 20

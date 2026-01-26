@@ -1,0 +1,229 @@
+// ============================================================================
+// Deny Event Correlation Analysis - KQL Queries
+// FSI Agent Governance Framework
+// ============================================================================
+//
+// Purpose: Cross-source correlation queries for deny event analysis
+//
+// Note: These queries assume data has been exported to a common Log Analytics
+// workspace or Azure Data Explorer database. For Power BI correlation,
+// use the Power BI template from the solution repository.
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Query 1: Combined Deny Event Summary (Requires Custom Tables)
+// -----------------------------------------------------------------------------
+// This query assumes you've imported CSV exports to custom tables:
+// - CopilotDenyEvents_CL
+// - DlpCopilotEvents_CL
+// - RaiTelemetry_CL
+//
+// To create custom tables, use Log Analytics Data Collection Rules or
+// the Log Analytics API for custom log ingestion.
+
+union
+    (CopilotDenyEvents_CL
+     | extend Source = "CopilotInteraction",
+              Severity = iff(HasXPIA_b or HasJailbreak_b, "High", "Medium")),
+    (DlpCopilotEvents_CL
+     | extend Source = "DLP"),
+    (RaiTelemetry_CL
+     | extend Source = "RAI", Severity = filterSeverity_s)
+| summarize
+    TotalEvents = count(),
+    HighSeverity = countif(Severity == "High"),
+    UniqueUsers = dcount(UserId)
+    by Source, bin(TimeGenerated, 1d)
+| order by TimeGenerated desc
+
+// -----------------------------------------------------------------------------
+// Query 2: User-Based Correlation (5-Minute Window)
+// -----------------------------------------------------------------------------
+// Correlate events by user within a 5-minute window
+
+let copilotEvents = CopilotDenyEvents_CL
+| extend CorrelationWindow = bin(Timestamp_t, 5m)
+| project CorrelationWindow, UserId_s, Source = "Copilot",
+          Category = DenyReason_s, AgentId = AgentId_s;
+
+let dlpEvents = DlpCopilotEvents_CL
+| extend CorrelationWindow = bin(Timestamp_t, 5m)
+| project CorrelationWindow, UserId_s, Source = "DLP",
+          Category = PolicyNames_s, AgentId = "";
+
+let raiEvents = RaiTelemetry_CL
+| extend CorrelationWindow = bin(timestamp, 5m)
+| project CorrelationWindow, UserId_s = userId_s, Source = "RAI",
+          Category = filterCategory_s, AgentId = agentId_s;
+
+union copilotEvents, dlpEvents, raiEvents
+| summarize
+    Sources = make_set(Source),
+    Categories = make_set(Category),
+    EventCount = count()
+    by CorrelationWindow, UserId_s
+| where array_length(Sources) > 1  // Multiple sources = correlated event
+| order by CorrelationWindow desc
+
+// -----------------------------------------------------------------------------
+// Query 3: Agent-Based Correlation
+// -----------------------------------------------------------------------------
+// For RAI telemetry correlation where UserId may not be available
+
+let copilotByAgent = CopilotDenyEvents_CL
+| extend CorrelationWindow = bin(Timestamp_t, 5m)
+| where isnotempty(AgentId_s)
+| project CorrelationWindow, AgentId_s, Source = "Copilot",
+          Category = DenyReason_s, UserId_s;
+
+let raiByAgent = RaiTelemetry_CL
+| extend CorrelationWindow = bin(timestamp, 5m)
+| where isnotempty(agentId_s)
+| project CorrelationWindow, AgentId_s = agentId_s, Source = "RAI",
+          Category = filterCategory_s, UserId_s = "";
+
+union copilotByAgent, raiByAgent
+| summarize
+    Sources = make_set(Source),
+    Categories = make_set(Category),
+    UserIds = make_set(UserId_s),
+    EventCount = count()
+    by CorrelationWindow, AgentId_s
+| where array_length(Sources) > 1
+| order by CorrelationWindow desc
+
+// -----------------------------------------------------------------------------
+// Query 4: Daily Summary Report
+// -----------------------------------------------------------------------------
+// Generate a daily summary suitable for executive reporting
+
+let reportDate = ago(1d);
+let endDate = now();
+
+let copilotSummary = CopilotDenyEvents_CL
+| where Timestamp_t between (reportDate .. endDate)
+| summarize
+    CopilotTotal = count(),
+    CopilotXPIA = countif(HasXPIA_b),
+    CopilotJailbreak = countif(HasJailbreak_b),
+    CopilotPolicyBlock = countif(HasPolicyBlock_b),
+    CopilotUsers = dcount(UserId_s),
+    CopilotAgents = dcount(AgentId_s);
+
+let dlpSummary = DlpCopilotEvents_CL
+| where Timestamp_t between (reportDate .. endDate)
+| summarize
+    DlpTotal = count(),
+    DlpHighSeverity = countif(Severity_s == "High"),
+    DlpBlocks = countif(Actions_s contains "Block"),
+    DlpOverrides = countif(HasOverride_b),
+    DlpUsers = dcount(UserId_s);
+
+let raiSummary = RaiTelemetry_CL
+| where timestamp between (reportDate .. endDate)
+| summarize
+    RaiTotal = count(),
+    RaiHighSeverity = countif(filterSeverity_s == "High"),
+    RaiAgents = dcount(agentId_s),
+    RaiSessions = dcount(sessionId_s);
+
+copilotSummary | join kind=cross (dlpSummary) on 1==1
+| join kind=cross (raiSummary) on 1==1
+| extend
+    TotalDenyEvents = CopilotTotal + DlpTotal + RaiTotal,
+    TotalHighSeverity = CopilotXPIA + CopilotJailbreak + DlpHighSeverity + RaiHighSeverity
+| project
+    ReportDate = format_datetime(reportDate, 'yyyy-MM-dd'),
+    TotalDenyEvents,
+    TotalHighSeverity,
+    CopilotTotal,
+    CopilotXPIA,
+    CopilotJailbreak,
+    CopilotPolicyBlock,
+    DlpTotal,
+    DlpBlocks,
+    DlpOverrides,
+    RaiTotal,
+    RaiHighSeverity
+
+// -----------------------------------------------------------------------------
+// Query 5: Anomaly Detection - Baseline Deviation
+// -----------------------------------------------------------------------------
+// Detect days with significantly higher deny events than baseline
+
+let baseline =
+    CopilotDenyEvents_CL
+    | where Timestamp_t > ago(30d) and Timestamp_t < ago(1d)
+    | summarize DailyCount = count() by bin(Timestamp_t, 1d)
+    | summarize AvgDaily = avg(DailyCount), StdDev = stdev(DailyCount);
+
+let today =
+    CopilotDenyEvents_CL
+    | where Timestamp_t > ago(1d)
+    | summarize TodayCount = count();
+
+baseline | join kind=cross (today) on 1==1
+| extend
+    Threshold = AvgDaily + (2 * StdDev),
+    IsAnomaly = TodayCount > AvgDaily + (2 * StdDev),
+    DeviationPercent = round((TodayCount - AvgDaily) / AvgDaily * 100, 2)
+| project
+    TodayCount,
+    BaselineAvg = round(AvgDaily, 0),
+    Threshold = round(Threshold, 0),
+    IsAnomaly,
+    DeviationPercent
+
+// -----------------------------------------------------------------------------
+// Query 6: Security Incident Candidates
+// -----------------------------------------------------------------------------
+// Identify potential security incidents requiring investigation
+
+union
+    (CopilotDenyEvents_CL
+     | where HasXPIA_b or HasJailbreak_b
+     | extend IncidentType = iff(HasXPIA_b, "XPIA Detection", "Jailbreak Attempt"),
+              Severity = "High",
+              Source = "CopilotInteraction"),
+    (RaiTelemetry_CL
+     | where filterSeverity_s == "High"
+     | extend IncidentType = strcat("RAI Filter: ", filterCategory_s),
+              Severity = "High",
+              Source = "RAI")
+| project
+    Timestamp = coalesce(Timestamp_t, timestamp),
+    UserId = coalesce(UserId_s, userId_s),
+    AgentId = coalesce(AgentId_s, agentId_s),
+    IncidentType,
+    Severity,
+    Source
+| order by Timestamp desc
+
+// -----------------------------------------------------------------------------
+// Query 7: Export for Power BI (Combined View)
+// -----------------------------------------------------------------------------
+// Unified export format for Power BI import
+
+union
+    (CopilotDenyEvents_CL
+     | extend
+        EventSource = "CopilotInteraction",
+        EventCategory = DenyReason_s,
+        EventSeverity = iff(HasXPIA_b or HasJailbreak_b, "High", "Medium")
+     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = AgentId_s,
+               EventSource, EventCategory, EventSeverity),
+    (DlpCopilotEvents_CL
+     | extend
+        EventSource = "DLP",
+        EventCategory = strcat("DLP: ", PolicyNames_s),
+        EventSeverity = Severity_s
+     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = "",
+               EventSource, EventCategory, EventSeverity),
+    (RaiTelemetry_CL
+     | extend
+        EventSource = "RAI",
+        EventCategory = strcat("RAI: ", filterCategory_s),
+        EventSeverity = filterSeverity_s
+     | project Timestamp = timestamp, UserId = userId_s, AgentId = agentId_s,
+               EventSource, EventCategory, EventSeverity)
+| order by Timestamp desc
