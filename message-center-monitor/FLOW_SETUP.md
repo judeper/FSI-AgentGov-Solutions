@@ -85,6 +85,7 @@ Add action: **Parse JSON**
 ```json
 {
   "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#admin/serviceAnnouncement/messages",
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$skip=100",
   "value": [
     {
       "id": "MC123456",
@@ -107,6 +108,8 @@ Add action: **Parse JSON**
   ]
 }
 ```
+
+> **Note:** The `@odata.nextLink` field appears when there are more results. Include it in your schema so Parse JSON doesn't fail when pagination is present.
 
 ## Step 5: Handle Pagination (Important)
 
@@ -169,9 +172,24 @@ Add action: **Compose**
 
 If you can configure an alternate key on your Dataverse table, use the simpler "Upsert a row" action:
 
-1. In Power Apps > Tables > MessageCenterLog > Keys
-2. Create a new key using `messagecenterId` column
-3. In your flow, use **Dataverse - Update or insert (upsert) a row**
+**Creating the Alternate Key:**
+
+1. Go to [make.powerapps.com](https://make.powerapps.com)
+2. Select your environment from the environment picker (top right)
+3. Navigate to **Tables** in the left menu
+4. Find and open **MessageCenterLog** table
+5. Click **Keys** in the left submenu (under Schema)
+6. Click **+ New key**
+7. Configure:
+   - **Display name:** `MessageCenterId Key`
+   - **Name:** (auto-generated, or customize)
+   - **Columns:** Select `messagecenterId`
+8. Click **Save**
+9. Wait for the key to be created (status changes from "In Progress" to "Active")
+
+**Using the Alternate Key in Power Automate:**
+
+1. In your flow, use **Dataverse - Update or insert (upsert) a row**
    - Table: MessageCenterLog
    - Alternate Key: messagecenterId = `@{items('Apply_to_each')?['id']}`
 
@@ -200,16 +218,43 @@ If you cannot modify the table schema, use this pattern:
 | services | `@{join(items('Apply_to_each')?['services'], ', ')}` |
 | startDateTime | `@{items('Apply_to_each')?['startDateTime']}` |
 | actionRequiredByDateTime | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
-| body | `@{items('Apply_to_each')?['body']?['content']}` |
+| body | `@{coalesce(items('Apply_to_each')?['body']?['content'], '')}` |
 
 **Category mapping:**
 - planForChange → Feature
 - stayInformed → Admin
-- preventOrFixIssues → Security
+- preventOrFixIssue → Security
 
 **Severity mapping:**
 - high → High
 - normal → Normal
+- critical → Critical
+
+### Choice Field Implementation with Switch
+
+For category and severity, you need to map API text values to Dataverse choice values. Use a **Switch** action:
+
+**Category Switch Example:**
+
+1. Add action: **Switch**
+2. On: `@{items('Apply_to_each')?['category']}`
+3. Add cases:
+   - Case `planForChange`: Set variable `categoryValue` = `Feature` (or your choice ID)
+   - Case `stayInformed`: Set variable `categoryValue` = `Admin`
+   - Case `preventOrFixIssue`: Set variable `categoryValue` = `Security`
+   - Default: Set variable `categoryValue` = `Admin`
+
+**Severity Switch Example:**
+
+1. Add action: **Switch**
+2. On: `@{items('Apply_to_each')?['severity']}`
+3. Add cases:
+   - Case `high`: Set variable `severityValue` = `High`
+   - Case `normal`: Set variable `severityValue` = `Normal`
+   - Case `critical`: Set variable `severityValue` = `Critical`
+   - Default: Set variable `severityValue` = `Normal`
+
+> **Tip:** If your Dataverse choices use numeric IDs (e.g., `100000000` for High), use those IDs instead of text values in your Switch cases.
 
 ## Step 7: Teams Notification for High Severity
 
@@ -218,7 +263,12 @@ Inside the Apply to each loop, after the Dataverse action:
 Add **Condition** to notify when action is truly needed:
 
 **Option A: Basic Check**
-- `@{items('Apply_to_each')?['severity']}` is equal to `high`
+```
+@or(
+  equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['severity'], 'critical')
+)
+```
 
 OR
 
@@ -281,14 +331,19 @@ For the Apply to each action:
 
 ### Add Scope for Error Handling
 
-Wrap the HTTP and Parse JSON in a **Scope** action:
+Wrap the main processing logic in a **Scope** action for better error handling:
 
 1. Add **Scope** action (call it "Try")
-2. Move HTTP and Parse JSON inside
+2. Move inside the Try scope:
+   - HTTP action (or Do Until loop for pagination)
+   - Parse JSON action
+   - Apply to each loop (including Dataverse upsert and Teams notification)
 3. Add another **Scope** after (call it "Catch")
 4. Configure "Catch" to run after "Try" has failed
 5. In "Catch", add a Teams notification for errors:
    - Post a message: "Message Center Monitor flow failed. Check run history."
+
+> **Why include Apply to each in Try?** If a single message fails to process (e.g., malformed data), the entire loop stops. Wrapping it in Try ensures you get notified of partial failures. For even more granular handling, you can add a nested Try/Catch inside the Apply to each loop to handle individual message failures without stopping the entire run.
 
 ## Step 9: Save and Test
 

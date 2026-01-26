@@ -1,5 +1,59 @@
 # Changelog
 
+## [2.1.0] - January 2026
+
+### Technical Review Fixes
+
+This release addresses 12 issues identified during technical review of the documentation.
+
+#### Critical Fixes
+
+**API Value Corrections:**
+- Fixed category mapping typo: `preventOrFixIssues` → `preventOrFixIssue` (FLOW_SETUP.md)
+- Added "Critical" severity option to match Microsoft Graph API values (README.md, SETUP_CHECKLIST.md)
+
+**Notification Logic:**
+- Updated notification condition to include both `high` and `critical` severity levels (FLOW_SETUP.md)
+
+**Implementation Guidance:**
+- Added step-by-step alternate key creation instructions for Dataverse upsert (FLOW_SETUP.md)
+
+#### Schema Improvements
+
+**Missing Fields Added:**
+- `lastModifiedDateTime` (DateTime) - When Microsoft last updated the post
+- `isMajorChange` (Yes/No) - Microsoft's flag for significant changes
+
+These fields were already in the sample JSON but missing from the table schema documentation.
+
+**Sample JSON Updated:**
+- Added `@odata.nextLink` pagination field with explanatory note
+
+#### Documentation Clarifications
+
+**New Sections Added:**
+- Choice field implementation guide with Switch action examples (FLOW_SETUP.md)
+- Publisher prefix discovery instructions - 3 methods to find your prefix (TEAMS_INTEGRATION.md)
+- Flow identity explanation - user-based vs service principal flows (SECRETS_MANAGEMENT.md)
+- Naming convention note - display names vs logical names (README.md)
+
+**Improved Guidance:**
+- Expanded error handling scope to include Apply to each loop in Try scope
+- Added null handling for body content using `coalesce()` expression
+- Added choice values table to setup checklist
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| README.md | Added Critical severity, missing schema fields, naming note |
+| FLOW_SETUP.md | Fixed typo, updated conditions, added implementation guidance |
+| TEAMS_INTEGRATION.md | Added publisher prefix discovery instructions |
+| SECRETS_MANAGEMENT.md | Added flow identity explanation |
+| SETUP_CHECKLIST.md | Added severity choice values, missing fields |
+
+---
+
 ## [2.0.0] - January 2025
 
 ### Breaking Changes

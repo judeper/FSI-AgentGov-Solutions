@@ -89,6 +89,20 @@ az keyvault secret set \
 
 Power Automate needs permission to read secrets from Key Vault.
 
+### Understanding Flow Identity
+
+Power Automate flows can run under different identities, which affects how you configure Key Vault access:
+
+| Flow Type | Identity | Key Vault Access |
+|-----------|----------|------------------|
+| **Standard (User-based)** | The user who created or owns the flow | Grant access to that user's Azure AD account |
+| **Service Principal** | An Azure AD app registration | Grant access to the service principal |
+| **Managed Identity** | System-assigned identity (premium) | Grant access to the managed identity |
+
+**Most Common Scenario:** Standard user-based flows run as the flow owner. When you create a Key Vault connection in Power Automate, it authenticates as your user account. Grant your user account (or a service account if using one) access to Key Vault.
+
+> **How to check:** Open your flow > click the Key Vault action > check which connection is used. The connection shows whose credentials are used to access Key Vault.
+
 ### Option A: Access Policy (Classic)
 
 1. Open your Key Vault

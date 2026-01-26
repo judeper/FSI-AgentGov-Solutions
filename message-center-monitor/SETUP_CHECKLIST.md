@@ -73,6 +73,8 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | services | Text (2000) |
 | startDateTime | DateTime |
 | actionRequiredByDateTime | DateTime |
+| lastModifiedDateTime | DateTime |
+| isMajorChange | Yes/No |
 | body | Multiline Text |
 | assessmentStatus | Choice |
 | assessment | Multiline Text |
@@ -80,6 +82,13 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | assessedBy | Lookup (User) |
 | assessedDate | DateTime |
 | actionsTaken | Multiline Text |
+
+**Choice Values:**
+| Choice Column | Values |
+|---------------|--------|
+| category | Feature, Admin, Security |
+| severity | High, Normal, Critical |
+| assessmentStatus | Not Assessed, Reviewed, Impacts Agents, No Impact |
 
 **Details:** [README.md - Data Model](./README.md#data-model)
 

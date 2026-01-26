@@ -284,6 +284,34 @@ In your Power Automate flow, replace the placeholder URL:
 
 **Note:** If you don't have a model-driven app deployed, you can remove this action from the card template or leave it as a placeholder for future use.
 
+### Finding Your Publisher Prefix
+
+Dataverse column logical names include a publisher prefix (e.g., `cr123_messagecenterlogid`). To find your prefix:
+
+**Method 1: Via Power Apps Tables**
+
+1. Go to [make.powerapps.com](https://make.powerapps.com)
+2. Select your environment (top right)
+3. Navigate to **Tables** > **MessageCenterLog**
+4. Click on any custom column (e.g., `messagecenterId`)
+5. In the column details panel, find **Logical name**
+6. The prefix is everything before the underscore (e.g., `cr123_` in `cr123_messagecenterId`)
+
+**Method 2: Via Solution Publisher**
+
+1. Go to [make.powerapps.com](https://make.powerapps.com) > **Solutions**
+2. Open the solution containing your table
+3. Click **Settings** (gear icon) > **Publishers**
+4. Find your publisher and note the **Prefix** value
+
+**Method 3: Via Dataverse Upsert Response**
+
+1. Run your flow with the Dataverse upsert action
+2. Check the flow run history
+3. Look at the upsert action output—the returned field names show the prefix
+
+> **Common prefixes:** Default environments often use `cr...` prefixes (e.g., `cr123_`). Custom publishers use the prefix you specified when creating the publisher.
+
 ### Monitor Flow Health
 
 - Set up a separate alert if the flow fails

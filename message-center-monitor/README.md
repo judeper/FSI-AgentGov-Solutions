@@ -69,10 +69,12 @@ Create a table named `MessageCenterLog` with these columns:
 | messagecenterId | Text (Primary) | MC###### format |
 | title | Text (500) | Post title |
 | category | Choice | Feature, Admin, Security |
-| severity | Choice | High, Normal |
+| severity | Choice | High, Normal, Critical |
 | services | Text (2000) | Comma-separated service names |
 | startDateTime | DateTime | When post was published |
 | actionRequiredByDateTime | DateTime | Deadline for action (if any) |
+| lastModifiedDateTime | DateTime | When Microsoft last updated this post |
+| isMajorChange | Yes/No | Microsoft's flag for significant changes |
 | body | Multiline Text | Full post content (HTML) |
 | assessmentStatus | Choice | Not Assessed, Reviewed, Impacts Agents, No Impact |
 | assessment | Multiline Text | Your team's assessment notes |
@@ -80,6 +82,8 @@ Create a table named `MessageCenterLog` with these columns:
 | assessedBy | Lookup (User) | Who reviewed this post |
 | assessedDate | DateTime | When it was reviewed |
 | actionsTaken | Multiline Text | Notes on response/remediation |
+
+> **Naming Convention Note:** Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix) for how to find it.
 
 ### Step 2: Create the Power Automate Flow
 
@@ -221,7 +225,9 @@ This solution is designed to be modified:
 
 ## Version
 
-2.0.0 - January 2025
+2.1.0 - January 2026
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
 ## License
 
