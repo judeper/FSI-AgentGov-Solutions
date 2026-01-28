@@ -7,6 +7,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Description | Status |
 |----------|-------------|--------|
 | [Message Center Monitor](./message-center-monitor/) | Monitor M365 Message Center for platform changes affecting AI agents | v2.0.0 |
+| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | v1.0.2 |
 
 ## How to Use
 
@@ -21,6 +22,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 All detailed documentation lives in each solution folder:
 
 - [Message Center Monitor](./message-center-monitor/README.md)
+- [Pipeline Governance Cleanup](./pipeline-governance-cleanup/README.md)
 
 Framework documentation:
 

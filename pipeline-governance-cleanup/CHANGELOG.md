@@ -1,0 +1,124 @@
+# Changelog
+
+All notable changes to the Pipeline Governance Cleanup solution are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to semantic versioning.
+
+---
+
+## [1.0.2] - January 2026
+
+### Fixed
+
+#### Critical PowerShell Bugs
+
+- **Get-PipelineInventory.ps1** - Fixed invalid PAC CLI command (`pac admin list` → `pac env list`)
+- **Get-PipelineInventory.ps1** - Fixed invalid PowerShell ternary syntax in `Get-UserEmailFromGraph` function
+- **Send-OwnerNotifications.ps1** - Added empty CSV check to prevent error when accessing empty array
+
+#### Documentation Consistency
+
+- **AUTOMATION_GUIDE.md** - Added missing output columns (`HasPipelinesEnabled`, `Notes`) to inventory table
+- **AUTOMATION_GUIDE.md** - Added complete pipeline trigger event list (`OnPreDeploymentCompleted`, `OnApprovalStarted`, `OnApprovalCompleted`, `OnDeploymentStarted`)
+- **AUTOMATION_GUIDE.md** - Standardized output filename to `environment-inventory.csv`
+- **README.md** - Added missing DeploymentEnvironment columns (`EnvironmentType`, `ValidationStatus`, `ErrorMessage`)
+- **README.md** - Corrected `EnvironmentId` type from GUID to String
+- **src/README.md** - Updated output columns list and standardized filename
+
+### Verified Correct
+
+The following were verified as accurate and unchanged:
+- All Microsoft Learn URLs are valid
+- Regulatory citations (OCC 2011-12, FFIEC, SOX 404, FINRA 4511) are appropriate
+- Control references (2.1, 2.3) exist and are correctly linked
+- All internal file references are valid
+
+---
+
+## [1.0.1] - January 2026
+
+### Critical Corrections
+
+This release addresses critical technical inaccuracies discovered during solution review that would have caused customer deployment failures.
+
+#### Removed Incorrect Content
+
+- **Removed `pac pipeline link` command** - This command does not exist in the PAC CLI. Force-linking environments is UI-only.
+- **Removed "List rows from DeploymentPipeline"** - The DeploymentPipeline table cannot be queried via Power Automate "List rows" action.
+- **Removed automated force-link claims** - Force-linking cannot be automated via any API, CLI, or workflow.
+
+#### Added
+
+- **LIMITATIONS.md** - New file documenting technical constraints and what cannot be automated
+- **PORTAL_WALKTHROUGH.md** - New file with step-by-step UI procedures for force-linking environments
+- **Get-PipelineInventory.ps1** - PowerShell script for environment discovery via PAC CLI
+- **Send-OwnerNotifications.ps1** - PowerShell script for sending notifications via Microsoft Graph
+- **AUTOMATION_GUIDE.md** - Renamed from FLOW_SETUP.md with corrected content
+
+#### Changed
+
+- **README.md** - Major rewrite with honest limitations section, updated prerequisites, revised workflow showing manual steps
+- **SETUP_CHECKLIST.md** - Added [MANUAL] markers to distinguish automated vs manual steps
+- **NOTIFICATION_TEMPLATES.md** - Fixed expression references for owner email resolution
+
+#### Documentation
+
+- Expanded Data Model section to include DeploymentStage and DeploymentEnvironment tables
+- Added prerequisite: Power Platform Pipelines app installation
+- Documented that trigger-based monitoring is the only supported Power Automate approach
+- Added Microsoft Learn URL references confirming limitations
+
+### Migration Notes
+
+If you implemented v1.0.0:
+
+1. Remove any flows attempting to "List rows from DeploymentPipeline" - they will not work
+2. Remove any PowerShell scripts using `pac pipeline link` - this command does not exist
+3. Use the new PowerShell scripts in `src/` for inventory and notifications
+4. Follow [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for manual force-link procedures
+5. Review [LIMITATIONS.md](./LIMITATIONS.md) to set correct expectations
+
+---
+
+## [1.0.0] - January 2026
+
+### Added
+
+- Initial release
+- **Discovery workflow** - Inventory non-compliant pipelines via Dataverse views and Power Automate flows
+- **Owner notification system** - Email and Teams adaptive card templates for communicating with pipeline owners
+- **Cleanup flow** - Automated pipeline deactivation with audit logging
+- **Custom host enforcement** - Force-link guidance for centralizing pipeline governance
+- **Ongoing monitoring** - Validation flow for detecting new violations
+- **FSI regulatory alignment** - Mapping to OCC 2011-12, FFIEC, SOX 404, FINRA 4511
+
+### Documentation
+
+- README.md - Solution overview, prerequisites, data model, quick start
+- FLOW_SETUP.md - Complete Power Automate flow configuration
+- NOTIFICATION_TEMPLATES.md - Email and Teams notification templates
+- SETUP_CHECKLIST.md - Quick deployment checklist
+- CHANGELOG.md - This file
+
+### Related Framework Controls
+
+- Control 2.3: Change Management and Release Planning
+- Control 2.1: Managed Environments
+
+### Known Issues (Addressed in v1.0.1)
+
+- Documentation contained incorrect claims about automation capabilities
+- `pac pipeline link` command does not exist
+- DeploymentPipeline table cannot be queried via Power Automate
+- Force-linking requires manual admin action
+
+---
+
+## Roadmap
+
+### Under Consideration
+
+- Power BI dashboard for compliance tracking
+- ServiceNow integration for exemption workflow
+- Azure Automation runbook for scheduled inventory
+- Teams bot for self-service status queries
