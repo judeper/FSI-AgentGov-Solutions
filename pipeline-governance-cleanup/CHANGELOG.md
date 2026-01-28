@@ -6,6 +6,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.5] - January 2026
+
+### Critical Bug Fixes - Technical Review Remediation
+
+This release fixes critical bugs identified during external technical review that would have caused script execution failures.
+
+#### Fixed
+
+**Get-PipelineInventory.ps1 - CLI Command Bug (CRITICAL)**
+- Changed `pac env list --json` to `pac admin list --json`
+- `pac env list` does not support `--json` parameter
+- Reference: [Microsoft Learn - pac admin](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/admin)
+
+**Get-PipelineInventory.ps1 - JSON Property Names (CRITICAL)**
+- Fixed property accessors to match `pac admin list --json` output format
+- Changed `$env.EnvironmentId` to `$env.'Environment Id'` (property has space)
+- Changed `$env.DisplayName` to `$env.Environment`
+- Changed `$env.EnvironmentType` to `$env.Type`
+- Previous code would return null values for all critical columns
+
+**Get-PipelineInventory.ps1 - Pipeline Probing (HIGH)**
+- Removed `--json` flag from `pac pipeline list` command (unsupported)
+- Implemented text output parsing to detect pipeline presence
+- Reference: [Microsoft Learn - pac pipeline](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/pipeline)
+
+**Get-PipelineInventory.ps1 - Output Column Updates**
+- `IsManaged` and `CreatedTime` now show placeholder values
+- These fields are not returned by `pac admin list --json`
+- Added notes directing users to verify in admin portal
+
+**Send-OwnerNotifications.ps1 - Application Permissions Support (MEDIUM)**
+- Added `-SenderEmail` parameter to support application permissions
+- When `-SenderEmail` is provided, uses explicit user ID instead of "me"
+- Enables fully automated notification workflows with service principals
+- Updated documentation to clarify both delegated and application permissions are supported
+
+**PORTAL_WALKTHROUGH.md - Missing Prerequisite (LOW)**
+- Added Managed Environment requirement for target environments
+- Starting February 2026, Microsoft requires all pipeline targets to be Managed Environments
+- Added link to Microsoft Learn documentation
+
+#### Changed
+
+- Version bumped to 1.0.5 across all scripts
+- src/README.md updated with corrected output columns and new parameter
+- Clarified CLI command requirements in script comments
+
+### Technical Review Summary
+
+| Finding | Severity | Status |
+|---------|----------|--------|
+| `pac env list --json` invalid | CRITICAL | ✅ Fixed |
+| JSON property names wrong | CRITICAL | ✅ Fixed |
+| `pac pipeline list --json` unsupported | HIGH | ✅ Fixed |
+| Application permissions not supported | MEDIUM | ✅ Fixed |
+| Missing Managed Environment prereq | LOW | ✅ Fixed |
+
+### Migration Notes
+
+If you implemented v1.0.3 or v1.0.4:
+1. Replace scripts with v1.0.5 versions - previous versions will not execute correctly
+2. If using application permissions for notifications, add `-SenderEmail` parameter
+3. Note that `IsManaged` and `CreatedTime` columns now require manual verification
+
+---
+
 ## [1.0.4] - January 2026
 
 ### Post-Review Enhancements

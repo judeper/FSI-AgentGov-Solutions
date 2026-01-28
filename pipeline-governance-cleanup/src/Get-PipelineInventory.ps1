@@ -73,11 +73,11 @@ function Get-PowerPlatformEnvironments {
     Write-Host "Retrieving Power Platform environments..." -ForegroundColor Cyan
 
     try {
-        # Use pac env list to get all environments
-        $envJson = pac env list --json 2>&1
+        # Use pac admin list to get all environments (pac env list does not support --json)
+        $envJson = pac admin list --json 2>&1
 
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to list environments. Ensure you are authenticated with pac auth create."
+            Write-Error "Failed to list environments. Ensure you are authenticated with pac auth create and have Power Platform Admin role."
             return $null
         }
 
@@ -98,24 +98,32 @@ function Test-EnvironmentPipelines {
     )
 
     try {
-        $result = pac pipeline list --environment $EnvironmentId --json 2>&1
+        # Note: pac pipeline list does NOT support --json, so we parse text output
+        $result = pac pipeline list --environment $EnvironmentId 2>&1
+        $resultText = $result -join "`n"
 
         if ($LASTEXITCODE -ne 0) {
             # Check if it's a "no pipelines" message vs actual error
-            $resultText = $result -join " "
-            if ($resultText -match "No pipelines found" -or $resultText -match "no records") {
+            if ($resultText -match "No pipelines found" -or $resultText -match "no records" -or $resultText -match "0 pipeline") {
                 return @{ HasPipelines = "No"; Notes = "" }
             }
-            return @{ HasPipelines = "Unknown"; Notes = "Unable to query: $resultText" }
+            return @{ HasPipelines = "Unknown"; Notes = "Unable to query: $($resultText.Substring(0, [Math]::Min(100, $resultText.Length)))" }
         }
 
-        $pipelines = $result | ConvertFrom-Json
+        # Parse text output - look for pipeline entries (lines with GUIDs typically indicate pipelines)
+        # The output format is tabular with headers like "Pipeline Name", "Pipeline Id", etc.
+        $lines = $result | Where-Object { $_ -match "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" }
 
-        if ($null -eq $pipelines -or $pipelines.Count -eq 0) {
+        if ($null -eq $lines -or @($lines).Count -eq 0) {
+            # No GUIDs found, likely no pipelines
+            if ($resultText -match "No pipelines" -or $resultText -match "0 pipeline") {
+                return @{ HasPipelines = "No"; Notes = "" }
+            }
             return @{ HasPipelines = "No"; Notes = "" }
         }
 
-        return @{ HasPipelines = "Yes"; Notes = "$($pipelines.Count) pipeline(s) found" }
+        $pipelineCount = @($lines).Count
+        return @{ HasPipelines = "Yes"; Notes = "$pipelineCount pipeline(s) found" }
     }
     catch {
         return @{ HasPipelines = "Unknown"; Notes = "Error: $_" }
@@ -126,7 +134,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.3 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.5 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -156,7 +164,13 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
 
     foreach ($env in $environments) {
         $index++
-        Write-Progress -Activity "Processing environments" -Status "$index of $($environments.Count): $($env.DisplayName)" -PercentComplete (($index / $environments.Count) * 100)
+        # pac admin list --json returns properties with spaces: "Environment", "Environment Id", "Type", "Environment Url", "Organization Id"
+        $envName = $env.Environment
+        $envId = $env.'Environment Id'
+        $envType = $env.Type
+        $envUrl = $env.'Environment Url'
+
+        Write-Progress -Activity "Processing environments" -Status "$index of $($environments.Count): $envName" -PercentComplete (($index / $environments.Count) * 100)
 
         # Determine compliance status based on designated host
         $complianceStatus = "Unknown"
@@ -170,8 +184,8 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
         # Probe for pipelines if requested
         $pipelineStatus = @{ HasPipelines = "[Not Probed]"; Notes = "" }
         if ($ProbePipelines) {
-            Write-Verbose "Probing pipelines for $($env.DisplayName)..."
-            $pipelineStatus = Test-EnvironmentPipelines -EnvironmentId $env.EnvironmentId
+            Write-Verbose "Probing pipelines for $envName..."
+            $pipelineStatus = Test-EnvironmentPipelines -EnvironmentId $envId
         }
 
         # Build notes field
@@ -186,12 +200,14 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
         }
 
         $result = [PSCustomObject]@{
-            EnvironmentId       = $env.EnvironmentId
-            EnvironmentName     = $env.DisplayName
-            EnvironmentType     = $env.EnvironmentType
-            EnvironmentUrl      = $env.EnvironmentUrl
-            IsManaged           = $env.IsManaged
-            CreatedTime         = $env.CreatedTime
+            EnvironmentId       = $envId
+            EnvironmentName     = $envName
+            EnvironmentType     = $envType
+            EnvironmentUrl      = $envUrl
+            # Note: IsManaged is not returned by pac admin list --json
+            # Users should verify Managed Environment status in admin portal
+            IsManaged           = "[Check Admin Portal]"
+            CreatedTime         = "[Not Available]"
             # The following fields cannot be populated via API - manual inspection required
             PipelinesHostId     = "[Manual Check Required]"
             HasPipelinesEnabled = $pipelineStatus.HasPipelines
@@ -223,7 +239,8 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
     Write-Host "  Inventory Summary" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "Total Environments: $($results.Count)"
-    Write-Host "Managed Environments: $(($results | Where-Object { $_.IsManaged -eq $true }).Count)"
+    # Note: Managed Environment status requires admin portal verification
+    # pac admin list does not include this information
 
     if ($ProbePipelines) {
         $withPipelines = ($results | Where-Object { $_.HasPipelinesEnabled -eq "Yes" }).Count

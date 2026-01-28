@@ -49,12 +49,14 @@ CSV file with columns:
 - EnvironmentName
 - EnvironmentType
 - EnvironmentUrl
-- IsManaged
-- CreatedTime
+- IsManaged (requires admin portal verification - not available from CLI)
+- CreatedTime (not available from CLI)
 - PipelinesHostId (requires manual verification)
 - HasPipelinesEnabled ("Yes", "No", "Unknown", or "[Not Probed]")
 - ComplianceStatus (requires manual verification)
 - Notes (pipeline count or error details)
+
+> **Note:** The `pac admin list` command does not return IsManaged or CreatedTime. Verify Managed Environment status in the Power Platform Admin Center.
 
 ### Limitations
 
@@ -76,7 +78,11 @@ Sends email notifications to environment/pipeline owners via Microsoft Graph.
 ### Prerequisites
 
 - Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
-- Mail.Send permission (delegated only - interactive sign-in required)
+- Mail.Send permission (delegated or application)
+
+**Authentication modes:**
+- **Delegated (default)**: Uses interactive sign-in, sends email as signed-in user
+- **Application**: Requires `-SenderEmail` parameter to specify sending user
 
 ### Input CSV Format
 
@@ -115,6 +121,7 @@ Sends email notifications to environment/pipeline owners via Microsoft Graph.
 | SupportEmail | No | platform-ops@company.com | Support team email |
 | MigrationUrl | No | (placeholder) | URL for migration request form |
 | ExemptionUrl | No | (placeholder) | URL for exemption request form |
+| SenderEmail | No | (empty) | Email address of sender (required for application permissions) |
 
 ---
 

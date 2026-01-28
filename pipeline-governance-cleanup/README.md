@@ -379,7 +379,7 @@ This solution supports:
 
 ## Version
 
-1.0.4 - January 2026
+1.0.5 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

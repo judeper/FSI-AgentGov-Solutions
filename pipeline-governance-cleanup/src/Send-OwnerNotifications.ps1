@@ -37,7 +37,11 @@
 .NOTES
     Prerequisites:
     - Microsoft Graph PowerShell SDK
-    - Mail.Send permission (delegated only - interactive sign-in required)
+    - Mail.Send permission (delegated or application)
+
+    Authentication modes:
+    - Delegated (default): Uses interactive sign-in, sends as signed-in user
+    - Application: Requires -SenderEmail parameter, sends as specified user
 
     The input CSV must contain these columns:
     - OwnerEmail: Email address of the owner to notify
@@ -67,7 +71,10 @@ param(
     [string]$MigrationUrl = "https://company.service-now.com/pipeline-migration",
 
     [Parameter(Mandatory = $false)]
-    [string]$ExemptionUrl = "https://company.service-now.com/pipeline-exemption"
+    [string]$ExemptionUrl = "https://company.service-now.com/pipeline-exemption",
+
+    [Parameter(Mandatory = $false)]
+    [string]$SenderEmail = ""
 )
 
 # Build email body from template
@@ -159,7 +166,8 @@ function Send-GraphEmail {
     param(
         [string]$To,
         [string]$Subject,
-        [string]$Body
+        [string]$Body,
+        [string]$Sender = ""
     )
 
     $message = @{
@@ -180,8 +188,11 @@ function Send-GraphEmail {
         saveToSentItems = $true
     }
 
+    # Determine UserId: use explicit sender for application permissions, "me" for delegated
+    $userId = if ([string]::IsNullOrEmpty($Sender)) { "me" } else { $Sender }
+
     try {
-        Send-MgUserMail -UserId "me" -BodyParameter $message -ErrorAction Stop
+        Send-MgUserMail -UserId $userId -BodyParameter $message -ErrorAction Stop
         return $true
     }
     catch {
@@ -194,7 +205,7 @@ function Send-GraphEmail {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.3 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.5 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -251,6 +262,10 @@ You may need to manually add owner information to your inventory before sending 
     # Connect to Microsoft Graph if not in test mode
     if (-not $TestMode) {
         Write-Host "Connecting to Microsoft Graph..." -ForegroundColor Cyan
+        if (-not [string]::IsNullOrEmpty($SenderEmail)) {
+            Write-Host "Using application permissions with sender: $SenderEmail" -ForegroundColor Yellow
+            Write-Host "Note: Ensure you have connected with application credentials before running this script." -ForegroundColor Yellow
+        }
         try {
             Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop
             Write-Host "Connected to Microsoft Graph" -ForegroundColor Green
@@ -301,7 +316,7 @@ You may need to manually add owner information to your inventory before sending 
         }
         else {
             if ($PSCmdlet.ShouldProcess($record.OwnerEmail, "Send notification email")) {
-                $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body
+                $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body -Sender $SenderEmail
                 if ($success) {
                     $sent++
                     Write-Verbose "Sent notification to $($record.OwnerEmail)"

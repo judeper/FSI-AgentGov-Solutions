@@ -23,6 +23,9 @@ Before starting, ensure you have:
 - [ ] **Power Platform Pipelines app** installed on the host
 - [ ] Target environment ID (GUID) to force-link
 - [ ] Documentation of current pipeline ownership (for communication)
+- [ ] **Target environment is a Managed Environment** - Pipeline targets must be Managed Environments
+
+> **Important:** Starting February 2026, Microsoft requires all pipeline target environments to be Managed Environments. If your target environment is not managed, enable it in Power Platform Admin Center before force-linking. See [Microsoft Learn: Managed Environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview).
 
 ---
 
