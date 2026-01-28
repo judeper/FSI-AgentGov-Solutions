@@ -15,6 +15,8 @@ Quick deployment checklist for the Pipeline Governance Cleanup solution.
 - [ ] Confirm Power Platform Admin role assigned
 - [ ] **[MANUAL]** Install Power Platform Pipelines app on host environment
 - [ ] **[MANUAL]** Verify Deployment Pipeline Configuration app is accessible
+- [ ] **[MANUAL]** Verify pipelines host is a Managed Environment
+- [ ] **[MANUAL]** Verify target environments are Managed Environments (required starting Feb 2026)
 - [ ] Install Power Platform CLI (`pac`): [Download](https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction)
 - [ ] Install Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
 
@@ -80,6 +82,8 @@ See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
 - [ ] Review test output for correctness
 - [ ] Send actual notifications (remove `-TestMode`)
 - [ ] Update tracking: Status = "Notified"
+
+> **Tip:** For automation with service principals, add `-SenderEmail "noreply@contoso.com"` to use application permissions instead of delegated.
 
 ---
 
@@ -198,9 +202,10 @@ See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for flow setup.
 
 | Task | Status | Method |
 |------|--------|--------|
-| List environments | ✓ Automated | PowerShell + PAC CLI |
-| Identify pipeline configs | **MANUAL** | Admin Portal inspection |
-| Send notifications | ✓ Automated | PowerShell + Graph API |
+| List environments | ✓ Automated | PowerShell + `pac admin list --json` |
+| Detect pipeline presence | ✓ Automated | PowerShell + `pac pipeline list` (text parsing) |
+| Identify pipeline host | **MANUAL** | Admin Portal inspection |
+| Send notifications | ✓ Automated | PowerShell + Graph API (delegated or application) |
 | Process exemptions | **MANUAL** | Human review |
 | Force-link environments | **MANUAL** | Admin Portal UI |
 | Monitor deployments | ✓ Automated | Power Automate triggers |

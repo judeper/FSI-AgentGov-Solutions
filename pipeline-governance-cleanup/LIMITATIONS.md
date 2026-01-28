@@ -54,6 +54,8 @@ There is no CLI command to link or force-link environments to a pipelines host.
 pac pipeline list --environment <env-id>
 ```
 
+> **Note:** The `pac pipeline list` command does not support `--json` output. The script parses text output to detect pipeline presence.
+
 This returns pipelines that deploy TO the environment (as a target stage). Use the `-ProbePipelines` switch in `Get-PipelineInventory.ps1` to automate this check across all environments.
 
 **What CANNOT be automated:** Determining which host environment owns/hosts the pipeline configuration. The association is implicit - a pipeline belongs to whichever environment's Dataverse database contains it. There is no field in the `DeploymentPipeline` table (or related tables) that indicates which host environment the pipeline belongs to.
@@ -91,10 +93,10 @@ Despite the limitations above, several governance tasks can be automated:
 
 | Task | Method | Notes |
 |------|--------|-------|
-| List all environments | PowerShell + PAC CLI | Full automation |
-| Export environment metadata | PowerShell | Environment type, managed status, etc. |
-| Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
-| Send notification emails | Microsoft Graph API | Full automation |
+| List all environments | PowerShell + PAC CLI | Uses `pac admin list --json` |
+| Export environment metadata | PowerShell | Type, URL (IsManaged requires portal check) |
+| Detect pipeline presence | PowerShell + PAC CLI | Uses `pac pipeline list` (text parsing, no --json) |
+| Send notification emails | Microsoft Graph API | Supports delegated and application permissions |
 | Post Teams alerts | Power Automate | Full automation |
 | Monitor deployments | Power Automate triggers | Event-based only |
 | Track compliance status | Custom Dataverse table | Manual updates required |

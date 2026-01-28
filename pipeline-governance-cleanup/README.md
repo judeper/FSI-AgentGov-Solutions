@@ -18,12 +18,12 @@ Discover, notify, and clean up personal Power Platform pipelines before enforcin
 
 | Capability | Status | Alternative |
 |------------|--------|-------------|
-| List all environments | **Automated** | PowerShell script via PAC CLI |
-| Detect pipeline presence | **Automated** | Use `-ProbePipelines` switch |
+| List all environments | **Automated** | `pac admin list --json` |
+| Detect pipeline presence | **Automated** | `pac pipeline list` (text parsing, no --json) |
 | Identify pipelines host association | **Manual** | Check each environment in Deployment Pipeline Configuration app |
 | Query DeploymentPipeline table via Power Automate | **Not Supported** | Use pipeline trigger events only |
 | Force-link environments | **Manual Only** | [Portal walkthrough](./PORTAL_WALKTHROUGH.md) |
-| Send owner notifications | **Automated** | PowerShell script via Microsoft Graph |
+| Send owner notifications | **Automated** | Microsoft Graph (delegated or application permissions) |
 | Monitor new deployments | **Automated** | Power Automate trigger events |
 
 See [LIMITATIONS.md](./LIMITATIONS.md) for detailed explanation of technical constraints.
@@ -48,6 +48,8 @@ You must have a designated pipelines host environment:
 3. **Install Power Platform Pipelines app** (required for Deployment Pipeline Configuration)
 4. Verify the Deployment Pipeline Configuration model-driven app is accessible
 5. Note the environment ID for configuration
+
+> **Important:** Starting February 2026, Microsoft requires all pipeline target environments to be Managed Environments. Verify your target environments are managed before force-linking. See [Microsoft Learn: Managed Environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview).
 
 See [Microsoft Learn: Set Up Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/set-up-pipelines) for host environment setup.
 

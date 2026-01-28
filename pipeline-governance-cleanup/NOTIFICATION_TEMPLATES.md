@@ -89,12 +89,21 @@ outputs('Get_a_row_by_ID')?['internalemailaddress']
 For simpler implementation, use the PowerShell notification script instead of Power Automate:
 
 ```powershell
+# Using delegated permissions (interactive sign-in)
 .\src\Send-OwnerNotifications.ps1 `
     -InputPath ".\non-compliant-environments.csv" `
     -EnforcementDate "2026-03-01"
+
+# Using application permissions (service principal automation)
+.\src\Send-OwnerNotifications.ps1 `
+    -InputPath ".\non-compliant-environments.csv" `
+    -EnforcementDate "2026-03-01" `
+    -SenderEmail "noreply@contoso.com"
 ```
 
 The CSV must include `OwnerEmail`, `EnvironmentName`, and `EnvironmentId` columns.
+
+> **Tip:** Use `-SenderEmail` for automated pipelines that cannot perform interactive sign-in.
 
 ---
 

@@ -66,15 +66,17 @@ Exports all Power Platform environments to CSV for review, with optional pipelin
 | EnvironmentName | Display name |
 | EnvironmentType | Production, Sandbox, Developer, etc. |
 | EnvironmentUrl | Dataverse URL |
-| IsManaged | Whether environment is managed |
-| CreatedTime | Creation timestamp |
+| IsManaged | [Check Admin Portal] - not available from `pac admin list` |
+| CreatedTime | [Not Available] - not available from `pac admin list` |
 | PipelinesHostId | [Manual Check Required] - cannot be determined via API |
 | HasPipelinesEnabled | "Yes", "No", "Unknown", or "[Not Probed]" |
 | ComplianceStatus | Requires manual verification |
 | Notes | Pipeline count or error details |
 
+> **Note:** The `pac admin list --json` command does not return IsManaged or CreatedTime. Verify Managed Environment status in the Power Platform Admin Center.
+
 **What `-ProbePipelines` does:**
-- Runs `pac pipeline list --environment <id>` for each environment
+- Runs `pac pipeline list --environment <id>` for each environment (note: `--json` is not supported, text output is parsed)
 - Detects whether pipelines deploy TO the environment (as a target stage)
 - Populates `HasPipelinesEnabled` with "Yes" (with count), "No", or "Unknown"
 
@@ -92,7 +94,11 @@ Sends governance notification emails to environment/pipeline owners.
 
 **Prerequisites:**
 - Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
-- Mail.Send permission (run `Connect-MgGraph -Scopes "Mail.Send"`)
+- Mail.Send permission (delegated or application)
+
+**Authentication modes:**
+- **Delegated (default)**: Uses interactive sign-in, sends email as signed-in user
+- **Application**: Requires `-SenderEmail` parameter to specify sending user
 
 **Input CSV requirements:**
 
@@ -112,13 +118,20 @@ Sends governance notification emails to environment/pipeline owners.
     -EnforcementDate "2026-03-01" `
     -TestMode
 
-# Send actual notifications
+# Send actual notifications (delegated permissions - interactive sign-in)
 .\src\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SupportEmail "platform-ops@contoso.com" `
     -MigrationUrl "https://contoso.service-now.com/migrate" `
     -ExemptionUrl "https://contoso.service-now.com/exemption"
+
+# Send using application permissions (service principal)
+.\src\Send-OwnerNotifications.ps1 `
+    -InputPath ".\reports\non-compliant.csv" `
+    -EnforcementDate "2026-03-01" `
+    -SenderEmail "noreply@contoso.com" `
+    -SupportEmail "platform-ops@contoso.com"
 ```
 
 ---
