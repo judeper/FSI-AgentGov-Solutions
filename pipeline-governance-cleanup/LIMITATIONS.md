@@ -48,17 +48,25 @@ There is no CLI command to link or force-link environments to a pipelines host.
 
 ### 3. Cannot Identify Pipelines Host Association via API
 
-**The problem:** There is no field in the `DeploymentPipeline` table (or related tables) that indicates which host environment the pipeline belongs to. The association is implicit - a pipeline belongs to whichever environment's Dataverse database contains it.
+**What CAN be automated:** You can detect whether an environment has pipelines using:
+
+```powershell
+pac pipeline list --environment <env-id>
+```
+
+This returns pipelines that deploy TO the environment (as a target stage). Use the `-ProbePipelines` switch in `Get-PipelineInventory.ps1` to automate this check across all environments.
+
+**What CANNOT be automated:** Determining which host environment owns/hosts the pipeline configuration. The association is implicit - a pipeline belongs to whichever environment's Dataverse database contains it. There is no field in the `DeploymentPipeline` table (or related tables) that indicates which host environment the pipeline belongs to.
 
 **Why this matters:** You cannot programmatically determine "which environments have pipelines hosted outside the designated host" because:
-1. You can't query the DeploymentPipeline table
+1. You can't query the DeploymentPipeline table via standard APIs
 2. Even if you could, there's no "host environment ID" field
-3. Each environment's pipelines live in that environment's Dataverse
+3. The pipeline-to-host relationship is implicit (the host is where the pipeline record exists)
 
-**Alternative:**
+**Alternative for host identification:**
 1. List all environments via PowerShell/PAC CLI
-2. Manually check each environment for the Pipelines app
-3. Use the Deployment Pipeline Configuration app to see linked environments
+2. Use `-ProbePipelines` to identify environments with pipelines configured
+3. Manually check each environment with pipelines in the Deployment Pipeline Configuration app to see which host they're linked to
 4. Build your own tracking table/spreadsheet
 
 ---
@@ -85,7 +93,7 @@ Despite the limitations above, several governance tasks can be automated:
 |------|--------|-------|
 | List all environments | PowerShell + PAC CLI | Full automation |
 | Export environment metadata | PowerShell | Environment type, managed status, etc. |
-| Resolve user emails | Microsoft Graph API | Look up owner details |
+| Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
 | Send notification emails | Microsoft Graph API | Full automation |
 | Post Teams alerts | Power Automate | Full automation |
 | Monitor deployments | Power Automate triggers | Event-based only |
@@ -217,7 +225,7 @@ Until Microsoft provides APIs:
 | Can't query DeploymentPipeline | **Critical** | Use triggers only |
 | No host association field | **High** | Manual verification |
 | Force-link is UI-only | **High** | Documented procedure |
-| Can't detect all pipelines | **Medium** | Event-based monitoring |
+| Can't detect host for pipelines | **Medium** | Use `-ProbePipelines` + manual host verification |
 
 **Bottom line:** This solution automates what can be automated (discovery, notification, monitoring) and provides clear documentation for the manual steps that remain unavoidable.
 

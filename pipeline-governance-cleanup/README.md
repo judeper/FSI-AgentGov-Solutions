@@ -19,7 +19,8 @@ Discover, notify, and clean up personal Power Platform pipelines before enforcin
 | Capability | Status | Alternative |
 |------------|--------|-------------|
 | List all environments | **Automated** | PowerShell script via PAC CLI |
-| Identify pipeline configurations | **Manual** | Check each environment in admin portal |
+| Detect pipeline presence | **Automated** | Use `-ProbePipelines` switch |
+| Identify pipelines host association | **Manual** | Check each environment in Deployment Pipeline Configuration app |
 | Query DeploymentPipeline table via Power Automate | **Not Supported** | Use pipeline trigger events only |
 | Force-link environments | **Manual Only** | [Portal walkthrough](./PORTAL_WALKTHROUGH.md) |
 | Send owner notifications | **Automated** | PowerShell script via Microsoft Graph |
@@ -140,17 +141,17 @@ For tracking cleanup progress, create a custom table:
 
 ### Step 1: Run Environment Inventory
 
-Use the PowerShell script to list all environments:
+Use the PowerShell script to list all environments and detect pipelines:
 
 ```powershell
 # Authenticate to Power Platform
 pac auth create
 
-# Run inventory script
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
+# Run inventory script with pipeline detection
+.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
 ```
 
-This produces a CSV with all environments. **Manual review is required** to identify which environments have pipeline configurations outside your designated host.
+This produces a CSV with all environments and indicates which have pipelines (`HasPipelinesEnabled` column). **Manual review is required** to identify which pipelines host those environments are linked to.
 
 ### Step 2: Manual Pipeline Assessment
 
@@ -281,7 +282,7 @@ This solution supports:
 
 ## Version
 
-1.0.2 - January 2026
+1.0.3 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

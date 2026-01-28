@@ -37,7 +37,7 @@
 .NOTES
     Prerequisites:
     - Microsoft Graph PowerShell SDK
-    - Mail.Send permission (delegated or application)
+    - Mail.Send permission (delegated only - interactive sign-in required)
 
     The input CSV must contain these columns:
     - OwnerEmail: Email address of the owner to notify
@@ -194,7 +194,7 @@ function Send-GraphEmail {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.2 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.3 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 

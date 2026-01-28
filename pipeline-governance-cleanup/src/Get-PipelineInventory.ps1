@@ -1,18 +1,16 @@
 <#
 .SYNOPSIS
-    Exports Power Platform pipeline inventory for governance review.
+    Exports Power Platform Dataverse environment inventory for governance review.
 
 .DESCRIPTION
-    Uses Power Platform CLI and Microsoft Graph to:
-    - List all environments in tenant
-    - Identify pipeline configurations per environment
-    - Export pipeline ownership and status
-    - Resolve owner email addresses via Microsoft Graph
+    Uses Power Platform CLI to:
+    - List all Dataverse environments in tenant
+    - Optionally probe each environment for pipeline configurations
 
     IMPORTANT LIMITATIONS:
-    - Cannot directly query DeploymentPipeline table via API
     - Cannot identify pipelines host associations automatically
-    - Manual correlation required to identify non-compliant pipelines
+    - Cannot query DeploymentPipeline table directly
+    - Manual correlation required for non-compliant pipeline identification
 
 .PARAMETER OutputPath
     Path for the CSV output file. Defaults to PipelineInventory.csv in current directory.
@@ -20,24 +18,27 @@
 .PARAMETER DesignatedHostId
     Environment ID of your designated pipelines host. Used to flag compliant environments.
 
-.PARAMETER IncludeUserDetails
-    If specified, resolves owner email addresses via Microsoft Graph (requires User.Read.All).
+.PARAMETER ProbePipelines
+    If specified, probes each environment to check for pipeline configurations using
+    'pac pipeline list --environment'. This can detect whether pipelines deploy TO an
+    environment but cannot determine the host environment association.
 
 .EXAMPLE
     .\Get-PipelineInventory.ps1 -OutputPath ".\reports\inventory.csv"
 
 .EXAMPLE
-    .\Get-PipelineInventory.ps1 -DesignatedHostId "00000000-0000-0000-0000-000000000000" -IncludeUserDetails
+    .\Get-PipelineInventory.ps1 -OutputPath ".\reports\inventory.csv" -ProbePipelines
+
+.EXAMPLE
+    .\Get-PipelineInventory.ps1 -DesignatedHostId "00000000-0000-0000-0000-000000000000" -ProbePipelines
 
 .NOTES
     Prerequisites:
     - Power Platform CLI (pac) installed and authenticated
-    - Microsoft Graph PowerShell SDK (if using -IncludeUserDetails)
     - Power Platform Admin role
 
     Permissions Required:
     - Power Platform: Environment Admin or Global Admin
-    - Microsoft Graph: User.Read.All (for email resolution)
 
     This script provides INVENTORY ONLY. Force-linking environments to a custom
     pipelines host requires manual action in the Deployment Pipeline Configuration app.
@@ -53,7 +54,7 @@ param(
     [string]$DesignatedHostId = "",
 
     [Parameter(Mandatory = $false)]
-    [switch]$IncludeUserDetails
+    [switch]$ProbePipelines
 )
 
 # Ensure PAC CLI is available
@@ -90,31 +91,42 @@ function Get-PowerPlatformEnvironments {
     }
 }
 
-# Get user details from Microsoft Graph
-function Get-UserEmailFromGraph {
+# Probe an environment for pipeline configurations
+function Test-EnvironmentPipelines {
     param(
-        [string]$UserId
+        [string]$EnvironmentId
     )
 
-    if ([string]::IsNullOrEmpty($UserId)) {
-        return "Unknown"
-    }
-
     try {
-        $user = Get-MgUser -UserId $UserId -Property "mail,userPrincipalName" -ErrorAction Stop
-        if ($user.Mail) { return $user.Mail } else { return $user.UserPrincipalName }
+        $result = pac pipeline list --environment $EnvironmentId --json 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            # Check if it's a "no pipelines" message vs actual error
+            $resultText = $result -join " "
+            if ($resultText -match "No pipelines found" -or $resultText -match "no records") {
+                return @{ HasPipelines = "No"; Notes = "" }
+            }
+            return @{ HasPipelines = "Unknown"; Notes = "Unable to query: $resultText" }
+        }
+
+        $pipelines = $result | ConvertFrom-Json
+
+        if ($null -eq $pipelines -or $pipelines.Count -eq 0) {
+            return @{ HasPipelines = "No"; Notes = "" }
+        }
+
+        return @{ HasPipelines = "Yes"; Notes = "$($pipelines.Count) pipeline(s) found" }
     }
     catch {
-        Write-Verbose "Could not resolve user $UserId : $_"
-        return "Unable to resolve"
+        return @{ HasPipelines = "Unknown"; Notes = "Error: $_" }
     }
 }
 
 # Main execution
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "  Power Platform Pipeline Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.2 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.3 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -127,18 +139,9 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
         exit 1
     }
 
-    # Connect to Microsoft Graph if user details requested
-    if ($IncludeUserDetails) {
-        Write-Host "Connecting to Microsoft Graph for user resolution..." -ForegroundColor Cyan
-        try {
-            Connect-MgGraph -Scopes "User.Read.All" -NoWelcome -ErrorAction Stop
-            Write-Host "Connected to Microsoft Graph" -ForegroundColor Green
-        }
-        catch {
-            Write-Warning "Could not connect to Microsoft Graph. User emails will not be resolved."
-            Write-Warning "Error: $_"
-            $IncludeUserDetails = $false
-        }
+    if ($ProbePipelines) {
+        Write-Host "Pipeline probing enabled - will check each environment for pipelines" -ForegroundColor Yellow
+        Write-Host ""
     }
 
     # Get all environments
@@ -164,6 +167,24 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
             $complianceStatus = "Requires Manual Verification"
         }
 
+        # Probe for pipelines if requested
+        $pipelineStatus = @{ HasPipelines = "[Not Probed]"; Notes = "" }
+        if ($ProbePipelines) {
+            Write-Verbose "Probing pipelines for $($env.DisplayName)..."
+            $pipelineStatus = Test-EnvironmentPipelines -EnvironmentId $env.EnvironmentId
+        }
+
+        # Build notes field
+        $notes = if ($pipelineStatus.Notes) {
+            $pipelineStatus.Notes
+        }
+        elseif (-not $ProbePipelines) {
+            "Run with -ProbePipelines or verify manually"
+        }
+        else {
+            ""
+        }
+
         $result = [PSCustomObject]@{
             EnvironmentId       = $env.EnvironmentId
             EnvironmentName     = $env.DisplayName
@@ -173,9 +194,9 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
             CreatedTime         = $env.CreatedTime
             # The following fields cannot be populated via API - manual inspection required
             PipelinesHostId     = "[Manual Check Required]"
-            HasPipelinesEnabled = "[Manual Check Required]"
+            HasPipelinesEnabled = $pipelineStatus.HasPipelines
             ComplianceStatus    = $complianceStatus
-            Notes               = "Run manual verification in Deployment Pipeline Configuration app"
+            Notes               = $notes
         }
 
         $results += $result
@@ -203,19 +224,31 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "Total Environments: $($results.Count)"
     Write-Host "Managed Environments: $(($results | Where-Object { $_.IsManaged -eq $true }).Count)"
+
+    if ($ProbePipelines) {
+        $withPipelines = ($results | Where-Object { $_.HasPipelinesEnabled -eq "Yes" }).Count
+        $withoutPipelines = ($results | Where-Object { $_.HasPipelinesEnabled -eq "No" }).Count
+        $unknown = ($results | Where-Object { $_.HasPipelinesEnabled -eq "Unknown" }).Count
+        Write-Host "Environments with Pipelines: $withPipelines"
+        Write-Host "Environments without Pipelines: $withoutPipelines"
+        if ($unknown -gt 0) {
+            Write-Host "Unable to Probe: $unknown" -ForegroundColor Yellow
+        }
+    }
+
     Write-Host "Output File: $OutputPath"
     Write-Host ""
-    Write-Host "IMPORTANT: This inventory lists environments only." -ForegroundColor Yellow
-    Write-Host "To identify which environments have pipelines or are linked to a" -ForegroundColor Yellow
-    Write-Host "specific pipelines host, you must manually check each environment" -ForegroundColor Yellow
-    Write-Host "using the Deployment Pipeline Configuration app." -ForegroundColor Yellow
+
+    if (-not $ProbePipelines) {
+        Write-Host "TIP: Run with -ProbePipelines to detect pipeline configurations automatically" -ForegroundColor Yellow
+        Write-Host ""
+    }
+
+    Write-Host "IMPORTANT: This inventory lists environments and pipeline presence only." -ForegroundColor Yellow
+    Write-Host "To identify which PIPELINES HOST an environment is linked to," -ForegroundColor Yellow
+    Write-Host "you must manually check using the Deployment Pipeline Configuration app." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "See PORTAL_WALKTHROUGH.md for manual verification procedures." -ForegroundColor Yellow
-
-    # Disconnect from Graph if connected
-    if ($IncludeUserDetails) {
-        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-    }
 }
 
 # Run main function

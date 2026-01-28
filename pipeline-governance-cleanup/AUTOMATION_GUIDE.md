@@ -11,6 +11,7 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 | Capability | Method | Documentation |
 |------------|--------|---------------|
 | List all environments | PowerShell + PAC CLI | [src/Get-PipelineInventory.ps1](./src/Get-PipelineInventory.ps1) |
+| Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
 | Send owner notifications | PowerShell + Microsoft Graph | [src/Send-OwnerNotifications.ps1](./src/Send-OwnerNotifications.ps1) |
 | Monitor deployment events | Power Automate triggers | This document (below) |
 | Alert on new pipelines | Power Automate + Teams | This document (below) |
@@ -32,7 +33,7 @@ See [LIMITATIONS.md](./LIMITATIONS.md) for technical details.
 
 ### Get-PipelineInventory.ps1
 
-Exports all Power Platform environments to CSV for review.
+Exports all Power Platform environments to CSV for review, with optional pipeline detection.
 
 **Location:** `src/Get-PipelineInventory.ps1`
 
@@ -42,9 +43,20 @@ Exports all Power Platform environments to CSV for review.
 # Basic usage - export all environments
 .\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
 
-# With user email resolution (requires Graph permissions)
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -IncludeUserDetails
+# With pipeline probing (recommended) - detects which environments have pipelines
+.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+
+# With designated host flag for compliance tracking
+.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines -DesignatedHostId "00000000-0000-0000-0000-000000000000"
 ```
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| OutputPath | No | Path for CSV output (default: `.\PipelineInventory.csv`) |
+| ProbePipelines | No | Probe each environment for pipeline configurations |
+| DesignatedHostId | No | Environment ID of your designated pipelines host |
 
 **Output columns:**
 
@@ -56,17 +68,21 @@ Exports all Power Platform environments to CSV for review.
 | EnvironmentUrl | Dataverse URL |
 | IsManaged | Whether environment is managed |
 | CreatedTime | Creation timestamp |
-| PipelinesHostId | [Manual Check Required] |
-| HasPipelinesEnabled | [Manual Check Required] |
+| PipelinesHostId | [Manual Check Required] - cannot be determined via API |
+| HasPipelinesEnabled | "Yes", "No", "Unknown", or "[Not Probed]" |
 | ComplianceStatus | Requires manual verification |
-| Notes | Additional information or instructions |
+| Notes | Pipeline count or error details |
+
+**What `-ProbePipelines` does:**
+- Runs `pac pipeline list --environment <id>` for each environment
+- Detects whether pipelines deploy TO the environment (as a target stage)
+- Populates `HasPipelinesEnabled` with "Yes" (with count), "No", or "Unknown"
 
 **What this script does NOT do:**
-- It cannot identify which environments have pipelines enabled
-- It cannot determine which pipelines host an environment is linked to
-- It cannot query the DeploymentPipeline table
+- It cannot determine which pipelines HOST an environment is linked to
+- It cannot query the DeploymentPipeline table directly
 
-After running this script, you must manually verify each environment's pipeline configuration.
+After running this script, environments with `HasPipelinesEnabled = "Yes"` need manual verification in the Deployment Pipeline Configuration app to identify their host.
 
 ### Send-OwnerNotifications.ps1
 

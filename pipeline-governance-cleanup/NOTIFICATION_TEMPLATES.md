@@ -41,8 +41,8 @@ Your pipeline was created outside of our centrally governed infrastructure. To m
    - Request via: [Exemption Form Link]
 
 3. <strong>No Action Needed</strong>
-   - If you no longer need this pipeline, no action is required
-   - The pipeline will be deactivated on [Enforcement Date]
+   - If you no longer need the pipelines in this environment, no action is required
+   - The environment will be force-linked to the central host on [Enforcement Date]
 
 <strong>Questions?</strong>
 Contact the Platform Operations team at [platform-ops@company.com] or [#platform-support in Teams].
@@ -194,7 +194,7 @@ Use when owner doesn't respond to initial notification.
 ### Subject Line
 
 ```
-FINAL NOTICE: Pipeline [Pipeline Name] will be deactivated on [Date]
+FINAL NOTICE: Environment [Environment Name] will be force-linked on [Date]
 ```
 
 ### Body
@@ -202,15 +202,15 @@ FINAL NOTICE: Pipeline [Pipeline Name] will be deactivated on [Date]
 ```html
 Dear [Owner Name],
 
-This is a final reminder regarding your deployment pipeline that requires action.
+This is a final reminder regarding your Power Platform environment that requires action.
 
-<strong>Pipeline:</strong> [Pipeline Name]
-<strong>Deactivation Date:</strong> [Enforcement Date]
+<strong>Environment:</strong> [Environment Name]
+<strong>Force-Link Date:</strong> [Enforcement Date]
 <strong>Days Remaining:</strong> [Days Until Deadline]
 
-We previously notified you on [Original Notification Date] about the required migration of your pipeline to our centralized governance infrastructure.
+We previously notified you on [Original Notification Date] about the required migration of your pipelines to our centralized governance infrastructure.
 
-<strong>If no action is taken, your pipeline will be automatically deactivated on [Enforcement Date].</strong>
+<strong>If no action is taken, your environment will be force-linked to the central host on [Enforcement Date]. Pipelines configured in any previous host will no longer deploy to this environment.</strong>
 
 To prevent disruption:
 - Migrate to the central host: [Migration Link]
@@ -226,12 +226,12 @@ Platform Operations Team
 
 ## Confirmation Email Template
 
-Send after pipeline has been deactivated.
+Send after environment has been force-linked.
 
 ### Subject Line
 
 ```
-Pipeline Deactivated: [Pipeline Name]
+Environment Force-Linked: [Environment Name]
 ```
 
 ### Body
@@ -239,20 +239,20 @@ Pipeline Deactivated: [Pipeline Name]
 ```html
 Dear [Owner Name],
 
-Your deployment pipeline has been deactivated as part of our governance cleanup.
+Your environment has been force-linked to the central pipelines host as part of our governance initiative.
 
-<strong>Pipeline:</strong> [Pipeline Name]
-<strong>Deactivated On:</strong> [Deactivation Date]
-<strong>Previous Status:</strong> Active
+<strong>Environment:</strong> [Environment Name]
+<strong>Force-Linked On:</strong> [Date]
+<strong>New Pipelines Host:</strong> [Central Host Name]
 
 <strong>What This Means:</strong>
-- This pipeline can no longer be used for deployments
-- Your deployment targets are unaffected
+- Pipelines in the previous host can no longer deploy to this environment
+- New pipelines must be configured in the central pipelines host
 - Solutions previously deployed remain in place
 
-<strong>Need to Restore?</strong>
-If you need this pipeline restored, please submit a request with business justification:
-[Restoration Request Link]
+<strong>Need Deployment Access Restored?</strong>
+Contact Platform Ops if you need deployment access restored or pipelines configured in the central host:
+[Platform Ops Contact Link]
 
 Thank you for your cooperation.
 

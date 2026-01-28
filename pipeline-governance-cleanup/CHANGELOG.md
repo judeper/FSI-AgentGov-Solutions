@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.3] - January 2026
+
+### Executive Feedback Remediation
+
+This release addresses material correctness gaps identified during executive assessment.
+
+#### Fixed
+
+**Get-PipelineInventory.ps1 - Overpromising Header**
+- Updated script description to accurately reflect capabilities (environment inventory only)
+- Removed claims about "pipeline configurations per environment" and "owner email resolution via Graph"
+- Script header now honestly describes what the script does and its limitations
+
+**Get-PipelineInventory.ps1 - Dead Code Removed**
+- Removed unused `-IncludeUserDetails` parameter
+- Removed unused `Get-UserEmailFromGraph` function
+- Removed Graph connection logic that connected but never used the connection
+
+**Send-OwnerNotifications.ps1 - Permission Claim**
+- Fixed documentation: "Mail.Send permission (delegated or application)" → "Mail.Send permission (delegated only - interactive sign-in required)"
+- Code uses `Send-MgUserMail -UserId "me"` which requires delegated auth
+
+**NOTIFICATION_TEMPLATES.md - Enforcement Language Consistency**
+- Changed all "deactivated" language to "force-link" to match actual enforcement action
+- Updated escalation email template: "pipeline will be deactivated" → "environment will be force-linked"
+- Updated confirmation email template: describes force-link outcome and impact
+
+**LIMITATIONS.md - Overclaimed Constraint**
+- Updated Section 3 to acknowledge `pac pipeline list --environment` CAN detect pipeline presence
+- Clarified that host association (not pipeline existence) is what cannot be automated
+
+#### Added
+
+**Get-PipelineInventory.ps1 - Pipeline Probing**
+- New `-ProbePipelines` switch that runs `pac pipeline list --environment` for each environment
+- Populates `HasPipelinesEnabled` column with "Yes" (with count), "No", or "Unknown"
+- Materially reduces manual triage by identifying which environments have pipelines
+- Does NOT solve host-association (that still requires manual verification)
+
+**Test-EnvironmentPipelines Function**
+- New function that probes individual environments for pipeline configurations
+- Handles "no pipelines" vs actual errors gracefully
+- Returns structured result with `HasPipelines` and `Notes` fields
+
+#### Changed
+
+- Version bumped to 1.0.3 across all files
+- AUTOMATION_GUIDE.md: Added `-ProbePipelines` documentation
+- src/README.md: Updated parameters, removed Graph references, fixed permission claim
+- README.md: Updated quick start to use `-ProbePipelines`, updated limitations table
+
+### Migration Notes
+
+If you implemented v1.0.2:
+1. Update inventory scripts to use `-ProbePipelines` for automated pipeline detection
+2. Remove any references to `-IncludeUserDetails` parameter (no longer exists)
+3. Review notification templates if using "deactivated" language - update to "force-link"
+
+---
+
 ## [1.0.2] - January 2026
 
 ### Fixed

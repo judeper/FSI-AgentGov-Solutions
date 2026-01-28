@@ -11,13 +11,12 @@ PowerShell scripts and automation artifacts for pipeline governance cleanup.
 
 ## Get-PipelineInventory.ps1
 
-Exports all Power Platform environments to CSV for governance review.
+Exports all Power Platform environments to CSV for governance review, with optional pipeline detection.
 
 ### Prerequisites
 
 - Power Platform CLI (`pac`): [Install](https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction)
 - Power Platform Admin role
-- Optional: Microsoft Graph PowerShell SDK for email resolution
 
 ### Usage
 
@@ -28,9 +27,20 @@ pac auth create
 # Basic inventory export
 .\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
 
-# With user email resolution (requires Graph permissions)
-.\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -IncludeUserDetails
+# With pipeline probing (recommended)
+.\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+
+# With designated host flag
+.\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines -DesignatedHostId "00000000-0000-0000-0000-000000000000"
 ```
+
+### Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| OutputPath | No | Path for CSV output (default: `.\PipelineInventory.csv`) |
+| ProbePipelines | No | Probe each environment for pipeline configurations |
+| DesignatedHostId | No | Environment ID of your designated pipelines host |
 
 ### Output
 
@@ -42,18 +52,20 @@ CSV file with columns:
 - IsManaged
 - CreatedTime
 - PipelinesHostId (requires manual verification)
-- HasPipelinesEnabled (requires manual verification)
+- HasPipelinesEnabled ("Yes", "No", "Unknown", or "[Not Probed]")
 - ComplianceStatus (requires manual verification)
-- Notes
+- Notes (pipeline count or error details)
 
 ### Limitations
 
-This script lists environments only. It **cannot**:
-- Identify which environments have pipelines enabled
-- Determine pipelines host associations
-- Query the DeploymentPipeline table
+This script **can**:
+- Detect which environments have pipelines using `-ProbePipelines`
 
-Manual verification is required after running this script. See [PORTAL_WALKTHROUGH.md](../PORTAL_WALKTHROUGH.md).
+This script **cannot**:
+- Determine which pipelines host an environment is linked to
+- Query the DeploymentPipeline table directly
+
+Manual verification is required to identify host associations. See [PORTAL_WALKTHROUGH.md](../PORTAL_WALKTHROUGH.md).
 
 ---
 
@@ -64,7 +76,7 @@ Sends email notifications to environment/pipeline owners via Microsoft Graph.
 ### Prerequisites
 
 - Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
-- Mail.Send permission (delegated or application)
+- Mail.Send permission (delegated only - interactive sign-in required)
 
 ### Input CSV Format
 
