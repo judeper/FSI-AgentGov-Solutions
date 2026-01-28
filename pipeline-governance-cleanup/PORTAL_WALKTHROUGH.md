@@ -365,9 +365,66 @@ Keep a reference of:
 
 ---
 
+## Part 6: Reversing a Force-Link (Rollback)
+
+If you need to move an environment to a different pipelines host after it has been force-linked.
+
+### When to Use
+
+- Force-link was applied to wrong environment
+- Business requirement changed requiring different host
+- Testing/troubleshooting requires host change
+- Team reorganization requires moving to different host
+
+### Understanding Rollback
+
+There is no "unlink" operation. To reverse a force-link, you must force-link the environment to a **different** pipelines host. The environment can only be linked to ONE host at a time.
+
+### Procedure
+
+1. Open **Deployment Pipeline Configuration** app in the **NEW target host** (not the current host)
+2. Navigate to **Environments** in the left navigation
+3. Click **+ New** to add the environment
+4. Enter the environment details (Name, Environment ID)
+5. Click **Save**
+6. If prompted with "already associated" error, click **Force Link**
+7. Confirm the action when prompted
+
+### Impact of Rollback
+
+| Impact | Description |
+|--------|-------------|
+| **Immediate** | Breaks deployments from the previous host |
+| **Pipeline access** | Pipelines in previous host can no longer deploy to this environment |
+| **Maker notification** | Pipeline owners in previous host should be notified |
+| **No data loss** | Solutions in the environment are not affected |
+
+### Important Notes
+
+- Force-linking is always manual (no API or CLI support)
+- Coordinate with pipeline owners in BOTH hosts before executing
+- Document the change for audit trail
+- Test deployment from new host after rollback
+
+### Rollback Tracking
+
+Update your tracking spreadsheet with rollback details:
+
+| Field | Value |
+|-------|-------|
+| Environment ID | Target environment GUID |
+| Previous Host | Host environment being abandoned |
+| New Host | New host environment ID |
+| Rollback Date | Today's date |
+| Reason | Business justification |
+| Performed By | Admin name/email |
+
+---
+
 ## See Also
 
 - [LIMITATIONS.md](./LIMITATIONS.md) - Why this cannot be automated
 - [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) - What CAN be automated
 - [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) - Communication templates
+- [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) - Compliance evidence checklist
 - [Microsoft Learn: Custom Host Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines)

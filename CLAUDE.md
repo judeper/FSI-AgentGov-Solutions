@@ -24,9 +24,11 @@ Solutions here may address one or multiple controls from the framework.
 
 ## Solutions
 
-| Solution | Description | Type |
-|----------|-------------|------|
-| message-center-monitor | M365 Message Center monitoring for platform changes | Power Automate/Dataverse |
+| Solution | Description | Type | Version |
+|----------|-------------|------|---------|
+| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Power Automate/Dataverse | v2.0.0 |
+| [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | PowerShell/Manual | v1.0.4 |
+| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | PowerShell/KQL | v1.0.0 |
 
 ## Conventions
 

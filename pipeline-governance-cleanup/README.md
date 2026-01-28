@@ -207,6 +207,38 @@ Use Power Automate triggers to monitor for new pipeline activity:
 
 See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for trigger configuration.
 
+### Step 7: Post-Migration Cleanup
+
+After force-linking environments to the centralized host:
+
+#### 7.1 Verify Pipeline Functionality
+
+1. Run test deployment through new host
+2. Confirm target environment receives solution
+3. Validate deployment stage sequencing works correctly
+
+#### 7.2 Communicate with Makers
+
+1. Notify pipeline owners their old pipelines are now orphaned
+2. Provide guidance on creating new pipelines in central host
+3. Offer assistance with pipeline recreation if needed
+
+**Sample communication:**
+
+> Your pipeline targeting [Environment Name] has been migrated to the corporate pipelines host. Pipelines you created in your personal host can no longer deploy to this environment. To continue using pipelines, request access to the corporate host and recreate your pipeline configurations.
+
+#### 7.3 Document Migration
+
+1. Update tracking table with completion date
+2. Record any exceptions or issues encountered
+3. Note any pending follow-up items
+
+#### 7.4 Review Old Hosts
+
+1. If old host environment is now unused, consider decommissioning
+2. Retain pipelines host for audit trail per retention requirements
+3. Do not delete old host until retention period expires
+
 ## Workflow
 
 ```
@@ -244,6 +276,8 @@ Trigger-Based Monitoring (Power Automate)
 
 ## Troubleshooting
 
+### Common Issues
+
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | PAC CLI auth fails | Token expired | Run `pac auth create` to reauthenticate |
@@ -251,6 +285,68 @@ Trigger-Based Monitoring (Power Automate)
 | Cannot find pipelines app | App not installed | Install Power Platform Pipelines on host |
 | Force Link fails | Environment protected | Check for environment locks, contact support |
 | Environment not listed | Filtered by type | Ensure including all environment types |
+
+### Error Recovery Procedures
+
+#### Notification Script Fails Mid-Run
+
+**Symptoms:** Some emails sent, script error, incomplete run
+
+**Recovery:**
+
+1. Check console output for last successful email
+2. Filter CSV to remaining records (not yet notified)
+3. Re-run with filtered CSV
+4. Emails are idempotent - resending is safe (recipients may receive duplicate)
+
+**Prevention:** Use `-TestMode` first to validate CSV and connectivity.
+
+#### Force-Link Fails with "Environment Protected"
+
+**Symptoms:** Force Link button errors or environment doesn't link
+
+**Recovery:**
+
+1. Check for environment locks in Admin Center (Settings > Operations)
+2. Verify you have Deployment Pipeline Administrator role
+3. Check if environment is in a protected state (backup in progress, copy in progress)
+4. Wait 15 minutes and retry
+5. If persists, contact Microsoft Support with environment ID and error message
+
+#### Inventory Shows "Unknown" for HasPipelinesEnabled
+
+**Symptoms:** `-ProbePipelines` returns "Unknown" for some environments
+
+**Recovery:**
+
+1. This may indicate insufficient permissions for that environment
+2. Verify pac auth profile has admin access to the specific environment
+3. Some environments may not support pipeline queries (e.g., Default environment)
+4. Mark as "Manual Check Required" in tracking spreadsheet
+5. Verify pipeline status manually in admin portal
+
+#### Graph API Returns 403 Forbidden
+
+**Symptoms:** Send-OwnerNotifications fails with permission error
+
+**Recovery:**
+
+1. Verify Mail.Send permission is granted (delegated, not application)
+2. Ensure you're running as a user with mailbox (not service account)
+3. Check if conditional access policies block Graph access
+4. Try `Connect-MgGraph -Scopes "Mail.Send"` to re-consent
+
+#### Environment Appears in Wrong Host After Force-Link
+
+**Symptoms:** Environment shows in old host, not new host
+
+**Recovery:**
+
+1. Wait 15-30 minutes for propagation
+2. Refresh browser and clear cache
+3. Verify force-link was confirmed (check for confirmation dialog)
+4. If still wrong after 1 hour, re-attempt force-link from correct host
+5. Contact Microsoft Support if issue persists
 
 ## FSI Regulatory Alignment
 
@@ -268,10 +364,11 @@ This solution supports compliance with:
 | Guide | Description |
 |-------|-------------|
 | [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) | Power Automate trigger-based monitoring |
-| [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Manual force-link UI procedures |
+| [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Manual force-link UI procedures (includes rollback) |
 | [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints and alternatives |
 | [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams notification templates |
 | [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) | Quick deployment checklist |
+| [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) | Compliance evidence checklist for auditors |
 
 ## Related Controls
 
@@ -282,7 +379,7 @@ This solution supports:
 
 ## Version
 
-1.0.3 - January 2026
+1.0.4 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

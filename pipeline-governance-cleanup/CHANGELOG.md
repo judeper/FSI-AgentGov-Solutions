@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.4] - January 2026
+
+### Post-Review Enhancements
+
+This release incorporates practical enhancements identified during technical assessment review. Focus areas: operational completeness and FSI compliance alignment.
+
+#### Added
+
+**PORTAL_WALKTHROUGH.md - Rollback Procedure**
+- New Part 6: Reversing a Force-Link (Rollback)
+- Documents how to move an environment to a different host after force-link
+- Includes impact assessment and tracking requirements
+- Clarifies there is no "unlink" - only "link to different host"
+
+**README.md - Post-Migration Cleanup**
+- New Step 7: Post-Migration Cleanup
+- Covers verification, maker communication, documentation, and old host review
+- Sample communication template for notifying affected makers
+
+**README.md - Error Recovery Procedures**
+- Expanded Troubleshooting section with recovery procedures
+- Covers: notification script failures, environment protection errors, inventory unknowns, Graph API errors, propagation delays
+
+**AUDIT_CHECKLIST.md - New File**
+- Compliance evidence checklist for auditors
+- Pre-enforcement, enforcement, and post-enforcement evidence sections
+- Regulatory mapping to OCC 2011-12, FFIEC, SOX 404, FINRA 4511
+- Retention requirements guidance
+- Evidence collection tips for screenshots, emails, and CSV exports
+- Audit interview preparation guide
+
+#### Changed
+
+- PORTAL_WALKTHROUGH.md: Added reference to AUDIT_CHECKLIST.md in See Also section
+- README.md version updated to 1.0.4
+
+### Review Assessment Summary
+
+Technical review validated the solution as "production-ready" with zero critical defects. This release addresses optional enhancements that align with FSI-AgentGov framework vision:
+
+| Enhancement | Priority | Rationale |
+|-------------|----------|-----------|
+| Rollback procedure | HIGH | Practical necessity for admins |
+| Post-migration cleanup | HIGH | Completes operational story |
+| Compliance audit checklist | MEDIUM | Direct FSI alignment |
+| Error recovery procedures | MEDIUM | Operational robustness |
+
+Excluded from scope: Azure Automation integration, Azure Monitor integration, video walkthroughs.
+
+---
+
 ## [1.0.3] - January 2026
 
 ### Executive Feedback Remediation

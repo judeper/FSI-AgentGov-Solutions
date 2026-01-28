@@ -7,7 +7,8 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Description | Status |
 |----------|-------------|--------|
 | [Message Center Monitor](./message-center-monitor/) | Monitor M365 Message Center for platform changes affecting AI agents | v2.0.0 |
-| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | v1.0.2 |
+| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | v1.0.4 |
+| [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v1.0.0 |
 
 ## How to Use
 
@@ -23,6 +24,7 @@ All detailed documentation lives in each solution folder:
 
 - [Message Center Monitor](./message-center-monitor/README.md)
 - [Pipeline Governance Cleanup](./pipeline-governance-cleanup/README.md)
+- [Deny Event Correlation Report](./deny-event-correlation-report/README.md)
 
 Framework documentation:
 
