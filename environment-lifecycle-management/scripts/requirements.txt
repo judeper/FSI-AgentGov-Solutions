@@ -1,0 +1,15 @@
+# Environment Lifecycle Management - Python Dependencies
+# Python 3.10+ required
+
+# Authentication
+msal>=1.25.0
+
+# HTTP requests
+requests>=2.31.0
+
+# Azure Key Vault
+azure-identity>=1.14.0
+azure-keyvault-secrets>=4.7.0
+
+# Microsoft Graph (for SP registration)
+msgraph-sdk>=1.0.0

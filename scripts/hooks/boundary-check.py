@@ -5,7 +5,7 @@ Claude Code PreToolUse Hook: Project Boundary Check
 Intercepts Bash commands and blocks any that might operate
 outside the project directory.
 
-Usage: Configured in .claude/settings.local.json as PreToolUse hook
+Usage: Configured in .claude/settings.json as PreToolUse hook
 """
 
 import sys
@@ -13,15 +13,24 @@ import json
 import os
 import re
 import platform
+import shlex
 
 # Project root - detect dynamically based on script location
 # Script is at: {PROJECT_ROOT}/scripts/hooks/boundary-check.py
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
 
+# Companion repository - allow access to FSI-AgentGov framework repo
+FRAMEWORK_ROOT = os.path.join(os.path.dirname(PROJECT_ROOT), "FSI-AgentGov")
+
+# Claude Code global directory - needed for plans, tasks, session data, etc.
+CLAUDE_GLOBAL_DIR = os.path.expanduser("~/.claude")
+
 # Also define platform-specific patterns for detection
 IS_WINDOWS = platform.system() == "Windows"
 PROJECT_ROOT_UNIX = PROJECT_ROOT.replace("\\", "/")  # Unix-style path
+FRAMEWORK_ROOT_UNIX = FRAMEWORK_ROOT.replace("\\", "/")  # Unix-style path
+CLAUDE_GLOBAL_DIR_UNIX = CLAUDE_GLOBAL_DIR.replace("\\", "/")  # Unix-style path
 
 
 def normalize_path(path):
@@ -93,6 +102,16 @@ def check_command(command):
     if project_lower in command_lower or PROJECT_ROOT_UNIX.lower() in command_lower:
         return True, "Command explicitly targets project directory"
 
+    # Allow commands targeting companion Framework repository
+    framework_lower = FRAMEWORK_ROOT.lower()
+    if framework_lower in command_lower or FRAMEWORK_ROOT_UNIX.lower() in command_lower:
+        return True, "Command targets companion Framework repository"
+
+    # Allow commands targeting Claude Code global directory (~/.claude/)
+    claude_global_lower = CLAUDE_GLOBAL_DIR.lower()
+    if claude_global_lower in command_lower or CLAUDE_GLOBAL_DIR_UNIX.lower() in command_lower:
+        return True, "Command targets Claude global directory"
+
     # Check for any safe patterns
     for pattern in safe_patterns:
         if re.search(pattern, command_lower):
@@ -100,24 +119,36 @@ def check_command(command):
 
     # If no absolute paths detected and no risky patterns, allow
     # (relative paths are fine - they operate from current directory)
-    # On Unix, check for paths starting with / that aren't the project
+    # On Unix, check for paths starting with / that aren't the project or ~/.claude/
     if not IS_WINDOWS:
-        # Check if command has absolute paths
-        command_parts = command_lower.split()
-        has_absolute_path = False
+        # Use shlex.split for proper quote handling
+        try:
+            command_parts = shlex.split(command_lower)
+        except ValueError:
+            # Malformed quotes - fall back to simple split
+            command_parts = command_lower.split()
+
+        has_disallowed_absolute_path = False
         if command_parts:
             # Check first part and any arguments for absolute paths
             for part in command_parts:
-                if part.startswith('/') and not part.startswith(project_lower):
-                    has_absolute_path = True
+                # Strip any remaining quotes
+                part_clean = part.strip('"\'')
+                if part_clean.startswith('/'):
+                    # Allow if within project, Framework repo, or Claude global directory
+                    if (part_clean.startswith(project_lower) or
+                        part_clean.startswith(framework_lower) or
+                        part_clean.startswith(claude_global_lower)):
+                        continue
+                    has_disallowed_absolute_path = True
                     break
 
-        if not has_absolute_path:
-            return True, "No absolute paths detected"
+        if not has_disallowed_absolute_path:
+            return True, "No disallowed absolute paths detected"
 
-        # Check if any absolute path in command is within project
-        if project_lower in command_lower:
-            return True, "Command targets project directory"
+        # Check if any absolute path in command is within project, Framework, or Claude global
+        if project_lower in command_lower or framework_lower in command_lower or claude_global_lower in command_lower:
+            return True, "Command targets allowed directory"
     else:
         if not re.search(r'(?<![a-z])[a-z]:\\|^/', command_lower):
             return True, "No absolute paths detected"

@@ -1,0 +1,23 @@
+{
+  "fsi_requestnumber": "REQ-00001",
+  "fsi_environmentname": "FIN-QuarterlyReporting-PROD",
+  "fsi_environmenttype": 2,
+  "fsi_region": 1,
+  "fsi_zone": 3,
+  "fsi_zonerationale": "Environment will process quarterly financial reports containing customer account data and PII. Required for SEC 10-Q filing automation.",
+  "fsi_zoneautoflags": "CUSTOMER_PII,FINANCIAL_TRANSACTIONS,PRODUCTION_WORKLOAD",
+  "fsi_datasensitivity": 3,
+  "fsi_expectedusers": 3,
+  "fsi_securitygroupid": "12345678-1234-1234-1234-123456789012",
+  "fsi_businessjustification": "Automate quarterly financial report generation and SEC 10-Q filing process. Will reduce manual effort by 40 hours per quarter and improve filing accuracy.",
+  "fsi_requester": "john.smith@contoso.com",
+  "fsi_requestedon": "2026-01-15T10:30:00Z",
+  "fsi_state": 7,
+  "fsi_approver": "jane.manager@contoso.com",
+  "fsi_approvedon": "2026-01-15T14:45:00Z",
+  "fsi_approvalcomments": "Approved. Verified business need and compliance review completed.",
+  "fsi_environmentid": "87654321-4321-4321-4321-210987654321",
+  "fsi_environmenturl": "https://fin-quarterly-prod.crm.dynamics.com",
+  "fsi_provisioningstarted": "2026-01-15T14:46:00Z",
+  "fsi_provisioningcompleted": "2026-01-15T14:52:30Z"
+}

@@ -1,0 +1,52 @@
+# Changelog
+
+All notable changes to the Environment Lifecycle Management solution.
+
+## [1.0.1] - 2026-01-29
+
+### Fixed
+
+- Added `--verbose` flag to `register_service_principal.py` for stack trace output on errors
+  - Matches pattern used by other scripts (`export_quarterly_evidence.py`, `validate_immutability.py`)
+  - Improves debugging for authentication and API errors
+
+---
+
+## [1.0.0] - 2026-01-29
+
+### Added
+
+- Initial release of Environment Lifecycle Management solution
+- **Data Layer:**
+  - EnvironmentRequest table schema (22 columns)
+  - ProvisioningLog table schema (11 columns, immutable)
+  - Four security roles (Requester, Approver, Admin, Auditor)
+  - Business rules for conditional required fields
+- **Python Scripts:**
+  - `elm_client.py` - Dataverse Web API wrapper with MSAL authentication
+  - `register_service_principal.py` - Entra app registration and Key Vault integration
+  - `export_quarterly_evidence.py` - FetchXML-based evidence export with SHA-256 hashing
+  - `verify_role_privileges.py` - Security role privilege audit
+  - `validate_immutability.py` - ProvisioningLog immutability verification
+- **Documentation:**
+  - Complete Dataverse schema specification
+  - Security role privilege matrix
+  - Service Principal setup guide
+  - Power Automate flow configuration
+  - Copilot Studio agent topic definitions
+  - Troubleshooting and error recovery guide
+- **Templates:**
+  - Sample EnvironmentRequest JSON
+  - Copilot Studio JSON output schema
+
+### Notes
+
+- Copilot Studio agent must be created manually (no deployment API)
+- Environment Groups must be created manually in PPAC
+- Power Automate flows must be created manually or imported as solution
+- Service Principal registration automated via Python script
+
+### Related
+
+- FSI-AgentGov Framework v1.2.10
+- [Environment Lifecycle Management Playbook](https://github.com/judeper/FSI-AgentGov/blob/main/docs/playbooks/advanced-implementations/environment-lifecycle-management/index.md)

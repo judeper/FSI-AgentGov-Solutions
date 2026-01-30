@@ -6,6 +6,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 | Solution | Description | Status |
 |----------|-------------|--------|
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated Power Platform environment provisioning with zone-based governance classification | v1.0.1 |
 | [Message Center Monitor](./message-center-monitor/) | Monitor M365 Message Center for platform changes affecting AI agents | v2.0.0 |
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | v1.0.5 |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v1.0.0 |
@@ -22,6 +23,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 All detailed documentation lives in each solution folder:
 
+- [Environment Lifecycle Management](./environment-lifecycle-management/README.md)
 - [Message Center Monitor](./message-center-monitor/README.md)
 - [Pipeline Governance Cleanup](./pipeline-governance-cleanup/README.md)
 - [Deny Event Correlation Report](./deny-event-correlation-report/README.md)

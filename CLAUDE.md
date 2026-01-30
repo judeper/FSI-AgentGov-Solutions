@@ -31,6 +31,7 @@ git rev-parse --show-toplevel
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
+| [environment-lifecycle-management](./environment-lifecycle-management/) | Automated Power Platform environment provisioning with zone-based governance | Python/Power Automate | v1.0.1 |
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Power Automate/Dataverse | v2.0.0 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.5 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
@@ -44,6 +45,10 @@ FSI-AgentGov-Solutions/
 │   └── settings.local.json    # Local overrides (not committed)
 ├── scripts/
 │   └── hooks/                  # Claude Code hooks (root-level)
+├── environment-lifecycle-management/
+│   ├── docs/                   # Setup and configuration guides
+│   ├── scripts/                # Python automation (SP registration, evidence export)
+│   └── templates/              # JSON samples, Copilot output schema
 ├── message-center-monitor/
 ├── pipeline-governance-cleanup/
 │   └── scripts/hooks/          # Standalone pass-through hooks (intentionally different)
