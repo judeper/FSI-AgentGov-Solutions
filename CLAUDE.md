@@ -3,52 +3,82 @@
 ## Purpose
 
 Reference implementations for the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/).
-These solutions help Financial Services organizations implement operational controls and monitoring for AI agents
-(Copilot Studio, Agent Builder).
+These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-## Relationship to Framework
+## Companion Repository
 
-| Framework Site | This Repository |
-|----------------|-----------------|
-| Principles, zones, controls | Working implementations |
-| Control Catalog (61 controls) | Scripts, packages, templates |
-| Playbooks (step-by-step) | Deployable solutions |
+**FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation:
+- `docs/framework/` - Governance principles
+- `docs/controls/` - 62 control specifications
+- `docs/playbooks/` - Implementation guides including references to solutions here
 
-Solutions here may address one or multiple controls from the framework.
+### Cross-Repository Workflow
 
-## Target Audience
+**Primary Working Directory:** FSI-AgentGov (documentation repo)
+- Boundary hooks in both repos allow cross-access
 
-- **Power Platform Administrators**: Deploy and configure solutions
-- **Agent Platform Teams**: Monitor platform changes affecting agents
-- **Microsoft Partners**: Customize for client environments
+**Hook Scope:**
+- `boundary-check.py` only intercepts Bash commands
+- Read/Write/Edit/Glob/Grep tools work cross-repo without restriction
+
+**Git Operations:**
+Each repo has separate git history. Always verify your working directory before git commands:
+```bash
+git rev-parse --show-toplevel
+```
 
 ## Solutions
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Power Automate/Dataverse | v2.0.0 |
-| [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, and clean up personal pipelines before enforcing centralized ALM governance | PowerShell/Manual | v1.0.5 |
-| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | PowerShell/KQL | v1.0.0 |
+| [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.5 |
+| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
 
-## Conventions
+## Directory Structure
 
-### Folder Structure
-- Folder names: `kebab-case`
-- Structure flexible by solution type (Power Automate, PowerShell, Python)
+```
+FSI-AgentGov-Solutions/
+├── .claude/
+│   ├── settings.json          # Team-shared settings
+│   └── settings.local.json    # Local overrides (not committed)
+├── scripts/
+│   └── hooks/                  # Claude Code hooks (root-level)
+├── message-center-monitor/
+├── pipeline-governance-cleanup/
+│   └── scripts/hooks/          # Standalone pass-through hooks (intentionally different)
+└── deny-event-correlation-report/
+```
 
-### Deployment
-Solutions provide setup guides for:
-1. Power Automate flows
-2. Dataverse tables
-3. Azure resources (Key Vault, App Registrations)
+## Hooks
 
-### Documentation
-- Each solution: README.md with prerequisites, deployment, usage
-- Supporting guides: Flow setup, Teams integration, secrets management
+| Hook | Location | Purpose |
+|------|----------|---------|
+| `scripts/hooks/boundary-check.py` | Root | Full boundary checking with cross-repo access |
+| `scripts/hooks/researcher-package-reminder.py` | Root | Reminder for FSI-AgentGov package regeneration |
+| `pipeline-governance-cleanup/scripts/hooks/*` | Nested | Simple pass-throughs for standalone use |
 
-## Roadmap
+**Note:** The nested hooks in `pipeline-governance-cleanup/scripts/hooks/` are intentionally different from root hooks. They allow all commands when that solution is used standalone.
 
-Planned solution areas:
-- Agent lifecycle management
-- Environment governance
-- Integration templates (Power Automate)
+## Language Guidelines (CRITICAL)
+
+When writing documentation in this repository, follow the language guidelines from FSI-AgentGov:
+
+**NEVER use these phrases (legal risk):**
+- "ensures compliance" - implies guarantee
+- "guarantees" - legal liability
+- "will prevent" - overclaim
+
+**ALWAYS use alternatives:** "supports compliance with", "helps meet", "recommended to"
+
+**Full guidelines:** See FSI-AgentGov `CONTRIBUTING.md`
+
+## Validation Commands
+
+```bash
+# Validate Python scripts
+python -m py_compile scripts/hooks/*.py
+
+# Validate PowerShell scripts (requires PowerShell)
+pwsh -Command "Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [System.Management.Automation.Language.Parser]::ParseFile(\$_.FullName, [ref]\$null, [ref]\$null) }"
+```
