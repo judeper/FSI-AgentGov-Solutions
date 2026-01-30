@@ -35,7 +35,7 @@ Run the inventory script to identify all environments:
 
 For each environment with `HasPipelinesEnabled = "Yes"`:
 
-1. Open the Deployment Pipeline Configuration app
+1. Open the Deployment Pipeline Configuration app **in the environment where the pipeline was created (the original host)**
 2. Navigate to **Pipelines** to see active pipelines
 3. Note the pipeline name, owner, and target environments
 4. Record the last deployment date
@@ -57,6 +57,9 @@ Identify which makers depend on each pipeline:
 ---
 
 ### Phase 2: Coexistence Period Management
+
+> **Warning: Avoid Force Linking Environments with In-Flight Deployments**
+> Do not execute a Force Link operation on an environment that has an active deployment in progress. The Force Link will orphan the in-flight deployment, and it will not complete. Coordinate with makers to ensure all deployments are complete before migrating an environment.
 
 During migration, both old and new hosts operate in parallel. Plan for a **30-60 day coexistence period**.
 

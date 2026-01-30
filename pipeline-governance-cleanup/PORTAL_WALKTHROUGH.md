@@ -251,7 +251,7 @@ This indicates the environment is linked to a different host. To proceed:
    - Document acknowledgment
 
 2. **Proceed with force-link:**
-   - Look for the **Force Link** button in the command bar
+   - The **Force Link** button will appear in the command bar after the "already associated" error is triggered
    - Click **Force Link**
    - Confirm the action when prompted
 

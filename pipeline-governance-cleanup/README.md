@@ -111,9 +111,10 @@ If all pre-flight checks pass, follow these steps:
    - Configure your custom host as the tenant default
    - This routes new pipeline creation to your host
    - See [Microsoft Learn: Set a default pipelines host](https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host)
+   - **Verification:** After setting the default host, it may take a few minutes to propagate. Verify by having a user with maker permissions (but not admin) attempt to create a pipeline in a separate development environment. They should be automatically directed to your custom host.
 
-4. **Link development environments**
-   - Add development environments to your custom host via the Deployment Pipeline Configuration app
+4. **Link development source environments**
+   - Add the environments where makers will build solutions (your development source environments) to your custom host via the Deployment Pipeline Configuration app
    - See [PORTAL_WALKTHROUGH.md Part 3](./PORTAL_WALKTHROUGH.md#part-3-force-link-an-environment)
 
 5. **Restrict pipeline creation (Security Best Practice)**
@@ -249,7 +250,7 @@ Send notifications to pipeline owners:
 
 See [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) for email templates.
 
-### Step 5: Execute Force-Link (Manual)
+### Step 5: Execute Force Link (Manual)
 
 After notification period (30-60 days):
 
@@ -320,7 +321,7 @@ Notify Owners (PowerShell - 30-60 day warning)
 Process Exemption Requests
         |
         v
-Execute Force-Link (MANUAL - Admin Portal)
+Execute Force Link (MANUAL - Admin Portal)
         |
         v
 Trigger-Based Monitoring (Power Automate)
@@ -367,7 +368,7 @@ Trigger-Based Monitoring (Power Automate)
 
 **Prevention:** Use `-TestMode` first to validate CSV and connectivity.
 
-#### Force-Link Fails with "Environment Protected"
+#### Force Link Fails with "Environment Protected"
 
 **Symptoms:** Force Link button errors or environment doesn't link
 
@@ -402,7 +403,7 @@ Trigger-Based Monitoring (Power Automate)
 3. Check if conditional access policies block Graph access
 4. Try `Connect-MgGraph -Scopes "Mail.Send"` to re-consent
 
-#### Environment Appears in Wrong Host After Force-Link
+#### Environment Appears in Wrong Host After Force Link
 
 **Symptoms:** Environment shows in old host, not new host
 
