@@ -87,6 +87,33 @@ This returns pipelines that deploy TO the environment (as a target stage). Use t
 
 ---
 
+### 5. Platform Host Cannot Be Governed Directly
+
+**The problem:** Organizations using Microsoft's automatic **platform host** (the tenant-wide default for personal pipelines) cannot directly govern it. The platform host:
+- Is infrastructure-managed and not visible as a separate environment
+- Does not show "Power Platform Pipelines" in development environments' Dynamics 365 apps list
+- Has limited administrative controls compared to custom hosts
+
+**Alternative:** Create a custom pipelines host and Force Link all environments to it. Optionally, set your custom host as the "default custom pipelines host" to override the platform host for new makers.
+
+See: https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host
+
+### 6. Force Link Controls Environment-Host Association
+
+**Important distinction:**
+- Force Link changes which host an environment is associated with
+- This affects BOTH deployments FROM and TO that environment (environments can only be associated with ONE host)
+- Force Link does NOT prevent users from CREATING new pipeline hosts in other environments
+
+**Can users still CREATE personal pipelines after you Force Link environments?**
+**YES.** Any user with admin rights on an environment with Dataverse can install Power Platform Pipelines and create their own host. However, pipelines in that personal host cannot deploy to or from environments you've Force Linked to your designated host.
+
+**Full prevention** requires Force Link PLUS restricting the **"Deployment pipeline default"** role in your custom host (controls who can create personal pipelines when your host is set as the default).
+
+See: https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines
+
+---
+
 ## What CAN Be Automated
 
 Despite the limitations above, several governance tasks can be automated:

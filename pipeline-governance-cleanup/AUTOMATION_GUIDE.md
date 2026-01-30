@@ -384,3 +384,40 @@ concat('Pipeline ', triggerOutputs()?['body/OutputParameters/PipelineName'], ' d
 6. Execute force-link after notification period ([PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md))
 
 See [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) for complete deployment checklist.
+
+---
+
+## New Environment Detection
+
+Since force-linking is manual (UI-only), organizations need a way to detect newly created environments and alert admins for action.
+
+> **Important:** This automation DETECTS new environments and ALERTS admins. It cannot automatically force-link due to platform limitations.
+
+### Power Automate Flow: New Environment Alert
+
+**Trigger:** Recurrence (recommended: daily)
+
+**Steps:**
+1. **List environments** - Power Platform for Admins connector
+2. **Filter array** - `createdtime ge @{addDays(utcNow(), -1)}`
+3. **Condition** - Check if any new environments found
+4. **If yes** - Send email/Teams notification to admin group
+
+**Notification should include:**
+- Environment name and ID
+- Environment type (Production, Sandbox, etc.)
+- Created by (if available)
+- Link to PORTAL_WALKTHROUGH for force-link instructions
+
+### Integration with CoE Starter Kit
+
+If using the Center of Excellence (CoE) Starter Kit:
+- Environment inventory is already tracked
+- Extend existing flows to trigger force-link alerts
+- Use CoE admin app for centralized tracking
+
+### Limitations
+
+- No automatic force-linking (manual action required)
+- Polling-based (not real-time)
+- Requires Power Platform for Admins connector permissions

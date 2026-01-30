@@ -205,7 +205,7 @@ function Send-GraphEmail {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.5 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.6 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 

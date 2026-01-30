@@ -12,6 +12,12 @@
     - Cannot query DeploymentPipeline table directly
     - Manual correlation required for non-compliant pipeline identification
 
+    IMPORTANT: This script cannot distinguish between platform host and
+    custom host. Manual verification is required. See PORTAL_WALKTHROUGH.md Part 0.
+
+    PAC CLI CONTEXT: Ensure you are authenticated to the HOST environment before
+    running pac pipeline list. Use 'pac auth list' to verify current context.
+
 .PARAMETER OutputPath
     Path for the CSV output file. Defaults to PipelineInventory.csv in current directory.
 
@@ -43,6 +49,9 @@
     This script provides INVENTORY ONLY. Force-linking environments to a custom
     pipelines host requires manual action in the Deployment Pipeline Configuration app.
     See PORTAL_WALKTHROUGH.md for manual procedures.
+
+    Starting February 2026, pipeline target environments must be Managed Environments.
+    Verify target environments are managed before force-linking.
 #>
 
 [CmdletBinding()]
@@ -134,7 +143,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.5 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.6 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 

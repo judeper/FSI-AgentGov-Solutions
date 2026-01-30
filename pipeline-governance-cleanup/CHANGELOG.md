@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.6] - January 2026
+
+### Added
+- Part 0 in PORTAL_WALKTHROUGH.md: Identify Your Pipelines Host Environment
+- Platform host vs custom host distinction in README.md and LIMITATIONS.md
+- New environment detection guidance in AUTOMATION_GUIDE.md
+- Environment type priority table for Force Link decisions
+- GCC/GCC High/DoD admin center URLs in PORTAL_WALKTHROUGH.md
+
+### Changed
+- Clarified that Force Link controls environment-host association (affects both to/from deployments)
+- Documented "Deployment pipeline default" role for controlling personal pipeline creation
+- Enhanced troubleshooting with PAC CLI diagnostic commands (must auth to HOST)
+- Added Managed Environment prerequisite note (February 2026 requirement)
+
+### Fixed
+- Documentation gap for customers using platform host (infrastructure-managed default)
+
+### References
+- Platform host: https://learn.microsoft.com/en-us/power-platform/alm/platform-host-pipelines
+- Custom host: https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines
+- Set default host: https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host
+
+---
+
 ## [1.0.5] - January 2026
 
 ### Critical Bug Fixes - Technical Review Remediation

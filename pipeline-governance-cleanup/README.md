@@ -53,6 +53,8 @@ You must have a designated pipelines host environment:
 
 See [Microsoft Learn: Set Up Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/set-up-pipelines) for host environment setup.
 
+> **Understanding Host Types:** Power Platform pipelines can use the **platform host** (automatically provisioned, infrastructure-managed, limited governance) or a **custom host** (manually configured, full governance control). This solution requires a custom host. If your organization uses the platform host (no "Power Platform Pipelines" app visible in your environment's D365 apps list), you must create a custom host first. See [PORTAL_WALKTHROUGH.md Part 0](./PORTAL_WALKTHROUGH.md#part-0-identify-your-pipelines-host-environment).
+
 ### 2. Roles Required
 
 | Role | Purpose |
@@ -287,6 +289,9 @@ Trigger-Based Monitoring (Power Automate)
 | Cannot find pipelines app | App not installed | Install Power Platform Pipelines on host |
 | Force Link fails | Environment protected | Check for environment locks, contact support |
 | Environment not listed | Filtered by type | Ensure including all environment types |
+| Power Platform Pipelines app not visible | Using platform host instead of custom host | See PORTAL_WALKTHROUGH Part 0; platform host is infrastructure-managed |
+| PAC CLI returns no pipelines | Wrong auth context | Run `pac auth list`; must authenticate to HOST environment, not dev/target |
+| Users still creating personal pipelines | Force Link controls host association, not creation | See LIMITATIONS.md section 6; restrict "Deployment pipeline default" role |
 
 ### Error Recovery Procedures
 
@@ -381,7 +386,7 @@ This solution supports:
 
 ## Version
 
-1.0.5 - January 2026
+1.0.6 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

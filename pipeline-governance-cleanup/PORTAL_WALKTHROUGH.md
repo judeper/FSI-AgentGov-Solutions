@@ -29,6 +29,58 @@ Before starting, ensure you have:
 
 ---
 
+## Part 0: Identify Your Pipelines Host Environment
+
+Before Force Linking environments, determine what type of host you're using.
+
+### Step 0.1: Check Dynamics 365 Apps List
+
+1. Navigate to [admin.powerplatform.microsoft.com](https://admin.powerplatform.microsoft.com)
+   - For GCC: https://gcc.admin.powerplatform.microsoft.us/
+   - For GCC High: https://high.admin.powerplatform.microsoft.us/
+2. Select your suspected host environment
+3. Click **Resources** > **Dynamics 365 apps**
+4. Look for **"Power Platform Pipelines"** (exact app name)
+
+**Decision tree:**
+- **If "Power Platform Pipelines" appears as Installed** → You have a custom host. Proceed to Part 1.
+- **If NOT listed (not installed, not available)** → You may be using the platform host. Continue to Step 0.2.
+
+### Step 0.2: Verify via Pipelines Page
+
+1. Go to [make.powerapps.com](https://make.powerapps.com)
+2. Open any solution in a development environment
+3. Click **Pipelines** > **Manage pipelines**
+4. Note the behavior:
+   - **Embedded app opens within Power Apps** → Using platform host (infrastructure-managed)
+   - **Opens dedicated Deployment Pipeline Configuration app** → Using custom host
+
+### Step 0.3: If Using Platform Host
+
+If you determine you're using the platform host and need full governance control:
+
+1. **Choose an environment** to become your custom host (must be Managed Environment)
+2. **Install "Power Platform Pipelines"** app via Resources > Dynamics 365 apps > Install app
+3. **Configure the custom host** per [Microsoft Learn](https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines)
+4. **Force Link all environments** to your new custom host (Parts 1-5 of this guide)
+5. **Optionally set as default** via [Set a default pipelines host](https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host)
+
+> **Note:** Existing pipelines in the platform host will NOT automatically migrate. Users must recreate their pipelines in the new custom host. Makers lose access to pipelines in the previous host when you Force Link their development environment.
+
+### Which Environments to Force Link
+
+| Environment Type | Should Force Link? | Priority |
+|-----------------|-------------------|----------|
+| Production (target) | **Yes** | 1 - Highest |
+| UAT/QA (target) | **Yes** | 2 |
+| Development (where makers build) | **Yes** | 3 |
+| Sandbox (general purpose) | **Yes** | 4 |
+| Trial environments | Optional | 5 - Lowest |
+| Default environment | **No** - Cannot be Force Linked | N/A |
+| The custom host itself | **No** - It IS the host | N/A |
+
+---
+
 ## Part 1: Verify Pipelines Host Setup
 
 Before force-linking environments, confirm your pipelines host is properly configured.
