@@ -6,6 +6,68 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.7] - January 2026
+
+### Added
+
+- **MIGRATION_GUIDE.md** - Comprehensive brownfield migration and coexistence guidance
+  - Phase-based migration approach (Assessment → Coexistence → Transition → Validation)
+  - Pipeline recreation steps for affected makers
+  - Coexistence failure scenarios and resolutions
+  - Self-service vs admin-assisted migration guidance
+- **Greenfield Quick Start** section in README.md for new implementations
+  - Pre-flight checklist for clean-slate deployments
+  - Step-by-step quick start for organizations without existing pipelines
+- **Decision tree** for platform host vs custom host scenarios in PORTAL_WALKTHROUGH.md
+  - Symptom-based scenario identification
+  - FSI recommendation for custom host requirement
+- **Backup/DR cascade effects** documentation in LIMITATIONS.md (Section 7)
+  - What happens during force-link operations
+  - What happens if host environment is deleted
+  - Recovery options and FSI retention recommendations
+- **Managed Environment licensing** implications note in LIMITATIONS.md (Section 8)
+  - February 2026 requirement documentation
+  - Licensing considerations for FSI
+- **Service principal setup guide** for unattended automation in AUTOMATION_GUIDE.md
+  - App registration steps
+  - Certificate vs secret authentication
+  - FSI security considerations
+- **DLP considerations** for pipeline deployments in AUTOMATION_GUIDE.md
+  - Monitoring flow connector requirements
+  - Pipeline deployment DLP impacts
+- **Impact assessment template** in NOTIFICATION_TEMPLATES.md
+  - Pre-enforcement assessment checklist
+  - Risk assessment checklist
+  - Operational approvals section
+  - Post-enforcement verification
+- **Part 7: Managing Pipeline Creator Access** in PORTAL_WALKTHROUGH.md
+  - Security role configuration
+  - Deployment pipeline default role management
+- **Sample CSV files** in `samples/` directory
+  - environment-inventory-sample.csv
+  - non-compliant-sample.csv
+  - samples/README.md with column descriptions
+- **FINRA 3110** to FSI Regulatory Alignment section (supervision and oversight)
+
+### Changed
+
+- Expanded Part 0 decision tree in PORTAL_WALKTHROUGH.md
+- Enhanced troubleshooting with owner lookup guidance
+- Updated escalation timeline to use "Force-Link Execution" instead of "Deactivation"
+- Version updated to 1.0.7 across all files
+
+### Removed
+
+- GCC/GCC High admin center URLs from PORTAL_WALKTHROUGH.md (out of scope for US FSI commercial)
+
+### Fixed
+
+- Documentation gaps for customers starting fresh (greenfield)
+- Missing coexistence period guidance for brownfield migrations
+- Unclear pipeline recreation steps for affected makers
+
+---
+
 ## [1.0.6] - January 2026
 
 ### Added

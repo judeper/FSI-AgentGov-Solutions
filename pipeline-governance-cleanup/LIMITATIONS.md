@@ -114,6 +114,76 @@ See: https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines
 
 ---
 
+### 7. Backup, Recovery, and Cascade Effects
+
+Understanding what happens during force-link operations helps prevent data loss and plan for recovery scenarios.
+
+**What happens when you Force Link an environment:**
+
+| Effect | Description |
+|--------|-------------|
+| Old pipelines orphaned | Pipelines in the old host can no longer deploy to the force-linked environment |
+| Old definitions retained | Pipeline configurations remain in the old host (not deleted) |
+| Target solutions unaffected | Solutions already deployed to the environment are not changed |
+| History retained | Pipeline run history remains in the old host environment |
+
+**What happens if the host environment is deleted:**
+
+| Effect | Recovery Possible? |
+|--------|-------------------|
+| All pipelines permanently deleted | **No** - pipeline configurations cannot be recovered |
+| Deployment stage configurations lost | **No** |
+| Pipeline run history lost | **No** |
+| Linked environments become unlinked | **Yes** - can link to a different host |
+| Solutions in target environments | **Unaffected** - solutions remain in place |
+
+**Recovery options:**
+
+- **Force-link to different host:** If your host is compromised, you can force-link environments to a new host
+- **No "unlink" operation:** Environments must always be linked to exactly one host
+- **No export/backup:** Pipeline configurations cannot be exported or backed up to files
+
+**FSI Recommendation:**
+
+Do not delete the old host environment until your retention period expires (typically **7 years** for financial services). The old host contains:
+- Pipeline deployment history (when, who, what was deployed)
+- Pipeline configuration history (how pipelines were configured)
+- Audit trail for compliance evidence
+
+---
+
+### 8. Managed Environment Licensing Implications
+
+Starting February 2026, Microsoft requires all pipeline target environments to be Managed Environments.
+
+**What this means:**
+
+- Pipeline targets (environments that receive deployments) must be Managed Environments
+- This is a **prerequisite** you must address manually
+- Microsoft does not automatically convert environments or provision licenses
+
+**Licensing considerations:**
+
+| Consideration | Impact |
+|---------------|--------|
+| Premium licensing | Managed Environments require Power Platform premium licensing for certain features |
+| User licenses | Users and apps in Managed Environments may need upgraded licenses |
+| Capacity | Managed Environments may consume additional capacity |
+| Add-on availability | Some Managed Environment features require add-on licenses |
+
+**Before enabling Managed Environments:**
+
+1. Review current licenses in Microsoft 365 Admin Center
+2. Identify which users/apps will be affected
+3. Estimate licensing cost impact
+4. Budget for additional licenses if needed
+
+**Note:** This solution does not automate license provisioning or environment conversion. Address licensing manually before force-linking.
+
+See [Microsoft Learn: Managed Environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview) for licensing details.
+
+---
+
 ## What CAN Be Automated
 
 Despite the limitations above, several governance tasks can be automated:

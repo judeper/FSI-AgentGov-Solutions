@@ -136,6 +136,134 @@ Sends governance notification emails to environment/pipeline owners.
 
 ---
 
+## Service Principal Setup for Unattended Automation
+
+For fully automated notification workflows (e.g., scheduled Azure Automation runbooks), configure an Azure AD app registration with application permissions.
+
+### Prerequisites
+
+- Azure AD Global Administrator or Application Administrator role
+- Certificate (recommended) or client secret for authentication
+
+### Step 1: Create App Registration
+
+1. Navigate to [Azure Portal](https://portal.azure.com) > **Azure Active Directory** > **App registrations**
+2. Click **New registration**
+3. Configure:
+   - **Name:** `Pipeline-Governance-Notifications`
+   - **Supported account types:** Single tenant (this organization only)
+   - **Redirect URI:** Leave blank (not needed for daemon apps)
+4. Click **Register**
+5. Note the **Application (client) ID** and **Directory (tenant) ID**
+
+### Step 2: Configure API Permissions
+
+1. In your app registration, click **API permissions**
+2. Click **Add a permission** > **Microsoft Graph**
+3. Select **Application permissions** (not delegated)
+4. Add these permissions:
+   - `Mail.Send` - Send mail as any user
+5. Click **Add permissions**
+6. Click **Grant admin consent for [your tenant]**
+7. Verify status shows green checkmarks
+
+### Step 3: Create Certificate or Secret
+
+**Option A: Certificate (Security Best Practice)**
+
+1. Go to **Certificates & secrets** > **Certificates** tab
+2. Click **Upload certificate**
+3. Upload a certificate from your organization's PKI (or self-signed for dev/test)
+4. Note the **Thumbprint** value
+
+**Option B: Client Secret (Development Only)**
+
+1. Go to **Certificates & secrets** > **Client secrets** tab
+2. Click **New client secret**
+3. Set expiration (recommend 90 days maximum)
+4. Note the **Value** immediately (it won't be shown again)
+
+> **Security Note:** Client secrets are less secure than certificates and must be rotated frequently. For production FSI environments, use certificates aligned with your organization's PKI policy.
+
+### Step 4: Run Script with Application Permissions
+
+```powershell
+# Connect with certificate authentication
+Connect-MgGraph -ClientId "your-app-id" -TenantId "your-tenant-id" -CertificateThumbprint "your-thumbprint"
+
+# Run notification script with sender email (required for app permissions)
+.\src\Send-OwnerNotifications.ps1 `
+    -InputPath ".\reports\non-compliant.csv" `
+    -EnforcementDate "2026-03-01" `
+    -SenderEmail "noreply@contoso.com" `
+    -SupportEmail "platform-ops@contoso.com"
+```
+
+### Security Considerations for FSI
+
+| Consideration | Recommendation |
+|---------------|----------------|
+| **Conditional Access** | Consider policies to restrict app access by IP range (corporate network only) |
+| **Audit logging** | Enable Azure AD sign-in logs for the app registration |
+| **Certificate rotation** | Align with organizational PKI policy (typically 1-2 years) |
+| **Secret rotation** | If using secrets, rotate every 90 days maximum |
+| **Documentation** | Document service principal in change management for operational handoff |
+| **Least privilege** | Only grant Mail.Send; do not add unnecessary permissions |
+
+### Azure Automation Integration (Optional)
+
+For scheduled runs via Azure Automation:
+
+1. Upload certificate to Azure Automation account (Certificates blade)
+2. Create runbook with `Connect-MgGraph` using certificate
+3. Schedule runbook for desired frequency
+4. Store CSV input in Azure Blob Storage or SharePoint
+
+---
+
+## DLP Considerations for Pipeline Governance
+
+Data Loss Prevention (DLP) policies can affect both your governance automation and the pipelines themselves.
+
+### Monitoring Flow Connectors
+
+If using Power Automate for governance monitoring, ensure these connectors are in compatible DLP groups:
+
+| Connector | Required Group | Used For |
+|-----------|---------------|----------|
+| Dataverse | Business | Pipeline trigger events, tracking table |
+| Office 365 Outlook | Business | Email notifications |
+| Microsoft Teams | Business | Teams alerts |
+| SharePoint | Business | CSV file storage (if applicable) |
+
+**Verify your DLP policy:**
+1. Open [Power Platform Admin Center](https://admin.powerplatform.microsoft.com) > **Policies** > **Data policies**
+2. Check policies that apply to your governance environment
+3. Ensure required connectors are in the Business group (or same group)
+
+### Pipeline Deployment DLP Impacts
+
+DLP policies can also affect pipeline operations themselves:
+
+| Impact | Description | Resolution |
+|--------|-------------|------------|
+| Dataverse blocked | If Dataverse is blocked in target environments, pipeline linking may fail | Ensure Dataverse is in Business group for all pipeline environments |
+| HTTP connectors restricted | Pipeline extensibility features may be blocked | Create DLP exception for pipelines host or whitelist specific HTTP endpoints |
+| Cross-environment flows blocked | Governance flows may be unable to access other environments | Use environment groups or policy exceptions |
+
+### FSI Recommendation
+
+Create a dedicated DLP policy for your pipelines host environment:
+
+1. Create new policy scoped to pipelines host environment only
+2. Place all pipeline-required connectors in Business group
+3. Block high-risk connectors (anonymous HTTP, social media, etc.)
+4. Document policy for compliance audit
+
+See [FSI-AgentGov Control 1.5: DLP Enforcement](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-enforcement.md) for comprehensive DLP guidance.
+
+---
+
 ## Power Automate Trigger-Based Monitoring
 
 While you cannot query the DeploymentPipeline table directly, you CAN create flows that respond to pipeline events using **Dataverse triggers**.

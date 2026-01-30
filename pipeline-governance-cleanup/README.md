@@ -78,6 +78,65 @@ If using Power Automate for trigger-based monitoring:
 2. Office 365 Outlook connector for email notifications
 3. Microsoft Teams connector for Teams alerts
 
+---
+
+## New Deployment (Greenfield)
+
+Use this path if your organization has **no existing personal pipelines or custom hosts**. This is a clean-slate implementation.
+
+### Before You Start (Pre-Flight Checklist)
+
+Complete these checks before proceeding:
+
+- [ ] **Confirm no existing custom hosts** - Run [Part 0 of PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md#part-0-identify-your-pipelines-host-environment) to verify no environments have the Power Platform Pipelines app installed
+- [ ] **Verify admin role** - Confirm you have Power Platform Admin or Entra Global Admin role
+- [ ] **Identify host environment** - Select an environment to become your custom host (must have Dataverse provisioned)
+- [ ] **Confirm target is (or can be) Managed Environment** - Starting February 2026, all pipeline targets must be Managed Environments
+- [ ] **Document planned pipeline structure** - Sketch your intended deployment stages (e.g., Dev → Test → Prod)
+- [ ] **Identify initial makers** - List users who will need pipeline creation access
+
+### Quick Start for New Implementations
+
+If all pre-flight checks pass, follow these steps:
+
+1. **Verify clean state**
+   - Run Part 0 of [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) to confirm no custom hosts exist
+   - If `pac pipeline list` returns no pipelines across all environments, you're in greenfield state
+
+2. **Create custom host**
+   - Install Power Platform Pipelines app in your designated host environment
+   - See [Microsoft Learn: Set up a custom host](https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines)
+
+3. **Set as default host**
+   - Configure your custom host as the tenant default
+   - This routes new pipeline creation to your host
+   - See [Microsoft Learn: Set a default pipelines host](https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host)
+
+4. **Link development environments**
+   - Add development environments to your custom host via the Deployment Pipeline Configuration app
+   - See [PORTAL_WALKTHROUGH.md Part 3](./PORTAL_WALKTHROUGH.md#part-3-force-link-an-environment)
+
+5. **Restrict pipeline creation (Security Best Practice)**
+   - Remove or restrict the "Deployment pipeline default" role to control who can create pipelines
+   - This limits makers from creating personal hosts
+   - See [PORTAL_WALKTHROUGH.md Part 7](./PORTAL_WALKTHROUGH.md#part-7-managing-pipeline-creator-access)
+
+6. **Skip to monitoring**
+   - No cleanup needed for greenfield deployments
+   - Proceed directly to [Step 6: Set Up Ongoing Monitoring](#step-6-set-up-ongoing-monitoring-optional)
+
+> **FSI Note:** For U.S. Financial Services organizations, restricting the "Deployment pipeline default" role is a security best practice. It limits makers from creating ungoverned personal pipeline hosts. See [LIMITATIONS.md Section 6](./LIMITATIONS.md#6-force-link-controls-environment-host-association) for details on what this controls.
+
+### Greenfield vs Brownfield
+
+| Scenario | Path | Documentation |
+|----------|------|---------------|
+| **Greenfield** - No existing pipelines | Use Quick Start above | This section |
+| **Brownfield** - Existing personal pipelines | Follow full cleanup workflow | [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) |
+| **Mixed** - Some environments have pipelines | Treat as brownfield | [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) |
+
+---
+
 ## Data Model
 
 ### System Tables (Pipelines Host Environment)
@@ -365,17 +424,20 @@ This solution supports compliance with:
 | **FFIEC IT Handbook** | Configuration management | Supports centralized deployment infrastructure |
 | **SOX 404** | IT general controls | Provides evidence of controlled deployments |
 | **FINRA 4511** | Books and records | Maintains inventory and cleanup documentation |
+| **FINRA 3110** | Supervision and oversight | Pipelines provide approval gates for supervisory control of deployments |
 
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
-| [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) | Power Automate trigger-based monitoring |
+| [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) | Power Automate trigger-based monitoring, service principal setup |
 | [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Manual force-link UI procedures (includes rollback) |
-| [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints and alternatives |
-| [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams notification templates |
+| [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) | Brownfield migration and coexistence guidance |
+| [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints, backup/DR, licensing |
+| [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams notification templates, impact assessment |
 | [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) | Quick deployment checklist |
 | [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) | Compliance evidence checklist for auditors |
+| [samples/](./samples/) | Sample CSV files for scripts |
 
 ## Related Controls
 
@@ -386,7 +448,7 @@ This solution supports:
 
 ## Version
 
-1.0.6 - January 2026
+1.0.7 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

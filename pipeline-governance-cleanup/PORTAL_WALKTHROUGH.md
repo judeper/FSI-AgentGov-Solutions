@@ -36,8 +36,6 @@ Before Force Linking environments, determine what type of host you're using.
 ### Step 0.1: Check Dynamics 365 Apps List
 
 1. Navigate to [admin.powerplatform.microsoft.com](https://admin.powerplatform.microsoft.com)
-   - For GCC: https://gcc.admin.powerplatform.microsoft.us/
-   - For GCC High: https://high.admin.powerplatform.microsoft.us/
 2. Select your suspected host environment
 3. Click **Resources** > **Dynamics 365 apps**
 4. Look for **"Power Platform Pipelines"** (exact app name)
@@ -66,6 +64,29 @@ If you determine you're using the platform host and need full governance control
 5. **Optionally set as default** via [Set a default pipelines host](https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipelines-host)
 
 > **Note:** Existing pipelines in the platform host will NOT automatically migrate. Users must recreate their pipelines in the new custom host. Makers lose access to pipelines in the previous host when you Force Link their development environment.
+
+### Decision Tree: Which Scenario Are You In?
+
+Use this table to identify your current state and determine the appropriate action:
+
+| Symptom | Scenario | Recommended Action |
+|---------|----------|-------------------|
+| No "Power Platform Pipelines" app visible in any environment | Platform host only | Create custom host → Set as default → Link all environments |
+| App visible in ONE environment only | Single custom host exists | Verify it's your designated host → Link remaining environments |
+| App visible in MULTIPLE environments | Multiple custom hosts exist | Inventory all hosts → Consolidate to one → Force Link environments from others |
+| App visible AND pipelines exist in platform host | Mixed state (custom + platform) | Create/designate custom host → Force Link all environments |
+| No pipelines anywhere (verified via `pac pipeline list`) | Greenfield (clean state) | Create custom host → Set as default → See [README.md Greenfield section](./README.md#new-deployment-greenfield) |
+
+### FSI Recommendation
+
+For U.S. Financial Services organizations, **a custom host is required** for governance and compliance. The platform host:
+
+- Cannot be governed directly by your organization
+- Has limited administrative controls
+- Does not support role-based access restrictions for pipeline creation
+- Does not provide visibility into pipeline configurations
+
+**Always migrate to a custom host you control.** See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for brownfield migration guidance.
 
 ### Which Environments to Force Link
 
@@ -476,10 +497,74 @@ Update your tracking spreadsheet with rollback details:
 
 ---
 
+## Part 7: Managing Pipeline Creator Access
+
+To restrict makers from creating personal pipeline hosts, configure the "Deployment pipeline default" role in your custom host.
+
+### When to Use This
+
+- After setting your custom host as the tenant default
+- When you want to control who can create new pipelines
+- As part of initial governance configuration (greenfield or brownfield)
+
+### Step 7.1: Access Security Roles
+
+1. Open [Power Platform Admin Center](https://admin.powerplatform.microsoft.com)
+2. Select your **custom host environment**
+3. Click **Settings** (gear icon in the header)
+4. Navigate to **Users + permissions** > **Security roles**
+
+### Step 7.2: Locate the Deployment Pipeline Roles
+
+Review these pipeline-related security roles:
+
+| Role | Purpose | Default Assignment |
+|------|---------|-------------------|
+| Deployment Pipeline Administrator | Full pipeline management | Environment admins |
+| Deployment Pipeline User | Run deployments, view pipelines | Environment makers |
+| Deployment pipeline default | Create pipelines when host is set as default | All users (by default) |
+
+### Step 7.3: Modify Role Assignment
+
+To restrict who can create pipelines:
+
+1. Click on **Deployment pipeline default** role
+2. Click **Members** tab
+3. Remove users or teams that should not create pipelines
+4. Add only approved users/teams who need pipeline creation rights
+
+**Alternative:** Assign the role to an empty team, effectively disabling it for all users.
+
+### What This Controls
+
+| Action | Controlled by Role? |
+|--------|---------------------|
+| Create new pipeline in your custom host | Yes - requires Deployment pipeline default role |
+| Run existing pipeline | No - controlled by Deployment Pipeline User role |
+| Create personal host in another environment | **No** - users with Environment Admin can still install the app |
+
+### Important Limitations
+
+Restricting the "Deployment pipeline default" role **only** affects pipeline creation when your custom host is set as the tenant default. Users with environment admin rights can still:
+
+- Install the Power Platform Pipelines app in other environments
+- Create their own custom host environments
+- Configure pipelines in those environments
+
+**Full prevention** requires:
+1. Setting your custom host as tenant default
+2. Restricting the "Deployment pipeline default" role (this section)
+3. Force-linking all environments to your host (prevents deployment to/from other hosts)
+
+See [LIMITATIONS.md Section 6](./LIMITATIONS.md#6-force-link-controls-environment-host-association) for details on these boundaries.
+
+---
+
 ## See Also
 
 - [LIMITATIONS.md](./LIMITATIONS.md) - Why this cannot be automated
 - [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) - What CAN be automated
 - [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) - Communication templates
+- [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) - Brownfield migration procedures
 - [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) - Compliance evidence checklist
 - [Microsoft Learn: Custom Host Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines)

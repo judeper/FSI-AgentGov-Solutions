@@ -1,0 +1,6 @@
+EnvironmentId,EnvironmentName,EnvironmentType,EnvironmentUrl,IsManaged,CreatedTime,PipelinesHostId,HasPipelinesEnabled,ComplianceStatus,Notes
+00000000-0000-0000-0000-000000000001,Sales-Dev,Sandbox,https://sales-dev.crm.dynamics.com,[Check Admin Portal],[Not Available],[Manual Check Required],Yes,Requires Manual Verification,2 pipeline(s) found
+00000000-0000-0000-0000-000000000002,Sales-Prod,Production,https://sales-prod.crm.dynamics.com,[Check Admin Portal],[Not Available],[Manual Check Required],Yes,Requires Manual Verification,1 pipeline(s) found
+00000000-0000-0000-0000-000000000003,HR-Dev,Developer,https://hr-dev.crm.dynamics.com,[Check Admin Portal],[Not Available],[Manual Check Required],No,Requires Manual Verification,
+00000000-0000-0000-0000-000000000004,Marketing-Test,Sandbox,https://marketing-test.crm.dynamics.com,[Check Admin Portal],[Not Available],[Manual Check Required],Unknown,Requires Manual Verification,Unable to query: access denied
+00000000-0000-0000-0000-000000000005,Finance-Prod,Production,https://finance-prod.crm.dynamics.com,[Check Admin Portal],[Not Available],[Manual Check Required],No,Requires Manual Verification,

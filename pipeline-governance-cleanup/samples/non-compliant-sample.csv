@@ -1,0 +1,4 @@
+OwnerEmail,EnvironmentName,EnvironmentId,OwnerName
+jane.doe@contoso.com,Sales-Dev,00000000-0000-0000-0000-000000000001,Jane Doe
+john.smith@contoso.com,Sales-Prod,00000000-0000-0000-0000-000000000002,John Smith
+alex.johnson@contoso.com,HR-Dev,00000000-0000-0000-0000-000000000003,Alex Johnson

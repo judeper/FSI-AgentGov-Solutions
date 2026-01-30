@@ -328,7 +328,68 @@ Alert for Platform Ops team when violations are detected.
 | 1 | Initial notification | Owner Notification |
 | 14 | First reminder | Owner Notification (modified subject) |
 | 28 | Final notice | Escalation Email |
-| 30-60 | Deactivation | Confirmation Email |
+| 30-60 | Force-Link Execution | Confirmation Email |
+
+---
+
+## Impact Assessment Template
+
+Complete this assessment before executing Force Link operations. This documents the change for audit trail and helps coordinate with stakeholders.
+
+### Pre-Enforcement Assessment
+
+| Item | Value | Notes |
+|------|-------|-------|
+| **Target Environment Name** | | |
+| **Target Environment ID** | | |
+| **Current Pipelines Host** | | |
+| **Number of Active Pipelines** | | Count pipelines in old host targeting this environment |
+| **Number of Affected Makers** | | Users with pipeline access |
+| **Last Deployment Date** | | When was the last deployment to this environment? |
+| **Business Criticality** | Low / Medium / High / Critical | |
+| **Assessment Date** | | |
+| **Assessed By** | | |
+
+### Risk Assessment Checklist
+
+Complete before proceeding with force-link:
+
+- [ ] Makers have been notified (30+ days in advance recommended)
+- [ ] No critical deployments scheduled during force-link window
+- [ ] Rollback plan documented (see [PORTAL_WALKTHROUGH.md Part 6](./PORTAL_WALKTHROUGH.md#part-6-reversing-a-force-link-rollback))
+- [ ] Support contact available during enforcement
+- [ ] Environment is a Managed Environment (or conversion scheduled)
+- [ ] Exemption requests reviewed and resolved
+
+### Approvals (Operational)
+
+> **Note:** This is an operational change to infrastructure governance, not an agent deployment requiring full CAB review. Follow your organization's change management process for infrastructure operations.
+
+| Role | Name | Date | Signature/Approval |
+|------|------|------|--------------------|
+| Environment Owner | | | |
+| Platform Admin | | | |
+| Security/Compliance (if required) | | | |
+
+### Post-Enforcement Verification
+
+Complete after force-link is executed:
+
+- [ ] Environment appears in new host's Environments list
+- [ ] Environment status shows **Active**
+- [ ] Old pipelines confirmed orphaned (cannot deploy)
+- [ ] Makers notified of completion
+- [ ] Tracking spreadsheet updated
+- [ ] Evidence captured (screenshot of environment in new host)
+
+### Documentation Retention
+
+Retain this assessment for **7 years** per FSI regulatory requirements. Include:
+
+- This completed form
+- Screenshots of before/after state
+- Email confirmation to makers
+- Any exemption documentation
 
 ---
 

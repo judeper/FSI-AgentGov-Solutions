@@ -143,7 +143,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.6 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.7 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
