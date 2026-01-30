@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [1.0.7] - January 2026
 
+### Second Review Corrections (January 2026)
+
+Minor documentation clarifications addressing 6 findings from external review:
+
+| ID | Severity | File | Correction |
+|----|----------|------|------------|
+| 1 | MEDIUM | MIGRATION_GUIDE.md | Added in-flight deployment warning in Phase 2 |
+| 2 | LOW | README.md | Clarified "development environments" → "development source environments" |
+| 3 | LOW | README.md | Added verification checkpoint after setting default host |
+| 4 | LOW | MIGRATION_GUIDE.md | Clarified Deployment Pipeline Configuration app location |
+| 5 | LOW | PORTAL_WALKTHROUGH.md | Clarified Force Link button appears after error is triggered |
+| 6 | LOW | README.md | Standardized "Force Link" capitalization (removed hyphens in headings) |
+
 ### Added
 
 - **MIGRATION_GUIDE.md** - Comprehensive brownfield migration and coexistence guidance
