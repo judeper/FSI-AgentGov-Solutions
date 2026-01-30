@@ -4,6 +4,45 @@ Automated Power Platform environment provisioning with zone-based governance cla
 
 > **Important:** This solution combines **Python automation scripts** with **manual portal configuration** for Copilot Studio agents. Environment Groups and Copilot Studio topics must be created manually via the admin portal. See [Known Limitations](#known-limitations) for details.
 
+## Automated Deployment (Lab/Dev)
+
+For quick setup in lab or development environments, use the automated deployment script:
+
+```bash
+# Install dependencies
+pip install -r scripts/requirements.txt
+
+# Dry run first to preview changes
+python scripts/deploy.py \
+    --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --interactive \
+    --dry-run
+
+# Full deployment
+python scripts/deploy.py \
+    --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --interactive
+```
+
+The deployment script creates:
+- Option sets (State, Zone, Region, etc.)
+- EnvironmentRequest table (22 columns, user-owned)
+- ProvisioningLog table (11 columns, org-owned, immutable)
+- Security roles (Requester, Approver, Admin, Auditor)
+- Business rules (conditional required fields)
+- Model-driven app views
+- Field security profiles
+
+**After automated deployment, you still need to manually:**
+1. Register Service Principal in PPAC
+2. Create Environment Groups
+3. Build Copilot Studio agent
+4. Create Power Automate flows
+
+For production environments, use the [manual setup process](#quick-start) for full audit trail.
+
 ## What This Solution Does
 
 - **Classifies** environment requests into governance zones (Zone 1/2/3) based on data sensitivity
@@ -17,13 +56,17 @@ Automated Power Platform environment provisioning with zone-based governance cla
 
 ## Known Limitations
 
-| Capability | Status | Alternative |
-|------------|--------|-------------|
-| Create Dataverse tables | **Manual** | Create via Power Apps maker portal |
-| Create security roles | **Manual** | Create via Power Platform admin center |
+| Capability | Status | Script/Alternative |
+|------------|--------|-------------------|
+| Create Dataverse tables | **Automated** | `deploy.py` or `create_dataverse_schema.py` |
+| Create security roles | **Automated** | `deploy.py` or `create_security_roles.py` |
+| Create business rules | **Automated** | `deploy.py` or `create_business_rules.py` |
+| Create views | **Automated** | `deploy.py` or `create_views.py` |
+| Create field security | **Automated** | `deploy.py` or `create_field_security.py` |
 | Create Environment Groups | **Manual** | Create via admin.powerplatform.com |
 | Create Copilot Studio agent | **Manual** | Build via make.powerapps.com (Copilot Studio) |
 | Create Power Automate flows | **Manual** | Create manually or import solution |
+| Register SP in PPAC | **Manual** | Portal step after `register_service_principal.py` |
 | Register Service Principal | **Automated** | `register_service_principal.py` |
 | Export quarterly evidence | **Automated** | `export_quarterly_evidence.py` |
 | Verify role privileges | **Automated** | `verify_role_privileges.py` |

@@ -35,7 +35,34 @@ Phase-based deployment checklist for the Environment Lifecycle Management soluti
 
 ## Phase 1: Data Layer
 
-### Create Dataverse Tables **[MANUAL]**
+### Option A: Automated Deployment (✓ Recommended for Lab/Dev)
+
+```bash
+# Install dependencies
+pip install -r scripts/requirements.txt
+
+# Dry run first
+python scripts/deploy.py \
+  --environment-url https://<org>.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --dry-run
+
+# Full deployment
+python scripts/deploy.py \
+  --environment-url https://<org>.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive
+```
+
+- [ ] Run deploy.py with `--dry-run` to validate
+- [ ] Review output for expected configuration
+- [ ] Execute without `--dry-run` to create resources
+- [ ] Skip to "Verify Immutability" section below
+
+### Option B: Manual Deployment **[MANUAL]** (Production)
+
+#### Create Dataverse Tables
 
 - [ ] Open Power Apps maker portal (make.powerapps.com)
 - [ ] Select governance environment
@@ -54,7 +81,7 @@ Phase-based deployment checklist for the Environment Lifecycle Management soluti
   - [ ] Security Group Required (when Zone = 2 or 3)
   - [ ] Approval Comments Required (when State = Rejected)
 
-### Create Security Roles **[MANUAL]**
+#### Create Security Roles
 
 - [ ] Open Power Platform admin center
 - [ ] Navigate to environment > Security roles
@@ -356,8 +383,11 @@ python scripts/export_quarterly_evidence.py \
 
 | Task | Status | Method |
 |------|--------|--------|
-| Create Dataverse tables | **MANUAL** | Power Apps maker portal |
-| Create security roles | **MANUAL** | Power Platform admin center |
+| Create Dataverse tables | ✓ Automated | `deploy.py` or `create_dataverse_schema.py` |
+| Create security roles | ✓ Automated | `deploy.py` or `create_security_roles.py` |
+| Create business rules | ✓ Automated | `deploy.py` or `create_business_rules.py` |
+| Create views | ✓ Automated | `deploy.py` or `create_views.py` |
+| Create field security | ✓ Automated | `deploy.py` or `create_field_security.py` |
 | Register Service Principal | ✓ Automated | `register_service_principal.py` |
 | Register as PPAC Management App | **MANUAL** | Power Platform admin center |
 | Create Environment Groups | **MANUAL** | Power Platform admin center |
@@ -370,6 +400,19 @@ python scripts/export_quarterly_evidence.py \
 ---
 
 ## Timeline Template
+
+### Lab/Dev Environment (Automated)
+
+| Day | Activity | Type |
+|-----|----------|------|
+| Day 1 | Run deploy.py for schema, roles, rules, views | ✓ Automated |
+| Day 1 | Register Service Principal | ✓ + **MANUAL** |
+| Day 1 | Create Environment Groups | **MANUAL** |
+| Day 2 | Build Copilot Studio agent | **MANUAL** |
+| Day 2-3 | Create Power Automate flows | **MANUAL** |
+| Day 3 | End-to-end testing, validation scripts | ✓ + **MANUAL** |
+
+### Production Environment (Manual)
 
 | Week | Activity | Type |
 |------|----------|------|

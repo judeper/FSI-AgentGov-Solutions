@@ -22,44 +22,64 @@ class ELMClient:
     def __init__(
         self,
         tenant_id: str,
-        client_id: str,
-        client_secret: str,
         environment_url: str,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        interactive: bool = False,
     ):
         """
         Initialize ELM client.
 
         Args:
             tenant_id: Entra ID tenant ID
-            client_id: Application (client) ID
-            client_secret: Client secret value
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
+            client_id: Application (client) ID (required for SP auth)
+            client_secret: Client secret value (required for SP auth)
+            interactive: Use interactive browser auth instead of SP
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
         self.environment_url = environment_url.rstrip("/")
         self.api_url = f"{self.environment_url}/api/data/v9.2/"
-
-        # MSAL Confidential Client for service-to-service auth
-        self._app = msal.ConfidentialClientApplication(
-            client_id=client_id,
-            client_credential=client_secret,
-            authority=f"https://login.microsoftonline.com/{tenant_id}",
-        )
+        self.interactive = interactive
 
         # Dataverse requires the environment URL as the scope
         self._scope = [f"{self.environment_url}/.default"]
         self._token: Optional[dict] = None
 
+        if interactive:
+            # Public client for interactive auth
+            self._app = msal.PublicClientApplication(
+                client_id=client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d",  # Well-known Power Platform CLI ID
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+            )
+        else:
+            # Confidential client for service-to-service auth
+            if not client_id or not client_secret:
+                raise ValueError("client_id and client_secret required for non-interactive auth")
+            self._app = msal.ConfidentialClientApplication(
+                client_id=client_id,
+                client_credential=client_secret,
+                authority=f"https://login.microsoftonline.com/{tenant_id}",
+            )
+
     def _get_token(self) -> str:
-        """Acquire access token using client credentials flow with caching."""
+        """Acquire access token with caching."""
         # Try to get cached token first
-        result = self._app.acquire_token_silent(scopes=self._scope, account=None)
+        accounts = self._app.get_accounts() if self.interactive else None
+        result = self._app.acquire_token_silent(
+            scopes=self._scope,
+            account=accounts[0] if accounts else None,
+        )
 
         if not result:
-            # No cached token, acquire new one
-            result = self._app.acquire_token_for_client(scopes=self._scope)
+            if self.interactive:
+                # Interactive browser flow
+                result = self._app.acquire_token_interactive(scopes=self._scope)
+            else:
+                # Client credentials flow
+                result = self._app.acquire_token_for_client(scopes=self._scope)
 
         if "access_token" not in result:
             error = result.get("error_description", result.get("error", "Unknown error"))
@@ -258,6 +278,353 @@ class ELMClient:
             orderby="createdon desc",
         )
 
+    # =========================================================================
+    # Metadata Operations (for schema deployment)
+    # =========================================================================
+
+    def get_entity_metadata(self, logical_name: str) -> Optional[dict]:
+        """
+        Get entity metadata by logical name.
+
+        Args:
+            logical_name: Entity logical name (e.g., fsi_environmentrequest)
+
+        Returns:
+            Entity metadata dict or None if not found
+        """
+        try:
+            response = requests.get(
+                urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
+                headers=self._get_headers(),
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    def create_entity(self, entity_metadata: dict) -> dict:
+        """
+        Create a new entity (table).
+
+        Args:
+            entity_metadata: Entity definition per Dataverse Web API spec
+
+        Returns:
+            Created entity metadata
+        """
+        response = requests.post(
+            urljoin(self.api_url, "EntityDefinitions"),
+            headers=self._get_headers(),
+            json=entity_metadata,
+        )
+        response.raise_for_status()
+
+        # Get the created entity
+        entity_id = response.headers.get("OData-EntityId", "")
+        if entity_id:
+            get_response = requests.get(entity_id, headers=self._get_headers())
+            if get_response.ok:
+                return get_response.json()
+        return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
+
+    def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
+        """
+        Create a new attribute (column) on an entity.
+
+        Args:
+            entity_logical_name: Entity logical name
+            attribute_metadata: Attribute definition per Dataverse Web API spec
+
+        Returns:
+            Created attribute metadata
+        """
+        response = requests.post(
+            urljoin(
+                self.api_url,
+                f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
+            ),
+            headers=self._get_headers(),
+            json=attribute_metadata,
+        )
+        response.raise_for_status()
+        return attribute_metadata
+
+    def get_attribute_metadata(
+        self, entity_logical_name: str, attribute_logical_name: str
+    ) -> Optional[dict]:
+        """
+        Get attribute metadata.
+
+        Args:
+            entity_logical_name: Entity logical name
+            attribute_logical_name: Attribute logical name
+
+        Returns:
+            Attribute metadata or None if not found
+        """
+        try:
+            response = requests.get(
+                urljoin(
+                    self.api_url,
+                    f"EntityDefinitions(LogicalName='{entity_logical_name}')"
+                    f"/Attributes(LogicalName='{attribute_logical_name}')",
+                ),
+                headers=self._get_headers(),
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    def create_global_optionset(self, optionset_metadata: dict) -> dict:
+        """
+        Create a global option set (choice).
+
+        Args:
+            optionset_metadata: OptionSet definition
+
+        Returns:
+            Created optionset metadata
+        """
+        response = requests.post(
+            urljoin(self.api_url, "GlobalOptionSetDefinitions"),
+            headers=self._get_headers(),
+            json=optionset_metadata,
+        )
+        response.raise_for_status()
+        return optionset_metadata
+
+    def get_global_optionset(self, name: str) -> Optional[dict]:
+        """
+        Get global option set by name.
+
+        Args:
+            name: OptionSet name
+
+        Returns:
+            OptionSet metadata or None if not found
+        """
+        try:
+            response = requests.get(
+                urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"),
+                headers=self._get_headers(),
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    def get_roles(self, filter_expr: Optional[str] = None) -> list[dict]:
+        """
+        Get security roles.
+
+        Args:
+            filter_expr: OData filter expression
+
+        Returns:
+            List of security roles
+        """
+        return self.query("roles", filter_expr=filter_expr)
+
+    def create_role(self, role_data: dict) -> str:
+        """
+        Create a security role.
+
+        Args:
+            role_data: Role definition
+
+        Returns:
+            Created role ID
+        """
+        return self.create("roles", role_data)
+
+    def get_privileges(self, filter_expr: Optional[str] = None) -> list[dict]:
+        """
+        Get system privileges.
+
+        Args:
+            filter_expr: OData filter expression
+
+        Returns:
+            List of privileges
+        """
+        return self.query("privileges", filter_expr=filter_expr)
+
+    def add_role_privilege(self, role_id: str, privilege_id: str, depth: int) -> None:
+        """
+        Add a privilege to a role.
+
+        Args:
+            role_id: Role GUID
+            privilege_id: Privilege GUID
+            depth: Privilege depth (1=User, 2=BU, 4=Parent:Child, 8=Org)
+        """
+        response = requests.post(
+            urljoin(self.api_url, "AddPrivilegesRole"),
+            headers=self._get_headers(),
+            json={
+                "RoleId": role_id,
+                "Privileges": [{"PrivilegeId": privilege_id, "Depth": depth}],
+            },
+        )
+        response.raise_for_status()
+
+    def get_role_privileges(self, role_id: str) -> list[dict]:
+        """
+        Get privileges assigned to a role.
+
+        Args:
+            role_id: Role GUID
+
+        Returns:
+            List of role privileges
+        """
+        return self.query(
+            f"roles({role_id})/roleprivileges_association",
+            select=["privilegeid", "name"],
+        )
+
+    def create_saved_query(self, query_data: dict) -> str:
+        """
+        Create a saved query (view).
+
+        Args:
+            query_data: SavedQuery definition
+
+        Returns:
+            Created query ID
+        """
+        return self.create("savedqueries", query_data)
+
+    def get_saved_queries(
+        self, entity_logical_name: str, filter_expr: Optional[str] = None
+    ) -> list[dict]:
+        """
+        Get saved queries for an entity.
+
+        Args:
+            entity_logical_name: Entity logical name
+            filter_expr: Additional OData filter
+
+        Returns:
+            List of saved queries
+        """
+        base_filter = f"returnedtypecode eq '{entity_logical_name}'"
+        if filter_expr:
+            base_filter = f"{base_filter} and {filter_expr}"
+        return self.query("savedqueries", filter_expr=base_filter)
+
+    def create_workflow(self, workflow_data: dict) -> str:
+        """
+        Create a workflow (business rule).
+
+        Args:
+            workflow_data: Workflow definition
+
+        Returns:
+            Created workflow ID
+        """
+        return self.create("workflows", workflow_data)
+
+    def get_workflows(
+        self, entity_logical_name: str, category: int = 2
+    ) -> list[dict]:
+        """
+        Get workflows for an entity.
+
+        Args:
+            entity_logical_name: Entity logical name
+            category: Workflow category (2=Business Rule)
+
+        Returns:
+            List of workflows
+        """
+        return self.query(
+            "workflows",
+            filter_expr=f"primaryentity eq '{entity_logical_name}' and category eq {category}",
+        )
+
+    def create_field_security_profile(self, profile_data: dict) -> str:
+        """
+        Create a field security profile.
+
+        Args:
+            profile_data: FieldSecurityProfile definition
+
+        Returns:
+            Created profile ID
+        """
+        return self.create("fieldsecurityprofiles", profile_data)
+
+    def get_field_security_profiles(self, filter_expr: Optional[str] = None) -> list[dict]:
+        """
+        Get field security profiles.
+
+        Args:
+            filter_expr: OData filter expression
+
+        Returns:
+            List of field security profiles
+        """
+        return self.query("fieldsecurityprofiles", filter_expr=filter_expr)
+
+    def create_field_permission(self, permission_data: dict) -> str:
+        """
+        Create a field permission.
+
+        Args:
+            permission_data: FieldPermission definition
+
+        Returns:
+            Created permission ID
+        """
+        return self.create("fieldpermissions", permission_data)
+
+    def get_solution_publisher(self, prefix: str) -> Optional[dict]:
+        """
+        Get solution publisher by prefix.
+
+        Args:
+            prefix: Publisher prefix (e.g., 'fsi')
+
+        Returns:
+            Publisher metadata or None if not found
+        """
+        publishers = self.query(
+            "publishers",
+            filter_expr=f"customizationprefix eq '{prefix}'",
+            select=["publisherid", "uniquename", "customizationprefix"],
+        )
+        return publishers[0] if publishers else None
+
+    def get_root_business_unit(self) -> dict:
+        """
+        Get the root business unit.
+
+        Returns:
+            Root business unit record
+        """
+        units = self.query(
+            "businessunits",
+            filter_expr="parentbusinessunitid eq null",
+            select=["businessunitid", "name"],
+        )
+        if not units:
+            raise RuntimeError("No root business unit found")
+        return units[0]
+
 
 def main():
     """CLI entry point."""
@@ -287,6 +654,11 @@ def main():
         help="Dataverse environment URL (or set ELM_ENVIRONMENT_URL env var)",
     )
     parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Use interactive browser authentication",
+    )
+    parser.add_argument(
         "--test-connection",
         action="store_true",
         help="Test connection to Dataverse",
@@ -295,24 +667,28 @@ def main():
     args = parser.parse_args()
 
     # Validate required arguments
-    if not all([args.tenant_id, args.client_id, args.environment_url]):
+    if not args.tenant_id or not args.environment_url:
         parser.error(
-            "Missing required arguments. Provide --tenant-id, --client-id, "
-            "--client-secret, and --environment-url (or set environment variables)"
+            "Missing required arguments. Provide --tenant-id and --environment-url "
+            "(or set ELM_TENANT_ID and ELM_ENVIRONMENT_URL env vars)"
         )
 
-    # Prompt for secret if not provided
+    # For non-interactive mode, need client credentials
     client_secret = args.client_secret
-    if not client_secret:
-        import getpass
-        client_secret = getpass.getpass("Client secret: ")
+    if not args.interactive:
+        if not args.client_id:
+            parser.error("--client-id required for non-interactive authentication")
+        if not client_secret:
+            import getpass
+            client_secret = getpass.getpass("Client secret: ")
 
     try:
         client = ELMClient(
             tenant_id=args.tenant_id,
+            environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
-            environment_url=args.environment_url,
+            interactive=args.interactive,
         )
 
         if args.test_connection:

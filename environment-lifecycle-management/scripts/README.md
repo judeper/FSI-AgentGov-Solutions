@@ -4,6 +4,19 @@ Automation scripts for Environment Lifecycle Management.
 
 ## Overview
 
+### Deployment Scripts (Lab/Dev)
+
+| Script | Purpose |
+|--------|---------|
+| `deploy.py` | **Main orchestrator** - deploys all Dataverse components |
+| `create_dataverse_schema.py` | Creates tables, columns, and global option sets |
+| `create_security_roles.py` | Creates 4 security roles with privileges |
+| `create_business_rules.py` | Creates conditional required field rules |
+| `create_views.py` | Creates model-driven app views |
+| `create_field_security.py` | Creates field security profiles |
+
+### Operational Scripts
+
 | Script | Purpose |
 |--------|---------|
 | `elm_client.py` | Dataverse Web API client wrapper |
@@ -11,6 +24,37 @@ Automation scripts for Environment Lifecycle Management.
 | `export_quarterly_evidence.py` | Quarterly evidence export with integrity hashing |
 | `verify_role_privileges.py` | Security role privilege audit |
 | `validate_immutability.py` | ProvisioningLog immutability verification |
+
+## Quick Start: Automated Deployment
+
+For lab/dev environments, use the automated deployment:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Dry run first (preview changes)
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <your-tenant-id> \
+  --interactive \
+  --dry-run
+
+# Full deployment
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <your-tenant-id> \
+  --interactive
+```
+
+The deployment creates:
+- 8 global option sets (State, Zone, Region, etc.)
+- EnvironmentRequest table (22 columns, user-owned)
+- ProvisioningLog table (11 columns, org-owned, immutable)
+- 4 security roles (Requester, Approver, Admin, Auditor)
+- 3 business rules (conditional required fields)
+- 8 model-driven app views
+- Field security profile for approvers
 
 ## Prerequisites
 
@@ -52,6 +96,138 @@ export ELM_ENVIRONMENT_URL="https://your-org.crm.dynamics.com"
 
 ## Script Details
 
+### deploy.py
+
+Main deployment orchestrator that creates all ELM Dataverse components.
+
+**Usage:**
+
+```bash
+# Full deployment with interactive auth (recommended for manual runs)
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive
+
+# Dry run to preview changes
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --dry-run
+
+# Deploy only tables and schema
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --tables-only
+
+# Deploy only security roles
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --roles-only
+
+# With Service Principal (for CI/CD)
+python deploy.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --client-id <app-id> \
+  --client-secret <secret>
+```
+
+**Deployment Phases:**
+
+1. **Schema** - Option sets, tables, columns
+2. **Security Roles** - 4 roles with privilege assignments
+3. **Business Rules** - Conditional required fields
+4. **Views** - Model-driven app views
+5. **Field Security** - Approver field restrictions
+
+### create_dataverse_schema.py
+
+Creates tables, columns, and global option sets.
+
+**Usage:**
+
+```bash
+python create_dataverse_schema.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --dry-run
+```
+
+### create_security_roles.py
+
+Creates security roles with correct privilege assignments.
+
+**Usage:**
+
+```bash
+python create_security_roles.py \
+  --environment-url https://org.crm.dynamics.com \
+  --tenant-id <tenant-id> \
+  --interactive \
+  --dry-run
+```
+
+**Roles Created:**
+
+| Role | Scope | Key Privileges |
+|------|-------|----------------|
+| ELM Requester | User | Create/Read/Write own requests |
+| ELM Approver | BU | Read/Write requests in BU |
+| ELM Admin | Org | Full requests, Create-only logs |
+| ELM Auditor | Org | Read-only all tables |
+
+### create_business_rules.py
+
+Creates business rules for conditional required fields.
+
+**Rules Created:**
+
+| Rule | Condition | Action |
+|------|-----------|--------|
+| Zone Rationale Required | Zone = 2 or 3 | Set fsi_zonerationale required |
+| Security Group Required | Zone = 2 or 3 | Set fsi_securitygroupid required |
+| Approval Comments Required | State = Rejected | Set fsi_approvalcomments required |
+
+### create_views.py
+
+Creates model-driven app views.
+
+**Views Created:**
+
+| View | Entity | Filter |
+|------|--------|--------|
+| My Requests | EnvironmentRequest | Requester = currentuser |
+| Pending My Approval | EnvironmentRequest | State = PendingApproval, Approver = currentuser |
+| All Pending | EnvironmentRequest | State = PendingApproval |
+| Provisioning in Progress | EnvironmentRequest | State = Provisioning |
+| Failed Requests | EnvironmentRequest | State = Failed |
+| Completed This Month | EnvironmentRequest | State = Completed, date >= startOfMonth |
+| All Provisioning Logs | ProvisioningLog | None |
+| Failed Actions | ProvisioningLog | Success = false |
+
+### create_field_security.py
+
+Creates field security profiles for approvers.
+
+**ELM Approver Fields Profile:**
+
+| Field | Permission |
+|-------|------------|
+| fsi_state | Read + Update |
+| fsi_approver | Read + Update |
+| fsi_approvedon | Read + Update |
+| fsi_approvalcomments | Read + Update |
+| All other fields | Read only |
+
+---
+
 ### elm_client.py
 
 Dataverse Web API wrapper with MSAL authentication.
@@ -61,11 +237,19 @@ Dataverse Web API wrapper with MSAL authentication.
 ```python
 from elm_client import ELMClient
 
+# Interactive auth (for manual runs)
+client = ELMClient(
+    tenant_id="...",
+    environment_url="https://org.crm.dynamics.com",
+    interactive=True,
+)
+
+# Service Principal auth (for automation)
 client = ELMClient(
     tenant_id="...",
     client_id="...",
     client_secret="...",
-    environment_url="https://org.crm.dynamics.com"
+    environment_url="https://org.crm.dynamics.com",
 )
 
 # Query EnvironmentRequest
@@ -78,12 +262,24 @@ client.create("fsi_provisioninglogs", {
     "fsi_actortype": 3,
     "fsi_success": True
 })
+
+# Metadata operations (for deployment scripts)
+client.get_entity_metadata("fsi_environmentrequest")
+client.create_entity(entity_metadata)
+client.create_attribute("fsi_environmentrequest", column_metadata)
 ```
 
 **Usage as CLI:**
 
 ```bash
-# Test connection
+# Test connection with interactive auth
+python elm_client.py \
+  --tenant-id <tenant> \
+  --environment-url https://org.crm.dynamics.com \
+  --interactive \
+  --test-connection
+
+# Test connection with Service Principal
 python elm_client.py \
   --tenant-id <tenant> \
   --client-id <client> \

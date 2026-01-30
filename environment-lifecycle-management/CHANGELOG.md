@@ -2,6 +2,44 @@
 
 All notable changes to the Environment Lifecycle Management solution.
 
+## [1.1.0] - 2026-01-30
+
+### Added
+
+- **Automated Dataverse Deployment** - New `deploy.py` orchestrator for quick lab/dev setup
+  - Creates all Dataverse components via Web API
+  - Supports `--dry-run` for preview without changes
+  - Supports `--interactive` for browser-based authentication
+  - Supports `--tables-only` and `--roles-only` for selective deployment
+- **Schema Automation Scripts:**
+  - `create_dataverse_schema.py` - Creates tables, columns, and global option sets
+  - `create_security_roles.py` - Creates 4 security roles with correct privileges
+  - `create_business_rules.py` - Creates conditional required field rules
+  - `create_views.py` - Creates 8 model-driven app views
+  - `create_field_security.py` - Creates ELM Approver Fields profile
+- **Enhanced elm_client.py:**
+  - Added metadata operations for entity/attribute/optionset creation
+  - Added interactive browser authentication support
+  - Added methods for roles, privileges, views, workflows, field security
+
+### Changed
+
+- Updated README.md with automated deployment quick start section
+- Updated SETUP_CHECKLIST.md with Option A (automated) path
+- Updated Known Limitations table to reflect new automation capabilities
+
+### Removed
+
+- Removed unused `msgraph-sdk` dependency from requirements.txt
+
+### Notes
+
+- Automated deployment recommended for lab/dev environments
+- Production deployment should use manual process for audit trail
+- Copilot Studio agents and Power Automate flows still require manual creation
+
+---
+
 ## [1.0.1] - 2026-01-29
 
 ### Fixed
