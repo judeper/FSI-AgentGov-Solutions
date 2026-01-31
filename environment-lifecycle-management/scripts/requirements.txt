@@ -2,11 +2,11 @@
 # Python 3.10+ required
 
 # Authentication
-msal>=1.25.0
+msal>=1.30.0                    # Token caching improvements
 
 # HTTP requests
-requests>=2.31.0
+requests>=2.32.0                # CVE-2024-35195 security fix
 
 # Azure Key Vault
-azure-identity>=1.14.0
+azure-identity>=1.18.0          # CAE support
 azure-keyvault-secrets>=4.7.0

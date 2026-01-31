@@ -64,7 +64,7 @@ Create three environment groups before deployment:
 | `FSI-Zone2-TeamCollaboration` | Zone 2 | Team collaboration, restricted DLP |
 | `FSI-Zone3-EnterpriseManagedEnvironment` | Zone 3 | Enterprise managed, highly restricted DLP |
 
-> **Note:** Environment Groups must be created manually in Power Platform admin center. There is no API for group creation.
+> **Note:** Environment Groups can be created via the Environment Groups API (`POST .../environmentGroups`) or manually in Power Platform admin center. Manual creation is recommended for initial setup to establish audit trail documentation.
 
 ## Azure Key Vault
 
@@ -153,9 +153,9 @@ The provisioning flows require these connectors in Business/Non-Blockable group:
 Install via `pip install -r scripts/requirements.txt`:
 
 ```
-msal>=1.25.0
-requests>=2.31.0
-azure-identity>=1.14.0
+msal>=1.30.0                    # Token caching improvements
+requests>=2.32.0                # CVE-2024-35195 security fix
+azure-identity>=1.18.0          # CAE support
 azure-keyvault-secrets>=4.7.0
 ```
 

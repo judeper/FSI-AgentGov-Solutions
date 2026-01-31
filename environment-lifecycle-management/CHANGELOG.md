@@ -2,6 +2,23 @@
 
 All notable changes to the Environment Lifecycle Management solution.
 
+## [1.1.2] - 2026-01-31
+
+### Changed
+
+- **Documentation Accuracy:** Corrected Environment Groups API claim in prerequisites.md (API exists via `POST .../environmentGroups`)
+- **Security Dependencies:** Updated Python dependency versions for security and feature improvements:
+  - `msal>=1.30.0` (token caching improvements)
+  - `requests>=2.32.0` (CVE-2024-35195 security fix)
+  - `azure-identity>=1.18.0` (CAE support)
+
+### Notes
+
+- Part of ELM Technical Accuracy Remediation (research validation: 71% accurate, 29% updated)
+- See FSI-AgentGov v1.2.26 for related framework documentation updates
+
+---
+
 ## [1.1.1] - 2026-01-31
 
 ### Changed
