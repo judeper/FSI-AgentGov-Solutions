@@ -95,8 +95,8 @@ Power Automate flows can run under different identities, which affects how you c
 
 | Flow Type | Identity | Key Vault Access |
 |-----------|----------|------------------|
-| **Standard (User-based)** | The user who created or owns the flow | Grant access to that user's Azure AD account |
-| **Service Principal** | An Azure AD app registration | Grant access to the service principal |
+| **Standard (User-based)** | The user who created or owns the flow | Grant access to that user's Microsoft Entra ID account |
+| **Service Principal** | A Microsoft Entra ID app registration | Grant access to the service principal |
 | **Managed Identity** | System-assigned identity (premium) | Grant access to the managed identity |
 
 **Most Common Scenario:** Standard user-based flows run as the flow owner. When you create a Key Vault connection in Power Automate, it authenticates as your user account. Grant your user account (or a service account if using one) access to Key Vault.
@@ -142,7 +142,7 @@ Configure:
 4. Search for "Azure Key Vault"
 5. Select **Azure Key Vault**
 6. Configure:
-   - **Authentication type:** Default Azure AD application
+   - **Authentication type:** Default Microsoft Entra ID application
    - **Vault name:** Your Key Vault name
 7. Click **Create**
 8. Sign in with your Microsoft 365 account
@@ -168,10 +168,10 @@ Configure:
 
 When rotating the client secret:
 
-1. Create new secret in Azure AD app registration
+1. Create new secret in Microsoft Entra ID app registration
 2. Add new secret to Key Vault (can use same name - it creates a new version)
 3. Verify flow works with new secret
-4. Delete old secret from Azure AD
+4. Delete old secret from Microsoft Entra ID
 
 ### Monitoring
 

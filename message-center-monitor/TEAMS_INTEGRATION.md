@@ -29,7 +29,7 @@ The solution sends adaptive card notifications to a Teams channel when:
 
 In your Power Automate flow:
 
-1. Add action: **Microsoft Teams - Post adaptive card in a chat or channel**
+1. Add action: **Microsoft Teams - Post card in a chat or channel**
 2. Sign in with your Microsoft 365 account
 3. Configure:
    - **Post as:** Flow bot
@@ -37,9 +37,15 @@ In your Power Automate flow:
    - **Team:** Select your team
    - **Channel:** Select your alerts channel
 
+> **Action Name Update:** Microsoft has renamed several Teams connector actions. The current action is "Post card in a chat or channel". If you have existing flows using "Post adaptive card in a chat or channel", they will continue to work, but new flows should use the current name.
+
 ## Step 3: Use the Adaptive Card Template
 
 The file `teams-notification-card.json` contains the notification template.
+
+### Adaptive Card Version Compatibility
+
+Teams supports Adaptive Cards versions 1.0 through 1.5. This solution uses version 1.4, which provides a good balance of features and compatibility. If you need features from version 1.5 (like table elements), update the version in your card JSON.
 
 ### Option A: Copy-Paste Method
 
@@ -323,8 +329,8 @@ Dataverse column logical names include a publisher prefix (e.g., `cr123_messagec
 ### Card Not Displaying
 
 - Validate JSON at [adaptivecards.io/designer](https://adaptivecards.io/designer)
-- Ensure version is "1.4" or compatible with Teams
-- Check for unsupported features in Teams
+- Ensure version is "1.4" or "1.5" (Teams supports versions 1.0-1.5)
+- Check for unsupported features in Teams (some Adaptive Card features are desktop-only)
 
 ### Mentions Not Working
 

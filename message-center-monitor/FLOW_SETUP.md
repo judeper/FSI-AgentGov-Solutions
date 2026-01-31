@@ -14,8 +14,8 @@ The flow:
 
 Before starting, ensure you have:
 
-- [ ] Azure AD app registration with `ServiceMessage.Read.All` permission
-- [ ] Admin consent granted for the app
+- [ ] Microsoft Entra ID app registration with `ServiceMessage.Read.All` permission
+- [ ] Admin consent granted for the app (any administrator with permission to consent)
 - [ ] Client ID, Tenant ID, and Client Secret ready
 - [ ] Dataverse table created (see README.md)
 - [ ] Azure Key Vault with client secret stored (recommended)
@@ -118,6 +118,8 @@ Microsoft Graph API returns paged results. Without handling pagination, you may 
 ### Understanding `@odata.nextLink`
 
 When more results exist than fit in one response, Graph API includes `@odata.nextLink` - a URL to fetch the next page. You must loop until this value is absent.
+
+> **Page Size:** The default page size is 100 items. You can request up to 1000 items per page by adding the `Prefer: odata.maxpagesize=1000` header to your HTTP request. This reduces the number of API calls needed for tenants with many posts.
 
 ### Pattern: Do Until Loop
 
@@ -305,7 +307,9 @@ This prevents notifications for posts with past deadlines.
 
 **If yes:**
 
-Add action: **Microsoft Teams - Post adaptive card in a chat or channel**
+Add action: **Microsoft Teams - Post card in a chat or channel**
+
+> **Note:** The action was previously called "Post adaptive card in a chat or channel" but has been renamed. If you see the old name in your flow, it will continue to work.
 
 - **Post as:** Flow bot
 - **Post in:** Channel
@@ -395,7 +399,7 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 ### HTTP action fails with 403
 
 - `ServiceMessage.Read.All` requires **Application** permission, not Delegated
-- Admin consent must be granted by a Global Administrator
+- Admin consent must be granted by an administrator with permission to consent to enterprise applications
 
 ### Parse JSON fails
 

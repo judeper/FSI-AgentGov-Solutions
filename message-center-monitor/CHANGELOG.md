@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.1.1] - January 2026
+
+### Technical Accuracy Updates
+
+This release addresses terminology and deprecation updates identified during technical validation against official Microsoft documentation.
+
+#### Terminology Updates
+
+**Azure AD → Microsoft Entra ID:**
+- Updated all documentation to use "Microsoft Entra ID" (rebranded in 2023)
+- Updated portal navigation instructions to reference Microsoft Entra admin center
+- Files affected: README.md, FLOW_SETUP.md, SECRETS_MANAGEMENT.md
+
+**Admin Consent Clarification:**
+- Changed "requires Global Admin" to "requires an administrator with permission to consent"
+- Admin consent can be granted by any admin with enterprise application consent permissions, not exclusively Global Admins
+
+#### Teams Connector Updates
+
+**Action Name Changes:**
+- Updated action name from "Post adaptive card in a chat or channel" to "Post card in a chat or channel"
+- Added note that existing flows with old action name will continue to work
+- Added Adaptive Card version compatibility note (Teams supports versions 1.0-1.5)
+
+#### API Documentation Enhancements
+
+**Page Size Documentation:**
+- Added note that maximum page size is 1000 (via `Prefer: odata.maxpagesize=1000` header)
+- Default page size remains 100 items
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| README.md | Entra ID terminology, admin consent clarification, version bump |
+| FLOW_SETUP.md | Entra ID terminology, Teams action update, max page size note |
+| TEAMS_INTEGRATION.md | Teams action name update, Adaptive Card version compatibility |
+| SECRETS_MANAGEMENT.md | Entra ID terminology (all Azure AD references) |
+
+---
+
 ## [2.1.0] - January 2026
 
 ### Technical Review Fixes

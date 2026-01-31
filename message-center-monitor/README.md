@@ -21,16 +21,16 @@ Monitor Microsoft 365 Message Center for platform changes that could impact AI a
 
 ## Prerequisites
 
-### 1. Azure AD App Registration
+### 1. Microsoft Entra ID App Registration
 
 Create an app registration for Message Center access:
 
-1. Go to Azure Portal > Azure Active Directory > App Registrations
+1. Go to [Microsoft Entra admin center](https://entra.microsoft.com) > **Applications** > **App registrations**
 2. Create new registration (single tenant)
 3. Under "API permissions":
    - Add permission > Microsoft Graph > **Application permissions**
    - Select `ServiceMessage.Read.All`
-   - Click **Grant admin consent** (requires Global Admin)
+   - Click **Grant admin consent** (requires an administrator with permission to consent)
 4. Under "Certificates & secrets", create a client secret
 5. Note the Application (client) ID, Directory (tenant) ID, and client secret
 
@@ -225,7 +225,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.1.0 - January 2026
+2.1.1 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
