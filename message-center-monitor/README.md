@@ -229,6 +229,15 @@ This solution is designed to be modified:
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
+## Related Controls
+
+- [Control 2.3: Change Management and Release Planning](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md)
+- [Control 2.10: Patch Management and System Updates](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.10-patch-management-and-system-updates.md)
+
+## Playbook Reference
+
+- [Platform Change Governance Playbook](https://github.com/judeper/FSI-AgentGov/blob/main/docs/playbooks/advanced-implementations/platform-change-governance/index.md)
+
 ## License
 
 MIT - See LICENSE in repository root

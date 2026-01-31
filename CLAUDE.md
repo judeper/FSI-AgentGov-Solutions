@@ -36,6 +36,17 @@ git rev-parse --show-toplevel
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.7 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
 
+## Control Implementations
+
+| Solution | Primary Controls | Description |
+|----------|-----------------|-------------|
+| environment-lifecycle-management | 2.1, 2.2, 2.3, 2.8, 1.7 | Environment provisioning with zone-based governance |
+| message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
+| pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
+| deny-event-correlation-report | 1.5, 1.7, 3.4 | Deny event correlation across Purview and App Insights |
+
+When updating solution READMEs, ensure Related Controls sections match these mappings.
+
 ## Directory Structure
 
 ```

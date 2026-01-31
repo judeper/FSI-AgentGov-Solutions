@@ -110,12 +110,13 @@ See [docs/architecture.md](docs/architecture.md) for detailed deployment instruc
 
 ## Related Framework Documentation
 
-This solution implements the [Deny Event Correlation Report](https://github.com/judeper/FSI-AgentGov/docs/playbooks/advanced-implementations/deny-event-correlation-report/) playbook from the FSI Agent Governance Framework.
+This solution implements the [Deny Event Correlation Report](https://github.com/judeper/FSI-AgentGov/blob/main/docs/playbooks/advanced-implementations/deny-event-correlation-report/index.md) playbook from the FSI Agent Governance Framework.
 
-Related controls:
-- [Control 1.7 - Audit Logging](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance/)
-- [Control 1.8 - Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-protection-and-external-threat-detection/)
-- [Control 3.2 - Usage Analytics](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring/)
+## Related Controls
+
+- [Control 1.5: DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md)
+- [Control 1.7: Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md)
+- [Control 3.4: Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md)
 
 ## Support
 
