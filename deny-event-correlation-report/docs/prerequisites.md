@@ -42,7 +42,10 @@
 | Permission | Scope | Required |
 |------------|-------|----------|
 | **Reader** | App Insights resource | Query telemetry |
-| **API Key (Read)** | App Insights resource | REST API access |
+| **Monitoring Reader** | App Insights resource | Entra ID authentication (recommended) |
+| ~~**API Key (Read)**~~ | ~~App Insights resource~~ | ~~REST API access~~ (deprecated March 31, 2026) |
+
+> ⚠️ **Deprecation Warning:** API key authentication (`x-api-key`) is deprecated and will be removed **March 31, 2026**. See [Authentication Migration](#authentication-migration) for Entra ID setup.
 
 ### Azure Automation (Optional)
 
@@ -87,7 +90,26 @@ Add-RoleGroupMember -Identity "View-Only Audit Logs" `
     -Member "svc-deny-report@contoso.com"
 ```
 
-### 3. Create Application Insights API Key
+### 3. Configure Application Insights Access
+
+#### Option A: Entra ID Authentication (Recommended)
+
+Starting **March 31, 2026**, API key authentication will no longer work. Configure Entra ID authentication now:
+
+1. Create or use an existing service principal (App Registration)
+2. Assign **Monitoring Reader** role on the Application Insights resource:
+   ```bash
+   az role assignment create \
+       --assignee "your-service-principal-id" \
+       --role "Monitoring Reader" \
+       --scope "/subscriptions/{sub}/resourceGroups/{rg}/providers/microsoft.insights/components/{appinsights}"
+   ```
+3. Store the service principal credentials in Azure Key Vault
+4. Use `Connect-AzAccount` with service principal in automation
+
+#### Option B: API Key (Deprecated - Ends March 31, 2026)
+
+> ⚠️ **Deprecated:** This method will stop working on March 31, 2026.
 
 1. Navigate to Azure Portal > Application Insights resource
 2. Go to **Configure** > **API Access**
@@ -172,12 +194,69 @@ customEvents
 - [ ] Microsoft 365 E5/E5 Compliance license assigned
 - [ ] Service account created with View-Only Audit Logs role
 - [ ] Application Insights resource created
-- [ ] Application Insights API key generated and stored
+- [ ] ~~Application Insights API key generated and stored~~ **OR** Entra ID service principal configured (recommended)
 - [ ] Copilot Studio agents configured with App Insights (Zone 2/3)
 - [ ] Azure Blob Storage account created (optional)
 - [ ] Azure Key Vault configured with credentials (optional)
 - [ ] Power BI workspace created with appropriate access
 - [ ] Network connectivity verified from execution environment
+
+---
+
+## Authentication Migration
+
+### Timeline
+
+| Date | Event |
+|------|-------|
+| **Now** | Begin migration to Entra ID authentication |
+| **March 31, 2026** | x-api-key authentication **permanently disabled** |
+| **After March 31, 2026** | All scripts using API keys will fail |
+
+### Migration Steps
+
+1. **Create Service Principal**
+   ```bash
+   az ad sp create-for-rbac --name "DenyReportService" --skip-assignment
+   ```
+   Save the output (appId, password, tenant).
+
+2. **Assign Monitoring Reader Role**
+   ```bash
+   az role assignment create \
+       --assignee "{appId}" \
+       --role "Monitoring Reader" \
+       --scope "/subscriptions/{sub}/resourceGroups/{rg}/providers/microsoft.insights/components/{appinsights-name}"
+   ```
+
+3. **Store Credentials in Key Vault**
+   ```bash
+   az keyvault secret set --vault-name "kv-deny-report" --name "ServicePrincipalId" --value "{appId}"
+   az keyvault secret set --vault-name "kv-deny-report" --name "ServicePrincipalSecret" --value "{password}"
+   az keyvault secret set --vault-name "kv-deny-report" --name "TenantId" --value "{tenant}"
+   ```
+
+4. **Update Scripts**
+
+   Replace API key authentication with Entra ID:
+   ```powershell
+   # Old (deprecated)
+   $headers = @{ "x-api-key" = $ApiKey }
+
+   # New (Entra ID)
+   Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
+   $token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
+   $headers = @{ "Authorization" = "Bearer $token" }
+   ```
+
+5. **Test Before Deadline**
+
+   Run test queries with new authentication to verify access before March 31, 2026.
+
+### Reference
+
+- [Azure Monitor deprecation announcement](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/deprecation)
+- [Entra ID authentication for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/access-api)
 
 ---
 

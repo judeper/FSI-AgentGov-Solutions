@@ -2,6 +2,10 @@
 
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 
+> ⚠️ **Deprecation Warning: x-api-key Authentication**
+>
+> Application Insights x-api-key authentication is deprecated and will be removed **March 31, 2026**. After this date, `Export-RaiTelemetry.ps1` will fail unless migrated to Entra ID authentication. See [prerequisites.md](docs/prerequisites.md#authentication-migration) for migration guidance.
+
 ## Overview
 
 This solution provides automated extraction, correlation, and visualization of deny events from three Microsoft data sources:
@@ -11,6 +15,7 @@ This solution provides automated extraction, correlation, and visualization of d
 | **Microsoft Purview Audit** | CopilotInteraction deny, XPIA, Jailbreak | Agent-level access blocks |
 | **Microsoft Purview DLP** | DlpRuleMatch for Copilot location | Sensitivity-based blocks |
 | **Application Insights** | ContentFiltered RAI events | Model-layer content filtering |
+| **Defender CloudAppEvents** (optional) | UPIA/XPIA detections | Prompt injection detection (advanced) |
 
 ## Regulatory Alignment
 

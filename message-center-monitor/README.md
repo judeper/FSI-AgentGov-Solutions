@@ -108,6 +108,8 @@ See [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) for Teams setup.
 2. Use the provided adaptive card template
 3. Configure the flow to post high-severity alerts
 
+> **Note on Office 365 Connectors Deprecation:** Microsoft is retiring Office 365 incoming webhook connectors on **March 31, 2026**. This solution uses the native **Power Automate "Post to Teams" connector**, which is unaffected by this deprecation. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
+
 ### Step 4: Verify It Works
 
 1. Run the flow manually

@@ -34,8 +34,13 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.0
+    Version: 1.1
     Requires: Application Insights API access, Az.KeyVault module (optional)
+
+    DEPRECATION WARNING:
+    x-api-key authentication is deprecated and will be permanently disabled on March 31, 2026.
+    Migrate to Entra ID authentication before this date.
+    See: docs/prerequisites.md#authentication-migration
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -141,6 +146,14 @@ try {
     Write-Host " RAI Telemetry Extraction" -ForegroundColor Cyan
     Write-Host " FSI Agent Governance Framework" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
+
+    # Deprecation warning for API key authentication
+    Write-Warning @"
+DEPRECATION NOTICE: x-api-key authentication is deprecated.
+This authentication method will be permanently disabled on March 31, 2026.
+Migrate to Entra ID (OAuth 2.0) authentication before this date.
+See: docs/prerequisites.md#authentication-migration
+"@
 
     # Validate parameters
     if ($StartDate -ge $EndDate) {

@@ -84,8 +84,9 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 - **Key deny indicators:**
   - `AccessedResources[].Status = "failure"`
   - `AccessedResources[].PolicyDetails` (present when blocked)
-  - `AccessedResources[].XPIADetected = true`
-  - `Messages[].JailbreakDetected = true`
+  - `ResponseOutcome = "Blocked"` (when content was blocked)
+
+> **Note:** The `XPIADetected` and `JailbreakDetected` fields are **not** part of the CopilotInteraction audit schema. Prompt injection and jailbreak detections are logged to **Defender CloudAppEvents** (requires Defender for Cloud Apps). See the CloudAppEvents Integration section below for details.
 
 #### Microsoft Purview DLP
 
@@ -98,6 +99,23 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 - **ContentFiltered events** - Logged by Copilot Studio when RAI blocks response
 - **Per-agent configuration required** - No tenant-wide telemetry
 - **Key fields:** FilterReason, FilterCategory, FilterSeverity
+
+#### Defender CloudAppEvents (Optional - Advanced)
+
+- **Prompt injection detection** - UPIA (User Prompt Injection Attack) and XPIA (Cross-domain Prompt Injection Attack) events
+- **Jailbreak detection** - Attempts to bypass model guardrails
+- **Requires:** Defender for Cloud Apps license, enabled Copilot protection
+- **Key query:**
+
+```kql
+CloudAppEvents
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where RawEventData has "PromptInjection" or RawEventData has "Jailbreak"
+| extend ThreatCategory = tostring(parse_json(RawEventData).ThreatCategory)
+| project Timestamp, AccountDisplayName, Application, ThreatCategory
+```
+
+> **Note:** CloudAppEvents integration is separate from the core deny event extraction and requires additional licensing (Defender for Cloud Apps). Organizations without Defender may skip this data source.
 
 ### 2. Extraction Layer
 
@@ -164,12 +182,15 @@ Power Automate Flow
 
 ### Authentication
 
-| Component | Authentication Method |
-|-----------|----------------------|
-| Exchange Online | Service principal or credential-based |
-| Application Insights | API key (rotate every 90 days) |
-| Azure Storage | Managed identity or SAS token |
-| Power BI | Azure AD |
+| Component | Authentication Method | Deprecation Status |
+|-----------|----------------------|-------------------|
+| Exchange Online | Service principal or credential-based | Active |
+| Application Insights | ~~API key~~ **Entra ID (OAuth 2.0)** | x-api-key deprecated March 31, 2026 |
+| Defender CloudAppEvents | Entra ID (Defender APIs) | Active |
+| Azure Storage | Managed identity or SAS token | Active |
+| Power BI | Azure AD | Active |
+
+> ⚠️ **Authentication Migration Required:** Application Insights x-api-key authentication is deprecated effective **March 31, 2026**. Migrate to Entra ID service principal authentication before this date. See [prerequisites.md](prerequisites.md#authentication-migration) for migration steps.
 
 ### Data Classification
 
