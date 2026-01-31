@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.8] - January 2026
+
+### Documentation Accuracy Fixes
+
+This release addresses three documentation inaccuracies that could cause confusion or set false expectations for makers.
+
+| Issue | Severity | File | Fix |
+|-------|----------|------|-----|
+| 4.1 | CRITICAL | NOTIFICATION_TEMPLATES.md, Send-OwnerNotifications.ps1 | Changed "deployment configurations will be preserved" to clarify that pipelines must be recreated |
+| 4.2 | MEDIUM | README.md, Get-PipelineInventory.ps1 | Added directional-only warning for `-ProbePipelines` text parsing |
+| 4.3 | MEDIUM | README.md | Added manual verification requirement for greenfield state detection |
+
+#### Fixed
+
+**Notification Language (Issue 4.1 - CRITICAL)**
+- Changed misleading "Your deployment configurations will be preserved" to:
+  - "Your deployed solutions will remain in place"
+  - "Pipeline definitions must be recreated in the central host"
+- This aligns with what MIGRATION_GUIDE.md and LIMITATIONS.md already correctly state
+- Affects: NOTIFICATION_TEMPLATES.md (email template) and Send-OwnerNotifications.ps1 (HTML email body)
+
+**-ProbePipelines Output Warning (Issue 4.2 - MEDIUM)**
+- Added warning in README.md: "The `-ProbePipelines` output is **directional only**"
+- Text parsing of `pac pipeline list` may produce false negatives if output formatting changes
+- Added output message in Get-PipelineInventory.ps1 summary when `-ProbePipelines` is used
+
+**Greenfield Verification Guidance (Issue 4.3 - MEDIUM)**
+- Clarified that `pac pipeline list` returning no pipelines is only *indicative* of greenfield state
+- Added requirement for manual verification in Deployment Pipeline Configuration app
+- CLI cannot detect all host configurations
+
+#### Changed
+
+- Version bumped to 1.0.8 across all affected files
+- README.md Quick Start Step 1 now includes manual verification requirement
+- Get-PipelineInventory.ps1 now displays directional warning after probe summary
+
+---
+
 ## [1.0.7] - January 2026
 
 ### Second Review Corrections (January 2026)

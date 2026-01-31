@@ -32,7 +32,8 @@ Your pipeline was created outside of our centrally governed infrastructure. To m
 
 1. <strong>Migrate to Central Host (Recommended)</strong>
    - Contact the Platform Ops team to migrate your pipeline
-   - Your deployment configurations will be preserved
+   - Your deployed solutions will remain in place
+   - Pipeline definitions must be recreated in the central host
    - Request via: [ServiceNow/Help Desk Link]
 
 2. <strong>Request Exemption</strong>

@@ -122,7 +122,8 @@ function Build-NotificationEmail {
 <li><strong>Migrate to Central Host (Recommended)</strong>
     <ul>
         <li>Contact the Platform Ops team to migrate your pipelines</li>
-        <li>Your deployment configurations will be preserved</li>
+        <li>Your deployed solutions will remain in place</li>
+        <li>Pipeline definitions must be recreated in the central host</li>
         <li>Request via: <a href="$MigrationUrl">Migration Request Form</a></li>
     </ul>
 </li>
@@ -205,7 +206,7 @@ function Send-GraphEmail {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.7 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.8 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 

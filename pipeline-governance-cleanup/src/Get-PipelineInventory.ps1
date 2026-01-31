@@ -143,7 +143,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.7 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.0.8 - January 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -267,6 +267,12 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
 
     if (-not $ProbePipelines) {
         Write-Host "TIP: Run with -ProbePipelines to detect pipeline configurations automatically" -ForegroundColor Yellow
+        Write-Host ""
+    }
+    else {
+        Write-Host ""
+        Write-Host "NOTE: Pipeline detection via -ProbePipelines is directional only." -ForegroundColor Yellow
+        Write-Host "      Validate manually before enforcement decisions." -ForegroundColor Yellow
         Write-Host ""
     }
 

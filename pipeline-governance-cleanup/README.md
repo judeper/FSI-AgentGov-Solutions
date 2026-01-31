@@ -101,7 +101,8 @@ If all pre-flight checks pass, follow these steps:
 
 1. **Verify clean state**
    - Run Part 0 of [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) to confirm no custom hosts exist
-   - If `pac pipeline list` returns no pipelines across all environments, you're in greenfield state
+   - Run `pac pipeline list` across environments—if no pipelines are detected, this is *indicative* of greenfield state
+   - **Required:** Manually verify in the Deployment Pipeline Configuration app that no custom hosts exist, even if `pac pipeline list` returns no pipelines. The CLI cannot detect all host configurations.
 
 2. **Create custom host**
    - Install Power Platform Pipelines app in your designated host environment
@@ -216,6 +217,8 @@ pac auth create
 ```
 
 This produces a CSV with all environments and indicates which have pipelines (`HasPipelinesEnabled` column). **Manual review is required** to identify which pipelines host those environments are linked to.
+
+> **Important:** The `-ProbePipelines` output is **directional only**. Text parsing of `pac pipeline list` may produce false negatives if output formatting changes. Do not rely solely on this output for enforcement decisions—require manual validation via the Deployment Pipeline Configuration app before executing force-link operations.
 
 ### Step 2: Manual Pipeline Assessment
 
@@ -449,7 +452,7 @@ This solution supports:
 
 ## Version
 
-1.0.7 - January 2026
+1.0.8 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
