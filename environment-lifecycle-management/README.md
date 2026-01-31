@@ -4,6 +4,46 @@ Automated Power Platform environment provisioning with zone-based governance cla
 
 > **Important:** This solution combines **Python automation scripts** with **manual portal configuration** for Copilot Studio agents. Environment Groups and Copilot Studio topics must be created manually via the admin portal. See [Known Limitations](#known-limitations) for details.
 
+## Prerequisites
+
+### 1. Licensing
+
+| License | Purpose |
+|---------|---------|
+| Power Apps Premium | Dataverse tables, model-driven app |
+| Copilot Studio | Intake agent (may be included in M365 E3/E5) |
+| Power Automate Premium | HTTP actions with Entra ID connector |
+| Azure Subscription | Key Vault for credential storage |
+
+### 2. Roles Required
+
+| Role | Purpose |
+|------|---------|
+| Power Platform Admin | Service Principal setup, environment creation |
+| Entra ID Application Administrator | App registration |
+| System Administrator | Dataverse table creation, security roles |
+| Key Vault Secrets Officer | Credential storage |
+
+### 3. Environment Groups
+
+Create three environment groups in Power Platform admin center before deployment:
+
+| Group Name | Zone | DLP Policy |
+|------------|------|------------|
+| FSI-Zone1-PersonalProductivity | Zone 1 | Standard |
+| FSI-Zone2-TeamCollaboration | Zone 2 | Restricted |
+| FSI-Zone3-EnterpriseManagedEnvironment | Zone 3 | Highly Restricted |
+
+### 4. Azure Key Vault
+
+Required for Service Principal credential storage:
+
+1. Create or identify existing Key Vault
+2. Grant Power Automate identity "Get" secret permission
+3. Store Service Principal client secret as `ELM-ServicePrincipal-Secret`
+
+See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for complete setup.
+
 ## Automated Deployment (Lab/Dev)
 
 For quick setup in lab or development environments, use the automated deployment script:
@@ -85,46 +125,6 @@ See [docs/troubleshooting.md](./docs/troubleshooting.md) for workarounds and err
 | Compliance Teams | Export evidence for regulatory examinations |
 | Auditors | Verify provisioning controls and immutability |
 
-## Prerequisites
-
-### 1. Licensing
-
-| License | Purpose |
-|---------|---------|
-| Power Apps Premium | Dataverse tables, model-driven app |
-| Copilot Studio | Intake agent (may be included in M365 E3/E5) |
-| Power Automate Premium | HTTP actions with Entra ID connector |
-| Azure Subscription | Key Vault for credential storage |
-
-### 2. Roles Required
-
-| Role | Purpose |
-|------|---------|
-| Power Platform Admin | Service Principal setup, environment creation |
-| Entra ID Application Administrator | App registration |
-| System Administrator | Dataverse table creation, security roles |
-| Key Vault Secrets Officer | Credential storage |
-
-### 3. Environment Groups
-
-Create three environment groups in Power Platform admin center before deployment:
-
-| Group Name | Zone | DLP Policy |
-|------------|------|------------|
-| FSI-Zone1-PersonalProductivity | Zone 1 | Standard |
-| FSI-Zone2-TeamCollaboration | Zone 2 | Restricted |
-| FSI-Zone3-EnterpriseManagedEnvironment | Zone 3 | Highly Restricted |
-
-### 4. Azure Key Vault
-
-Required for Service Principal credential storage:
-
-1. Create or identify existing Key Vault
-2. Grant Power Automate identity "Get" secret permission
-3. Store Service Principal client secret as `ELM-ServicePrincipal-Secret`
-
-See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for complete setup.
-
 ## Data Model
 
 ### EnvironmentRequest Table
@@ -133,11 +133,11 @@ Primary request table with 22 columns including zone classification, approval wo
 
 | Key Column | Type | Purpose |
 |------------|------|---------|
-| `er_requestnumber` | Auto Number | REQ-00001 format |
-| `er_environmentname` | Text | DEPT-Purpose-TYPE naming |
-| `er_zone` | Choice | Zone 1/2/3 classification |
-| `er_state` | Choice | Workflow state (Draft → Completed) |
-| `er_environmentid` | Text | Power Platform environment ID |
+| `fsi_requestnumber` | Auto Number | REQ-00001 format |
+| `fsi_environmentname` | Text | DEPT-Purpose-TYPE naming |
+| `fsi_zone` | Choice | Zone 1/2/3 classification |
+| `fsi_state` | Choice | Workflow state (Draft → Completed) |
+| `fsi_environmentid` | Text | Power Platform environment ID |
 
 ### ProvisioningLog Table
 
@@ -145,11 +145,11 @@ Immutable audit trail with 11 columns. Organization-owned with no Update/Delete 
 
 | Key Column | Type | Purpose |
 |------------|------|---------|
-| `pl_sequence` | Number | Action sequence (1, 2, 3...) |
-| `pl_action` | Choice | 16 action types |
-| `pl_actor` | Text | UPN or Service Principal ID |
-| `pl_timestamp` | DateTime | Action timestamp |
-| `pl_success` | Boolean | Success/failure flag |
+| `fsi_sequence` | Number | Action sequence (1, 2, 3...) |
+| `fsi_action` | Choice | 16 action types |
+| `fsi_actor` | Text | UPN or Service Principal ID |
+| `fsi_timestamp` | DateTime | Action timestamp |
+| `fsi_success` | Boolean | Success/failure flag |
 
 See [docs/dataverse-schema.md](./docs/dataverse-schema.md) for complete schema.
 
@@ -363,7 +363,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.0.1 - January 2026
+1.1.1 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

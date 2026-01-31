@@ -43,14 +43,78 @@ APPROVER_FIELD_PERMISSIONS = {
 }
 
 
-def create_field_security(client: ELMClient, dry_run: bool = False) -> None:
-    """Create field security profiles for ELM."""
+def validate_fields_exist(
+    client: ELMClient,
+    entity_logical_name: str,
+    field_names: list[str],
+) -> tuple[list[str], list[str]]:
+    """
+    Validate that all specified fields exist on the entity.
+
+    Args:
+        client: Authenticated ELMClient
+        entity_logical_name: Entity logical name
+        field_names: List of field names to check
+
+    Returns:
+        Tuple of (existing_fields, missing_fields)
+    """
+    existing = []
+    missing = []
+    for field_name in field_names:
+        attr = client.get_attribute_metadata(entity_logical_name, field_name)
+        if attr:
+            existing.append(field_name)
+        else:
+            missing.append(field_name)
+    return existing, missing
+
+
+def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
+    """
+    Create field security profiles for ELM.
+
+    Args:
+        client: Authenticated ELMClient
+        dry_run: If True, show what would be created without making changes
+
+    Returns:
+        True if successful, False if validation fails
+    """
     print("\n" + "=" * 60)
     print("ELM Field Security Deployment")
     print("=" * 60)
 
     if dry_run:
         print("\n*** DRY RUN - No changes will be made ***\n")
+
+    # Validate entity exists first
+    print("\n[Validating Schema]")
+    er_metadata = client.get_entity_metadata("fsi_environmentrequest")
+    if not er_metadata:
+        print("  ERROR: EnvironmentRequest table not found.")
+        print("  Run create_dataverse_schema.py first.")
+        return False
+    print("  EnvironmentRequest table: found ✓")
+
+    # Upfront field validation
+    print()
+    print("  Validating fields...")
+    existing_fields, missing_fields = validate_fields_exist(
+        client,
+        "fsi_environmentrequest",
+        list(APPROVER_FIELD_PERMISSIONS.keys()),
+    )
+
+    if missing_fields:
+        print(f"  ERROR: {len(missing_fields)} required field(s) not found:")
+        for field in missing_fields:
+            print(f"    - {field}")
+        print()
+        print("  Run create_dataverse_schema.py to create missing fields.")
+        return False
+
+    print(f"  All {len(existing_fields)} fields validated ✓")
 
     profile_name = "ELM Approver Fields"
 
@@ -78,19 +142,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> None:
     # Create field permissions
     print(f"\n[Creating Field Permissions]")
 
-    # Get entity metadata to ensure we have the right attribute IDs
-    er_metadata = client.get_entity_metadata("fsi_environmentrequest")
-    if not er_metadata:
-        print("  ERROR: EnvironmentRequest table not found. Run create_dataverse_schema.py first.")
-        return
-
     for field_name, permissions in APPROVER_FIELD_PERMISSIONS.items():
-        # Check if attribute exists
-        attr = client.get_attribute_metadata("fsi_environmentrequest", field_name)
-        if not attr:
-            print(f"  {field_name}: attribute not found, skipping")
-            continue
-
         can_update = permissions["canupdate"] > 0
 
         if dry_run:
@@ -127,6 +179,8 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> None:
     print("  - Associate the ELM Approver Fields profile with ELM Approver security role")
     print("  - Test with an approver user to verify field restrictions work")
     print("  - Approvers should only be able to modify: State, Approver, Approved On, Approval Comments")
+
+    return True
 
 
 def main():
@@ -189,7 +243,9 @@ def main():
             interactive=args.interactive,
         )
 
-        create_field_security(client, dry_run=args.dry_run)
+        success = create_field_security(client, dry_run=args.dry_run)
+        if not success:
+            sys.exit(1)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

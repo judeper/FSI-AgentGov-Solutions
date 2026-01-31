@@ -2,6 +2,30 @@
 
 All notable changes to the Environment Lifecycle Management solution.
 
+## [1.1.1] - 2026-01-31
+
+### Changed
+
+- **BREAKING:** `register_service_principal.py` now requires explicit `--expiry-days` (30-365 range)
+- **BREAKING:** `elm_client.py` now requires explicit `--client-id` for all authentication modes
+- `validate_immutability.py` exit codes: 2=integrity issues, 3=violations (was both 3)
+- `create_security_roles.py` now returns success/failure status and exits with code 1 on failures
+- `create_field_security.py` now returns success/failure status
+
+### Added
+
+- `deploy.py` pre-flight validation shows existing schema state in dry-run mode
+- `export_quarterly_evidence.py` warns when exports contain 0 records
+- `create_security_roles.py` tracks and reports failed privilege assignments
+- `create_field_security.py` validates all fields exist before starting
+
+### Fixed
+
+- README.md Data Model section now uses correct `fsi_` prefix (was `er_`/`pl_`)
+- README.md Prerequisites section now appears before Automated Deployment
+
+---
+
 ## [1.1.0] - 2026-01-30
 
 ### Added

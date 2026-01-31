@@ -214,11 +214,15 @@ Examples:
         print(f"  Exported {requests_count} records to {requests_filename}")
         print(f"  SHA-256: {requests_hash[:16]}...")
 
+        if requests_count == 0:
+            print("  WARNING: No EnvironmentRequest records found in date range")
+
         manifest["files"].append({
             "name": requests_filename,
             "table": "fsi_environmentrequest",
             "recordCount": requests_count,
             "sha256": requests_hash,
+            "isEmpty": requests_count == 0,
         })
 
         # Export ProvisioningLog
@@ -242,11 +246,15 @@ Examples:
         print(f"  Exported {logs_count} records to {logs_filename}")
         print(f"  SHA-256: {logs_hash[:16]}...")
 
+        if logs_count == 0:
+            print("  WARNING: No ProvisioningLog records found in date range")
+
         manifest["files"].append({
             "name": logs_filename,
             "table": "fsi_provisioninglog",
             "recordCount": logs_count,
             "sha256": logs_hash,
+            "isEmpty": logs_count == 0,
         })
 
         # Write manifest
@@ -271,6 +279,16 @@ Examples:
         for f in manifest["files"]:
             print(f"  - {f['name']} ({f['recordCount']} records)")
         print(f"  - manifest.json")
+
+        # Warn if both exports are empty
+        if requests_count == 0 and logs_count == 0:
+            print()
+            print("NOTICE: Both exports contain 0 records.")
+            print("  This may indicate:")
+            print("  - No activity in the specified date range")
+            print("  - Incorrect date range parameters")
+            print("  - ELM tables not yet populated")
+
         print()
         print("Integrity verification:")
         print("  To verify exports, compare SHA-256 hashes in manifest.json")

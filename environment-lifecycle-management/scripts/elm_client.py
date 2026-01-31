@@ -50,8 +50,13 @@ class ELMClient:
 
         if interactive:
             # Public client for interactive auth
+            if not client_id:
+                raise ValueError(
+                    "client_id is required for interactive authentication. "
+                    "Register an app in Entra ID and provide --client-id."
+                )
             self._app = msal.PublicClientApplication(
-                client_id=client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d",  # Well-known Power Platform CLI ID
+                client_id=client_id,
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
         else:
@@ -641,7 +646,7 @@ def main():
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ELM_CLIENT_ID"),
-        help="Application (client) ID (or set ELM_CLIENT_ID env var)",
+        help="Application (client) ID - required for all auth modes (or set ELM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
@@ -673,11 +678,13 @@ def main():
             "(or set ELM_TENANT_ID and ELM_ENVIRONMENT_URL env vars)"
         )
 
-    # For non-interactive mode, need client credentials
+    # Validate client_id is provided for all modes
+    if not args.client_id:
+        parser.error("--client-id is required (or set ELM_CLIENT_ID env var)")
+
+    # For non-interactive mode, need client secret
     client_secret = args.client_secret
     if not args.interactive:
-        if not args.client_id:
-            parser.error("--client-id required for non-interactive authentication")
         if not client_secret:
             import getpass
             client_secret = getpass.getpass("Client secret: ")

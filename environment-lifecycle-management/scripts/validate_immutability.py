@@ -242,7 +242,7 @@ Examples:
             print("  2. Check for System Administrator overrides")
             print("  3. Document incident per security policy")
             print("  4. Contact security team if unauthorized")
-            sys.exit(3)
+            sys.exit(3)  # Exit code 3 = immutability violations (updates/deletes detected)
 
         elif integrity_issues > 0:
             print("WARNING: Data integrity issues found")
@@ -253,7 +253,7 @@ Examples:
             print("  1. Review records with missing fields")
             print("  2. Investigate orphaned log entries")
             print("  3. Fix data issues if possible")
-            sys.exit(3)
+            sys.exit(2)  # Exit code 2 = integrity issues, 3 = violations
 
         else:
             print("Result: PASSED - No immutability violations detected")

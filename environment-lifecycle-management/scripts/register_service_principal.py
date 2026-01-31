@@ -90,7 +90,7 @@ def create_app_registration(
 def create_client_secret(
     token: str,
     app_object_id: str,
-    expiry_days: int = 90,
+    expiry_days: int,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -216,8 +216,8 @@ Examples:
     parser.add_argument(
         "--expiry-days",
         type=int,
-        default=90,
-        help="Secret expiry in days (default: 90)",
+        required=True,
+        help="Secret expiry in days (required, valid range: 30-365)",
     )
     parser.add_argument(
         "--rotate-secret",
@@ -241,6 +241,10 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Validate expiry-days range
+    if args.expiry_days < 30 or args.expiry_days > 365:
+        parser.error(f"--expiry-days must be between 30 and 365 (got {args.expiry_days})")
 
     print("ELM Service Principal Registration")
     print("=" * 36)

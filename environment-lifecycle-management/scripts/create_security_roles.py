@@ -108,14 +108,26 @@ def get_privilege_name(operation: str, entity_logical_name: str) -> str:
     return f"{prefix}{entity_logical_name}"
 
 
-def create_roles(client: ELMClient, dry_run: bool = False) -> None:
-    """Create ELM security roles with privilege assignments."""
+def create_roles(client: ELMClient, dry_run: bool = False) -> bool:
+    """
+    Create ELM security roles with privilege assignments.
+
+    Args:
+        client: Authenticated ELMClient
+        dry_run: If True, show what would be created without making changes
+
+    Returns:
+        True if all operations succeeded, False if any failures occurred
+    """
     print("\n" + "=" * 60)
     print("ELM Security Roles Deployment")
     print("=" * 60)
 
     if dry_run:
         print("\n*** DRY RUN - No changes will be made ***\n")
+
+    # Track failed operations
+    failed_operations = []
 
     # Get root business unit (required for role creation)
     print("\n[Getting Root Business Unit]")
@@ -178,6 +190,12 @@ def create_roles(client: ELMClient, dry_run: bool = False) -> None:
                         print(f"      {priv_name}: assigned ({depth_name})")
                     except Exception as e:
                         print(f"      {priv_name}: ERROR - {e}")
+                        failed_operations.append({
+                            "role": role_name,
+                            "privilege": priv_name,
+                            "depth": depth_name,
+                            "error": str(e),
+                        })
 
     # Verify immutability for ELM Admin
     print("\n[Verifying ELM Admin Immutability]")
@@ -212,12 +230,25 @@ def create_roles(client: ELMClient, dry_run: bool = False) -> None:
     else:
         print("  ELM Admin role not found, skipping verification")
 
+    # Report failed operations
+    if failed_operations and not dry_run:
+        print("\n[Failed Operations Summary]")
+        print(f"  {len(failed_operations)} privilege assignment(s) failed:")
+        for failure in failed_operations:
+            print(f"    - {failure['role']}: {failure['privilege']} ({failure['depth']})")
+            print(f"      Error: {failure['error']}")
+
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")
+    elif failed_operations:
+        print("SECURITY ROLES DEPLOYMENT COMPLETED WITH ERRORS")
+        print(f"  {len(failed_operations)} privilege assignment(s) failed")
     else:
         print("SECURITY ROLES DEPLOYMENT COMPLETE")
     print("=" * 60)
+
+    return len(failed_operations) == 0
 
 
 def main():
@@ -280,7 +311,9 @@ def main():
             interactive=args.interactive,
         )
 
-        create_roles(client, dry_run=args.dry_run)
+        success = create_roles(client, dry_run=args.dry_run)
+        if not success and not args.dry_run:
+            sys.exit(1)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

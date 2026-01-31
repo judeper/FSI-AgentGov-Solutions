@@ -64,6 +64,104 @@ def print_banner():
     print()
 
 
+def preflight_check(client: ELMClient) -> dict:
+    """
+    Perform pre-flight validation to check existing schema state.
+
+    Args:
+        client: Authenticated ELMClient
+
+    Returns:
+        Dictionary with existing component status
+    """
+    status = {
+        "organization": None,
+        "tables": {},
+        "option_sets": {},
+        "roles": {},
+    }
+
+    print("[Pre-flight Validation]")
+    print()
+
+    # Test connection and get org info
+    print("  Checking connection...")
+    try:
+        org = client.test_connection()
+        status["organization"] = org.get("name", "Unknown")
+        print(f"    Organization: {status['organization']} ✓")
+    except Exception as e:
+        print(f"    Connection failed: {e} ✗")
+        return status
+
+    # Check for existing ELM tables
+    print()
+    print("  Checking existing tables...")
+    tables_to_check = ["fsi_environmentrequest", "fsi_provisioninglog"]
+    for table in tables_to_check:
+        metadata = client.get_entity_metadata(table)
+        exists = metadata is not None
+        status["tables"][table] = exists
+        marker = "exists" if exists else "not found"
+        symbol = "✓" if exists else "○"
+        print(f"    {table}: {marker} {symbol}")
+
+    # Check for existing option sets
+    print()
+    print("  Checking existing option sets...")
+    optionsets_to_check = [
+        "fsi_requeststate",
+        "fsi_governancezone",
+        "fsi_environmentregion",
+        "fsi_environmenttype",
+        "fsi_datasensitivity",
+        "fsi_provisioningaction",
+    ]
+    for optionset in optionsets_to_check:
+        existing = client.get_global_optionset(optionset)
+        exists = existing is not None
+        status["option_sets"][optionset] = exists
+        marker = "exists" if exists else "not found"
+        symbol = "✓" if exists else "○"
+        print(f"    {optionset}: {marker} {symbol}")
+
+    # Check for existing ELM roles
+    print()
+    print("  Checking existing security roles...")
+    roles_to_check = ["ELM Requester", "ELM Approver", "ELM Admin", "ELM Auditor"]
+    for role_name in roles_to_check:
+        existing = client.get_roles(filter_expr=f"name eq '{role_name}'")
+        exists = len(existing) > 0
+        status["roles"][role_name] = exists
+        marker = "exists" if exists else "not found"
+        symbol = "✓" if exists else "○"
+        print(f"    {role_name}: {marker} {symbol}")
+
+    # Summary
+    print()
+    tables_exist = sum(1 for v in status["tables"].values() if v)
+    optionsets_exist = sum(1 for v in status["option_sets"].values() if v)
+    roles_exist = sum(1 for v in status["roles"].values() if v)
+
+    print("  Summary:")
+    print(f"    Tables: {tables_exist}/{len(tables_to_check)} exist")
+    print(f"    Option sets: {optionsets_exist}/{len(optionsets_to_check)} exist")
+    print(f"    Roles: {roles_exist}/{len(roles_to_check)} exist")
+
+    if tables_exist == len(tables_to_check) and roles_exist == len(roles_to_check):
+        print()
+        print("  Schema appears complete. Deployment will update existing components.")
+    elif tables_exist == 0 and roles_exist == 0:
+        print()
+        print("  No existing ELM schema detected. Fresh deployment will be performed.")
+    else:
+        print()
+        print("  Partial schema detected. Deployment will create missing components.")
+
+    print()
+    return status
+
+
 def deploy(
     client: ELMClient,
     dry_run: bool = False,
@@ -87,11 +185,15 @@ def deploy(
     success = True
 
     try:
-        # Test connection first
-        print("[Testing Connection]")
-        org = client.test_connection()
-        print(f"  Connected to: {org.get('name', 'Unknown')}")
-        print()
+        # Run pre-flight check for dry-run mode
+        if dry_run:
+            preflight_check(client)
+        else:
+            # Test connection first
+            print("[Testing Connection]")
+            org = client.test_connection()
+            print(f"  Connected to: {org.get('name', 'Unknown')}")
+            print()
 
         if roles_only:
             # Only deploy security roles
