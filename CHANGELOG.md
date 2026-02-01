@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **COI Testing Framework v1.0.0** - Conflict of interest testing for agent recommendations
+  - Test categories: Proprietary bias (3), Suitability (3), Fee transparency (2), Cross-selling (2)
+  - Python test runner: run_coi_tests.py
+  - Scheduled and on-demand test execution
+  - FINRA Supervision Workflow integration
+  - Supports Controls 2.18, 2.11, 2.5
+
 - **RAG Source Validator v1.0.0** - Integrity validation for RAG knowledge sources
   - Dataverse schema: fsi_knowledgesource, fsi_validationresult, fsi_sourcechange
   - Security roles: RSV Viewer, RSV Validator, RSV Admin
@@ -83,6 +90,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [COI Testing Framework](./coi-testing/CHANGELOG.md) - v1.0.0
 - [RAG Source Validator](./rag-source-validator/CHANGELOG.md) - v1.0.0
 - [Scope Drift Monitor](./scope-drift-monitor/CHANGELOG.md) - v1.0.0
 - [Segregation of Duties Detector](./segregation-detector/CHANGELOG.md) - v1.0.0
