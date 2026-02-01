@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **RAG Source Validator v1.0.0** - Integrity validation for RAG knowledge sources
+  - Dataverse schema: fsi_knowledgesource, fsi_validationresult, fsi_sourcechange
+  - Security roles: RSV Viewer, RSV Validator, RSV Admin
+  - PowerShell script: Invoke-SourceValidation.ps1
+  - SHA-256 hash validation, schema drift detection, freshness monitoring
+  - Supports SharePoint, Dataverse, Azure Blob sources
+  - Supports Controls 2.16, 1.7, 2.13
+
 - **Scope Drift Monitor v1.0.0** - Detect agent data access beyond declared scope
   - Dataverse schema: fsi_agentscope, fsi_scopeitem, fsi_scopeviolation, fsi_expansionrequest
   - Security roles: SDM Viewer, SDM Analyst, SDM Admin
@@ -75,6 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [RAG Source Validator](./rag-source-validator/CHANGELOG.md) - v1.0.0
 - [Scope Drift Monitor](./scope-drift-monitor/CHANGELOG.md) - v1.0.0
 - [Segregation of Duties Detector](./segregation-detector/CHANGELOG.md) - v1.0.0
 - [Compliance Dashboard](./compliance-dashboard/CHANGELOG.md) - v1.0.0-beta

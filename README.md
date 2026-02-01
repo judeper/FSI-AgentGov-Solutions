@@ -15,6 +15,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 62 controls | v1.0.0-beta | 3.3, 3.1, 3.2 |
 | [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement | v1.0.0 | 2.8, 2.1, 2.3 |
 | [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared scope | v1.0.0 | 1.14, 1.4, 1.5 |
+| [RAG Source Validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources | v1.0.0 | 2.16, 1.7, 2.13 |
 
 > **Note:** Solutions marked with `-beta` have complete documentation and schemas but require manual Power BI template creation. See solution README for details.
 
@@ -39,6 +40,7 @@ All detailed documentation lives in each solution folder:
 - [Compliance Dashboard](./compliance-dashboard/README.md) *(beta)*
 - [Segregation of Duties Detector](./segregation-detector/README.md)
 - [Scope Drift Monitor](./scope-drift-monitor/README.md)
+- [RAG Source Validator](./rag-source-validator/README.md)
 
 Framework documentation:
 
