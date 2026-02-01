@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Conditional Access Automation v1.0.0** - CA policy deployment and compliance monitoring for AI workloads
+  - 8 policy templates for Copilot Studio, Agent Builder, and M365 Copilot
+  - PowerShell scripts: Deploy-CAPolicies.ps1, Test-PolicyCompliance.ps1, Register-ServicePrincipal.ps1
+  - Zone-based policy requirements (Zone 1: risk-based, Zone 2: always MFA, Zone 3: MFA + compliant device)
+  - Policy drift detection and compliance monitoring
+  - Break-glass account exclusion enforcement
+  - ELM integration for automated policy deployment on environment provisioning
+  - Complete documentation: prerequisites, templates, deployment guide, compliance monitoring, troubleshooting
+  - Supports Controls 1.11, 1.23, 1.18
+
 - **FINRA Supervision Workflow v1.0.0** - Automated supervision queue for AI agent outputs (FINRA 3110)
   - Dataverse schema: SupervisionQueue, SupervisionLog, SupervisionConfig tables
   - Security roles: FSW Supervisor, FSW Queue Manager, FSW Admin, FSW Auditor
@@ -39,6 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [Conditional Access Automation](./conditional-access-automation/CHANGELOG.md) - v1.0.0
 - [FINRA Supervision Workflow](./finra-supervision-workflow/CHANGELOG.md) - v1.0.0
 - [Environment Lifecycle Management](./environment-lifecycle-management/CHANGELOG.md) - v1.1.2
 - [Message Center Monitor](./message-center-monitor/CHANGELOG.md) - v2.1.1

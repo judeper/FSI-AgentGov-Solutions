@@ -1,0 +1,25 @@
+{
+  "displayName": "CA-AgentBuilder-Zone3-MFA-CompliantDevice",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeGroups": ["<zone-3-users-group-id>"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": ["<agent-builder-app-id>"]
+    },
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["mfa", "compliantDevice"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 1,
+      "type": "hours",
+      "isEnabled": true
+    }
+  }
+}

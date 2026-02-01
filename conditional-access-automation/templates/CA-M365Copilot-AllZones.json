@@ -1,0 +1,29 @@
+{
+  "displayName": "CA-M365Copilot-AllZones-RiskBasedMFA",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bCollaborationGuest,b2bCollaborationMember"
+      }
+    },
+    "applications": {
+      "includeApplications": ["fb8d773d-7ef8-4ec0-a117-179f88add510"]
+    },
+    "signInRiskLevels": ["low", "medium", "high"],
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 8,
+      "type": "hours",
+      "isEnabled": true
+    }
+  }
+}

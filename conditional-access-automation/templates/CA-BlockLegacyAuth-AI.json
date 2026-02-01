@@ -1,0 +1,22 @@
+{
+  "displayName": "CA-BlockLegacyAuth-AllAI",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": [
+        "<copilot-studio-app-id>",
+        "<agent-builder-app-id>",
+        "fb8d773d-7ef8-4ec0-a117-179f88add510"
+      ]
+    },
+    "clientAppTypes": ["exchangeActiveSync", "other"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["block"]
+  }
+}

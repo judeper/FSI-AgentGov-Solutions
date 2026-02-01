@@ -1,0 +1,24 @@
+{
+  "displayName": "CA-RequireCompliantDevice-Zone3",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeGroups": ["<zone-3-users-group-id>"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": [
+        "<copilot-studio-app-id>",
+        "<agent-builder-app-id>"
+      ]
+    },
+    "platforms": {
+      "includePlatforms": ["windows", "macOS", "iOS", "android"]
+    },
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["compliantDevice", "domainJoinedDevice"]
+  }
+}

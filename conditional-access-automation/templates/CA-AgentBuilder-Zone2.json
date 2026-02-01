@@ -1,0 +1,25 @@
+{
+  "displayName": "CA-AgentBuilder-Zone2-MFARequired",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeGroups": ["<zone-2-users-group-id>"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": ["<agent-builder-app-id>"]
+    },
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 4,
+      "type": "hours",
+      "isEnabled": true
+    }
+  }
+}
