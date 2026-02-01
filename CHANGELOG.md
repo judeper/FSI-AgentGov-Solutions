@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Hallucination Tracker v1.0.0** - Feedback aggregation for hallucination pattern analysis
+  - Multi-source feedback collection (user, supervisor, automated)
+  - 5 hallucination categories with severity scoring
+  - Pattern detection and clustering
+  - Agent accuracy scoring and rating
+  - Python script: analyze_patterns.py
+  - Supports Controls 3.10, 2.9, 2.12
+
 - **COI Testing Framework v1.0.0** - Conflict of interest testing for agent recommendations
   - Test categories: Proprietary bias (3), Suitability (3), Fee transparency (2), Cross-selling (2)
   - Python test runner: run_coi_tests.py
@@ -90,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [Hallucination Tracker](./hallucination-tracker/CHANGELOG.md) - v1.0.0
 - [COI Testing Framework](./coi-testing/CHANGELOG.md) - v1.0.0
 - [RAG Source Validator](./rag-source-validator/CHANGELOG.md) - v1.0.0
 - [Scope Drift Monitor](./scope-drift-monitor/CHANGELOG.md) - v1.0.0
