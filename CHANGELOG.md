@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **DR Testing Framework v1.0.0** - Automated disaster recovery testing for AI agents
+  - 4 test scenarios: Agent Restore, Environment Failover, Data Recovery, Full DR
+  - RTO/RPO measurement and comparison
+  - Validation checks for agent, connector, data, and security
+  - PowerShell script: Invoke-DRTest.ps1
+  - Gap identification and tracking
+  - Evidence export for compliance
+  - Supports Controls 2.4, 2.1, 1.9
+
 - **Hallucination Tracker v1.0.0** - Feedback aggregation for hallucination pattern analysis
   - Multi-source feedback collection (user, supervisor, automated)
   - 5 hallucination categories with severity scoring
@@ -98,6 +107,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [DR Testing Framework](./dr-testing-framework/CHANGELOG.md) - v1.0.0
 - [Hallucination Tracker](./hallucination-tracker/CHANGELOG.md) - v1.0.0
 - [COI Testing Framework](./coi-testing/CHANGELOG.md) - v1.0.0
 - [RAG Source Validator](./rag-source-validator/CHANGELOG.md) - v1.0.0

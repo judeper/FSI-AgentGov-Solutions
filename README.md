@@ -18,6 +18,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | [RAG Source Validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources | v1.0.0 | 2.16, 1.7, 2.13 |
 | [COI Testing Framework](./coi-testing/) | Conflict of interest testing for agent recommendations | v1.0.0 | 2.18, 2.11, 2.5 |
 | [Hallucination Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.0.0 | 3.10, 2.9, 2.12 |
+| [DR Testing Framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agents | v1.0.0 | 2.4, 2.1, 1.9 |
 
 > **Note:** Solutions marked with `-beta` have complete documentation and schemas but require manual Power BI template creation. See solution README for details.
 
@@ -45,6 +46,7 @@ All detailed documentation lives in each solution folder:
 - [RAG Source Validator](./rag-source-validator/README.md)
 - [COI Testing Framework](./coi-testing/README.md)
 - [Hallucination Tracker](./hallucination-tracker/README.md)
+- [DR Testing Framework](./dr-testing-framework/README.md)
 
 Framework documentation:
 
