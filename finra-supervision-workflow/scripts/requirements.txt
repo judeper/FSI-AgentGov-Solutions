@@ -1,0 +1,26 @@
+# FINRA Supervision Workflow - Python Dependencies
+
+# Authentication
+msal>=1.30.0
+azure-identity>=1.18.0
+
+# HTTP requests
+requests>=2.32.0
+
+# Data handling
+pandas>=2.0.0
+
+# Output formatting
+tabulate>=0.9.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# CLI argument parsing (stdlib, listed for documentation)
+# argparse - included in Python stdlib
+
+# JSON handling (stdlib, listed for documentation)
+# json - included in Python stdlib
+
+# Hash generation (stdlib, listed for documentation)
+# hashlib - included in Python stdlib
