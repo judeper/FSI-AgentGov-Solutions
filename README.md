@@ -13,6 +13,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment and compliance monitoring for AI workloads | v1.0.0 | 1.11, 1.23, 1.18 |
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 62 controls | v1.0.0-beta | 3.3, 3.1, 3.2 |
+| [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement | v1.0.0 | 2.8, 2.1, 2.3 |
 
 > **Note:** Solutions marked with `-beta` have complete documentation and schemas but require manual Power BI template creation. See solution README for details.
 
@@ -35,6 +36,7 @@ All detailed documentation lives in each solution folder:
 - [FINRA Supervision Workflow](./finra-supervision-workflow/README.md)
 - [Conditional Access Automation](./conditional-access-automation/README.md)
 - [Compliance Dashboard](./compliance-dashboard/README.md) *(beta)*
+- [Segregation of Duties Detector](./segregation-detector/README.md)
 
 Framework documentation:
 

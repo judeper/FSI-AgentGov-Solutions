@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Segregation of Duties Detector v1.0.0** - Role conflict detection for Maker/Checker enforcement
+  - Dataverse schema: fsi_conflictrule, fsi_sodviolation, fsi_sodexception, fsi_sodauditlog
+  - Security roles: SoD Viewer, SoD Analyst, SoD Admin
+  - PowerShell scripts: Invoke-SoDScan.ps1, Import-ConflictRules.ps1
+  - Default rule sets: Maker/Checker (4), Segregation (3), Privileged Access (3)
+  - Complete documentation: prerequisites, schema, conflict rules, troubleshooting
+  - Supports Controls 2.8, 2.1, 2.3
+
 - **Compliance Dashboard v1.0.0-beta** - Aggregated compliance reporting across 62 controls
   - Dataverse schema: fsi_controlmaster, fsi_controlassessment, fsi_compliancescore, fsi_complianceexception, fsi_complianceevidence
   - Security roles: CD Viewer, CD Assessor, CD Admin
@@ -59,6 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [Segregation of Duties Detector](./segregation-detector/CHANGELOG.md) - v1.0.0
 - [Compliance Dashboard](./compliance-dashboard/CHANGELOG.md) - v1.0.0-beta
 - [Conditional Access Automation](./conditional-access-automation/CHANGELOG.md) - v1.0.0
 - [FINRA Supervision Workflow](./finra-supervision-workflow/CHANGELOG.md) - v1.0.0
