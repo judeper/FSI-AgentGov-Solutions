@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Scope Drift Monitor v1.0.0** - Detect agent data access beyond declared scope
+  - Dataverse schema: fsi_agentscope, fsi_scopeitem, fsi_scopeviolation, fsi_expansionrequest
+  - Security roles: SDM Viewer, SDM Analyst, SDM Admin
+  - PowerShell script: New-AgentBaseline.ps1
+  - Scope expansion workflow with data owner and security approval
+  - Complete documentation: prerequisites, schema, baseline configuration
+  - Supports Controls 1.14, 1.4, 1.5
+
 - **Segregation of Duties Detector v1.0.0** - Role conflict detection for Maker/Checker enforcement
   - Dataverse schema: fsi_conflictrule, fsi_sodviolation, fsi_sodexception, fsi_sodauditlog
   - Security roles: SoD Viewer, SoD Analyst, SoD Admin
@@ -67,6 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [Scope Drift Monitor](./scope-drift-monitor/CHANGELOG.md) - v1.0.0
 - [Segregation of Duties Detector](./segregation-detector/CHANGELOG.md) - v1.0.0
 - [Compliance Dashboard](./compliance-dashboard/CHANGELOG.md) - v1.0.0-beta
 - [Conditional Access Automation](./conditional-access-automation/CHANGELOG.md) - v1.0.0

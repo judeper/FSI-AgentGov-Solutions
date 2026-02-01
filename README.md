@@ -14,6 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment and compliance monitoring for AI workloads | v1.0.0 | 1.11, 1.23, 1.18 |
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 62 controls | v1.0.0-beta | 3.3, 3.1, 3.2 |
 | [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement | v1.0.0 | 2.8, 2.1, 2.3 |
+| [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared scope | v1.0.0 | 1.14, 1.4, 1.5 |
 
 > **Note:** Solutions marked with `-beta` have complete documentation and schemas but require manual Power BI template creation. See solution README for details.
 
@@ -37,6 +38,7 @@ All detailed documentation lives in each solution folder:
 - [Conditional Access Automation](./conditional-access-automation/README.md)
 - [Compliance Dashboard](./compliance-dashboard/README.md) *(beta)*
 - [Segregation of Duties Detector](./segregation-detector/README.md)
+- [Scope Drift Monitor](./scope-drift-monitor/README.md)
 
 Framework documentation:
 
