@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Compliance Dashboard v1.0.0-beta** - Aggregated compliance reporting across 62 controls
+  - Dataverse schema: fsi_controlmaster, fsi_controlassessment, fsi_compliancescore, fsi_complianceexception, fsi_complianceevidence
+  - Security roles: CD Viewer, CD Assessor, CD Admin
+  - Power Automate flows: CD-ScoreCalculator, CD-ExceptionMonitor, CD-EvidenceCollector
+  - Python script: load_sample_data.py for demo data
+  - Complete documentation: prerequisites, schema, flows, Power BI setup, DAX measures, troubleshooting
+  - Control master data: All 62 controls with zone applicability and weights
+  - Supports Controls 3.3, 3.1, 3.2
+  - **Note:** Beta release - documentation and schemas complete, Power BI template requires manual creation
+
 - **Conditional Access Automation v1.0.0** - CA policy deployment and compliance monitoring for AI workloads
   - 8 policy templates for Copilot Studio, Agent Builder, and M365 Copilot
   - PowerShell scripts: Deploy-CAPolicies.ps1, Test-PolicyCompliance.ps1, Register-ServicePrincipal.ps1
@@ -49,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Individual solution changelogs:
 
+- [Compliance Dashboard](./compliance-dashboard/CHANGELOG.md) - v1.0.0-beta
 - [Conditional Access Automation](./conditional-access-automation/CHANGELOG.md) - v1.0.0
 - [FINRA Supervision Workflow](./finra-supervision-workflow/CHANGELOG.md) - v1.0.0
 - [Environment Lifecycle Management](./environment-lifecycle-management/CHANGELOG.md) - v1.1.2
