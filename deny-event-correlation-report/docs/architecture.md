@@ -182,6 +182,15 @@ Power Automate Flow
 
 ### Authentication
 
+!!! danger "Deprecation Warning: x-api-key Authentication - March 31, 2026"
+    Application Insights API key authentication is **deprecated** and will **stop working** on **March 31, 2026**. After this date, scripts using the `-ApiKey` parameter will fail with authentication errors.
+
+    Organizations should plan migration to Entra ID OAuth 2.0 authentication before this date to ensure RAI telemetry extraction continues to function.
+
+    See [Authentication Migration](prerequisites.md#authentication-migration) for step-by-step guidance.
+
+    *Last verified: February 2, 2026*
+
 | Component | Authentication Method | Deprecation Status |
 |-----------|----------------------|-------------------|
 | Exchange Online | Service principal or credential-based | Active |
@@ -189,8 +198,6 @@ Power Automate Flow
 | Defender CloudAppEvents | Entra ID (Defender APIs) | Active |
 | Azure Storage | Managed identity or SAS token | Active |
 | Power BI | Azure AD | Active |
-
-> ⚠️ **Authentication Migration Required:** Application Insights x-api-key authentication is deprecated effective **March 31, 2026**. Migrate to Entra ID service principal authentication before this date. See [prerequisites.md](prerequisites.md#authentication-migration) for migration steps.
 
 ### Data Classification
 

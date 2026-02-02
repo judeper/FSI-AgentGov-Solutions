@@ -30,6 +30,19 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
+!!! danger "Warning: x-api-key Deprecated - March 31, 2026"
+    If you are troubleshooting API key authentication issues, note that this authentication method is **deprecated** and will **stop working on March 31, 2026**. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
+
+    **Migration Path:**
+
+    1. Register an App in Entra ID with Monitoring Reader role
+    2. Replace `-ApiKey` parameter with `Connect-AzAccount` authentication
+    3. Use bearer token authentication via `Get-AzAccessToken`
+
+    See [Authentication Migration](prerequisites.md#authentication-migration) for complete migration steps.
+
+    *Last verified: February 2, 2026*
+
 **Symptoms:**
 - REST API returns 401/403 error
 - "Authentication failed" error message
@@ -38,17 +51,28 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 | Cause | Solution |
 |-------|----------|
-| **Invalid API key** | Regenerate API key in Azure Portal |
+| **Invalid API key** | Regenerate API key in Azure Portal (deprecated) |
 | **Wrong App ID** | Verify Application ID (not Instrumentation Key) |
-| **Key expired** | Create new API key if policy requires rotation |
+| **Key expired** | Migrate to Entra ID authentication (recommended) |
 | **Insufficient permissions** | Ensure API key has "Read telemetry" permission |
 | **Resource not found** | Verify App Insights resource exists and ID is correct |
 
-**Diagnostic Steps:**
+**Diagnostic Steps (API Key - Deprecated):**
 
 ```powershell
-# Test API connectivity
+# Test API connectivity (deprecated method - migrate to Entra ID)
 $headers = @{ "x-api-key" = "your-key" }
+$uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
+Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+```
+
+**Diagnostic Steps (Entra ID - Recommended):**
+
+```powershell
+# Test API connectivity with Entra ID authentication
+Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
+$token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
+$headers = @{ "Authorization" = "Bearer $token" }
 $uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
 Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
 ```
