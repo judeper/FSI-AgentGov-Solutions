@@ -43,11 +43,34 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.0
+    Version: 1.1
     Requires: ExchangeOnlineManagement, Az.Storage, Az.KeyVault modules
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
+#>
+
+<#
+================================================================================
+  DEPRECATION WARNING: x-api-key Authentication - March 31, 2026
+================================================================================
+
+  This script orchestrates Export-RaiTelemetry.ps1, which uses Application
+  Insights API key authentication via the -AppInsightsApiKey parameter.
+
+  API key authentication is DEPRECATED and will STOP WORKING on March 31, 2026.
+
+  After this date, RAI telemetry extraction will fail unless migrated to
+  Entra ID authentication.
+
+  Required Migration:
+  - Switch to Entra ID (Azure AD) authentication using service principals
+  - Update Export-RaiTelemetry.ps1 to use Connect-AzAccount and bearer tokens
+  - See docs/prerequisites.md#authentication-migration for step-by-step guide
+
+  Last verified: February 2, 2026
+
+================================================================================
 #>
 
 [CmdletBinding()]
@@ -193,6 +216,23 @@ try {
         if (-not $AppInsightsApiKey -and $kvSecrets.AppInsightsApiKey) {
             $AppInsightsApiKey = $kvSecrets.AppInsightsApiKey
         }
+    }
+
+    # Deprecation warning for API key authentication
+    if ($AppInsightsApiKey) {
+        Write-Warning @"
+
+================================================================================
+  DEPRECATION: x-api-key authentication will stop working March 31, 2026
+================================================================================
+  The -AppInsightsApiKey parameter uses deprecated API key authentication.
+  Organizations should plan migration to Entra ID authentication before this
+  date to ensure RAI telemetry extraction continues to work.
+
+  Migration guide: docs/prerequisites.md#authentication-migration
+================================================================================
+
+"@
     }
 
     # Track results

@@ -13,6 +13,7 @@
 .PARAMETER ApiKey
     The API key with read access to Application Insights.
     Create in Azure Portal > Application Insights > API Access > Create API key.
+    NOTE: API key authentication is deprecated. See deprecation warning below.
 
 .PARAMETER StartDate
     Start of the time window for query. Defaults to yesterday.
@@ -34,16 +35,32 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.1
+    Version: 1.2
     Requires: Application Insights API access, Az.KeyVault module (optional)
-
-    DEPRECATION WARNING:
-    x-api-key authentication is deprecated and will be permanently disabled on March 31, 2026.
-    Migrate to Entra ID authentication before this date.
-    See: docs/prerequisites.md#authentication-migration
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
+#>
+
+<#
+================================================================================
+  DEPRECATION WARNING: x-api-key Authentication - March 31, 2026
+================================================================================
+
+  The Application Insights API key authentication method used by this script
+  is DEPRECATED and will STOP WORKING on March 31, 2026.
+
+  After this date, scripts using the -ApiKey parameter will fail with
+  authentication errors and will be unable to retrieve RAI telemetry.
+
+  Required Migration:
+  - Switch to Entra ID (Azure AD) authentication using service principals
+  - Use Connect-AzAccount and bearer token authentication
+  - See docs/prerequisites.md#authentication-migration for step-by-step guide
+
+  Last verified: February 2, 2026
+
+================================================================================
 #>
 
 [CmdletBinding()]
@@ -149,10 +166,16 @@ try {
 
     # Deprecation warning for API key authentication
     Write-Warning @"
-DEPRECATION NOTICE: x-api-key authentication is deprecated.
-This authentication method will be permanently disabled on March 31, 2026.
-Migrate to Entra ID (OAuth 2.0) authentication before this date.
-See: docs/prerequisites.md#authentication-migration
+
+================================================================================
+  DEPRECATION: x-api-key authentication will stop working March 31, 2026
+================================================================================
+  Organizations should plan migration to Entra ID authentication before this
+  date. After March 31, 2026, this script will fail when using -ApiKey.
+
+  Migration guide: docs/prerequisites.md#authentication-migration
+================================================================================
+
 "@
 
     # Validate parameters
