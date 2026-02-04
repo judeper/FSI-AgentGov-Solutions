@@ -1,0 +1,876 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033">
+  <Entities>
+    <!-- Table: fsi_controlmaster -->
+    <Entity Name="fsi_controlmaster">
+      <EntityInfo>
+        <entity Name="fsi_controlmaster">
+          <LocalizedNames>
+            <LocalizedName description="Control Master" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Control Masters" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Master list of all 62 controls in the FSI Agent Governance Framework" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_controlmasterid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_controlmasterid</Name>
+              <LogicalName>fsi_controlmasterid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_controlid">
+              <Type>nvarchar</Type>
+              <Name>fsi_controlid</Name>
+              <LogicalName>fsi_controlid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>10</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_pillar">
+              <Type>picklist</Type>
+              <Name>fsi_pillar</Name>
+              <LogicalName>fsi_pillar</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_pillar">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Security" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Management" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Reporting" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="SharePoint" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_description">
+              <Type>ntext</Type>
+              <Name>fsi_description</Name>
+              <LogicalName>fsi_description</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_zone1applicable">
+              <Type>bit</Type>
+              <Name>fsi_zone1applicable</Name>
+              <LogicalName>fsi_zone1applicable</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+            </attribute>
+            <attribute PhysicalName="fsi_zone2applicable">
+              <Type>bit</Type>
+              <Name>fsi_zone2applicable</Name>
+              <LogicalName>fsi_zone2applicable</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+            </attribute>
+            <attribute PhysicalName="fsi_zone3applicable">
+              <Type>bit</Type>
+              <Name>fsi_zone3applicable</Name>
+              <LogicalName>fsi_zone3applicable</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+            </attribute>
+            <attribute PhysicalName="fsi_regulatoryreference">
+              <Type>ntext</Type>
+              <Name>fsi_regulatoryreference</Name>
+              <LogicalName>fsi_regulatoryreference</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_weight">
+              <Type>decimal</Type>
+              <Name>fsi_weight</Name>
+              <LogicalName>fsi_weight</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>1.0</MinValue>
+              <MaxValue>3.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_category">
+              <Type>picklist</Type>
+              <Name>fsi_category</Name>
+              <LogicalName>fsi_category</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_category">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Native Microsoft Feature" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Custom Solution Required" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Process/Documentation Control" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_controlassessment -->
+    <Entity Name="fsi_controlassessment">
+      <EntityInfo>
+        <entity Name="fsi_controlassessment">
+          <LocalizedNames>
+            <LocalizedName description="Control Assessment" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Control Assessments" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Assessment records for each control, capturing compliance status" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_controlassessmentid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_controlassessmentid</Name>
+              <LogicalName>fsi_controlassessmentid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_controlmasterid">
+              <Type>lookup</Type>
+              <Name>fsi_controlmasterid</Name>
+              <LogicalName>fsi_controlmasterid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_controlmaster</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_assessmentdate">
+              <Type>datetime</Type>
+              <Name>fsi_assessmentdate</Name>
+              <LogicalName>fsi_assessmentdate</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_status">
+              <Type>picklist</Type>
+              <Name>fsi_status</Name>
+              <LogicalName>fsi_status</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_status">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Compliant" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Partial" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Non-Compliant" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Not Applicable" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_zone">
+              <Type>picklist</Type>
+              <Name>fsi_zone</Name>
+              <LogicalName>fsi_zone</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_zone">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Zone 1 - Personal Productivity" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Zone 2 - Team Collaboration" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Zone 3 - Enterprise Managed" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_score">
+              <Type>int</Type>
+              <Name>fsi_score</Name>
+              <LogicalName>fsi_score</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>100</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_assessor">
+              <Type>lookup</Type>
+              <Name>fsi_assessor</Name>
+              <LogicalName>fsi_assessor</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_notes">
+              <Type>ntext</Type>
+              <Name>fsi_notes</Name>
+              <LogicalName>fsi_notes</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_nextreviewdate">
+              <Type>datetime</Type>
+              <Name>fsi_nextreviewdate</Name>
+              <LogicalName>fsi_nextreviewdate</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_evidencecount">
+              <Type>int</Type>
+              <Name>fsi_evidencecount</Name>
+              <LogicalName>fsi_evidencecount</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>999</MaxValue>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_compliancescore -->
+    <Entity Name="fsi_compliancescore">
+      <EntityInfo>
+        <entity Name="fsi_compliancescore">
+          <LocalizedNames>
+            <LocalizedName description="Compliance Score" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Compliance Scores" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Daily compliance score snapshots for trend analysis" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_compliancescoreid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_compliancescoreid</Name>
+              <LogicalName>fsi_compliancescoreid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_scoredate">
+              <Type>datetime</Type>
+              <Name>fsi_scoredate</Name>
+              <LogicalName>fsi_scoredate</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_overallscore">
+              <Type>decimal</Type>
+              <Name>fsi_overallscore</Name>
+              <LogicalName>fsi_overallscore</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_pillar1score">
+              <Type>decimal</Type>
+              <Name>fsi_pillar1score</Name>
+              <LogicalName>fsi_pillar1score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_pillar2score">
+              <Type>decimal</Type>
+              <Name>fsi_pillar2score</Name>
+              <LogicalName>fsi_pillar2score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_pillar3score">
+              <Type>decimal</Type>
+              <Name>fsi_pillar3score</Name>
+              <LogicalName>fsi_pillar3score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_pillar4score">
+              <Type>decimal</Type>
+              <Name>fsi_pillar4score</Name>
+              <LogicalName>fsi_pillar4score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_zone1score">
+              <Type>decimal</Type>
+              <Name>fsi_zone1score</Name>
+              <LogicalName>fsi_zone1score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_zone2score">
+              <Type>decimal</Type>
+              <Name>fsi_zone2score</Name>
+              <LogicalName>fsi_zone2score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_zone3score">
+              <Type>decimal</Type>
+              <Name>fsi_zone3score</Name>
+              <LogicalName>fsi_zone3score</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0.0</MinValue>
+              <MaxValue>100.0</MaxValue>
+              <Precision>2</Precision>
+            </attribute>
+            <attribute PhysicalName="fsi_compliantcount">
+              <Type>int</Type>
+              <Name>fsi_compliantcount</Name>
+              <LogicalName>fsi_compliantcount</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>62</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_partialcount">
+              <Type>int</Type>
+              <Name>fsi_partialcount</Name>
+              <LogicalName>fsi_partialcount</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>62</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_noncompliantcount">
+              <Type>int</Type>
+              <Name>fsi_noncompliantcount</Name>
+              <LogicalName>fsi_noncompliantcount</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>62</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_exceptioncount">
+              <Type>int</Type>
+              <Name>fsi_exceptioncount</Name>
+              <LogicalName>fsi_exceptioncount</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>999</MaxValue>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_complianceexception -->
+    <Entity Name="fsi_complianceexception">
+      <EntityInfo>
+        <entity Name="fsi_complianceexception">
+          <LocalizedNames>
+            <LocalizedName description="Compliance Exception" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Compliance Exceptions" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Open compliance exceptions requiring remediation" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_complianceexceptionid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_complianceexceptionid</Name>
+              <LogicalName>fsi_complianceexceptionid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_controlassessmentid">
+              <Type>lookup</Type>
+              <Name>fsi_controlassessmentid</Name>
+              <LogicalName>fsi_controlassessmentid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_controlassessment</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_severity">
+              <Type>picklist</Type>
+              <Name>fsi_severity</Name>
+              <LogicalName>fsi_severity</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_severity">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Critical" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="High" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Medium" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Low" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_exceptionstatus">
+              <Type>picklist</Type>
+              <Name>fsi_exceptionstatus</Name>
+              <LogicalName>fsi_exceptionstatus</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_exceptionstatus">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Open" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="In Progress" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Pending Verification" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Closed" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Accepted Risk" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_owner">
+              <Type>lookup</Type>
+              <Name>fsi_owner</Name>
+              <LogicalName>fsi_owner</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_description">
+              <Type>ntext</Type>
+              <Name>fsi_description</Name>
+              <LogicalName>fsi_description</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_rootcause">
+              <Type>ntext</Type>
+              <Name>fsi_rootcause</Name>
+              <LogicalName>fsi_rootcause</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_remediationplan">
+              <Type>ntext</Type>
+              <Name>fsi_remediationplan</Name>
+              <LogicalName>fsi_remediationplan</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_targetdate">
+              <Type>datetime</Type>
+              <Name>fsi_targetdate</Name>
+              <LogicalName>fsi_targetdate</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_actualclosedate">
+              <Type>datetime</Type>
+              <Name>fsi_actualclosedate</Name>
+              <LogicalName>fsi_actualclosedate</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_daysopen">
+              <Type>int</Type>
+              <Name>fsi_daysopen</Name>
+              <LogicalName>fsi_daysopen</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>9999</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_slastatus">
+              <Type>picklist</Type>
+              <Name>fsi_slastatus</Name>
+              <LogicalName>fsi_slastatus</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_slastatus">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="On Track" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="At Risk" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Breached" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_complianceevidence -->
+    <Entity Name="fsi_complianceevidence">
+      <EntityInfo>
+        <entity Name="fsi_complianceevidence">
+          <LocalizedNames>
+            <LocalizedName description="Compliance Evidence" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Compliance Evidence" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Evidence items linked to assessments for audit purposes" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_complianceevidenceid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_complianceevidenceid</Name>
+              <LogicalName>fsi_complianceevidenceid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_controlassessmentid">
+              <Type>lookup</Type>
+              <Name>fsi_controlassessmentid</Name>
+              <LogicalName>fsi_controlassessmentid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_controlassessment</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_evidencetype">
+              <Type>picklist</Type>
+              <Name>fsi_evidencetype</Name>
+              <LogicalName>fsi_evidencetype</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_evidencetype">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Screenshot" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Configuration Export" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Audit Log" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Policy Document" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Test Result" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="6">
+                  <labels>
+                    <label description="External Report" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_sourceurl">
+              <Type>nvarchar</Type>
+              <Name>fsi_sourceurl</Name>
+              <LogicalName>fsi_sourceurl</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>500</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_evidencedescription">
+              <Type>ntext</Type>
+              <Name>fsi_evidencedescription</Name>
+              <LogicalName>fsi_evidencedescription</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_collecteddate">
+              <Type>datetime</Type>
+              <Name>fsi_collecteddate</Name>
+              <LogicalName>fsi_collecteddate</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_collectedby">
+              <Type>lookup</Type>
+              <Name>fsi_collectedby</Name>
+              <LogicalName>fsi_collectedby</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_hash">
+              <Type>nvarchar</Type>
+              <Name>fsi_hash</Name>
+              <LogicalName>fsi_hash</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>64</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+  </Entities>
+  <roles />
+  <workflows />
+  <fieldSecurityProfiles />
+  <templates />
+  <EntityMaps />
+  <EntityRelationships>
+    <EntityRelationship Name="fsi_controlmaster_controlassessment">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_controlassessment</ReferencingEntityName>
+      <ReferencedEntityName>fsi_controlmaster</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_controlmasterid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Control Master to Control Assessment relationship" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+    <EntityRelationship Name="fsi_controlassessment_exception">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_complianceexception</ReferencingEntityName>
+      <ReferencedEntityName>fsi_controlassessment</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_controlassessmentid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Control Assessment to Compliance Exception relationship" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+    <EntityRelationship Name="fsi_controlassessment_evidence">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_complianceevidence</ReferencingEntityName>
+      <ReferencedEntityName>fsi_controlassessment</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_controlassessmentid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Control Assessment to Compliance Evidence relationship" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+  </EntityRelationships>
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+  <HierarchyRules />
+  <EntityDataProviders />
+</ImportExportXml>

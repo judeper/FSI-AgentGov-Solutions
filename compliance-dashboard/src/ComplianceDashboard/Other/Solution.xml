@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="pac" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>ComplianceDashboard</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="Compliance Dashboard" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="FSI Agent Governance Framework - Aggregated compliance reporting dashboard" languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>FSIAgentGov</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="FSI Agent Governance" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="FSI Agent Governance Framework publisher" languagecode="1033" />
+      </Descriptions>
+      <EMailAddress>compliance@fsiagentgov.com</EMailAddress>
+      <SupportingWebsiteUrl>https://github.com/judeper/FSI-AgentGov-Solutions</SupportingWebsiteUrl>
+      <CustomizationPrefix>fsi</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
+      <Addresses>
+        <Address>
+          <AddressNumber>1</AddressNumber>
+          <AddressTypeCode>1</AddressTypeCode>
+          <City />
+          <County />
+          <Country />
+          <Fax />
+          <FreightTermsCode />
+          <ImportSequenceNumber />
+          <Latitude />
+          <Line1 />
+          <Line2 />
+          <Line3 />
+          <Longitude />
+          <Name />
+          <PostalCode />
+          <PostOfficeBox />
+          <PrimaryContactName />
+          <ShippingMethodCode />
+          <StateOrProvince />
+          <Telephone1 />
+          <Telephone2 />
+          <Telephone3 />
+          <TimeZoneRuleVersionNumber />
+          <UPSZone />
+          <UTCOffset />
+          <UTCConversionTimeZoneCode />
+        </Address>
+        <Address>
+          <AddressNumber>2</AddressNumber>
+          <AddressTypeCode>1</AddressTypeCode>
+          <City />
+          <County />
+          <Country />
+          <Fax />
+          <FreightTermsCode />
+          <ImportSequenceNumber />
+          <Latitude />
+          <Line1 />
+          <Line2 />
+          <Line3 />
+          <Longitude />
+          <Name />
+          <PostalCode />
+          <PostOfficeBox />
+          <PrimaryContactName />
+          <ShippingMethodCode />
+          <StateOrProvince />
+          <Telephone1 />
+          <Telephone2 />
+          <Telephone3 />
+          <TimeZoneRuleVersionNumber />
+          <UPSZone />
+          <UTCOffset />
+          <UTCConversionTimeZoneCode />
+        </Address>
+      </Addresses>
+    </Publisher>
+    <RootComponents />
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>
