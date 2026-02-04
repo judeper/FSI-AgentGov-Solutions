@@ -1,5 +1,7 @@
 # Deny Event Correlation Report
 
+> **Status:** Work In Progress
+
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 
 > ⚠️ **Deprecation Warning: x-api-key Authentication**
@@ -21,7 +23,7 @@ This solution provides automated extraction, correlation, and visualization of d
 
 This solution supports compliance evidence for:
 
-- **FINRA 25-07** - AI governance evidence
+- **FINRA Regulatory Notice 24-09** - Generative AI governance guidance
 - **FINRA 4511** - Records retention
 - **SEC 17a-3/4** - Supervision evidence
 - **GLBA 501(b)** - Safeguards evidence

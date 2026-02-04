@@ -1,5 +1,7 @@
 # Environment Lifecycle Management
 
+> **Status:** Completed
+
 Automated Power Platform environment provisioning with zone-based governance classification.
 
 > **Important:** This solution combines **Python automation scripts** with **manual portal configuration** for Copilot Studio agents. Environment Groups and Copilot Studio topics must be created manually via the admin portal. See [Known Limitations](#known-limitations) for details.
@@ -363,7 +365,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.1.1 - January 2026
+1.1.2 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

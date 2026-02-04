@@ -6,14 +6,11 @@
     Queries Application Insights for Copilot Studio ContentFiltered events,
     which indicate when Azure AI Content Safety blocked agent responses.
 
+    Uses Entra ID (Azure AD) authentication for secure access.
+
 .PARAMETER AppInsightsAppId
     The Application ID of your Application Insights resource.
     Found in Azure Portal > Application Insights > API Access.
-
-.PARAMETER ApiKey
-    The API key with read access to Application Insights.
-    Create in Azure Portal > Application Insights > API Access > Create API key.
-    NOTE: API key authentication is deprecated. See deprecation warning below.
 
 .PARAMETER StartDate
     Start of the time window for query. Defaults to yesterday.
@@ -25,18 +22,20 @@
     Path for the exported CSV file. Defaults to current directory with date stamp.
 
 .EXAMPLE
-    .\Export-RaiTelemetry.ps1 -AppInsightsAppId "abc123" -ApiKey "key123"
-    Exports yesterday's RAI events to the current directory.
+    Connect-AzAccount
+    .\Export-RaiTelemetry.ps1 -AppInsightsAppId "abc123"
+    Exports yesterday's RAI events using interactive authentication.
 
 .EXAMPLE
-    $key = Get-AzKeyVaultSecret -VaultName "myVault" -Name "AppInsightsKey" -AsPlainText
-    .\Export-RaiTelemetry.ps1 -AppInsightsAppId "abc123" -ApiKey $key
-    Exports using a key from Azure Key Vault.
+    Connect-AzAccount -ServicePrincipal -TenantId $tenantId -Credential $cred
+    .\Export-RaiTelemetry.ps1 -AppInsightsAppId "abc123"
+    Exports using service principal authentication.
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.2
-    Requires: Application Insights API access, Az.KeyVault module (optional)
+    Version: 1.3
+    Requires: Az.Accounts module
+    Authentication: Entra ID (Azure AD) - uses Connect-AzAccount
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -44,21 +43,20 @@
 
 <#
 ================================================================================
-  DEPRECATION WARNING: x-api-key Authentication - March 31, 2026
+  AUTHENTICATION MIGRATION COMPLETE - Entra ID (Azure AD)
 ================================================================================
 
-  The Application Insights API key authentication method used by this script
-  is DEPRECATED and will STOP WORKING on March 31, 2026.
+  This script now uses Entra ID authentication via Connect-AzAccount.
 
-  After this date, scripts using the -ApiKey parameter will fail with
-  authentication errors and will be unable to retrieve RAI telemetry.
+  Migration completed: February 4, 2026
 
-  Required Migration:
-  - Switch to Entra ID (Azure AD) authentication using service principals
-  - Use Connect-AzAccount and bearer token authentication
-  - See docs/prerequisites.md#authentication-migration for step-by-step guide
+  The deprecated x-api-key authentication method has been removed.
+  This script will continue working after March 31, 2026.
 
-  Last verified: February 2, 2026
+  Prerequisites:
+  - Install Az.Accounts module: Install-Module Az.Accounts -Force
+  - Authenticate before running: Connect-AzAccount
+  - Grant Monitoring Reader role on Application Insights resource
 
 ================================================================================
 #>
@@ -67,9 +65,6 @@
 param(
     [Parameter(Mandatory)]
     [string]$AppInsightsAppId,
-
-    [Parameter(Mandatory)]
-    [string]$ApiKey,
 
     [Parameter()]
     [DateTime]$StartDate = (Get-Date).AddDays(-1).Date,
@@ -86,16 +81,27 @@ param(
 function Invoke-AppInsightsQuery {
     <#
     .SYNOPSIS
-        Executes a KQL query against Application Insights REST API.
+        Executes a KQL query against Application Insights REST API using Entra ID authentication.
     #>
     param(
         [string]$AppId,
-        [string]$Key,
         [string]$Query
     )
 
+    # Get access token for Application Insights API
+    # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026)
+    try {
+        $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+        if (-not $token) {
+            throw "Failed to acquire access token. Ensure you have authenticated with Connect-AzAccount."
+        }
+    }
+    catch {
+        throw "Authentication failed: $_. Run Connect-AzAccount before executing this script."
+    }
+
     $headers = @{
-        "x-api-key" = $Key
+        "Authorization" = "Bearer $($token.Token)"
         "Content-Type" = "application/json"
     }
 
@@ -115,8 +121,8 @@ function Invoke-AppInsightsQuery {
             $statusDesc = $_.Exception.Response.StatusDescription
 
             switch ($statusCode) {
-                401 { throw "Authentication failed. Check your API key." }
-                403 { throw "Access denied. Ensure API key has read permissions." }
+                401 { throw "Authentication failed. Ensure you have authenticated with Connect-AzAccount and have Monitoring Reader role on the Application Insights resource." }
+                403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
                 404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
                 429 { throw "Rate limited. Wait and retry." }
                 default { throw "API request failed: $statusCode - $statusDesc" }
@@ -164,19 +170,23 @@ try {
     Write-Host " FSI Agent Governance Framework" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
 
-    # Deprecation warning for API key authentication
-    Write-Warning @"
+    # Check for Az.Accounts module
+    if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+        throw "Az.Accounts module is not installed. Run: Install-Module Az.Accounts -Force"
+    }
 
-================================================================================
-  DEPRECATION: x-api-key authentication will stop working March 31, 2026
-================================================================================
-  Organizations should plan migration to Entra ID authentication before this
-  date. After March 31, 2026, this script will fail when using -ApiKey.
-
-  Migration guide: docs/prerequisites.md#authentication-migration
-================================================================================
-
-"@
+    # Verify authentication
+    try {
+        $context = Get-AzContext
+        if (-not $context) {
+            throw "Not authenticated. Please run Connect-AzAccount before executing this script."
+        }
+        Write-Host "Authenticated as: $($context.Account.Id)" -ForegroundColor Green
+        Write-Host "Subscription: $($context.Subscription.Name)`n" -ForegroundColor Gray
+    }
+    catch {
+        throw "Authentication check failed: $_. Please run Connect-AzAccount."
+    }
 
     # Validate parameters
     if ($StartDate -ge $EndDate) {
@@ -218,8 +228,8 @@ customEvents
     Write-Host "  App ID: $AppInsightsAppId" -ForegroundColor Gray
     Write-Host "  Time Range: $startIso to $endIso" -ForegroundColor Gray
 
-    # Execute query
-    $response = Invoke-AppInsightsQuery -AppId $AppInsightsAppId -Key $ApiKey -Query $kqlQuery
+    # Execute query using Entra ID authentication
+    $response = Invoke-AppInsightsQuery -AppId $AppInsightsAppId -Query $kqlQuery
 
     # Convert response
     $raiEvents = ConvertFrom-AppInsightsResponse -Response $response

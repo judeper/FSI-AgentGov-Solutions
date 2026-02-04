@@ -1,5 +1,7 @@
 # Pipeline Governance Cleanup
 
+> **Status:** Completed
+
 Discover, notify, and clean up personal Power Platform pipelines before enforcing centralized ALM governance.
 
 > **Important:** This solution requires both **automated scripts** AND **manual admin actions**. Force-linking environments to a custom pipelines host cannot be automated - it requires UI interaction in the Deployment Pipeline Configuration app. See [LIMITATIONS.md](./LIMITATIONS.md) for details.

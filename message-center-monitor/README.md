@@ -1,5 +1,7 @@
 # Message Center Monitor
 
+> **Status:** Completed
+
 Monitor Microsoft 365 Message Center for platform changes that could impact AI agent deployments (Copilot Studio, Agent Builder).
 
 ## What This Solution Does
