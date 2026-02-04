@@ -1,14 +1,12 @@
 # Compliance Dashboard
 
-> **Status:** Work In Progress
+> **Status:** Production Ready
 
 Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 62 controls with zone-based filtering.
 
 ## Overview
 
 The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 and Power Platform sources to provide a unified view of your AI agent governance posture. It supports regulatory reporting requirements for SOX 404, FINRA 3120, and OCC 2011-12.
-
-> **Beta Status:** This solution is currently in beta (v1.0.0-beta). The Power BI template (.pbit) requires manual creation based on the specifications in docs/power-bi-setup.md. Once the template is complete and tested, the solution will move to v1.0.0.
 
 ## Features
 
@@ -88,50 +86,70 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 
 ## Quick Start
 
-### 1. Deploy Dataverse Schema
+Follow the comprehensive [Deployment Checklist](docs/deployment-checklist.md) for step-by-step deployment validation.
+
+### 1. Deploy Power Platform Solution
 
 ```powershell
-# Import the Dataverse solution
+# Import the unmanaged solution package
 pac solution import --path ./templates/ComplianceDashboard_1_0_0.zip
 ```
 
-Or manually create tables using the schema in [docs/dataverse-schema.md](docs/dataverse-schema.md).
+The solution package includes:
+- 5 Dataverse tables (control master, assessments, scores, exceptions, evidence)
+- 2 Power Automate flows (score calculator, exception monitor)
+- 3 security roles (Viewer, Assessor, Admin)
 
-### 2. Configure Power Automate Flows
+See [Dataverse Schema](docs/dataverse-schema.md) for table structure details.
 
-Deploy the data collection flows:
+### 2. Load Sample Data (Optional)
 
-1. **Compliance Score Collector** - Daily Purview Compliance Manager sync
-2. **Environment Status Collector** - Daily Power Platform status sync
-3. **Exception Aggregator** - Consolidates exceptions from all sources
+For demonstration and testing, load sample data:
 
-See [docs/flow-configuration.md](docs/flow-configuration.md) for detailed setup.
+```bash
+# Set authentication environment variables
+export AZURE_TENANT_ID="your-tenant-id"
+export AZURE_CLIENT_ID="your-client-id"
+export AZURE_CLIENT_SECRET="your-client-secret"
 
-### 3. Deploy Power BI Report
-
-1. Download the Power BI template from `templates/ComplianceDashboard.pbit`
-2. Open in Power BI Desktop
-3. Configure Dataverse connection parameters
-4. Publish to Power BI Service
-
-See [docs/power-bi-setup.md](docs/power-bi-setup.md) for detailed instructions.
-
-### 4. Load Sample Data (Optional)
-
-For demonstration purposes, load the sample data:
-
-```powershell
+# Load sample data (62 controls, 90 days history)
 python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com"
 ```
+
+**Production Deployment:** Clear sample data before production use.
+
+### 3. Deploy Power BI Dashboard
+
+1. Download Power BI template: `templates/ComplianceDashboard.pbit`
+2. Open in Power BI Desktop
+3. Enter parameters:
+   - `DataverseEnvironmentUrl`: Your environment URL
+   - `TenantId`: Your Azure AD tenant ID
+4. Authenticate with organizational account
+5. Publish to Power BI Service
+6. Configure scheduled refresh (daily at 7:00 AM)
+
+See [Power BI Setup](docs/power-bi-setup.md) for detailed configuration and [Power BI Template Specification](docs/power-bi-template-spec.md) for template creation instructions.
+
+### 4. Activate Flows
+
+1. Navigate to Power Automate > Solutions > Compliance Dashboard
+2. Turn on **CD-ScoreCalculator** (daily score calculation)
+3. Turn on **CD-ExceptionMonitor** (hourly SLA monitoring)
+4. Test each flow manually to verify functionality
+
+See [Deployment Checklist](docs/deployment-checklist.md) for complete validation steps.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Prerequisites](docs/prerequisites.md) | Detailed licensing and permission requirements |
+| [Deployment Checklist](docs/deployment-checklist.md) | Step-by-step deployment validation checklist |
 | [Dataverse Schema](docs/dataverse-schema.md) | Table definitions and relationships |
 | [Flow Configuration](docs/flow-configuration.md) | Power Automate flow setup |
 | [Power BI Setup](docs/power-bi-setup.md) | Dashboard deployment and customization |
+| [Power BI Template Spec](docs/power-bi-template-spec.md) | Complete .pbit template creation instructions |
 | [DAX Measures](docs/dax-measures.md) | Calculation logic for compliance metrics |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 
@@ -221,6 +239,27 @@ Where:
 - Validation tracking
 - Ongoing monitoring metrics
 
+## Known Limitations
+
+This section documents limitations and design decisions for v1.0.0 deployment.
+
+| Limitation | Description | Workaround |
+|------------|-------------|------------|
+| **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop GUI | Follow [Power BI Template Specification](docs/power-bi-template-spec.md) for step-by-step instructions |
+| **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
+| **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX filters |
+| **Sample data is demo only** | Sample data uses realistic distributions but should not be used in production environments | Clear sample data with `--clear` flag before loading production assessments |
+| **Single deployment path** | No Quick Start option, full deployment required for all scenarios | Complete all steps in [Deployment Checklist](docs/deployment-checklist.md) |
+| **Upgrade path not documented** | Migration from v1.0.0 to future versions not yet specified | Upgrade documentation will be added in v1.1.0 release |
+| **Unmanaged solution only** | Solution package is unmanaged to allow customer customization | Convert to managed solution post-customization if needed |
+
+**Future Enhancements (planned for v1.1.0+):**
+- Automated deployment validation script
+- Pre-configured RLS templates for common org structures
+- Quick Start deployment option with minimal configuration
+- Upgrade migration toolkit for version transitions
+- Managed solution variant for locked-down deployments
+
 ## Related Controls
 
 | Control | Relationship |
@@ -229,11 +268,45 @@ Where:
 | [3.2 - Usage Analytics](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Usage trend data |
 | [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md) | Exception correlation |
 
+## Rollback and Uninstall
+
+If deployment issues are encountered, follow these steps to rollback:
+
+### Quick Rollback
+
+1. **Stop Power Automate flows:**
+   - Navigate to Power Automate > Solutions > Compliance Dashboard
+   - Turn off CD-ScoreCalculator and CD-ExceptionMonitor flows
+
+2. **Delete Power BI report:**
+   - In Power BI Service workspace, delete report and dataset
+   - No data loss (data remains in Dataverse)
+
+3. **Delete solution (optional):**
+   - Navigate to Power Apps > Solutions
+   - Delete "Compliance Dashboard" solution
+   - Tables and data will be removed
+
+### Complete Uninstall
+
+For complete removal including all data:
+
+1. Delete Power BI report and dataset
+2. Turn off all flows in solution
+3. Delete solution from Power Apps
+4. (Optional) Manually delete Dataverse tables if solution deletion left remnants
+5. Clear sample data: `python scripts/load_sample_data.py --clear`
+
+See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rollback-procedure) for detailed steps.
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.0 | February 2026 | Production release with complete deployment artifacts |
 | 1.0.0-beta | February 2026 | Initial beta release (Power BI template requires manual creation) |
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ## Support
 

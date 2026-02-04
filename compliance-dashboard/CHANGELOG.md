@@ -4,7 +4,43 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-04
+
+### Added
+
+- **Deployment Documentation:**
+  - Comprehensive deployment checklist with manual validation steps
+  - Power BI template creation specification (.pbit manual creation guide)
+  - Known limitations section documenting what is not supported
+  - Rollback and uninstall procedures
+- **Power Platform Solution Package:**
+  - Unmanaged solution package (ComplianceDashboard_1_0_0.zip)
+  - Contains Dataverse schema and Power Automate flows
+  - Connection reference configuration for Dataverse, Outlook, Teams
+  - Environment variables for notification email and Teams webhook
+- **Enhanced Sample Data:**
+  - Full 62-control coverage with zone applicability
+  - 90-day historical compliance score data for trend analysis
+  - Realistic distributions (not uniform scores)
+  - Sample exceptions with varied SLA statuses and severities
+  - Export flag for sample data extraction
+
+### Changed
+
+- **Status:** Updated from beta (v1.0.0-beta) to production-ready (v1.0.0)
+- **README:** Restructured with Known Limitations and Rollback sections
+- **Quick Start:** Updated to reference actual solution package and deployment checklist
+- **Documentation:** Added deployment-checklist.md and power-bi-template-spec.md to documentation table
+
+### Fixed
+
+- Sample data loader now generates realistic compliance score variations
+- Clarified that RLS is not pre-configured (customer must implement)
+- Documented manual .pbit creation requirement
+
+---
+
+## [1.0.0-beta] - February 2026
 
 ### Added
 
