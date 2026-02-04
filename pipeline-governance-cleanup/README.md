@@ -215,7 +215,7 @@ Use the PowerShell script to list all environments and detect pipelines:
 pac auth create
 
 # Run inventory script with pipeline detection
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
 ```
 
 This produces a CSV with all environments and indicates which have pipelines (`HasPipelinesEnabled` column). **Manual review is required** to identify which pipelines host those environments are linked to.
@@ -247,7 +247,7 @@ Add owner information to your inventory:
 Send notifications to pipeline owners:
 
 ```powershell
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -TestMode  # Remove to send actual emails

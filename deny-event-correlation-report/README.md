@@ -1,6 +1,6 @@
 # Deny Event Correlation Report
 
-> **Status:** Work In Progress
+> **Status:** Validated
 
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 

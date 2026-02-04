@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Work In Progress
+> **Status:** Validated
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
