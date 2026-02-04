@@ -146,18 +146,15 @@ try {
     Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
 
     # Store client ID
-    $clientIdSecret = ConvertTo-SecureString $app.AppId -AsPlainText -Force
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue $clientIdSecret | Out-Null
+    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue $app.AppId | Out-Null
     Write-Host "  Stored: CAA-SP-ClientId" -ForegroundColor Green
 
     # Store client secret
-    $clientSecretValue = ConvertTo-SecureString $secret.SecretText -AsPlainText -Force
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue $clientSecretValue | Out-Null
+    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue $secret.SecretText | Out-Null
     Write-Host "  Stored: CAA-SP-ClientSecret" -ForegroundColor Green
 
     # Store tenant ID
-    $tenantIdSecret = ConvertTo-SecureString $TenantId -AsPlainText -Force
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue $tenantIdSecret | Out-Null
+    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue $TenantId | Out-Null
     Write-Host "  Stored: CAA-TenantId" -ForegroundColor Green
 }
 catch {
