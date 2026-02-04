@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/environmentvariables.json",
+  "environmentVariables": [
+    {
+      "schemaName": "fsi_CD_NotificationEmail",
+      "displayName": "Notification Email",
+      "description": "Email address for compliance notifications and alerts",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": true,
+      "hint": "Example: compliance@contoso.com"
+    },
+    {
+      "schemaName": "fsi_CD_TeamsWebhook",
+      "displayName": "Teams Webhook URL",
+      "description": "Microsoft Teams incoming webhook URL for posting alerts",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": false,
+      "hint": "Example: https://contoso.webhook.office.com/webhookb2/..."
+    },
+    {
+      "schemaName": "fsi_CD_DataverseEnvironment",
+      "displayName": "Dataverse Environment URL",
+      "description": "Dataverse environment URL for API calls",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": false,
+      "hint": "Example: https://org.crm.dynamics.com"
+    },
+    {
+      "schemaName": "fsi_CD_SLAMultiplier",
+      "displayName": "SLA Multiplier",
+      "description": "Multiplier for SLA calculations (default: 1.0). Use values >1.0 to extend SLA periods, <1.0 to shorten",
+      "type": "Decimal",
+      "defaultValue": "1.0",
+      "isRequired": false,
+      "hint": "Example: 1.5 extends all SLAs by 50%"
+    }
+  ]
+}
