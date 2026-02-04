@@ -76,6 +76,9 @@ param(
     [string]$OutputPath = ".\RaiTelemetry-$(Get-Date -Format 'yyyy-MM-dd').csv"
 )
 
+#Requires -Version 7.0
+#Requires -Modules Az.Accounts
+
 #region Functions
 
 function Invoke-AppInsightsQuery {

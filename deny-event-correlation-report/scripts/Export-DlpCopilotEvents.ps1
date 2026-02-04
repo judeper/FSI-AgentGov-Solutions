@@ -56,6 +56,9 @@ param(
     [string]$PolicyNameFilter = "*"
 )
 
+#Requires -Version 7.0
+#Requires -Modules ExchangeOnlineManagement
+
 #region Functions
 
 function Connect-ToExchangeOnline {

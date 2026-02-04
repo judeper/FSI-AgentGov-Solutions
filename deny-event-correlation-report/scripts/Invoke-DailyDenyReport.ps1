@@ -100,6 +100,9 @@ param(
     [switch]$SkipUpload
 )
 
+#Requires -Version 7.0
+#Requires -Modules ExchangeOnlineManagement, Az.Storage, Az.KeyVault
+
 #region Configuration
 
 $ErrorActionPreference = "Stop"

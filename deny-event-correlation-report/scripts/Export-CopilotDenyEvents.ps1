@@ -53,6 +53,9 @@ param(
     [int]$MaxResults = 50000
 )
 
+#Requires -Version 7.0
+#Requires -Modules ExchangeOnlineManagement
+
 #region Functions
 
 function Connect-ToExchangeOnline {
