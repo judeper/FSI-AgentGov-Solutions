@@ -53,7 +53,19 @@ Write-Host "Timestamp: $timestamp"
 Write-Host ""
 
 # Load configuration
-$config = Get-Content $ConfigPath | ConvertFrom-Json
+try {
+    Write-Verbose "Loading configuration from $ConfigPath..."
+    if (-not (Test-Path $ConfigPath)) {
+        throw "Configuration file not found: $ConfigPath"
+    }
+    $config = Get-Content $ConfigPath -ErrorAction Stop | ConvertFrom-Json
+    Write-Verbose "Configuration loaded successfully."
+}
+catch {
+    Write-Error "Failed to load configuration from $ConfigPath"
+    Write-Error "Error: $_"
+    throw
+}
 
 # Ensure output directory exists
 if (-not (Test-Path $OutputPath)) {
@@ -61,20 +73,34 @@ if (-not (Test-Path $OutputPath)) {
 }
 
 # Connect to Microsoft Graph
-Write-Host "Connecting to Microsoft Graph..."
-$context = Get-MgContext
-if (-not $context -or $context.TenantId -ne $TenantId) {
-    Connect-MgGraph -TenantId $TenantId -Scopes "Policy.Read.All"
+try {
+    Write-Host "Connecting to Microsoft Graph..."
+    $context = Get-MgContext
+    if (-not $context -or $context.TenantId -ne $TenantId) {
+        Connect-MgGraph -TenantId $TenantId -Scopes "Policy.Read.All" -ErrorAction Stop
+    }
+    Write-Host "Connected." -ForegroundColor Green
 }
-Write-Host "Connected." -ForegroundColor Green
+catch {
+    Write-Error "Failed to connect to Microsoft Graph (Tenant: $TenantId)"
+    Write-Error "Error: $_"
+    throw
+}
 
 # Get all CA policies
-Write-Host "`nRetrieving Conditional Access policies..."
-$allPolicies = Get-MgIdentityConditionalAccessPolicy
-$fsiPolicies = $allPolicies | Where-Object {
-    $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
+try {
+    Write-Host "`nRetrieving Conditional Access policies..."
+    $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
+    $fsiPolicies = $allPolicies | Where-Object {
+        $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
+    }
+    Write-Host "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
 }
-Write-Host "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
+catch {
+    Write-Error "Failed to retrieve Conditional Access policies"
+    Write-Error "Error: $_"
+    throw
+}
 
 # Initialize results
 $complianceResults = @{
@@ -311,12 +337,19 @@ if ($complianceResults.gaps.Count -gt 0) {
 }
 
 # Export results
-$coverageFile = Join-Path $OutputPath "PolicyCoverage-$timestamp.json"
-$complianceResults | ConvertTo-Json -Depth 10 | Out-File $coverageFile -Encoding utf8
-Write-Host "`nResults exported to: $coverageFile" -ForegroundColor Green
+try {
+    $coverageFile = Join-Path $OutputPath "PolicyCoverage-$timestamp.json"
+    $complianceResults | ConvertTo-Json -Depth 10 | Out-File $coverageFile -Encoding utf8
+    Write-Host "`nResults exported to: $coverageFile" -ForegroundColor Green
 
-$gapsFile = Join-Path $OutputPath "PolicyGaps-$timestamp.json"
-$complianceResults.gaps | ConvertTo-Json -Depth 5 | Out-File $gapsFile -Encoding utf8
-Write-Host "Gaps exported to: $gapsFile"
+    $gapsFile = Join-Path $OutputPath "PolicyGaps-$timestamp.json"
+    $complianceResults.gaps | ConvertTo-Json -Depth 5 | Out-File $gapsFile -Encoding utf8
+    Write-Host "Gaps exported to: $gapsFile"
+}
+catch {
+    Write-Error "Failed to export compliance results to $OutputPath"
+    Write-Error "Error: $_"
+    throw
+}
 
 Write-Host "`nCompliance check complete." -ForegroundColor Green
