@@ -77,6 +77,9 @@ param(
     [string]$SenderEmail = ""
 )
 
+#Requires -Version 7.0
+#Requires -Modules Microsoft.Graph.Users.Actions
+
 # Build email body from template
 function Build-NotificationEmail {
     param(

@@ -66,6 +66,8 @@ param(
     [switch]$ProbePipelines
 )
 
+#Requires -Version 7.0
+
 # Ensure PAC CLI is available
 function Test-PacCli {
     try {
