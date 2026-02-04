@@ -1,5 +1,7 @@
 # Scope Drift Monitor
 
+> **Status:** Work In Progress
+
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
 ## Overview

@@ -1,5 +1,7 @@
 # FINRA Supervision Workflow
 
+> **Status:** Validated
+
 Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations.
 
 > **Regulatory Context:** FINRA Rule 3110 requires member firms to establish and maintain a system to supervise the activities of each associated person that is reasonably designed to achieve compliance. This solution automates the routing and tracking of AI agent outputs requiring supervisory review.

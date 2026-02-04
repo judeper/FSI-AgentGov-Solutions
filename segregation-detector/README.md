@@ -1,5 +1,7 @@
 # Segregation of Duties Detector
 
+> **Status:** Work In Progress
+
 Automated role conflict detection for Maker/Checker enforcement in AI agent deployment pipelines, supporting SOX 404 IT General Controls.
 
 ## Overview

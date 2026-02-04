@@ -1,10 +1,14 @@
 # Compliance Dashboard
 
+> **Status:** Work In Progress
+
 Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 62 controls with zone-based filtering.
 
 ## Overview
 
 The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 and Power Platform sources to provide a unified view of your AI agent governance posture. It supports regulatory reporting requirements for SOX 404, FINRA 3120, and OCC 2011-12.
+
+> **Beta Status:** This solution is currently in beta (v1.0.0-beta). The Power BI template (.pbit) requires manual creation based on the specifications in docs/power-bi-setup.md. Once the template is complete and tested, the solution will move to v1.0.0.
 
 ## Features
 
@@ -221,15 +225,15 @@ Where:
 
 | Control | Relationship |
 |---------|--------------|
-| [3.1 - Agent Inventory](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-registry.md) | Agent count metrics |
-| [3.2 - Usage Analytics](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-adoption-metrics.md) | Usage trend data |
-| [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-response-metrics.md) | Exception correlation |
+| [3.1 - Agent Inventory](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Agent count metrics |
+| [3.2 - Usage Analytics](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Usage trend data |
+| [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md) | Exception correlation |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.0 | February 2026 | Initial release |
+| 1.0.0-beta | February 2026 | Initial beta release (Power BI template requires manual creation) |
 
 ## Support
 

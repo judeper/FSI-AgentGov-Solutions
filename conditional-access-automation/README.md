@@ -1,5 +1,7 @@
 # Conditional Access Automation
 
+> **Status:** Work In Progress
+
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
 > **Security Context:** This solution implements Zero Trust access controls for AI applications, ensuring consistent MFA enforcement and risk-based authentication across all governance zones.
@@ -271,10 +273,9 @@ Add to ELM `SupervisionConfig`:
 
 | Regulation | Requirement | How This Helps |
 |------------|-------------|----------------|
-| **NIST 800-53** | AC-2, IA-2 | MFA enforcement, access control |
-| **Zero Trust** | Verify explicitly | Risk-based authentication |
 | **SOX 404** | IT general controls | Consistent access policies |
 | **GLBA 501(b)** | Safeguards rule | Multi-factor authentication |
+| **Zero Trust Principles** | Verify explicitly | Risk-based authentication |
 
 ## Troubleshooting
 
