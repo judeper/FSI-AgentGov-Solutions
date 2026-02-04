@@ -33,6 +33,22 @@ Automated deployment and compliance monitoring of Entra ID Conditional Access po
 | Azure Key Vault | Credential storage for automation |
 | PowerShell 7+ | Script execution |
 
+### 4. Service Principal CA Policy Considerations
+
+!!! warning "Service Principal Security Group Bypass"
+    Service Principals used for automation may not be members of security groups used in CA policy assignments, causing them to bypass user-targeted CA controls. When deploying CA policies for AI workloads, consider:
+
+    **For User-Targeted Policies:**
+    - Policies targeting security groups will NOT apply to Service Principals
+    - Service Principals authenticate as application identities without group membership
+
+    **For Service Principal Protection:**
+    - Create app-specific CA policies targeting Service Principal application IDs directly
+    - Use Named Locations to restrict Service Principal sign-ins to trusted networks
+    - Monitor Service Principal sign-ins via Entra ID logs (filter: User Type = Service Principal)
+
+    This solution includes Service Principal CA policy templates in `templates/service-principals/` directory.
+
 ## What This Solution Does
 
 - **Deploys** pre-configured Conditional Access policy templates for AI workloads

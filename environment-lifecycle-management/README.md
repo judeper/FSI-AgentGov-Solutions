@@ -26,6 +26,17 @@ Automated Power Platform environment provisioning with zone-based governance cla
 | System Administrator | Dataverse table creation, security roles |
 | Key Vault Secrets Officer | Credential storage |
 
+!!! warning "Service Principal Permissions"
+    This solution uses a Service Principal for automated environment provisioning. Service Principals are application identities that bypass security group-based access controls. Ensure:
+
+    - Service Principal has minimum required Power Platform API permissions (Environment.Manage.All)
+    - Service Principal sign-ins are restricted via Named Locations to trusted networks
+    - Service Principal authentication is monitored via Entra ID Sign-in Logs
+    - Service Principal credentials are rotated quarterly and stored in Azure Key Vault
+    - Service Principal does NOT have Global Administrator or Power Platform Administrator directory roles (use least-privilege API permissions instead)
+
+    See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for security configuration guidance.
+
 ### 3. Environment Groups
 
 Create three environment groups in Power Platform admin center before deployment:
