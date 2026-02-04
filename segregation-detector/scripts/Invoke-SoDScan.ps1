@@ -49,6 +49,8 @@ param(
     [switch]$DryRun
 )
 
+#Requires -Version 7.0
+
 $ErrorActionPreference = "Stop"
 
 #region Helper Functions

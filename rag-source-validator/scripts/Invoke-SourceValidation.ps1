@@ -34,6 +34,8 @@ param(
     [string]$ClientSecret = $env:AZURE_CLIENT_SECRET
 )
 
+#Requires -Version 7.0
+
 $ErrorActionPreference = "Stop"
 
 function Get-AccessToken {
