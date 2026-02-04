@@ -1,0 +1,379 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "Recurrence": {
+      "recurrence": {
+        "frequency": "Hour",
+        "interval": 1
+      },
+      "type": "Recurrence"
+    }
+  },
+  "actions": {
+    "Initialize_SLA_Days": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "SLADays",
+            "type": "object",
+            "value": {
+              "1": 7,
+              "2": 14,
+              "3": 30,
+              "4": 90
+            }
+          }
+        ]
+      },
+      "description": "SLA days by severity: Critical=7, High=14, Medium=30, Low=90"
+    },
+    "Initialize_Breached_Exceptions": {
+      "runAfter": {
+        "Initialize_SLA_Days": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "BreachedExceptions",
+            "type": "array",
+            "value": []
+          }
+        ]
+      }
+    },
+    "List_Open_Exceptions": {
+      "runAfter": {
+        "Initialize_Breached_Exceptions": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_commondataserviceforapps",
+          "operationId": "ListRecords",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_complianceexceptions",
+          "$select": "fsi_complianceexceptionid,fsi_name,fsi_severity,fsi_exceptionstatus,fsi_slastatus,fsi_targetdate,createdon",
+          "$expand": "fsi_owner($select=internalemailaddress,fullname),fsi_controlassessmentid($select=fsi_name)",
+          "$filter": "fsi_exceptionstatus eq 1 or fsi_exceptionstatus eq 2 or fsi_exceptionstatus eq 3"
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Apply_to_each_Exception": {
+      "foreach": "@outputs('List_Open_Exceptions')?['body/value']",
+      "actions": {
+        "Calculate_Days_Open": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": "@div(sub(ticks(utcNow()), ticks(items('Apply_to_each_Exception')?['createdon'])), 864000000000)"
+        },
+        "Get_SLA_Days": {
+          "runAfter": {
+            "Calculate_Days_Open": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(equals(items('Apply_to_each_Exception')?['fsi_severity'], 1), variables('SLADays')?['1'], if(equals(items('Apply_to_each_Exception')?['fsi_severity'], 2), variables('SLADays')?['2'], if(equals(items('Apply_to_each_Exception')?['fsi_severity'], 3), variables('SLADays')?['3'], variables('SLADays')?['4'])))"
+        },
+        "Calculate_SLA_Threshold": {
+          "runAfter": {
+            "Get_SLA_Days": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@mul(outputs('Get_SLA_Days'), 0.8)",
+          "description": "80% threshold for At Risk status"
+        },
+        "Determine_New_SLA_Status": {
+          "runAfter": {
+            "Calculate_SLA_Threshold": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(greater(outputs('Calculate_Days_Open'), outputs('Get_SLA_Days')), 3, if(greater(outputs('Calculate_Days_Open'), outputs('Calculate_SLA_Threshold')), 2, 1))",
+          "description": "1=On Track, 2=At Risk, 3=Breached"
+        },
+        "Get_Previous_SLA_Status": {
+          "runAfter": {
+            "Determine_New_SLA_Status": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@coalesce(items('Apply_to_each_Exception')?['fsi_slastatus'], 1)"
+        },
+        "Update_Exception_Record": {
+          "runAfter": {
+            "Get_Previous_SLA_Status": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "fsi_complianceexceptions",
+              "recordId": "@items('Apply_to_each_Exception')?['fsi_complianceexceptionid']",
+              "item": {
+                "fsi_daysopen": "@int(outputs('Calculate_Days_Open'))",
+                "fsi_slastatus": "@outputs('Determine_New_SLA_Status')"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Condition_Status_Changed_to_Breached": {
+          "actions": {
+            "Append_to_Breached_List": {
+              "runAfter": {},
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "BreachedExceptions",
+                "value": {
+                  "name": "@items('Apply_to_each_Exception')?['fsi_name']",
+                  "control": "@items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']",
+                  "owner": "@items('Apply_to_each_Exception')?['fsi_owner']?['fullname']",
+                  "ownerEmail": "@items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress']",
+                  "daysOpen": "@outputs('Calculate_Days_Open')",
+                  "sla": "@outputs('Get_SLA_Days')",
+                  "targetDate": "@items('Apply_to_each_Exception')?['fsi_targetdate']"
+                }
+              }
+            },
+            "Send_Breach_Email": {
+              "runAfter": {
+                "Append_to_Breached_List": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "emailMessage": {
+                    "To": "@{items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress']}",
+                    "Cc": "@{variables('CD_NotificationEmail')}",
+                    "Subject": "URGENT: SLA Breached - @{items('Apply_to_each_Exception')?['fsi_name']}",
+                    "Body": "<p><strong style='color:red;'>SLA BREACHED</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Overdue:</strong> @{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>Immediate action is required. Please update the remediation plan and status.</p>",
+                    "Importance": "High"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Post_Teams_Alert": {
+              "runAfter": {
+                "Send_Breach_Email": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "@{variables('CD_TeamsWebhook')}",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "@type": "MessageCard",
+                  "@context": "http://schema.org/extensions",
+                  "themeColor": "FF0000",
+                  "summary": "SLA Breach: @{items('Apply_to_each_Exception')?['fsi_name']}",
+                  "sections": [
+                    {
+                      "activityTitle": "🚨 SLA BREACHED",
+                      "activitySubtitle": "@{items('Apply_to_each_Exception')?['fsi_name']}",
+                      "facts": [
+                        {
+                          "name": "Control",
+                          "value": "@{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}"
+                        },
+                        {
+                          "name": "Owner",
+                          "value": "@{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}"
+                        },
+                        {
+                          "name": "Days Open",
+                          "value": "@{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)"
+                        },
+                        {
+                          "name": "Days Overdue",
+                          "value": "@{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}"
+                        }
+                      ],
+                      "markdown": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Update_Exception_Record": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@outputs('Determine_New_SLA_Status')",
+                  3
+                ]
+              },
+              {
+                "not": {
+                  "equals": [
+                    "@outputs('Get_Previous_SLA_Status')",
+                    3
+                  ]
+                }
+              }
+            ]
+          },
+          "type": "If",
+          "description": "Send notification only if status just changed to Breached"
+        },
+        "Condition_Status_Changed_to_At_Risk": {
+          "actions": {
+            "Send_Warning_Email": {
+              "runAfter": {},
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "emailMessage": {
+                    "To": "@{items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress']}",
+                    "Subject": "WARNING: Exception At Risk - @{items('Apply_to_each_Exception')?['fsi_name']}",
+                    "Body": "<p><strong style='color:orange;'>SLA AT RISK</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Remaining:</strong> @{sub(outputs('Get_SLA_Days'), int(outputs('Calculate_Days_Open')))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>This exception is approaching SLA breach. Please prioritize remediation efforts.</p>",
+                    "Importance": "Normal"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Condition_Status_Changed_to_Breached": [
+              "Succeeded",
+              "Skipped"
+            ]
+          },
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@outputs('Determine_New_SLA_Status')",
+                  2
+                ]
+              },
+              {
+                "equals": [
+                  "@outputs('Get_Previous_SLA_Status')",
+                  1
+                ]
+              }
+            ]
+          },
+          "type": "If",
+          "description": "Send warning only if status just changed from On Track to At Risk"
+        }
+      },
+      "runAfter": {
+        "List_Open_Exceptions": [
+          "Succeeded"
+        ]
+      },
+      "type": "Foreach",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "repetitions": 1
+        }
+      }
+    },
+    "Condition_Send_Daily_Summary": {
+      "actions": {
+        "Send_Daily_Summary_Email": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage": {
+                "To": "@{variables('CD_NotificationEmail')}",
+                "Subject": "Daily Exception Summary - @{length(variables('BreachedExceptions'))} Breached",
+                "Body": "<h2>Daily Exception Summary</h2><p><strong>Total Breached Exceptions:</strong> @{length(variables('BreachedExceptions'))}</p><table border='1' style='border-collapse:collapse;'><thead><tr><th>Exception</th><th>Control</th><th>Owner</th><th>Days Open</th><th>SLA</th><th>Days Overdue</th></tr></thead><tbody>@{join(select(variables('BreachedExceptions'), concat('<tr><td>', item()?['name'], '</td><td>', item()?['control'], '</td><td>', item()?['owner'], '</td><td>', item()?['daysOpen'], '</td><td>', item()?['sla'], '</td><td>', sub(item()?['daysOpen'], item()?['sla']), '</td></tr>')), '')}</tbody></table><p>Please review and expedite remediation for all breached exceptions.</p>",
+                "Importance": "High"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "runAfter": {
+        "Apply_to_each_Exception": [
+          "Succeeded"
+        ]
+      },
+      "expression": {
+        "and": [
+          {
+            "greater": [
+              "@length(variables('BreachedExceptions'))",
+              0
+            ]
+          },
+          {
+            "equals": [
+              "@formatDateTime(utcNow(), 'HH')",
+              "09"
+            ]
+          }
+        ]
+      },
+      "type": "If",
+      "description": "Send daily summary at 9 AM if any exceptions are breached"
+    }
+  },
+  "outputs": {},
+  "description": "CD-ExceptionMonitor: Updates exception SLA status and sends alerts for at-risk items"
+}

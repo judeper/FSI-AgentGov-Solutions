@@ -1,0 +1,345 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "Recurrence": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2026-01-01T06:00:00Z",
+        "timeZone": "UTC"
+      },
+      "type": "Recurrence"
+    }
+  },
+  "actions": {
+    "Initialize_TotalWeightedScore": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TotalWeightedScore",
+            "type": "float",
+            "value": 0.0
+          }
+        ]
+      }
+    },
+    "Initialize_TotalWeight": {
+      "runAfter": {
+        "Initialize_TotalWeightedScore": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TotalWeight",
+            "type": "float",
+            "value": 0.0
+          }
+        ]
+      }
+    },
+    "Initialize_PillarScores": {
+      "runAfter": {
+        "Initialize_TotalWeight": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "PillarScores",
+            "type": "object",
+            "value": {
+              "1": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              },
+              "2": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              },
+              "3": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              },
+              "4": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    "Initialize_ZoneScores": {
+      "runAfter": {
+        "Initialize_PillarScores": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ZoneScores",
+            "type": "object",
+            "value": {
+              "1": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              },
+              "2": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              },
+              "3": {
+                "weightedSum": 0.0,
+                "weight": 0.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    "Initialize_StatusCounts": {
+      "runAfter": {
+        "Initialize_ZoneScores": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "StatusCounts",
+            "type": "object",
+            "value": {
+              "compliant": 0,
+              "partial": 0,
+              "noncompliant": 0
+            }
+          }
+        ]
+      }
+    },
+    "List_Control_Assessments": {
+      "runAfter": {
+        "Initialize_StatusCounts": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_commondataserviceforapps",
+          "operationId": "ListRecords",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_controlassessments",
+          "$select": "fsi_controlassessmentid,fsi_assessmentdate,fsi_status,fsi_zone,fsi_score",
+          "$expand": "fsi_controlmasterid($select=fsi_controlid,fsi_pillar,fsi_weight)",
+          "$orderby": "fsi_assessmentdate desc"
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Apply_to_each_Assessment": {
+      "foreach": "@outputs('List_Control_Assessments')?['body/value']",
+      "actions": {
+        "Condition_Status_Not_NA": {
+          "actions": {
+            "Get_Control_Weight": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "@items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_weight']"
+            },
+            "Get_Zone_Multiplier": {
+              "runAfter": {
+                "Get_Control_Weight": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 3), 1.5, if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 2), 1.2, 1.0))"
+            },
+            "Calculate_Weighted_Score": {
+              "runAfter": {
+                "Get_Zone_Multiplier": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@mul(mul(items('Apply_to_each_Assessment')?['fsi_score'], outputs('Get_Control_Weight')), outputs('Get_Zone_Multiplier'))"
+            },
+            "Increment_TotalWeightedScore": {
+              "runAfter": {
+                "Calculate_Weighted_Score": [
+                  "Succeeded"
+                ]
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "TotalWeightedScore",
+                "value": "@outputs('Calculate_Weighted_Score')"
+              }
+            },
+            "Increment_TotalWeight": {
+              "runAfter": {
+                "Increment_TotalWeightedScore": [
+                  "Succeeded"
+                ]
+              },
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "TotalWeight",
+                "value": "@mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))"
+              }
+            },
+            "Update_Status_Counts": {
+              "runAfter": {
+                "Increment_TotalWeight": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 1), add(variables('StatusCounts')?['compliant'], 1), if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 2), add(variables('StatusCounts')?['partial'], 1), add(variables('StatusCounts')?['noncompliant'], 1)))"
+            }
+          },
+          "runAfter": {},
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "equals": [
+                    "@items('Apply_to_each_Assessment')?['fsi_status']",
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          "type": "If"
+        }
+      },
+      "runAfter": {
+        "List_Control_Assessments": [
+          "Succeeded"
+        ]
+      },
+      "type": "Foreach",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "repetitions": 1
+        }
+      }
+    },
+    "Calculate_Overall_Score": {
+      "runAfter": {
+        "Apply_to_each_Assessment": [
+          "Succeeded"
+        ]
+      },
+      "type": "Compose",
+      "inputs": "@if(greater(variables('TotalWeight'), 0), div(variables('TotalWeightedScore'), variables('TotalWeight')), 0)"
+    },
+    "Get_Open_Exception_Count": {
+      "runAfter": {
+        "Calculate_Overall_Score": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_commondataserviceforapps",
+          "operationId": "ListRecords",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_complianceexceptions",
+          "$filter": "fsi_exceptionstatus eq 1 or fsi_exceptionstatus eq 2 or fsi_exceptionstatus eq 3",
+          "$count": true
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Create_Compliance_Score_Record": {
+      "runAfter": {
+        "Get_Open_Exception_Count": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_commondataserviceforapps",
+          "operationId": "CreateRecord",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_compliancescores",
+          "item": {
+            "fsi_name": "Compliance Score @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+            "fsi_scoredate": "@formatDateTime(utcNow(), 'yyyy-MM-dd')",
+            "fsi_overallscore": "@outputs('Calculate_Overall_Score')",
+            "fsi_pillar1score": "@if(greater(variables('PillarScores')?['1']?['weight'], 0), div(variables('PillarScores')?['1']?['weightedSum'], variables('PillarScores')?['1']?['weight']), 0)",
+            "fsi_pillar2score": "@if(greater(variables('PillarScores')?['2']?['weight'], 0), div(variables('PillarScores')?['2']?['weightedSum'], variables('PillarScores')?['2']?['weight']), 0)",
+            "fsi_pillar3score": "@if(greater(variables('PillarScores')?['3']?['weight'], 0), div(variables('PillarScores')?['3']?['weightedSum'], variables('PillarScores')?['3']?['weight']), 0)",
+            "fsi_pillar4score": "@if(greater(variables('PillarScores')?['4']?['weight'], 0), div(variables('PillarScores')?['4']?['weightedSum'], variables('PillarScores')?['4']?['weight']), 0)",
+            "fsi_zone1score": "@if(greater(variables('ZoneScores')?['1']?['weight'], 0), div(variables('ZoneScores')?['1']?['weightedSum'], variables('ZoneScores')?['1']?['weight']), 0)",
+            "fsi_zone2score": "@if(greater(variables('ZoneScores')?['2']?['weight'], 0), div(variables('ZoneScores')?['2']?['weightedSum'], variables('ZoneScores')?['2']?['weight']), 0)",
+            "fsi_zone3score": "@if(greater(variables('ZoneScores')?['3']?['weight'], 0), div(variables('ZoneScores')?['3']?['weightedSum'], variables('ZoneScores')?['3']?['weight']), 0)",
+            "fsi_compliantcount": "@variables('StatusCounts')?['compliant']",
+            "fsi_partialcount": "@variables('StatusCounts')?['partial']",
+            "fsi_noncompliantcount": "@variables('StatusCounts')?['noncompliant']",
+            "fsi_exceptioncount": "@outputs('Get_Open_Exception_Count')?['body/@odata.count']"
+          }
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Send_Success_Notification": {
+      "runAfter": {
+        "Create_Compliance_Score_Record": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_office365",
+          "operationId": "SendEmailV2",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "emailMessage": {
+            "To": "@{variables('CD_NotificationEmail')}",
+            "Subject": "Compliance Score Calculated - @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+            "Body": "<p>Daily compliance score calculation completed successfully.</p><p><strong>Overall Score:</strong> @{outputs('Calculate_Overall_Score')}</p><p><strong>Status Breakdown:</strong></p><ul><li>Compliant: @{variables('StatusCounts')?['compliant']}</li><li>Partial: @{variables('StatusCounts')?['partial']}</li><li>Non-Compliant: @{variables('StatusCounts')?['noncompliant']}</li></ul><p><strong>Open Exceptions:</strong> @{outputs('Get_Open_Exception_Count')?['body/@odata.count']}</p>",
+            "Importance": "Normal"
+          }
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    }
+  },
+  "outputs": {},
+  "description": "CD-ScoreCalculator: Calculates daily compliance scores from control assessments"
+}
