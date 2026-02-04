@@ -1,5 +1,7 @@
 # DR Testing Framework
 
+> **Status:** Planned
+
 Automated disaster recovery testing workflows for AI agent infrastructure, ensuring compliance with operational resilience requirements.
 
 ## Overview
@@ -287,9 +289,10 @@ The framework generates compliance evidence:
 
 | Control | Relationship |
 |---------|--------------|
+| [2.4 - Business Continuity and Disaster Recovery](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.4-business-continuity-and-disaster-recovery.md) | Primary control for DR testing |
 | [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Environment backup |
-| [2.13 - Documentation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-recordkeeping.md) | Procedure documentation |
-| [1.9 - Data Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.9-data-retention-policies.md) | Backup retention |
+| [2.13 - Documentation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Procedure documentation |
+| [1.9 - Data Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.9-data-retention-and-deletion-policies.md) | Backup retention |
 
 ## Version History
 

@@ -1,5 +1,7 @@
 # Hallucination Feedback Tracker
 
+> **Status:** Planned
+
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 
 ## Overview
@@ -218,9 +220,10 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 
 | Control | Relationship |
 |---------|--------------|
-| [2.9 - Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-performance-monitoring-and-slas.md) | Quality metrics |
+| [2.9 - Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring-and-optimization.md) | Quality metrics |
 | [2.12 - Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110.md) | Supervisor feedback |
-| [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-response-metrics.md) | Escalation |
+| [3.10 - Hallucination Feedback Loop](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.10-hallucination-feedback-loop.md) | Primary control for hallucination tracking |
+| [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md) | Escalation |
 
 ## Version History
 
