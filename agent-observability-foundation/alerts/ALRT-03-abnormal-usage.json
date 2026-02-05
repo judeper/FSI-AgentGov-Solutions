@@ -1,0 +1,217 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "ALRT-03: Abnormal Usage Pattern alert rule with dynamic thresholds and bidirectional detection. Monitors agent session volumes and triggers on both spikes and drops to detect anomalous behavior patterns.",
+    "version": "0.1.0",
+    "lastUpdated": "February 2026",
+    "controlReference": "3.2 - Usage Analytics and Activity Monitoring"
+  },
+  "parameters": {
+    "alertName": {
+      "type": "string",
+      "defaultValue": "ALRT-03-Abnormal-Usage",
+      "metadata": {
+        "description": "Base name for the alert rule (zone suffix will be appended)"
+      }
+    },
+    "applicationInsightsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Application Insights instance to monitor"
+      }
+    },
+    "actionGroupZone1Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 1 (Personal Productivity) Action Group"
+      }
+    },
+    "actionGroupZone2Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 2 (Team Collaboration) Action Group"
+      }
+    },
+    "actionGroupZone3Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 (Enterprise Managed) Action Group"
+      }
+    },
+    "enabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether the alert rule is enabled"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for the alert rule resources"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone1')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-03: Abnormal Usage Pattern - Zone 1 (Personal Productivity)",
+        "description": "Alert when agent session volume deviates significantly from learned baseline (both spikes and drops). Zone 1 uses Low sensitivity for personal productivity agents with higher tolerance for usage variability.",
+        "severity": 3,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone1';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "timeAggregation": "Total",
+              "metricMeasureColumn": "TotalSessions",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterOrLessThan",
+              "alertSensitivity": "Low",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 3
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone1Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/3.2/troubleshooting/",
+            "ControlReference": "3.2 - Usage Analytics and Activity Monitoring",
+            "Zone": "Zone 1 - Personal Productivity",
+            "Severity": "Informational"
+          }
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone2')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-03: Abnormal Usage Pattern - Zone 2 (Team Collaboration)",
+        "description": "Alert when agent session volume deviates significantly from learned baseline (both spikes and drops). Zone 2 uses Medium sensitivity for team collaboration agents with balanced usage pattern monitoring.",
+        "severity": 2,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone2';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "timeAggregation": "Total",
+              "metricMeasureColumn": "TotalSessions",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterOrLessThan",
+              "alertSensitivity": "Medium",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 3
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone2Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/3.2/troubleshooting/",
+            "ControlReference": "3.2 - Usage Analytics and Activity Monitoring",
+            "Zone": "Zone 2 - Team Collaboration",
+            "Severity": "Warning"
+          }
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone3')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-03: Abnormal Usage Pattern - Zone 3 (Enterprise Managed)",
+        "description": "Alert when agent session volume deviates significantly from learned baseline (both spikes and drops). Zone 3 uses High sensitivity for enterprise managed agents with strict usage pattern monitoring for compliance and capacity planning.",
+        "severity": 1,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone3';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "timeAggregation": "Total",
+              "metricMeasureColumn": "TotalSessions",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterOrLessThan",
+              "alertSensitivity": "High",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 3
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone3Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/3.2/troubleshooting/",
+            "ControlReference": "3.2 - Usage Analytics and Activity Monitoring",
+            "Zone": "Zone 3 - Enterprise Managed",
+            "Severity": "Error"
+          }
+        },
+        "autoMitigate": true
+      }
+    }
+  ],
+  "outputs": {
+    "alertRuleZone1Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone1'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 1 Abnormal Usage alert rule"
+      }
+    },
+    "alertRuleZone2Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone2'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 2 Abnormal Usage alert rule"
+      }
+    },
+    "alertRuleZone3Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone3'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 Abnormal Usage alert rule"
+      }
+    }
+  }
+}
