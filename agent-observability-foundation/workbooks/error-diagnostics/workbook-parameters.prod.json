@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookId": {
+      "value": "b2c3d4e5-0002-4000-8000-000000000002"
+    },
+    "workbookDisplayName": {
+      "value": "Agent Error Diagnostics - Production"
+    },
+    "applicationInsightsId": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/microsoft.insights/components/{app-insights-name}"
+    },
+    "workbookSourceId": {
+      "value": "Azure Monitor"
+    }
+  }
+}
