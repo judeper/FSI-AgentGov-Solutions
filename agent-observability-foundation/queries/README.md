@@ -1,6 +1,6 @@
 # KQL Query Library
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Part of:** Agent Observability Foundation Solution
 **Purpose:** Reusable KQL queries for Copilot Studio governance monitoring
 
@@ -21,6 +21,7 @@ Queries are organized by **function** (not regulation) to maximize reusability:
 ```
 queries/
 ├── README.md                     # This file
+├── governance-queries.md         # Query-to-control mapping for audits
 ├── usage-analytics/              # Session and user engagement metrics
 │   ├── agent-usage-analytics.kql     # Session/message volume trends
 │   └── user-engagement-metrics.kql   # Distinct users, repeat sessions
@@ -31,9 +32,15 @@ queries/
 │   ├── latency-distribution.kql      # P50/P95/P99 percentiles
 │   └── slow-query-detection.kql      # Responses exceeding threshold
 ├── compliance/                   # Audit trail and regulatory evidence
-│   └── (Phase 2 Plan 02)
+│   ├── agent-decision-audit-trail.kql    # FINRA 3110 decision chain
+│   ├── completeness-assessment.kql       # Telemetry gap detection
+│   ├── rai-content-filtering-detection.kql  # RAI/XPIA/Jailbreak events
+│   ├── generative-answers-telemetry.kql  # GenAI response quality
+│   └── flow-failure-correlation.kql      # Power Automate failures
 └── sr11-7-model-risk/           # SR 11-7 model risk monitoring
-    └── (Phase 2 Plan 03)
+    ├── output-monitoring.kql         # Outcome analysis
+    ├── drift-detection-baseline.kql  # Response pattern drift (20%)
+    └── validation-test-results.kql   # Pass rate threshold (95%)
 ```
 
 **Why function-based?** A single query often supports multiple regulations. For example, `agent-usage-analytics.kql` provides evidence for both FINRA 3110 (supervision metrics) and SOX 404 (operational monitoring). Organizing by function avoids query duplication.
@@ -203,16 +210,27 @@ Audit trail queries include a `CompletenessPercent` field indicating what percen
 
 **Purpose:** Audit trail extraction for regulatory evidence (FINRA 3110, SEC 17a-4).
 
-*Queries added in Phase 2 Plan 02.*
+| Query | Description | Primary Control |
+|-------|-------------|-----------------|
+| `agent-decision-audit-trail.kql` | Complete decision chain for FINRA 3110 | 1.7 (Audit Logging), 2.12 (FINRA 3110) |
+| `completeness-assessment.kql` | Telemetry gap detection for audit readiness | 1.7 (Supporting) |
+| `rai-content-filtering-detection.kql` | RAI/XPIA/Jailbreak event detection | 1.6 (DSPM for AI) |
+| `generative-answers-telemetry.kql` | Generative AI response quality metrics | 2.9 (Performance) |
+| `flow-failure-correlation.kql` | Power Automate failure correlation | 3.4 (Incident Reporting) |
 
 ### sr11-7-model-risk/
 
 **Purpose:** SR 11-7 model risk monitoring (outcome analysis, drift detection, validation).
 
-*Queries added in Phase 2 Plan 03.*
+| Query | Description | Primary Control |
+|-------|-------------|-----------------|
+| `output-monitoring.kql` | Topic distribution and recommendation trends | 2.6 (Model Risk) |
+| `drift-detection-baseline.kql` | Response pattern drift detection (20% threshold) | 2.6 (Model Risk) |
+| `validation-test-results.kql` | Validation test pass rates (95% threshold) | 2.6 (Model Risk) |
 
 ## Related Documentation
 
+- [Query Governance Mapping](governance-queries.md) - Query-to-control mapping with regulatory cross-reference
 - [Architecture](../architecture.md) - Solution architecture overview
 - [Governance Mapping](../governance-mapping.md) - Artifact-to-control mapping
 - [PII Sanitization Guide](../docs/pii-sanitization-guide.md) - PII handling guidance
@@ -220,5 +238,5 @@ Audit trail queries include a `CompletenessPercent` field indicating what percen
 
 ---
 
-*Query Library Version: 1.0.0*
+*Query Library Version: 1.1.0*
 *Last Updated: 2026-02-05*
