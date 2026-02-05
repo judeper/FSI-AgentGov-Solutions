@@ -1,0 +1,69 @@
+// agent-decision-audit-trail.kql
+// Purpose: Extract complete decision chain for FINRA 3110 supervision requirements
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {AgentId} - Optional agent filter (default: all agents)
+//   {IncludePII} - Boolean flag: true = raw UserId (authorized reviewers only), false = hashed (default)
+//
+// Output Schema:
+//   Timestamp (datetime) - When decision occurred
+//   AgentId (string) - Agent identifier
+//   SessionId (string) - Conversation session ID
+//   UserId (string) - User identifier (hashed unless IncludePII=true)
+//   Prompt (string) - User input
+//   Response (string) - Agent output
+//   Sources (dynamic) - Knowledge sources cited
+//   SupervisorId (string) - Reviewer identity if HITL enabled
+//   ReviewStatus (string) - Approved/Rejected/Pending
+//   CompletenessPercent (real) - % of required fields present (5 fields: text, speak, fromName, session_Id, recipientId)
+//
+// Supports:
+//   Control 1.7 (Primary) - Comprehensive Audit Logging
+//   Control 2.12 (Primary) - FINRA 3110 Supervision
+//   Control 2.6 (Supporting) - SR 11-7 Model Risk Management
+//
+// Regulatory Mapping:
+//   FINRA 3110 - Supervisory procedures documentation
+//   SEC 17a-4 - Communications record preservation
+//   SR 11-7 - Model decision audit trail
+//
+// Sample Output:
+// | Timestamp            | AgentId   | SessionId     | UserId (hashed)      | Prompt                          | Response                      | CompletenessPercent |
+// | 2026-02-04T10:15:23Z | agent-001 | sess-abc-123  | sha256:a3f2c9d8e7... | "What are my account options?"  | "Based on your profile..."    | 1.0                 |
+// | 2026-02-04T09:45:12Z | agent-002 | sess-def-456  | sha256:b4e3d0f1a8... | "Show recent transactions"      | "Here are your last 5..."     | 0.8                 |
+//
+// Notes:
+//   - Default mode hashes UserId for PII protection (hash_sha256)
+//   - Fields with NULL produce coalesce warning ('NOT_CAPTURED')
+//   - CompletenessPercent helps identify telemetry gaps before audits
+//   - For workbook integration, replace {Parameter} with workbook parameter controls
+//   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
+
+let TimeRange = {TimeRange:7d};
+let AgentIdFilter = "{AgentId:all}";
+let IncludePII = {IncludePII:false};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| where AgentIdFilter == "all" or AgentId == AgentIdFilter
+| extend SessionId = tostring(session_Id)
+| extend UserIdRaw = tostring(customDimensions["fromName"])
+| extend UserId = iff(IncludePII, UserIdRaw, hash_sha256(UserIdRaw))
+| extend Prompt = coalesce(tostring(customDimensions["text"]), "NOT_CAPTURED")
+| extend Response = coalesce(tostring(customDimensions["speak"]), "NOT_CAPTURED")
+| extend Sources = todynamic(coalesce(tostring(customDimensions["citationSources"]), "[]"))
+| extend SupervisorId = coalesce(tostring(customDimensions["SupervisorId"]), "NOT_CAPTURED")
+| extend ReviewStatus = coalesce(tostring(customDimensions["ReviewStatus"]), "NOT_CAPTURED")
+| extend CompletenessPercent =
+    todouble(
+        iff(isnotnull(customDimensions["text"]), 1, 0) +
+        iff(isnotnull(customDimensions["speak"]), 1, 0) +
+        iff(isnotnull(customDimensions["fromName"]), 1, 0) +
+        iff(isnotnull(session_Id), 1, 0) +
+        iff(isnotnull(customDimensions["recipientId"]), 1, 0)
+    ) / 5.0
+| project Timestamp=timestamp, AgentId, SessionId, UserId, Prompt, Response, Sources, SupervisorId, ReviewStatus, CompletenessPercent
+| order by Timestamp desc

@@ -1,0 +1,62 @@
+// completeness-assessment.kql
+// Purpose: Identify telemetry gaps for audit readiness and proactive remediation
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   Date (datetime) - Aggregation date
+//   AvgCompleteness (real) - Average completeness percentage across all records
+//   RecordsBelow80Percent (int) - Count of records with <80% field completeness
+//   TotalRecords (int) - Total record count for the day
+//   ComplianceRisk (string) - HIGH (<80%), MEDIUM (80-90%), LOW (>90%) based on daily average
+//
+// Supports:
+//   Control 1.7 (Supporting) - Audit trail quality monitoring
+//   Control 2.12 (Supporting) - FINRA 3110 evidence completeness
+//
+// Regulatory Mapping:
+//   FINRA 3110 - Complete supervisory records requirement
+//   SEC 17a-4 - Communications record integrity
+//
+// Sample Output:
+// | Date       | AvgCompleteness | RecordsBelow80Percent | TotalRecords | ComplianceRisk |
+// | 2026-02-04 | 0.72            | 1543                  | 4250         | HIGH           |
+// | 2026-02-03 | 0.91            | 287                   | 3890         | LOW            |
+// | 2026-02-02 | 0.85            | 612                   | 4102         | MEDIUM         |
+//
+// Notes:
+//   - Fields assessed: text (Prompt), speak (Response), fromName (User), session_Id, recipientId (Agent)
+//   - HIGH risk indicates potential audit deficiency - investigate telemetry configuration
+//   - Consider enabling "Log sensitive Activity properties" in Copilot Studio for complete capture
+//   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend
+    HasText = iff(isnotnull(customDimensions["text"]), 1, 0),
+    HasSpeak = iff(isnotnull(customDimensions["speak"]), 1, 0),
+    HasFromName = iff(isnotnull(customDimensions["fromName"]), 1, 0),
+    HasSessionId = iff(isnotnull(session_Id), 1, 0),
+    HasRecipientId = iff(isnotnull(customDimensions["recipientId"]), 1, 0)
+| extend CompletenessPercent =
+    todouble(HasText + HasSpeak + HasFromName + HasSessionId + HasRecipientId) / 5.0
+| summarize
+    AvgCompleteness = avg(CompletenessPercent),
+    RecordsBelow80Percent = countif(CompletenessPercent < 0.80),
+    TotalRecords = count()
+    by bin(timestamp, 1d)
+| project
+    Date = timestamp,
+    AvgCompleteness = round(AvgCompleteness, 2),
+    RecordsBelow80Percent,
+    TotalRecords,
+    ComplianceRisk = case(
+        AvgCompleteness < 0.80, "HIGH",
+        AvgCompleteness < 0.90, "MEDIUM",
+        "LOW"
+    )
+| order by Date desc
