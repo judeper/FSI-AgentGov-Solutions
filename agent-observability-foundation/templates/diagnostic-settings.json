@@ -1,0 +1,96 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to ADLS Gen2 storage for long-term SEC 17a-4 retention.",
+    "version": "0.1.0",
+    "lastUpdated": "February 2026"
+  },
+  "parameters": {
+    "appInsightsName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Application Insights resource to configure diagnostic settings for"
+      }
+    },
+    "storageAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the ADLS Gen2 storage account for log export (e.g., /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name})"
+      }
+    },
+    "settingName": {
+      "type": "string",
+      "defaultValue": "export-to-adls",
+      "metadata": {
+        "description": "Name for the diagnostic settings configuration"
+      }
+    },
+    "retentionDays": {
+      "type": "int",
+      "defaultValue": 2555,
+      "minValue": 0,
+      "maxValue": 365000,
+      "metadata": {
+        "description": "Retention period in days for exported logs. 2555 days (7 years) recommended for SEC 17a-4. Set to 0 for unlimited retention (managed by storage account lifecycle policy)."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/components/providers/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "[concat(parameters('appInsightsName'), '/Microsoft.Insights/', parameters('settingName'))]",
+      "properties": {
+        "storageAccountId": "[parameters('storageAccountId')]",
+        "logs": [
+          {
+            "category": "AppTraces",
+            "categoryGroup": null,
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
+          },
+          {
+            "category": "AppEvents",
+            "categoryGroup": null,
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
+          },
+          {
+            "category": "AppRequests",
+            "categoryGroup": null,
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
+          },
+          {
+            "category": "AppExceptions",
+            "categoryGroup": null,
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "diagnosticSettingsId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/components/providers/diagnosticSettings', parameters('appInsightsName'), 'Microsoft.Insights', parameters('settingName'))]",
+      "metadata": {
+        "description": "Resource ID of the created diagnostic settings"
+      }
+    }
+  }
+}
