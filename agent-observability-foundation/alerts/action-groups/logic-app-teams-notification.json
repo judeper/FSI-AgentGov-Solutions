@@ -1,0 +1,196 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Logic App for transforming Azure Monitor common alert schema to Microsoft Teams notifications. Acts as intermediary between Action Groups and Teams channels (direct webhooks produce malformed messages).",
+    "version": "0.1.0",
+    "lastUpdated": "February 2026"
+  },
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "defaultValue": "fsi-agent-alert-teams-notification",
+      "metadata": {
+        "description": "Name of the Logic App workflow resource"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for Logic App deployment"
+      }
+    },
+    "teamsConnectionName": {
+      "type": "string",
+      "defaultValue": "teams-connection",
+      "metadata": {
+        "description": "Name of the Microsoft Teams API connection resource"
+      }
+    }
+  },
+  "variables": {
+    "teamsConnectionId": "[resourceId('Microsoft.Web/connections', parameters('teamsConnectionName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('logicAppName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schemaId": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "essentials": {
+                          "type": "object",
+                          "properties": {
+                            "alertRule": { "type": "string" },
+                            "severity": { "type": "string" },
+                            "description": { "type": "string" },
+                            "firedDateTime": { "type": "string" }
+                          }
+                        },
+                        "customProperties": {
+                          "type": "object",
+                          "properties": {
+                            "RunbookUrl": { "type": "string" },
+                            "Zone": { "type": "string" },
+                            "ControlReference": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "actions": {
+            "Parse_Alert_Payload": {
+              "runAfter": {},
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schemaId": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "essentials": {
+                          "type": "object",
+                          "properties": {
+                            "alertRule": { "type": "string" },
+                            "severity": { "type": "string" },
+                            "description": { "type": "string" },
+                            "firedDateTime": { "type": "string" }
+                          }
+                        },
+                        "customProperties": { "type": "object" }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "Determine_Severity_Color": {
+              "runAfter": {
+                "Parse_Alert_Payload": ["Succeeded"]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "severityColor",
+                    "type": "string",
+                    "value": "@{if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev0'), 'ff0000', if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev1'), 'ff8c00', 'ffd700'))}"
+                  }
+                ]
+              }
+            },
+            "Format_Teams_Message": {
+              "runAfter": {
+                "Determine_Severity_Color": ["Succeeded"]
+              },
+              "type": "Compose",
+              "inputs": {
+                "contentType": "html",
+                "content": "<div style='border-left: 4px solid #@{variables('severityColor')}; padding-left: 12px;'><h3>@{body('Parse_Alert_Payload')?['data']?['essentials']?['alertRule']}</h3><p><strong>Severity:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['severity']}</p><p><strong>Description:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['description']}</p><p><strong>Time:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['firedDateTime']}</p>@{if(not(empty(body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'])), concat('<p><strong>Zone:</strong> ', body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'], '</p>'), '')}<p><strong>Control:</strong> @{body('Parse_Alert_Payload')?['data']?['customProperties']?['ControlReference']}</p><p><a href=\"@{body('Parse_Alert_Payload')?['data']?['customProperties']?['RunbookUrl']}\">View Runbook</a></p></div>"
+              }
+            },
+            "Post_to_Teams": {
+              "runAfter": {
+                "Format_Teams_Message": ["Succeeded"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['teams']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v1.0/teams/@{encodeURIComponent('TEAM_ID')}/channels/@{encodeURIComponent('CHANNEL_ID')}/messages",
+                "body": {
+                  "body": {
+                    "contentType": "html",
+                    "content": "@{outputs('Format_Teams_Message')}"
+                  }
+                }
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "teams": {
+                "connectionId": "[variables('teamsConnectionId')]",
+                "connectionName": "[parameters('teamsConnectionName')]",
+                "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'teams')]"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "logicAppId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Logic/workflows', parameters('logicAppName'))]",
+      "metadata": {
+        "description": "Resource ID of the Logic App workflow"
+      }
+    },
+    "logicAppCallbackUrl": {
+      "type": "string",
+      "value": "[listCallbackURL(concat(resourceId('Microsoft.Logic/workflows', parameters('logicAppName')), '/triggers/manual'), '2019-05-01').value]",
+      "metadata": {
+        "description": "HTTP callback URL for the Logic App trigger (use in Action Group configuration)"
+      }
+    }
+  }
+}

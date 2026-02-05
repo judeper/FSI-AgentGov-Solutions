@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Action Group for Zone 3 (Enterprise Managed) agent alerts. Routes notifications to enterprise operations Teams channel and email recipients.",
+    "version": "0.1.0",
+    "lastUpdated": "February 2026"
+  },
+  "parameters": {
+    "actionGroupName": {
+      "type": "string",
+      "defaultValue": "ag-agent-zone3-ent-ops",
+      "metadata": {
+        "description": "Name of the Action Group resource"
+      }
+    },
+    "groupShortName": {
+      "type": "string",
+      "defaultValue": "z3-ent-ops",
+      "maxLength": 12,
+      "metadata": {
+        "description": "Short name for the Action Group (max 12 characters, used in SMS/email notifications)"
+      }
+    },
+    "emailAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address for Zone 3 alert notifications (provides audit trail)"
+      }
+    },
+    "teamsLogicAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Logic App that handles Teams notifications (e.g., /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Logic/workflows/{name})"
+      }
+    },
+    "teamsLogicAppCallbackUrl": {
+      "type": "securestring",
+      "metadata": {
+        "description": "HTTPS callback URL for the Logic App trigger (obtained from Logic App deployment outputs)"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('actionGroupName')]",
+      "location": "global",
+      "properties": {
+        "groupShortName": "[parameters('groupShortName')]",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "Zone 3 Enterprise Ops",
+            "emailAddress": "[parameters('emailAddress')]",
+            "useCommonAlertSchema": true
+          }
+        ],
+        "logicAppReceivers": [
+          {
+            "name": "Teams Enterprise Ops Channel",
+            "resourceId": "[parameters('teamsLogicAppId')]",
+            "callbackUrl": "[parameters('teamsLogicAppCallbackUrl')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "actionGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/actionGroups', parameters('actionGroupName'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 Action Group"
+      }
+    }
+  }
+}
