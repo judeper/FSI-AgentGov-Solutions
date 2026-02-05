@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Shared parameters for dev environment alert deployments. These parameters are referenced across multiple alert rule templates to ensure consistency.",
+    "environment": "dev",
+    "lastUpdated": "February 2026"
+  },
+  "parameters": {
+    "applicationInsightsId": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.Insights/components/appi-agent-dev",
+      "metadata": {
+        "description": "Resource ID of the Application Insights instance for dev environment alert rules"
+      }
+    },
+    "logAnalyticsWorkspaceId": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.OperationalInsights/workspaces/law-agent-dev",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace for dev environment KQL-based alert rules"
+      }
+    },
+    "emailAddress": {
+      "value": "agent-ops-dev@contoso.com",
+      "metadata": {
+        "description": "Email address for dev environment alert notifications (provides audit trail per FSI compliance requirements)"
+      }
+    },
+    "teamsLogicAppId": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.Logic/workflows/fsi-agent-alert-teams-notification-dev",
+      "metadata": {
+        "description": "Resource ID of the Logic App that handles Teams notifications for dev environment"
+      }
+    },
+    "teamsLogicAppCallbackUrl": {
+      "value": "https://prod-XX.eastus.logic.azure.com:443/workflows/XXXXXXXXXXXXXXXX/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XXXXXXXXXXXXXXXX",
+      "metadata": {
+        "description": "HTTPS callback URL for the Logic App trigger (obtained from Logic App deployment outputs). Replace with actual URL after Logic App deployment."
+      }
+    },
+    "actionGroupZone1Id": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.Insights/actionGroups/ag-agent-zone1-general-dev",
+      "metadata": {
+        "description": "Resource ID of the Zone 1 (Personal Productivity) Action Group for dev environment"
+      }
+    },
+    "actionGroupZone2Id": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.Insights/actionGroups/ag-agent-zone2-team-ops-dev",
+      "metadata": {
+        "description": "Resource ID of the Zone 2 (Team Collaboration) Action Group for dev environment"
+      }
+    },
+    "actionGroupZone3Id": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/rg-agent-observability-dev/providers/Microsoft.Insights/actionGroups/ag-agent-zone3-ent-ops-dev",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 (Enterprise Managed) Action Group for dev environment"
+      }
+    }
+  }
+}
