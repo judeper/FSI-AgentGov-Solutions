@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookId": {
+      "value": "c3d4e5f6-0003-4000-8000-000000000002"
+    },
+    "workbookDisplayName": {
+      "value": "Agent Usage Overview - Production"
+    },
+    "applicationInsightsId": {
+      "value": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/microsoft.insights/components/{app-insights-name}"
+    },
+    "workbookSourceId": {
+      "value": "Azure Monitor"
+    }
+  }
+}
