@@ -1,0 +1,47 @@
+// user-engagement-metrics.kql
+// Purpose: Distinct users and repeat session metrics with PII-safe hashing for user behavior analysis
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Day of the aggregation period
+//   AgentId (string) - Agent identifier (recipientId from customDimensions)
+//   DistinctUsers (long) - Count of unique users (hashed)
+//   TotalSessions (long) - Total conversation sessions
+//   SessionsPerUser (real) - Average sessions per user (engagement metric)
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - User interaction patterns for supervision
+//   GDPR Article 22 - Anonymized user metrics (hashed identities)
+//
+// Sample Output:
+// | Timestamp | AgentId | DistinctUsers | TotalSessions | SessionsPerUser |
+// | 2026-02-04 | agent-prod-001 | 128 | 342 | 2.67 |
+// | 2026-02-03 | agent-prod-001 | 115 | 318 | 2.77 |
+// | 2026-02-02 | agent-prod-002 | 89 | 156 | 1.75 |
+//
+// Notes:
+//   - Uses hash_sha256() for persistent user correlation across queries
+//   - SessionsPerUser > 2.0 indicates repeat engagement
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name in ("BotMessageReceived", "BotMessageSend")
+| where tostring(customDimensions['DesignMode']) == "False"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend UserIdRaw = tostring(customDimensions["fromName"])
+| extend UserIdHashed = hash_sha256(UserIdRaw)
+| summarize
+    DistinctUsers = dcount(UserIdHashed),
+    TotalSessions = dcount(session_Id)
+    by bin(timestamp, 1d), AgentId
+| extend SessionsPerUser = todouble(TotalSessions) / DistinctUsers
+| project Timestamp = timestamp, AgentId, DistinctUsers, TotalSessions, SessionsPerUser
+| order by Timestamp desc, DistinctUsers desc

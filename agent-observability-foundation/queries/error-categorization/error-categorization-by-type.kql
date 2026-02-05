@@ -1,0 +1,60 @@
+// error-categorization-by-type.kql
+// Purpose: Categorize errors into connector/knowledge/orchestration buckets for incident triage
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   ErrorCategory (string) - High-level error bucket: Connector, Knowledge, or Orchestration
+//   ErrorCode (string) - Specific error code from errorCodeText
+//   ErrorCount (long) - Number of occurrences
+//   Percentage (real) - Percentage of total errors
+//
+// Supports:
+//   Control 3.4 (Primary) - Incident Reporting and Root Cause Analysis
+//
+// Regulatory Alignment:
+//   SOX 404 - IT control monitoring and exception reporting
+//   OCC 2011-12 - Sound practices for IT risk management
+//
+// Sample Output:
+// | ErrorCategory | ErrorCode | ErrorCount | Percentage |
+// | Connector | API_TIMEOUT | 45 | 32.1 |
+// | Knowledge | SEARCH_NO_RESULTS | 38 | 27.1 |
+// | Orchestration | TOPIC_FALLBACK | 28 | 20.0 |
+// | Connector | AUTH_FAILED | 15 | 10.7 |
+// | Knowledge | INDEX_UNAVAILABLE | 14 | 10.0 |
+//
+// Notes:
+//   - Categorization logic:
+//     * Connector: error contains "connector", "API", "timeout", "auth"
+//     * Knowledge: error contains "knowledge", "search", "index", "document"
+//     * Orchestration: all other errors (fallback, topic, flow)
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+let TotalErrors = customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend errorCodeText = tostring(customDimensions["errorCodeText"])
+| where isnotempty(errorCodeText)
+| count;
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend errorCodeText = tostring(customDimensions["errorCodeText"])
+| where isnotempty(errorCodeText)
+| extend ErrorCode = errorCodeText
+| extend ErrorCategory = case(
+    ErrorCode contains_cs "connector" or ErrorCode contains_cs "API" or
+    ErrorCode contains_cs "timeout" or ErrorCode contains_cs "auth", "Connector",
+    ErrorCode contains_cs "knowledge" or ErrorCode contains_cs "search" or
+    ErrorCode contains_cs "index" or ErrorCode contains_cs "document", "Knowledge",
+    "Orchestration"
+)
+| summarize ErrorCount = count() by ErrorCategory, ErrorCode
+| extend Percentage = round(todouble(ErrorCount) / toscalar(TotalErrors) * 100, 1)
+| project ErrorCategory, ErrorCode, ErrorCount, Percentage
+| order by Percentage desc

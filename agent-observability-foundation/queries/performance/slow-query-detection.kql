@@ -1,0 +1,48 @@
+// slow-query-detection.kql
+// Purpose: Identify responses exceeding latency threshold for performance investigation
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {ThresholdMs} - Latency threshold in milliseconds (default: 5000)
+//
+// Output Schema:
+//   Timestamp (datetime) - When the slow response occurred
+//   AgentId (string) - Agent identifier
+//   SessionId (string) - Conversation session for context
+//   DurationMs (real) - Response time in milliseconds
+//   Topic (string) - Topic that triggered the slow response
+//
+// Supports:
+//   Control 2.9 (Supporting) - Agent Performance Monitoring and Optimization
+//
+// Regulatory Alignment:
+//   OCC 2011-12 - Operational risk management
+//   SOX 404 - IT general controls (system performance)
+//
+// Sample Output:
+// | Timestamp | AgentId | SessionId | DurationMs | Topic |
+// | 2026-02-05T14:23:45Z | agent-prod-001 | sess-abc123 | 8945 | AccountInquiry |
+// | 2026-02-05T13:15:22Z | agent-prod-002 | sess-def456 | 7234 | LoanCalculation |
+// | 2026-02-05T12:45:11Z | agent-prod-001 | sess-ghi789 | 6123 | DocumentSearch |
+//
+// Notes:
+//   - Default threshold 5000ms (5 seconds) - adjust based on SLA
+//   - Results ordered by DurationMs descending to show worst offenders first
+//   - Topic helps identify which agent flows need optimization
+//   - For Log Analytics testing, replace {TimeRange:7d} with 7d and {ThresholdMs:5000} with 5000
+
+let TimeRange = {TimeRange:7d};
+let ThresholdMs = {ThresholdMs:5000};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend SessionId = tostring(session_Id)
+| extend DurationMs = todouble(customDimensions["duration"])
+| extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
+| where isnotnull(DurationMs)
+| where DurationMs > ThresholdMs
+| project Timestamp = timestamp, AgentId, SessionId, DurationMs = round(DurationMs, 0), Topic
+| order by DurationMs desc
+| take 100

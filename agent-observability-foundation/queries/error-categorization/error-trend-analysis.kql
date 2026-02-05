@@ -1,0 +1,45 @@
+// error-trend-analysis.kql
+// Purpose: Error rate trend over time for anomaly detection and alerting
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Hour of the aggregation period
+//   ErrorCount (long) - Number of error events
+//   TotalMessages (long) - Total bot messages (denominator)
+//   ErrorRate (real) - Error percentage (ErrorCount / TotalMessages)
+//
+// Supports:
+//   Control 3.4 (Supporting) - Incident Reporting and Root Cause Analysis
+//
+// Regulatory Alignment:
+//   SOX 404 - Exception monitoring and escalation
+//   OCC 2011-12 - Operational risk indicators
+//
+// Sample Output:
+// | Timestamp | ErrorCount | TotalMessages | ErrorRate |
+// | 2026-02-05T14:00:00Z | 12 | 245 | 4.9 |
+// | 2026-02-05T13:00:00Z | 8 | 312 | 2.6 |
+// | 2026-02-05T12:00:00Z | 15 | 289 | 5.2 |
+// | 2026-02-05T11:00:00Z | 5 | 256 | 2.0 |
+//
+// Notes:
+//   - Hourly granularity for anomaly detection (daily hides spikes)
+//   - ErrorRate > 5% sustained for 2+ hours indicates investigation needed
+//   - Use with Azure Monitor alerts for proactive notification
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend hasError = isnotempty(tostring(customDimensions["errorCodeText"]))
+| summarize
+    ErrorCount = countif(hasError),
+    TotalMessages = count()
+    by bin(timestamp, 1h)
+| extend ErrorRate = round(todouble(ErrorCount) / TotalMessages * 100, 1)
+| project Timestamp = timestamp, ErrorCount, TotalMessages, ErrorRate
+| order by Timestamp desc

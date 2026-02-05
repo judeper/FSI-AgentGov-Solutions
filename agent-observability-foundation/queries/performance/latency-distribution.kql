@@ -1,0 +1,52 @@
+// latency-distribution.kql
+// Purpose: P50/P95/P99 response time distribution for SLA monitoring and performance analysis
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {AgentId} - Optional agent filter (default: all) - workbook parameter
+//
+// Output Schema:
+//   Timestamp (datetime) - Hour of the aggregation period
+//   AgentId (string) - Agent identifier
+//   P50 (real) - 50th percentile response time in milliseconds
+//   P95 (real) - 95th percentile response time in milliseconds
+//   P99 (real) - 99th percentile response time in milliseconds
+//   Count (long) - Number of responses in the period
+//
+// Supports:
+//   Control 2.9 (Primary) - Agent Performance Monitoring and Optimization
+//
+// Regulatory Alignment:
+//   OCC 2011-12 - Operational risk management (performance degradation)
+//   SOX 404 - IT general controls (system availability)
+//
+// Sample Output:
+// | Timestamp | AgentId | P50 | P95 | P99 | Count |
+// | 2026-02-05T14:00:00Z | agent-prod-001 | 245 | 890 | 1523 | 312 |
+// | 2026-02-05T13:00:00Z | agent-prod-001 | 198 | 756 | 1245 | 289 |
+// | 2026-02-05T14:00:00Z | agent-prod-002 | 312 | 1245 | 2890 | 156 |
+//
+// Notes:
+//   - P95 > 2000ms indicates potential SLA risk
+//   - P99 > 5000ms indicates tail latency issues requiring investigation
+//   - DurationMs extracted from customDimensions["duration"]
+//   - For Log Analytics testing, replace {TimeRange:7d} with 7d and {AgentId} with "all"
+
+let TimeRange = {TimeRange:7d};
+let AgentIdFilter = "{AgentId}";
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| where AgentIdFilter == "all" or AgentId == AgentIdFilter
+| extend DurationMs = todouble(customDimensions["duration"])
+| where isnotnull(DurationMs)
+| summarize
+    P50 = percentile(DurationMs, 50),
+    P95 = percentile(DurationMs, 95),
+    P99 = percentile(DurationMs, 99),
+    Count = count()
+    by bin(timestamp, 1h), AgentId
+| project Timestamp = timestamp, AgentId, P50 = round(P50, 0), P95 = round(P95, 0), P99 = round(P99, 0), Count
+| order by Timestamp desc, Count desc
