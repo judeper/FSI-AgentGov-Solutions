@@ -1,0 +1,158 @@
+# Agent Observability Foundation - Configuration Example
+# ======================================================
+#
+# This file provides a complete example configuration for deploying
+# FSI-compliant Azure telemetry infrastructure.
+#
+# Usage:
+#   cp config.example.yml config.yml
+#   # Edit config.yml with your values
+#   python scripts/provision.py --config config/config.yml
+#
+# Schema validation: config/config.schema.json
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Azure Subscription and Resource Group
+# -----------------------------------------------------------------------------
+
+# Azure subscription where resources will be deployed
+subscription_id: "00000000-0000-0000-0000-000000000000"
+
+# Resource group name (will be created if it doesn't exist)
+resource_group: "rg-agent-observability-prod"
+
+# Azure region for all resources
+location: "eastus"
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Data Retention Settings
+# -----------------------------------------------------------------------------
+
+# Data retention period in days
+# Default: 730 (2 years) for SEC 17a-4(b)(4) compliance
+# - SEC 17a-4(b)(4) requires 2-year retention for broker-dealer communications
+# - For longer retention (SEC 17a-4(a) 6 years), use ADLS Gen2 export
+retention_days: 730
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Resource Naming
+# -----------------------------------------------------------------------------
+
+# Prefix for all resource names (lowercase, alphanumeric)
+# Resources will be named: {prefix}-{resource-type}-{suffix}
+naming_prefix: "aof"
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Azure Resource Tags
+# -----------------------------------------------------------------------------
+
+# Tags applied to all provisioned resources for cost tracking and governance
+tags:
+  environment: "production"
+  solution: "agent-observability-foundation"
+  compliance-framework: "FSI-AgentGov"
+  data-classification: "confidential"
+  cost-center: "it-governance"
+
+# -----------------------------------------------------------------------------
+# Application Insights Configuration
+# -----------------------------------------------------------------------------
+
+# Application Insights workspace for Copilot Studio and Agent 365 telemetry
+application_insights:
+  # Resource name (leave empty to auto-generate from naming_prefix)
+  name: "ai-agent-observability"
+  # Application type
+  kind: "web"
+
+# -----------------------------------------------------------------------------
+# Log Analytics Workspace Configuration
+# -----------------------------------------------------------------------------
+
+# Log Analytics workspace (required for workspace-based Application Insights)
+log_analytics:
+  # Workspace name (leave empty to auto-generate from naming_prefix)
+  name: "law-agent-observability"
+  # Pricing tier (PerGB2018 is pay-as-you-go, recommended for most workloads)
+  sku: "PerGB2018"
+
+# -----------------------------------------------------------------------------
+# Storage Account Configuration
+# -----------------------------------------------------------------------------
+
+# Storage account for telemetry export via diagnostic settings
+# IMPORTANT: StorageV2 WITHOUT hierarchical namespace - required for diagnostic
+# settings export. ADLS Gen2 with hierarchical namespace is NOT supported for
+# diagnostic settings export as of Feb 2026.
+storage:
+  # Account name (globally unique, 3-24 lowercase alphanumeric)
+  # Leave empty to auto-generate from naming_prefix
+  name: "staofsec17a4export"
+  # Account kind - MUST be StorageV2 (not BlobStorage or ADLS Gen2)
+  account_kind: "StorageV2"
+  # Replication type (GRS recommended for compliance workloads)
+  replication: "Standard_GRS"
+
+# -----------------------------------------------------------------------------
+# Diagnostic Settings Configuration
+# -----------------------------------------------------------------------------
+
+# Export Application Insights logs to storage for long-term retention
+diagnostic_settings:
+  # Setting name for identification
+  name: "export-to-storage-sec17a4"
+  # Log categories to export
+  # - AppTraces: Trace logs from Copilot Studio conversations
+  # - AppEvents: Custom events including CopilotInteraction events
+  # - AppExceptions: Error and exception telemetry
+  log_categories:
+    - "AppTraces"
+    - "AppEvents"
+
+# -----------------------------------------------------------------------------
+# RBAC Role Assignments (Separation of Duties)
+# -----------------------------------------------------------------------------
+
+# Role assignments for FSI governance requirements:
+# - Operational team: Read-only telemetry access (Monitoring Reader)
+# - Compliance team: Archive/export access (Storage Blob Data Reader)
+# - Security team: Log investigation (Log Analytics Reader)
+#
+# IMPORTANT: Update principal_id values with your Entra ID object IDs
+rbac:
+  # Operational team - read-only access to Application Insights and Log Analytics
+  - role_name: "Monitoring Reader"
+    principal_id: "00000000-0000-0000-0000-000000000001"
+    principal_type: "Group"
+    description: "Operational team read-only access to telemetry dashboards"
+
+  # Compliance team - read access to storage export for audit/eDiscovery
+  - role_name: "Storage Blob Data Reader"
+    principal_id: "00000000-0000-0000-0000-000000000002"
+    principal_type: "Group"
+    description: "Compliance team access to archived telemetry for SEC 17a-4 audits"
+
+  # Security team - log investigation access
+  - role_name: "Log Analytics Reader"
+    principal_id: "00000000-0000-0000-0000-000000000003"
+    principal_type: "Group"
+    description: "Security team access for incident investigation"
+
+# -----------------------------------------------------------------------------
+# Notes
+# -----------------------------------------------------------------------------
+#
+# WORM Policy (Immutability):
+#   WORM policy is NOT configured by this script intentionally.
+#   Reason: WORM policies cannot be unlocked once applied - too risky for
+#   accidental production lockdown.
+#   See docs/worm-configuration.md for manual WORM setup steps.
+#
+# Cost Management:
+#   - Configure ingestion sampling at Application Insights workspace level
+#   - Set cost alerts in Azure Monitor (recommended: 50%, 75%, 90% thresholds)
+#   - See docs/cost-tuning-guide.md for production optimization
+#
+# PII Handling:
+#   - customDimensions.text and customDimensions.speak contain conversation data
+#   - See docs/pii-sanitization-guide.md for redaction decision framework

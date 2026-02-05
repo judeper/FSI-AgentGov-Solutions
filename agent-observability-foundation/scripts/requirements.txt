@@ -1,0 +1,16 @@
+# Agent Observability Foundation - Python Dependencies
+# Python 3.10+ required
+
+# Authentication
+azure-identity>=1.18.0              # DefaultAzureCredential with CAE support
+
+# Azure Resource Management SDKs
+azure-mgmt-applicationinsights>=4.1.0  # Application Insights workspace management
+azure-mgmt-loganalytics>=13.0.0        # Log Analytics workspace management
+azure-mgmt-monitor>=6.0.0              # Diagnostic settings configuration
+azure-mgmt-storage>=21.0.0             # Storage account provisioning
+azure-mgmt-authorization>=4.0.0        # RBAC role assignment automation
+azure-mgmt-resource>=23.0.0            # Resource group operations
+
+# Configuration
+pyyaml>=6.0                         # YAML config file parsing

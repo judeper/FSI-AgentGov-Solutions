@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/judeper/FSI-AgentGov-Solutions/agent-observability-foundation/config/config.schema.json",
+  "title": "Agent Observability Foundation Configuration",
+  "description": "Configuration schema for FSI-compliant Azure telemetry infrastructure provisioning",
+  "type": "object",
+  "required": ["subscription_id", "resource_group", "location"],
+  "properties": {
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID where resources will be deployed",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "examples": ["00000000-0000-0000-0000-000000000000"]
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Azure resource group name for telemetry infrastructure",
+      "minLength": 1,
+      "maxLength": 90,
+      "examples": ["rg-agent-observability-prod"]
+    },
+    "location": {
+      "type": "string",
+      "description": "Azure region for resource deployment (e.g., eastus, westus2, westeurope)",
+      "examples": ["eastus", "westus2", "westeurope"]
+    },
+    "retention_days": {
+      "type": "integer",
+      "description": "Data retention period in days. Default 730 (2 years) for SEC 17a-4(b)(4) compliance",
+      "default": 730,
+      "minimum": 30,
+      "maximum": 730,
+      "examples": [730, 365, 90]
+    },
+    "naming_prefix": {
+      "type": "string",
+      "description": "Prefix for all resource names to ensure uniqueness",
+      "default": "aof",
+      "minLength": 2,
+      "maxLength": 10,
+      "pattern": "^[a-z][a-z0-9]*$",
+      "examples": ["aof", "fsi", "prod"]
+    },
+    "tags": {
+      "type": "object",
+      "description": "Azure resource tags applied to all provisioned resources",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "examples": [
+        {
+          "environment": "production",
+          "solution": "agent-observability-foundation",
+          "compliance-framework": "FSI-AgentGov"
+        }
+      ]
+    },
+    "application_insights": {
+      "type": "object",
+      "description": "Application Insights workspace configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Application Insights resource name. If not specified, generated from naming_prefix",
+          "examples": ["ai-agent-observability"]
+        },
+        "kind": {
+          "type": "string",
+          "description": "Application Insights type",
+          "default": "web",
+          "enum": ["web", "ios", "other", "java", "phone", "store", "MobileCenter"]
+        }
+      }
+    },
+    "log_analytics": {
+      "type": "object",
+      "description": "Log Analytics workspace configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Log Analytics workspace name. If not specified, generated from naming_prefix",
+          "examples": ["law-agent-observability"]
+        },
+        "sku": {
+          "type": "string",
+          "description": "Log Analytics pricing tier",
+          "default": "PerGB2018",
+          "enum": ["PerGB2018", "CapacityReservation", "Free", "Standalone", "PerNode", "Standard", "Premium"]
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "description": "Azure Storage account configuration for telemetry export (diagnostic settings destination)",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Storage account name (globally unique, 3-24 lowercase alphanumeric). If not specified, generated from naming_prefix",
+          "pattern": "^[a-z0-9]{3,24}$",
+          "examples": ["staofsec17a4export"]
+        },
+        "account_kind": {
+          "type": "string",
+          "description": "Storage account kind. Must be StorageV2 for diagnostic settings export",
+          "default": "StorageV2",
+          "enum": ["StorageV2", "Storage", "BlobStorage"]
+        },
+        "replication": {
+          "type": "string",
+          "description": "Storage replication type for data durability",
+          "default": "Standard_GRS",
+          "enum": ["Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS"]
+        }
+      }
+    },
+    "diagnostic_settings": {
+      "type": "object",
+      "description": "Diagnostic settings configuration for exporting Application Insights logs to storage",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Diagnostic settings name",
+          "default": "export-to-storage",
+          "examples": ["export-to-adls-sec17a4"]
+        },
+        "log_categories": {
+          "type": "array",
+          "description": "Log categories to export from Application Insights",
+          "default": ["AppTraces", "AppEvents"],
+          "items": {
+            "type": "string",
+            "enum": [
+              "AppAvailabilityResults",
+              "AppBrowserTimings",
+              "AppDependencies",
+              "AppEvents",
+              "AppExceptions",
+              "AppMetrics",
+              "AppPageViews",
+              "AppPerformanceCounters",
+              "AppRequests",
+              "AppSystemEvents",
+              "AppTraces"
+            ]
+          },
+          "examples": [["AppTraces", "AppEvents", "AppExceptions"]]
+        }
+      }
+    },
+    "rbac": {
+      "type": "array",
+      "description": "RBAC role assignments for separation of duties (operational vs compliance paths)",
+      "items": {
+        "type": "object",
+        "required": ["role_name", "principal_id", "principal_type"],
+        "properties": {
+          "role_name": {
+            "type": "string",
+            "description": "Azure built-in role name or ID",
+            "examples": ["Monitoring Reader", "Storage Blob Data Reader", "Log Analytics Reader"]
+          },
+          "principal_id": {
+            "type": "string",
+            "description": "Object ID of the Entra ID user, group, or service principal",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "principal_type": {
+            "type": "string",
+            "description": "Type of security principal",
+            "enum": ["User", "Group", "ServicePrincipal"]
+          },
+          "description": {
+            "type": "string",
+            "description": "Purpose of this role assignment for audit trail"
+          }
+        }
+      },
+      "examples": [
+        [
+          {
+            "role_name": "Monitoring Reader",
+            "principal_id": "00000000-0000-0000-0000-000000000001",
+            "principal_type": "Group",
+            "description": "Operational team read-only access to telemetry"
+          }
+        ]
+      ]
+    }
+  }
+}
