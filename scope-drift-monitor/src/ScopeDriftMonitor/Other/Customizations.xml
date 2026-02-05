@@ -1,0 +1,992 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033">
+  <Entities>
+    <!-- Table: fsi_agentscope -->
+    <Entity Name="fsi_agentscope">
+      <EntityInfo>
+        <entity Name="fsi_agentscope">
+          <LocalizedNames>
+            <LocalizedName description="Agent Scope" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Agent Scopes" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Master scope definition for AI agents - defines allowed data sources and connectors" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_agentscopeid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_agentscopeid</Name>
+              <LogicalName>fsi_agentscopeid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_agentid">
+              <Type>nvarchar</Type>
+              <Name>fsi_agentid</Name>
+              <LogicalName>fsi_agentid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>36</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_environmentid">
+              <Type>nvarchar</Type>
+              <Name>fsi_environmentid</Name>
+              <LogicalName>fsi_environmentid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>36</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_zone">
+              <Type>picklist</Type>
+              <Name>fsi_zone</Name>
+              <LogicalName>fsi_zone</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_agentscope_zone">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Zone 1 - Personal Productivity" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Zone 2 - Team Collaboration" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Zone 3 - Enterprise Managed" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_owner">
+              <Type>lookup</Type>
+              <Name>fsi_owner</Name>
+              <LogicalName>fsi_owner</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_dataowner">
+              <Type>lookup</Type>
+              <Name>fsi_dataowner</Name>
+              <LogicalName>fsi_dataowner</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_purpose">
+              <Type>ntext</Type>
+              <Name>fsi_purpose</Name>
+              <LogicalName>fsi_purpose</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_status">
+              <Type>picklist</Type>
+              <Name>fsi_status</Name>
+              <LogicalName>fsi_status</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_agentscope_status">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Draft" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Active" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Under Review" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Suspended" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Archived" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_lastvalidated">
+              <Type>datetime</Type>
+              <Name>fsi_lastvalidated</Name>
+              <LogicalName>fsi_lastvalidated</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_nextreview">
+              <Type>datetime</Type>
+              <Name>fsi_nextreview</Name>
+              <LogicalName>fsi_nextreview</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_allowedconnectors">
+              <Type>ntext</Type>
+              <Name>fsi_allowedconnectors</Name>
+              <LogicalName>fsi_allowedconnectors</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_allowedsites">
+              <Type>ntext</Type>
+              <Name>fsi_allowedsites</Name>
+              <LogicalName>fsi_allowedsites</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_allowedtables">
+              <Type>ntext</Type>
+              <Name>fsi_allowedtables</Name>
+              <LogicalName>fsi_allowedtables</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_allowedapis">
+              <Type>ntext</Type>
+              <Name>fsi_allowedapis</Name>
+              <LogicalName>fsi_allowedapis</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_scopeitem -->
+    <Entity Name="fsi_scopeitem">
+      <EntityInfo>
+        <entity Name="fsi_scopeitem">
+          <LocalizedNames>
+            <LocalizedName description="Scope Item" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Scope Items" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Individual scope items with detailed configuration for each allowed resource" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_scopeitemid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_scopeitemid</Name>
+              <LogicalName>fsi_scopeitemid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_agentscopeid">
+              <Type>lookup</Type>
+              <Name>fsi_agentscopeid</Name>
+              <LogicalName>fsi_agentscopeid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_agentscope</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_itemtype">
+              <Type>picklist</Type>
+              <Name>fsi_itemtype</Name>
+              <LogicalName>fsi_itemtype</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeitem_itemtype">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Connector" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="SharePoint Site" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="SharePoint Library" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Dataverse Table" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="External API" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="6">
+                  <labels>
+                    <label description="File Share" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="7">
+                  <labels>
+                    <label description="Database" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_resourcename">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourcename</Name>
+              <LogicalName>fsi_resourcename</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_resourceurl">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourceurl</Name>
+              <LogicalName>fsi_resourceurl</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>500</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_accesslevel">
+              <Type>picklist</Type>
+              <Name>fsi_accesslevel</Name>
+              <LogicalName>fsi_accesslevel</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeitem_accesslevel">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Read Only" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Read/Write" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Full Control" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_justification">
+              <Type>ntext</Type>
+              <Name>fsi_justification</Name>
+              <LogicalName>fsi_justification</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_approvedby">
+              <Type>lookup</Type>
+              <Name>fsi_approvedby</Name>
+              <LogicalName>fsi_approvedby</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_approvedon">
+              <Type>datetime</Type>
+              <Name>fsi_approvedon</Name>
+              <LogicalName>fsi_approvedon</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_expiredate">
+              <Type>datetime</Type>
+              <Name>fsi_expiredate</Name>
+              <LogicalName>fsi_expiredate</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateOnly</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_enabled">
+              <Type>bit</Type>
+              <Name>fsi_enabled</Name>
+              <LogicalName>fsi_enabled</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_scopeviolation -->
+    <Entity Name="fsi_scopeviolation">
+      <EntityInfo>
+        <entity Name="fsi_scopeviolation">
+          <LocalizedNames>
+            <LocalizedName description="Scope Violation" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Scope Violations" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Detected scope drift violations when agent accesses resources outside declared scope" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_scopeviolationid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_scopeviolationid</Name>
+              <LogicalName>fsi_scopeviolationid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_agentscopeid">
+              <Type>lookup</Type>
+              <Name>fsi_agentscopeid</Name>
+              <LogicalName>fsi_agentscopeid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_agentscope</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_violationtype">
+              <Type>picklist</Type>
+              <Name>fsi_violationtype</Name>
+              <LogicalName>fsi_violationtype</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeviolation_violationtype">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Unauthorized Connector" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Unauthorized SharePoint Site" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Unauthorized Dataverse Table" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Unauthorized External API" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Expired Scope Item" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="6">
+                  <labels>
+                    <label description="No Baseline Defined" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_resourcename">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourcename</Name>
+              <LogicalName>fsi_resourcename</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_resourceurl">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourceurl</Name>
+              <LogicalName>fsi_resourceurl</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>500</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_severity">
+              <Type>picklist</Type>
+              <Name>fsi_severity</Name>
+              <LogicalName>fsi_severity</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeviolation_severity">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Critical" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="High" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Medium" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Low" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_status">
+              <Type>picklist</Type>
+              <Name>fsi_status</Name>
+              <LogicalName>fsi_status</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeviolation_status">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Open" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Under Investigation" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Expansion Requested" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Resolved - Scope Expanded" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Resolved - Access Removed" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="6">
+                  <labels>
+                    <label description="Closed - False Positive" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_detectedon">
+              <Type>datetime</Type>
+              <Name>fsi_detectedon</Name>
+              <LogicalName>fsi_detectedon</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_auditrecordid">
+              <Type>nvarchar</Type>
+              <Name>fsi_auditrecordid</Name>
+              <LogicalName>fsi_auditrecordid</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_accessdetails">
+              <Type>ntext</Type>
+              <Name>fsi_accessdetails</Name>
+              <LogicalName>fsi_accessdetails</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_resolvedon">
+              <Type>datetime</Type>
+              <Name>fsi_resolvedon</Name>
+              <LogicalName>fsi_resolvedon</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_resolutiontype">
+              <Type>picklist</Type>
+              <Name>fsi_resolutiontype</Name>
+              <LogicalName>fsi_resolutiontype</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_scopeviolation_resolutiontype">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Scope Expanded" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Agent Remediated" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Access Revoked" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="False Positive" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Risk Accepted" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_expansionrequestid">
+              <Type>lookup</Type>
+              <Name>fsi_expansionrequestid</Name>
+              <LogicalName>fsi_expansionrequestid</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_expansionrequest</target>
+              </Targets>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+
+    <!-- Table: fsi_expansionrequest -->
+    <Entity Name="fsi_expansionrequest">
+      <EntityInfo>
+        <entity Name="fsi_expansionrequest">
+          <LocalizedNames>
+            <LocalizedName description="Expansion Request" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Expansion Requests" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Requests to expand agent scope after violation detection or proactive change" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_expansionrequestid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_expansionrequestid</Name>
+              <LogicalName>fsi_expansionrequestid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_agentscopeid">
+              <Type>lookup</Type>
+              <Name>fsi_agentscopeid</Name>
+              <LogicalName>fsi_agentscopeid</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_agentscope</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_scopeviolationid">
+              <Type>lookup</Type>
+              <Name>fsi_scopeviolationid</Name>
+              <LogicalName>fsi_scopeviolationid</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>fsi_scopeviolation</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_requesttype">
+              <Type>picklist</Type>
+              <Name>fsi_requesttype</Name>
+              <LogicalName>fsi_requesttype</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_expansionrequest_requesttype">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Add Connector" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Add SharePoint Site" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Add Dataverse Table" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Add External API" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Increase Access Level" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_resourcename">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourcename</Name>
+              <LogicalName>fsi_resourcename</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_resourceurl">
+              <Type>nvarchar</Type>
+              <Name>fsi_resourceurl</Name>
+              <LogicalName>fsi_resourceurl</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>500</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_justification">
+              <Type>ntext</Type>
+              <Name>fsi_justification</Name>
+              <LogicalName>fsi_justification</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_requestedby">
+              <Type>lookup</Type>
+              <Name>fsi_requestedby</Name>
+              <LogicalName>fsi_requestedby</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_requestedon">
+              <Type>datetime</Type>
+              <Name>fsi_requestedon</Name>
+              <LogicalName>fsi_requestedon</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_status">
+              <Type>picklist</Type>
+              <Name>fsi_status</Name>
+              <LogicalName>fsi_status</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_expansionrequest_status">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Pending" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Data Owner Review" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Security Review" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Approved" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="5">
+                  <labels>
+                    <label description="Denied" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="6">
+                  <labels>
+                    <label description="Cancelled" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_dataownerapproval">
+              <Type>picklist</Type>
+              <Name>fsi_dataownerapproval</Name>
+              <LogicalName>fsi_dataownerapproval</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_expansionrequest_approval">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Pending" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Approved" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Denied" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Delegated" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_dataownerapprovedby">
+              <Type>lookup</Type>
+              <Name>fsi_dataownerapprovedby</Name>
+              <LogicalName>fsi_dataownerapprovedby</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_securityapproval">
+              <Type>picklist</Type>
+              <Name>fsi_securityapproval</Name>
+              <LogicalName>fsi_securityapproval</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_expansionrequest_securityapproval">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Pending" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Approved" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Denied" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="4">
+                  <labels>
+                    <label description="Delegated" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+            <attribute PhysicalName="fsi_securityapprovedby">
+              <Type>lookup</Type>
+              <Name>fsi_securityapprovedby</Name>
+              <LogicalName>fsi_securityapprovedby</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Targets>
+                <target>systemuser</target>
+              </Targets>
+            </attribute>
+            <attribute PhysicalName="fsi_completedon">
+              <Type>datetime</Type>
+              <Name>fsi_completedon</Name>
+              <LogicalName>fsi_completedon</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+  </Entities>
+  <roles />
+  <workflows />
+  <fieldSecurityProfiles />
+  <templates />
+  <EntityMaps />
+  <EntityRelationships>
+    <EntityRelationship Name="fsi_agentscope_scopeitem">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_scopeitem</ReferencingEntityName>
+      <ReferencedEntityName>fsi_agentscope</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_agentscopeid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Agent Scope to Scope Item relationship (1:N)" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+    <EntityRelationship Name="fsi_agentscope_scopeviolation">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_scopeviolation</ReferencingEntityName>
+      <ReferencedEntityName>fsi_agentscope</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_agentscopeid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Agent Scope to Scope Violation relationship (1:N)" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+    <EntityRelationship Name="fsi_agentscope_expansionrequest">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_expansionrequest</ReferencingEntityName>
+      <ReferencedEntityName>fsi_agentscope</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_agentscopeid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Agent Scope to Expansion Request relationship (1:N)" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+    <EntityRelationship Name="fsi_scopeviolation_expansionrequest">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_expansionrequest</ReferencingEntityName>
+      <ReferencedEntityName>fsi_scopeviolation</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_scopeviolationid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Scope Violation to Expansion Request relationship (1:N, optional)" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
+  </EntityRelationships>
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+  <HierarchyRules />
+  <EntityDataProviders />
+</ImportExportXml>
