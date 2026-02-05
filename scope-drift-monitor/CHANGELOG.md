@@ -4,6 +4,54 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
+## [1.1.0] - February 2026
+
+### Added
+
+- **Power Automate Flows:**
+  - `SDM-DriftDetector` - Scheduled drift detection using Office 365 Management API
+  - `SDM-AlertDispatcher` - Teams adaptive card and email notifications on violations
+  - `SDM-ExpansionProcessor` - Approval workflow for scope expansion requests
+- **PowerShell Scripts:**
+  - `New-AgentBaseline.ps1` - Auto-generate baselines from audit history (Office 365 Management API)
+  - `Invoke-DriftScan.ps1` - Manual drift detection scan
+  - `Test-AlertDelivery.ps1` - Test alert delivery configuration
+- **Connection References:**
+  - `fsi_cr_dataverse` - Dataverse connector
+  - `fsi_cr_office365` - Office 365 Outlook connector
+  - `fsi_cr_teams` - Microsoft Teams connector
+  - `fsi_cr_approvals` - Approvals connector
+  - `fsi_cr_o365management` - HTTP with Azure AD for Management API
+- **Environment Variables:**
+  - `fsi_SDM_TenantId` - Azure AD tenant ID
+  - `fsi_SDM_DataverseEnvironment` - Dataverse environment URL
+  - `fsi_SDM_TeamsGroupId` - Teams team ID for alerts
+  - `fsi_SDM_TeamsChannelId` - Teams channel ID for alerts
+  - `fsi_SDM_SecurityTeamEmail` - Security team email
+  - `fsi_SDM_DetectionFrequency` - Detection interval in minutes
+- **Documentation:**
+  - `flow-configuration.md` - Flow setup and configuration guide
+  - `troubleshooting.md` - Common issues and resolutions
+  - `baseline-configuration.md` - Scope baseline setup guide
+- **Solution Package:**
+  - Unpacked solution source in `src/ScopeDriftMonitor/`
+  - Support for `pac solution pack` workflow
+
+### Changed
+
+- Updated `New-AgentBaseline.ps1` to use Office 365 Management API instead of Microsoft Graph
+- Auto-generated baselines now go Active immediately (per governance decision)
+- Enhanced README with complete deployment instructions
+
+### Technical Decisions
+
+- Office 365 Management API selected over Graph API (Graph auditLogs moved to beta April 2025)
+- Graceful degradation when audit sources unavailable
+- Dual alert delivery (Teams + email) for all violations
+- Single-approver workflow with 7-day timeout for expansion requests
+
+---
+
 ## [1.0.0] - February 2026
 
 ### Added
@@ -38,4 +86,4 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
-*Scope Drift Monitor - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.1.0 - FSI Agent Governance Framework*

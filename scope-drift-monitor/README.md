@@ -1,6 +1,6 @@
 # Scope Drift Monitor
 
-> **Status:** Work In Progress
+> **Status:** Production Ready (v1.1.0)
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
@@ -99,26 +99,61 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 
 ## Quick Start
 
-### 1. Deploy Dataverse Schema
+### 1. Deploy Solution Package
 
 ```powershell
-pac solution import --path ./templates/ScopeDriftMonitor_1_0_0.zip
+# Package the solution using Power Platform CLI
+pac solution pack --folder ./src/ScopeDriftMonitor --zipfile ./ScopeDriftMonitor_1_1_0.zip
+
+# Import to your environment
+pac solution import --path ./ScopeDriftMonitor_1_1_0.zip --environment "https://your-org.crm.dynamics.com"
 ```
 
-### 2. Capture Agent Baselines
+### 2. Configure Environment Variables
+
+After import, configure these environment variables in Power Apps:
+
+| Variable | Value |
+|----------|-------|
+| `fsi_SDM_TenantId` | Your Azure AD tenant ID |
+| `fsi_SDM_DataverseEnvironment` | `https://your-org.crm.dynamics.com` |
+| `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
+| `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
+| `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
+
+### 3. Configure Connection References
+
+Connect each connection reference to an appropriate connection:
+
+- `fsi_cr_dataverse` - Dataverse connection
+- `fsi_cr_office365` - Office 365 Outlook connection
+- `fsi_cr_teams` - Microsoft Teams connection
+- `fsi_cr_approvals` - Approvals connection
+- `fsi_cr_o365management` - HTTP with Azure AD (Office 365 Management APIs)
+
+### 4. Capture Agent Baselines
 
 ```powershell
-.\scripts\New-AgentBaseline.ps1 -AgentId "guid" -Environment "https://your-org.crm.dynamics.com"
+# Auto-generate baseline from audit history
+.\scripts\New-AgentBaseline.ps1 -AgentId "guid" -Environment "https://your-org.crm.dynamics.com" -Days 30
 ```
 
-### 3. Configure Detection Flow
+### 5. Turn On Flows
 
-Deploy the drift detection flow per [docs/flow-configuration.md](docs/flow-configuration.md).
+1. Navigate to **Power Automate** > **Solutions** > **Scope Drift Monitor**
+2. Turn on each flow:
+   - SDM-DriftDetector
+   - SDM-AlertDispatcher
+   - SDM-ExpansionProcessor
 
-### 4. Run Initial Scan
+### 6. Run Initial Scan (Optional)
 
 ```powershell
+# Manual drift scan to verify configuration
 .\scripts\Invoke-DriftScan.ps1 -Environment "https://your-org.crm.dynamics.com"
+
+# Test alert delivery
+.\scripts\Test-AlertDelivery.ps1 -Environment "https://your-org.crm.dynamics.com" -AgentScopeId "xxxxx"
 ```
 
 ## Documentation
@@ -214,7 +249,8 @@ If Denied: Remediate Access → Close Violation
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.0 | February 2026 | Initial release |
+| 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
+| 1.0.0 | February 2026 | Initial schema and concept |
 
 ## Support
 
@@ -222,4 +258,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.0.0*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.1.0*
