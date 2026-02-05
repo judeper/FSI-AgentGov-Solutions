@@ -1,0 +1,84 @@
+// flow-failure-correlation.kql
+// Purpose: Correlate Power Automate flow failures with agent conversations
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Failure time
+//   AgentId (string) - Agent that triggered the flow
+//   SessionId (string) - Conversation session
+//   FlowName (string) - Power Automate flow name
+//   ErrorCode (string) - Flow error code
+//   ErrorMessage (string) - Flow error message
+//   CorrelationId (string) - Cross-system correlation identifier
+//
+// Supports:
+//   Control 3.4 (Primary) - Incident Reporting
+//   Control 2.9 (Supporting) - Performance impact tracking
+//
+// Regulatory Mapping:
+//   SOX 302/404 - IT control failure documentation
+//
+// Sample Output:
+// | Timestamp            | AgentId   | SessionId     | FlowName              | ErrorCode         | ErrorMessage                      | CorrelationId    |
+// | 2026-02-04T16:45:23Z | agent-001 | sess-abc-123  | CreateTicketFlow      | ActionFailed      | "HTTP request failed: 503"        | corr-xyz-789     |
+// | 2026-02-04T15:30:11Z | agent-002 | sess-def-456  | SendNotificationFlow  | ConnectionError   | "Connector authentication failed" | corr-uvw-456     |
+// | 2026-02-04T14:15:55Z | agent-001 | sess-ghi-789  | UpdateCRMFlow         | Timeout           | "Flow execution timed out"        | corr-rst-123     |
+//
+// Notes:
+//   - Power Automate errors appear in customEvents with name containing "MicrosoftFlow" or "ActionFailed"
+//   - CorrelationId enables cross-system tracing between agent conversation and flow execution
+//   - Use ErrorCode to categorize failure types for root cause analysis
+//   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
+
+let TimeRange = {TimeRange:7d};
+
+// Power Automate flow failure events
+let FlowFailures = customEvents
+| where timestamp > ago(TimeRange)
+| where name contains "MicrosoftFlow" or name contains "ActionFailed" or name contains "FlowRun"
+| where customDimensions has "error" or customDimensions has "Error" or customDimensions has "failed"
+| extend AgentId = coalesce(tostring(customDimensions["recipientId"]), tostring(customDimensions["botId"]), "NOT_CAPTURED")
+| extend SessionId = coalesce(tostring(session_Id), tostring(customDimensions["conversationId"]), "NOT_CAPTURED")
+| extend FlowName = coalesce(
+    tostring(customDimensions["flowName"]),
+    tostring(customDimensions["FlowName"]),
+    tostring(customDimensions["workflowName"]),
+    "NOT_CAPTURED"
+)
+| extend ErrorCode = coalesce(
+    tostring(customDimensions["errorCode"]),
+    tostring(customDimensions["ErrorCode"]),
+    tostring(customDimensions["statusCode"]),
+    "ActionFailed"
+)
+| extend ErrorMessage = coalesce(
+    tostring(customDimensions["errorMessage"]),
+    tostring(customDimensions["ErrorMessage"]),
+    tostring(customDimensions["message"]),
+    "NOT_CAPTURED"
+)
+| extend CorrelationId = coalesce(
+    tostring(customDimensions["correlationId"]),
+    tostring(customDimensions["CorrelationId"]),
+    tostring(customDimensions["x-ms-correlation-id"]),
+    tostring(operation_Id),
+    "NOT_CAPTURED"
+);
+
+// Join with conversation context for richer correlation
+let ConversationContext = customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend" or name == "BotMessageReceived"
+| extend ContextAgentId = tostring(customDimensions["recipientId"])
+| extend ContextSessionId = tostring(session_Id)
+| extend ContextCorrelationId = tostring(operation_Id)
+| project ContextTimestamp=timestamp, ContextAgentId, ContextSessionId, ContextCorrelationId;
+
+FlowFailures
+| join kind=leftouter (ConversationContext) on $left.CorrelationId == $right.ContextCorrelationId
+| extend AgentId = iff(AgentId == "NOT_CAPTURED" and isnotempty(ContextAgentId), ContextAgentId, AgentId)
+| extend SessionId = iff(SessionId == "NOT_CAPTURED" and isnotempty(ContextSessionId), ContextSessionId, SessionId)
+| project Timestamp=timestamp, AgentId, SessionId, FlowName, ErrorCode, ErrorMessage, CorrelationId
+| order by Timestamp desc

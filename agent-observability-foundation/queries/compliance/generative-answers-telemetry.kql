@@ -1,0 +1,58 @@
+// generative-answers-telemetry.kql
+// Purpose: Extract generative answers telemetry (topic, result, feedback) for response quality monitoring
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Event time
+//   ConversationId (string) - Conversation identifier
+//   AgentId (string) - Agent instance identifier
+//   Topic (string) - Topic name that triggered the generative answer
+//   Message (string) - User message that triggered the response
+//   Result (string) - Generative answer result status
+//   Summary (string) - Response summary
+//   HasFeedback (bool) - Whether user provided feedback on this response
+//
+// Supports:
+//   Control 2.9 (Primary) - Agent Performance Monitoring
+//   Control 2.6 (Supporting) - Model output quality (SR 11-7 outcome analysis)
+//
+// Regulatory Mapping:
+//   SR 11-7 - Model output quality monitoring
+//
+// Sample Output:
+// | Timestamp            | ConversationId | AgentId   | Topic             | Message                    | Result    | Summary                  | HasFeedback |
+// | 2026-02-04T15:30:12Z | conv-abc-123   | agent-001 | AccountInquiry    | "What is my balance?"      | Success   | "Your balance is..."     | true        |
+// | 2026-02-04T14:22:45Z | conv-def-456   | agent-002 | TransactionHelp   | "Show recent transactions" | Success   | "Here are your last..."  | false       |
+// | 2026-02-04T13:18:33Z | conv-ghi-789   | agent-001 | GeneralFAQ        | "What are your hours?"     | NoAnswer  | ""                       | false       |
+//
+// Notes:
+//   - GenerativeAnswers events contain topic, result, and summary from Copilot Studio generative AI
+//   - Result values: Success, NoAnswer, Filtered, Error
+//   - HasFeedback indicates user rated the response (useful for quality trending)
+//   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "GenerativeAnswers"
+| extend cd = todynamic(customDimensions)
+| extend ConversationId = tostring(cd.conversationId)
+| extend AgentId = tostring(cd.recipientId)
+| extend Topic = tostring(cd.TopicName)
+| extend Message = tostring(cd.Message)
+| extend Result = tostring(cd.Result)
+| extend Summary = tostring(cd.Summary)
+| extend HasFeedback = isnotnull(cd.FeedbackScore) or isnotnull(cd.FeedbackText)
+| project
+    Timestamp = timestamp,
+    ConversationId,
+    AgentId,
+    Topic,
+    Message,
+    Result,
+    Summary,
+    HasFeedback
+| order by Timestamp desc

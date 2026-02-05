@@ -1,0 +1,65 @@
+// rai-content-filtering-detection.kql
+// Purpose: Detect RAI content filtering events from Microsoft Purview (XPIADetected, JailbreakDetected)
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Event time
+//   AgentId (string) - Agent identifier
+//   SessionId (string) - Conversation session
+//   FilterType (string) - XPIA/Jailbreak/ContentFilter
+//   FilterResult (string) - Blocked/Flagged/Allowed
+//   UserIdHashed (string) - Hashed user identity (privacy-protected)
+//   Prompt (string) - Triggering input (if available)
+//
+// Supports:
+//   Control 1.6 (Primary) - DSPM for AI
+//   Control 1.7 (Supporting) - Security event audit
+//
+// Regulatory Mapping:
+//   RAI policies - Content safety compliance
+//   GLBA 501(b) - Protection against anticipated threats
+//
+// Sample Output:
+// | Timestamp            | AgentId   | SessionId     | FilterType  | FilterResult | UserIdHashed         | Prompt                   |
+// | 2026-02-04T14:23:45Z | agent-001 | sess-xyz-789  | XPIA        | Blocked      | sha256:c5d4e3f2a1... | "Ignore previous..."     |
+// | 2026-02-04T13:15:22Z | agent-002 | sess-abc-456  | Jailbreak   | Flagged      | sha256:d6e5f4a3b2... | "Pretend you are..."     |
+// | 2026-02-04T11:08:33Z | agent-001 | sess-def-123  | ContentFilter| Blocked     | sha256:e7f6a5b4c3... | "[inappropriate content]"|
+//
+// Notes:
+//   - Microsoft Purview generates XPIADetected and JailbreakDetected in customDimensions
+//   - XPIA = Cross-Prompt Injection Attack detection
+//   - All UserId fields are hashed by default for privacy protection
+//   - Consider alerting on FilterType == "XPIA" or "Jailbreak" events
+//   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend" or name == "BotMessageReceived"
+| extend XPIADetected = tobool(customDimensions["XPIADetected"])
+| extend JailbreakDetected = tobool(customDimensions["JailbreakDetected"])
+| extend ContentFilterResult = tostring(customDimensions["ContentFilterResult"])
+| where XPIADetected == true or JailbreakDetected == true or isnotempty(ContentFilterResult)
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend SessionId = tostring(session_Id)
+| extend UserIdRaw = tostring(customDimensions["fromName"])
+| extend UserIdHashed = hash_sha256(UserIdRaw)
+| extend FilterType = case(
+    XPIADetected == true, "XPIA",
+    JailbreakDetected == true, "Jailbreak",
+    isnotempty(ContentFilterResult), "ContentFilter",
+    "Unknown"
+)
+| extend FilterResult = case(
+    XPIADetected == true or JailbreakDetected == true, "Blocked",
+    ContentFilterResult == "Blocked", "Blocked",
+    ContentFilterResult == "Flagged", "Flagged",
+    ContentFilterResult == "Allowed", "Allowed",
+    "Unknown"
+)
+| extend Prompt = coalesce(tostring(customDimensions["text"]), "NOT_CAPTURED")
+| project Timestamp=timestamp, AgentId, SessionId, FilterType, FilterResult, UserIdHashed, Prompt
+| order by Timestamp desc
