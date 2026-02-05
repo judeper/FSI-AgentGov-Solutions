@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/environmentvariables.json",
+  "environmentVariables": [
+    {
+      "schemaName": "fsi_SDM_TenantId",
+      "displayName": "Tenant ID",
+      "description": "Azure AD tenant ID for Office 365 Management API authentication",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": true,
+      "hint": "Example: 12345678-1234-1234-1234-123456789012"
+    },
+    {
+      "schemaName": "fsi_SDM_SecurityTeamEmail",
+      "displayName": "Security Team Email",
+      "description": "Security team distribution list for violation alerts",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": true,
+      "hint": "Example: securityteam@contoso.com"
+    },
+    {
+      "schemaName": "fsi_SDM_TeamsChannelId",
+      "displayName": "Teams Channel ID",
+      "description": "Microsoft Teams channel ID for posting violation alert Adaptive Cards",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": false,
+      "hint": "Example: 19:abc123...@thread.tacv2"
+    },
+    {
+      "schemaName": "fsi_SDM_TeamsGroupId",
+      "displayName": "Teams Group ID",
+      "description": "Microsoft Teams group (team) ID for posting violation alert Adaptive Cards",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": false,
+      "hint": "Example: 12345678-1234-1234-1234-123456789012"
+    },
+    {
+      "schemaName": "fsi_SDM_DataverseEnvironment",
+      "displayName": "Dataverse Environment URL",
+      "description": "Dataverse environment URL for generating direct links to violation records",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": false,
+      "hint": "Example: https://org.crm.dynamics.com"
+    },
+    {
+      "schemaName": "fsi_SDM_DetectionWindowMinutes",
+      "displayName": "Detection Window (Minutes)",
+      "description": "Detection lookback window in minutes - how far back to query audit logs each cycle",
+      "type": "Decimal",
+      "defaultValue": "15",
+      "isRequired": false,
+      "hint": "Default: 15 minutes (aligns with scheduled flow frequency)"
+    }
+  ]
+}
