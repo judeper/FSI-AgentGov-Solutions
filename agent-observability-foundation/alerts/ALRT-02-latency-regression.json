@@ -1,0 +1,217 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "ALRT-02: Latency Regression alert rule with dynamic thresholds and zone-specific sensitivity. Monitors agent P95 latency and triggers when response times regress beyond learned baselines.",
+    "version": "0.1.0",
+    "lastUpdated": "February 2026",
+    "controlReference": "2.9 - Agent Performance Monitoring and Optimization"
+  },
+  "parameters": {
+    "alertName": {
+      "type": "string",
+      "defaultValue": "ALRT-02-Latency-Regression",
+      "metadata": {
+        "description": "Base name for the alert rule (zone suffix will be appended)"
+      }
+    },
+    "applicationInsightsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Application Insights instance to monitor"
+      }
+    },
+    "actionGroupZone1Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 1 (Personal Productivity) Action Group"
+      }
+    },
+    "actionGroupZone2Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 2 (Team Collaboration) Action Group"
+      }
+    },
+    "actionGroupZone3Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 (Enterprise Managed) Action Group"
+      }
+    },
+    "enabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether the alert rule is enabled"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for the alert rule resources"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone1')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-02: Latency Regression - Zone 1 (Personal Productivity)",
+        "description": "Alert when agent P95 latency exceeds dynamic baseline. Zone 1 uses Low sensitivity for personal productivity agents with higher tolerance for performance variability.",
+        "severity": 2,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone1';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "timeAggregation": "Average",
+              "metricMeasureColumn": "P95Latency",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterThan",
+              "alertSensitivity": "Low",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 2
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone1Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/2.9/troubleshooting/",
+            "ControlReference": "2.9 - Agent Performance Monitoring and Optimization",
+            "Zone": "Zone 1 - Personal Productivity",
+            "Severity": "Warning"
+          }
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone2')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-02: Latency Regression - Zone 2 (Team Collaboration)",
+        "description": "Alert when agent P95 latency exceeds dynamic baseline. Zone 2 uses Medium sensitivity for team collaboration agents with balanced performance tolerance.",
+        "severity": 1,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone2';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "timeAggregation": "Average",
+              "metricMeasureColumn": "P95Latency",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterThan",
+              "alertSensitivity": "Medium",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 2
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone2Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/2.9/troubleshooting/",
+            "ControlReference": "2.9 - Agent Performance Monitoring and Optimization",
+            "Zone": "Zone 2 - Team Collaboration",
+            "Severity": "Error"
+          }
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[concat(parameters('alertName'), '-Zone3')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "ALRT-02: Latency Regression - Zone 3 (Enterprise Managed)",
+        "description": "Alert when agent P95 latency exceeds dynamic baseline. Zone 3 uses High sensitivity for enterprise managed agents with strict performance SLA requirements.",
+        "severity": 0,
+        "enabled": "[parameters('enabled')]",
+        "scopes": [
+          "[parameters('applicationInsightsId')]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let ZoneFilter = 'zone3';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "timeAggregation": "Average",
+              "metricMeasureColumn": "P95Latency",
+              "criterionType": "DynamicThresholdCriterion",
+              "operator": "GreaterThan",
+              "alertSensitivity": "High",
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 4,
+                "minFailingPeriodsToAlert": 2
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupZone3Id')]"
+          ],
+          "customProperties": {
+            "RunbookUrl": "https://judeper.github.io/FSI-AgentGov/playbooks/control-implementations/2.9/troubleshooting/",
+            "ControlReference": "2.9 - Agent Performance Monitoring and Optimization",
+            "Zone": "Zone 3 - Enterprise Managed",
+            "Severity": "Critical"
+          }
+        },
+        "autoMitigate": true
+      }
+    }
+  ],
+  "outputs": {
+    "alertRuleZone1Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone1'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 1 Latency Regression alert rule"
+      }
+    },
+    "alertRuleZone2Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone2'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 2 Latency Regression alert rule"
+      }
+    },
+    "alertRuleZone3Id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', concat(parameters('alertName'), '-Zone3'))]",
+      "metadata": {
+        "description": "Resource ID of the Zone 3 Latency Regression alert rule"
+      }
+    }
+  }
+}
