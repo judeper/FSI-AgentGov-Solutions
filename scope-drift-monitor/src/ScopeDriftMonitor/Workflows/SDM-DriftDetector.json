@@ -1,0 +1,595 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    },
+    "$authentication": {
+      "defaultValue": {},
+      "type": "SecureObject"
+    }
+  },
+  "triggers": {
+    "Recurrence": {
+      "recurrence": {
+        "frequency": "Minute",
+        "interval": 15,
+        "startTime": "2026-01-01T00:00:00Z",
+        "timeZone": "UTC"
+      },
+      "type": "Recurrence"
+    }
+  },
+  "actions": {
+    "Initialize_LastCheckTime": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "LastCheckTime",
+            "type": "string",
+            "value": "@{addMinutes(utcNow(), -15)}"
+          }
+        ]
+      }
+    },
+    "Initialize_TenantId": {
+      "runAfter": {
+        "Initialize_LastCheckTime": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TenantId",
+            "type": "string",
+            "value": "@{parameters('fsi_SDM_TenantId')}"
+          }
+        ]
+      }
+    },
+    "Initialize_SourceStatus": {
+      "runAfter": {
+        "Initialize_TenantId": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "SourceStatus",
+            "type": "array",
+            "value": []
+          }
+        ]
+      }
+    },
+    "Initialize_ViolationsFound": {
+      "runAfter": {
+        "Initialize_SourceStatus": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ViolationsFound",
+            "type": "integer",
+            "value": 0
+          }
+        ]
+      }
+    },
+    "Initialize_AuditEvents": {
+      "runAfter": {
+        "Initialize_ViolationsFound": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "AuditEvents",
+            "type": "array",
+            "value": []
+          }
+        ]
+      }
+    },
+    "List_Active_Agent_Scopes": {
+      "runAfter": {
+        "Initialize_AuditEvents": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_commondataserviceforapps",
+          "operationId": "ListRecords",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_agentscopes",
+          "$filter": "fsi_status eq 2",
+          "$select": "fsi_agentscopeid,fsi_name,fsi_agentid,fsi_environmentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis",
+          "$expand": "fsi_owner($select=internalemailaddress,fullname)"
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Scope_Query_Unified_Audit_Log": {
+      "runAfter": {
+        "List_Active_Agent_Scopes": [
+          "Succeeded"
+        ]
+      },
+      "type": "Scope",
+      "actions": {
+        "HTTP_Get_Content_Blobs": {
+          "runAfter": {},
+          "type": "Http",
+          "inputs": {
+            "method": "GET",
+            "uri": "https://manage.office.com/api/v1.0/@{variables('TenantId')}/activity/feed/subscriptions/content",
+            "queries": {
+              "contentType": "Audit.General",
+              "startTime": "@{variables('LastCheckTime')}",
+              "endTime": "@{utcNow()}"
+            },
+            "authentication": {
+              "type": "ActiveDirectoryOAuth",
+              "audience": "https://manage.office.com",
+              "tenant": "@{variables('TenantId')}",
+              "clientId": "@{parameters('fsi_SDM_ClientId')}",
+              "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+            }
+          }
+        },
+        "For_Each_Content_Blob": {
+          "runAfter": {
+            "HTTP_Get_Content_Blobs": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "foreach": "@body('HTTP_Get_Content_Blobs')",
+          "actions": {
+            "HTTP_Get_Blob_Content": {
+              "runAfter": {},
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{items('For_Each_Content_Blob')?['contentUri']}",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "audience": "https://manage.office.com",
+                  "tenant": "@{variables('TenantId')}",
+                  "clientId": "@{parameters('fsi_SDM_ClientId')}",
+                  "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+                }
+              }
+            },
+            "Filter_CopilotInteraction_Events": {
+              "runAfter": {
+                "HTTP_Get_Blob_Content": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Query",
+              "inputs": {
+                "from": "@body('HTTP_Get_Blob_Content')",
+                "where": "@equals(item()?['RecordType'], 261)"
+              }
+            },
+            "Append_Filtered_Events": {
+              "runAfter": {
+                "Filter_CopilotInteraction_Events": [
+                  "Succeeded"
+                ]
+              },
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "AuditEvents",
+                "value": "@body('Filter_CopilotInteraction_Events')"
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Append_UAL_Success_Status": {
+          "runAfter": {
+            "For_Each_Content_Blob": [
+              "Succeeded"
+            ]
+          },
+          "type": "AppendToArrayVariable",
+          "inputs": {
+            "name": "SourceStatus",
+            "value": {
+              "source": "Unified Audit Log",
+              "status": "available",
+              "eventsFound": "@{length(variables('AuditEvents'))}",
+              "timestamp": "@{utcNow()}"
+            }
+          }
+        }
+      }
+    },
+    "UAL_Error_Handler": {
+      "runAfter": {
+        "Scope_Query_Unified_Audit_Log": [
+          "Failed",
+          "TimedOut"
+        ]
+      },
+      "type": "AppendToArrayVariable",
+      "inputs": {
+        "name": "SourceStatus",
+        "value": {
+          "source": "Unified Audit Log",
+          "status": "unavailable",
+          "reason": "Query failed or timed out - continuing with graceful degradation",
+          "timestamp": "@{utcNow()}"
+        }
+      }
+    },
+    "For_Each_Audit_Event": {
+      "runAfter": {
+        "Scope_Query_Unified_Audit_Log": [
+          "Succeeded",
+          "Failed",
+          "TimedOut"
+        ]
+      },
+      "type": "Foreach",
+      "foreach": "@variables('AuditEvents')",
+      "actions": {
+        "Parse_Event_Agent_Id": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": "@items('For_Each_Audit_Event')?['EventData']?['AppHost']"
+        },
+        "Find_Matching_Scope": {
+          "runAfter": {
+            "Parse_Event_Agent_Id": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('List_Active_Agent_Scopes')?['body/value']",
+            "where": "@or(contains(item()?['fsi_agentid'], outputs('Parse_Event_Agent_Id')), equals(item()?['fsi_agentid'], items('For_Each_Audit_Event')?['EventData']?['AgentId']))"
+          }
+        },
+        "Condition_Scope_Found": {
+          "runAfter": {
+            "Find_Matching_Scope": [
+              "Succeeded"
+            ]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "greater": [
+                  "@length(body('Find_Matching_Scope'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Get_Matched_Scope": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "@first(body('Find_Matching_Scope'))"
+            },
+            "For_Each_Accessed_Resource": {
+              "runAfter": {
+                "Get_Matched_Scope": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach",
+              "foreach": "@coalesce(items('For_Each_Audit_Event')?['EventData']?['AccessedResources'], json('[]'))",
+              "actions": {
+                "Determine_Resource_Type": {
+                  "runAfter": {},
+                  "type": "Compose",
+                  "inputs": "@items('For_Each_Accessed_Resource')?['Type']"
+                },
+                "Check_SharePoint_Site_Access": {
+                  "runAfter": {
+                    "Determine_Resource_Type": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "contains": [
+                          "docx,xlsx,pptx,pdf,txt",
+                          "@outputs('Determine_Resource_Type')"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '[]')",
+                            "@items('For_Each_Accessed_Resource')?['SiteUrl']"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_SharePoint_Violation": {
+                      "runAfter": {},
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_scopeviolations",
+                          "item": {
+                            "fsi_name": "Unauthorized SharePoint Site - @{outputs('Get_Matched_Scope')?['fsi_name']}",
+                            "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
+                            "fsi_violationtype": 2,
+                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['SiteUrl']}",
+                            "fsi_severity": 3,
+                            "fsi_status": 1,
+                            "fsi_detectedon": "@{utcNow()}",
+                            "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"action\":\"', items('For_Each_Accessed_Resource')?['Action'], '\",\"file\":\"', items('For_Each_Accessed_Resource')?['Name'], '\"}'))}"
+                          }
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Increment_Violations_SP": {
+                      "runAfter": {
+                        "Create_SharePoint_Violation": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "ViolationsFound",
+                        "value": 1
+                      }
+                    }
+                  }
+                },
+                "Check_Connector_Access": {
+                  "runAfter": {
+                    "Check_SharePoint_Site_Access": [
+                      "Succeeded",
+                      "Skipped"
+                    ]
+                  },
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@outputs('Determine_Resource_Type')",
+                          "Connector"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '[]')",
+                            "@items('For_Each_Accessed_Resource')?['Name']"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_Connector_Violation": {
+                      "runAfter": {},
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_scopeviolations",
+                          "item": {
+                            "fsi_name": "Unauthorized Connector - @{outputs('Get_Matched_Scope')?['fsi_name']}",
+                            "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
+                            "fsi_violationtype": 1,
+                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_severity": 2,
+                            "fsi_status": 1,
+                            "fsi_detectedon": "@{utcNow()}",
+                            "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"connector\":\"', items('For_Each_Accessed_Resource')?['Name'], '\"}'))}"
+                          }
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Increment_Violations_Connector": {
+                      "runAfter": {
+                        "Create_Connector_Violation": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "ViolationsFound",
+                        "value": 1
+                      }
+                    }
+                  }
+                },
+                "Check_External_API_Access": {
+                  "runAfter": {
+                    "Check_Connector_Access": [
+                      "Succeeded",
+                      "Skipped"
+                    ]
+                  },
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@outputs('Determine_Resource_Type')",
+                          "ExternalAPI"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '[]')",
+                            "@items('For_Each_Accessed_Resource')?['Url']"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_API_Violation": {
+                      "runAfter": {},
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_scopeviolations",
+                          "item": {
+                            "fsi_name": "Unauthorized External API - @{outputs('Get_Matched_Scope')?['fsi_name']}",
+                            "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
+                            "fsi_violationtype": 4,
+                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['Url']}",
+                            "fsi_severity": 2,
+                            "fsi_status": 1,
+                            "fsi_detectedon": "@{utcNow()}",
+                            "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"api\":\"', items('For_Each_Accessed_Resource')?['Url'], '\"}'))}"
+                          }
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Increment_Violations_API": {
+                      "runAfter": {
+                        "Create_API_Violation": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "ViolationsFound",
+                        "value": 1
+                      }
+                    }
+                  }
+                }
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Create_No_Baseline_Violation": {
+                "runAfter": {},
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                  },
+                  "parameters": {
+                    "entityName": "fsi_scopeviolations",
+                    "item": {
+                      "fsi_name": "No Baseline Defined - Unknown Agent",
+                      "fsi_violationtype": 6,
+                      "fsi_resourcename": "Agent activity detected without scope definition",
+                      "fsi_severity": 2,
+                      "fsi_status": 1,
+                      "fsi_detectedon": "@{utcNow()}",
+                      "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                      "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"agentHost\":\"', outputs('Parse_Event_Agent_Id'), '\"}'))}"
+                    }
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              },
+              "Increment_Violations_NoBaseline": {
+                "runAfter": {
+                  "Create_No_Baseline_Violation": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "IncrementVariable",
+                "inputs": {
+                  "name": "ViolationsFound",
+                  "value": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "runtimeConfiguration": {
+        "concurrency": {
+          "repetitions": 1
+        }
+      }
+    },
+    "Compose_Detection_Summary": {
+      "runAfter": {
+        "For_Each_Audit_Event": [
+          "Succeeded"
+        ]
+      },
+      "type": "Compose",
+      "inputs": {
+        "detectionRun": {
+          "timestamp": "@{utcNow()}",
+          "windowStart": "@{variables('LastCheckTime')}",
+          "windowEnd": "@{utcNow()}",
+          "sourcesChecked": "@{variables('SourceStatus')}",
+          "eventsProcessed": "@{length(variables('AuditEvents'))}",
+          "violationsCreated": "@{variables('ViolationsFound')}",
+          "activeScopesCount": "@{length(outputs('List_Active_Agent_Scopes')?['body/value'])}"
+        }
+      }
+    }
+  },
+  "outputs": {},
+  "description": "SDM-DriftDetector: Scheduled detection flow that polls Unified Audit Log for CopilotInteraction events and creates violations for out-of-scope access"
+}
