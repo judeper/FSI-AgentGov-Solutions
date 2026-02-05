@@ -1,0 +1,47 @@
+// output-monitoring.kql
+// Purpose: SR 11-7 outcome analysis - track agent recommendation distribution and quality metrics over time
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//
+// Output Schema:
+//   Date (datetime) - Aggregation date
+//   AgentId (string) - Agent identifier
+//   Topic (string) - Topic/intent category
+//   TotalRecommendations (long) - Count of recommendations
+//   DistinctUsers (long) - Unique users receiving recommendations
+//
+// Supports:
+//   Control 2.6 (Primary) - SR 11-7 Ongoing Monitoring
+//
+// Regulatory Mapping:
+//   SR 11-7 Section III - "ongoing monitoring to confirm that models are performing as intended"
+//   OCC 2011-12 - Sound practices for model risk management
+//
+// Sample Output:
+// | Date       | AgentId        | Topic              | TotalRecommendations | DistinctUsers |
+// | 2026-02-04 | agent-prod-001 | AccountInquiry     | 342                  | 128           |
+// | 2026-02-04 | agent-prod-001 | LoanRecommendation | 156                  | 89            |
+// | 2026-02-04 | agent-prod-002 | InvestmentAdvice   | 98                   | 45            |
+// | 2026-02-03 | agent-prod-001 | AccountInquiry     | 318                  | 115           |
+//
+// Notes:
+//   - Run weekly (minimum) for SR 11-7 ongoing monitoring evidence
+//   - Topic distribution shifts may indicate model behavior changes
+//   - Outcome correlation with customer actions requires integration with downstream CRM (documented as future enhancement)
+//   - For direct Log Analytics execution, replace {TimeRange:30d} with literal: let TimeRange = 30d;
+
+let TimeRange = {TimeRange:30d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
+| extend UserIdHashed = hash_sha256(tostring(customDimensions["fromName"]))
+| summarize
+    TotalRecommendations = count(),
+    DistinctUsers = dcount(UserIdHashed)
+    by bin(timestamp, 1d), AgentId, Topic
+| project Date=timestamp, AgentId, Topic, TotalRecommendations, DistinctUsers
+| order by Date desc, TotalRecommendations desc

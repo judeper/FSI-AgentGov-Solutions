@@ -1,0 +1,68 @@
+// drift-detection-baseline.kql
+// Purpose: SR 11-7 drift detection - identify response pattern changes exceeding threshold
+//
+// Parameters:
+//   {BaselineDays} - Baseline period in days (default: 90) - 90 days recommended for statistical significance
+//   {MonitoringDays} - Recent monitoring period in days (default: 7)
+//   {DriftThreshold} - Percentage threshold for investigation (default: 20)
+//
+// Output Schema:
+//   Topic (string) - Topic/intent category
+//   BaselineCount (long) - Baseline period message count
+//   CurrentCount (long) - Current period message count
+//   DriftPercent (real) - Percentage change from baseline
+//   DriftDirection (string) - INCREASE or DECREASE
+//   InvestigationRequired (bool) - True if DriftPercent exceeds threshold
+//
+// Supports:
+//   Control 2.6 (Primary) - SR 11-7 Model Recalibration Trigger
+//
+// Regulatory Mapping:
+//   SR 11-7 Section III - "prompt investigation of anomalies"
+//   OCC 2011-12 - Trigger-based model revalidation
+//
+// Sample Output:
+// | Topic              | BaselineCount | CurrentCount | DriftPercent | DriftDirection | InvestigationRequired |
+// | LoanRecommendation | 1250          | 1875         | 50.0         | INCREASE       | true                  |
+// | AccountInquiry     | 3450          | 3105         | 10.0         | DECREASE       | false                 |
+// | InvestmentAdvice   | 890           | 1068         | 20.0         | INCREASE       | true                  |
+// | NewTopic           | 0             | 156          | 100.0        | INCREASE       | true                  |
+//
+// Notes:
+//   - 20% drift threshold is configurable; higher-risk agents should use lower threshold (e.g., 10%)
+//   - New topics (BaselineCount=0) always show 100% drift and require investigation
+//   - Topics with InvestigationRequired=true should trigger SR 11-7 recalibration review
+//   - Run weekly (minimum) for ongoing monitoring compliance
+//   - For direct Log Analytics execution, replace parameters with literal values
+
+let BaselineDays = {BaselineDays:90};
+let MonitoringDays = {MonitoringDays:7};
+let DriftThreshold = {DriftThreshold:20};
+
+let BaselineStart = ago(1d * (BaselineDays + MonitoringDays));
+let BaselineEnd = ago(1d * MonitoringDays);
+
+let Baseline = customEvents
+| where timestamp between (BaselineStart .. BaselineEnd)
+| where name == "BotMessageSend"
+| extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
+| summarize BaselineCount = count() by Topic;
+
+let Current = customEvents
+| where timestamp > ago(1d * MonitoringDays)
+| where name == "BotMessageSend"
+| extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
+| summarize CurrentCount = count() by Topic;
+
+Baseline
+| join kind=fullouter Current on Topic
+| extend Topic = coalesce(Topic, Topic1)
+| extend BaselineCount = coalesce(BaselineCount, 0)
+| extend CurrentCount = coalesce(CurrentCount, 0)
+| extend DriftPercent = iff(BaselineCount > 0,
+    round(abs(todouble(CurrentCount - BaselineCount)) / BaselineCount * 100, 1),
+    100.0)
+| extend DriftDirection = iff(CurrentCount > BaselineCount, "INCREASE", "DECREASE")
+| extend InvestigationRequired = DriftPercent > DriftThreshold
+| project Topic, BaselineCount, CurrentCount, DriftPercent, DriftDirection, InvestigationRequired
+| order by DriftPercent desc

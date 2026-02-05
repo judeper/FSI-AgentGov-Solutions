@@ -1,0 +1,55 @@
+// validation-test-results.kql
+// Purpose: SR 11-7 process verification - confirm agent responses match validation test expectations
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {PassRateThreshold} - Minimum acceptable pass rate percentage (default: 95)
+//
+// Output Schema:
+//   Topic (string) - Topic under test
+//   TestCount (long) - Total validation tests executed
+//   PassCount (long) - Tests that passed
+//   FailCount (long) - Tests that failed
+//   PassRate (real) - Pass percentage (PassCount / TestCount * 100)
+//   MeetsThreshold (bool) - True if PassRate >= threshold
+//
+// Supports:
+//   Control 2.6 (Primary) - SR 11-7 Validation Evidence
+//
+// Regulatory Mapping:
+//   SR 11-7 Section II - "validation should check the model's... effectiveness"
+//   OCC 2011-12 - Independent validation requirements
+//
+// Sample Output:
+// | Topic              | TestCount | PassCount | FailCount | PassRate | MeetsThreshold |
+// | AccountInquiry     | 150       | 147       | 3         | 98.0     | true           |
+// | LoanRecommendation | 120       | 108       | 12        | 90.0     | false          |
+// | InvestmentAdvice   | 85        | 82        | 3         | 96.5     | true           |
+// | TransferMoney      | 200       | 198       | 2         | 99.0     | true           |
+//
+// Notes:
+//   - Requires validation test framework that sets IsValidationTest=true in customDimensions
+//   - TestPassed field should be set by validation framework (true/false)
+//   - Topics with MeetsThreshold=false require remediation before next validation cycle
+//   - 95% threshold is industry standard; adjust based on topic criticality
+//   - For direct Log Analytics execution, replace parameters with literal values
+
+let TimeRange = {TimeRange:7d};
+let PassRateThreshold = {PassRateThreshold:95};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "BotMessageSend"
+| extend IsValidationTest = tobool(customDimensions["IsValidationTest"])
+| where IsValidationTest == true
+| extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
+| extend TestPassed = tobool(customDimensions["TestPassed"])
+| summarize
+    TestCount = count(),
+    PassCount = countif(TestPassed == true),
+    FailCount = countif(TestPassed == false or isnull(TestPassed))
+    by Topic
+| extend PassRate = round(todouble(PassCount) / TestCount * 100, 1)
+| extend MeetsThreshold = PassRate >= PassRateThreshold
+| project Topic, TestCount, PassCount, FailCount, PassRate, MeetsThreshold
+| order by PassRate asc
