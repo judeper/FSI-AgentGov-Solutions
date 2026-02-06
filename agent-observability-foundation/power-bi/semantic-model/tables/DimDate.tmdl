@@ -1,0 +1,121 @@
+table DimDate
+	lineageTag: a1a2a3a4-a5a6-4a7a-8a9a-0a1a2a3a4a5a
+
+	column DateKey
+		dataType: int64
+		isKey: true
+		formatString: #,0
+		sourceColumn: DateKey
+		summarizeBy: none
+		lineageTag: b1b2b3b4-b5b6-4b7b-8b9b-0b1b2b3b4b5b
+
+		annotation SummarizationSetBy = User
+
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: Date
+		summarizeBy: none
+		lineageTag: c1c2c3c4-c5c6-4c7c-8c9c-0c1c2c3c4c5c
+
+		annotation SummarizationSetBy = User
+
+	column Year
+		dataType: int64
+		formatString: #,0
+		sourceColumn: Year
+		summarizeBy: none
+		lineageTag: d1d2d3d4-d5d6-4d7d-8d9d-0d1d2d3d4d5d
+
+		annotation SummarizationSetBy = User
+
+	column Quarter
+		dataType: int64
+		formatString: #,0
+		sourceColumn: Quarter
+		summarizeBy: none
+		lineageTag: e1e2e3e4-e5e6-4e7e-8e9e-0e1e2e3e4e5e
+
+		annotation SummarizationSetBy = User
+
+	column Month
+		dataType: int64
+		formatString: #,0
+		sourceColumn: Month
+		summarizeBy: none
+		lineageTag: f1f2f3f4-f5f6-4f7f-8f9f-0f1f2f3f4f5f
+
+		annotation SummarizationSetBy = User
+
+	column MonthName
+		dataType: string
+		sourceColumn: MonthName
+		summarizeBy: none
+		lineageTag: a2a3a4a5-a6a7-4a8a-9a0a-1a2a3a4a5a6a
+
+		annotation SummarizationSetBy = User
+
+	column Week
+		dataType: int64
+		formatString: #,0
+		sourceColumn: Week
+		summarizeBy: none
+		lineageTag: b2b3b4b5-b6b7-4b8b-9b0b-1b2b3b4b5b6b
+
+		annotation SummarizationSetBy = User
+
+	column DayOfWeek
+		dataType: int64
+		formatString: #,0
+		sourceColumn: DayOfWeek
+		summarizeBy: none
+		lineageTag: c2c3c4c5-c6c7-4c8c-9c0c-1c2c3c4c5c6c
+
+		annotation SummarizationSetBy = User
+
+	column DayName
+		dataType: string
+		sourceColumn: DayName
+		summarizeBy: none
+		lineageTag: d2d3d4d5-d6d7-4d8d-9d0d-1d2d3d4d5d6d
+
+		annotation SummarizationSetBy = User
+
+	column IsWeekend
+		dataType: boolean
+		formatString: "TRUE";"TRUE";"FALSE"
+		sourceColumn: IsWeekend
+		summarizeBy: none
+		lineageTag: e2e3e4e5-e6e7-4e8e-9e0e-1e2e3e4e5e6e
+
+		annotation SummarizationSetBy = User
+
+	column FiscalYear
+		dataType: int64
+		formatString: #,0
+		sourceColumn: FiscalYear
+		summarizeBy: none
+		lineageTag: f2f3f4f5-f6f7-4f8f-9f0f-1f2f3f4f5f6f
+
+		annotation SummarizationSetBy = User
+
+	column FiscalQuarter
+		dataType: int64
+		formatString: #,0
+		sourceColumn: FiscalQuarter
+		summarizeBy: none
+		lineageTag: a3a4a5a6-a7a8-4a9a-0a1a-2a3a4a5a6a7a
+
+		annotation SummarizationSetBy = User
+
+	partition DimDate = m
+		mode: import
+		source =
+				let
+				    Source = #"Date Dimension Generator",
+				    DateTable = Source
+				in
+				    DateTable
+
+	annotation PBI_ResultType = Table
+

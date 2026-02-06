@@ -1,0 +1,85 @@
+table FactAgentSessions
+	lineageTag: 9f3a1e2b-8c4d-4e5f-a6b7-1c2d3e4f5a6b
+
+	column SessionDate
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: SessionDate
+		dataCategory: PaddedDateTableDates
+		lineageTag: a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
+
+		annotation SummarizationSetBy = Automatic
+
+	column AgentId
+		dataType: string
+		sourceColumn: AgentId
+		lineageTag: b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+
+		annotation SummarizationSetBy = Automatic
+
+	column ZoneId
+		dataType: string
+		sourceColumn: ZoneId
+		lineageTag: c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f
+
+		annotation SummarizationSetBy = Automatic
+
+	column SessionCount
+		dataType: int64
+		formatString: #,0
+		sourceColumn: SessionCount
+		lineageTag: d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a
+
+		annotation SummarizationSetBy = Automatic
+
+	column MessageCount
+		dataType: int64
+		formatString: #,0
+		sourceColumn: MessageCount
+		lineageTag: e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b
+
+		annotation SummarizationSetBy = Automatic
+
+	column ErrorCount
+		dataType: int64
+		formatString: #,0
+		sourceColumn: ErrorCount
+		lineageTag: f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c
+
+		annotation SummarizationSetBy = Automatic
+
+	column AvgLatencyMs
+		dataType: double
+		formatString: #,0.00
+		sourceColumn: AvgLatencyMs
+		lineageTag: a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d
+
+		annotation SummarizationSetBy = Automatic
+
+	column P95LatencyMs
+		dataType: double
+		formatString: #,0.00
+		sourceColumn: P95LatencyMs
+		lineageTag: b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e
+
+		annotation SummarizationSetBy = Automatic
+
+	column CompletionRate
+		dataType: double
+		formatString: 0.00%;-0.00%;0.00%
+		sourceColumn: CompletionRate
+		lineageTag: c9d0e1f2-a3b4-4c5d-6e7f-8a9b0c1d2e3f
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactAgentSessions = m
+		mode: import
+		source =
+				let
+				    Source = #"Azure Application Insights",
+				    SessionData = Source
+				in
+				    SessionData
+
+	annotation PBI_ResultType = Table
+

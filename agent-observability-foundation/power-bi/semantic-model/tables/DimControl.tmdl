@@ -1,0 +1,64 @@
+table DimControl
+	lineageTag: c1c2c3c4-c5c6-4c7c-8c9c-0c1c2c3c4c5c
+
+	column ControlId
+		dataType: string
+		isKey: true
+		sourceColumn: ControlId
+		summarizeBy: none
+		lineageTag: c2c3c4c5-c6c7-4c8c-9c0c-1c2c3c4c5c6c
+
+		annotation SummarizationSetBy = User
+
+	column ControlName
+		dataType: string
+		sourceColumn: ControlName
+		summarizeBy: none
+		lineageTag: c3c4c5c6-c7c8-4c9c-0c1c-2c3c4c5c6c7c
+
+		annotation SummarizationSetBy = User
+
+	column Pillar
+		dataType: string
+		sourceColumn: Pillar
+		summarizeBy: none
+		lineageTag: c4c5c6c7-c8c9-4c0c-1c2c-3c4c5c6c7c8c
+
+		annotation SummarizationSetBy = User
+
+	column PillarName
+		dataType: string
+		sourceColumn: PillarName
+		summarizeBy: none
+		lineageTag: c5c6c7c8-c9c0-4c1c-2c3c-4c5c6c7c8c9c
+
+		annotation SummarizationSetBy = User
+
+	column PillarWeight
+		dataType: double
+		formatString: 0.00%;-0.00%;0.00%
+		sourceColumn: PillarWeight
+		summarizeBy: none
+		lineageTag: c6c7c8c9-c0c1-4c2c-3c4c-5c6c7c8c9c0c
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: c7c8c9c0-c1c2-4c3c-4c5c-6c7c8c9c0c1c
+
+		annotation SummarizationSetBy = User
+
+	partition DimControl = m
+		mode: import
+		source =
+				let
+				    Source = #"Control Metadata",
+				    ControlDim = Source
+				in
+				    ControlDim
+
+	annotation PBI_ResultType = Table
+

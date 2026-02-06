@@ -1,0 +1,54 @@
+table DimRole
+	lineageTag: ro1ro2ro-ro3r-4ro4-ro5r-o6ro7ro8ro9r
+
+	column RoleId
+		dataType: string
+		isKey: true
+		sourceColumn: RoleId
+		summarizeBy: none
+		lineageTag: ro2ro3ro-ro4r-4ro5-ro6r-o7ro8ro9ro0r
+
+		annotation SummarizationSetBy = User
+
+	column RoleName
+		dataType: string
+		sourceColumn: RoleName
+		summarizeBy: none
+		lineageTag: ro3ro4ro-ro5r-4ro6-ro7r-o8ro9ro0ro1r
+
+		annotation SummarizationSetBy = User
+
+	column RoleCategory
+		dataType: string
+		sourceColumn: RoleCategory
+		summarizeBy: none
+		lineageTag: ro4ro5ro-ro6r-4ro7-ro8r-o9ro0ro1ro2r
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: ro5ro6ro-ro7r-4ro8-ro9r-o0ro1ro2ro3r
+
+		annotation SummarizationSetBy = User
+
+	partition DimRole = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({
+				        {"GA", "Entra Global Admin", "Admin", "Global Administrator with full tenant access"},
+				        {"PPA", "Power Platform Admin", "Admin", "Power Platform service administrator"},
+				        {"PCA", "Purview Compliance Admin", "Admin", "Compliance and data governance administrator"},
+				        {"EOA", "Exchange Online Admin", "Admin", "Exchange Online service administrator"},
+				        {"CA", "Compliance Analyst", "Analyst", "Reviews compliance reports and dashboards"},
+				        {"SO", "Security Operator", "Operator", "Monitors security alerts and incidents"},
+				        {"SUP", "FINRA Supervisor", "Supervisor", "FINRA 3110 designated supervisor"}
+				    }, type table [RoleId = text, RoleName = text, RoleCategory = text, Description = text])
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

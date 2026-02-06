@@ -1,0 +1,59 @@
+table DimZone
+	lineageTag: z1z2z3z4-z5z6-4z7z-8z9z-0z1z2z3z4z5z
+
+	column ZoneId
+		dataType: string
+		isKey: true
+		sourceColumn: ZoneId
+		summarizeBy: none
+		lineageTag: y1y2y3y4-y5y6-4y7y-8y9y-0y1y2y3y4y5y
+
+		annotation SummarizationSetBy = User
+
+	column ZoneName
+		dataType: string
+		sourceColumn: ZoneName
+		summarizeBy: none
+		lineageTag: x1x2x3x4-x5x6-4x7x-8x9x-0x1x2x3x4x5x
+
+		annotation SummarizationSetBy = User
+
+	column ZoneLevel
+		dataType: int64
+		formatString: #,0
+		sourceColumn: ZoneLevel
+		summarizeBy: none
+		lineageTag: w1w2w3w4-w5w6-4w7w-8w9w-0w1w2w3w4w5w
+
+		annotation SummarizationSetBy = User
+
+	column GovernanceTier
+		dataType: string
+		sourceColumn: GovernanceTier
+		summarizeBy: none
+		lineageTag: v1v2v3v4-v5v6-4v7v-8v9v-0v1v2v3v4v5v
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: u1u2u3u4-u5u6-4u7u-8u9u-0u1u2u3u4u5u
+
+		annotation SummarizationSetBy = User
+
+	partition DimZone = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({
+				        {"Zone1", "Personal Productivity", 1, "Low", "Individual agents with personal scope data access"},
+				        {"Zone2", "Team Collaboration", 2, "Medium", "Team/department agents with shared resource access"},
+				        {"Zone3", "Enterprise Managed", 3, "High", "Enterprise-wide agents with broad data access and regulatory requirements"}
+				    }, type table [ZoneId = text, ZoneName = text, ZoneLevel = Int64.Type, GovernanceTier = text, Description = text])
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,65 @@
+table DimRegulation
+	lineageTag: r1r2r3r4-r5r6-4r7r-8r9r-0r1r2r3r4r5r
+
+	column RegulationId
+		dataType: string
+		isKey: true
+		sourceColumn: RegulationId
+		summarizeBy: none
+		lineageTag: r2r3r4r5-r6r7-4r8r-9r0r-1r2r3r4r5r6r
+
+		annotation SummarizationSetBy = User
+
+	column RegulationName
+		dataType: string
+		sourceColumn: RegulationName
+		summarizeBy: none
+		lineageTag: r3r4r5r6-r7r8-4r9r-0r1r-2r3r4r5r6r7r
+
+		annotation SummarizationSetBy = User
+
+	column RegulationBody
+		dataType: string
+		sourceColumn: RegulationBody
+		summarizeBy: none
+		lineageTag: r4r5r6r7-r8r9-4r0r-1r2r-3r4r5r6r7r8r
+
+		annotation SummarizationSetBy = User
+
+	column Category
+		dataType: string
+		sourceColumn: Category
+		summarizeBy: none
+		lineageTag: r5r6r7r8-r9r0-4r1r-2r3r-4r5r6r7r8r9r
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: r6r7r8r9-r0r1-4r2r-3r4r-5r6r7r8r9r0r
+
+		annotation SummarizationSetBy = User
+
+	partition DimRegulation = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({
+				        {"FINRA-3110", "FINRA 3110", "FINRA", "Supervision", "Supervisory system for broker-dealer oversight"},
+				        {"FINRA-4511", "FINRA 4511", "FINRA", "Recordkeeping", "General requirements for broker-dealer retention"},
+				        {"SEC-17a-3", "SEC 17a-3", "SEC", "Recordkeeping", "Records to be made by broker-dealers"},
+				        {"SEC-17a-4", "SEC 17a-4", "SEC", "Recordkeeping", "Records to be preserved by broker-dealers"},
+				        {"SOX-302", "SOX 302", "SEC", "Risk Management", "Corporate responsibility for financial reports"},
+				        {"SOX-404", "SOX 404", "SEC", "Risk Management", "Management assessment of internal controls"},
+				        {"SR-11-7", "SR 11-7", "Federal Reserve", "Risk Management", "Model risk management guidance"},
+				        {"GLBA-501b", "GLBA 501(b)", "FTC", "Data Protection", "Safeguards rule for customer information"},
+				        {"OCC-2011-12", "OCC 2011-12", "OCC", "Risk Management", "Sound practices for model risk management"},
+				        {"CFTC-1.31", "CFTC 1.31", "CFTC", "Recordkeeping", "Books and records required to be kept"}
+				    }, type table [RegulationId = text, RegulationName = text, RegulationBody = text, Category = text, Description = text])
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

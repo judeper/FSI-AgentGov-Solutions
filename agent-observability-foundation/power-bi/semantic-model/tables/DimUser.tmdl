@@ -1,0 +1,47 @@
+table DimUser
+	lineageTag: u1u2u3u4-u5u6-4u7u-8u9u-0u1u2u3u4u5u
+
+	column UserId
+		dataType: string
+		isKey: true
+		sourceColumn: UserId
+		summarizeBy: none
+		lineageTag: u2u3u4u5-u6u7-4u8u-9u0u-1u2u3u4u5u6u
+
+		annotation SummarizationSetBy = User
+
+	column UserRole
+		dataType: string
+		sourceColumn: UserRole
+		summarizeBy: none
+		lineageTag: u3u4u5u6-u7u8-4u9u-0u1u-2u3u4u5u6u7u
+
+		annotation SummarizationSetBy = User
+
+	column ZoneId
+		dataType: string
+		sourceColumn: ZoneId
+		summarizeBy: none
+		lineageTag: u4u5u6u7-u8u9-4u0u-1u2u-3u4u5u6u7u8u
+
+		annotation SummarizationSetBy = User
+
+	column Department
+		dataType: string
+		sourceColumn: Department
+		summarizeBy: none
+		lineageTag: u5u6u7u8-u9u0-4u1u-2u3u-4u5u6u7u8u9u
+
+		annotation SummarizationSetBy = User
+
+	partition DimUser = m
+		mode: import
+		source =
+				let
+				    Source = #"User Metadata",
+				    UserDim = Source
+				in
+				    UserDim
+
+	annotation PBI_ResultType = Table
+

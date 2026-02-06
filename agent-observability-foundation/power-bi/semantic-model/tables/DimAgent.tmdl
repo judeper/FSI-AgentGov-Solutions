@@ -1,0 +1,81 @@
+table DimAgent
+	lineageTag: aa1aa2aa-aa3a-4aa4-aa5a-a6aa7aa8aa9a
+
+	column AgentId
+		dataType: string
+		isKey: true
+		sourceColumn: AgentId
+		summarizeBy: none
+		lineageTag: bb1bb2bb-bb3b-4bb4-bb5b-b6bb7bb8bb9b
+
+		annotation SummarizationSetBy = User
+
+	column AgentName
+		dataType: string
+		sourceColumn: AgentName
+		summarizeBy: none
+		lineageTag: cc1cc2cc-cc3c-4cc4-cc5c-c6cc7cc8cc9c
+
+		annotation SummarizationSetBy = User
+
+	column AgentType
+		dataType: string
+		sourceColumn: AgentType
+		summarizeBy: none
+		lineageTag: dd1dd2dd-dd3d-4dd4-dd5d-d6dd7dd8dd9d
+
+		annotation SummarizationSetBy = User
+
+	column ZoneId
+		dataType: string
+		sourceColumn: ZoneId
+		summarizeBy: none
+		lineageTag: ee1ee2ee-ee3e-4ee4-ee5e-e6ee7ee8ee9e
+
+		annotation SummarizationSetBy = User
+
+	column EnvironmentId
+		dataType: string
+		sourceColumn: EnvironmentId
+		summarizeBy: none
+		lineageTag: ff1ff2ff-ff3f-4ff4-ff5f-f6ff7ff8ff9f
+
+		annotation SummarizationSetBy = User
+
+	column IsProduction
+		dataType: boolean
+		formatString: "TRUE";"TRUE";"FALSE"
+		sourceColumn: IsProduction
+		summarizeBy: none
+		lineageTag: aa2aa3aa-aa4a-4aa5-aa6a-a7aa8aa9aa0a
+
+		annotation SummarizationSetBy = User
+
+	column CreatedDate
+		dataType: dateTime
+		formatString: Short Date
+		sourceColumn: CreatedDate
+		summarizeBy: none
+		lineageTag: bb2bb3bb-bb4b-4bb5-bb6b-b7bb8bb9bb0b
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: cc2cc3cc-cc4c-4cc5-cc6c-c7cc8cc9cc0c
+
+		annotation SummarizationSetBy = User
+
+	partition DimAgent = m
+		mode: import
+		source =
+				let
+				    Source = #"Agent Metadata",
+				    AgentDim = Source
+				in
+				    AgentDim
+
+	annotation PBI_ResultType = Table
+

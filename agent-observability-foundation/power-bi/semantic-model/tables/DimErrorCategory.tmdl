@@ -1,0 +1,52 @@
+table DimErrorCategory
+	lineageTag: e1e2e3e4-e5e6-4e7e-8e9e-0e1e2e3e4e5e
+
+	column ErrorCategoryId
+		dataType: string
+		isKey: true
+		sourceColumn: ErrorCategoryId
+		summarizeBy: none
+		lineageTag: e2e3e4e5-e6e7-4e8e-9e0e-1e2e3e4e5e6e
+
+		annotation SummarizationSetBy = User
+
+	column ErrorCategory
+		dataType: string
+		sourceColumn: ErrorCategory
+		summarizeBy: none
+		lineageTag: e3e4e5e6-e7e8-4e9e-0e1e-2e3e4e5e6e7e
+
+		annotation SummarizationSetBy = User
+
+	column Severity
+		dataType: string
+		sourceColumn: Severity
+		summarizeBy: none
+		lineageTag: e4e5e6e7-e8e9-4e0e-1e2e-3e4e5e6e7e8e
+
+		annotation SummarizationSetBy = User
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+		lineageTag: e5e6e7e8-e9e0-4e1e-2e3e-4e5e6e7e8e9e
+
+		annotation SummarizationSetBy = User
+
+	partition DimErrorCategory = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({
+				        {"CONN", "Connector", "High", "Connector timeout, authentication failure, or API error"},
+				        {"KNOW", "Knowledge", "Medium", "Grounding source unavailable or retrieval failure"},
+				        {"ORCH", "Orchestration", "Critical", "Flow execution failure or topic navigation error"},
+				        {"AUTH", "Authentication", "Critical", "User authentication or permission denied"},
+				        {"RATE", "RateLimit", "Medium", "API rate limit exceeded or throttling"}
+				    }, type table [ErrorCategoryId = text, ErrorCategory = text, Severity = text, Description = text])
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

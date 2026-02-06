@@ -1,0 +1,32 @@
+table UserZoneMapping
+	lineageTag: uz1uz2uz-uz3u-4uz4-uz5u-z6uz7uz8uz9u
+
+	column UserEmail
+		dataType: string
+		sourceColumn: UserEmail
+		summarizeBy: none
+		lineageTag: uz2uz3uz-uz4u-4uz5-uz6u-z7uz8uz9uz0u
+
+		annotation SummarizationSetBy = User
+
+	column ZoneId
+		dataType: string
+		sourceColumn: ZoneId
+		summarizeBy: none
+		lineageTag: uz3uz4uz-uz5u-4uz6-uz7u-z8uz9uz0uz1u
+
+		annotation SummarizationSetBy = User
+
+	partition UserZoneMapping = m
+		mode: import
+		source =
+				let
+				    Source = #"User Zone Assignment",
+				    Mapping = Source
+				in
+				    Mapping
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+
