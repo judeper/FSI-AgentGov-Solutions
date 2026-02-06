@@ -1,6 +1,6 @@
 # Audit Configuration Validator
 
-> **Status:** In Development (Phase 2 - Infrastructure & Environment Validation)
+> **Status:** v1.0.0 — Complete
 
 Automated validation of Microsoft 365 and Power Platform audit configurations to support compliance with US financial services regulations.
 
@@ -42,6 +42,8 @@ pip install -r scripts/requirements.txt
 - **Stores** validation history in Dataverse (immutable, append-only)
 - **Detects** grace period violations (newly enabled audit configs)
 - **Tracks** environment registry with zone classification and override capability
+- **Exports** compliance evidence to JSON with SHA-256 integrity hashing
+- **Verifies** evidence file integrity for audit examination submissions
 
 **This is an audit compliance solution** - it helps organizations maintain audit configurations that support compliance with FINRA 4511, SEC 17a-3/4, and SOX 404.
 
@@ -99,6 +101,29 @@ python scripts/validate_environments.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
     --interactive
+```
+
+### Step 5: Export Compliance Evidence
+
+```powershell
+# Export last 30 days of tenant validation evidence
+.\scripts\Export-AuditValidationEvidence.ps1 `
+    -DataverseUrl https://org.crm.dynamics.com `
+    -TenantId <your-tenant-id> `
+    -Scope Tenant `
+    -OutputDirectory .\exports `
+    -Interactive
+
+# Export environment validation evidence
+.\scripts\Export-AuditValidationEvidence.ps1 `
+    -DataverseUrl https://org.crm.dynamics.com `
+    -TenantId <your-tenant-id> `
+    -Scope Environment `
+    -OutputDirectory .\exports `
+    -Interactive
+
+# Verify evidence integrity
+.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\tenant-validation-20260206-143500.json
 ```
 
 ## Zone Requirements
@@ -159,8 +184,9 @@ Administrator-managed environment catalog:
 | Tenant-level validation | **Automated** | PowerShell scripts (Phase 1) |
 | Environment discovery | **Automated** | `discover_environments.py` (Phase 2) |
 | Environment validation | **Automated** | `validate_environments.py` (Phase 2) |
-| Power Automate flow | **Manual** | Create manually or import solution (Phase 3) |
-| Alerting configuration | **Manual** | Teams/Email connectors (Phase 4) |
+| Power Automate flow | **Template** | Import from JSON templates in src/ (see docs/FLOW_SETUP.md) |
+| Alerting configuration | **Template** | Configured via Power Automate flows |
+| Evidence export | **Automated** | Export-AuditValidationEvidence.ps1 |
 
 ## Who Should Use This
 
@@ -196,18 +222,19 @@ Administrator-managed environment catalog:
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Phase 3: Power Automate Flows (Scheduled Automation)           │
-│  - Daily scheduled run (tenant + environment validation)         │
-│  - Write results to Dataverse                                   │
-│  - Query grace period violations                                │
+│  Phase 3: Automated Orchestration & Alerting                    │
+│  - Start-TenantValidationRunbook.ps1 (Azure Automation)         │
+│  - Start-EnvironmentValidationRunbook.ps1 (Azure Automation)    │
+│  - Compare-ValidationBaseline.ps1 (drift detection)             │
+│  - Power Automate flows (daily schedule, alert routing)         │
 └─────────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Phase 4: Alerting & Reporting (Visibility)                     │
-│  - Teams notifications for failures                              │
-│  - Email alerts for grace period expirations                     │
-│  - Dashboard integration (v9 milestone)                          │
+│  Phase 4: Evidence Export & Framework Integration               │
+│  - Export-AuditValidationEvidence.ps1 (JSON + SHA-256)          │
+│  - Test-EvidenceIntegrity.ps1 (hash verification)               │
+│  - Evidence export guide for auditors                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -219,16 +246,20 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 - [Service Principal Setup](./docs/service-principal-setup.md) - App registration, permissions
 - [Dataverse Schema Guide](./docs/dataverse-schema.md) - Table structure, relationships
+- [Flow Setup Guide](./docs/FLOW_SETUP.md) - Power Automate flow creation and configuration
+- [Evidence Export Guide](./docs/evidence-export-guide.md) - Compliance evidence collection and verification
 - [Troubleshooting](./docs/troubleshooting.md) - Common issues, resolutions
 
 ## Related Controls
 
-This solution supports implementation of:
+This solution helps support implementation of:
 
 - **Control 1.7** - Audit Log Configuration (framework controls)
 - Tenant-level audit validation (Unified Audit Log, mailbox audit)
 - Environment-level audit validation (Power Platform audit retention)
 - Zone-based retention thresholds (180d/365d/730d)
+- Automated daily validation with drift detection (Power Automate)
+- Evidence export with SHA-256 integrity hashing
 
 ## Security Considerations
 
