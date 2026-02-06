@@ -1,0 +1,233 @@
+table _Measures
+	lineageTag: m1m2m3m4-m5m6-4m7m-8m9m-0m1m2m3m4m5m
+
+	/// ========================================
+	/// CATEGORY 1: Core Session Metrics
+	/// ========================================
+
+	measure 'Total Sessions' = SUM(FactAgentSessions[SessionCount])
+		formatString: #,0
+		displayFolder: "Session Metrics"
+		lineageTag: s1s2s3s4-s5s6-4s7s-8s9s-0s1s2s3s4s5s
+
+	measure 'Total Messages' = SUM(FactAgentSessions[MessageCount])
+		formatString: #,0
+		displayFolder: "Session Metrics"
+		lineageTag: s2s3s4s5-s6s7-4s8s-9s0s-1s2s3s4s5s6s
+
+	measure 'Total Errors' = SUM(FactAgentSessions[ErrorCount])
+		formatString: #,0
+		displayFolder: "Session Metrics"
+		lineageTag: s3s4s5s6-s7s8-4s9s-0s1s-2s3s4s5s6s7s
+
+	measure 'Avg Completion Rate' = AVERAGE(FactAgentSessions[CompletionRate])
+		formatString: 0.0%
+		displayFolder: "Session Metrics"
+		lineageTag: s4s5s6s7-s8s9-4s0s-1s2s-3s4s5s6s7s8s
+
+	measure 'Active Agents' = DISTINCTCOUNT(FactAgentSessions[AgentId])
+		formatString: #,0
+		displayFolder: "Session Metrics"
+		lineageTag: s5s6s7s8-s9s0-4s1s-2s3s-4s5s6s7s8s9s
+
+	/// ========================================
+	/// CATEGORY 2: Latency Metrics
+	/// ========================================
+	/// Note: P95 at session-grain is an average of daily P95 values.
+	/// For precise P95 across all events, use FactAgentEvents with
+	/// PERCENTILE.INC (requires Premium/Import mode for large datasets).
+
+	measure 'Avg Latency (ms)' = AVERAGE(FactAgentSessions[AvgLatencyMs])
+		formatString: #,0.0
+		displayFolder: "Latency"
+		lineageTag: l1l2l3l4-l5l6-4l7l-8l9l-0l1l2l3l4l5l
+
+	measure 'P95 Latency (ms)' = AVERAGE(FactAgentSessions[P95LatencyMs])
+		formatString: #,0.0
+		displayFolder: "Latency"
+		lineageTag: l2l3l4l5-l6l7-4l8l-9l0l-1l2l3l4l5l6l
+
+	/// ========================================
+	/// CATEGORY 3: Error Rate Metrics
+	/// ========================================
+
+	measure 'Error Rate' =
+		DIVIDE(
+			SUM(FactAgentSessions[ErrorCount]),
+			SUM(FactAgentSessions[MessageCount])
+		)
+		formatString: 0.0%
+		displayFolder: "Error Rates"
+		lineageTag: e1e2e3e4-e5e6-4e7e-8e9e-0e1e2e3e4e5e
+
+	measure 'Error Rate by Zone' =
+		DIVIDE(
+			SUM(FactAgentSessions[ErrorCount]),
+			SUM(FactAgentSessions[MessageCount])
+		)
+		formatString: 0.0%
+		displayFolder: "Error Rates"
+		lineageTag: e2e3e4e5-e6e7-4e8e-9e0e-1e2e3e4e5e6e
+		/// Same formula — zone filtering comes from slicer context on DimZone
+
+	/// ========================================
+	/// CATEGORY 4: Compliance Metrics
+	/// ========================================
+	/// Note: Compliance Score below is a simplified pattern.
+	/// In practice, evidence status should come from a control
+	/// evidence tracking system. This measure should be customized
+	/// based on the organization's evidence collection workflow.
+	/// Pillar weights: Pillar 1=40%, Pillar 2=30%, Pillar 3=20%, Pillar 4=10%
+
+	measure 'Compliance Score' =
+		VAR TotalWeightedControls =
+			SUMX(
+				DimControl,
+				DimControl[PillarWeight]
+			)
+		VAR WeightedCompleteControls =
+			SUMX(
+				FILTER(
+					DimControl,
+					NOT(ISBLANK(
+						CALCULATE(
+							COUNTROWS(FactAgentEvents),
+							ALLEXCEPT(DimControl, DimControl[ControlId])
+						)
+					))
+				),
+				DimControl[PillarWeight]
+			)
+		RETURN
+			DIVIDE(WeightedCompleteControls, TotalWeightedControls) * 100
+		formatString: 0.0
+		displayFolder: "Compliance"
+		lineageTag: c1c2c3c4-c5c6-4c7c-8c9c-0c1c2c3c4c5c
+
+	measure 'Control Coverage %' =
+		DIVIDE(
+			COUNTROWS(
+				FILTER(
+					DimControl,
+					NOT(ISBLANK(
+						CALCULATE(
+							COUNTROWS(FactAgentEvents),
+							ALLEXCEPT(DimControl, DimControl[ControlId])
+						)
+					))
+				)
+			),
+			COUNTROWS(DimControl)
+		) * 100
+		formatString: 0.0%
+		displayFolder: "Compliance"
+		lineageTag: c2c3c4c5-c6c7-4c8c-9c0c-1c2c3c4c5c6c
+
+	measure 'Regulatory Gaps' =
+		COUNTROWS(
+			FILTER(
+				DimRegulation,
+				ISBLANK(
+					CALCULATE(
+						COUNTROWS(FactAgentEvents),
+						ALLEXCEPT(DimRegulation, DimRegulation[RegulationId])
+					)
+				)
+			)
+		)
+		formatString: #,0
+		displayFolder: "Compliance"
+		lineageTag: c3c4c5c6-c7c8-4c9c-0c1c-2c3c4c5c6c7c
+
+	/// ========================================
+	/// CATEGORY 5: Trend Measures
+	/// ========================================
+	/// WoW/MoM applied to high-value executive measures:
+	/// Total Sessions, Error Rate, Avg Latency
+
+	measure 'Sessions WoW' =
+		VAR CurrentWeek = [Total Sessions]
+		VAR PriorWeek =
+			CALCULATE(
+				[Total Sessions],
+				DATEADD(DimDate[Date], -7, DAY)
+			)
+		RETURN
+			DIVIDE(CurrentWeek - PriorWeek, PriorWeek)
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: "Trends"
+		lineageTag: t1t2t3t4-t5t6-4t7t-8t9t-0t1t2t3t4t5t
+
+	measure 'Sessions MoM' =
+		VAR CurrentMonth = [Total Sessions]
+		VAR PriorMonth =
+			CALCULATE(
+				[Total Sessions],
+				DATEADD(DimDate[Date], -1, MONTH)
+			)
+		RETURN
+			DIVIDE(CurrentMonth - PriorMonth, PriorMonth)
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: "Trends"
+		lineageTag: t2t3t4t5-t6t7-4t8t-9t0t-1t2t3t4t5t6t
+
+	measure 'Error Rate WoW' =
+		VAR CurrentWeek = [Error Rate]
+		VAR PriorWeek =
+			CALCULATE(
+				[Error Rate],
+				DATEADD(DimDate[Date], -7, DAY)
+			)
+		RETURN
+			CurrentWeek - PriorWeek
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: "Trends"
+		lineageTag: t3t4t5t6-t7t8-4t9t-0t1t-2t3t4t5t6t7t
+		/// Note: Error rate trend is absolute change (not %), since base rate is already %
+
+	measure 'Avg Latency WoW' =
+		VAR CurrentWeek = [Avg Latency (ms)]
+		VAR PriorWeek =
+			CALCULATE(
+				[Avg Latency (ms)],
+				DATEADD(DimDate[Date], -7, DAY)
+			)
+		RETURN
+			DIVIDE(CurrentWeek - PriorWeek, PriorWeek)
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: "Trends"
+		lineageTag: t4t5t6t7-t8t9-4t0t-1t2t-3t4t5t6t7t8t
+
+	/// ========================================
+	/// CATEGORY 6: Event-Level Measures
+	/// ========================================
+	/// For drill-down using USERELATIONSHIP on the inactive
+	/// EventDateKey → DateKey relationship
+
+	measure 'Event Count' =
+		CALCULATE(
+			COUNTROWS(FactAgentEvents),
+			USERELATIONSHIP(FactAgentEvents[EventDateKey], DimDate[DateKey])
+		)
+		formatString: #,0
+		displayFolder: "Event Detail"
+		lineageTag: v1v2v3v4-v5v6-4v7v-8v9v-0v1v2v3v4v5v
+
+	measure 'Event Error Rate' =
+		CALCULATE(
+			DIVIDE(
+				COUNTROWS(
+					FILTER(
+						FactAgentEvents,
+						NOT(ISBLANK(FactAgentEvents[ErrorCategoryId]))
+					)
+				),
+				COUNTROWS(FactAgentEvents)
+			),
+			USERELATIONSHIP(FactAgentEvents[EventDateKey], DimDate[DateKey])
+		)
+		formatString: 0.0%
+		displayFolder: "Event Detail"
+		lineageTag: v2v3v4v5-v6v7-4v8v-9v0v-1v2v3v4v5v6v
+
+	annotation PBI_ResultType = Table
