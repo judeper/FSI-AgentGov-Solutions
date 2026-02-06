@@ -11,26 +11,14 @@ This Power BI solution provides business intelligence and compliance reporting c
 | **`semantic-model/`** | TMDL-based star schema with dual-grain facts (session + event), 8 dimensions, zone-based RLS |
 | **`measures/`** | DAX measures for sessions, latency, error rates, compliance score, and trend calculations |
 | **`kql-views/`** | Pre-aggregated KQL functions for efficient Power BI data consumption |
-| **`templates/`** | Parameterized `.pbit` template for quick deployment |
+| **`templates/`** | Reserved for `.pbit` template (planned — use TMDL path for now) |
 | **`docs/`** | Integration guide, connector decision matrix, Viva Insights documentation |
 
 ## Quick Start
 
 Choose your deployment path based on your experience level and customization needs.
 
-### Option 1: Template (Fastest)
-
-**Best for:** Quick deployment with standard configuration
-
-1. Open `templates/agent-compliance-dashboard.pbit` in Power BI Desktop
-2. Enter your Log Analytics workspace URL when prompted
-3. Select connection mode (Import or DirectQuery — see [decision matrix](docs/connector-decision-matrix.md))
-4. Authenticate with Azure AD
-5. Publish to Power BI Service
-
-**Time to deploy:** 10-15 minutes
-
-### Option 2: Custom Build
+### Option 1: TMDL Import (Recommended)
 
 **Best for:** Organizations requiring customization or integration with existing Power BI infrastructure
 
@@ -42,6 +30,8 @@ Choose your deployment path based on your experience level and customization nee
 6. Publish to Power BI Service
 
 **Time to deploy:** 1-2 hours
+
+> **Note:** A `.pbit` template for quick-start deployment is planned for a future release. Until then, the TMDL import path above provides full functionality including all 19 DAX measures, zone-based RLS, and 5 dashboard page designs.
 
 **See:** [Power BI Integration Guide](docs/power-bi-integration.md) for detailed custom build instructions
 

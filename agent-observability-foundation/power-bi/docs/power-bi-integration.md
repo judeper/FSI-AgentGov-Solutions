@@ -9,7 +9,7 @@ Executive-facing compliance dashboards and agent observability analytics for Mic
 - 19 DAX measures covering sessions, latency, error rates, compliance score
 - Executive dashboard with 5 pages optimized for regulatory examination readiness
 - Zone-based Row-Level Security (RLS) aligned with FSI-AgentGov governance framework
-- Deployment flexibility: .pbit template for quick start or TMDL for customization
+- Deployment via TMDL import (`.pbit` template planned for future release)
 
 ## Prerequisites
 
@@ -162,31 +162,14 @@ In Power BI Desktop, configure drill-through on `DimAgent[AgentName]` field to e
 
 ## Deployment
 
-### Option A: Using .pbit Template (Quick Start)
+### Option A: .pbit Template (Planned — Not Yet Available)
 
-**Best for:** Organizations wanting a turnkey deployment with minimal customization.
+> **Status:** The `.pbit` template is planned for a future release. Use Option B (TMDL Import) below for current deployment. All semantic model files, DAX measures, and KQL functions are available today.
 
-**Steps:**
-1. Download `agent-compliance-dashboard.pbit` from GitHub releases
-2. Open in Power BI Desktop — parameter prompt appears:
-   - **Log Analytics Workspace URL**: `https://api.loganalytics.io/v1/workspaces/{workspace-id}`
-   - **Start Date**: Reporting period start (YYYY-MM-DD)
-   - **End Date**: Reporting period end (YYYY-MM-DD)
-3. Click **Load** — Power BI queries workspace and refreshes data
-4. (Optional) Customize visuals, colors, branding
-5. Publish to Power BI Service workspace:
-   - File → Publish → Select workspace
-   - Configure dataset refresh schedule (see Refresh Strategy section)
-6. Configure Row-Level Security (see RLS section)
-7. Share with users — assign to ZoneBasedAccess role
-
-**Parameters:**
-- `WorkspaceURL` - Log Analytics workspace URL with workspace ID
-- `StartDate` - Report start date (default: 90 days ago)
-- `EndDate` - Report end date (default: today)
-
-**Customization after deployment:**
-- Edit parameters: Dataset settings → Parameters → Edit values
+When available, the template will support parameterized deployment with:
+- **Log Analytics Workspace URL**: `https://api.loganalytics.io/v1/workspaces/{workspace-id}`
+- **Start Date**: Reporting period start (YYYY-MM-DD)
+- **End Date**: Reporting period end (YYYY-MM-DD)
 - Modify visuals: Download .pbix from Power BI Service → Edit in Desktop → Republish
 
 ### Option B: Building from TMDL (Customization)

@@ -255,36 +255,15 @@ Power BI will create a live connection to the workspace.
 - Optimize KQL queries based on execution time
 - Add indexes to Log Analytics workspace if query patterns are stable
 
-## .pbit Template Deployment
+## .pbit Template Deployment (Planned)
 
-The `.pbit` (Power BI Template) file provides parameterized quick-start deployment.
+> **Status:** The `.pbit` template is planned for a future release. Until then, use the TMDL import path described in the [Power BI Integration Guide](power-bi-integration.md). All TMDL source files, DAX measures, and KQL functions are available today.
 
-### Prerequisites
+The `.pbit` (Power BI Template) file will provide parameterized quick-start deployment when available.
 
-- Power BI Desktop (June 2022 or later)
-- Power BI Pro license (minimum) for Import mode
-- Power BI Premium/PPU/Fabric for DirectQuery mode
-- Agent Observability Foundation deployed with KQL functions
+### Planned Parameters
 
-### Step-by-Step Deployment
-
-**1. Download Template**
-
-Download `agent-compliance-dashboard.pbit` from the `templates/` directory:
-
-```bash
-# From FSI-AgentGov-Solutions repository
-cd agent-observability-foundation/power-bi/templates/
-```
-
-**2. Open Template in Power BI Desktop**
-
-- Double-click `agent-compliance-dashboard.pbit`
-- Power BI Desktop will launch and prompt for parameters
-
-**3. Enter Parameters**
-
-When prompted, provide:
+When the template is released, it will prompt for:
 
 | Parameter | Example Value | Description |
 |-----------|---------------|-------------|
@@ -293,22 +272,20 @@ When prompted, provide:
 | **End Date** | `2026-03-31` | Reporting period end (YYYY-MM-DD) |
 | **Connection Mode** | `Import` or `DirectQuery` | Choose based on decision matrix above |
 
-**4. Authenticate**
+### Current Deployment Path (TMDL Import)
 
-- Click **Sign in** when prompted
-- Authenticate with Azure AD account
-- Click **Connect**
+Until the `.pbit` template is available, deploy using TMDL:
 
-**5. Validate Data Load**
+1. Open Power BI Desktop → File → Open → Browse to `semantic-model/` directory
+2. Power BI imports the TMDL files (database, tables, relationships, measures, RLS)
+3. Configure data source connection to your Log Analytics workspace
+4. Publish to Power BI Service
 
-Power BI will load data based on the connection mode selected.
-
-- **Import mode:** Data loads into local storage (may take 1-5 minutes)
-- **DirectQuery mode:** Connection established (immediate)
+See [Power BI Integration Guide](power-bi-integration.md) for detailed steps.
 
 **6. Validate Measures (IMPORTANT)**
 
-**Known .pbit bug:** DAX measures may not persist when opening .pbit files in some Power BI Desktop versions.
+**Known .pbit note:** DAX measures may not persist when opening .pbit files in some Power BI Desktop versions.
 
 To validate:
 
@@ -396,13 +373,15 @@ Power BI Premium, PPU, and Fabric support **composite models** combining Import 
 | "DirectQuery not supported" error | Published to Pro workspace | Publish to Premium/PPU/Fabric workspace |
 | High query cost | Frequent automatic page refresh | Reduce refresh frequency, use scheduled refresh Import mode for static reports |
 
-### .pbit Template Issues
+### .pbit Template Issues (When Available)
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Measures missing after opening | Known Power BI Desktop bug (versions 2.125-2.130) | Manually import measures from `measures/*.dax` files, or update to latest Power BI Desktop |
 | Parameters not prompting | Template opened in Edit mode | Close and reopen file — parameters prompt on first open only |
 | Relationships broken | Schema mismatch between template and KQL functions | Verify KQL function output columns match TMDL table definitions |
+
+> **Note:** The `.pbit` template is planned for a future release. Use TMDL import path until then.
 
 ### Authentication Issues
 
