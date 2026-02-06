@@ -7,17 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 3 - Power Automate Integration (Planned)
-- Power Automate flow for scheduled tenant validation
-- Power Automate flow for environment validation
-- Dataverse integration for validation history storage
-- Grace period query and alerting
+No planned changes. Solution is feature-complete for v4 milestone.
 
-### Phase 4 - Alerting & Reporting (Planned)
-- Teams notification for validation failures
-- Email alerts for grace period expirations
-- Dashboard integration (v9 milestone)
-- Quarterly compliance reports
+## [1.0.0] - 2026-02-06
+
+### Added - Phase 4: Evidence Export & Framework Integration
+
+#### Evidence Export
+- **Export-AuditValidationEvidence.ps1** - Main evidence export script
+  - Supports Tenant and Environment scope
+  - Date range filtering with -FromDate and -ToDate parameters
+  - JSON output with -Depth 10 (prevents nested object truncation)
+  - SHA-256 companion hash files in standard format
+  - Interactive and service principal authentication modes
+
+- **Get-ValidationResults.ps1** (private) - Dataverse query helper
+  - OData filter construction for scope, date range, RunId
+  - Pagination handling for large result sets
+
+- **Test-EvidenceIntegrity.ps1** - Hash verification utility
+  - SHA-256 hash comparison against companion .sha256 files
+  - Batch verification support via pipeline
+  - Quiet mode for automation
+
+#### Documentation
+- Evidence export guide (docs/evidence-export-guide.md)
+- Updated README with complete Phase 4 content
+- Framework integration (Control 1.7 tip admonition, solutions-index.md entry)
+
+## [0.3.0] - 2026-02-06
+
+### Added - Phase 3: Automated Orchestration & Alerting
+
+#### Azure Automation Runbooks
+- **Start-TenantValidationRunbook.ps1** - Azure Automation wrapper for tenant validation
+  - Authenticates using certificate-based service principal
+  - Runs all three tenant validators (UAL, mailbox, Purview)
+  - Writes results to Dataverse
+  - Returns structured JSON for Power Automate consumption
+
+- **Start-EnvironmentValidationRunbook.ps1** - Azure Automation wrapper for environment validation
+  - Discovers and validates all registered environments
+  - Per-environment audit and retention validation
+  - Writes results to Dataverse
+  - Returns per-environment JSON results
+
+#### Drift Detection
+- **Compare-ValidationBaseline.ps1** (private) - Configuration drift detection
+  - Compares current validation against last known baseline
+  - Numeric severity comparison (Passed=1, Error=5)
+  - Per-validator drift for tenant, per-environment for environments
+  - First run treats non-Passed as drift (no baseline suppression)
+
+#### Power Automate Flows
+- **tenant-validation-flow.json** - Daily tenant validation at 6 AM UTC
+- **environment-validation-flow.json** - Daily environment validation at 7 AM UTC
+- Severity-based alert routing (Failed/Error → Teams + email, Warning → email only)
+- Scope Try-Catch error handling pattern
+
+#### Alerting
+- **adaptive-card-tenant-alert.json** - Teams card for tenant drift alerts
+- **adaptive-card-environment-alert.json** - Teams card for environment drift alerts
+- Email alerts to compliance distribution list
+
+#### Documentation
+- Flow setup guide (docs/FLOW_SETUP.md)
 
 ## [0.2.0] - 2026-02-06
 
@@ -122,12 +176,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version Notes
 
 ### Current Focus
-- **v0.2.0** - Infrastructure deployment and environment validation capabilities
-- **Next** - Power Automate integration for scheduled automation (v0.3.0)
+- **v1.0.0** - Feature-complete with evidence export and framework integration
 
 ### Milestone Roadmap
 - v0.1.0 - Core PowerShell validators (tenant-level) ✓
-- v0.2.0 - Python infrastructure and Dataverse schema (in progress)
-- v0.3.0 - Power Automate flows (scheduled tenant + environment validation)
-- v0.4.0 - Alerting and reporting (Teams, Email, Dashboard prep)
-- v1.0.0 - Production-ready with full automation + alerting
+- v0.2.0 - Python infrastructure and Dataverse schema ✓
+- v0.3.0 - Power Automate flows (scheduled tenant + environment validation) ✓
+- v1.0.0 - Evidence export, integrity verification, framework integration ✓
