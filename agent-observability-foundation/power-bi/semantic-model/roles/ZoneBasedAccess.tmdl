@@ -1,0 +1,24 @@
+/// Zone-Based Row-Level Security
+/// Dynamic role using USERNAME() to filter data by zone assignment
+/// Applied to DimZone dimension to cascade filtering to all fact tables
+
+role ZoneBasedAccess
+	modelPermission: read
+
+	tablePermission UserZoneMapping = 'UserZoneMapping'[UserEmail] = USERNAME()
+
+	tablePermission DimZone =
+			VAR UserZone =
+			    LOOKUPVALUE(
+			        UserZoneMapping[ZoneId],
+			        UserZoneMapping[UserEmail], USERNAME()
+			    )
+			RETURN
+			    IF(
+			        NOT ISBLANK(UserZone) && DimZone[ZoneId] = UserZone,
+			        TRUE(),
+			        FALSE()
+			    )
+
+	annotation Description = "Restricts users to view data only for their assigned governance zone (Zone 1, 2, or 3). Users without zone assignment cannot view any data (secure default)."
+

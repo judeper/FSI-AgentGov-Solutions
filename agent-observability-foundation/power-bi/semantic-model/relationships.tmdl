@@ -1,0 +1,83 @@
+/// Relationships between fact and dimension tables
+/// Star schema with dual-grain facts (session-level and event-level)
+
+relationship SessionDate_to_Date
+	fromColumn: FactAgentSessions.SessionDate
+	toColumn: DimDate.Date
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship SessionAgent_to_Agent
+	fromColumn: FactAgentSessions.AgentId
+	toColumn: DimAgent.AgentId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship SessionZone_to_Zone
+	fromColumn: FactAgentSessions.ZoneId
+	toColumn: DimZone.ZoneId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship EventDateKey_to_DateKey
+	fromColumn: FactAgentEvents.EventDateKey
+	toColumn: DimDate.DateKey
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: false
+	/// Inactive to avoid ambiguity - use USERELATIONSHIP() in DAX measures
+
+relationship EventAgent_to_Agent
+	fromColumn: FactAgentEvents.AgentId
+	toColumn: DimAgent.AgentId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship EventError_to_ErrorCategory
+	fromColumn: FactAgentEvents.ErrorCategoryId
+	toColumn: DimErrorCategory.ErrorCategoryId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship EventUser_to_User
+	fromColumn: FactAgentEvents.UserId
+	toColumn: DimUser.UserId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship EventControl_to_Control
+	fromColumn: FactAgentEvents.ControlId
+	toColumn: DimControl.ControlId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship AgentZone_to_Zone
+	fromColumn: DimAgent.ZoneId
+	toColumn: DimZone.ZoneId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship UserZone_to_Zone
+	fromColumn: DimUser.ZoneId
+	toColumn: DimZone.ZoneId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
