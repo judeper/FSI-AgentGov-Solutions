@@ -78,6 +78,86 @@ python scripts/provision.py
 python scripts/verify_telemetry.py
 ```
 
+## Deployment
+
+After provisioning the telemetry infrastructure (Phase 1), deploy workbooks and alert rules using PowerShell deployment scripts.
+
+### Workbook Deployment
+
+Deploy all 3 Azure Monitor Workbooks (Operational Health, Error Diagnostics, Usage Overview) to your resource group:
+
+```powershell
+# Preview deployment without making changes
+pwsh scripts/deploy-workbooks.ps1 `
+  -ResourceGroup "rg-agent-observability-dev" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment dev `
+  -DryRun
+
+# Deploy workbooks to development environment
+pwsh scripts/deploy-workbooks.ps1 `
+  -ResourceGroup "rg-agent-observability-dev" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment dev
+
+# Deploy workbooks to production environment
+pwsh scripts/deploy-workbooks.ps1 `
+  -ResourceGroup "rg-agent-observability-prod" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment prod
+```
+
+**Idempotent Deployment:**
+Re-running the deployment script updates existing workbooks without creating duplicates, enabling safe CI/CD integration.
+
+### Alert Deployment
+
+Deploy alert infrastructure in dependency order: Logic App → Action Groups → Alert Rules.
+
+```powershell
+# Preview deployment without making changes
+pwsh scripts/deploy-alerts.ps1 `
+  -ResourceGroup "rg-agent-observability-dev" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment dev `
+  -DryRun
+
+# Deploy alerts to development environment (with confirmation prompt)
+pwsh scripts/deploy-alerts.ps1 `
+  -ResourceGroup "rg-agent-observability-dev" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment dev
+
+# Deploy alerts to production environment (skip confirmation)
+pwsh scripts/deploy-alerts.ps1 `
+  -ResourceGroup "rg-agent-observability-prod" `
+  -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -Environment prod `
+  -Force
+```
+
+**Deployment Phases:**
+1. **Phase 1:** Logic App (Teams notification schema transformer)
+2. **Phase 2:** Action Groups (3 zone-specific groups referencing Logic App callback URL)
+3. **Phase 3:** Alert Rules (ALRT-01, ALRT-02, ALRT-03 with dynamic thresholds)
+
+The script enforces this dependency order automatically. Dynamic threshold baselines require 10-14 days of telemetry data before alerts become active.
+
+### Validation
+
+For comprehensive pre-deployment prerequisites and post-deployment verification steps, see:
+
+**[scripts/validation-checklist.md](scripts/validation-checklist.md)**
+
+The validation checklist covers:
+- Azure infrastructure verification (Application Insights, Log Analytics, Storage)
+- Software requirements (PowerShell 7.0+, Azure CLI 2.50+)
+- ARM template file verification
+- Workbook deployment validation with idempotency testing
+- Alert deployment validation with 3-phase dependency checks
+- Dynamic threshold baseline expectations
+- Troubleshooting quick reference
+
 ## Solution Structure
 
 ```
@@ -94,6 +174,9 @@ agent-observability-foundation/
 │   ├── teardown.py                    # Cleanup script for lab cycling
 │   ├── verify_telemetry.py            # Post-deployment validation
 │   ├── verify_worm.py                 # WORM policy verification (read-only)
+│   ├── deploy-workbooks.ps1           # Workbook deployment automation (PowerShell 7.0+)
+│   ├── deploy-alerts.ps1              # Alert infrastructure deployment (PowerShell 7.0+)
+│   ├── validation-checklist.md        # Pre/post-deployment verification checklist
 │   └── requirements.txt               # Python dependencies
 ├── queries/
 │   ├── README.md                      # KQL query library overview
@@ -136,6 +219,7 @@ agent-observability-foundation/
 | [docs/cost-tuning-guide.md](docs/cost-tuning-guide.md) | Sampling configuration and cost alert thresholds |
 | [docs/alert-tuning-guide.md](docs/alert-tuning-guide.md) | Dynamic threshold sensitivity tuning, baseline periods, zone recommendations |
 | [docs/worm-configuration.md](docs/worm-configuration.md) | Manual WORM policy setup for SEC 17a-4(f) compliance |
+| [scripts/validation-checklist.md](scripts/validation-checklist.md) | Pre-deployment prerequisites and post-deployment verification procedures |
 
 ## Troubleshooting
 
