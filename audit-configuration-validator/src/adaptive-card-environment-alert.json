@@ -1,0 +1,141 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "Container",
+      "style": "attention",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "[ALERT] Audit Configuration Drift -- Environment",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "color": "Attention"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${overallStatus}",
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "TextBlock",
+          "text": "${timestamp}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${environmentName}",
+          "weight": "Bolder",
+          "size": "Medium",
+          "wrap": true,
+          "spacing": "Medium"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Environment ID",
+              "value": "${environmentId}"
+            },
+            {
+              "title": "Zone",
+              "value": "${zone}"
+            },
+            {
+              "title": "Severity",
+              "value": "${overallStatus}"
+            },
+            {
+              "title": "Drift From",
+              "value": "${baselineStatus} → ${currentStatus}"
+            },
+            {
+              "title": "Audit Status",
+              "value": "${auditStatus}"
+            },
+            {
+              "title": "Retention Status",
+              "value": "${retentionStatus}"
+            }
+          ],
+          "spacing": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Reason",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${reason}",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Remediation",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${remediationHint}",
+          "wrap": true,
+          "spacing": "Small",
+          "isSubtle": true
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Environment",
+      "url": "https://admin.powerplatform.microsoft.com/environments/${environmentId}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Validation History",
+      "url": "${validationHistoryUrl}"
+    }
+  ]
+}
