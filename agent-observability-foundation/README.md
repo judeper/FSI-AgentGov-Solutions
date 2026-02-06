@@ -1,8 +1,8 @@
 # Agent Observability Foundation
 
-> **Status:** Work In Progress
+> **Version:** v1.1.0
 
-FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention.
+FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
 
 ## Architecture Overview
 
@@ -14,12 +14,24 @@ All Azure resources are provisioned via Python scripts using the Azure SDK for P
 
 ## What This Solution Does
 
+### Telemetry Infrastructure
 - **Deploys Application Insights** with 730-day retention for Copilot Studio telemetry capture (customEvents with CopilotInteraction schema)
 - **Creates Log Analytics workspace** with 2-year interactive query capability using PerGB2018 pricing tier
 - **Configures ADLS Gen2 export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM)
 - **Establishes RBAC separation** between operational monitoring (Monitoring Reader) and compliance audit paths (Storage Blob Data Reader)
 - **Provides PII sanitization guidance** for conversation data in customDimensions fields (text, speak, fromName, recipientName)
 - **Includes cost management configuration** with sampling defaults and cost alert thresholds
+
+### Azure Monitor Workbooks
+- **Operational Health Workbook** with 4 tabs: Overview metrics, Availability grid, Error Rates by category, Latency percentiles (P50/P95/P99)
+- **Error Diagnostics Workbook** with 5 tabs: Error Summary, Error Drill-Down by agent, Root Cause Analysis (flow failures, RAI events), Event Detail payload view
+- **Usage Overview Workbook** with 5 tabs: Adoption Overview, Engagement metrics, Channel Distribution, Generative AI Quality monitoring
+
+### Alert Rules & Action Groups
+- **High Failure Rate Alert (ALRT-01)** with dynamic threshold monitoring on BotMessageSend error rates across 3 zones
+- **Latency Regression Alert (ALRT-02)** with P95 latency monitoring and zone-specific sensitivity tuning
+- **Abnormal Usage Alert (ALRT-03)** with bidirectional detection (spikes and drops) on session volume
+- **Zone-based notification routing** via Teams (real-time) and email (audit trail) through zone-specific action groups
 
 ## Who Should Use This
 
@@ -83,9 +95,28 @@ agent-observability-foundation/
 │   ├── verify_telemetry.py            # Post-deployment validation
 │   ├── verify_worm.py                 # WORM policy verification (read-only)
 │   └── requirements.txt               # Python dependencies
+├── queries/
+│   ├── README.md                      # KQL query library overview
+│   ├── foundation/                    # Core operational queries (6 queries)
+│   ├── compliance/                    # Regulatory audit queries (5 queries)
+│   ├── sr-11-7/                       # SR 11-7 model governance (3 queries)
+│   └── governance-queries.md          # Query-to-control mapping
+├── workbooks/
+│   ├── README.md                      # Workbooks overview and deployment
+│   ├── operational-health/            # Daily ops monitoring (4 tabs)
+│   ├── error-diagnostics/             # Incident investigation (5 tabs)
+│   └── usage-overview/                # Adoption and engagement (5 tabs)
+├── alerts/
+│   ├── README.md                      # Alert rules and action groups overview
+│   ├── action-groups/                 # Zone-specific notification routing
+│   ├── ALRT-01-high-failure-rate.json # Dynamic threshold error rate alerts
+│   ├── ALRT-02-latency-regression.json # Dynamic threshold latency alerts
+│   ├── ALRT-03-abnormal-usage.json    # Bidirectional usage anomaly alerts
+│   └── shared-parameters.*.json       # Environment-specific parameters
 ├── docs/
 │   ├── pii-sanitization-guide.md      # Decision framework for PII handling
 │   ├── cost-tuning-guide.md           # Sampling and cost management
+│   ├── alert-tuning-guide.md          # Dynamic threshold tuning guidance
 │   └── worm-configuration.md          # Manual WORM setup steps (not automated)
 └── templates/
     └── diagnostic-settings.json       # ARM template for export config
@@ -98,8 +129,12 @@ agent-observability-foundation/
 | [architecture.md](architecture.md) | Mermaid data flow diagram, component details, SoD boundaries, retention tiers |
 | [prerequisites.md](prerequisites.md) | Checklist table with Resource, Required Role, and License Tier |
 | [governance-mapping.md](governance-mapping.md) | Maps telemetry artifacts to FSI-AgentGov framework controls |
+| [queries/README.md](queries/README.md) | KQL query library with 14 production queries for workbooks and alerts |
+| [workbooks/README.md](workbooks/README.md) | Workbook catalog, deployment instructions, KQL query source mapping |
+| [alerts/README.md](alerts/README.md) | Alert catalog, zone routing architecture, deployment order, runbook links |
 | [docs/pii-sanitization-guide.md](docs/pii-sanitization-guide.md) | Decision framework for handling PII in customDimensions |
 | [docs/cost-tuning-guide.md](docs/cost-tuning-guide.md) | Sampling configuration and cost alert thresholds |
+| [docs/alert-tuning-guide.md](docs/alert-tuning-guide.md) | Dynamic threshold sensitivity tuning, baseline periods, zone recommendations |
 | [docs/worm-configuration.md](docs/worm-configuration.md) | Manual WORM policy setup for SEC 17a-4(f) compliance |
 
 ## Troubleshooting
@@ -126,7 +161,14 @@ This solution supports the following FSI-AgentGov framework controls:
 
 ## Version
 
-v0.1.0 - February 2026
+**v1.1.0** - February 2026
+
+**What's New in v1.1.0:**
+- Azure Monitor Workbooks (3 workbooks with 14 tabs total)
+- Dynamic threshold alert rules (3 alerts across 9 zone-specific rules)
+- Zone-based notification routing via Teams and email
+- Alert tuning guide for sensitivity and baseline period optimization
+- KQL query library with 14 production queries
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
