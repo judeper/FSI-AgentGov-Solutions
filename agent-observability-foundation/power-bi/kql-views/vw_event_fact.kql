@@ -1,0 +1,81 @@
+// ============================================================
+// Function: vw_event_fact
+// Purpose: Event-level detail for Power BI drill-down and audit trail investigation
+//
+// Parameters:
+//   startDate (datetime) - Start of date range to query
+//   endDate (datetime) - End of date range to query
+//
+// Output Schema:
+//   EventTimestamp (datetime) - When the event occurred
+//   EventDateKey (long) - Date as integer (YYYYMMDD format)
+//   AgentId (string) - Agent identifier from recipientId
+//   SessionId (string) - Conversation session identifier
+//   EventType (string) - BotMessageReceived or BotMessageSend
+//   LatencyMs (real) - Response latency in milliseconds
+//   ErrorCategoryId (string) - Error category if event failed
+//   UserId (string) - SHA-256 hashed user identifier (PII-safe)
+//   ControlId (string) - Associated control identifier if present
+//
+// Supports:
+//   PBI-01 - Power BI Semantic Model Design
+//   PBI-03 - KQL Pre-Aggregation Functions
+//   Control 1.7 (Primary) - Comprehensive Audit Logging and Compliance
+//
+// WARNING: High-Volume Data
+//   This function returns event-level (not aggregated) data.
+//   Recommendations:
+//     - Use DirectQuery mode (Premium/PPU/Fabric F-SKU) for real-time access
+//     - OR use Import mode with short date ranges (7-14 days max)
+//
+//   Example volume: 100 agents × 500 sessions/day × 5 messages/session × 7 days = 1.75M rows
+//
+// PII Handling:
+//   UserId is SHA-256 hashed per Phase 2 PII convention for persistent,
+//   privacy-safe user correlation across sessions.
+//
+// Deployment:
+//   .create-or-alter function vw_event_fact(startDate:datetime, endDate:datetime) { ... }
+//
+// Integration Pattern (DirectQuery):
+//   Power BI → Azure Data Explorer (Kusto) → Select DirectQuery mode
+//
+// Integration Pattern (Import - use with caution):
+//   M query with date range restriction:
+//     vw_event_fact(datetime(2026-02-01), datetime(2026-02-07))
+//
+// ============================================================
+
+let vw_event_fact = (startDate: datetime, endDate: datetime) {
+    customEvents
+    | where timestamp between (startDate .. endDate)
+    | where name in ("BotMessageReceived", "BotMessageSend")
+    | where tostring(customDimensions['DesignMode']) == "False"
+    | extend
+        EventTimestamp = timestamp,
+        EventDateKey = toint(format_datetime(timestamp, "yyyyMMdd")),
+        AgentId = tostring(customDimensions["recipientId"]),
+        SessionId = session_Id,
+        EventType = name,
+        LatencyMs = todouble(customDimensions["latencyMs"]),
+        ErrorCategoryId = iff(
+            isnotempty(tostring(customDimensions["errorCodeText"])),
+            tostring(customDimensions["errorCategory"]),
+            ""
+        ),
+        UserIdRaw = tostring(customDimensions["from_Id"]),
+        ControlId = tostring(customDimensions["controlId"])
+    | extend UserId = hash_sha256(UserIdRaw)
+    | project
+        EventTimestamp,
+        EventDateKey,
+        AgentId,
+        SessionId,
+        EventType,
+        LatencyMs,
+        ErrorCategoryId,
+        UserId,
+        ControlId
+    | order by EventTimestamp desc
+};
+vw_event_fact(startDate, endDate)

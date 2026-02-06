@@ -1,0 +1,92 @@
+// ============================================================
+// Function: vw_dim_agent
+// Purpose: Build agent dimension from telemetry metadata for Power BI semantic model
+//
+// Parameters:
+//   None - Returns distinct agents from all time
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier from recipientId
+//   AgentName (string) - Agent display name from recipientName
+//   AgentType (string) - CopilotStudio, Agent365SDK, or AgentBuilder (heuristic)
+//   ZoneId (string) - Governance zone (Zone1/Zone2/Zone3)
+//   EnvironmentId (string) - Power Platform environment identifier
+//   IsProduction (bool) - True if Zone2 or Zone3
+//   CreatedDate (datetime) - First seen timestamp
+//   Description (string) - Generated description
+//
+// Supports:
+//   PBI-01 - Power BI Semantic Model Design
+//   PBI-03 - KQL Pre-Aggregation Functions
+//   Control 3.1 (Primary) - Agent Inventory and Metadata Management
+//
+// IMPORTANT: AgentType Inference Heuristic
+//   AgentType is inferred from telemetry properties:
+//     - CopilotStudio: customDimensions contains "copilotStudioAgent"
+//     - Agent365SDK: customDimensions contains "agent365Sdk"
+//     - AgentBuilder: fallback (neither property present)
+//
+//   This heuristic may need customization based on actual telemetry properties
+//   in your Application Insights workspace. Validate after deployment.
+//
+// Deployment:
+//   .create-or-alter function vw_dim_agent() { ... }
+//
+// Expected Row Count:
+//   ~number of distinct agents (typically 10-200)
+//
+// Refresh Frequency:
+//   Refresh this dimension when new agents are deployed or agent metadata changes.
+//   For Import mode: daily refresh recommended.
+//
+// Integration Pattern:
+//   Power BI M query:
+//     let
+//         Source = AzureDataExplorer.Contents("workspace-url", "database-name"),
+//         Query = "vw_dim_agent()"
+//     in
+//         Source{[Name=Query]}[Data]
+//
+// ============================================================
+
+let vw_dim_agent = () {
+    customEvents
+    | where name in ("BotMessageReceived", "BotMessageSend")
+    | where tostring(customDimensions['DesignMode']) == "False"
+    | extend
+        AgentId = tostring(customDimensions["recipientId"]),
+        AgentName = tostring(customDimensions["recipientName"]),
+        ZoneId = tostring(customDimensions["Zone"]),
+        EnvironmentId = tostring(customDimensions["environmentId"]),
+        CopilotStudioFlag = tostring(customDimensions["copilotStudioAgent"]),
+        Agent365SdkFlag = tostring(customDimensions["agent365Sdk"])
+    | summarize
+        AgentName = take_any(AgentName),
+        ZoneId = take_any(ZoneId),
+        EnvironmentId = take_any(EnvironmentId),
+        FirstSeen = min(timestamp),
+        LastSeen = max(timestamp),
+        TotalSessions = dcount(session_Id),
+        CopilotStudioFlag = take_any(CopilotStudioFlag),
+        Agent365SdkFlag = take_any(Agent365SdkFlag)
+        by AgentId
+    | extend
+        AgentType = case(
+            isnotempty(CopilotStudioFlag), "CopilotStudio",
+            isnotempty(Agent365SdkFlag), "Agent365SDK",
+            "AgentBuilder"
+        ),
+        IsProduction = (ZoneId in ("Zone2", "Zone3")),
+        CreatedDate = FirstSeen,
+        Description = strcat("Agent ", AgentName, " in ", ZoneId)
+    | project
+        AgentId,
+        AgentName,
+        AgentType,
+        ZoneId,
+        EnvironmentId,
+        IsProduction,
+        CreatedDate,
+        Description
+};
+vw_dim_agent()

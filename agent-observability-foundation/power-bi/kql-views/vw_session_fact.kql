@@ -1,0 +1,78 @@
+// ============================================================
+// Function: vw_session_fact
+// Purpose: Pre-aggregate customEvents into session-level fact for Power BI Import mode consumption
+//
+// Parameters:
+//   startDate (datetime) - Start of date range to query
+//   endDate (datetime) - End of date range to query
+//
+// Output Schema:
+//   SessionDate (datetime) - Date of session (1-day bins)
+//   AgentId (string) - Agent identifier from recipientId
+//   ZoneId (string) - Governance zone (Zone1/Zone2/Zone3)
+//   SessionCount (long) - Distinct conversation sessions
+//   MessageCount (long) - Total messages (sent + received)
+//   ErrorCount (long) - Messages with error codes
+//   AvgLatencyMs (real) - Average response latency
+//   P95LatencyMs (real) - 95th percentile response latency
+//   CompletionRate (real) - Ratio of sessions with at least one agent response
+//
+// Supports:
+//   PBI-01 - Power BI Semantic Model Design
+//   PBI-03 - KQL Pre-Aggregation Functions
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Deployment:
+//   .create-or-alter function vw_session_fact(startDate:datetime, endDate:datetime) { ... }
+//
+// Expected Row Count:
+//   ~agents × days in range
+//   Example: 50 agents over 90 days = ~4,500 rows
+//
+// Pro License 1GB Limit Guidance:
+//   - 90-day window recommended for <100 agents
+//   - 30-day window recommended for >100 agents
+//   - Each row ~200 bytes; 1GB ≈ 5M rows
+//
+// Integration Pattern:
+//   Power BI M query:
+//     let
+//         Source = AzureDataExplorer.Contents("workspace-url", "database-name"),
+//         Query = "vw_session_fact(datetime(2026-01-01), datetime(2026-03-31))"
+//     in
+//         Source{[Name=Query]}[Data]
+//
+// ============================================================
+
+let vw_session_fact = (startDate: datetime, endDate: datetime) {
+    customEvents
+    | where timestamp between (startDate .. endDate)
+    | where name in ("BotMessageReceived", "BotMessageSend")
+    | where tostring(customDimensions['DesignMode']) == "False"
+    | extend
+        AgentId = tostring(customDimensions["recipientId"]),
+        ZoneId = tostring(customDimensions["Zone"]),
+        ErrorCode = tostring(customDimensions["errorCodeText"]),
+        LatencyMs = todouble(customDimensions["latencyMs"])
+    | summarize
+        SessionCount = dcount(session_Id),
+        MessageCount = count(),
+        ErrorCount = countif(isnotempty(ErrorCode)),
+        AvgLatencyMs = avg(LatencyMs),
+        P95LatencyMs = percentile(LatencyMs, 95),
+        SessionsWithResponse = dcountif(session_Id, name == "BotMessageSend")
+        by SessionDate = bin(timestamp, 1d), AgentId, ZoneId
+    | extend CompletionRate = todouble(SessionsWithResponse) / SessionCount
+    | project
+        SessionDate,
+        AgentId,
+        ZoneId,
+        SessionCount,
+        MessageCount,
+        ErrorCount,
+        AvgLatencyMs,
+        P95LatencyMs,
+        CompletionRate
+    | order by SessionDate desc, SessionCount desc
+};
+vw_session_fact(startDate, endDate)
