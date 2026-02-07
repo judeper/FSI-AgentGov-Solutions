@@ -70,6 +70,16 @@
     Identifies overlapping policies that may interact with session security controls.
     Returns informational warnings only (does not fail overall validation).
 
+.PARAMETER DataverseUrl
+    Dataverse environment URL (e.g., https://org.crm.dynamics.com). When specified,
+    zone thresholds are read from Dataverse environment variables (fsi_SSC_* prefix)
+    instead of local JSON baseline files. Falls back to local baselines if Dataverse
+    is unavailable.
+
+.PARAMETER DataverseToken
+    Pre-acquired bearer token for Dataverse Web API. Optional. If omitted and
+    DataverseUrl is specified, the script attempts to use the current auth context.
+
 .EXAMPLE
     .\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\tenant-config.json" -Interactive
 
@@ -85,6 +95,12 @@
     .\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\config.json" -IncludeConflictAudit -TenantId "contoso.onmicrosoft.com" -ClientId "12345..." -CertificateThumbprint "ABCDEF..."
 
     Runs full validation with policy conflict audit using service principal authentication.
+
+.EXAMPLE
+    .\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\config.json" -DataverseUrl "https://org.crm.dynamics.com" -Interactive
+
+    Runs validation with zone thresholds loaded from Dataverse environment variables.
+    Falls back to local JSON baselines if Dataverse is unavailable.
 
 .OUTPUTS
     PSCustomObject with properties:
@@ -152,7 +168,13 @@ param(
     [switch]$SkipPimValidation,
 
     [Parameter(Mandatory = $false)]
-    [switch]$IncludeConflictAudit
+    [switch]$IncludeConflictAudit,
+
+    [Parameter(Mandatory = $false)]
+    [string]$DataverseUrl,
+
+    [Parameter(Mandatory = $false)]
+    [string]$DataverseToken
 )
 
 $ErrorActionPreference = "Stop"
@@ -173,6 +195,7 @@ try {
     . "$scriptRoot\private\Connect-GraphSession.ps1"
     . "$scriptRoot\private\Compare-SessionBaseline.ps1"
     . "$scriptRoot\private\Test-BreakGlassExclusion.ps1"
+    . "$scriptRoot\private\Get-DataverseThreshold.ps1"
 }
 catch {
     Write-Error "Failed to load private helper scripts: $($_.Exception.Message)"
@@ -215,6 +238,36 @@ try {
 catch {
     Write-Error "Failed to parse baseline file: $($_.Exception.Message)"
     throw
+}
+
+# Optionally override baseline thresholds from Dataverse environment variables
+if ($DataverseUrl) {
+    Write-Host "Querying Dataverse for zone thresholds..." -ForegroundColor Cyan
+
+    $dvParams = @{
+        DataverseUrl = $DataverseUrl
+        Zone = $Zone
+    }
+    if ($DataverseToken) {
+        $dvParams.AccessToken = $DataverseToken
+    }
+
+    $dvThresholds = Get-DataverseThreshold @dvParams
+
+    if ($dvThresholds) {
+        Write-Host "Dataverse thresholds loaded (source: $($dvThresholds.Source)):" -ForegroundColor Green
+        if ($dvThresholds.SignInFrequencyMinutes) {
+            Write-Host "  SignInFrequencyMinutes: $($baseline.signInFrequencyMinutes) -> $($dvThresholds.SignInFrequencyMinutes)" -ForegroundColor Cyan
+            $baseline.signInFrequencyMinutes = $dvThresholds.SignInFrequencyMinutes
+        }
+        if ($dvThresholds.AuthStrength) {
+            Write-Host "  AuthStrength: $($baseline.authenticationStrength) -> $($dvThresholds.AuthStrength)" -ForegroundColor Cyan
+            $baseline.authenticationStrength = $dvThresholds.AuthStrength
+        }
+    }
+    else {
+        Write-Warning "Dataverse thresholds unavailable. Falling back to local baseline: $baselineFile"
+    }
 }
 
 # Initialize results object
