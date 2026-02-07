@@ -1,0 +1,537 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    }
+  },
+  "triggers": {
+    "Recurrence": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "schedule": {
+          "hours": ["6"],
+          "minutes": [0]
+        },
+        "timeZone": "UTC"
+      },
+      "type": "Recurrence"
+    }
+  },
+  "actions": {
+    "Initialize_DataverseUrl": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "DataverseUrl",
+            "type": "string",
+            "value": "https://governance.crm.dynamics.com"
+          }
+        ]
+      },
+      "description": "Central Dataverse organization URL for validation history storage"
+    },
+    "Initialize_TenantId": {
+      "runAfter": {
+        "Initialize_DataverseUrl": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TenantId",
+            "type": "string",
+            "value": "contoso.onmicrosoft.com"
+          }
+        ]
+      },
+      "description": "Azure AD tenant ID"
+    },
+    "Initialize_ClientId": {
+      "runAfter": {
+        "Initialize_TenantId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ClientId",
+            "type": "string",
+            "value": "your-client-id-here"
+          }
+        ]
+      },
+      "description": "Azure AD application client ID"
+    },
+    "Initialize_CertificateThumbprint": {
+      "runAfter": {
+        "Initialize_ClientId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "CertificateThumbprint",
+            "type": "string",
+            "value": "your-certificate-thumbprint-here"
+          }
+        ]
+      },
+      "description": "Certificate thumbprint for service principal authentication"
+    },
+    "Initialize_SubscriptionId": {
+      "runAfter": {
+        "Initialize_CertificateThumbprint": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "SubscriptionId",
+            "type": "string",
+            "value": "your-subscription-id-here"
+          }
+        ]
+      },
+      "description": "Azure subscription ID containing Automation Account"
+    },
+    "Initialize_ResourceGroup": {
+      "runAfter": {
+        "Initialize_SubscriptionId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ResourceGroup",
+            "type": "string",
+            "value": "rg-session-validation"
+          }
+        ]
+      },
+      "description": "Azure resource group containing Automation Account"
+    },
+    "Initialize_AutomationAccount": {
+      "runAfter": {
+        "Initialize_ResourceGroup": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "AutomationAccount",
+            "type": "string",
+            "value": "aa-session-validator"
+          }
+        ]
+      },
+      "description": "Azure Automation Account name"
+    },
+    "Initialize_TeamsChannelId": {
+      "runAfter": {
+        "Initialize_AutomationAccount": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TeamsChannelId",
+            "type": "string",
+            "value": "your-teams-channel-id-here"
+          }
+        ]
+      },
+      "description": "Teams channel ID for alert notifications"
+    },
+    "Initialize_ComplianceDistributionList": {
+      "runAfter": {
+        "Initialize_TeamsChannelId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ComplianceDistributionList",
+            "type": "string",
+            "value": "compliance-alerts@contoso.com"
+          }
+        ]
+      },
+      "description": "Email distribution list for compliance alerts"
+    },
+    "Initialize_Zone": {
+      "runAfter": {
+        "Initialize_ComplianceDistributionList": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "Zone",
+            "type": "string",
+            "value": "Zone3"
+          }
+        ]
+      },
+      "description": "Governance zone to validate (Zone1, Zone2, or Zone3)"
+    },
+    "Scope_Try": {
+      "actions": {
+        "Create_Automation_Job": {
+          "runAfter": {},
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['azureautomation']['connectionId']"
+              }
+            },
+            "method": "put",
+            "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs",
+            "queries": {
+              "runbookName": "Start-SessionValidationRunbook",
+              "wait": false,
+              "x-ms-api-version": "2015-10-31"
+            },
+            "body": {
+              "properties": {
+                "parameters": {
+                  "Zone": "@{variables('Zone')}",
+                  "DataverseUrl": "@{variables('DataverseUrl')}",
+                  "TenantId": "@{variables('TenantId')}",
+                  "ClientId": "@{variables('ClientId')}",
+                  "CertificateThumbprint": "@{variables('CertificateThumbprint')}",
+                  "ConfigPath": "tenant-config.json"
+                }
+              }
+            }
+          },
+          "description": "Start Azure Automation runbook for session security validation"
+        },
+        "Wait_For_Job": {
+          "runAfter": {
+            "Create_Automation_Job": ["Succeeded"]
+          },
+          "type": "Until",
+          "expression": "@or(equals(body('Get_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Get_Job_Status')?['properties']?['status'], 'Suspended'))",
+          "limit": {
+            "count": 240,
+            "timeout": "PT2H"
+          },
+          "actions": {
+            "Get_Job_Status": {
+              "runAfter": {
+                "Delay": ["Succeeded"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureautomation']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}",
+                "queries": {
+                  "x-ms-api-version": "2015-10-31"
+                }
+              },
+              "description": "Check runbook job status"
+            },
+            "Delay": {
+              "runAfter": {},
+              "type": "Wait",
+              "inputs": {
+                "interval": {
+                  "count": 30,
+                  "unit": "Second"
+                }
+              },
+              "description": "Wait 30 seconds before checking job status"
+            }
+          },
+          "description": "Wait until runbook job completes or fails (max 2 hours)"
+        },
+        "Check_Job_Failed": {
+          "runAfter": {
+            "Wait_For_Job": ["Succeeded"]
+          },
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Failed"
+                ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Stopped"
+                ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Suspended"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Send_Job_Failure_Email": {
+              "runAfter": {},
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@variables('ComplianceDistributionList')",
+                  "Subject": "[CRITICAL] Session Security Validation Job Failed",
+                  "Body": "<p><strong>Azure Automation job failed</strong></p><p>Runbook: Start-SessionValidationRunbook<br>Zone: @{variables('Zone')}<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
+                  "Importance": "High"
+                }
+              },
+              "description": "Send email notification on job failure"
+            },
+            "Terminate_Failed": {
+              "runAfter": {
+                "Send_Job_Failure_Email": ["Succeeded"]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "message": "Azure Automation job failed: @{body('Get_Job_Status')?['properties']?['status']}"
+                }
+              }
+            }
+          },
+          "description": "Handle job failure - send alert and terminate"
+        },
+        "Get_Job_Output": {
+          "runAfter": {
+            "Check_Job_Failed": ["Succeeded"]
+          },
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['azureautomation']['connectionId']"
+              }
+            },
+            "method": "get",
+            "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}/output",
+            "queries": {
+              "x-ms-api-version": "2015-10-31"
+            }
+          },
+          "description": "Retrieve runbook job output (JSON string)"
+        },
+        "Parse_Results": {
+          "runAfter": {
+            "Get_Job_Output": ["Succeeded"]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_Job_Output')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "RunType": { "type": "string" },
+                "Timestamp": { "type": "string" },
+                "Zone": { "type": "string" },
+                "OverallStatus": { "type": "string" },
+                "Reason": { "type": "string" },
+                "Validators": {
+                  "type": "object",
+                  "properties": {
+                    "SessionControls": {
+                      "type": "object",
+                      "properties": {
+                        "Status": { "type": "string" },
+                        "Reason": { "type": "string" }
+                      }
+                    },
+                    "AuthStrength": {
+                      "type": "object",
+                      "properties": {
+                        "Status": { "type": "string" },
+                        "Reason": { "type": "string" }
+                      }
+                    },
+                    "PimRoleSettings": {
+                      "type": "object",
+                      "properties": {
+                        "Status": { "type": "string" },
+                        "Reason": { "type": "string" }
+                      }
+                    },
+                    "BreakGlass": {
+                      "type": "object",
+                      "properties": {
+                        "Status": { "type": "string" },
+                        "Reason": { "type": "string" }
+                      }
+                    }
+                  }
+                },
+                "Drift": {
+                  "type": "object",
+                  "properties": {
+                    "DriftDetected": { "type": "boolean" },
+                    "CurrentStatus": { "type": "string" },
+                    "BaselineStatus": { "type": "string" },
+                    "BaselineDate": { "type": "string" },
+                    "IsFirstRun": { "type": "boolean" }
+                  }
+                },
+                "AlertRequired": { "type": "boolean" },
+                "AlertSeverity": { "type": "string" }
+              }
+            }
+          },
+          "description": "Parse JSON output from runbook"
+        },
+        "Check_Alert_Required": {
+          "runAfter": {
+            "Parse_Results": ["Succeeded"]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@body('Parse_Results')?['AlertRequired']",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Check_Severity_For_Teams": {
+              "runAfter": {},
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "equals": [
+                      "@body('Parse_Results')?['OverallStatus']",
+                      "Failed"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@body('Parse_Results')?['OverallStatus']",
+                      "Error"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Post_Teams_Card": {
+                  "runAfter": {},
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['teams']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/v1.0/teams/@{variables('TeamsChannelId')}/channels/@{variables('TeamsChannelId')}/messages",
+                    "body": {
+                      "rootMessage": {
+                        "body": {
+                          "contentType": "html",
+                          "content": "<attachment id=\"adaptive-card\"></attachment>"
+                        },
+                        "attachments": [
+                          {
+                            "contentType": "application/vnd.microsoft.card.adaptive",
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Session Security Drift\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Session Controls\",\"value\":\"${sessionControlsStatus}\"},{\"title\":\"Auth Strength\",\"value\":\"${authStrengthStatus}\"},{\"title\":\"PIM Settings\",\"value\":\"${pimStatus}\"},{\"title\":\"Break-Glass\",\"value\":\"${breakGlassStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', body('Parse_Results')?['OverallStatus']), '${timestamp}', body('Parse_Results')?['Timestamp']), '${zone}', body('Parse_Results')?['Zone']), '${baselineStatus}', body('Parse_Results')?['Drift']?['BaselineStatus']), '${currentStatus}', body('Parse_Results')?['Drift']?['CurrentStatus']), '${baselineDate}', body('Parse_Results')?['Drift']?['BaselineDate']), '${reason}', body('Parse_Results')?['Reason']), '${sessionControlsStatus}', body('Parse_Results')?['Validators']?['SessionControls']?['Status']), '${authStrengthStatus}', body('Parse_Results')?['Validators']?['AuthStrength']?['Status']), '${pimStatus}', body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']), '${breakGlassStatus}', body('Parse_Results')?['Validators']?['BreakGlass']?['Status']), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "description": "Post adaptive card to Teams for Failed/Error severity"
+                }
+              },
+              "description": "Only post Teams card for Failed or Error status"
+            },
+            "Send_Alert_Email": {
+              "runAfter": {
+                "Check_Severity_For_Teams": ["Succeeded"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@variables('ComplianceDistributionList')",
+                  "Subject": "[ALERT] Session Security Drift - @{body('Parse_Results')?['Zone']} - @{body('Parse_Results')?['OverallStatus']}",
+                  "Body": "<h3>Session Security Drift Detected</h3><table><tr><td><strong>Zone:</strong></td><td>@{body('Parse_Results')?['Zone']}</td></tr><tr><td><strong>Status:</strong></td><td>@{body('Parse_Results')?['OverallStatus']}</td></tr><tr><td><strong>Baseline Status:</strong></td><td>@{body('Parse_Results')?['Drift']?['BaselineStatus']}</td></tr><tr><td><strong>Current Status:</strong></td><td>@{body('Parse_Results')?['Drift']?['CurrentStatus']}</td></tr><tr><td><strong>Baseline Date:</strong></td><td>@{body('Parse_Results')?['Drift']?['BaselineDate']}</td></tr><tr><td><strong>Reason:</strong></td><td>@{body('Parse_Results')?['Reason']}</td></tr></table><h4>Validator Results</h4><ul><li><strong>Session Controls:</strong> @{body('Parse_Results')?['Validators']?['SessionControls']?['Status']}</li><li><strong>Auth Strength:</strong> @{body('Parse_Results')?['Validators']?['AuthStrength']?['Status']}</li><li><strong>PIM Settings:</strong> @{body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']}</li><li><strong>Break-Glass:</strong> @{body('Parse_Results')?['Validators']?['BreakGlass']?['Status']}</li></ul><p><a href=\"@{variables('DataverseUrl')}/main.aspx\">View Validation History</a></p>",
+                  "Importance": "@if(or(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
+                }
+              },
+              "description": "Send email alert to compliance distribution list"
+            }
+          },
+          "description": "Send alerts if drift detected"
+        }
+      },
+      "runAfter": {
+        "Initialize_Zone": ["Succeeded"]
+      },
+      "type": "Scope",
+      "description": "Main validation execution scope with error handling"
+    },
+    "Scope_Catch": {
+      "actions": {
+        "Send_Error_Email": {
+          "runAfter": {},
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['office365']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@variables('ComplianceDistributionList')",
+              "Subject": "[CRITICAL] Session Security Validation Flow Error",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: SSC - Session Validation (Daily)<br>Zone: @{variables('Zone')}<br>Timestamp: @{utcNow()}</p><p>Review flow run history for details.</p>",
+              "Importance": "High"
+            }
+          },
+          "description": "Send error notification on flow failure"
+        }
+      },
+      "runAfter": {
+        "Scope_Try": ["Failed", "Skipped", "TimedOut"]
+      },
+      "type": "Scope",
+      "description": "Error handling scope - send notification on failure"
+    }
+  },
+  "outputs": {}
+}
