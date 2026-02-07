@@ -1,0 +1,15 @@
+{
+  "zone": "Zone2",
+  "zoneName": "Team Collaboration",
+  "signInFrequencyMinutes": 240,
+  "signInFrequencyDisplay": "4 hours",
+  "persistentBrowser": "never",
+  "authenticationStrength": "passwordless",
+  "authenticationStrengthDescription": "Passwordless MFA (FIDO2 key, Windows Hello, Microsoft Authenticator passwordless)",
+  "requireCompliantDevice": false,
+  "pimSettings": {
+    "maxActivationHours": 4,
+    "requireApproval": false,
+    "requireAuthContext": true
+  }
+}

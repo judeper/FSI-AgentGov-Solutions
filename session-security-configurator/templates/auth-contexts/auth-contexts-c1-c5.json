@@ -1,0 +1,32 @@
+[
+  {
+    "id": "c1",
+    "displayName": "FSI-AgentGov Zone 1",
+    "description": "Personal Productivity zone step-up",
+    "isAvailable": true
+  },
+  {
+    "id": "c2",
+    "displayName": "FSI-AgentGov Zone 2",
+    "description": "Team Collaboration zone step-up",
+    "isAvailable": true
+  },
+  {
+    "id": "c3",
+    "displayName": "FSI-AgentGov Zone 3",
+    "description": "Enterprise Managed zone step-up",
+    "isAvailable": true
+  },
+  {
+    "id": "c4",
+    "displayName": "FSI-AgentGov PIM Elevation",
+    "description": "PIM role activation step-up",
+    "isAvailable": true
+  },
+  {
+    "id": "c5",
+    "displayName": "FSI-AgentGov Emergency Access",
+    "description": "Break-glass account activation",
+    "isAvailable": true
+  }
+]

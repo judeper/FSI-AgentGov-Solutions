@@ -1,0 +1,15 @@
+{
+  "zone": "Zone1",
+  "zoneName": "Personal Productivity",
+  "signInFrequencyMinutes": 480,
+  "signInFrequencyDisplay": "8 hours",
+  "persistentBrowser": "never",
+  "authenticationStrength": null,
+  "authenticationStrengthDescription": "Standard MFA (any method)",
+  "requireCompliantDevice": false,
+  "pimSettings": {
+    "maxActivationHours": 8,
+    "requireApproval": false,
+    "requireAuthContext": false
+  }
+}
