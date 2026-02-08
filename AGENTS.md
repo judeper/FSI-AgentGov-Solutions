@@ -141,3 +141,9 @@ pwsh -Command "Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [System.M
 | **Codex CLI** | `.codex/config.toml` | Model, sandbox, approval policy |
 | **Copilot** | `.github/copilot-instructions.md` | Repository context for Copilot |
 | **Copilot Instructions** | `.github/instructions/` | Auto-included rules by file path |
+
+### Copilot Tool Alias Notes
+
+GitHub Copilot's recognized built-in aliases are: `read`, `edit`, `search`, `execute`, `agent`, `web`, `todo`. Unrecognized names are silently ignored (falling back to unrestricted access).
+
+**Platform differences:** The `web` and `todo` aliases are supported in VS Code Copilot Chat but are currently not applicable to the GitHub.com Copilot coding agent. This repo does not define custom Copilot agents or prompts — agent workflows are orchestrated from FSI-AgentGov using cross-repo edits.
