@@ -84,6 +84,26 @@ Only one tool writes to shared state files at a time.
 **Handoff Summary:** [What was done, what's next]
 ```
 
+### Codex CLI Model Selection
+
+Pick the cheapest model that can hold the relevant context in one pass and will not invent control IDs, file paths, or implementation steps. Three named profiles are defined in `.codex/config.toml`:
+
+| Profile | Model | Reasoning | Use When |
+|---------|-------|-----------|----------|
+| `budget` | gpt-5.1-codex-mini | low | Script edits, README updates within one solution |
+| *(default)* | gpt-5.1-codex | high | New solution folder following existing pattern |
+| `quality` | gpt-5.3-codex | xhigh | Solution spanning multiple admin domains or controls |
+
+Activate with `codex --profile budget` or `codex --profile quality`. The default (no flag) uses gpt-5.1-codex.
+
+**Workflow:**
+1. Run a "plan-only" prompt first — get the file list and diff outline before generating changes
+2. Simple patches (1–2 files): `codex --profile budget`; multi-file: use the default
+3. One solution per commit for reviewable diffs
+4. Validate after each change set; escalate to `--profile quality` when failures need cross-file reasoning
+
+> **Note:** Profiles control the LLM model and reasoning effort. GSD model profiles (`quality`/`balanced`/`budget`) control workflow behavior, not the underlying LLM. They are complementary.
+
 ## Cross-Repository Workflow
 
 **Primary Working Directory:** FSI-AgentGov (documentation repo)
