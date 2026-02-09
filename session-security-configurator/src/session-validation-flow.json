@@ -404,9 +404,42 @@
           },
           "description": "Parse JSON output from runbook"
         },
-        "Check_Alert_Required": {
+        "Write_Validation_History": {
           "runAfter": {
             "Parse_Results": ["Succeeded"]
+          },
+          "type": "Http",
+          "inputs": {
+            "method": "POST",
+            "uri": "@{variables('DataverseUrl')}/api/data/v9.2/fsi_validationhistories",
+            "headers": {
+              "Content-Type": "application/json",
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0"
+            },
+            "authentication": {
+              "type": "ManagedServiceIdentity",
+              "audience": "@{variables('DataverseUrl')}"
+            },
+            "body": {
+              "fsi_name": "@{body('Parse_Results')?['Zone']}-@{body('Parse_Results')?['Timestamp']}",
+              "fsi_runid": "@{guid()}",
+              "fsi_zone": "@{if(equals(body('Parse_Results')?['Zone'], 'Zone1'), 100000001, if(equals(body('Parse_Results')?['Zone'], 'Zone2'), 100000002, 100000003))}",
+              "fsi_severity": "@{if(equals(body('Parse_Results')?['OverallStatus'], 'Passed'), 1, if(equals(body('Parse_Results')?['OverallStatus'], 'Warning'), 2, if(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), 4, 5)))}",
+              "fsi_validationtype": 6,
+              "fsi_rawvalue": "@{string(body('Parse_Results'))}",
+              "fsi_reason": "@{body('Parse_Results')?['Reason']}",
+              "fsi_timestamp": "@{body('Parse_Results')?['Timestamp']}",
+              "fsi_checkcount": 4,
+              "fsi_baselineid": "@{if(equals(body('Parse_Results')?['Drift']?['IsFirstRun'], true), '', body('Parse_Results')?['Drift']?['BaselineDate'])}",
+              "fsi_remediationhint": "@{if(equals(body('Parse_Results')?['AlertRequired'], true), body('Parse_Results')?['Reason'], '')}"
+            }
+          },
+          "description": "Write validation results to Dataverse immutable audit trail (runs for ALL results, not just alerts)"
+        },
+        "Check_Alert_Required": {
+          "runAfter": {
+            "Write_Validation_History": ["Succeeded", "Failed"]
           },
           "type": "If",
           "expression": {

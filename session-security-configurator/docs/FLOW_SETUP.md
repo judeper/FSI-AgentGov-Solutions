@@ -11,6 +11,7 @@ This flow provides automated orchestration and alerting for the Session Security
 - Triggers daily at 6:00 AM UTC (configurable)
 - Executes `Start-SessionValidationRunbook.ps1` in Azure Automation
 - Parses validation results with drift detection
+- Writes validation results to Dataverse immutable audit trail (all scans, not just failures)
 - Posts adaptive card to Teams for Failed/Error severity
 - Sends email to distribution list for all drift alerts
 - Handles errors with CRITICAL email notification
@@ -25,6 +26,10 @@ Before creating the flow, ensure you have:
   - Modules installed: Microsoft.Graph.Identity.SignIns, MSAL.PS
   - Application permissions granted: Policy.Read.All, Directory.Read.All
 - [ ] **Dataverse environment** with SSC schema deployed (run `python scripts/deploy.py`)
+- [ ] **Managed Identity** configured for Dataverse access:
+  - Flow's managed identity (or connection identity) has Create permission on `fsi_validationhistory` entity
+  - Security role: System Administrator, or custom role with Organization-level Create on ValidationHistory
+  - Required for Write_Validation_History action (HTTP connector with MSI authentication)
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
@@ -109,6 +114,7 @@ Watch for these key actions to complete successfully:
 - **Wait_For_Job**: Job status polling (max 2 hours, 30-second intervals)
 - **Get_Job_Output**: JSON output retrieved from completed runbook
 - **Parse_Results**: JSON schema validation passes
+- **Write_Validation_History**: Validation results written to Dataverse (HTTP 204 No Content = success)
 - **Check_Alert_Required**: Condition evaluates based on AlertRequired flag
 - **Post_Teams_Card** (if Failed/Error): Adaptive card posted to Teams
 - **Send_Alert_Email** (if alert required): Email sent to distribution list
@@ -324,6 +330,30 @@ The flow routes alerts based on validation status and drift detection:
 3. Consider skipping PIM validation if permissions are limited:
    - Add `SkipPimValidation: true` to runbook parameters
 4. If persistent, increase Wait_For_Job timeout limit in flow (max: 30 days)
+
+### Dataverse Write Fails (Write_Validation_History)
+
+**Symptom:** Write_Validation_History action shows "Forbidden" (403) or "Unauthorized" (401) error in flow run history, but alerting still works
+
+**Cause:** Managed identity lacks Dataverse permissions, or DataverseUrl is incorrect
+
+**Solution:**
+
+1. Verify DataverseUrl variable matches the environment where SSC schema is deployed:
+   - Navigate to [make.powerapps.com](https://make.powerapps.com) > Environment > Session details > Instance url
+   - Must match the value in the Initialize_DataverseUrl action exactly
+2. Check managed identity permissions:
+   - Navigate to [admin.powerplatform.microsoft.com](https://admin.powerplatform.microsoft.com)
+   - Select environment > **Settings** > **Users + permissions** > **Application users**
+   - Find the flow's application user (matches the connection identity)
+   - Assign **System Administrator** role or a custom role with Create on `fsi_validationhistory`
+3. If using a custom security role:
+   - Navigate to **Settings** > **Security roles**
+   - Create or edit role > **Custom Entities** tab
+   - Find `Validation History` > Grant **Create** at Organization level
+4. Test by manually triggering the flow and checking Write_Validation_History action result
+
+**Note:** Alerting continues even when Dataverse writes fail. The Check_Alert_Required action is configured to run after Write_Validation_History regardless of success or failure. However, if writes fail persistently, drift detection will not function correctly (Get-DriftStatus queries fsi_validationhistories for baseline comparison). Fix Dataverse access promptly.
 
 ### Certificate Authentication Failures
 
