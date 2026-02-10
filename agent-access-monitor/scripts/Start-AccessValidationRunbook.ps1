@@ -445,6 +445,41 @@ try {
 
     #endregion
 
+    #region Build enriched ZoneSummary
+
+    # The orchestrator produces simple integer counts per zone (Zone1=3, Zone2=5, etc.)
+    # The flow Parse_Results schema expects objects: Zone1: { Total, Compliant, Violations }
+    # Transform here so the flow and adaptive card can render per-zone detail.
+
+    $zoneNonCompliant = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
+    if ($scanResult.Environments) {
+        foreach ($env in $scanResult.Environments) {
+            $z = $env.Zone
+            if ($z -and $zoneNonCompliant.ContainsKey($z)) {
+                $zoneNonCompliant[$z]++
+            }
+        }
+    }
+
+    $enrichedZoneSummary = [ordered]@{}
+    foreach ($z in @('Zone1', 'Zone2', 'Zone3')) {
+        $total = 0
+        if ($scanResult.ZoneSummary -and $scanResult.ZoneSummary.PSObject.Properties[$z]) {
+            $total = [int]$scanResult.ZoneSummary.$z
+        }
+        $violationEnvCount = [int]$zoneNonCompliant[$z]
+
+        $enrichedZoneSummary[$z] = [PSCustomObject]@{
+            Total      = $total
+            Compliant  = $total - $violationEnvCount
+            Violations = $violationEnvCount
+        }
+    }
+
+    Write-Verbose "Zone summary enriched: Z1=$($enrichedZoneSummary.Zone1.Total)/$($enrichedZoneSummary.Zone1.Compliant), Z2=$($enrichedZoneSummary.Zone2.Total)/$($enrichedZoneSummary.Zone2.Compliant), Z3=$($enrichedZoneSummary.Zone3.Total)/$($enrichedZoneSummary.Zone3.Compliant)"
+
+    #endregion
+
     #region Build and emit output
 
     $output = [PSCustomObject]@{
@@ -453,7 +488,7 @@ try {
         TotalEnvironments = $scanResult.Summary.TotalEnvironments
         OverallStatus     = $scanResult.OverallStatus
         Reason            = $reason
-        ZoneSummary       = $scanResult.ZoneSummary
+        ZoneSummary       = [PSCustomObject]$enrichedZoneSummary
         Violations        = $violations
         Drift             = $driftResults
         AlertRequired     = $alertRequired
