@@ -3,35 +3,73 @@
     Deploys Conditional Access policy templates for AI workloads.
 
 .DESCRIPTION
-    Deploys pre-configured Conditional Access policies from templates,
-    supporting zone-based deployment and report-only testing mode.
+    Deploys pre-configured Conditional Access policies from JSON templates to an
+    Entra ID tenant. Supports zone-based deployment (Zone1, Zone2, Zone3) and
+    report-only testing mode. Templates use placeholder tokens that are replaced
+    with tenant-specific values from a configuration file at deploy time.
+
+    Supports WhatIf/Confirm via ShouldProcess so administrators can preview every
+    Graph API call before it executes. The legacy -DryRun switch is retained for
+    backward compatibility and maps to -WhatIf internally.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    The Entra ID (Azure AD) tenant GUID to deploy policies into.
 
 .PARAMETER ConfigPath
-    Path to tenant configuration JSON file.
+    Path to the tenant configuration JSON file containing group IDs,
+    application IDs, break-glass accounts, and optional policy prefix.
 
 .PARAMETER TemplateSet
-    Which templates to deploy: All, Zone1, Zone2, Zone3.
+    Which set of templates to deploy. Valid values: All, Zone1, Zone2, Zone3.
+    Defaults to "All". Each zone includes its zone-specific templates plus
+    common templates (M365Copilot, BlockLegacyAuth).
+
+.PARAMETER Zone
+    Optional shorthand for -TemplateSet. Accepts Zone1, Zone2, or Zone3.
+    When specified, overrides -TemplateSet with the matching zone value.
 
 .PARAMETER TemplatePath
-    Path to template directory. Defaults to ../templates.
+    Path to the directory containing policy template JSON files.
+    Defaults to ../templates relative to the script location.
 
 .PARAMETER EnablePolicies
-    Deploy as enabled ($true) or report-only ($false). Defaults to $false.
+    When $true, deploys policies in enabled state. When $false (default),
+    deploys in report-only mode (enabledForReportingButNotEnforced).
 
 .PARAMETER DryRun
-    Preview changes without deploying.
+    [Obsolete] Legacy switch retained for backward compatibility. Maps to
+    -WhatIf internally. Prefer using -WhatIf instead.
+
+.PARAMETER Force
+    When specified, updates existing policies with the same display name
+    without prompting for confirmation.
 
 .EXAMPLE
-    .\Deploy-CAPolicies.ps1 -TenantId "xxx" -ConfigPath "./config.json" -TemplateSet "Zone3" -DryRun
+    .\Deploy-CAPolicies.ps1 -TenantId "contoso.onmicrosoft.com" -ConfigPath "./config.json" -TemplateSet "Zone3" -WhatIf
+
+    Previews which Zone 3 policies would be deployed without making changes.
 
 .EXAMPLE
-    .\Deploy-CAPolicies.ps1 -TenantId "xxx" -ConfigPath "./config.json" -TemplateSet "All" -EnablePolicies $false
+    .\Deploy-CAPolicies.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -ConfigPath "./config.json" -TemplateSet "All" -EnablePolicies $false
+
+    Deploys all templates in report-only mode for impact analysis.
+
+.EXAMPLE
+    .\Deploy-CAPolicies.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -ConfigPath "./config.json" -Zone Zone2 -Force
+
+    Deploys Zone 2 templates, updating any existing policies with matching names.
+
+.OUTPUTS
+    None. Status output is written to the host and verbose streams.
+
+.NOTES
+    File: Deploy-CAPolicies.ps1
+    Version: 2.0.0
+    Supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12
+    through auditable, zone-based Conditional Access deployment.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory = $true)]
     [string]$TenantId,
@@ -44,11 +82,16 @@ param(
     [string]$TemplateSet = "All",
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet("Zone1", "Zone2", "Zone3")]
+    [string]$Zone,
+
+    [Parameter(Mandatory = $false)]
     [string]$TemplatePath = "$PSScriptRoot\..\templates",
 
     [Parameter(Mandatory = $false)]
     [bool]$EnablePolicies = $false,
 
+    # [Obsolete("Use -WhatIf instead of -DryRun. -DryRun is retained for backward compatibility.")]
     [Parameter(Mandatory = $false)]
     [switch]$DryRun,
 
@@ -57,36 +100,37 @@ param(
 )
 
 #Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Identity.SignIns
+#Requires -Modules @{ ModuleName = 'Microsoft.Graph.Identity.SignIns'; ModuleVersion = '2.0.0' }
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Import private helpers
+. $PSScriptRoot/private/Connect-GraphSession.ps1
+. $PSScriptRoot/private/Get-ZoneClassification.ps1
+. $PSScriptRoot/private/Test-ParameterValidation.ps1
+
+# Map legacy -DryRun to WhatIf
+if ($DryRun) { $WhatIfPreference = $true }
+
+# Map -Zone shorthand to -TemplateSet
+if ($Zone) { $TemplateSet = $Zone }
+
 # Banner
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Conditional Access Policy Deployment" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Tenant: $TenantId"
 Write-Host "Template Set: $TemplateSet"
-Write-Host "Mode: $(if ($DryRun) { 'DRY RUN' } else { 'DEPLOY' })"
+Write-Host "Mode: $(if ($WhatIfPreference) { 'DRY RUN (WhatIf)' } else { 'DEPLOY' })"
 Write-Host "State: $(if ($EnablePolicies) { 'Enabled' } else { 'Report-Only' })"
 Write-Host ""
 
-# Load configuration
-Write-Host "Loading configuration from $ConfigPath..."
-if (-not (Test-Path $ConfigPath)) {
-    throw "Configuration file not found: $ConfigPath"
-}
+# Load and validate configuration
+Write-Verbose "Loading configuration from $ConfigPath..."
+Test-CAAConfigPath -Path $ConfigPath
 $config = Get-Content $ConfigPath | ConvertFrom-Json
-
-# Validate configuration
-$requiredFields = @("tenantId", "groups", "breakGlassAccounts", "applications")
-foreach ($field in $requiredFields) {
-    if (-not $config.$field) {
-        throw "Configuration missing required field: $field"
-    }
-}
-Write-Host "Configuration validated." -ForegroundColor Green
+Write-Verbose "Configuration validated."
 
 # Define template mapping
 $templateMapping = @{
@@ -125,22 +169,13 @@ switch ($TemplateSet) {
     }
 }
 
-Write-Host "`nTemplates to deploy:" -ForegroundColor Yellow
-$templatesToDeploy | ForEach-Object { Write-Host "  - $_" }
+Write-Verbose "Templates to deploy: $($templatesToDeploy -join ', ')"
 
-# Connect to Microsoft Graph
-if (-not $DryRun) {
-    Write-Host "`nConnecting to Microsoft Graph..."
-    try {
-        $context = Get-MgContext
-        if (-not $context -or $context.TenantId -ne $TenantId) {
-            Connect-MgGraph -TenantId $TenantId -Scopes "Policy.ReadWrite.ConditionalAccess"
-        }
-        Write-Host "Connected to Graph API." -ForegroundColor Green
-    }
-    catch {
-        throw "Failed to connect to Microsoft Graph: $_"
-    }
+# Connect to Microsoft Graph (skipped in WhatIf mode)
+if (-not $WhatIfPreference) {
+    Write-Verbose "Establishing Microsoft Graph session..."
+    Connect-CAAGraphSession -TenantId $TenantId
+    Write-Verbose "Connected to Graph API."
 }
 
 # Process templates
@@ -151,14 +186,19 @@ foreach ($templateFile in $templatesToDeploy) {
     $templateFullPath = Join-Path $TemplatePath $templateFile
 
     if (-not (Test-Path $templateFullPath)) {
-        Write-Host "  Template not found: $templateFile" -ForegroundColor Yellow
+        Write-Verbose "Template not found: $templateFile — skipping."
         continue
     }
 
-    Write-Host "`nProcessing: $templateFile" -ForegroundColor Cyan
+    Write-Verbose "Processing: $templateFile"
 
     # Load template
     $template = Get-Content $templateFullPath | ConvertFrom-Json -AsHashtable
+
+    # Remove _metadata before sending to Graph API
+    if ($template.ContainsKey('_metadata')) {
+        $template.Remove('_metadata')
+    }
 
     # Apply configuration substitutions
     $policyName = $template.displayName
@@ -199,41 +239,43 @@ foreach ($templateFile in $templatesToDeploy) {
     # Set policy state
     $template.state = if ($EnablePolicies) { "enabled" } else { "enabledForReportingButNotEnforced" }
 
-    Write-Host "  Name: $policyName"
-    Write-Host "  State: $($template.state)"
+    Write-Verbose "  Name: $policyName"
+    Write-Verbose "  State: $($template.state)"
 
-    if ($DryRun) {
-        Write-Host "  [DRY RUN] Would create policy" -ForegroundColor Yellow
+    if ($WhatIfPreference) {
+        Write-Host "  [WhatIf] Would deploy policy: $policyName ($templateFile)" -ForegroundColor Yellow
         $deployedPolicies += @{
             Name = $policyName
             Template = $templateFile
             State = $template.state
-            Status = "DryRun"
+            Status = "WhatIf"
         }
         continue
     }
 
-    # Check if policy exists
+    # Check if policy exists and deploy
     try {
         $existingPolicy = Get-MgIdentityConditionalAccessPolicy -Filter "displayName eq '$policyName'" -ErrorAction SilentlyContinue
 
         if ($existingPolicy) {
             if ($Force) {
-                Write-Host "  Updating existing policy..." -ForegroundColor Yellow
-                Update-MgIdentityConditionalAccessPolicy `
-                    -ConditionalAccessPolicyId $existingPolicy.Id `
-                    -BodyParameter $template
-                Write-Host "  Updated successfully." -ForegroundColor Green
-                $deployedPolicies += @{
-                    Name = $policyName
-                    Template = $templateFile
-                    State = $template.state
-                    Status = "Updated"
-                    Id = $existingPolicy.Id
+                if ($PSCmdlet.ShouldProcess("Policy: $policyName (Id: $($existingPolicy.Id))", "Update in tenant $TenantId")) {
+                    Write-Verbose "  Updating existing policy..."
+                    Update-MgIdentityConditionalAccessPolicy `
+                        -ConditionalAccessPolicyId $existingPolicy.Id `
+                        -BodyParameter $template
+                    Write-Verbose "  Updated successfully."
+                    $deployedPolicies += @{
+                        Name = $policyName
+                        Template = $templateFile
+                        State = $template.state
+                        Status = "Updated"
+                        Id = $existingPolicy.Id
+                    }
                 }
             }
             else {
-                Write-Host "  Policy exists. Use -Force to update." -ForegroundColor Yellow
+                Write-Verbose "  Policy exists. Use -Force to update."
                 $deployedPolicies += @{
                     Name = $policyName
                     Template = $templateFile
@@ -245,20 +287,22 @@ foreach ($templateFile in $templatesToDeploy) {
         }
         else {
             # Create new policy
-            Write-Host "  Creating policy..."
-            $newPolicy = New-MgIdentityConditionalAccessPolicy -BodyParameter $template
-            Write-Host "  Created successfully. ID: $($newPolicy.Id)" -ForegroundColor Green
-            $deployedPolicies += @{
-                Name = $policyName
-                Template = $templateFile
-                State = $template.state
-                Status = "Created"
-                Id = $newPolicy.Id
+            if ($PSCmdlet.ShouldProcess("Policy: $policyName", "Deploy to tenant $TenantId")) {
+                Write-Verbose "  Creating policy..."
+                $newPolicy = New-MgIdentityConditionalAccessPolicy -BodyParameter $template
+                Write-Verbose "  Created successfully. ID: $($newPolicy.Id)"
+                $deployedPolicies += @{
+                    Name = $policyName
+                    Template = $templateFile
+                    State = $template.state
+                    Status = "Created"
+                    Id = $newPolicy.Id
+                }
             }
         }
     }
     catch {
-        Write-Host "  ERROR: $_" -ForegroundColor Red
+        Write-Verbose "  ERROR: $_"
         $errors += @{
             Template = $templateFile
             Policy = $policyName
@@ -268,9 +312,9 @@ foreach ($templateFile in $templatesToDeploy) {
 }
 
 # Summary
-Write-Host "`n" + "=" * 60 -ForegroundColor Cyan
+Write-Host ("`n" + "=" * 60) -ForegroundColor Cyan
 Write-Host "Deployment Summary" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 
 Write-Host "`nPolicies Processed: $($deployedPolicies.Count)"
 $deployedPolicies | ForEach-Object {
@@ -278,7 +322,7 @@ $deployedPolicies | ForEach-Object {
         "Created" { "Green" }
         "Updated" { "Yellow" }
         "Skipped" { "Cyan" }
-        "DryRun" { "Gray" }
+        "WhatIf" { "Gray" }
         default { "White" }
     }
     Write-Host "  [$($_.Status)] $($_.Name)" -ForegroundColor $statusColor
@@ -291,7 +335,7 @@ if ($errors.Count -gt 0) {
     }
 }
 
-if (-not $DryRun -and $deployedPolicies.Count -gt 0) {
+if (-not $WhatIfPreference -and $deployedPolicies.Count -gt 0) {
     Write-Host "`nNext Steps:" -ForegroundColor Yellow
     if (-not $EnablePolicies) {
         Write-Host "  1. Policies deployed in report-only mode"
