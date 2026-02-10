@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "description": "Expected content moderation levels per governance zone",
+  "zones": {
+    "Zone1": {
+      "description": "Personal Productivity - Medium minimum",
+      "minimumModerationLevel": "Medium",
+      "violations": {
+        "Low": {
+          "severity": "High",
+          "regulatory": "Governance gap — Below minimum content moderation threshold"
+        }
+      }
+    },
+    "Zone2": {
+      "description": "Team Collaboration - High required",
+      "minimumModerationLevel": "High",
+      "violations": {
+        "Low": {
+          "severity": "High",
+          "regulatory": "SOX 404 — Inadequate content controls for shared agent"
+        },
+        "Medium": {
+          "severity": "Medium",
+          "regulatory": "Best practice uplift recommended for team agents"
+        }
+      }
+    },
+    "Zone3": {
+      "description": "Enterprise Managed - High required",
+      "minimumModerationLevel": "High",
+      "violations": {
+        "Low": {
+          "severity": "Critical",
+          "regulatory": "FINRA 3110 — Unmoderated customer-facing AI agent"
+        },
+        "Medium": {
+          "severity": "High",
+          "regulatory": "GLBA 501(b) — Insufficient content protection for enterprise agent"
+        }
+      }
+    },
+    "Unknown": {
+      "description": "Unclassified environment",
+      "minimumModerationLevel": "High",
+      "violations": {
+        "unclassified": {
+          "severity": "Warning",
+          "regulatory": "Governance gap — Environment not assigned to zone"
+        }
+      }
+    }
+  }
+}
