@@ -1,0 +1,166 @@
+# Status Mapping Reference — Cross-Solution Integration
+
+This document defines the per-solution logic for translating Tier 2 governance solution validation results into Compliance Dashboard `fsi_controlassessment` records.
+
+---
+
+## Solution-to-Control Mapping
+
+| Solution | Control ID(s) | Control Name(s) | Assessment Frequency |
+|----------|--------------|------------------|---------------------|
+| ACV | 1.7 | Comprehensive Audit Logging and Compliance | Daily |
+| SSC | 1.23 | Step-Up Authentication for Agent Operations | Daily |
+| SSC | 1.11 | Conditional Access and Phishing-Resistant MFA | Daily |
+| AAM | 3.8 | Copilot Hub and Governance Dashboard | Daily |
+| CMM | 1.8 | Runtime Protection and External Threat Detection | Daily |
+| FUS | 1.14 | Data Minimization and Agent Scope Control | Daily |
+
+**Total:** 5 solutions → 7 control assessments (SSC feeds 2 controls)
+
+---
+
+## Status Translation Logic
+
+### ACV → Control 1.7
+
+**Source table:** `fsi_auditvalidationhistories`
+**Source field:** `fsi_severity` (Choice: 1-5)
+**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'` (represents overall run result)
+
+| ACV Severity | CD Status | CD Score | Logic |
+|-------------|-----------|----------|-------|
+| 1 (Passed) | 1 (Compliant) | 100 | All audit checks passed |
+| 2 (Warning) | 2 (Partial) | 50 | Minor audit gaps (e.g., retention below recommended) |
+| 3 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
+| 4 (Failed) | 3 (Non-Compliant) | 0 | Critical audit configuration failure |
+| 5 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
+
+**Score formula:** Direct mapping based on worst-case severity from latest orchestrator run.
+
+---
+
+### SSC → Controls 1.23, 1.11
+
+**Source table:** `fsi_validationhistories`
+**Source field:** `fsi_severity` (Choice: 1-5)
+**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'`
+
+SSC validates 6 dimensions. For dashboard purposes, the orchestrator-level severity is used.
+
+**Control 1.23 (Step-Up Authentication):**
+Maps dimensions: SessionControls, AuthStrength, PIM
+
+| SSC Severity | CD Status | CD Score |
+|-------------|-----------|----------|
+| 1 (Passed) | 1 (Compliant) | 100 |
+| 2 (Warning) | 2 (Partial) | 50 |
+| 3 (GracePeriod) | 2 (Partial) | 50 |
+| 4 (Failed) | 3 (Non-Compliant) | 0 |
+| 5 (Error) | 3 (Non-Compliant) | 0 |
+
+**Control 1.11 (Conditional Access and MFA):**
+Same mapping — SSC orchestrator covers both controls. Both controls get the same assessment status from each SSC run.
+
+---
+
+### AAM → Control 3.8
+
+**Source table:** `fsi_accessvalidationhistories`
+**Source field:** `fsi_overall_status` (String)
+**Query:** Latest record ordered by `fsi_timestamp desc`
+
+| AAM Status | CD Status | CD Score | Logic |
+|-----------|-----------|----------|-------|
+| Compliant | 1 (Compliant) | 100 | All environments meet zone access policies |
+| Warning | 2 (Partial) | 50 | Some environments in grace period or minor gaps |
+| NonCompliant | 3 (Non-Compliant) | 0 | Environments failing access governance checks |
+| Critical | 3 (Non-Compliant) | 0 | Critical access violations detected |
+
+**Note:** AAM uses string-based status, not Choice values. Integration layer performs case-insensitive string matching.
+
+---
+
+### CMM → Control 1.8
+
+**Source table:** `fsi_moderationvalidationhistories`
+**Source fields:** `fsi_compliant_count` (Integer), `fsi_total_agents` (Integer)
+**Query:** Latest record ordered by `fsi_timestamp desc`
+
+**Compliance Rate Calculation:**
+```
+compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
+```
+
+| Compliance Rate | CD Status | CD Score | Logic |
+|----------------|-----------|----------|-------|
+| 100% | 1 (Compliant) | 100 | All agents meet zone moderation requirements |
+| ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some gaps |
+| < 80% | 3 (Non-Compliant) | 0 | Significant moderation policy gaps |
+| 0 agents | 4 (Not Applicable) | — | No agents to validate |
+
+**Score formula:** `fsi_score = compliance_rate` (direct percentage, not threshold-based). The `fsi_status` derivation uses thresholds above; `fsi_score` preserves the actual rate for trend analysis.
+
+---
+
+### FUS → Control 1.14
+
+**Source table:** `fsi_fileupload_validationhistories`
+**Source field:** `fsi_compliance_rate` (Decimal)
+**Query:** Latest record ordered by `fsi_timestamp desc`
+
+| Compliance Rate | CD Status | CD Score | Logic |
+|----------------|-----------|----------|-------|
+| 100% | 1 (Compliant) | 100 | All agents meet zone file upload policy |
+| ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some with unauthorized uploads |
+| < 80% | 3 (Non-Compliant) | 0 | Significant file upload policy violations |
+| 0 agents | 4 (Not Applicable) | — | No agents to validate |
+
+**Score formula:** Same as CMM — direct compliance rate for `fsi_score`, threshold-based for `fsi_status`.
+
+---
+
+## Assessment Record Structure
+
+When creating/updating `fsi_controlassessment` records:
+
+```json
+{
+  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters({control_guid})",
+  "fsi_assessmentdate": "2026-02-10T06:00:00Z",
+  "fsi_status": 1,
+  "fsi_score": 100,
+  "fsi_notes": "Automated assessment via ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
+  "fsi_nextreviewdate": "2026-02-11T06:00:00Z",
+  "fsi_evidencecount": 1
+}
+
+```
+
+**Key behaviors:**
+- **Upsert logic:** Match on `fsi_controlmasterid` + `fsi_zone` + date. Create new if no same-day record exists; update if exists.
+- **Zone handling:** If a solution validates across all zones, create one assessment per zone.
+- **Notes field:** Include solution name, version, run ID, and raw status for audit trail.
+- **Next review date:** Set to tomorrow (daily feed cadence).
+
+---
+
+## Evidence Registration
+
+When Tier 2 solutions export evidence packages, register them in `fsi_complianceevidence`:
+
+```json
+{
+  "fsi_name": "ACV Evidence Export — 2026-02-10",
+  "fsi_controlassessmentid@odata.bind": "/fsi_controlassessments({assessment_guid})",
+  "fsi_evidencetype": 5,
+  "fsi_description": "Automated evidence from Audit Configuration Validator. SHA-256 verified.",
+  "fsi_collecteddate": "2026-02-10T06:00:00Z",
+  "fsi_hash": "a1b2c3d4..."
+}
+```
+
+**Evidence Type:** Always `5` (Test Result) for automated solution evidence.
+
+---
+
+*Status Mapping Reference v1.0.0 — February 2026*

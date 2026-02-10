@@ -1,0 +1,215 @@
+{
+  "properties": {
+    "displayName": "ELM-SolutionInitializer",
+    "description": "Child flow triggered when ELM logs a ProvisioningCompleted action. Cascades to downstream solution registration: creates ACV environment registry entry and logs initialization for other Tier 2 solutions.",
+    "state": "Suspended",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "actions": {
+        "Get_ELM_Request": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "fsi_environmentrequests",
+              "recordId": "@triggerBody()?['_fsi_environmentrequest_value']"
+            }
+          },
+          "runAfter": {}
+        },
+        "Extract_Provisioning_Data": {
+          "type": "Compose",
+          "inputs": {
+            "environmentId": "@body('Get_ELM_Request')?['fsi_environmentid']",
+            "environmentName": "@body('Get_ELM_Request')?['fsi_environmentname']",
+            "environmentUrl": "@body('Get_ELM_Request')?['fsi_environmenturl']",
+            "zone": "@body('Get_ELM_Request')?['fsi_zone']",
+            "securityGroupId": "@body('Get_ELM_Request')?['fsi_securitygroupid']",
+            "requestNumber": "@body('Get_ELM_Request')?['fsi_requestnumber']",
+            "environmentType": "@body('Get_ELM_Request')?['fsi_environmenttype']",
+            "provisionedAt": "@utcNow()"
+          },
+          "runAfter": {
+            "Get_ELM_Request": ["Succeeded"]
+          }
+        },
+        "Register_In_ACV": {
+          "type": "Scope",
+          "actions": {
+            "Check_ACV_Exists": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_environmentregistrys",
+                  "$filter": "fsi_environmentid eq '@{outputs('Extract_Provisioning_Data')?['environmentId']}'",
+                  "$top": 1
+                }
+              },
+              "runAfter": {}
+            },
+            "ACV_Not_Registered": {
+              "type": "If",
+              "expression": {
+                "equals": ["@length(body('Check_ACV_Exists')?['value'])", 0]
+              },
+              "actions": {
+                "Create_ACV_Registry": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "fsi_environmentregistrys",
+                      "item": {
+                        "fsi_name": "@outputs('Extract_Provisioning_Data')?['environmentName']",
+                        "fsi_environmentid": "@outputs('Extract_Provisioning_Data')?['environmentId']",
+                        "fsi_zone": "@outputs('Extract_Provisioning_Data')?['zone']",
+                        "fsi_status": 1,
+                        "fsi_environmenttype": "@outputs('Extract_Provisioning_Data')?['environmentType']",
+                        "fsi_environmenturl": "@outputs('Extract_Provisioning_Data')?['environmentUrl']",
+                        "fsi_discoveredon": "@utcNow()",
+                        "fsi_notes": "Auto-registered via ELM provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
+                      }
+                    }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {
+                  "Update_ACV_Registry": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "UpdateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "fsi_environmentregistrys",
+                        "recordId": "@first(body('Check_ACV_Exists')?['value'])?['fsi_environmentregistryid']",
+                        "item": {
+                          "fsi_zone": "@outputs('Extract_Provisioning_Data')?['zone']",
+                          "fsi_status": 1,
+                          "fsi_notes": "Updated via ELM re-provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
+                        }
+                      }
+                    },
+                    "runAfter": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_ACV_Exists": ["Succeeded"]
+              }
+            }
+          },
+          "runAfter": {
+            "Extract_Provisioning_Data": ["Succeeded"]
+          }
+        },
+        "Log_Initialization": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "fsi_provisioninglogs",
+              "item": {
+                "fsi_name": "INT-Init-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
+                "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
+                "fsi_action": 11,
+                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":true,\"zone\":@{outputs('Extract_Provisioning_Data')?['zone']},\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
+                "fsi_actor": "CrossSolutionIntegration",
+                "fsi_actortype": 3,
+                "fsi_success": true
+              }
+            }
+          },
+          "runAfter": {
+            "Register_In_ACV": ["Succeeded"]
+          }
+        },
+        "Notify_Teams": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostMessageToConversation",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body": {
+                "recipient": {
+                  "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                  "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                },
+                "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ✅ Registered<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
+              }
+            }
+          },
+          "runAfter": {
+            "Log_Initialization": ["Succeeded"]
+          }
+        }
+      },
+      "triggers": {
+        "When_ProvisioningCompleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "fsi_provisioninglog",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filterexpression": "fsi_action eq 13 and fsi_success eq true"
+            }
+          }
+        }
+      },
+      "contentVersion": "1.0.0.0"
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "fsi_cr_dataverse_int",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      },
+      "shared_teams": {
+        "connectionName": "fsi_cr_teams_int",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_metadata": {
+    "solution": "Cross-Solution Integration",
+    "version": "1.0.0",
+    "description": "ELM provisioning hook. Triggers when fsi_provisioninglog records ProvisioningCompleted (action=13, success=true). Auto-registers environment in ACV fsi_environmentregistry with zone from ELM request.",
+    "trigger": "Dataverse webhook on fsi_provisioninglog create where fsi_action=13 AND fsi_success=true",
+    "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation."
+  }
+}

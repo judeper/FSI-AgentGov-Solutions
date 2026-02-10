@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "description": "Expected agent access settings per governance zone",
+  "zones": {
+    "Zone1": {
+      "description": "Personal Productivity - Permissive access for individual development",
+      "expected": {
+        "bot-limitSharingMode": "noLimit",
+        "bot-authoringSharingDisabled": false,
+        "bot-publishedBotLimitSharingMode": "noLimit"
+      },
+      "violations": {
+        "any_setting": "Info"
+      }
+    },
+    "Zone2": {
+      "description": "Team Collaboration - Moderate restrictions for shared workloads",
+      "expected": {
+        "bot-limitSharingMode": "ExcludeSharingToSecurityGroups",
+        "bot-authoringSharingDisabled": false,
+        "bot-publishedBotLimitSharingMode": "ExcludeSharingToSecurityGroups"
+      },
+      "violations": {
+        "bot-limitSharingMode_noLimit": "High",
+        "bot-publishedBotLimitSharingMode_noLimit": "High"
+      }
+    },
+    "Zone3": {
+      "description": "Enterprise Managed - Restricted access for production/customer-facing",
+      "expected": {
+        "bot-limitSharingMode": "ExcludeSharingToSecurityGroups",
+        "bot-authoringSharingDisabled": true,
+        "bot-publishedBotLimitSharingMode": "ExcludeSharingToSecurityGroups"
+      },
+      "violations": {
+        "bot-limitSharingMode_noLimit": "Critical",
+        "bot-authoringSharingDisabled_false": "Critical",
+        "bot-publishedBotLimitSharingMode_noLimit": "Critical"
+      }
+    },
+    "Unknown": {
+      "description": "Unclassified environment - requires zone assignment",
+      "expected": {},
+      "violations": {
+        "unclassified": "Warning"
+      }
+    }
+  },
+  "regulatory_context": {
+    "Critical": "FINRA 4511 - Unapproved tool distribution to customer-facing users. Immediate remediation required.",
+    "High": "SOX 404 - Insufficient access controls for regulated workloads. Review within 24 hours.",
+    "Warning": "Governance gap - Environment not assigned to zone or minor deviation. Review within 7 days.",
+    "Info": "Informational - Zone 1 allows permissive settings by design. No action required."
+  },
+  "setting_descriptions": {
+    "bot-limitSharingMode": {
+      "noLimit": "Agents can be shared with anyone in the organization",
+      "ExcludeSharingToSecurityGroups": "Agent sharing restricted to security groups only"
+    },
+    "bot-authoringSharingDisabled": {
+      "true": "Agent authoring sharing is disabled (ALM-only deployment)",
+      "false": "Agent authoring can be shared with editors"
+    },
+    "bot-publishedBotLimitSharingMode": {
+      "noLimit": "Published agents can be accessed by anyone",
+      "ExcludeSharingToSecurityGroups": "Published agent access restricted to security groups"
+    }
+  }
+}

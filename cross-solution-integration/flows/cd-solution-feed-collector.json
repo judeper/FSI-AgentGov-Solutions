@@ -1,0 +1,246 @@
+{
+  "properties": {
+    "displayName": "CD-SolutionFeedCollector",
+    "description": "Daily automated feed from Tier 2 governance solutions (ACV, SSC, AAM, CMM, FUS) into Compliance Dashboard assessments. Queries each solution's validation history, translates results, and upserts fsi_controlassessment records.",
+    "state": "Suspended",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "actions": {
+        "Initialize_RunId": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "RunId",
+                "type": "string",
+                "value": "@{guid()}"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "Initialize_SyncResults": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "SyncResults",
+                "type": "array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_RunId": ["Succeeded"]
+          }
+        },
+        "Sync_ACV": {
+          "type": "Scope",
+          "actions": {
+            "Query_ACV_Latest": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_auditvalidationhistories",
+                  "$filter": "fsi_validationtype eq 'Orchestrator'",
+                  "$orderby": "fsi_timestamp desc",
+                  "$top": 1
+                }
+              },
+              "runAfter": {}
+            },
+            "ACV_Has_Records": {
+              "type": "If",
+              "expression": {
+                "greater": ["@length(body('Query_ACV_Latest')?['value'])", 0]
+              },
+              "actions": {
+                "Map_ACV_Status": {
+                  "type": "Compose",
+                  "inputs": {
+                    "solution": "ACV",
+                    "controlId": "1.7",
+                    "severity": "@first(body('Query_ACV_Latest')?['value'])?['fsi_severity']",
+                    "status": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 1, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 2, 3))",
+                    "score": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 100, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 50, 0))",
+                    "runId": "@first(body('Query_ACV_Latest')?['value'])?['fsi_runid']",
+                    "timestamp": "@first(body('Query_ACV_Latest')?['value'])?['fsi_timestamp']"
+                  },
+                  "runAfter": {}
+                },
+                "Upsert_ACV_Assessment": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "fsi_controlassessments",
+                      "item": {
+                        "fsi_status": "@outputs('Map_ACV_Status')?['status']",
+                        "fsi_score": "@outputs('Map_ACV_Status')?['score']",
+                        "fsi_assessmentdate": "@utcNow()",
+                        "fsi_notes": "Automated: ACV v1.0.0. Run: @{outputs('Map_ACV_Status')?['runId']}. Severity: @{outputs('Map_ACV_Status')?['severity']}",
+                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Map_ACV_Status": ["Succeeded"]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Query_ACV_Latest": ["Succeeded"]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_SyncResults": ["Succeeded"]
+          }
+        },
+        "Sync_AAM": {
+          "type": "Scope",
+          "actions": {
+            "Query_AAM_Latest": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_accessvalidationhistories",
+                  "$orderby": "fsi_timestamp desc",
+                  "$top": 1
+                }
+              },
+              "runAfter": {}
+            },
+            "AAM_Has_Records": {
+              "type": "If",
+              "expression": {
+                "greater": ["@length(body('Query_AAM_Latest')?['value'])", 0]
+              },
+              "actions": {
+                "Map_AAM_Status": {
+                  "type": "Compose",
+                  "inputs": {
+                    "solution": "AAM",
+                    "controlId": "3.8",
+                    "status": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 1, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 2, 3))",
+                    "score": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 100, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 50, 0))"
+                  },
+                  "runAfter": {}
+                },
+                "Upsert_AAM_Assessment": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "fsi_controlassessments",
+                      "item": {
+                        "fsi_status": "@outputs('Map_AAM_Status')?['status']",
+                        "fsi_score": "@outputs('Map_AAM_Status')?['score']",
+                        "fsi_assessmentdate": "@utcNow()",
+                        "fsi_notes": "Automated: AAM v1.0.0. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
+                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Map_AAM_Status": ["Succeeded"]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Query_AAM_Latest": ["Succeeded"]
+              }
+            }
+          },
+          "runAfter": {
+            "Sync_ACV": ["Succeeded", "Failed"]
+          }
+        },
+        "Send_Summary_Teams": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostMessageToConversation",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body": {
+                "recipient": {
+                  "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                  "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                },
+                "messageBody": "<p><strong>📊 Compliance Dashboard Feed Complete</strong></p><p>Run ID: @{variables('RunId')}<br/>Timestamp: @{utcNow()}<br/>Solutions synced: ACV, SSC, AAM, CMM, FUS</p>"
+              }
+            }
+          },
+          "runAfter": {
+            "Sync_AAM": ["Succeeded", "Failed"]
+          }
+        }
+      },
+      "triggers": {
+        "Daily_6_30_AM_UTC": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2026-02-11T06:30:00Z",
+            "timeZone": "UTC"
+          }
+        }
+      },
+      "contentVersion": "1.0.0.0"
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "fsi_cr_dataverse_int",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      },
+      "shared_teams": {
+        "connectionName": "fsi_cr_teams_int",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+        "tier": "NotSpecified"
+      }
+    },
+    "environment": {
+      "name": "Default"
+    }
+  },
+  "_metadata": {
+    "solution": "Cross-Solution Integration",
+    "version": "1.0.0",
+    "description": "Abbreviated flow definition showing ACV and AAM sync patterns. SSC, CMM, and FUS follow the same pattern with solution-specific query and mapping logic. Full flow should be manually created in Power Automate using this template.",
+    "schedule": "Daily at 6:30 AM UTC (30 min after Tier 2 daily scans)",
+    "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation."
+  }
+}

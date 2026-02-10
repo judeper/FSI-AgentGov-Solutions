@@ -2,6 +2,36 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.0.0] - 2026-02-09
+
+### Added — Phase 4: Evidence Export & Framework Integration
+
+#### Evidence Export
+- **Export-AgentAccessEvidence.ps1** — Main evidence export script
+  - Zone-based filtering (All/1/2/3)
+  - Date range support with -FromDate and -ToDate
+  - Optional baseline inclusion with -IncludeBaselines
+  - JSON output with -Depth 10 (prevents nested object truncation)
+  - SHA-256 companion hash files in standard checksum format
+  - Interactive and certificate-based authentication modes
+
+- **Get-AAMValidationResults.ps1** (private) — Dataverse query helper
+  - Queries fsi_accessvalidationhistory and fsi_accessviolations
+  - OData filtering with automatic pagination support
+
+- **Test-EvidenceIntegrity.ps1** — SHA-256 hash verification utility
+  - Single file and batch verification modes
+  - Cross-platform hash format compatibility (shasum, certutil)
+
+#### Documentation
+- **SCHEMA.md** — Dataverse schema reference (3 tables, option sets, environment variables)
+- **EVIDENCE_EXPORT.md** — Evidence export operations guide with verification procedures
+- **TROUBLESHOOTING.md** — Common issues and resolutions (6 categories)
+
+#### Framework Integration
+- Control 3.8 tip admonition linking to Agent Access Governance Monitor solution
+- solutions-index.md catalog entry with regulatory alignment (FINRA 4511, SOX 404)
+
 ## [0.3.0] - 2025-07-17
 
 ### Added
