@@ -2,6 +2,22 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.0.0] - 2026-02-10
+
+### Added — Phase 4: Evidence Export & Framework Integration
+- `Export-ContentModerationEvidence.ps1` — SHA-256 integrity-hashed compliance evidence export with zone filtering, date range, baseline inclusion, and interactive/service principal authentication
+- `Get-CMMValidationResults.ps1` — Dataverse query helper for validation history and violations with OData pagination, zone filtering, and RunId support
+- `Test-EvidenceIntegrity.ps1` — Evidence integrity verification utility comparing computed SHA-256 against companion hash file
+- Control 1.8 tip admonition linking to Content Moderation Governance Monitor solution
+- solutions-index.md catalog entry with components, regulatory alignment, and repository link
+- `docs/SCHEMA.md` — Complete Dataverse schema reference (3 tables, option sets, environment variables, connection references, entity relationship diagram)
+- `docs/EVIDENCE_EXPORT.md` — Step-by-step evidence export guide with interactive, service principal, zone filter, and baseline inclusion examples
+- `docs/TROUBLESHOOTING.md` — Comprehensive troubleshooting guide covering deployment, authentication, validation, drift detection, evidence export, and Power Automate flow issues
+- Updated `docs/PREREQUISITES.md` with MSAL.PS module requirement for evidence export
+
+### Changed
+- README.md updated to v1.0.0 with evidence export features, Quick Start steps 5-6, expanded solution components tree, and documentation links section
+
 ## [0.3.0] - 2026-02-10
 
 ### Added

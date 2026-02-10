@@ -1,32 +1,93 @@
-# Troubleshooting
+# Troubleshooting Guide
 
-> **Status:** Stub — Troubleshooting guide will be expanded as the solution matures.
+Common issues and resolutions for the Content Moderation Governance Monitor solution.
 
-## Common Issues
+---
 
-### Cannot enumerate environments
+## Deployment Issues
 
-**Symptom:** "Access denied" or empty environment list.
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Tables not created | Insufficient Dataverse permissions | Verify executing identity has System Administrator or System Customizer role |
+| Environment variables missing | `deploy.py --vars-only` not run or failed | Re-run `python scripts/deploy.py --vars-only`; check for existing variables with same schema name |
+| Connection reference errors | Connector not available in environment | Verify Office 365 Outlook, Teams, and Dataverse connectors are available in the target environment |
+| `deploy.py` fails with 403 | MSAL token lacks Dataverse scope | Verify app registration has `user_impersonation` scope for Dataverse; re-authenticate |
+| Duplicate option set error | `fsi_acv_zone` or `fsi_acv_severity` already exists from ACV/SSC deployment | Expected — `create_dataverse_schema.py` checks for existing option sets before creation |
 
-**Resolution:**
-1. Verify you have Power Platform Admin or Global Admin role
-2. Run `Add-PowerAppsAccount` to authenticate
-3. Confirm network access to `api.bap.microsoft.com`
+---
 
-### Bot table query fails
+## Authentication Issues
 
-**Symptom:** "Failed to query bots" warning for specific environments.
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Certificate auth 401 | Certificate not associated with app registration | Upload certificate to the app registration in Entra ID; verify thumbprint matches |
+| MSAL token error | `MSAL.PS` module not installed | Run `Install-Module MSAL.PS -Scope CurrentUser` |
+| Dataverse 401 Unauthorized | Token expired or wrong audience | Re-authenticate; verify token audience matches Dataverse URL |
+| Dataverse 403 Forbidden | Missing security role in target environment | Add executing identity as application user with read access to CMM tables |
+| Interactive auth popup blocked | PowerShell session does not support interactive UI | Use `-CertificateThumbprint` and `-ClientId` for non-interactive auth |
 
-**Resolution:**
-1. Verify the target environment has Dataverse provisioned
-2. Confirm your identity has read access to the `bot` table
-3. Check `Connect-EnvironmentDataverse.ps1` token acquisition
+---
 
-### Unknown moderation level
+## Validation Issues
 
-**Symptom:** Agents report `Unknown` moderation level.
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| No agents found | Environment has no Copilot Studio bots, or bots are all drafts | Verify bots exist; use `-IncludeDrafts` to scan unpublished agents |
+| Unknown moderation level | Bot `configuration` JSON does not contain content moderation settings | Agent may not have generative AI enabled; Unknown agents receive Warning severity |
+| Zone lookup failure | ELM `fsi_environment` table not deployed or empty | Verify ELM deployment; falls back to naming convention matching (`-Z1-`, `-Z2-`, `-Z3-` in environment name) |
+| Bot metadata query error | Environment Dataverse not provisioned | Skip environments without Dataverse; these cannot host Copilot Studio bots |
+| Sandbox environments included | `fsi_CMM_IncludeSandbox` set to true | Set environment variable to `false` or use `-ExcludeSandbox` parameter |
+| Moderation level shows "strict" | Older Copilot Studio version uses non-standard labels | `Get-BotModerationLevel` normalizes "strict" → "High" and "standard" → "Medium" |
 
-**Resolution:**
-- The bot's `configuration` JSON blob may not contain content moderation settings
+---
+
+## Drift Detection Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| No baseline found for agent | `Invoke-ModerationBaselineCapture.ps1` not yet run | Capture initial baselines: `.\scripts\Invoke-ModerationBaselineCapture.ps1 -DataverseUrl ...` |
+| Drift always detected | Baseline agent ID does not match current bot GUID | Re-capture baselines; bot GUIDs may change after republish |
+| Baseline deactivation failure | Dataverse update permission missing | Verify executing identity has write access to `fsi_moderationbaselines` table |
+| Runbook timeout on large tenant | Many environments with many agents per environment | Increase Azure Automation job timeout; consider filtering by zone (`-Zone 3`) |
+| Stale baseline warning | Baseline older than `fsi_CMM_BaselineAgeThresholdDays` | Re-capture baselines to refresh timestamps |
+
+---
+
+## Evidence Export Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Empty evidence file | No validation scans in date range | Check `FromDate`/`ToDate` parameters; verify scans have been executed |
+| Hash mismatch after file copy | File encoding changed during transfer | Re-export from source system; ensure UTF-8 encoding preserved during copy |
+| ConvertTo-Json truncation | Nested objects beyond serialization depth | Script uses `-Depth 10`; if still truncated, inspect source data structure |
+| Zone filter returns no results | No violations for specified zone | Verify zone classification is correct; try `-Zone All` first |
+| Pagination timeout | Very large validation history (10000+ records) | Narrow date range with `-FromDate` and `-ToDate` parameters |
+| Missing baselines section | `-IncludeBaselines` not specified | Re-run with `-IncludeBaselines` switch |
+
+---
+
+## Power Automate Flow Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Flow not triggering | Recurrence trigger misconfigured or flow disabled | Verify flow is turned on; check recurrence interval (default: 24 hours) |
+| Adaptive card not posting | Teams connection reference not configured | Open flow → edit → update `fsi_cr_teams_moderationmonitor` connection reference |
+| Connection reference not configured | First-run setup not completed | Edit flow, select each connection reference action, and bind to active connections |
+| JSON parsing error in flow | Runbook output format changed | Verify `Start-ModerationValidationRunbook.ps1` output matches expected JSON schema |
+| Flow timeout | Runbook execution exceeds flow timeout | Increase flow timeout or reduce scan scope (filter by zone) |
+| Email notification not sent | Office 365 connection reference not bound | Configure `fsi_cr_office365_moderationmonitor` with a mailbox that can send |
+
+---
+
+## Related Documentation
+
+- [PREREQUISITES.md](PREREQUISITES.md) — Module and permission requirements
+- [SCHEMA.md](SCHEMA.md) — Dataverse schema reference
+- [EVIDENCE_EXPORT.md](EVIDENCE_EXPORT.md) — Evidence export guide
+- [FLOW_SETUP.md](FLOW_SETUP.md) — Power Automate flow deployment
+
+---
+
+*Content Moderation Governance Monitor — Troubleshooting Guide v1.0.0*
 - Check if `botcomponent` records contain moderation configuration
 - Some bot types (classic PVA) may not expose moderation via the Dataverse API

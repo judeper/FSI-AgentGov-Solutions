@@ -8,6 +8,8 @@ The Content Moderation Monitor detects when Copilot Studio agents have insuffici
 
 It supports Control 1.14 (Content Moderation) and related controls by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
 
+**Version:** 1.0.0
+
 ## Quick Start
 
 ```powershell
@@ -22,6 +24,17 @@ Add-PowerAppsAccount
 
 # 4. Run full validation
 ./scripts/Test-ContentModerationCompliance.ps1 -ExcludeSandbox
+
+# 5. Export compliance evidence
+./scripts/Export-ContentModerationEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "your-tenant-id" `
+    -OutputDirectory ".\exports" `
+    -Interactive
+
+# 6. Verify evidence integrity
+./scripts/Test-EvidenceIntegrity.ps1 `
+    -EvidenceFilePath ".\exports\cmm-evidence-All-*.json"
 ```
 
 ## Zone Requirements
@@ -56,6 +69,10 @@ Each governance zone has a minimum required content moderation level:
 | **Severity Classification** | Critical/High/Medium/Warning per zone and moderation level |
 | **Regulatory Context** | FINRA 3110, SOX 404, GLBA 501(b) context for each violation |
 | **Environment Filtering** | Exclude sandbox, trial, default, or newly provisioned environments |
+| **Drift Detection** | Daily baseline comparison detects configuration changes |
+| **Teams Alerting** | Adaptive card alerts with severity classification and regulatory context |
+| **Evidence Export** | SHA-256 integrity-hashed JSON evidence for regulatory examinations |
+| **Evidence Verification** | Tamper detection via companion hash file verification |
 
 ## Solution Components
 
@@ -65,21 +82,30 @@ content-moderation-monitor/
 │   ├── Get-AgentModerationSettings.ps1    # Query agent moderation levels
 │   ├── Compare-ModerationCompliance.ps1   # Compare levels vs requirements
 │   ├── Test-ContentModerationCompliance.ps1 # Validation orchestrator
+│   ├── Start-ModerationValidationRunbook.ps1 # Azure Automation runbook wrapper
+│   ├── Invoke-ModerationBaselineCapture.ps1  # Baseline capture utility
+│   ├── Export-ContentModerationEvidence.ps1   # SHA-256 evidence export
+│   ├── Test-EvidenceIntegrity.ps1             # Evidence hash verification
 │   └── private/
-│       ├── CMMClient.psm1                 # Dataverse client
+│       ├── CMMClient.psm1                 # Dataverse client module
+│       ├── Get-CMMValidationResults.ps1   # Evidence query helper
 │       ├── Get-ZoneClassification.ps1     # Zone lookup helper
 │       ├── Get-ExpectedModerationLevel.ps1 # Moderation level reference
 │       ├── Test-ParameterValidation.ps1   # Parameter validators
 │       └── Connect-EnvironmentDataverse.ps1 # Per-env Dataverse auth
-├── src/dataverse/                         # Dataverse schema (Phase 2)
+├── src/
+│   ├── adaptive-card-moderation-alert.json # Teams alert template
+│   ├── moderation-validation-flow.json     # Power Automate flow
+│   └── dataverse/                          # Dataverse schema definitions
 ├── templates/
 │   └── moderation-baseline.json           # Zone requirements reference
-├── flows/                                 # Power Automate flows (Phase 3)
+├── flows/                                 # Power Automate flow exports
 └── docs/
-    ├── PREREQUISITES.md
-    ├── SCHEMA.md
-    ├── EVIDENCE_EXPORT.md
-    └── TROUBLESHOOTING.md
+    ├── PREREQUISITES.md                   # Module and permission requirements
+    ├── SCHEMA.md                          # Dataverse schema reference
+    ├── EVIDENCE_EXPORT.md                 # Evidence export guide
+    ├── FLOW_SETUP.md                      # Power Automate setup guide
+    └── TROUBLESHOOTING.md                 # Troubleshooting guide
 ```
 
 ## Key Difference from Agent Access Monitor
@@ -98,6 +124,14 @@ This means:
 | [1.14 - Content Moderation](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-content-moderation-configuration/) | Primary — Agent content moderation levels |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
+
+## Documentation
+
+- [Prerequisites](docs/PREREQUISITES.md) — Module and permission requirements
+- [Dataverse Schema](docs/SCHEMA.md) — Table, column, and option set reference
+- [Evidence Export](docs/EVIDENCE_EXPORT.md) — Compliance evidence export guide
+- [Flow Setup](docs/FLOW_SETUP.md) — Power Automate deployment guide
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and resolutions
 
 ## Prerequisites
 

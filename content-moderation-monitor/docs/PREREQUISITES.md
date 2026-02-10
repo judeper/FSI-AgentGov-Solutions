@@ -9,6 +9,7 @@ Requirements for deploying the Content Moderation Monitor solution.
 | PowerShell | 7.0+ | Core runtime |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
+| MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
 
 ## Installation
 
