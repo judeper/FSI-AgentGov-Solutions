@@ -1,28 +1,65 @@
 <#
 .SYNOPSIS
-    Registers a service principal for CA policy automation.
+    Registers an Entra ID service principal for Conditional Access policy automation.
 
 .DESCRIPTION
-    Creates an Entra ID app registration with required Graph API permissions
-    for Conditional Access policy management, and stores credentials in Key Vault.
+    Creates an Entra ID app registration with the Microsoft Graph API permissions
+    required for Conditional Access policy management and stores the resulting
+    credentials in Azure Key Vault.
+
+    The app registration receives the following application (Role) permissions:
+      - Policy.Read.All — read CA policies and named locations
+      - Policy.ReadWrite.ConditionalAccess — create and update CA policies
+      - Application.Read.All — enumerate app registrations
+      - Directory.Read.All — read directory objects (users, groups)
+      - AuditLog.Read.All — read sign-in and audit logs
+
+    Supports WhatIf/Confirm via ShouldProcess so administrators can preview
+    each Graph API and Key Vault operation before execution. The legacy -DryRun
+    switch is retained for backward compatibility and maps to -WhatIf internally.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    The Entra ID (Azure AD) tenant GUID to register the app in.
 
 .PARAMETER AppName
-    Display name for the app registration.
+    Display name for the app registration. Should follow organizational
+    naming conventions (e.g., "CAA-Automation-SP").
 
 .PARAMETER KeyVaultName
-    Azure Key Vault name for credential storage.
+    Name of the Azure Key Vault where client credentials will be stored.
+    The running user must have Set permission on secrets.
 
 .PARAMETER DryRun
-    Preview changes without creating resources.
+    [Obsolete] Legacy switch retained for backward compatibility. Maps to
+    -WhatIf internally. Prefer using -WhatIf instead.
 
 .EXAMPLE
-    .\Register-ServicePrincipal.ps1 -TenantId "xxx" -AppName "CAA-Automation-SP" -KeyVaultName "kv-caa"
+    .\Register-ServicePrincipal.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -AppName "CAA-Automation-SP" -KeyVaultName "kv-caa" -WhatIf
+
+    Previews all registration steps without creating any resources.
+
+.EXAMPLE
+    .\Register-ServicePrincipal.ps1 -TenantId "contoso.onmicrosoft.com" -AppName "CAA-Automation-SP" -KeyVaultName "kv-caa"
+
+    Creates the app registration, service principal, client secret, and stores
+    credentials in Key Vault. Outputs the admin consent URL.
+
+.EXAMPLE
+    .\Register-ServicePrincipal.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -AppName "CAA-Prod-SP" -KeyVaultName "kv-caa-prod" -Confirm:$false
+
+    Runs without interactive confirmation prompts.
+
+.OUTPUTS
+    None. Status output is written to the host and verbose streams.
+
+.NOTES
+    File: Register-ServicePrincipal.ps1
+    Version: 2.0.0
+    Supports compliance with FINRA 4511 and SEC 17a-4 by establishing
+    auditable, least-privilege service identities for CA automation.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory = $true)]
     [string]$TenantId,
@@ -33,6 +70,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$KeyVaultName,
 
+    # [Obsolete("Use -WhatIf instead of -DryRun. -DryRun is retained for backward compatibility.")]
     [Parameter(Mandatory = $false)]
     [switch]$DryRun
 )
@@ -43,16 +81,22 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-Write-Host "=" * 60 -ForegroundColor Cyan
+# Import private helpers
+. $PSScriptRoot/private/Connect-GraphSession.ps1
+
+# Map legacy -DryRun to WhatIf
+if ($DryRun) { $WhatIfPreference = $true }
+
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Service Principal Registration" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Tenant: $TenantId"
 Write-Host "App Name: $AppName"
 Write-Host "Key Vault: $KeyVaultName"
-Write-Host "Mode: $(if ($DryRun) { 'DRY RUN' } else { 'CREATE' })"
+Write-Host "Mode: $(if ($WhatIfPreference) { 'DRY RUN (WhatIf)' } else { 'CREATE' })"
 Write-Host ""
 
-# Define required permissions
+# Define required permissions with inline documentation
 $requiredPermissions = @(
     @{
         ResourceAppId = "00000003-0000-0000-c000-000000000000"  # Microsoft Graph
@@ -66,16 +110,15 @@ $requiredPermissions = @(
     }
 )
 
-Write-Host "Required Microsoft Graph permissions:"
-Write-Host "  - Policy.Read.All"
-Write-Host "  - Policy.ReadWrite.ConditionalAccess"
-Write-Host "  - Application.Read.All"
-Write-Host "  - Directory.Read.All"
-Write-Host "  - AuditLog.Read.All"
-Write-Host ""
+Write-Verbose "Required Microsoft Graph permissions:"
+Write-Verbose "  - 246dd0d5-... = Policy.Read.All"
+Write-Verbose "  - 01c0a623-... = Policy.ReadWrite.ConditionalAccess"
+Write-Verbose "  - 9a5d68dd-... = Application.Read.All"
+Write-Verbose "  - 7ab1d382-... = Directory.Read.All"
+Write-Verbose "  - b0afded3-... = AuditLog.Read.All"
 
-if ($DryRun) {
-    Write-Host "[DRY RUN] Would perform the following:" -ForegroundColor Yellow
+if ($WhatIfPreference) {
+    Write-Host "[WhatIf] Would perform the following:" -ForegroundColor Yellow
     Write-Host "  1. Create app registration: $AppName"
     Write-Host "  2. Add required Graph API permissions"
     Write-Host "  3. Create client secret (1 year expiry)"
@@ -88,18 +131,20 @@ if ($DryRun) {
 }
 
 # Connect to Microsoft Graph
-Write-Host "Connecting to Microsoft Graph..."
-Connect-MgGraph -TenantId $TenantId -Scopes "Application.ReadWrite.All"
-Write-Host "Connected." -ForegroundColor Green
+Write-Verbose "Establishing Microsoft Graph session..."
+Connect-CAAGraphSession -TenantId $TenantId -Scopes @('Application.ReadWrite.All')
+Write-Verbose "Connected."
 
 # Check if app already exists
-Write-Host "`nChecking for existing app registration..."
+Write-Verbose "Checking for existing app registration..."
 $existingApp = Get-MgApplication -Filter "displayName eq '$AppName'" -ErrorAction SilentlyContinue
 
 if ($existingApp) {
-    Write-Host "App registration already exists: $($existingApp.AppId)" -ForegroundColor Yellow
-    $response = Read-Host "Do you want to update it? (y/n)"
-    if ($response -ne "y") {
+    Write-Verbose "App registration already exists: $($existingApp.AppId)"
+    if (-not $PSCmdlet.ShouldContinue(
+        "App registration '$AppName' already exists ($($existingApp.AppId)). Update it?",
+        "Existing app found"
+    )) {
         Write-Host "Aborted." -ForegroundColor Yellow
         return
     }
@@ -107,67 +152,78 @@ if ($existingApp) {
 }
 else {
     # Create app registration
-    Write-Host "`nCreating app registration..."
-    $appParams = @{
-        DisplayName = $AppName
-        SignInAudience = "AzureADMyOrg"
-        RequiredResourceAccess = $requiredPermissions
+    if ($PSCmdlet.ShouldProcess("App registration: $AppName", "Create in tenant $TenantId")) {
+        Write-Verbose "Creating app registration..."
+        $appParams = @{
+            DisplayName = $AppName
+            SignInAudience = "AzureADMyOrg"
+            RequiredResourceAccess = $requiredPermissions
+        }
+        $app = New-MgApplication @appParams
+        Write-Verbose "Created app: $($app.AppId)"
     }
-    $app = New-MgApplication @appParams
-    Write-Host "Created app: $($app.AppId)" -ForegroundColor Green
+    else {
+        return
+    }
 }
 
 # Create service principal if it doesn't exist
-Write-Host "`nChecking service principal..."
+Write-Verbose "Checking service principal..."
 $sp = Get-MgServicePrincipal -Filter "appId eq '$($app.AppId)'" -ErrorAction SilentlyContinue
 if (-not $sp) {
-    Write-Host "Creating service principal..."
-    $sp = New-MgServicePrincipal -AppId $app.AppId
-    Write-Host "Created service principal: $($sp.Id)" -ForegroundColor Green
+    if ($PSCmdlet.ShouldProcess("Service principal for app: $($app.AppId)", "Create in tenant $TenantId")) {
+        Write-Verbose "Creating service principal..."
+        $sp = New-MgServicePrincipal -AppId $app.AppId
+        Write-Verbose "Created service principal: $($sp.Id)"
+    }
 }
 else {
-    Write-Host "Service principal exists: $($sp.Id)"
+    Write-Verbose "Service principal exists: $($sp.Id)"
 }
 
 # Create client secret
-Write-Host "`nCreating client secret..."
-$secretParams = @{
-    PasswordCredential = @{
-        DisplayName = "CAA-Automation-Secret"
-        EndDateTime = (Get-Date).AddYears(1)
+if ($PSCmdlet.ShouldProcess("Client secret for app: $AppName", "Create with 1-year expiry")) {
+    Write-Verbose "Creating client secret..."
+    $secretParams = @{
+        PasswordCredential = @{
+            DisplayName = "CAA-Automation-Secret"
+            EndDateTime = (Get-Date).AddYears(1)
+        }
     }
+    $secret = Add-MgApplicationPassword -ApplicationId $app.Id -BodyParameter $secretParams
+    Write-Verbose "Client secret created (expires: $($secret.EndDateTime))"
 }
-$secret = Add-MgApplicationPassword -ApplicationId $app.Id -BodyParameter $secretParams
-Write-Host "Client secret created (expires: $($secret.EndDateTime))" -ForegroundColor Green
 
 # Store in Key Vault
-Write-Host "`nStoring credentials in Key Vault..."
-try {
-    Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
+if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials (ClientId, ClientSecret, TenantId)")) {
+    Write-Verbose "Storing credentials in Key Vault..."
+    try {
+        Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
 
-    # Store client ID
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue $app.AppId | Out-Null
-    Write-Host "  Stored: CAA-SP-ClientId" -ForegroundColor Green
+        # Store client ID
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue $app.AppId | Out-Null
+        Write-Verbose "  Stored: CAA-SP-ClientId"
 
-    # Store client secret
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue $secret.SecretText | Out-Null
-    Write-Host "  Stored: CAA-SP-ClientSecret" -ForegroundColor Green
+        # Store client secret
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue $secret.SecretText | Out-Null
+        Write-Verbose "  Stored: CAA-SP-ClientSecret"
 
-    # Store tenant ID
-    Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue $TenantId | Out-Null
-    Write-Host "  Stored: CAA-TenantId" -ForegroundColor Green
-}
-catch {
-    Write-Host "Warning: Could not store in Key Vault: $_" -ForegroundColor Yellow
-    Write-Host "Please manually store the following:" -ForegroundColor Yellow
-    Write-Host "  Client ID: $($app.AppId)"
-    Write-Host "  Client Secret: $($secret.SecretText)"
+        # Store tenant ID
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue $TenantId | Out-Null
+        Write-Verbose "  Stored: CAA-TenantId"
+    }
+    catch {
+        Write-Host "Warning: Could not store in Key Vault: $_" -ForegroundColor Yellow
+        Write-Host "Please manually store the following:" -ForegroundColor Yellow
+        Write-Host "  Client ID: $($app.AppId)"
+        Write-Host "  Client Secret: $($secret.SecretText)"
+    }
 }
 
 # Output summary
-Write-Host "`n" + "=" * 60 -ForegroundColor Cyan
+Write-Host ("`n" + "=" * 60) -ForegroundColor Cyan
 Write-Host "Service Principal Created" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 
 Write-Host "`nApplication Details:"
 Write-Host "  Display Name: $AppName"
