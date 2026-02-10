@@ -1,0 +1,608 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": {
+      "defaultValue": {},
+      "type": "Object"
+    }
+  },
+  "triggers": {
+    "Recurrence": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "schedule": {
+          "hours": ["6"],
+          "minutes": [0]
+        },
+        "timeZone": "UTC"
+      },
+      "type": "Recurrence"
+    }
+  },
+  "actions": {
+    "Initialize_DataverseUrl": {
+      "runAfter": {},
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "DataverseUrl",
+            "type": "string",
+            "value": "https://governance.crm.dynamics.com"
+          }
+        ]
+      },
+      "description": "Central Dataverse organization URL for validation history and baselines"
+    },
+    "Initialize_TenantId": {
+      "runAfter": {
+        "Initialize_DataverseUrl": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TenantId",
+            "type": "string",
+            "value": "contoso.onmicrosoft.com"
+          }
+        ]
+      },
+      "description": "Azure AD tenant ID"
+    },
+    "Initialize_ClientId": {
+      "runAfter": {
+        "Initialize_TenantId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ClientId",
+            "type": "string",
+            "value": "your-client-id-here"
+          }
+        ]
+      },
+      "description": "Azure AD application client ID for certificate-based authentication"
+    },
+    "Initialize_CertificateThumbprint": {
+      "runAfter": {
+        "Initialize_ClientId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "CertificateThumbprint",
+            "type": "string",
+            "value": "your-certificate-thumbprint-here"
+          }
+        ]
+      },
+      "description": "Certificate thumbprint for service principal authentication"
+    },
+    "Initialize_SubscriptionId": {
+      "runAfter": {
+        "Initialize_CertificateThumbprint": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "SubscriptionId",
+            "type": "string",
+            "value": "your-subscription-id-here"
+          }
+        ]
+      },
+      "description": "Azure subscription ID containing Automation Account"
+    },
+    "Initialize_ResourceGroup": {
+      "runAfter": {
+        "Initialize_SubscriptionId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ResourceGroup",
+            "type": "string",
+            "value": "rg-content-moderation-monitor"
+          }
+        ]
+      },
+      "description": "Azure resource group containing Automation Account"
+    },
+    "Initialize_AutomationAccount": {
+      "runAfter": {
+        "Initialize_ResourceGroup": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "AutomationAccount",
+            "type": "string",
+            "value": "aa-content-moderation-monitor"
+          }
+        ]
+      },
+      "description": "Azure Automation Account name"
+    },
+    "Initialize_TeamsGroupId": {
+      "runAfter": {
+        "Initialize_AutomationAccount": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TeamsGroupId",
+            "type": "string",
+            "value": "your-teams-group-id-here"
+          }
+        ]
+      },
+      "description": "Teams group (team) ID for alert notifications"
+    },
+    "Initialize_TeamsChannelId": {
+      "runAfter": {
+        "Initialize_TeamsGroupId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TeamsChannelId",
+            "type": "string",
+            "value": "your-teams-channel-id-here"
+          }
+        ]
+      },
+      "description": "Teams channel ID for alert notifications"
+    },
+    "Initialize_ComplianceDistributionList": {
+      "runAfter": {
+        "Initialize_TeamsChannelId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ComplianceDistributionList",
+            "type": "string",
+            "value": "compliance-alerts@contoso.com"
+          }
+        ]
+      },
+      "description": "Email distribution list for compliance alerts"
+    },
+    "Scope_Try": {
+      "actions": {
+        "Create_Automation_Job": {
+          "runAfter": {},
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['azureautomation']['connectionId']"
+              }
+            },
+            "method": "put",
+            "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs",
+            "queries": {
+              "runbookName": "Start-ModerationValidationRunbook",
+              "wait": false,
+              "x-ms-api-version": "2015-10-31"
+            },
+            "body": {
+              "properties": {
+                "parameters": {
+                  "TenantId": "@{variables('TenantId')}",
+                  "ClientId": "@{variables('ClientId')}",
+                  "CertificateThumbprint": "@{variables('CertificateThumbprint')}",
+                  "DataverseUrl": "@{variables('DataverseUrl')}"
+                }
+              }
+            }
+          },
+          "description": "Start Azure Automation runbook for content moderation compliance validation"
+        },
+        "Wait_For_Job": {
+          "runAfter": {
+            "Create_Automation_Job": ["Succeeded"]
+          },
+          "type": "Until",
+          "expression": "@or(equals(body('Get_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Get_Job_Status')?['properties']?['status'], 'Suspended'))",
+          "limit": {
+            "count": 240,
+            "timeout": "PT2H"
+          },
+          "actions": {
+            "Delay": {
+              "runAfter": {},
+              "type": "Wait",
+              "inputs": {
+                "interval": {
+                  "count": 30,
+                  "unit": "Second"
+                }
+              },
+              "description": "Wait 30 seconds before checking job status"
+            },
+            "Get_Job_Status": {
+              "runAfter": {
+                "Delay": ["Succeeded"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureautomation']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}",
+                "queries": {
+                  "x-ms-api-version": "2015-10-31"
+                }
+              },
+              "description": "Check runbook job status"
+            }
+          },
+          "description": "Wait until runbook job completes or fails (max 2 hours)"
+        },
+        "Check_Job_Failed": {
+          "runAfter": {
+            "Wait_For_Job": ["Succeeded"]
+          },
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Failed"
+                ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Stopped"
+                ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Suspended"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Send_Job_Failure_Email": {
+              "runAfter": {},
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@variables('ComplianceDistributionList')",
+                  "Subject": "[CRITICAL] Content Moderation Validation Job Failed",
+                  "Body": "<p><strong>Azure Automation job failed</strong></p><p>Runbook: Start-ModerationValidationRunbook<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
+                  "Importance": "High"
+                }
+              },
+              "description": "Send email notification on job failure"
+            },
+            "Terminate_Failed": {
+              "runAfter": {
+                "Send_Job_Failure_Email": ["Succeeded"]
+              },
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "message": "Azure Automation job failed: @{body('Get_Job_Status')?['properties']?['status']}"
+                }
+              }
+            }
+          },
+          "description": "Handle job failure - send alert and terminate"
+        },
+        "Get_Job_Output": {
+          "runAfter": {
+            "Check_Job_Failed": ["Succeeded"]
+          },
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['azureautomation']['connectionId']"
+              }
+            },
+            "method": "get",
+            "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}/output",
+            "queries": {
+              "x-ms-api-version": "2015-10-31"
+            }
+          },
+          "description": "Retrieve runbook job output (JSON string)"
+        },
+        "Parse_Results": {
+          "runAfter": {
+            "Get_Job_Output": ["Succeeded"]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Get_Job_Output')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "RunType": { "type": "string" },
+                "Timestamp": { "type": "string" },
+                "TotalAgents": { "type": "integer" },
+                "TotalEnvironments": { "type": "integer" },
+                "OverallStatus": { "type": "string" },
+                "Reason": { "type": "string" },
+                "ZoneSummary": {
+                  "type": "object",
+                  "properties": {
+                    "Zone1": {
+                      "type": "object",
+                      "properties": {
+                        "Total": { "type": "integer" },
+                        "Compliant": { "type": "integer" },
+                        "Violations": { "type": "integer" }
+                      }
+                    },
+                    "Zone2": {
+                      "type": "object",
+                      "properties": {
+                        "Total": { "type": "integer" },
+                        "Compliant": { "type": "integer" },
+                        "Violations": { "type": "integer" }
+                      }
+                    },
+                    "Zone3": {
+                      "type": "object",
+                      "properties": {
+                        "Total": { "type": "integer" },
+                        "Compliant": { "type": "integer" },
+                        "Violations": { "type": "integer" }
+                      }
+                    }
+                  }
+                },
+                "Violations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "AgentId": { "type": "string" },
+                      "AgentName": { "type": "string" },
+                      "EnvironmentId": { "type": "string" },
+                      "EnvironmentName": { "type": "string" },
+                      "Zone": { "type": "string" },
+                      "ExpectedModerationLevel": { "type": "string" },
+                      "ActualModerationLevel": { "type": "string" },
+                      "Severity": { "type": "string" },
+                      "RegulatoryContext": { "type": "string" }
+                    }
+                  }
+                },
+                "Drift": {
+                  "type": "object",
+                  "properties": {
+                    "HasDrift": { "type": "boolean" },
+                    "IsFirstRun": { "type": "boolean" },
+                    "DriftedAgents": { "type": "integer" },
+                    "Details": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "AgentId": { "type": "string" },
+                          "AgentName": { "type": "string" },
+                          "EnvironmentId": { "type": "string" },
+                          "EnvironmentName": { "type": "string" },
+                          "Zone": { "type": "string" },
+                          "HasDrift": { "type": "boolean" },
+                          "IsFirstRun": { "type": "boolean" },
+                          "Direction": { "type": "string" },
+                          "BaselineLevel": { "type": "string" },
+                          "CurrentLevel": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "AlertRequired": { "type": "boolean" },
+                "AlertSeverity": { "type": "string" }
+              }
+            }
+          },
+          "description": "Parse JSON output from runbook into typed properties. Schema matches CMM runbook output with TotalAgents, per-agent violations, and agent-level drift object."
+        },
+        "Write_Validation_History": {
+          "runAfter": {
+            "Parse_Results": ["Succeeded"]
+          },
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['dataverse']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/api/data/v9.2/fsi_moderationvalidationhistory",
+            "headers": {
+              "Content-Type": "application/json",
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0"
+            },
+            "body": {
+              "fsi_name": "ModerationScan-@{body('Parse_Results')?['Timestamp']}",
+              "fsi_runid": "@{guid()}",
+              "fsi_overallstatus": "@{body('Parse_Results')?['OverallStatus']}",
+              "fsi_violationcount": "@{length(body('Parse_Results')?['Violations'])}",
+              "fsi_totalagents": "@{body('Parse_Results')?['TotalAgents']}",
+              "fsi_environments_scanned": "@{string(body('Parse_Results')?['TotalEnvironments'])}",
+              "fsi_summaryjson": "@{string(body('Parse_Results'))}",
+              "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}"
+            }
+          },
+          "description": "Write validation results to Dataverse immutable audit trail (runs for ALL results, not just alerts). This action runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_moderationmonitor"
+        },
+        "Check_Alert_Required": {
+          "runAfter": {
+            "Write_Validation_History": ["Succeeded", "Failed"]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@body('Parse_Results')?['AlertRequired']",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Check_Severity_For_Teams": {
+              "runAfter": {},
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "equals": [
+                      "@body('Parse_Results')?['AlertSeverity']",
+                      "Critical"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@body('Parse_Results')?['OverallStatus']",
+                      "Failed"
+                    ]
+                  },
+                  {
+                    "equals": [
+                      "@body('Parse_Results')?['OverallStatus']",
+                      "Error"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Post_Teams_Card": {
+                  "runAfter": {},
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['teams']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/v1.0/teams/@{variables('TeamsGroupId')}/channels/@{variables('TeamsChannelId')}/messages",
+                    "body": {
+                      "rootMessage": {
+                        "body": {
+                          "contentType": "html",
+                          "content": "<attachment id=\"adaptive-card\"></attachment>"
+                        },
+                        "attachments": [
+                          {
+                            "contentType": "application/vnd.microsoft.card.adaptive",
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Content Moderation Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-content-moderation-governance-monitor/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']))"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity. Connection: fsi_cr_teams_moderationmonitor"
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "description": "Only post Teams card for Critical/Failed/Error status"
+            },
+            "Send_Alert_Email": {
+              "runAfter": {
+                "Check_Severity_For_Teams": ["Succeeded"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@variables('ComplianceDistributionList')",
+                  "Subject": "[ALERT] Content Moderation Governance - @{body('Parse_Results')?['OverallStatus']} - @{body('Parse_Results')?['AlertSeverity']}",
+                  "Body": "<h3>Content Moderation Governance Monitor Alert</h3><table><tr><td><strong>Status:</strong></td><td>@{body('Parse_Results')?['OverallStatus']}</td></tr><tr><td><strong>Severity:</strong></td><td>@{body('Parse_Results')?['AlertSeverity']}</td></tr><tr><td><strong>Total Agents:</strong></td><td>@{body('Parse_Results')?['TotalAgents']}</td></tr><tr><td><strong>Total Environments:</strong></td><td>@{body('Parse_Results')?['TotalEnvironments']}</td></tr><tr><td><strong>Violations:</strong></td><td>@{length(body('Parse_Results')?['Violations'])}</td></tr><tr><td><strong>Reason:</strong></td><td>@{body('Parse_Results')?['Reason']}</td></tr><tr><td><strong>Timestamp:</strong></td><td>@{body('Parse_Results')?['Timestamp']}</td></tr></table><h4>Zone Summary</h4><ul><li><strong>Zone 1:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total']} agents compliant</li><li><strong>Zone 2:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total']} agents compliant</li><li><strong>Zone 3:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']} agents compliant</li></ul><h4>Drift Detection</h4><p>Drifted Agents: @{body('Parse_Results')?['Drift']?['DriftedAgents']}</p><p><a href=\"https://admin.powerplatform.microsoft.com/environments\">View in Power Platform Admin Center</a></p>",
+                  "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
+                }
+              },
+              "description": "Send email alert to compliance distribution list for all alert-required results. Connection: fsi_cr_office365_moderationmonitor"
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "description": "Route alerts based on AlertRequired flag. Critical/Failed -> Teams + email; High/Warning -> email only; Passed -> no alert"
+        }
+      },
+      "runAfter": {
+        "Initialize_ComplianceDistributionList": ["Succeeded"]
+      },
+      "type": "Scope",
+      "description": "Main validation execution scope with error handling"
+    },
+    "Scope_Catch": {
+      "actions": {
+        "Send_Critical_Error_Email": {
+          "runAfter": {},
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['office365']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@variables('ComplianceDistributionList')",
+              "Subject": "[CRITICAL] CMM Flow Execution Failed",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: CMM - Content Moderation Validation (Daily)<br>Timestamp: @{utcNow()}</p><p>Review flow run history in Power Automate for details.</p>",
+              "Importance": "High"
+            }
+          },
+          "description": "Send CRITICAL error notification when the flow itself fails"
+        }
+      },
+      "runAfter": {
+        "Scope_Try": ["Failed", "Skipped", "TimedOut"]
+      },
+      "type": "Scope",
+      "description": "Error handling scope - sends CRITICAL email when flow execution fails"
+    }
+  },
+  "outputs": {}
+}
