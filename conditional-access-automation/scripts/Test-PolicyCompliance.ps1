@@ -1,28 +1,69 @@
 <#
 .SYNOPSIS
-    Tests Conditional Access policy compliance and coverage.
+    Tests Conditional Access policy compliance, coverage, and session controls.
 
 .DESCRIPTION
-    Verifies that CA policies are properly configured, covering all required
-    zones and applications, with correct grant and session controls.
+    Verifies that Conditional Access policies are properly configured, covering all
+    required governance zones and AI applications with correct grant controls, session
+    controls, and break-glass exclusions.
+
+    Performs five compliance checks:
+      1. Policy Existence — verifies expected policies exist for each zone
+      2. Policy State — confirms policies are enabled or report-only
+      3. Break-Glass Exclusions — validates emergency accounts are excluded
+      4. MFA Grant Controls — checks MFA requirement on non-block policies
+      5. Session Controls — validates signInFrequency and persistentBrowser settings
+
+    Supports WhatIf mode to preview which policies would be checked without
+    querying Microsoft Graph.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    The Entra ID (Azure AD) tenant GUID to check policies against.
 
 .PARAMETER ConfigPath
-    Path to tenant configuration JSON file.
+    Path to the tenant configuration JSON file containing group IDs,
+    application IDs, break-glass accounts, and optional policy prefix.
 
 .PARAMETER OutputPath
-    Directory for compliance reports.
+    Optional directory path for compliance report files.  When provided,
+    JSON report files are written to this directory.  When omitted,
+    results are displayed to the console only.
+
+.PARAMETER OutputFormat
+    Format for console output. Valid values: Table (default), JSON, Object.
+    Table renders a formatted summary; JSON writes raw JSON to the pipeline;
+    Object returns the compliance results hashtable for further processing.
 
 .PARAMETER IncludeReportOnly
-    Include report-only policies in coverage analysis.
+    When specified, counts report-only policies as passing the state check.
 
 .EXAMPLE
-    .\Test-PolicyCompliance.ps1 -TenantId "xxx" -ConfigPath "./config.json" -OutputPath "./reports"
+    .\Test-PolicyCompliance.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -ConfigPath "./config.json"
+
+    Runs compliance checks and displays results in table format on the console.
+
+.EXAMPLE
+    .\Test-PolicyCompliance.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -ConfigPath "./config.json" -OutputPath "./reports" -OutputFormat JSON
+
+    Runs checks, exports JSON reports to ./reports, and writes raw JSON to stdout.
+
+.EXAMPLE
+    .\Test-PolicyCompliance.ps1 -TenantId "00000000-0000-0000-0000-000000000000" -ConfigPath "./config.json" -WhatIf
+
+    Previews which policies would be checked without connecting to Graph.
+
+.OUTPUTS
+    System.Collections.Hashtable
+    When -OutputFormat is 'Object', returns the compliance results hashtable.
+
+.NOTES
+    File: Test-PolicyCompliance.ps1
+    Version: 2.0.0
+    Supports compliance with FINRA 4511/3110, SEC 17a-3/4, and OCC 2011-12
+    through automated policy coverage verification and gap detection.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $true)]
     [string]$TenantId,
@@ -30,71 +71,103 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ConfigPath,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$OutputPath,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Table", "JSON", "Object")]
+    [string]$OutputFormat = "Table",
 
     [Parameter(Mandatory = $false)]
     [switch]$IncludeReportOnly
 )
 
 #Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Identity.SignIns
+#Requires -Modules @{ ModuleName = 'Microsoft.Graph.Identity.SignIns'; ModuleVersion = '2.0.0' }
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Import private helpers
+. $PSScriptRoot/private/Connect-GraphSession.ps1
+. $PSScriptRoot/private/Get-ZoneClassification.ps1
+. $PSScriptRoot/private/Test-ParameterValidation.ps1
+
 $timestamp = Get-Date -Format "yyyy-MM-dd"
 
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Conditional Access Policy Compliance Check" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Tenant: $TenantId"
 Write-Host "Timestamp: $timestamp"
 Write-Host ""
 
 # Load configuration
-try {
-    Write-Verbose "Loading configuration from $ConfigPath..."
-    if (-not (Test-Path $ConfigPath)) {
-        throw "Configuration file not found: $ConfigPath"
-    }
-    $config = Get-Content $ConfigPath -ErrorAction Stop | ConvertFrom-Json
-    Write-Verbose "Configuration loaded successfully."
-}
-catch {
-    Write-Error "Failed to load configuration from $ConfigPath"
-    Write-Error "Error: $_"
-    throw
+Write-Verbose "Loading configuration from $ConfigPath..."
+Test-CAAConfigPath -Path $ConfigPath
+$config = Get-Content $ConfigPath -ErrorAction Stop | ConvertFrom-Json
+Write-Verbose "Configuration loaded and validated."
+
+# Define expected policies (used in WhatIf preview and live checks)
+$expectedPolicies = @{
+    "Zone1" = @(
+        @{ Pattern = "*CopilotStudio*Zone1*"; Required = $true }
+    )
+    "Zone2" = @(
+        @{ Pattern = "*CopilotStudio*Zone2*"; Required = $true }
+        @{ Pattern = "*AgentBuilder*Zone2*"; Required = $true }
+    )
+    "Zone3" = @(
+        @{ Pattern = "*CopilotStudio*Zone3*"; Required = $true }
+        @{ Pattern = "*AgentBuilder*Zone3*"; Required = $true }
+        @{ Pattern = "*CompliantDevice*Zone3*"; Required = $true }
+    )
+    "Common" = @(
+        @{ Pattern = "*M365Copilot*"; Required = $true }
+        @{ Pattern = "*BlockLegacyAuth*"; Required = $true }
+    )
 }
 
-# Ensure output directory exists
-if (-not (Test-Path $OutputPath)) {
+# WhatIf preview — list what would be checked without querying Graph
+if ($WhatIfPreference) {
+    Write-Host "[WhatIf] Would perform the following compliance checks:" -ForegroundColor Yellow
+    Write-Host ""
+    foreach ($zone in $expectedPolicies.Keys) {
+        Write-Host "  $zone policies:" -ForegroundColor Cyan
+        foreach ($expected in $expectedPolicies[$zone]) {
+            Write-Host "    - $($expected.Pattern) (Required: $($expected.Required))"
+        }
+    }
+    Write-Host ""
+    Write-Host "  Checks: Policy Existence, Policy State, Break-Glass Exclusions, MFA Grant Controls, Session Controls"
+    Write-Host "  Output format: $OutputFormat"
+    if ($OutputPath) {
+        Write-Host "  Report output: $OutputPath"
+    }
+    else {
+        Write-Host "  Report output: Console only"
+    }
+    return
+}
+
+# Ensure output directory exists (when provided)
+if ($OutputPath -and -not (Test-Path $OutputPath)) {
     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
 }
 
 # Connect to Microsoft Graph
-try {
-    Write-Host "Connecting to Microsoft Graph..."
-    $context = Get-MgContext
-    if (-not $context -or $context.TenantId -ne $TenantId) {
-        Connect-MgGraph -TenantId $TenantId -Scopes "Policy.Read.All" -ErrorAction Stop
-    }
-    Write-Host "Connected." -ForegroundColor Green
-}
-catch {
-    Write-Error "Failed to connect to Microsoft Graph (Tenant: $TenantId)"
-    Write-Error "Error: $_"
-    throw
-}
+Write-Verbose "Establishing Microsoft Graph session..."
+Connect-CAAGraphSession -TenantId $TenantId -Scopes @('Policy.Read.All')
+Write-Verbose "Connected."
 
 # Get all CA policies
+Write-Verbose "Retrieving Conditional Access policies..."
 try {
-    Write-Host "`nRetrieving Conditional Access policies..."
     $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
     $fsiPolicies = $allPolicies | Where-Object {
         $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
     }
-    Write-Host "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
+    Write-Verbose "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
 }
 catch {
     Write-Error "Failed to retrieve Conditional Access policies"
@@ -119,28 +192,8 @@ $complianceResults = @{
     details = @()
 }
 
-# Define expected policies
-$expectedPolicies = @{
-    "Zone1" = @(
-        @{ Pattern = "*CopilotStudio*Zone1*"; Required = $true }
-    )
-    "Zone2" = @(
-        @{ Pattern = "*CopilotStudio*Zone2*"; Required = $true }
-        @{ Pattern = "*AgentBuilder*Zone2*"; Required = $true }
-    )
-    "Zone3" = @(
-        @{ Pattern = "*CopilotStudio*Zone3*"; Required = $true }
-        @{ Pattern = "*AgentBuilder*Zone3*"; Required = $true }
-        @{ Pattern = "*CompliantDevice*Zone3*"; Required = $true }
-    )
-    "Common" = @(
-        @{ Pattern = "*M365Copilot*"; Required = $true }
-        @{ Pattern = "*BlockLegacyAuth*"; Required = $true }
-    )
-}
-
 # Check 1: Policy Existence
-Write-Host "`nChecking policy existence..." -ForegroundColor Yellow
+Write-Verbose "Checking policy existence..."
 
 foreach ($zone in $expectedPolicies.Keys) {
     foreach ($expected in $expectedPolicies[$zone]) {
@@ -152,7 +205,7 @@ foreach ($zone in $expectedPolicies.Keys) {
 
         if ($matchingPolicies.Count -gt 0) {
             $complianceResults.checksPassed++
-            Write-Host "  [PASS] $($expected.Pattern)" -ForegroundColor Green
+            Write-Verbose "  [PASS] $($expected.Pattern)"
 
             foreach ($policy in $matchingPolicies) {
                 $complianceResults.details += @{
@@ -170,7 +223,7 @@ foreach ($zone in $expectedPolicies.Keys) {
         }
         else {
             $complianceResults.checksFailed++
-            Write-Host "  [FAIL] $($expected.Pattern) - Not found" -ForegroundColor Red
+            Write-Verbose "  [FAIL] $($expected.Pattern) - Not found"
 
             $complianceResults.gaps += @{
                 type = "MissingPolicy"
@@ -183,7 +236,7 @@ foreach ($zone in $expectedPolicies.Keys) {
 }
 
 # Check 2: Policy State
-Write-Host "`nChecking policy states..." -ForegroundColor Yellow
+Write-Verbose "Checking policy states..."
 
 foreach ($policy in $fsiPolicies) {
     $complianceResults.checksPerformed++
@@ -195,11 +248,11 @@ foreach ($policy in $fsiPolicies) {
     if ($isEnabled -or ($IncludeReportOnly -and $isReportOnly)) {
         $complianceResults.checksPassed++
         $stateDisplay = if ($isReportOnly) { "Report-Only" } else { "Enabled" }
-        Write-Host "  [PASS] $($policy.DisplayName) - $stateDisplay" -ForegroundColor Green
+        Write-Verbose "  [PASS] $($policy.DisplayName) - $stateDisplay"
     }
     elseif ($isReportOnly -and -not $IncludeReportOnly) {
         $complianceResults.checksFailed++
-        Write-Host "  [WARN] $($policy.DisplayName) - Report-Only (not enforcing)" -ForegroundColor Yellow
+        Write-Verbose "  [WARN] $($policy.DisplayName) - Report-Only (not enforcing)"
         $complianceResults.gaps += @{
             type = "PolicyNotEnabled"
             policy = $policy.DisplayName
@@ -209,7 +262,7 @@ foreach ($policy in $fsiPolicies) {
     }
     else {
         $complianceResults.checksFailed++
-        Write-Host "  [FAIL] $($policy.DisplayName) - Disabled" -ForegroundColor Red
+        Write-Verbose "  [FAIL] $($policy.DisplayName) - Disabled"
         $complianceResults.gaps += @{
             type = "PolicyDisabled"
             policy = $policy.DisplayName
@@ -220,7 +273,7 @@ foreach ($policy in $fsiPolicies) {
 }
 
 # Check 3: Break-Glass Exclusions
-Write-Host "`nChecking break-glass exclusions..." -ForegroundColor Yellow
+Write-Verbose "Checking break-glass exclusions..."
 
 foreach ($policy in $fsiPolicies) {
     $complianceResults.checksPerformed++
@@ -237,11 +290,11 @@ foreach ($policy in $fsiPolicies) {
 
     if ($allBreakGlassExcluded) {
         $complianceResults.checksPassed++
-        Write-Host "  [PASS] $($policy.DisplayName) - Break-glass accounts excluded" -ForegroundColor Green
+        Write-Verbose "  [PASS] $($policy.DisplayName) - Break-glass accounts excluded"
     }
     else {
         $complianceResults.checksFailed++
-        Write-Host "  [FAIL] $($policy.DisplayName) - Missing break-glass exclusions" -ForegroundColor Red
+        Write-Verbose "  [FAIL] $($policy.DisplayName) - Missing break-glass exclusions"
         $complianceResults.gaps += @{
             type = "MissingBreakGlassExclusion"
             policy = $policy.DisplayName
@@ -251,7 +304,7 @@ foreach ($policy in $fsiPolicies) {
 }
 
 # Check 4: Grant Controls (MFA)
-Write-Host "`nChecking MFA requirements..." -ForegroundColor Yellow
+Write-Verbose "Checking MFA requirements..."
 
 foreach ($policy in $fsiPolicies) {
     # Skip block policies
@@ -265,17 +318,91 @@ foreach ($policy in $fsiPolicies) {
 
     if ($hasMFA) {
         $complianceResults.checksPassed++
-        Write-Host "  [PASS] $($policy.DisplayName) - MFA required" -ForegroundColor Green
+        Write-Verbose "  [PASS] $($policy.DisplayName) - MFA required"
     }
     else {
         $complianceResults.checksFailed++
-        Write-Host "  [WARN] $($policy.DisplayName) - MFA not required" -ForegroundColor Yellow
+        Write-Verbose "  [WARN] $($policy.DisplayName) - MFA not required"
         $complianceResults.gaps += @{
             type = "NoMFARequirement"
             policy = $policy.DisplayName
             grantControls = $policy.GrantControls.BuiltInControls
             recommendation = "Add MFA to grant controls"
         }
+    }
+}
+
+# Check 5: Session Controls (signInFrequency and persistentBrowser)
+Write-Verbose "Checking session controls..."
+
+foreach ($policy in $fsiPolicies) {
+    # Skip block policies — they don't need session controls
+    if ($policy.GrantControls.BuiltInControls -contains "block") {
+        continue
+    }
+
+    $complianceResults.checksPerformed++
+
+    $sessionControls = $policy.SessionControls
+    $hasSignInFrequency = $sessionControls -and
+        $sessionControls.SignInFrequency -and
+        $sessionControls.SignInFrequency.IsEnabled -eq $true
+    $hasPersistentBrowser = $sessionControls -and
+        $sessionControls.PersistentBrowser -and
+        $sessionControls.PersistentBrowser.IsEnabled -eq $true
+
+    # Determine expected session controls based on zone (Zone3 should have persistentBrowser = never)
+    $isZone3 = $policy.DisplayName -like "*Zone3*"
+
+    if ($hasSignInFrequency) {
+        $freqValue = $sessionControls.SignInFrequency.Value
+        $freqType = $sessionControls.SignInFrequency.Type
+        Write-Verbose "  [PASS] $($policy.DisplayName) - Sign-in frequency: $freqValue $freqType"
+
+        if ($isZone3 -and $hasPersistentBrowser) {
+            $browserMode = $sessionControls.PersistentBrowser.Mode
+            if ($browserMode -eq "never") {
+                Write-Verbose "  [PASS] $($policy.DisplayName) - Persistent browser: $browserMode"
+            }
+            else {
+                Write-Verbose "  [WARN] $($policy.DisplayName) - Persistent browser mode is '$browserMode', expected 'never' for Zone3"
+                $complianceResults.gaps += @{
+                    type = "SessionControlMisconfigured"
+                    policy = $policy.DisplayName
+                    detail = "persistentBrowser.mode is '$browserMode', expected 'never' for Zone3"
+                    recommendation = "Set persistentBrowser.mode to 'never' for Zone3 policies"
+                }
+            }
+        }
+        elseif ($isZone3 -and -not $hasPersistentBrowser) {
+            Write-Verbose "  [WARN] $($policy.DisplayName) - Zone3 policy missing persistentBrowser control"
+            $complianceResults.gaps += @{
+                type = "MissingSessionControl"
+                policy = $policy.DisplayName
+                detail = "Zone3 policy should have persistentBrowser set to 'never'"
+                recommendation = "Add persistentBrowser session control with mode 'never'"
+            }
+        }
+
+        $complianceResults.checksPassed++
+    }
+    else {
+        $complianceResults.checksFailed++
+        Write-Verbose "  [WARN] $($policy.DisplayName) - No sign-in frequency configured"
+        $complianceResults.gaps += @{
+            type = "MissingSessionControl"
+            policy = $policy.DisplayName
+            detail = "signInFrequency not configured or not enabled"
+            recommendation = "Configure sign-in frequency for session timeout enforcement"
+        }
+    }
+
+    $complianceResults.details += @{
+        check = "SessionControls"
+        policy = $policy.DisplayName
+        signInFrequency = if ($hasSignInFrequency) { "$($sessionControls.SignInFrequency.Value) $($sessionControls.SignInFrequency.Type)" } else { "Not configured" }
+        persistentBrowser = if ($hasPersistentBrowser) { $sessionControls.PersistentBrowser.Mode } else { "Not configured" }
+        result = if ($hasSignInFrequency) { "Pass" } else { "Fail" }
     }
 }
 
@@ -306,9 +433,9 @@ else {
 }
 
 # Summary
-Write-Host "`n" + "=" * 60 -ForegroundColor Cyan
+Write-Host ("`n" + "=" * 60) -ForegroundColor Cyan
 Write-Host "Compliance Summary" -ForegroundColor Cyan
-Write-Host "=" * 60 -ForegroundColor Cyan
+Write-Host ("=" * 60) -ForegroundColor Cyan
 
 Write-Host "`nChecks Performed: $($complianceResults.checksPerformed)"
 Write-Host "Checks Passed: $($complianceResults.checksPassed)" -ForegroundColor Green
@@ -336,20 +463,33 @@ if ($complianceResults.gaps.Count -gt 0) {
     }
 }
 
-# Export results
-try {
-    $coverageFile = Join-Path $OutputPath "PolicyCoverage-$timestamp.json"
-    $complianceResults | ConvertTo-Json -Depth 10 | Out-File $coverageFile -Encoding utf8
-    Write-Host "`nResults exported to: $coverageFile" -ForegroundColor Green
-
-    $gapsFile = Join-Path $OutputPath "PolicyGaps-$timestamp.json"
-    $complianceResults.gaps | ConvertTo-Json -Depth 5 | Out-File $gapsFile -Encoding utf8
-    Write-Host "Gaps exported to: $gapsFile"
+# Output results based on format
+switch ($OutputFormat) {
+    "JSON" {
+        $complianceResults | ConvertTo-Json -Depth 10
+    }
+    "Object" {
+        $complianceResults
+    }
+    # "Table" — already displayed above via Write-Host
 }
-catch {
-    Write-Error "Failed to export compliance results to $OutputPath"
-    Write-Error "Error: $_"
-    throw
+
+# Export results to files (only when OutputPath is specified)
+if ($OutputPath) {
+    try {
+        $coverageFile = Join-Path $OutputPath "PolicyCoverage-$timestamp.json"
+        $complianceResults | ConvertTo-Json -Depth 10 | Out-File $coverageFile -Encoding utf8
+        Write-Host "`nResults exported to: $coverageFile" -ForegroundColor Green
+
+        $gapsFile = Join-Path $OutputPath "PolicyGaps-$timestamp.json"
+        $complianceResults.gaps | ConvertTo-Json -Depth 5 | Out-File $gapsFile -Encoding utf8
+        Write-Host "Gaps exported to: $gapsFile"
+    }
+    catch {
+        Write-Error "Failed to export compliance results to $OutputPath"
+        Write-Error "Error: $_"
+        throw
+    }
 }
 
 Write-Host "`nCompliance check complete." -ForegroundColor Green
