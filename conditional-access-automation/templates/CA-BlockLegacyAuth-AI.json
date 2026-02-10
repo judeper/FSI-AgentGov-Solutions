@@ -10,7 +10,7 @@
       "includeApplications": [
         "<copilot-studio-app-id>",
         "<agent-builder-app-id>",
-        "fb8d773d-7ef8-4ec0-a117-179f88add510"
+        "<m365-copilot-app-id>"
       ]
     },
     "clientAppTypes": ["exchangeActiveSync", "other"]
@@ -18,5 +18,10 @@
   "grantControls": {
     "operator": "OR",
     "builtInControls": ["block"]
+  },
+  "_metadata": {
+    "schemaVersion": "v1.0",
+    "lastValidated": "2026-02-10",
+    "targetControl": "1.11"
   }
 }

@@ -21,5 +21,10 @@
       "type": "hours",
       "isEnabled": true
     }
+  },
+  "_metadata": {
+    "schemaVersion": "v1.0",
+    "lastValidated": "2026-02-10",
+    "targetControl": "1.11"
   }
 }
