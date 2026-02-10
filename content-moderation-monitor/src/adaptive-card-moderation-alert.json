@@ -1,0 +1,365 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "Container",
+      "style": "${accentStyle}",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "[ALERT] Content Moderation Governance Monitor",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "color": "Attention"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${AlertSeverity}",
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "TextBlock",
+          "text": "${Timestamp}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Run Summary",
+          "weight": "Bolder",
+          "size": "Medium",
+          "spacing": "Medium"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Status",
+              "value": "${OverallStatus}"
+            },
+            {
+              "title": "Total Agents",
+              "value": "${TotalAgents}"
+            },
+            {
+              "title": "Total Environments",
+              "value": "${TotalEnvironments}"
+            },
+            {
+              "title": "Severity",
+              "value": "${AlertSeverity}"
+            },
+            {
+              "title": "Reason",
+              "value": "${Reason}"
+            }
+          ],
+          "spacing": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Zone Summary",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Compliant",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Total",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 1",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z1Compliant}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z1Total}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 2",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z2Compliant}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z2Total}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 3",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z3Compliant}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z3Total}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Violations",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${ViolationSummary}",
+          "wrap": true,
+          "spacing": "Small",
+          "size": "Small"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Agent",
+              "value": "${AgentName}"
+            },
+            {
+              "title": "Environment",
+              "value": "${EnvironmentName}"
+            },
+            {
+              "title": "Zone",
+              "value": "${Zone}"
+            },
+            {
+              "title": "Expected Moderation",
+              "value": "${ExpectedLevel}"
+            },
+            {
+              "title": "Actual Moderation",
+              "value": "${ActualLevel}"
+            },
+            {
+              "title": "Severity",
+              "value": "${Severity}"
+            },
+            {
+              "title": "Regulatory Context",
+              "value": "${RegulatoryContext}"
+            }
+          ],
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Drift Detection",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Drifted Agents",
+              "value": "${DriftedAgents}"
+            },
+            {
+              "title": "Agent",
+              "value": "${DriftAgentName}"
+            },
+            {
+              "title": "Environment",
+              "value": "${DriftEnvName}"
+            },
+            {
+              "title": "Baseline Level",
+              "value": "${BaselineLevel}"
+            },
+            {
+              "title": "Current Level",
+              "value": "${CurrentLevel}"
+            },
+            {
+              "title": "Direction",
+              "value": "${Direction}"
+            }
+          ],
+          "spacing": "Small"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View in Power Platform Admin",
+      "url": "https://admin.powerplatform.microsoft.com/environments"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Run Manual Check",
+      "url": "${ManualCheckUrl}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Documentation",
+      "url": "${DocumentationUrl}"
+    }
+  ]
+}
