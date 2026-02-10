@@ -2,6 +2,20 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [0.3.0] - 2026-02-10
+
+### Added
+- Start-ModerationValidationRunbook.ps1 — Azure Automation runbook wrapper for non-interactive daily content moderation validation with certificate-based auth, per-agent drift detection via batch baseline query, and structured JSON output
+- Invoke-ModerationBaselineCapture.ps1 — Operator-initiated per-agent baseline capture writing moderation levels to Dataverse with active baseline management and zone/environment/agent filtering
+- adaptive-card-moderation-alert.json — Teams adaptive card template for content moderation violation and drift alerts with per-agent severity classification and regulatory context
+- moderation-validation-flow.json — Power Automate cloud flow for daily scheduled moderation validation, immutable Dataverse history persistence, and conditional Teams/email alerting (Critical→Teams+email, High→email)
+- FLOW_SETUP.md — Step-by-step guide for flow import, variable configuration, connection reference binding, baseline capture workflow, and troubleshooting
+
+### Changed
+- Save-CMMBaseline in CMMClient.psm1 completed with active baseline deactivation before new baseline write (single active baseline per agent)
+- Get-ModerationBaseline in CMMClient.psm1 enhanced with -AgentId and -ActiveOnly parameters for per-agent drift detection and batch baseline queries
+- CMMClient.psm1 version bumped to 0.3.0
+
 ## [0.2.0] - 2026-02-10
 
 ### Added — Phase 2: Dataverse Infrastructure

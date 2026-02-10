@@ -136,12 +136,12 @@ The flow uses three connection references deployed during Phase 2:
 | Flow Expression | Dataverse Column | Type | Description |
 |----------------|------------------|------|-------------|
 | `"ModerationScan-" + Timestamp` | `fsi_name` | String | Display name with scan timestamp |
-| `guid()` | `fsi_runid` | String (GUID) | Unique run identifier |
-| `OverallStatus` | `fsi_overallstatus` | String | Passed, Failed, or Error |
-| `length(Violations)` | `fsi_violationcount` | Integer | Number of violations detected |
-| `TotalAgents` | `fsi_totalagents` | Integer | Total agents scanned |
+| `guid()` | `fsi_run_id` | String (GUID) | Unique run identifier |
+| `OverallStatus` | `fsi_overall_status` | String | Passed, Failed, or Error |
+| `length(Violations)` | `fsi_violation_count` | Integer | Number of violations detected |
+| `TotalAgents` | `fsi_total_agents` | Integer | Total agents scanned |
 | `string(TotalEnvironments)` | `fsi_environments_scanned` | String | Number of environments scanned |
-| Full JSON output | `fsi_summaryjson` | Memo | Complete runbook output for audit |
+| Full JSON output | `fsi_summary_json` | Memo | Complete runbook output for audit |
 | `Timestamp` | `fsi_validation_time` | DateTime | Scan execution timestamp |
 
 **Why it runs before alerting:**

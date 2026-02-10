@@ -452,12 +452,12 @@
             },
             "body": {
               "fsi_name": "ModerationScan-@{body('Parse_Results')?['Timestamp']}",
-              "fsi_runid": "@{guid()}",
-              "fsi_overallstatus": "@{body('Parse_Results')?['OverallStatus']}",
-              "fsi_violationcount": "@{length(body('Parse_Results')?['Violations'])}",
-              "fsi_totalagents": "@{body('Parse_Results')?['TotalAgents']}",
+              "fsi_run_id": "@{guid()}",
+              "fsi_overall_status": "@{body('Parse_Results')?['OverallStatus']}",
+              "fsi_violation_count": "@{length(body('Parse_Results')?['Violations'])}",
+              "fsi_total_agents": "@{body('Parse_Results')?['TotalAgents']}",
               "fsi_environments_scanned": "@{string(body('Parse_Results')?['TotalEnvironments'])}",
-              "fsi_summaryjson": "@{string(body('Parse_Results'))}",
+              "fsi_summary_json": "@{string(body('Parse_Results'))}",
               "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}"
             }
           },
