@@ -8,7 +8,7 @@
 
 .NOTES
     Module: CMMClient.psm1
-    Version: 0.2.0
+    Version: 0.3.0
     Author: FSI Agent Governance Team
 #>
 
@@ -137,11 +137,25 @@ function Get-ModerationBaseline {
 
     .PARAMETER EnvironmentId
         Optional environment GUID to filter by.
+
+    .PARAMETER AgentId
+        Optional agent ID to filter by.
+
+    .PARAMETER ActiveOnly
+        When specified, returns only active baselines (fsi_is_active eq true).
+        Use with no other filters to batch-query all active baselines for
+        hashtable construction in drift detection.
     #>
     [CmdletBinding()]
     param(
         [Parameter()]
-        [string]$EnvironmentId
+        [string]$EnvironmentId,
+
+        [Parameter()]
+        [string]$AgentId,
+
+        [Parameter()]
+        [switch]$ActiveOnly
     )
 
     if (-not $script:DataverseUrl) {
@@ -154,6 +168,12 @@ function Get-ModerationBaseline {
         if ($EnvironmentId) {
             $filter += " and fsi_environment_guid eq '$EnvironmentId'"
         }
+        if ($AgentId) {
+            $filter += " and fsi_agent_id eq '$AgentId'"
+        }
+        if ($ActiveOnly) {
+            $filter += " and fsi_is_active eq true"
+        }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?" +
                "`$filter=$filter&`$orderby=createdon desc"
@@ -163,8 +183,32 @@ function Get-ModerationBaseline {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-        return $response.value
+        $allRecords = @()
+        $nextLink = $uri
+
+        while ($nextLink) {
+            $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -ErrorAction Stop
+            $allRecords += $response.value
+            $nextLink = $response.'@odata.nextLink'
+        }
+
+        # Map Dataverse fields to friendly property names
+        return $allRecords | ForEach-Object {
+            [PSCustomObject]@{
+                BaselineId       = $_.fsi_moderationbaselineid
+                Name             = $_.fsi_name
+                EnvironmentGuid  = $_.fsi_environment_guid
+                EnvironmentName  = $_.fsi_environment_name
+                Zone             = $_.fsi_zone
+                AgentId          = $_.fsi_agent_id
+                AgentName        = $_.fsi_agent_name
+                ModerationLevel  = $_.fsi_moderation_level
+                CapturedBy       = $_.fsi_captured_by
+                CapturedAt       = $_.fsi_captured_at
+                IsActive         = $_.fsi_is_active
+                RawJson          = $_.fsi_raw_json
+            }
+        }
     } catch {
         Write-Warning "Failed to get moderation baseline: $($_.Exception.Message)"
         return $null
@@ -534,6 +578,23 @@ function Save-CMMBaseline {
             'OData-Version'    = '4.0'
         }
 
+        # Deactivate existing active baseline for this agent
+        $deactivateFilter = "fsi_is_active eq true and fsi_agent_id eq '$AgentId'"
+        $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?`$filter=$deactivateFilter&`$select=fsi_moderationbaselineid"
+
+        $existing = Invoke-RestMethod -Uri $queryUri -Headers $headers -Method Get
+
+        foreach ($prev in $existing.value) {
+            $prevId = $prev.fsi_moderationbaselineid
+            if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
+                $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines($prevId)"
+                $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json
+                Invoke-RestMethod -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
+                Write-Verbose "Deactivated previous baseline: $prevId"
+            }
+        }
+
+        # Create new active baseline
         $timestamp = (Get-Date).ToUniversalTime().ToString('o')
         $capturedByValue = if ($CapturedBy) { $CapturedBy } else { "System" }
         $rawJsonValue = if ($RawJson) { $RawJson } else { "" }
