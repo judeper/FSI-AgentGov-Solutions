@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""Create Dataverse connection references for File Upload Security Configurator.
+
+Provisions three connection references for the FUS solution:
+  - Dataverse (for baseline/violation storage)
+  - Office 365 (for owner resolution and email notifications)
+  - Teams (for adaptive card violation alerts)
+
+All operations are idempotent — existing references are skipped.
+
+Usage:
+  python create_connection_references.py --tenant-id <tid> --url <url> [--dry-run]
+"""
+
+import argparse
+import os
+import sys
+
+from fus_client import FUSClient
+
+
+# ── Connection Reference Definitions ──────────────────────────────
+
+CONNECTION_REFERENCES = [
+    {
+        "connectionreferencedisplayname": "FUS - Dataverse",
+        "connectionreferencelogicalname": "fsi_cr_dataverse_fileuploadsecurity",
+        "connectorid": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "description": (
+            "Dataverse connection for File Upload Security Configurator. "
+            "Used to read/write baseline, validation history, and violation records."
+        ),
+    },
+    {
+        "connectionreferencedisplayname": "FUS - Office 365",
+        "connectionreferencelogicalname": "fsi_cr_office365_fileuploadsecurity",
+        "connectorid": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "description": (
+            "Office 365 connection for File Upload Security Configurator. "
+            "Used for agent owner resolution and email-based violation notifications."
+        ),
+    },
+    {
+        "connectionreferencedisplayname": "FUS - Teams",
+        "connectionreferencelogicalname": "fsi_cr_teams_fileuploadsecurity",
+        "connectorid": "/providers/Microsoft.PowerApps/apis/shared_teams",
+        "description": (
+            "Teams connection for File Upload Security Configurator. "
+            "Used to post adaptive card violation alerts to governance channels."
+        ),
+    },
+]
+
+
+def deploy_connection_references(client: FUSClient) -> None:
+    """Create all FUS connection references (idempotent)."""
+    print(f"\n{'='*60}")
+    print("Connection References")
+    print(f"{'='*60}")
+
+    for ref_def in CONNECTION_REFERENCES:
+        logical_name = ref_def["connectionreferencelogicalname"]
+
+        # Check if already exists
+        result = client.query(
+            "connectionreferences",
+            filter=(
+                f"connectionreferencelogicalname eq '{logical_name}'"
+            ),
+            select="connectionreferencelogicalname",
+        )
+        if result.get("value"):
+            print(f"  {logical_name}: already exists")
+            continue
+
+        if client.dry_run:
+            print(f"  [DRY RUN] Would create: {logical_name}")
+            continue
+
+        client.create_record("connectionreferences", ref_def)
+        print(f"  {logical_name}: created")
+
+    print(f"\n  Total: {len(CONNECTION_REFERENCES)} connection references")
+    print(f"{'='*60}")
+
+
+# ── CLI Entry Point ──────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Create connection references for File Upload Security Configurator"
+    )
+    parser.add_argument("--tenant-id", default=os.environ.get("FUS_TENANT_ID"))
+    parser.add_argument("--client-id", default=os.environ.get("FUS_CLIENT_ID"))
+    parser.add_argument("--client-secret", default=os.environ.get("FUS_CLIENT_SECRET"))
+    parser.add_argument("--url", default=os.environ.get("FUS_DATAVERSE_URL"),
+                        help="Dataverse environment URL")
+    parser.add_argument("--interactive", action="store_true",
+                        help="Use interactive browser auth")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Show what would be created without making changes")
+    args = parser.parse_args()
+
+    if not args.tenant_id or not args.url:
+        parser.error(
+            "tenant-id and url are required "
+            "(set FUS_TENANT_ID and FUS_DATAVERSE_URL env vars or use flags)"
+        )
+
+    client = FUSClient(
+        tenant_id=args.tenant_id,
+        environment_url=args.url,
+        client_id=args.client_id,
+        client_secret=args.client_secret,
+        interactive=args.interactive,
+        dry_run=args.dry_run,
+    )
+
+    deploy_connection_references(client)
+
+
+if __name__ == "__main__":
+    main()

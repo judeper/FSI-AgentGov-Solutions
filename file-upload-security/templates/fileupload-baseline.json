@@ -1,0 +1,75 @@
+{
+    "metadata": {
+        "solution": "file-upload-security",
+        "version": "1.0.0",
+        "description": "Zone-specific file upload governance policies for Copilot Studio agents",
+        "lastUpdated": "2026-02-10"
+    },
+    "zoneRequirements": {
+        "Zone 1": {
+            "fileUploadAllowed": true,
+            "requiresApproval": false,
+            "minimumModerationLevel": "Medium",
+            "description": "Personal Productivity — file upload at maker discretion"
+        },
+        "Zone 2": {
+            "fileUploadAllowed": true,
+            "requiresApproval": true,
+            "minimumModerationLevel": "High",
+            "description": "Team Collaboration — file upload requires governance approval and High moderation minimum"
+        },
+        "Zone 3": {
+            "fileUploadAllowed": false,
+            "requiresApproval": true,
+            "minimumModerationLevel": "Highest",
+            "description": "Enterprise Managed — file upload disabled by default; if enabled requires Highest moderation"
+        }
+    },
+    "violationSeverity": {
+        "Zone3_FileUploadEnabled_NoApproval": {
+            "severity": "Critical",
+            "description": "File upload enabled in Zone 3 without documented approval",
+            "regulations": ["FINRA 4511", "SEC 17a-3", "GLBA 501(b)", "OCC 2011-12"]
+        },
+        "Zone3_FileUploadEnabled_InsufficientModeration": {
+            "severity": "Critical",
+            "description": "File upload enabled in Zone 3 without Highest content moderation",
+            "regulations": ["FINRA 4511", "SEC 17a-3", "GLBA 501(b)"]
+        },
+        "Zone2_FileUploadEnabled_InsufficientModeration": {
+            "severity": "High",
+            "description": "File upload enabled in Zone 2 without High content moderation minimum",
+            "regulations": ["FINRA 4511", "SEC 17a-3"]
+        },
+        "Zone2_FileUploadEnabled_NoApproval": {
+            "severity": "High",
+            "description": "File upload enabled in Zone 2 without documented approval",
+            "regulations": ["FINRA 4511", "GLBA 501(b)"]
+        },
+        "Unknown_Zone_FileUploadEnabled": {
+            "severity": "Medium",
+            "description": "File upload enabled on agent in unclassified environment",
+            "regulations": ["FINRA 4511"]
+        },
+        "Zone1_NoModeration": {
+            "severity": "Warning",
+            "description": "File upload enabled in Zone 1 without content moderation configured",
+            "regulations": ["FINRA 25-07"]
+        }
+    },
+    "supportedFileTypes": {
+        "note": "Platform-level restriction — not configurable per agent",
+        "images": {
+            "types": ["JPG", "PNG", "WebP", "GIF"],
+            "maxSize": "15 MB"
+        },
+        "documents": {
+            "types": ["PDF"],
+            "maxPages": 40
+        },
+        "text": {
+            "types": ["TXT", "CSV"],
+            "maxSize": "180 KB"
+        }
+    }
+}
