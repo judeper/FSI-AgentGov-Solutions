@@ -2,6 +2,30 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [0.2.0] - 2026-02-10
+
+### Added — Phase 2: Dataverse Infrastructure
+
+#### Python Deployment Scripts
+- **cmm_client.py** — CMMClient Dataverse Web API client with MSAL auth (interactive + service principal)
+- **create_dataverse_schema.py** — Three-table schema deployment (ModerationBaseline, ModerationValidationHistory, ModerationViolation)
+- **create_environment_variables.py** — Seven `fsi_CMM_*` operational parameters
+- **create_connection_references.py** — Three Power Automate connection references (Dataverse, Office 365, Teams)
+- **deploy.py** — Full deployment orchestrator with selective/dry-run modes (`--tables-only`, `--vars-only`, `--refs-only`)
+- **requirements.txt** — Python dependencies (msal, requests)
+
+#### Dataverse Integration in PowerShell
+- `-DataverseToken` parameter on `Test-ContentModerationCompliance` for pre-obtained authentication tokens
+- `-PersistResults` switch for writing validation results to Dataverse
+- Operational parameter reading from `fsi_CMM_*` environment variables (GracePeriodHours, IncludeDrafts, IncludeSandbox)
+- RunId correlation across validation history and violation records
+- `EnvironmentId` added to `Compare-ModerationCompliance` output
+
+### Changed
+- `Test-ContentModerationCompliance` reads GracePeriodHours, IncludeDrafts, IncludeSandbox from Dataverse when connected
+- Standalone mode (no `-DataverseUrl`) remains unchanged — no regression
+- CMMClient.psm1 bumped to v0.2.0
+
 ## [0.1.0] - 2026-02-09
 
 ### Added — Phase 1 Plan 01-01: Solution scaffold and private helpers

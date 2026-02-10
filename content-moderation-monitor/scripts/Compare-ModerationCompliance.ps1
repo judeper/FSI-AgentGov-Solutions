@@ -64,7 +64,7 @@ function Compare-ModerationCompliance {
 
     .OUTPUTS
         PSCustomObject[] — One object per agent with properties:
-        AgentId, AgentName, EnvironmentDisplayName, Zone,
+        AgentId, AgentName, EnvironmentId, EnvironmentDisplayName, Zone,
         CurrentModerationLevel, ExpectedModerationLevel, IsCompliant,
         Severity, RegulatoryContext, AgentStatus
     #>
@@ -143,6 +143,7 @@ function Compare-ModerationCompliance {
             $complianceResult = [PSCustomObject]@{
                 AgentId                 = $agent.AgentId
                 AgentName               = $agent.AgentName
+                EnvironmentId           = $agent.EnvironmentId
                 EnvironmentDisplayName  = $agent.EnvironmentDisplayName
                 Zone                    = $agentZone
                 CurrentModerationLevel  = $agentLevel

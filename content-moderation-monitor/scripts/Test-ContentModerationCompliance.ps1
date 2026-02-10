@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-ContentModerationCompliance.ps1
-    Version: 1.0.0
+    Version: 1.1.0
     Solution: Content Moderation Monitor (v7)
     Controls: 1.8 (Content Moderation)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -88,6 +88,17 @@ function Test-ContentModerationCompliance {
 
     .PARAMETER DataverseUrl
         Optional ELM Dataverse URL for zone classification lookup. (CMV-06)
+        When provided with -PersistResults, also reads operational parameters
+        from Dataverse environment variables and persists scan results.
+
+    .PARAMETER DataverseToken
+        Pre-obtained access token for Dataverse authentication. When provided
+        with -DataverseUrl, uses this token instead of interactive auth.
+
+    .PARAMETER PersistResults
+        When specified with -DataverseUrl, writes validation summary to
+        fsi_moderationvalidationhistory and individual violations to
+        fsi_moderationviolations. Requires active Dataverse connection.
 
     .PARAMETER BaselinePath
         Path to moderation-baseline.json override.
@@ -159,6 +170,12 @@ function Test-ContentModerationCompliance {
         [string]$DataverseUrl,
 
         [Parameter()]
+        [string]$DataverseToken,
+
+        [Parameter()]
+        [switch]$PersistResults,
+
+        [Parameter()]
         [string]$BaselinePath,
 
         [Parameter()]
@@ -213,8 +230,60 @@ function Test-ContentModerationCompliance {
     if ($DataverseUrl) {
         Write-Verbose "  DataverseUrl:       $DataverseUrl"
     }
+    if ($DataverseToken) {
+        Write-Verbose "  DataverseToken:     (provided)"
+    }
+    if ($PersistResults) {
+        Write-Verbose "  PersistResults:     True"
+    }
     if ($BaselinePath) {
         Write-Verbose "  BaselinePath:       $BaselinePath"
+    }
+
+    #endregion
+
+    #region Dataverse Integration
+
+    $dataverseConnected = $false
+
+    if ($DataverseUrl) {
+        try {
+            Import-Module "$scriptRoot\private\CMMClient.psm1" -Force
+
+            if ($DataverseToken) {
+                Connect-CMMDataverse -DataverseUrl $DataverseUrl -AccessToken $DataverseToken
+            } else {
+                Connect-CMMDataverse -DataverseUrl $DataverseUrl
+            }
+
+            $connection = Get-CMMConnection
+            if ($connection.IsConnected) {
+                $dataverseConnected = $true
+                Write-Verbose "Connected to Dataverse: $DataverseUrl"
+
+                # Read operational parameters from Dataverse env vars
+                # Rule: explicit parameter values always override Dataverse values
+                $dvGracePeriod = Get-CMMEnvironmentVariable -Name 'GracePeriodHours' -DefaultValue $null
+                if (-not $PSBoundParameters.ContainsKey('GracePeriodHours') -and $null -ne $dvGracePeriod) {
+                    $GracePeriodHours = [int]$dvGracePeriod
+                    Write-Verbose "GracePeriodHours from Dataverse: $GracePeriodHours"
+                }
+
+                $dvIncludeDrafts = Get-CMMEnvironmentVariable -Name 'IncludeDrafts' -DefaultValue $null
+                if (-not $PSBoundParameters.ContainsKey('IncludeDrafts') -and $null -ne $dvIncludeDrafts -and $dvIncludeDrafts -eq 'true') {
+                    $IncludeDrafts = [switch]::Present
+                    Write-Verbose "IncludeDrafts from Dataverse: true"
+                }
+
+                $dvIncludeSandbox = Get-CMMEnvironmentVariable -Name 'IncludeSandbox' -DefaultValue $null
+                if (-not $PSBoundParameters.ContainsKey('ExcludeSandbox') -and $null -ne $dvIncludeSandbox -and $dvIncludeSandbox -eq 'true') {
+                    $ExcludeSandbox = $false
+                    Write-Verbose "IncludeSandbox from Dataverse: true (ExcludeSandbox overridden)"
+                }
+            }
+        } catch {
+            Write-Warning "Dataverse connection failed: $($_.Exception.Message). Continuing in standalone mode."
+        }
     }
 
     #endregion
@@ -427,6 +496,62 @@ function Test-ContentModerationCompliance {
     }
 
     Write-Host ""
+
+    #endregion
+
+    #region Persist Results to Dataverse
+
+    if ($PersistResults -and $dataverseConnected) {
+        $runId = [guid]::NewGuid().ToString()
+
+        # Collect unique environment names for the summary
+        $environmentNameList = ($agentSettings | Select-Object -Property EnvironmentDisplayName -Unique |
+            ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
+
+        # Write validation summary
+        $validationSummary = @{
+            OverallStatus        = $overallStatus
+            TotalAgents          = $agentSettings.Count
+            CompliantCount       = $compliantAgentCount
+            ViolationCount       = $violationAgentCount
+            EnvironmentsScanned  = $environmentNameList
+        }
+
+        if ($PSCmdlet.ShouldProcess("Dataverse validation history", "Write scan results")) {
+            try {
+                Write-ModerationValidationHistory -ValidationResult $validationSummary -RunId $runId
+                Write-Verbose "Validation history written with RunId: $runId"
+            } catch {
+                Write-Warning "Failed to write validation history: $($_.Exception.Message)"
+            }
+        }
+
+        # Write individual violations
+        foreach ($violation in $violationResults) {
+            if ($PSCmdlet.ShouldProcess("$($violation.AgentName) in $($violation.EnvironmentDisplayName)", "Write violation")) {
+                try {
+                    $violationData = @{
+                        EnvironmentId          = $violation.EnvironmentId
+                        EnvironmentDisplayName = $violation.EnvironmentDisplayName
+                        AgentId                = $violation.AgentId
+                        AgentName              = $violation.AgentName
+                        Zone                   = $violation.Zone
+                        ExpectedLevel          = $violation.ExpectedModerationLevel
+                        ActualLevel            = $violation.CurrentModerationLevel
+                        Severity               = $violation.Severity
+                        RegulatoryContext      = $violation.RegulatoryContext
+                    }
+                    Write-ModerationViolation -Violation $violationData -RunId $runId
+                } catch {
+                    Write-Warning "Failed to write violation for $($violation.AgentName): $($_.Exception.Message)"
+                }
+            }
+        }
+
+        Write-Output "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))"
+    } elseif ($PersistResults -and -not $dataverseConnected) {
+        Write-Warning "PersistResults requested but Dataverse not connected. Results not persisted."
+    }
 
     #endregion
 
