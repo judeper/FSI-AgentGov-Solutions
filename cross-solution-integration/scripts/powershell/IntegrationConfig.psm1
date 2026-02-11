@@ -6,8 +6,8 @@
     IntegrationConfig.psm1 provides canonical mappings, table configurations, and status translation
     functions used by Sync-SolutionAssessments.ps1 and Export-UnifiedComplianceEvidence.ps1.
 
-    This module centralizes the data contract between the 5 Tier 2 governance solutions
-    (ACV, SSC, AAM, CMM, FUS) and the Compliance Dashboard.
+    This module centralizes the data contract between the 6 Tier 2 governance solutions
+    (ACV, SSC, AAM, CMM, FUS, CAA) and the Compliance Dashboard.
 
 .NOTES
     Version: 1.0.0
@@ -92,6 +92,7 @@ function Get-SolutionControlMapping {
         'AAM' = @('3.8')
         'CMM' = @('1.8')
         'FUS' = @('1.14')
+        'CAA' = @('1.11', '1.23', '1.18')
     }
 }
 
@@ -173,6 +174,16 @@ function Get-SolutionTableConfig {
             SolutionName     = 'File Upload Security Configurator'
             SolutionVersion  = 'v1.0.0'
         }
+        'CAA' = @{
+            EntitySet       = 'fsi_capolicyvalidationhistories'
+            StatusField     = 'fsi_severity'
+            StatusType      = 'Choice'          # Choice 1-5
+            TimestampField  = 'fsi_timestamp'
+            RunIdField      = 'fsi_runid'
+            FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
+            SolutionName    = 'Conditional Access Automation'
+            SolutionVersion = 'v1.1.0'
+        }
     }
 }
 
@@ -218,7 +229,7 @@ function ConvertTo-DashboardStatus {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS')]
+        [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA')]
         [string]$Solution,
 
         [Parameter()]
@@ -235,7 +246,7 @@ function ConvertTo-DashboardStatus {
     )
 
     switch ($Solution) {
-        { $_ -in 'ACV', 'SSC' } {
+        { $_ -in 'ACV', 'SSC', 'CAA' } {
             # Choice-based severity (1-5)
             $sevInt = [int]$Severity
             switch ($sevInt) {
@@ -369,6 +380,7 @@ function Get-EvidenceExportScripts {
         'AAM' = 'Export-AgentAccessEvidence.ps1'
         'CMM' = 'Export-ContentModerationEvidence.ps1'
         'FUS' = 'Export-FileUploadEvidence.ps1'
+        'CAA' = 'Export-CAAComplianceEvidence.ps1'
     }
 }
 
@@ -389,6 +401,7 @@ function Get-SolutionDirectories {
         'AAM' = 'agent-access-monitor'
         'CMM' = 'content-moderation-monitor'
         'FUS' = 'file-upload-security'
+        'CAA' = 'conditional-access-automation'
         'ELM' = 'environment-lifecycle-management'
         'CD'  = 'compliance-dashboard'
         'INT' = 'cross-solution-integration'
