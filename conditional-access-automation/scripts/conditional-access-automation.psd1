@@ -3,7 +3,7 @@
     # RootModule = ''
     
     # Version number of this module
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.1.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -47,7 +47,9 @@
         'Test-PolicyCompliance',
         'Register-ServicePrincipal',
         'Watch-PolicyDrift',
-        'Export-PolicyBaseline'
+        'Export-PolicyBaseline',
+        'Export-CAAComplianceEvidence',
+        'Test-EvidenceIntegrity'
     )
     
     # Cmdlets to export from this module
@@ -84,6 +86,14 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 1.1.0 - 2026-02-10
+
+### Added
+- Export-CAAComplianceEvidence: SHA-256 integrity-hashed compliance evidence export
+- Test-EvidenceIntegrity: Verify evidence file integrity via SHA-256 companion hash
+- Dataverse OData query helper for validation histories, violations, and baselines
+- Evidence schema with metadata, summary, zone breakdown, and record arrays
+
 ## 1.0.0 - 2026-02-10
 
 ### Added
