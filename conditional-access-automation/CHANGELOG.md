@@ -2,6 +2,32 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.1.0] - 2026-02-10
+
+### Added
+- CAAClient PowerShell module with 8 Dataverse functions (Connect, Read, Write)
+- Azure Automation runbook (Start-CAAValidationRunbook.ps1) for unattended daily execution
+- Power Automate daily compliance scan flow (caa-daily-compliance-flow.json)
+- ELM provisioning hook flow (caa-provisioning-hook-flow.json)
+- Teams adaptive card alert template (adaptive-card-caa-alert.json)
+- Dataverse schema: 3 tables (Baseline, ValidationHistory, Violation)
+- 7 environment variables with fsi_CAA_* prefix
+- 4 connection references with fsi_cr_* naming
+- Multi-dimensional drift detection (state, conditions, grants, sessions, additions/removals)
+- SHA-256 evidence export (Export-CAAComplianceEvidence.ps1)
+- Evidence integrity verification (Test-EvidenceIntegrity.ps1)
+- Policy baseline export (Export-PolicyBaseline.ps1)
+- Policy drift monitoring (Watch-PolicyDrift.ps1)
+- Zone lookup integration with ELM Dataverse
+- Dry-run mode for all deployment operations
+- PREREQUISITES.md, SCHEMA.md, EVIDENCE_EXPORT.md documentation
+
+### Changed
+- Deploy-CAPolicies.ps1 modernized with module structure and WhatIf support
+- Test-PolicyCompliance.ps1 extended with Dataverse persistence and drift analysis
+- Register-ServicePrincipal.ps1 modernized with Key Vault integration
+- Module manifest updated with Tier 2 function exports
+
 ## [1.0.0] - February 2026
 
 ### Added

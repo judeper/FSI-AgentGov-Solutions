@@ -287,3 +287,131 @@ Get-MgServicePrincipal -Filter "startswith(displayName, 'Copilot')" |
 | Testing | 2-4 hours | Validate policy behavior |
 | Enable policies | 30 minutes | Switch from report-only |
 | **Total** | **5-9 hours** | Across 1-2 days |
+
+---
+
+## Tier 2: Azure Automation Requirements
+
+These prerequisites are required for unattended daily compliance scans via Azure Automation.
+
+### Azure Automation Account
+
+| Requirement | Detail |
+|-------------|--------|
+| Azure Automation account | Standard tier, any supported region |
+| Identity | System-assigned managed identity **or** certificate-based service principal |
+| Runbook runtime | PowerShell 7.2+ runtime environment |
+| Az.Accounts module | Imported into Automation account (v3.0.0+) |
+
+```powershell
+# Verify Azure Automation account
+Get-AzAutomationAccount -ResourceGroupName "rg-fsi-governance" |
+    Select-Object AutomationAccountName, State, Location
+
+# Import required module
+Import-AzAutomationModule `
+    -AutomationAccountName "caa-automation" `
+    -ResourceGroupName "rg-fsi-governance" `
+    -Name "Az.Accounts" `
+    -ContentLinkUri "https://www.powershellgallery.com/api/v2/package/Az.Accounts"
+```
+
+### Certificate Authentication
+
+For unattended runbook execution, certificate-based authentication is recommended over client secrets.
+
+| Requirement | Detail |
+|-------------|--------|
+| Certificate | Self-signed or CA-issued, RSA 2048-bit minimum |
+| Key Vault storage | Certificate stored in Azure Key Vault |
+| App registration | Certificate uploaded to Entra ID app registration |
+| Automation credential | Certificate thumbprint configured in Automation account |
+
+```powershell
+# Create self-signed certificate for automation
+$cert = New-SelfSignedCertificate `
+    -Subject "CN=CAA-Automation" `
+    -CertStoreLocation "Cert:\CurrentUser\My" `
+    -KeyExportPolicy Exportable `
+    -KeySpec Signature `
+    -KeyLength 2048 `
+    -NotAfter (Get-Date).AddYears(2)
+```
+
+---
+
+## Tier 2: Dataverse Requirements
+
+These prerequisites are required for compliance evidence persistence and Power Automate flows.
+
+### Power Platform Environment
+
+| Requirement | Detail |
+|-------------|--------|
+| Power Platform environment | Production or Sandbox with Dataverse database |
+| Dataverse database | Provisioned and accessible |
+| Security role | Service account assigned System Administrator or custom role with table CRUD |
+| CAA schema deployed | Three tables created via `create_dataverse_schema.py` |
+
+### Dataverse Deployment Checklist
+
+- [ ] Power Platform environment created
+- [ ] Dataverse database provisioned
+- [ ] Service account has appropriate security role
+- [ ] Schema deployed (`python scripts/create_dataverse_schema.py`)
+- [ ] Environment variables deployed (`python scripts/create_environment_variables.py`)
+- [ ] Connection references deployed (`python scripts/create_connection_references.py`)
+
+### API Permissions for Dataverse
+
+In addition to the Graph API permissions listed above, Dataverse access requires:
+
+| Permission | Scope | Purpose |
+|------------|-------|---------|
+| Dataverse Web API | `https://<org>.crm.dynamics.com/.default` | Read/write Dataverse tables |
+
+---
+
+## Tier 2: Expanded Permissions Reference
+
+### Complete API Permissions Table
+
+| API Permission | Type | Purpose | Admin Consent |
+|---------------|------|---------|:-------------:|
+| `Policy.Read.All` | Application | Read CA policies | Yes |
+| `Policy.ReadWrite.ConditionalAccess` | Application | Create/update CA policies | Yes |
+| `Application.Read.All` | Application | Read app registrations | Yes |
+| `Directory.Read.All` | Application | Read directory objects (users, groups) | Yes |
+| `AuditLog.Read.All` | Application | Read audit logs for evidence collection | Yes |
+
+### Automation Network Endpoints
+
+| Endpoint | Port | Purpose |
+|----------|------|---------|
+| `graph.microsoft.com` | 443 | Microsoft Graph API (CA policy management) |
+| `login.microsoftonline.com` | 443 | Entra ID authentication |
+| `*.vault.azure.net` | 443 | Azure Key Vault (credential storage) |
+| `*.crm.dynamics.com` | 443 | Dataverse Web API (evidence persistence) |
+| `management.azure.com` | 443 | Azure Management API (Automation account) |
+
+---
+
+## Tier 2: Pre-Deployment Checklist
+
+### Azure Automation
+- [ ] Automation account created in target subscription
+- [ ] System-assigned managed identity enabled (or certificate configured)
+- [ ] Az.Accounts module imported
+- [ ] Runbook uploaded (`Start-CAAValidationRunbook.ps1`)
+
+### Dataverse
+- [ ] Power Platform environment with Dataverse provisioned
+- [ ] Service account security role assigned
+- [ ] Schema deployed (3 tables, 2 option sets)
+- [ ] Environment variables deployed (7 variables)
+- [ ] Connection references deployed (4 references)
+
+### Power Automate
+- [ ] Daily compliance flow imported (`caa-daily-compliance-flow.json`)
+- [ ] Connection references configured with valid connections
+- [ ] Flow tested in manual trigger mode before enabling schedule

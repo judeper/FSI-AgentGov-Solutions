@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Validated
+> **Status:** Production Ready | **Version:** v1.1.0
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
@@ -49,15 +49,47 @@ Automated deployment and compliance monitoring of Entra ID Conditional Access po
 
     This solution includes Service Principal CA policy templates in `templates/service-principals/` directory.
 
+## Architecture
+
+The solution is organized in two tiers:
+
+| Tier | Components | Purpose |
+|------|-----------|--------|
+| **Tier 1 — Policy Automation** | PowerShell scripts, CA policy templates | Deploy, validate, and monitor CA policies via Graph API |
+| **Tier 2 — Compliance Infrastructure** | Dataverse schema, Power Automate flows, Azure Automation runbook | Automated daily scans, evidence persistence, Teams alerting |
+
+```
+┌─────────────────────────┐     ┌──────────────────────────┐
+│  Azure Automation       │────▶│  Microsoft Graph API     │
+│  (Daily Runbook)        │     │  (CA Policy Read/Write)  │
+└────────┬────────────────┘     └──────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐     ┌──────────────────────────┐
+│  Dataverse              │◀───▶│  Power Automate          │
+│  (Baselines, History,   │     │  (Daily Compliance Flow, │
+│   Violations)           │     │   ELM Provisioning Hook) │
+└────────┬────────────────┘     └──────────┬───────────────┘
+         │                                 │
+         ▼                                 ▼
+┌─────────────────────────┐     ┌──────────────────────────┐
+│  Evidence Export         │     │  Teams Adaptive Card     │
+│  (SHA-256 hashed JSON)  │     │  (Violation Alerts)      │
+└─────────────────────────┘     └──────────────────────────┘
+```
+
 ## What This Solution Does
 
 - **Deploys** pre-configured Conditional Access policy templates for AI workloads
 - **Enforces** MFA requirements based on governance zone (Zone 1/2/3)
-- **Monitors** policy compliance and configuration drift
+- **Monitors** policy compliance and configuration drift with daily automated scans
+- **Persists** validation results, violations, and baselines in Dataverse
 - **Reports** on policy coverage gaps across AI applications
+- **Exports** SHA-256 integrity-hashed evidence packages for regulatory examinations
+- **Alerts** via Teams adaptive cards when violations are detected
 - **Integrates** with Environment Lifecycle Management for new environment provisioning
 
-**This is a security automation solution** - it helps organizations implement consistent Zero Trust controls for AI applications while maintaining audit trails and compliance evidence.
+**This is a security automation solution** — it helps organizations implement consistent Zero Trust controls for AI applications while maintaining audit trails and compliance evidence.
 
 ## Policy Templates
 
@@ -136,6 +168,19 @@ After testing in report-only mode:
     -TenantId "<tenant-id>" `
     -TemplateSet "Zone3" `
     -EnablePolicies $true
+```
+
+### Step 5: Export Compliance Evidence
+
+```powershell
+# Export last 30 days of compliance evidence with SHA-256 integrity hash
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence"
+
+# Verify evidence integrity
+.\scripts\Test-EvidenceIntegrity.ps1 `
+    -EvidencePath "./evidence/CAA-Evidence-*.json"
 ```
 
 ## Zone-Based Policy Requirements
@@ -269,21 +314,30 @@ Add to ELM `SupervisionConfig`:
 
 ## Compliance Evidence
 
-### Export Policy Configuration
+### Export Compliance Evidence
 
 ```powershell
-.\scripts\Export-PolicyEvidence.ps1 `
-    -TenantId "<tenant-id>" `
+# Export last 30 days of evidence from Dataverse
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence"
+
+# Export specific quarter
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
     -OutputPath "./evidence" `
-    -StartDate "2026-01-01" `
-    -EndDate "2026-03-31"
+    -FromDate "2026-01-01" -ToDate "2026-03-31"
+
+# Verify evidence integrity
+.\scripts\Test-EvidenceIntegrity.ps1 `
+    -EvidencePath "./evidence/CAA-Evidence-*.json"
 ```
 
 **Exports:**
-- `CAPolicies-Q1-2026.json` - All CA policy configurations
-- `PolicyAuditLog-Q1-2026.json` - Policy change audit trail
-- `SignInLogs-Q1-2026.json` - Sign-in events with CA evaluation
-- `manifest.json` - SHA-256 integrity hashes
+- `CAA-Evidence-<timestamp>.json` — Validation results, violations, baselines
+- `CAA-Evidence-<timestamp>.json.sha256` — SHA-256 companion hash for tamper-evident verification
+
+See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete command reference and JSON schema.
 
 ### Regulatory Alignment
 
@@ -324,7 +378,9 @@ See [docs/troubleshooting.md](./docs/troubleshooting.md) for complete error reco
 
 | Guide | Description |
 |-------|-------------|
-| [docs/prerequisites.md](./docs/prerequisites.md) | Licensing, roles, dependencies |
+| [docs/prerequisites.md](./docs/prerequisites.md) | Licensing, roles, dependencies (Tier 1 + Tier 2) |
+| [docs/SCHEMA.md](./docs/SCHEMA.md) | Dataverse tables, option sets, environment variables, connection references |
+| [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) | Evidence export command reference, JSON schema, hash verification |
 | [docs/policy-templates.md](./docs/policy-templates.md) | Template specifications and customization |
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Step-by-step deployment |
 | [docs/compliance-monitoring.md](./docs/compliance-monitoring.md) | Drift detection and reporting |
@@ -345,9 +401,37 @@ Implementation guidance in FSI-AgentGov:
 - [Control 1.11 Portal Walkthrough](https://github.com/judeper/FSI-AgentGov/blob/main/docs/playbooks/control-implementations/1.11/portal-walkthrough.md)
 - [Control 1.11 PowerShell Setup](https://github.com/judeper/FSI-AgentGov/blob/main/docs/playbooks/control-implementations/1.11/powershell-setup.md)
 
+## Components
+
+### Tier 1 — Policy Automation
+
+| Component | File | Purpose |
+|-----------|------|--------|
+| Policy Templates | `templates/*.json` | 8 CA policy templates for AI workloads |
+| Deploy Policies | `scripts/Deploy-CAPolicies.ps1` | Template deployment with WhatIf support |
+| Service Principal | `scripts/Register-ServicePrincipal.ps1` | App registration with Key Vault integration |
+| Compliance Check | `scripts/Test-PolicyCompliance.ps1` | Coverage verification with Dataverse persistence |
+| Drift Monitor | `scripts/Watch-PolicyDrift.ps1` | Multi-dimensional drift detection |
+| Baseline Export | `scripts/Export-PolicyBaseline.ps1` | Policy snapshot capture |
+
+### Tier 2 — Compliance Infrastructure
+
+| Component | File | Purpose |
+|-----------|------|--------|
+| Dataverse Schema | `scripts/create_dataverse_schema.py` | 3 tables, 2 shared option sets |
+| Environment Variables | `scripts/create_environment_variables.py` | 7 runtime configuration variables |
+| Connection References | `scripts/create_connection_references.py` | 4 Power Automate connector references |
+| Daily Compliance Flow | `src/caa-daily-compliance-flow.json` | Automated daily validation scan |
+| ELM Provisioning Hook | `src/caa-provisioning-hook-flow.json` | Zone-based policy deployment on environment creation |
+| Teams Alert Card | `src/adaptive-card-caa-alert.json` | Violation notification template |
+| Evidence Export | `scripts/Export-CAAComplianceEvidence.ps1` | SHA-256 integrity-hashed evidence packages |
+| Evidence Verification | `scripts/Test-EvidenceIntegrity.ps1` | Hash verification for exported evidence |
+| CAAClient Module | `scripts/private/CAAClient.psm1` | 8 Dataverse functions (Connect, Read, Write) |
+| Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` | Unattended daily execution via Azure Automation |
+
 ## Version
 
-1.0.0 - February 2026
+1.1.0 - February 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

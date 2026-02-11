@@ -418,3 +418,137 @@ If issues persist:
    - Error messages
    - Script output
    - Policy configurations (sanitized)
+
+---
+
+## Evidence Export Issues
+
+### Hash Mismatch After Export
+
+**Symptom:**
+```
+HASH MISMATCH — Expected: A1B2C3... Actual: D4E5F6...
+Test-EvidenceIntegrity returns Valid = $false
+```
+
+**Cause:** The evidence JSON file was modified after export (manual edits, encoding changes, or file transfer corruption).
+
+**Resolution:**
+1. Do not modify evidence files after export — they are tamper-evident by design
+2. Re-export from the Dataverse source using the same date range:
+```powershell
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence" `
+    -FromDate "2026-01-01" -ToDate "2026-01-31"
+```
+3. Verify the new export:
+```powershell
+.\scripts\Test-EvidenceIntegrity.ps1 -EvidencePath "./evidence/CAA-Evidence-*.json"
+```
+
+---
+
+### Empty Validations Array
+
+**Symptom:** Evidence JSON contains `"validations": []` with `"recordCount": 0`.
+
+**Cause:** No validation runs occurred within the specified date range.
+
+**Resolution:**
+1. Check the `-FromDate` and `-ToDate` parameters — they may be too narrow
+2. Verify the daily compliance flow is running:
+```powershell
+# Check recent flow runs in Power Automate admin center
+# Or query Dataverse directly for recent validation records
+Get-CAAValidationResults -DataverseUrl $url -AccessToken $token `
+    -Table 'fsi_capolicyvalidationhistories' `
+    -FromDate (Get-Date).AddDays(-7)
+```
+3. Trigger a manual validation run to populate data:
+```powershell
+.\scripts\Test-PolicyCompliance.ps1 -TenantId "<tenant-id>" -OutputPath "./reports"
+```
+
+---
+
+### Truncated JSON Output
+
+**Symptom:** Evidence JSON file is incomplete or fails to parse (`ConvertFrom-Json` throws an error).
+
+**Cause:** The `ConvertTo-Json` depth was insufficient for nested policy data. The export script uses `-Depth 10` by default, but manual JSON manipulation or piping through other tools may truncate the output.
+
+**Resolution:**
+1. Re-run the export script without modifications — it includes `-Depth 10` automatically
+2. If processing evidence manually, always specify depth:
+```powershell
+$evidence | ConvertTo-Json -Depth 10 | Out-File -FilePath $path -Encoding utf8
+```
+3. Validate the JSON structure:
+```powershell
+$json = Get-Content "./evidence/CAA-Evidence-*.json" -Raw | ConvertFrom-Json
+$json.metadata  # Should contain exportedAt, scope, etc.
+```
+
+---
+
+### Dataverse Authentication Failure
+
+**Symptom:**
+```
+Error: Failed to acquire Dataverse access token.
+Status: 401 Unauthorized
+```
+
+**Cause:** Certificate expired, app registration permissions removed, or managed identity not configured.
+
+**Resolution:**
+1. Verify the app registration certificate is valid:
+```powershell
+Get-AzADAppCredential -ApplicationId "<app-id>" |
+    Select-Object DisplayName, EndDateTime, Type
+```
+2. Check Graph API permissions are still granted:
+```powershell
+Get-MgServicePrincipal -Filter "appId eq '<app-id>'" |
+    Get-MgServicePrincipalAppRoleAssignment |
+    Select-Object ResourceDisplayName, AppRoleId
+```
+3. Verify Dataverse environment is accessible:
+```powershell
+Invoke-RestMethod -Uri "https://org.crm.dynamics.com/api/data/v9.2/WhoAmI" `
+    -Headers @{ Authorization = "Bearer $token" }
+```
+4. If using Azure Automation managed identity, verify it has Dataverse security role assigned
+
+---
+
+### Large Export File
+
+**Symptom:** Evidence JSON file is very large (>100 MB) and slow to process.
+
+**Cause:** Wide date range capturing months of daily validation data.
+
+**Resolution:**
+1. Filter by specific run ID to export a single scan:
+```powershell
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence" `
+    -RunId "specific-run-id"
+```
+2. Narrow the date range:
+```powershell
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence" `
+    -FromDate (Get-Date).AddDays(-7) -ToDate (Get-Date)
+```
+3. Consider weekly exports instead of the 30-day default for environments with many policies
+4. Exclude baselines if only validation results are needed:
+```powershell
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -OutputPath "./evidence" `
+    -IncludeBaselines:$false
+```
