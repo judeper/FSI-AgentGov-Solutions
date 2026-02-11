@@ -1,0 +1,205 @@
+<#
+.SYNOPSIS
+    Retrieves a normalized baseline snapshot of Conditional Access policies
+    matching FSI governance naming patterns.
+
+.DESCRIPTION
+    Queries Microsoft Graph for all Conditional Access policies that match
+    FSI agent governance naming conventions (CA-CopilotStudio-*, CA-AgentBuilder-*,
+    CA-M365Copilot-*, CA-BlockLegacyAuth-*, CA-RequireCompliantDevice-*, and custom
+    prefixes). Returns a normalized array of policy objects suitable for baseline
+    comparison and drift detection.
+
+    Each policy object includes conditions, grant controls, session controls,
+    governance zone classification (derived from the policy name), and a UTC
+    timestamp marking the snapshot time.
+
+    Supports WhatIf mode to preview which policies would be queried without
+    making Graph API calls.
+
+.PARAMETER TenantId
+    Optional Entra ID (Azure AD) tenant GUID. When provided, used for logging
+    and correlation. The active Graph session determines the actual tenant.
+
+.PARAMETER PolicyNamePrefix
+    Optional policy name prefix for matching additional custom-prefixed policies.
+    Default FSI patterns (CA-CopilotStudio-*, CA-AgentBuilder-*, CA-M365Copilot-*,
+    CA-BlockLegacyAuth-*, CA-RequireCompliantDevice-*) are always included.
+
+.PARAMETER ConfigPath
+    Optional path to a tenant configuration JSON file. When provided and
+    the file contains a policyPrefix property, that prefix is added to the
+    set of matching patterns.
+
+.EXAMPLE
+    Get-CAAPolicyBaseline
+
+    Returns normalized policy objects for all FSI-patterned CA policies
+    in the currently connected tenant.
+
+.EXAMPLE
+    Get-CAAPolicyBaseline -PolicyNamePrefix "CA-Custom-"
+
+    Returns policies matching default FSI patterns plus any policies
+    whose DisplayName starts with "CA-Custom-".
+
+.EXAMPLE
+    Get-CAAPolicyBaseline -ConfigPath "./config.json"
+
+    Loads additional policy prefix from the configuration file and
+    includes matching policies in the baseline.
+
+.EXAMPLE
+    Get-CAAPolicyBaseline -WhatIf
+
+    Previews which naming patterns would be queried without calling Graph.
+
+.OUTPUTS
+    System.Collections.Hashtable[]
+    Array of normalized policy objects with properties: PolicyId, DisplayName,
+    State, Conditions, GrantControls, SessionControls, Zone, SnapshotTimestamp.
+
+.NOTES
+    File: Get-PolicyBaseline.ps1
+    Version: 1.0.0
+    Supports compliance with FINRA 4511/3110, SEC 17a-3/4, and OCC 2011-12
+    through automated policy baseline capture for drift detection.
+#>
+
+function Get-CAAPolicyBaseline {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$PolicyNamePrefix,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ConfigPath
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    # Default FSI naming patterns
+    $defaultPatterns = @(
+        'CA-CopilotStudio-*',
+        'CA-AgentBuilder-*',
+        'CA-M365Copilot-*',
+        'CA-BlockLegacyAuth-*',
+        'CA-RequireCompliantDevice-*'
+    )
+
+    # Build pattern list
+    $patterns = [System.Collections.Generic.List[string]]::new()
+    foreach ($p in $defaultPatterns) { $patterns.Add($p) }
+
+    # Add custom prefix if provided directly
+    if ($PolicyNamePrefix) {
+        $prefixPattern = if ($PolicyNamePrefix.EndsWith('*')) { $PolicyNamePrefix } else { "$PolicyNamePrefix*" }
+        $patterns.Add($prefixPattern)
+        Write-Verbose "Added custom prefix pattern: $prefixPattern"
+    }
+
+    # Load config prefix if ConfigPath provided
+    if ($ConfigPath -and (Test-Path $ConfigPath)) {
+        $configData = Get-Content $ConfigPath -ErrorAction Stop | ConvertFrom-Json
+        if ($configData.policyPrefix) {
+            $configPattern = "$($configData.policyPrefix)-*"
+            $patterns.Add($configPattern)
+            Write-Verbose "Added config prefix pattern: $configPattern"
+        }
+    }
+
+    # WhatIf preview — show patterns without querying Graph
+    if ($PSCmdlet.ShouldProcess(
+        "Conditional Access policies matching $($patterns.Count) naming patterns",
+        "Query Microsoft Graph for baseline snapshot"
+    )) {
+        # Retrieve all CA policies with pagination
+        Write-Verbose "Retrieving all Conditional Access policies from Graph..."
+        $allPolicies = Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop
+        Write-Verbose "Found $($allPolicies.Count) total CA policies"
+
+        # Filter to FSI-matching policies
+        $matchedPolicies = @()
+        foreach ($policy in $allPolicies) {
+            foreach ($pattern in $patterns) {
+                if ($policy.DisplayName -like $pattern) {
+                    $matchedPolicies += $policy
+                    break  # avoid duplicates if policy matches multiple patterns
+                }
+            }
+        }
+
+        Write-Verbose "Matched $($matchedPolicies.Count) policies against FSI patterns"
+
+        # Snapshot timestamp (UTC ISO 8601)
+        $snapshotTime = (Get-Date).ToUniversalTime().ToString('o')
+
+        # Normalize each policy into a baseline object
+        $baselineObjects = @()
+        foreach ($policy in $matchedPolicies) {
+            # Derive zone from policy display name
+            $zone = if ($policy.DisplayName -match 'Zone1') { 'Zone1' }
+                    elseif ($policy.DisplayName -match 'Zone2') { 'Zone2' }
+                    elseif ($policy.DisplayName -match 'Zone3') { 'Zone3' }
+                    elseif ($policy.DisplayName -match 'AllZones') { 'AllZones' }
+                    else { 'Common' }
+
+            # Normalize conditions
+            $conditions = @{
+                Users              = @{
+                    IncludeUsers  = @($policy.Conditions.Users.IncludeUsers)
+                    ExcludeUsers  = @($policy.Conditions.Users.ExcludeUsers)
+                    IncludeGroups = @($policy.Conditions.Users.IncludeGroups)
+                    ExcludeGroups = @($policy.Conditions.Users.ExcludeGroups)
+                }
+                Applications       = @{
+                    IncludeApplications = @($policy.Conditions.Applications.IncludeApplications)
+                    ExcludeApplications = @($policy.Conditions.Applications.ExcludeApplications)
+                }
+                SignInRiskLevels   = @($policy.Conditions.SignInRiskLevels)
+                ClientAppTypes     = @($policy.Conditions.ClientAppTypes)
+                Platforms          = @{
+                    IncludePlatforms = @($policy.Conditions.Platforms.IncludePlatforms)
+                    ExcludePlatforms = @($policy.Conditions.Platforms.ExcludePlatforms)
+                }
+            }
+
+            # Normalize grant controls
+            $grantControls = @{
+                Operator                = $policy.GrantControls.Operator
+                BuiltInControls         = @($policy.GrantControls.BuiltInControls)
+                AuthenticationStrength   = $policy.GrantControls.AuthenticationStrength
+            }
+
+            # Normalize session controls
+            $sessionControls = @{
+                SignInFrequency  = @{
+                    IsEnabled = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.IsEnabled } else { $false }
+                    Value     = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.Value } else { $null }
+                    Type      = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.Type } else { $null }
+                }
+                PersistentBrowser = @{
+                    IsEnabled = if ($policy.SessionControls.PersistentBrowser) { $policy.SessionControls.PersistentBrowser.IsEnabled } else { $false }
+                    Mode      = if ($policy.SessionControls.PersistentBrowser) { $policy.SessionControls.PersistentBrowser.Mode } else { $null }
+                }
+            }
+
+            $baselineObjects += @{
+                PolicyId          = $policy.Id
+                DisplayName       = $policy.DisplayName
+                State             = $policy.State
+                Conditions        = $conditions
+                GrantControls     = $grantControls
+                SessionControls   = $sessionControls
+                Zone              = $zone
+                SnapshotTimestamp  = $snapshotTime
+            }
+        }
+
+        Write-Verbose "Baseline snapshot captured: $($baselineObjects.Count) policies at $snapshotTime"
+        return $baselineObjects
+    }
+}
