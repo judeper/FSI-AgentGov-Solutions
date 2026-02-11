@@ -14,8 +14,11 @@ This document defines the per-solution logic for translating Tier 2 governance s
 | AAM | 3.8 | Copilot Hub and Governance Dashboard | Daily |
 | CMM | 1.8 | Runtime Protection and External Threat Detection | Daily |
 | FUS | 1.14 | Data Minimization and Agent Scope Control | Daily |
+| CAA | 1.11 | Conditional Access and Phishing-Resistant MFA | Daily |
+| CAA | 1.23 | Step-Up Authentication for Agent Operations | Daily |
+| CAA | 1.18 | RBAC and Least-Privilege for Agent Identities | Daily |
 
-**Total:** 5 solutions → 7 control assessments (SSC feeds 2 controls)
+**Total:** 6 solutions → 10 control assessments (SSC and CAA share Control 1.11)
 
 ---
 
@@ -119,6 +122,33 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 
 ---
 
+### CAA → Controls 1.11, 1.23, 1.18
+
+**Source table:** `fsi_capolicyvalidationhistories`
+**Source field:** `fsi_severity` (Choice: 1-5)
+**Query:** Latest record ordered by `fsi_timestamp desc`
+
+| CAA Severity | CD Status | CD Score | Logic |
+|-------------|-----------|----------|-------|
+| 1 (Passed) | 1 (Compliant) | 100 | All CA policies meet zone requirements |
+| 2 (Warning) | 2 (Partial) | 50 | Minor policy gaps (e.g., report-only mode) |
+| 3 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
+| 4 (Failed) | 3 (Non-Compliant) | 0 | CA policy compliance failure |
+| 5 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
+
+**Control Mapping:**
+
+| Control | Role | Notes |
+|---------|------|-------|
+| 1.11 | Primary | Dual-feed with SSC (worst-of-two resolution) |
+| 1.23 | Secondary | CA session controls complement |
+| 1.18 | Secondary | RBAC policy complement |
+
+**Dual-Feed Resolution (Control 1.11):**
+SSC validates session security (inactivity timeouts, persistent browser). CAA validates CA policy compliance (MFA enforcement, break-glass exclusions, policy drift). Both are complementary compliance signals. The Compliance Dashboard uses worst-of-two status: if either solution reports Non-Compliant, Control 1.11 shows Non-Compliant.
+
+---
+
 ## Assessment Record Structure
 
 When creating/updating `fsi_controlassessment` records:
@@ -163,4 +193,4 @@ When Tier 2 solutions export evidence packages, register them in `fsi_compliance
 
 ---
 
-*Status Mapping Reference v1.0.0 — February 2026*
+*Status Mapping Reference v1.1.0 — February 2026*
