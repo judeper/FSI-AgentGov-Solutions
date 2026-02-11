@@ -3,8 +3,8 @@
     Syncs Tier 2 governance solution validation results into Compliance Dashboard assessments.
 
 .DESCRIPTION
-    Queries the latest validation history from each of the 5 Tier 2 governance solutions
-    (ACV, SSC, AAM, CMM, FUS), translates their status/severity values into Compliance
+    Queries the latest validation history from each of the 6 Tier 2 governance solutions
+    (ACV, SSC, AAM, CMM, FUS, CAA), translates their status/severity values into Compliance
     Dashboard fsi_controlassessment records, and optionally registers evidence.
 
     This script can run interactively, via Azure Automation, or be invoked by the
@@ -30,7 +30,7 @@
     Show what would be created/updated without writing to Dataverse.
 
 .PARAMETER Solutions
-    Array of solution abbreviations to sync. Default: all 5 (ACV, SSC, AAM, CMM, FUS).
+    Array of solution abbreviations to sync. Default: all 6 (ACV, SSC, AAM, CMM, FUS, CAA).
 
 .PARAMETER RegisterEvidence
     When specified, also register evidence records in fsi_complianceevidence from
@@ -75,8 +75,8 @@ param(
 
     [switch]$DryRun,
 
-    [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS')]
-    [string[]]$Solutions = @('ACV', 'SSC', 'AAM', 'CMM', 'FUS'),
+    [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA')]
+    [string[]]$Solutions = @('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA'),
 
     [switch]$RegisterEvidence,
 
@@ -506,7 +506,62 @@ foreach ($solution in $Solutions) {
     Write-Host ""
 }
 
-# Output results
+#region Worst-of-Two Resolution for Control 1.11
+
+# If both SSC and CAA contributed assessments for Control 1.11, apply worst-of-two logic
+if (('SSC' -in $Solutions) -and ('CAA' -in $Solutions)) {
+    $sscResult = $allResults | Where-Object { $_.Solution -eq 'SSC' -and $_.ControlId -eq '1.11' -and $_.Status -ne 'No Data' } | Select-Object -First 1
+    $caaResult = $allResults | Where-Object { $_.Solution -eq 'CAA' -and $_.ControlId -eq '1.11' -and $_.Status -ne 'No Data' } | Select-Object -First 1
+
+    if ($sscResult -and $caaResult) {
+        # Map status labels to numeric values for comparison
+        $statusOrder = @{ 'Compliant' = 1; 'Partial' = 2; 'Non-Compliant' = 3 }
+        $sscValue = $statusOrder[$sscResult.Status]
+        $caaValue = $statusOrder[$caaResult.Status]
+        $worstValue = [Math]::Max($sscValue, $caaValue)
+        $worstLabel = ($statusOrder.GetEnumerator() | Where-Object { $_.Value -eq $worstValue }).Key
+        $worstScore = switch ($worstValue) { 1 { 100 } 2 { 50 } 3 { 0 } }
+
+        if ($sscValue -ne $caaValue) {
+            Write-Host "[Control 1.11] Dual-feed resolution: SSC=$($sscResult.Status), CAA=$($caaResult.Status) => Worst-of-two: $worstLabel" -ForegroundColor Magenta
+
+            if (-not $DryRun) {
+                try {
+                    $controlGuid = $controlGuids['1.11']
+                    if ($controlGuid) {
+                        $cdConfig = Get-DashboardTableConfig
+                        $today = (Get-Date).ToString('yyyy-MM-dd')
+                        $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')&`$top=1"
+                        $existing = Invoke-DataverseQuery -Connection $connection `
+                            -EntitySet $cdConfig.Assessment.EntitySet `
+                            -Query $existingQuery
+
+                        if ($existing.Count -gt 0) {
+                            $worstNotes = "Automated assessment — worst-of-two resolution. SSC: $($sscResult.Status), CAA: $($caaResult.Status). Final: $worstLabel."
+                            Update-DataverseRecord -Connection $connection `
+                                -EntitySet $cdConfig.Assessment.EntitySet `
+                                -RecordId $existing[0].fsi_controlassessmentid `
+                                -Record @{
+                                    'fsi_status' = $worstValue
+                                    'fsi_score'  = $worstScore
+                                    'fsi_notes'  = $worstNotes
+                                }
+                            Write-Host "  [Updated] Control 1.11 assessment with worst-of-two result" -ForegroundColor Green
+                        }
+                    }
+                } catch {
+                    Write-Warning "  [Error] Worst-of-two update for Control 1.11: $($_.Exception.Message)"
+                }
+            } else {
+                Write-Host "  [DryRun] Would update Control 1.11 assessment to $worstLabel (Score: $worstScore)" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "[Control 1.11] Dual-feed aligned: SSC and CAA both report $($sscResult.Status)" -ForegroundColor Green
+        }
+    }
+}
+
+#endregion
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "  Sync Summary" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
