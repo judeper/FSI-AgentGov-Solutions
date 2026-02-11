@@ -7,12 +7,13 @@
     required governance zones and AI applications with correct grant controls, session
     controls, and break-glass exclusions.
 
-    Performs five compliance checks:
+    Performs five compliance checks (six when BaselinePath is provided):
       1. Policy Existence — verifies expected policies exist for each zone
       2. Policy State — confirms policies are enabled or report-only
       3. Break-Glass Exclusions — validates emergency accounts are excluded
       4. MFA Grant Controls — checks MFA requirement on non-block policies
       5. Session Controls — validates signInFrequency and persistentBrowser settings
+      6. Policy Drift Analysis — compares current state against a saved baseline (optional)
 
     Supports WhatIf mode to preview which policies would be checked without
     querying Microsoft Graph.
@@ -33,6 +34,12 @@
     Format for console output. Valid values: Table (default), JSON, Object.
     Table renders a formatted summary; JSON writes raw JSON to the pipeline;
     Object returns the compliance results hashtable for further processing.
+
+.PARAMETER BaselinePath
+    Optional path to a previously exported baseline JSON file (from
+    Export-PolicyBaseline.ps1). When provided, an additional drift analysis
+    check compares the current policy state against the baseline and adds
+    findings to the compliance results.
 
 .PARAMETER IncludeReportOnly
     When specified, counts report-only policies as passing the state check.
@@ -79,6 +86,9 @@ param(
     [string]$OutputFormat = "Table",
 
     [Parameter(Mandatory = $false)]
+    [string]$BaselinePath,
+
+    [Parameter(Mandatory = $false)]
     [switch]$IncludeReportOnly
 )
 
@@ -92,6 +102,8 @@ $ErrorActionPreference = "Stop"
 . $PSScriptRoot/private/Connect-GraphSession.ps1
 . $PSScriptRoot/private/Get-ZoneClassification.ps1
 . $PSScriptRoot/private/Test-ParameterValidation.ps1
+. $PSScriptRoot/private/Get-PolicyBaseline.ps1
+. $PSScriptRoot/private/Compare-PolicyBaseline.ps1
 
 $timestamp = Get-Date -Format "yyyy-MM-dd"
 
@@ -140,6 +152,9 @@ if ($WhatIfPreference) {
     }
     Write-Host ""
     Write-Host "  Checks: Policy Existence, Policy State, Break-Glass Exclusions, MFA Grant Controls, Session Controls"
+    if ($BaselinePath) {
+        Write-Host "  + Check 6: Policy Drift Analysis (baseline: $BaselinePath)"
+    }
     Write-Host "  Output format: $OutputFormat"
     if ($OutputPath) {
         Write-Host "  Report output: $OutputPath"
@@ -406,6 +421,54 @@ foreach ($policy in $fsiPolicies) {
     }
 }
 
+# Check 6: Policy Drift Analysis (when BaselinePath provided)
+if ($BaselinePath) {
+    Write-Verbose "Running policy drift analysis against baseline: $BaselinePath"
+
+    if (-not (Test-Path $BaselinePath)) {
+        Write-Warning "Baseline file not found: $BaselinePath — skipping drift analysis"
+    }
+    else {
+        $baselineContent = Get-Content $BaselinePath -Raw -ErrorAction Stop | ConvertFrom-Json
+        $previousPolicies = $baselineContent.policies
+
+        # Build current baseline from the already-retrieved policies
+        $currentBaseline = Get-CAAPolicyBaseline -TenantId $TenantId
+
+        $driftResults = Compare-CAAPolicyBaseline -PreviousBaseline @($previousPolicies) -CurrentBaseline @($currentBaseline)
+        $driftFindings = @($driftResults | Where-Object { $_.DriftType -ne 'None' })
+
+        foreach ($drift in $driftResults) {
+            $complianceResults.checksPerformed++
+            if ($drift.Severity -le 1) {
+                $complianceResults.checksPassed++
+            }
+            else {
+                $complianceResults.checksFailed++
+            }
+        }
+
+        $complianceResults['driftAnalysis'] = @{
+            baselineFile     = $BaselinePath
+            totalDriftItems  = $driftFindings.Count
+            findings         = @($driftResults)
+        }
+
+        if ($driftFindings.Count -gt 0) {
+            $complianceResults.gaps += @{
+                type           = "PolicyDrift"
+                driftCount     = $driftFindings.Count
+                recommendation = "Review drift findings and re-export baseline after remediation"
+            }
+        }
+
+        Write-Verbose "  Drift analysis complete: $($driftFindings.Count) drift items found"
+    }
+}
+else {
+    Write-Verbose "No baseline provided — run Export-PolicyBaseline.ps1 to establish a baseline for drift detection"
+}
+
 # Determine zone coverage status
 foreach ($zone in @("zone1", "zone2", "zone3")) {
     if ($complianceResults.coverage.$zone.policies.Count -gt 0) {
@@ -461,6 +524,13 @@ if ($complianceResults.gaps.Count -gt 0) {
     $complianceResults.gaps | ForEach-Object {
         Write-Host "  - [$($_.type)] $($_.recommendation)" -ForegroundColor Yellow
     }
+}
+
+if ($complianceResults.ContainsKey('driftAnalysis')) {
+    $driftData = $complianceResults['driftAnalysis']
+    Write-Host "`nDrift Analysis:" -ForegroundColor Cyan
+    Write-Host "  Baseline: $($driftData.baselineFile)"
+    Write-Host "  Drift items found: $($driftData.totalDriftItems)" -ForegroundColor $(if ($driftData.totalDriftItems -gt 0) { "Yellow" } else { "Green" })
 }
 
 # Output results based on format

@@ -45,7 +45,9 @@
     FunctionsToExport = @(
         'Deploy-CAPolicies',
         'Test-PolicyCompliance',
-        'Register-ServicePrincipal'
+        'Register-ServicePrincipal',
+        'Watch-PolicyDrift',
+        'Export-PolicyBaseline'
     )
     
     # Cmdlets to export from this module
