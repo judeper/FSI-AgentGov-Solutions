@@ -15,3 +15,9 @@ All notable changes to the Audit Logging Compliance Automation solution will be 
   - `Send-ComplianceNotification` — Graph sendMail via shared mailbox with attachments
 - `AuditComplianceHelpers.psd1` — Module manifest with version 1.0.0
 - `AuditComplianceHelpers.Tests.ps1` — Pester 5 unit tests for helper module
+- `Check-AuditLoggingCompliance.ps1` — Detection runbook (MI auth, environment scanning, compliance determination, CSV export, HTML email)
+- `Enable-AuditLogging.ps1` — Remediation runbook (org-level + entity-level audit enablement, WhatIf, validation)
+- `create_audit_compliance_schema.py` — Dataverse schema creation script
+- `docs/deployment-guide.md` — Azure Automation deployment (phases 1–5, MI permissions, shared mailbox)
+- `docs/scheduling-guide.md` — Runbook scheduling (weekly detection, optional daily, parameter reference)
+- `docs/testing-scenarios.md` — 15 test scenarios + 10 troubleshooting issues
