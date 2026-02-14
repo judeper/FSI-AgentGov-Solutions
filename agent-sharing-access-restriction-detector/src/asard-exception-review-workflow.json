@@ -102,12 +102,12 @@
                     "parameters": {
                       "entityName": "fsi_agentsharingcompliances",
                       "$select": "fsi_agent_name,fsi_environment_name,fsi_exception_expires_at,fsi_exception_approved_by,fsi_exception_justification",
-                      "$filter": "fsi_compliance_status eq 2 and fsi_exception_expires_at ge @{variables('Today')} and fsi_exception_expires_at le @{variables('ExpiringThreshold')}",
+                      "$filter": "fsi_compliance_status eq 914430002 and fsi_exception_expires_at ge @{variables('Today')} and fsi_exception_expires_at le @{variables('ExpiringThreshold')}",
                       "$orderby": "fsi_exception_expires_at asc"
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for exceptions expiring within 14 days (compliance_status=2, expires_at between today and today+14)"
+                  "description": "Query for exceptions expiring within 14 days (compliance_status=914430002, expires_at between today and today+14)"
                 },
                 "Condition_Check_Expiring_Exceptions_Exist": {
                   "type": "If",
@@ -205,12 +205,12 @@
                     "parameters": {
                       "entityName": "fsi_agentsharingcompliances",
                       "$select": "fsi_agentsharingcomplianceid,fsi_agent_name,fsi_environment_name,fsi_exception_expires_at,fsi_exception_justification",
-                      "$filter": "fsi_compliance_status eq 2 and fsi_exception_expires_at lt @{variables('Today')}",
+                      "$filter": "fsi_compliance_status eq 914430002 and fsi_exception_expires_at lt @{variables('Today')}",
                       "$orderby": "fsi_exception_expires_at desc"
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for expired exceptions (compliance_status=2, expires_at < today)"
+                  "description": "Query for expired exceptions (compliance_status=914430002, expires_at < today)"
                 },
                 "Condition_Check_Expired_Exceptions_Exist": {
                   "type": "If",
@@ -245,7 +245,7 @@
                             "parameters": {
                               "entityName": "fsi_agentsharingcompliances",
                               "recordId": "@item()?['fsi_agentsharingcomplianceid']",
-                              "item/fsi_compliance_status": 1,
+                              "item/fsi_compliance_status": 914430001,
                               "item/fsi_exception_expires_at": null,
                               "item/fsi_exception_justification": null,
                               "item/fsi_exception_approved_by": null,
@@ -254,7 +254,7 @@
                             },
                             "authentication": "@parameters('$authentication')"
                           },
-                          "description": "Reset compliance_status to NonCompliant (1) and clear all exception fields"
+                          "description": "Reset compliance_status to NonCompliant (914430001) and clear all exception fields"
                         }
                       },
                       "description": "Iterate over expired exceptions and update each record"
@@ -343,9 +343,17 @@
       "Query Dataverse for expiring exceptions (expires_at <= today+14)",
       "Send Teams notification with expiring exception list",
       "Query Dataverse for expired exceptions (expires_at < today)",
-      "Update expired records: Set compliance_status=1, clear exception fields",
+      "Update expired records: Set compliance_status=914430001 (NonCompliant), clear exception fields",
       "Send Teams notification with expired exception list"
     ],
+    "optionSetMappings": {
+      "fsi_compliance_status": {
+        "914430000": "Compliant",
+        "914430001": "NonCompliant",
+        "914430002": "Exception",
+        "914430003": "Error"
+      }
+    },
     "deploymentInstructions": [
       "Import flow into target environment via Power Automate portal or ALM pipelines",
       "Configure connection references: Dataverse (shared_commondataserviceforapps), Teams (shared_teams)",

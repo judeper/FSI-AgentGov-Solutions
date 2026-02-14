@@ -34,6 +34,22 @@
         "$authentication": {
           "defaultValue": {},
           "type": "SecureObject"
+        },
+        "fsi_ASARD_ApprovalEmail": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "fsi_ASARD_ApprovalEmail",
+            "description": "Governance lead email address for remediation approval assignment"
+          }
+        },
+        "fsi_ASARD_TeamsChannelId": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "fsi_ASARD_TeamsChannelId",
+            "description": "Microsoft Teams channel ID for remediation notifications"
+          }
         }
       },
       "triggers": {
@@ -70,7 +86,7 @@
               {
                 "name": "ApproverEmail",
                 "type": "string",
-                "value": ""
+                "value": "@parameters('fsi_ASARD_ApprovalEmail')"
               }
             ]
           },
@@ -88,7 +104,7 @@
               {
                 "name": "TeamsChannelId",
                 "type": "string",
-                "value": ""
+                "value": "@parameters('fsi_ASARD_TeamsChannelId')"
               }
             ]
           },
@@ -225,6 +241,60 @@
           },
           "description": "Capture approval run start timestamp for summary reporting."
         },
+        "Initialize_CurrentAgentId": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CurrentAgentId",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_RunStartTime": [
+              "Succeeded"
+            ]
+          },
+          "description": "Variable to hold current agent ID during loop iteration. Set via SetVariable inside Apply_to_each_Agent."
+        },
+        "Initialize_CurrentEnvironmentId": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CurrentEnvironmentId",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_CurrentAgentId": [
+              "Succeeded"
+            ]
+          },
+          "description": "Variable to hold current environment ID during loop iteration. Set via SetVariable inside Apply_to_each_Agent."
+        },
+        "Initialize_CurrentZone": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CurrentZone",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_CurrentEnvironmentId": [
+              "Succeeded"
+            ]
+          },
+          "description": "Variable to hold current zone classification during loop iteration. Set via SetVariable inside Apply_to_each_Agent."
+        },
         "Scope_Main": {
           "type": "Scope",
           "actions": {
@@ -233,7 +303,7 @@
               "inputs": {
                 "parameters": {
                   "entityName": "fsi_agentsharingcompliances",
-                  "$filter": "fsi_compliance_status eq 1 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
+                  "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
                   "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
                   "$orderby": "fsi_last_checked desc",
                   "$top": 100
@@ -277,55 +347,40 @@
                   "type": "Foreach",
                   "foreach": "@outputs('List_NonCompliant_Agents')?['body/value']",
                   "actions": {
-                    "Initialize_AgentId": {
-                      "type": "InitializeVariable",
+                    "Set_AgentId": {
+                      "type": "SetVariable",
                       "inputs": {
-                        "variables": [
-                          {
-                            "name": "CurrentAgentId",
-                            "type": "string",
-                            "value": "@{items('Apply_to_each_Agent')?['fsi_agent_id']}"
-                          }
-                        ]
+                        "name": "CurrentAgentId",
+                        "value": "@{items('Apply_to_each_Agent')?['fsi_agent_id']}"
                       },
                       "runAfter": {},
-                      "description": "Extract agent ID from current iteration item."
+                      "description": "Set agent ID from current iteration item."
                     },
-                    "Initialize_EnvironmentId": {
-                      "type": "InitializeVariable",
+                    "Set_EnvironmentId": {
+                      "type": "SetVariable",
                       "inputs": {
-                        "variables": [
-                          {
-                            "name": "CurrentEnvironmentId",
-                            "type": "string",
-                            "value": "@{items('Apply_to_each_Agent')?['fsi_environment_id']}"
-                          }
-                        ]
+                        "name": "CurrentEnvironmentId",
+                        "value": "@{items('Apply_to_each_Agent')?['fsi_environment_id']}"
                       },
                       "runAfter": {
-                        "Initialize_AgentId": [
+                        "Set_AgentId": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Extract environment ID from current iteration item."
+                      "description": "Set environment ID from current iteration item."
                     },
-                    "Initialize_Zone": {
-                      "type": "InitializeVariable",
+                    "Set_Zone": {
+                      "type": "SetVariable",
                       "inputs": {
-                        "variables": [
-                          {
-                            "name": "CurrentZone",
-                            "type": "integer",
-                            "value": "@items('Apply_to_each_Agent')?['fsi_zone']"
-                          }
-                        ]
+                        "name": "CurrentZone",
+                        "value": "@items('Apply_to_each_Agent')?['fsi_zone']"
                       },
                       "runAfter": {
-                        "Initialize_EnvironmentId": [
+                        "Set_EnvironmentId": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Extract zone classification from current iteration item."
+                      "description": "Set zone classification from current iteration item."
                     },
                     "Query_Approved_Groups_For_Zone": {
                       "type": "OpenApiConnection",
@@ -342,7 +397,7 @@
                         }
                       },
                       "runAfter": {
-                        "Initialize_Zone": [
+                        "Set_Zone": [
                           "Succeeded"
                         ]
                       },
@@ -788,7 +843,7 @@
             }
           },
           "runAfter": {
-            "Initialize_RunStartTime": [
+            "Initialize_CurrentZone": [
               "Succeeded"
             ]
           }
@@ -848,6 +903,19 @@
       "fsi_ASARD_TeamsChannelId",
       "fsi_ASARD_ApprovalTimeoutDays"
     ],
+    "optionSetMappings": {
+      "fsi_compliance_status": {
+        "914430000": "Compliant",
+        "914430001": "NonCompliant",
+        "914430002": "Exception",
+        "914430003": "Error"
+      },
+      "fsi_approval_status": {
+        "914430000": "Pending",
+        "914430001": "Approved",
+        "914430002": "Rejected"
+      }
+    },
     "connectionReferences": [
       "fsi_cr_dataverse_asard",
       "fsi_cr_teams_asard",
