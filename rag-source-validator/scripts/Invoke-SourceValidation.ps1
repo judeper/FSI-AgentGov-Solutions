@@ -93,9 +93,14 @@ function Get-KnowledgeSources {
         $filter = "fsi_knowledgesourceid eq $SourceId"
     }
 
-    $uri = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
-    $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-    return $response.value
+    $results = @()
+    $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
+    while ($nextLink) {
+        $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+        $results += $response.value
+        $nextLink = $response.'@odata.nextLink'
+    }
+    return $results
 }
 
 function New-ValidationResult {

@@ -291,17 +291,21 @@ class ALCAClient:
             return []
 
         try:
-            response = self._session.get(
-                urljoin(
-                    self.api_url,
-                    f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys",
-                ),
-                headers=self._get_headers(),
+            results = []
+            url = urljoin(
+                self.api_url,
+                f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys",
             )
-            if response.status_code == 404:
-                return []
-            response.raise_for_status()
-            return response.json().get("value", [])
+            headers = self._get_headers()
+            while url:
+                response = self._session.get(url, headers=headers)
+                if response.status_code == 404:
+                    return []
+                response.raise_for_status()
+                data = response.json()
+                results.extend(data.get("value", []))
+                url = data.get("@odata.nextLink")
+            return results
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 return []

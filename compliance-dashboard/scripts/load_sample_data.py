@@ -69,9 +69,14 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
 
     api_url = f"{dataverse_url}/api/data/v9.2/fsi_controlmasters"
 
-    # Check existing records
-    existing = requests.get(api_url, headers=headers).json()
-    existing_ids = {r.get("fsi_controlid") for r in existing.get("value", [])}
+    # Check existing records (with pagination)
+    existing_records = []
+    next_url = api_url
+    while next_url:
+        existing = requests.get(next_url, headers=headers).json()
+        existing_records.extend(existing.get("value", []))
+        next_url = existing.get("@odata.nextLink")
+    existing_ids = {r.get("fsi_controlid") for r in existing_records}
 
     if existing_ids and not force:
         print(f"Found {len(existing_ids)} existing controls. Use --force to overwrite.")

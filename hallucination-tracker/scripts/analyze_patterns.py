@@ -74,12 +74,18 @@ class PatternAnalyzer:
         }
 
         start_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
-        uri = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$filter=createdon ge {start_date}"
+        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$filter=createdon ge {start_date}"
 
         try:
-            response = requests.get(uri, headers=headers)
-            if response.status_code == 200:
-                return response.json().get("value", [])
+            results = []
+            while url:
+                response = requests.get(url, headers=headers)
+                if response.status_code != 200:
+                    break
+                data = response.json()
+                results.extend(data.get("value", []))
+                url = data.get("@odata.nextLink")
+            return results
         except Exception as e:
             print(f"Warning: Could not fetch feedback: {e}")
 

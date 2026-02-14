@@ -138,9 +138,17 @@ class SSCClient:
         if filter_expr: params["$filter"] = filter_expr
         if orderby: params["$orderby"] = orderby
         if top: params["$top"] = str(top)
-        response = self._session.get(urljoin(self.api_url, entity_set), headers=self._get_headers(), params=params)
-        response.raise_for_status()
-        return response.json().get("value", [])
+        results = []
+        url = urljoin(self.api_url, entity_set)
+        headers = self._get_headers()
+        while url:
+            response = self._session.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            results.extend(data.get("value", []))
+            url = data.get("@odata.nextLink")
+            params = {}  # nextLink URL includes query params
+        return results
 
     def create_record(self, entity_set, data):
         if self.dry_run:
