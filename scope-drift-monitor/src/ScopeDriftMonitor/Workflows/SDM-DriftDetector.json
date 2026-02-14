@@ -31,7 +31,7 @@
           {
             "name": "LastCheckTime",
             "type": "string",
-            "value": "@{addMinutes(utcNow(), -15)}"
+            "value": "@{addMinutes(utcNow(), mul(-1, int(parameters('fsi_SDM_DetectionWindowMinutes'))))}"
           }
         ]
       }
@@ -266,16 +266,16 @@
                 "where": "@equals(item()?['RecordType'], 261)"
               }
             },
-            "Append_Filtered_Events": {
+            "Flatten_Filtered_Events": {
               "runAfter": {
                 "Filter_CopilotInteraction_Events": [
                   "Succeeded"
                 ]
               },
-              "type": "AppendToArrayVariable",
+              "type": "SetVariable",
               "inputs": {
                 "name": "AuditEvents",
-                "value": "@body('Filter_CopilotInteraction_Events')"
+                "value": "@union(variables('AuditEvents'), coalesce(body('Filter_CopilotInteraction_Events'), json('[]')))"
               }
             }
           },
@@ -347,7 +347,7 @@
           "type": "Query",
           "inputs": {
             "from": "@outputs('List_Active_Agent_Scopes')?['body/value']",
-            "where": "@or(contains(item()?['fsi_agentid'], outputs('Parse_Event_Agent_Id')), equals(item()?['fsi_agentid'], items('For_Each_Audit_Event')?['EventData']?['AgentId']))"
+            "where": "@or(equals(item()?['fsi_agentid'], outputs('Parse_Event_Agent_Id')), equals(item()?['fsi_agentid'], items('For_Each_Audit_Event')?['EventData']?['AgentId']))"
           }
         },
         "Condition_Scope_Found": {
@@ -434,7 +434,7 @@
                             "fsi_status": 1,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"action\":\"', items('For_Each_Accessed_Resource')?['Action'], '\",\"file\":\"', items('For_Each_Accessed_Resource')?['Name'], '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(items('For_Each_Audit_Event')?['UserId'], '\"', '\\\"'), '\",\"action\":\"', replace(coalesce(items('For_Each_Accessed_Resource')?['Action'], ''), '\"', '\\\"'), '\",\"file\":\"', replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '\"', '\\\"'), '\"}'))}"
                           }
                         },
                         "authentication": "@parameters('$authentication')"
@@ -501,7 +501,7 @@
                             "fsi_status": 1,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"connector\":\"', items('For_Each_Accessed_Resource')?['Name'], '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(items('For_Each_Audit_Event')?['UserId'], '\"', '\\\"'), '\",\"connector\":\"', replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '\"', '\\\"'), '\"}'))}"
                           }
                         },
                         "authentication": "@parameters('$authentication')"
@@ -569,7 +569,7 @@
                             "fsi_status": 1,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"api\":\"', items('For_Each_Accessed_Resource')?['Url'], '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(items('For_Each_Audit_Event')?['UserId'], '\"', '\\\"'), '\",\"api\":\"', replace(coalesce(items('For_Each_Accessed_Resource')?['Url'], ''), '\"', '\\\"'), '\"}'))}"
                           }
                         },
                         "authentication": "@parameters('$authentication')"
@@ -618,7 +618,7 @@
                       "fsi_status": 1,
                       "fsi_detectedon": "@{utcNow()}",
                       "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                      "fsi_accessdetails": "@{json(concat('{\"user\":\"', items('For_Each_Audit_Event')?['UserId'], '\",\"agentHost\":\"', outputs('Parse_Event_Agent_Id'), '\"}'))}"
+                      "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(items('For_Each_Audit_Event')?['UserId'], '\"', '\\\"'), '\",\"agentHost\":\"', replace(coalesce(string(outputs('Parse_Event_Agent_Id')), ''), '\"', '\\\"'), '\"}'))}"
                     }
                   },
                   "authentication": "@parameters('$authentication')"

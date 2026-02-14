@@ -63,7 +63,10 @@ function Connect-ToExchangeOnline {
     .SYNOPSIS
         Connects to Exchange Online if not already connected.
     #>
-    if (-not (Get-Command Search-UnifiedAuditLog -ErrorAction SilentlyContinue)) {
+    # Check for an active EXO session (not just module presence)
+    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
+        Where-Object { $_.State -eq 'Connected' }
+    if (-not $exoSession) {
         Write-Verbose "Connecting to Exchange Online..."
         try {
             Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop

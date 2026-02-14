@@ -469,6 +469,8 @@ Write-Host "  Scope Drift Detection Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+Write-AuditLog "Drift scan starting — Environment=$Environment AgentFilter=$(if ($AgentId) { $AgentId } else { 'All' }) Lookback=${Minutes}m"
+
 Write-Host "Environment: $Environment"
 Write-Host "Agent Filter: $(if ($AgentId) { $AgentId } else { 'All active agents' })"
 Write-Host "Lookback: $Minutes minutes"
@@ -587,6 +589,7 @@ foreach ($event in $events) {
                 Resource = $violation.Resource
                 Severity = Get-SeverityLabel -Severity $violation.Severity
             }
+            Write-AuditLog "Violation detected — Agent=$(if ($eventAgentId) { $eventAgentId } else { 'Unknown' }) Type=$($violation.Type) Resource=$($violation.Resource) Severity=$(Get-SeverityLabel -Severity $violation.Severity)" -Level "WARN"
         }
     }
 }
@@ -634,6 +637,8 @@ $output = [PSCustomObject]@{
     Violations        = $violationResults
     ScanTime          = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 }
+
+Write-AuditLog "Drift scan complete — Events=$($events.Count) Agents=$($agentsScanned.Count) Violations=$totalViolations"
 
 Write-Output $output
 

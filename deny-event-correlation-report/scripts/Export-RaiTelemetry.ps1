@@ -234,6 +234,11 @@ customEvents
     # Execute query using Entra ID authentication
     $response = Invoke-AppInsightsQuery -AppId $AppInsightsAppId -Query $kqlQuery
 
+    # Check for truncation — App Insights API silently caps results at ~10K rows
+    if ($response.tables -and $response.tables[0].rows.Count -ge 10000) {
+        Write-Warning "App Insights query returned 10,000 rows — results may be truncated. Consider narrowing the date range."
+    }
+
     # Convert response
     $raiEvents = ConvertFrom-AppInsightsResponse -Response $response
 

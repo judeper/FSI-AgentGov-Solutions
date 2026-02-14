@@ -157,6 +157,14 @@ function ConvertTo-CopilotDlpEvent {
             }
 
             if ($isCopilotRelated -or $PolicyFilter -ne "*") {
+                # Apply PolicyNameFilter: skip events that don't match when a filter is specified
+                if ($PolicyFilter -and $PolicyFilter -ne "*") {
+                    $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
+                    if (-not $matchesFilter) {
+                        return
+                    }
+                }
+
                 # Extract policy details
                 $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
                 $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "

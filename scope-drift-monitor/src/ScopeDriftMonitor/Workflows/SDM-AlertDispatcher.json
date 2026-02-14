@@ -218,7 +218,8 @@
     "Update_Violation_Status": {
       "runAfter": {
         "Send_Email_Notification": [
-          "Succeeded"
+          "Succeeded",
+          "Failed"
         ]
       },
       "type": "OpenApiConnection",

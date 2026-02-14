@@ -135,10 +135,10 @@ function Get-KeyVaultSecrets {
 
     $secrets = @{}
 
-    # Try to get App Insights credentials
+    # Retrieve App Insights App ID from Key Vault
+    # NOTE: AppInsightsApiKey retrieval removed — Entra ID auth (Wave 1 migration) no longer needs it
     try {
         $secrets.AppInsightsAppId = Get-AzKeyVaultSecret -VaultName $VaultName -Name "AppInsightsAppId" -AsPlainText -ErrorAction SilentlyContinue
-        $secrets.AppInsightsApiKey = Get-AzKeyVaultSecret -VaultName $VaultName -Name "AppInsightsApiKey" -AsPlainText -ErrorAction SilentlyContinue
     }
     catch {
         Write-Warning "Could not retrieve App Insights secrets from Key Vault."
@@ -216,26 +216,7 @@ try {
         if (-not $AppInsightsAppId -and $kvSecrets.AppInsightsAppId) {
             $AppInsightsAppId = $kvSecrets.AppInsightsAppId
         }
-        if (-not $AppInsightsApiKey -and $kvSecrets.AppInsightsApiKey) {
-            $AppInsightsApiKey = $kvSecrets.AppInsightsApiKey
-        }
-    }
-
-    # Deprecation warning for API key authentication
-    if ($AppInsightsApiKey) {
-        Write-Warning @"
-
-================================================================================
-  DEPRECATION: x-api-key authentication will stop working March 31, 2026
-================================================================================
-  The -AppInsightsApiKey parameter uses deprecated API key authentication.
-  Organizations should plan migration to Entra ID authentication before this
-  date to ensure RAI telemetry extraction continues to work.
-
-  Migration guide: docs/prerequisites.md#authentication-migration
-================================================================================
-
-"@
+        # NOTE: ApiKey no longer retrieved from KeyVault — Entra ID auth path does not need it
     }
 
     # Track results
