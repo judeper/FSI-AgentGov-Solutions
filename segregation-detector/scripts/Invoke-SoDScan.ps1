@@ -109,6 +109,51 @@ function Get-EntraDirectoryRoles {
     return $response.value
 }
 
+function Get-PowerPlatformRoleAssignments {
+    param([string]$Token)
+
+    $headers = @{
+        "Authorization" = "Bearer $Token"
+        "Content-Type"  = "application/json"
+    }
+
+    $assignments = @()
+
+    # Get all environments
+    $envUri = "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2023-06-01"
+    try {
+        $envResponse = Invoke-RestMethod -Uri $envUri -Headers $headers -Method Get
+    } catch {
+        Write-Warning "Unable to query Power Platform environments: $($_.Exception.Message)"
+        return $assignments
+    }
+
+    foreach ($env in $envResponse.value) {
+        $envId = $env.name
+        $envDisplayName = $env.properties.displayName
+
+        # Get role assignments for each environment
+        $roleUri = "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$envId/roleAssignments?api-version=2023-06-01"
+        try {
+            $roleResponse = Invoke-RestMethod -Uri $roleUri -Headers $headers -Method Get
+            foreach ($ra in $roleResponse.value) {
+                $assignments += @{
+                    PrincipalId     = $ra.properties.principal.id
+                    PrincipalType   = $ra.properties.principal.type
+                    RoleName        = $ra.properties.roleDefinition.displayName
+                    RoleId          = $ra.properties.roleDefinition.id
+                    EnvironmentId   = $envId
+                    EnvironmentName = $envDisplayName
+                }
+            }
+        } catch {
+            Write-Verbose "  Skipping environment $envDisplayName role query: $($_.Exception.Message)"
+        }
+    }
+
+    return $assignments
+}
+
 function Get-ConflictRules {
     param(
         [string]$Environment,
@@ -242,6 +287,13 @@ $directoryRoles = Get-EntraDirectoryRoles -Token $graphToken
 $roleAssignments = Get-EntraDirectoryRoleAssignments -Token $graphToken
 Write-Host "  Found $($roleAssignments.Count) role assignments" -ForegroundColor Green
 
+# Get Power Platform role assignments
+Write-Host ""
+Write-Host "Querying Power Platform role assignments..." -ForegroundColor Gray
+$ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://api.bap.microsoft.com/.default"
+$ppRoleAssignments = Get-PowerPlatformRoleAssignments -Token $ppToken
+Write-Host "  Found $($ppRoleAssignments.Count) Power Platform role assignments" -ForegroundColor Green
+
 # Build user role map
 Write-Host ""
 Write-Host "Building user role map..." -ForegroundColor Gray
@@ -275,6 +327,33 @@ foreach ($assignment in $roleAssignments) {
 }
 
 Write-Host "  Mapped roles for $($userRoleMap.Count) users" -ForegroundColor Green
+
+# Merge Power Platform role assignments into user role map
+Write-Host ""
+Write-Host "Merging Power Platform roles..." -ForegroundColor Gray
+$ppUsersAdded = 0
+foreach ($ppAssignment in $ppRoleAssignments) {
+    $userId = $ppAssignment.PrincipalId
+    if (-not $userId) { continue }
+
+    if (-not $userRoleMap.ContainsKey($userId)) {
+        $userRoleMap[$userId] = @{
+            UserId = $userId
+            UserPrincipalName = $userId  # PP API may not return UPN
+            DisplayName = $userId
+            Roles = @()
+        }
+        $ppUsersAdded++
+    }
+
+    $userRoleMap[$userId].Roles += @{
+        RoleName = $ppAssignment.RoleName
+        RoleId = $ppAssignment.RoleId
+        Context = 2  # Power Platform Role
+        Assignment = "$($ppAssignment.EnvironmentName):$($ppAssignment.RoleName)"
+    }
+}
+Write-Host "  Merged PP roles ($ppUsersAdded new users added)" -ForegroundColor Green
 
 # Scan for violations
 Write-Host ""

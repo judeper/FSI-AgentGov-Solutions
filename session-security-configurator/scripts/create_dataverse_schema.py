@@ -25,10 +25,10 @@ SHARED_OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_acv_severity": {
@@ -450,39 +450,52 @@ COLUMNS = {
 }
 
 
-def create_optionsets(client: SSCClient, dry_run: bool) -> None:
+def create_optionsets(client: SSCClient, dry_run: bool) -> dict:
     """Create global option sets (shared and SSC-specific)."""
     print("\n=== Creating Option Sets ===")
+    created = 0
+    skipped = 0
 
     # Check and create shared option sets (fsi_acv_zone, fsi_acv_severity)
     print("\nShared option sets (reused from ACV):")
     for name, metadata in SHARED_OPTIONSETS.items():
         if client.get_global_optionset(name):
             print(f"  {name}: Already exists (reusing)")
+            skipped += 1
         else:
             print(f"  {name}: Creating")
             client.create_option_set(metadata)
+            created += 1
 
     # Create SSC-specific option sets
     print("\nSSC-specific option sets:")
     for name, metadata in OPTIONSETS.items():
         if client.get_global_optionset(name):
             print(f"  {name}: Already exists")
+            skipped += 1
         else:
             print(f"  {name}: Creating")
             client.create_option_set(metadata)
+            created += 1
+
+    return {"created": created, "skipped": skipped}
 
 
-def create_tables(client: SSCClient, dry_run: bool) -> None:
+def create_tables(client: SSCClient, dry_run: bool) -> dict:
     """Create tables."""
     print("\n=== Creating Tables ===")
+    created = 0
+    skipped = 0
     for table_name, metadata in TABLES.items():
         logical_name = table_name.lower()
         if client.check_table_exists(logical_name):
             print(f"  {table_name}: Already exists")
+            skipped += 1
         else:
             print(f"  {table_name}: Creating")
             client.create_table(metadata)
+            created += 1
+    return {"created": created, "skipped": skipped}
 
 
 def create_columns(client: SSCClient, dry_run: bool) -> None:
@@ -500,12 +513,17 @@ def create_columns(client: SSCClient, dry_run: bool) -> None:
                 client.create_column(table_logical_name, column_metadata)
 
 
-def create_schema(client: SSCClient, dry_run: bool) -> None:
+def create_schema(client: SSCClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
-    create_optionsets(client, dry_run)
-    create_tables(client, dry_run)
+    option_set_results = create_optionsets(client, dry_run)
+    table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
     print("\n=== Schema Creation Complete ===")
+    return {
+        "errors": 0,
+        "option_sets": option_set_results,
+        "tables": table_results,
+    }
 
 
 def main():

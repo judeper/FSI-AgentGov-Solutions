@@ -115,7 +115,13 @@ function New-ValidationResult {
 }
 
 function Update-SourceHash {
-    param([string]$Environment, [string]$Token, [string]$SourceId, [string]$Hash)
+    param(
+        [string]$Environment,
+        [string]$Token,
+        [string]$SourceId,
+        [string]$Hash,
+        [string]$BaselineHash
+    )
 
     $headers = @{
         "Authorization" = "Bearer $Token"
@@ -125,10 +131,14 @@ function Update-SourceHash {
     }
 
     $uri = "$Environment/api/data/v9.2/fsi_knowledgesources($SourceId)"
-    $body = @{
+    $update = @{
         fsi_currenthash = $Hash
         fsi_lastvalidated = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    } | ConvertTo-Json
+    }
+    if ($BaselineHash) {
+        $update.fsi_baselinehash = $BaselineHash
+    }
+    $body = $update | ConvertTo-Json
 
     Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body | Out-Null
 }
@@ -210,15 +220,19 @@ foreach ($source in $sources) {
                 $changed++
             }
         } else {
-            # No baseline - capture it
+            # No baseline - capture it and write back as baseline
             $result.fsi_result = 1
             $result.fsi_hashchanged = $false
             Write-Host "  BASELINE CAPTURED" -ForegroundColor Cyan
             $passed++
         }
 
-        # Update source hash
-        Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash
+        # Update source hash (write baseline on first run)
+        $baselineParam = @{}
+        if (-not $source.fsi_baselinehash) {
+            $baselineParam.BaselineHash = $currentHash
+        }
+        Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
 
     } catch {
         $result.fsi_result = 5  # Failed - Source Unavailable

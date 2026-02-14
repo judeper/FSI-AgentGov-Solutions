@@ -90,6 +90,17 @@ namespace FsiAgentGovernance.Plugins
                 throw new InvalidPluginExecutionException(
                     "MIME validation plugin configuration deserialized to null.");
             }
+
+            // Validate enforcement mode against known values
+            var validModes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "Block", "TestWithNotifications", "Disabled" };
+            if (!string.IsNullOrEmpty(_config.EnforcementMode) &&
+                !validModes.Contains(_config.EnforcementMode))
+            {
+                throw new InvalidPluginExecutionException(
+                    $"Invalid EnforcementMode '{_config.EnforcementMode}'. " +
+                    "Valid values are: Block, TestWithNotifications, Disabled.");
+            }
         }
 
         /// <summary>
