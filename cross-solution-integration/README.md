@@ -2,6 +2,8 @@
 
 Integration layer that connects the 5 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
 
+> **Status:** Completed
+
 ## Overview
 
 The FSI Agent Governance Framework includes standalone governance solutions that each validate specific aspects of Copilot Studio agent compliance. This integration layer:

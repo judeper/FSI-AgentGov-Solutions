@@ -1,6 +1,6 @@
 # Compliance Dashboard
 
-> **Status:** Production Ready
+> **Status:** Completed
 
 Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 71 controls with zone-based filtering.
 

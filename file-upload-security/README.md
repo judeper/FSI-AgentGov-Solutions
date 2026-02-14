@@ -2,6 +2,8 @@
 
 Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 (Data Minimization and Agent Scope Control) by detecting agents with file uploads enabled in zones where uploads should be restricted or disabled.
 
+> **Status:** Completed
+
 ## Solution Overview
 
 | Attribute | Value |

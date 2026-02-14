@@ -2,6 +2,8 @@
 
 Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
 
+> **Status:** Completed
+
 ## Overview
 
 The Content Moderation Monitor detects when Copilot Studio agents have insufficient content moderation settings for their governance zone. Unlike environment-level solutions, this monitor performs **per-agent validation** — examining each bot deployed across your Power Platform environments.

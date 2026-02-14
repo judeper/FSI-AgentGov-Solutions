@@ -1,6 +1,6 @@
 # DR Testing Framework
 
-> **Status:** Planned
+> **Status:** Work In Progress
 
 Automated disaster recovery testing workflows for AI agent infrastructure, ensuring compliance with operational resilience requirements.
 

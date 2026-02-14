@@ -1,6 +1,6 @@
 # Conflict of Interest Testing
 
-> **Status:** Planned
+> **Status:** Work In Progress
 
 Automated conflict of interest testing framework for AI agent recommendations in financial services contexts.
 

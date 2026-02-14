@@ -1,8 +1,9 @@
 # Agent Sharing Access Restriction Detector
 
 > **Version:** v1.0.0
+> **Status:** Completed
 
-Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
+Continuous detectionand restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
 
 ## Overview
 

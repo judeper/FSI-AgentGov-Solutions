@@ -1,6 +1,6 @@
 # Hallucination Feedback Tracker
 
-> **Status:** Planned
+> **Status:** Work In Progress
 
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 

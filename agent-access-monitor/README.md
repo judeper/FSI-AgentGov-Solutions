@@ -2,6 +2,8 @@
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
+> **Status:** Completed
+
 ## Overview
 
 The Agent Access Governance Monitor detects when Power Platform environments have overly permissive agent access configurations that violate governance zone requirements. It supports Control 3.8 (Copilot Hub and Governance Dashboard) by automating compliance validation.
