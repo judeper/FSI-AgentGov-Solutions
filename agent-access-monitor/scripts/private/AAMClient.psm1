@@ -16,6 +16,9 @@
 
 $script:DataverseUrl = $null
 $script:AccessToken = $null
+$script:ClientId = $null
+$script:TenantId = $null
+$script:TokenExpiry = $null
 
 #endregion
 
@@ -32,10 +35,18 @@ function Connect-AAMDataverse {
         [string]$DataverseUrl,
         
         [Parameter()]
-        [string]$AccessToken
+        [string]$AccessToken,
+
+        [Parameter()]
+        [string]$ClientId,
+
+        [Parameter()]
+        [string]$TenantId
     )
     
     $script:DataverseUrl = $DataverseUrl.TrimEnd('/')
+    $script:ClientId = $ClientId
+    $script:TenantId = $TenantId
     
     if ($AccessToken) {
         $script:AccessToken = $AccessToken
@@ -53,6 +64,28 @@ function Connect-AAMDataverse {
     }
     
     Write-Verbose "Connected to Dataverse: $script:DataverseUrl"
+}
+
+function Get-ValidToken {
+    <#
+    .SYNOPSIS
+        Returns a valid access token, refreshing via MSAL if expired or near expiry.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if (-not $script:TokenExpiry -or (Get-Date) -ge $script:TokenExpiry.AddMinutes(-5)) {
+        if ($script:ClientId -and $script:TenantId -and $script:DataverseUrl) {
+            try {
+                $token = Get-MsalToken -ClientId $script:ClientId -TenantId $script:TenantId -Scopes "$($script:DataverseUrl)/.default" -Silent
+                $script:AccessToken = $token.AccessToken
+                $script:TokenExpiry = $token.ExpiresOn.LocalDateTime
+            } catch {
+                Write-Warning "Token refresh failed: $($_.Exception.Message). Using existing token."
+            }
+        }
+    }
+    return $script:AccessToken
 }
 
 function Get-AAMConnection {
@@ -105,7 +138,7 @@ function Get-AAMEnvironmentVariable {
                "`$expand=environmentvariablevalues"
         
         $headers = @{
-            'Authorization' = "Bearer $script:AccessToken"
+            'Authorization' = "Bearer $(Get-ValidToken)"
             'Accept' = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version' = '4.0'
@@ -158,7 +191,7 @@ function Get-AAMActiveBaseline {
                "`$filter=$filter&`$orderby=fsi_captured_at desc"
         
         $headers = @{
-            'Authorization' = "Bearer $script:AccessToken"
+            'Authorization' = "Bearer $(Get-ValidToken)"
             'Accept' = 'application/json'
         }
         
@@ -214,7 +247,7 @@ function Write-AAMValidationHistory {
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory"
         
         $headers = @{
-            'Authorization' = "Bearer $script:AccessToken"
+            'Authorization' = "Bearer $(Get-ValidToken)"
             'Content-Type' = 'application/json'
             'Accept' = 'application/json'
         }
@@ -258,11 +291,18 @@ function Write-AAMViolation {
     }
     
     try {
+        $zoneMap = @{
+            "Zone1" = 100000000
+            "Zone2" = 100000001
+            "Zone3" = 100000002
+        }
+        $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { $Violation.Zone }
+
         $record = @{
             fsi_name              = "$($Violation.Zone)-$($Violation.ViolationType)-$(Get-Date -Format 'yyyy-MM-dd')"
             fsi_environment_guid  = $Violation.EnvironmentId
             fsi_environment_name  = $Violation.EnvironmentDisplayName
-            fsi_zone              = $Violation.Zone
+            fsi_zone              = $zoneValue
             fsi_violation_type    = $Violation.ViolationType
             fsi_expected_value    = $Violation.Expected
             fsi_actual_value      = $Violation.Actual
@@ -278,13 +318,13 @@ function Write-AAMViolation {
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessviolations"
         
         $headers = @{
-            'Authorization' = "Bearer $script:AccessToken"
+            'Authorization' = "Bearer $(Get-ValidToken)"
             'Content-Type' = 'application/json'
             'Accept' = 'application/json'
         }
         
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
-        Write-Verbose "Violation record created for $($Violation.EnvironmentDisplayName)"
+        Write-Verbose "Violation record createdfor $($Violation.EnvironmentDisplayName)"
         return $response
     } catch {
         Write-Warning "Failed to write violation: $($_.Exception.Message)"
@@ -337,14 +377,14 @@ function Save-AAMBaseline {
 
     try {
         $headers = @{
-            'Authorization'    = "Bearer $script:AccessToken"
+            'Authorization'    = "Bearer $(Get-ValidToken)"
             'Content-Type'     = 'application/json'
             'Accept'           = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
         }
 
-        # Deactivate existing active baseline for this environment
+        # Deactivate existing active baselinefor this environment
         $filter = "fsi_is_active eq true and fsi_environment_guid eq '$EnvironmentGuid'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?`$filter=$filter&`$select=fsi_accessbaselineid"
 
@@ -419,7 +459,7 @@ function Get-AAMLastValidation {
                "`$orderby=fsi_validation_time desc&`$top=$Top&`$select=$select"
 
         $headers = @{
-            'Authorization'    = "Bearer $script:AccessToken"
+            'Authorization'    = "Bearer $(Get-ValidToken)"
             'Accept'           = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
@@ -454,6 +494,7 @@ function Get-AAMLastValidation {
 Export-ModuleMember -Function @(
     'Connect-AAMDataverse',
     'Get-AAMConnection',
+    'Get-ValidToken',
     'Get-AAMEnvironmentVariable',
     'Get-AAMActiveBaseline',
     'Write-AAMValidationHistory',

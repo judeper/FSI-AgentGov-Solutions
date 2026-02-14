@@ -177,13 +177,20 @@ class AAMClient:
         if top:
             params["$top"] = str(top)
 
-        response = self._session.get(
-            urljoin(self.api_url, entity_set),
-            headers=self._get_headers(),
-            params=params,
-        )
-        response.raise_for_status()
-        return response.json().get("value", [])
+        all_records: list[dict] = []
+        url = urljoin(self.api_url, entity_set)
+        while url:
+            response = self._session.get(
+                url,
+                headers=self._get_headers(),
+                params=params,
+            )
+            response.raise_for_status()
+            data = response.json()
+            all_records.extend(data.get("value", []))
+            url = data.get("@odata.nextLink")
+            params = {}  # nextLink includes query params
+        return all_records
 
     def create_record(self, entity_set: str, data: dict) -> str:
         """
