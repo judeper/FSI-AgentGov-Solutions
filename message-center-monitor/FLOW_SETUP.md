@@ -230,7 +230,6 @@ If you cannot modify the table schema, use this pattern:
 **Severity mapping:**
 - high → High
 - normal → Normal
-- critical → Critical
 
 ### Choice Field Implementation with Switch
 
@@ -253,7 +252,6 @@ For category and severity, you need to map API text values to Dataverse choice v
 3. Add cases:
    - Case `high`: Set variable `severityValue` = `High`
    - Case `normal`: Set variable `severityValue` = `Normal`
-   - Case `critical`: Set variable `severityValue` = `Critical`
    - Default: Set variable `severityValue` = `Normal`
 
 > **Tip:** If your Dataverse choices use numeric IDs (e.g., `100000000` for High), use those IDs instead of text values in your Switch cases.
@@ -266,10 +264,7 @@ Add **Condition** to notify when action is truly needed:
 
 **Option A: Basic Check**
 ```
-@or(
-  equals(items('Apply_to_each')?['severity'], 'high'),
-  equals(items('Apply_to_each')?['severity'], 'critical')
-)
+@equals(items('Apply_to_each')?['severity'], 'high')
 ```
 
 OR

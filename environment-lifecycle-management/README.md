@@ -13,7 +13,7 @@ Automated Power Platform environment provisioning with zone-based governance cla
 | License | Purpose |
 |---------|---------|
 | Power Apps Premium | Dataverse tables, model-driven app |
-| Copilot Studio | Intake agent (may be included in M365 E3/E5) |
+| Copilot Studio | Intake agent (separate license required) |
 | Power Automate Premium | HTTP actions with Entra ID connector |
 | Azure Subscription | Key Vault for credential storage |
 

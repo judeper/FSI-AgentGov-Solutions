@@ -92,13 +92,17 @@ EXPECTED_ROLES = {
     },
 }
 
-# Depth mapping
+# PrivilegeDepth enum values (Dataverse SDK)
+# https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/privilegedepth
 DEPTH_MAP = {
-    1: "User",
-    2: "Business Unit",
-    4: "Parent: Child Business Units",
-    8: "Organization",
+    0: "User",
+    1: "Business Unit",
+    2: "Parent: Child Business Units",
+    3: "Organization",
 }
+
+# The privilegedepthmask column stores bitmask values; convert to PrivilegeDepth enum
+_BITMASK_TO_DEPTH = {1: 0, 2: 1, 4: 2, 8: 3}
 
 
 def get_role_privileges(client: ELMClient, role_name: str) -> Optional[dict]:
@@ -147,7 +151,8 @@ def get_role_privileges(client: ELMClient, role_name: str) -> Optional[dict]:
     # Build privilege map
     priv_map = {}
     for priv in privileges:
-        depth = priv.get("privilegedepthmask", 0)
+        depth_mask = priv.get("privilegedepthmask", 0)
+        depth = _BITMASK_TO_DEPTH.get(depth_mask, depth_mask)
         # Linked entity attributes come with alias prefix
         priv_name = priv.get("priv.name", priv.get("priv_x002e_name", ""))
 

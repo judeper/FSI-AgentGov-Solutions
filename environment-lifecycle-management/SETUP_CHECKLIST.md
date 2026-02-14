@@ -14,7 +14,7 @@ Phase-based deployment checklist for the Environment Lifecycle Management soluti
 ### Licensing
 
 - [ ] Power Apps Premium or Per App license available
-- [ ] Copilot Studio license (or included in M365 E3/E5)
+- [ ] Copilot Studio license (separate license required, not included in M365 E3/E5)
 - [ ] Power Automate Premium license (for HTTP with Entra ID connector)
 - [ ] Azure subscription with Key Vault access
 

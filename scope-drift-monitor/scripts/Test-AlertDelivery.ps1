@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules Microsoft.Graph.Users.Actions
 
 <#
 .SYNOPSIS
@@ -17,18 +18,9 @@
 .PARAMETER EmailRecipient
     Email address for test notifications. Can also be set via SDM_NOTIFICATION_EMAIL.
 
-.PARAMETER SmtpServer
-    SMTP server for email delivery. Default: smtp.office365.com
-
 .PARAMETER FromEmail
-    Sender email address. Can also be set via SDM_FROM_EMAIL environment variable.
-
-.PARAMETER SmtpPort
-    SMTP port. Default: 587 (TLS).
-
-.PARAMETER SmtpCredential
-    PSCredential for SMTP authentication. If not provided, will try to use
-    SDM_SMTP_USERNAME and SDM_SMTP_PASSWORD environment variables.
+    Sender email address (must have Send.Mail permission in Graph).
+    Can also be set via SDM_FROM_EMAIL environment variable.
 
 .EXAMPLE
     .\Test-AlertDelivery.ps1 -Channel Teams -TeamsWebhook "https://..."
@@ -40,11 +32,13 @@
 
 .EXAMPLE
     .\Test-AlertDelivery.ps1 -Channel Email -EmailRecipient "security@contoso.com" -FromEmail "alerts@contoso.com"
-    Tests email delivery only.
+    Tests email delivery only via Microsoft Graph.
 
 .NOTES
     Teams incoming webhooks are retiring March 31, 2026.
     Use Power Automate workflows for production deployments.
+    Email delivery uses Send-MgUserMail (Microsoft Graph). Requires
+    Microsoft.Graph.Users.Actions module and Mail.Send permission.
 #>
 
 [CmdletBinding()]
@@ -60,16 +54,7 @@ param(
     [string]$EmailRecipient = $env:SDM_NOTIFICATION_EMAIL,
 
     [Parameter(Mandatory = $false)]
-    [string]$SmtpServer = "smtp.office365.com",
-
-    [Parameter(Mandatory = $false)]
-    [string]$FromEmail = $env:SDM_FROM_EMAIL,
-
-    [Parameter(Mandatory = $false)]
-    [int]$SmtpPort = 587,
-
-    [Parameter(Mandatory = $false)]
-    [PSCredential]$SmtpCredential
+    [string]$FromEmail = $env:SDM_FROM_EMAIL
 )
 
 $ErrorActionPreference = "Stop"
@@ -189,23 +174,14 @@ function Send-TeamsNotification {
 function Send-EmailNotification {
     <#
     .SYNOPSIS
-        Sends a test email notification.
+        Sends a test email notification via Microsoft Graph.
     #>
     param(
         [Parameter(Mandatory = $true)]
         [string]$To,
 
         [Parameter(Mandatory = $true)]
-        [string]$From,
-
-        [Parameter(Mandatory = $true)]
-        [string]$SmtpServer,
-
-        [Parameter(Mandatory = $true)]
-        [int]$Port,
-
-        [Parameter(Mandatory = $false)]
-        [PSCredential]$Credential
+        [string]$From
     )
 
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -259,23 +235,16 @@ function Send-EmailNotification {
 </html>
 "@
 
-    $mailParams = @{
-        To         = $To
-        From       = $From
-        Subject    = $subject
-        Body       = $htmlBody
-        SmtpServer = $SmtpServer
-        Port       = $Port
-        UseSsl     = $true
-        BodyAsHtml = $true
-    }
-
-    if ($Credential) {
-        $mailParams.Credential = $Credential
+    $params = @{
+        Message = @{
+            Subject       = $subject
+            Body          = @{ ContentType = "HTML"; Content = $htmlBody }
+            ToRecipients  = @(@{ EmailAddress = @{ Address = $To } })
+        }
     }
 
     try {
-        Send-MailMessage @mailParams
+        Send-MgUserMail -UserId $From -BodyParameter $params
         return @{
             Success = $true
             Message = "Email notification sent successfully to $To"
@@ -365,19 +334,9 @@ if ($Channel -eq "Email" -or $Channel -eq "Both") {
         $hasFailure = $true
     }
     else {
-        # Build credential if not provided and env vars are set
-        $credential = $SmtpCredential
-        if (-not $credential -and $env:SDM_SMTP_USERNAME -and $env:SDM_SMTP_PASSWORD) {
-            $securePassword = ConvertTo-SecureString $env:SDM_SMTP_PASSWORD -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($env:SDM_SMTP_USERNAME, $securePassword)
-        }
-
         $emailResult = Send-EmailNotification `
             -To $EmailRecipient `
-            -From $FromEmail `
-            -SmtpServer $SmtpServer `
-            -Port $SmtpPort `
-            -Credential $credential
+            -From $FromEmail
 
         if ($emailResult.Success) {
             Write-Host "  Email: SUCCESS" -ForegroundColor Green

@@ -49,7 +49,7 @@ See [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md) for detailed steps.
 ### 3. Power Platform Environment
 
 - Dataverse environment (included with most Power Platform licenses)
-- Power Automate license (standard is sufficient)
+- Power Automate Premium license (required for Dataverse and HTTP connectors)
 
 ### 4. DLP Policy (If Applicable)
 

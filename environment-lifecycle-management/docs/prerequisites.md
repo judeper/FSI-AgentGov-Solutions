@@ -7,7 +7,7 @@ Complete requirements for deploying the Environment Lifecycle Management solutio
 | License | Purpose | Minimum Tier |
 |---------|---------|--------------|
 | **Power Apps Premium** | Dataverse tables, model-driven app | Per User or Per App |
-| **Copilot Studio** | Intake agent for environment requests | Included in M365 E3/E5 or standalone |
+| **Copilot Studio** | Intake agent for environment requests | Separate license required (not included in M365 E3/E5) |
 | **Power Automate Premium** | HTTP with Entra ID connector, child flows | Per User or Per Flow |
 | **Azure Subscription** | Key Vault for credential storage | Pay-as-you-go |
 | **Microsoft 365** | End-user licenses, Entra ID | E3 or E5 |
