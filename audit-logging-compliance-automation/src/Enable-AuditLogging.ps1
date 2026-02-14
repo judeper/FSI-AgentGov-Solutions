@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 5.1
 #Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0' }
 #Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0' }
 
@@ -179,7 +179,7 @@ function Enable-EntityLevelAudit {
 
     Invoke-DataverseRequest -EnvironmentUrl $EnvUrl `
         -RelativeUri "/api/data/v9.2/EntityDefinitions(LogicalName='$EntityLogicalName')" `
-        -Token $Token -Method PUT -Body $body
+        -Token $Token -Method PATCH -Body $body
 
     return $true
 }
@@ -253,7 +253,7 @@ try {
     else {
         # Power Platform authentication
         $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com"
-        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain
+        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -ApplicationId $null -AccessToken $ppToken
         Write-Output "  Power Platform: Connected"
 
         # Exchange Online authentication

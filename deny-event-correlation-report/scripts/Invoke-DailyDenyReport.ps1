@@ -310,7 +310,6 @@ try {
                 if (Test-Path $raiScript) {
                     & $raiScript `
                         -AppInsightsAppId $AppInsightsAppId `
-                        -ApiKey $AppInsightsApiKey `
                         -OutputPath $raiTelemetryPath
 
                     if (Test-Path $raiTelemetryPath) {

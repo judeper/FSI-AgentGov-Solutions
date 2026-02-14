@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 5.1
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
@@ -212,7 +212,7 @@ try {
                 $auditResults = Search-UnifiedAuditLog `
                     -StartDate $startDate `
                     -EndDate $endDate `
-                    -RecordType "PowerAppsApp", "PowerAppsPlan", "PowerAppsResource" `
+                    -RecordType "PowerAppsApp" `
                     -ResultSize 1 `
                     -ErrorAction SilentlyContinue
 

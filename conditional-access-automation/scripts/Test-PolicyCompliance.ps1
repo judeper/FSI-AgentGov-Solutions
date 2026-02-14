@@ -180,7 +180,7 @@ Write-Verbose "Retrieving Conditional Access policies..."
 try {
     $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
     $fsiPolicies = $allPolicies | Where-Object {
-        $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
+        $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "CA-CopilotStudio-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
     }
     Write-Verbose "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
 }

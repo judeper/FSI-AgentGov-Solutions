@@ -213,10 +213,7 @@ if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials (
         Write-Verbose "  Stored: CAA-TenantId"
     }
     catch {
-        Write-Host "Warning: Could not store in Key Vault: $_" -ForegroundColor Yellow
-        Write-Host "Please manually store the following:" -ForegroundColor Yellow
-        Write-Host "  Client ID: $($app.AppId)"
-        Write-Host "  Client Secret: $($secret.SecretText)"
+        throw "Failed to retrieve client secret from Key Vault: $_"
     }
 }
 

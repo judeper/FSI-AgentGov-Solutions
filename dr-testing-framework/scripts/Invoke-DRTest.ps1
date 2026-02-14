@@ -91,33 +91,43 @@ function Test-AgentRestore {
     $startTime = Get-Date
 
     Write-Host "  Step 1: Locate agent backup..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Backup Located"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would locate agent backup" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Restore agent configuration..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 3
         $result.ValidationChecks += @{Check = "Configuration Restored"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would restore agent configuration" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 3: Verify agent responds..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Agent Responsive"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would verify agent responds" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 4: Validate connectors..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Connectors Functional"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would validate connectors" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 5: Verify security policies..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 1
         $result.ValidationChecks += @{Check = "Security Applied"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would verify security policies" -ForegroundColor Yellow
     }
 
     $endTime = Get-Date
@@ -138,27 +148,35 @@ function Test-EnvironmentFailover {
     $startTime = Get-Date
 
     Write-Host "  Step 1: Initiate failover..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 3
         $result.ValidationChecks += @{Check = "Failover Initiated"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would initiate failover" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Verify backup environment accessible..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Environment Accessible"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would verify backup environment accessible" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 3: Validate data synchronization..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Data Synchronized"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would validate data synchronization" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 4: Test agent functionality..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Agents Functional"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would test agent functionality" -ForegroundColor Yellow
     }
 
     $endTime = Get-Date
@@ -179,27 +197,35 @@ function Test-DataRecovery {
     $startTime = Get-Date
 
     Write-Host "  Step 1: Identify restore point..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Restore Point Found"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would identify restore point" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Initiate data restore..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 4
         $result.ValidationChecks += @{Check = "Restore Initiated"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would initiate data restore" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 3: Verify data integrity..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 2
         $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would verify data integrity" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 4: Validate record counts..." -ForegroundColor Gray
-    if ($DryRun) {
+    if (-not $DryRun) {
         Start-Sleep -Seconds 1
         $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"}
+    } else {
+        Write-Host "    [DRY RUN] Would validate record counts" -ForegroundColor Yellow
     }
 
     $endTime = Get-Date
