@@ -159,7 +159,7 @@ try {
     Import-Module MSAL.PS -ErrorAction Stop
 
     # Get certificate for authentication
-    $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
+    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
     Write-Verbose "Certificate found: $($cert.Subject)"
 
     # Acquire token

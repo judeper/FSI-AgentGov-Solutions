@@ -221,7 +221,7 @@ try {
 
     Import-Module MSAL.PS -ErrorAction Stop
 
-    $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
+    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
     Write-Verbose "Certificate found: $($cert.Subject)"
 
     $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"

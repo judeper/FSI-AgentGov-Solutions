@@ -208,7 +208,7 @@ try {
             -Interactive `
             -ErrorAction Stop
     } else {
-        $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
+        $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
         $tokenResult = Get-MsalToken `
             -ClientId $ClientId `
             -ClientCertificate $cert `
