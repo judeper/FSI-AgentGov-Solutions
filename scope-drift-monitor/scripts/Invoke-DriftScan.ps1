@@ -77,6 +77,16 @@ function Write-AuditLog {
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
+# Align with Power Automate flow enum values
+$ViolationType = @{
+    Connector    = 1
+    Scope        = 2
+    Permission   = 3
+    DataSource   = 4
+    Integration  = 5
+    NoBaseline   = 6
+}
+
 #region Helper Functions
 
 function Get-AccessToken {
@@ -375,11 +385,11 @@ function Get-ViolationTypeCode {
     param([string]$TypeName)
 
     switch ($TypeName) {
-        "No Baseline Defined"          { return 1 }
-        "Unauthorized Connector"       { return 2 }
-        "Unauthorized SharePoint Site" { return 3 }
-        "Unauthorized Dataverse Table" { return 4 }
-        "Unauthorized External API"    { return 5 }
+        "No Baseline Defined"          { return $ViolationType.NoBaseline }
+        "Unauthorized Connector"       { return $ViolationType.Connector }
+        "Unauthorized SharePoint Site" { return $ViolationType.Scope }
+        "Unauthorized Dataverse Table" { return $ViolationType.DataSource }
+        "Unauthorized External API"    { return $ViolationType.Integration }
         default                        { return 0 }
     }
 }

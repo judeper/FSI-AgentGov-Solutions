@@ -104,9 +104,43 @@
         ]
       }
     },
-    "List_Active_Agent_Scopes": {
+    "Initialize_ContentBlobs": {
       "runAfter": {
         "Initialize_AuditEvents": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ContentBlobs",
+            "type": "array",
+            "value": []
+          }
+        ]
+      }
+    },
+    "Initialize_ContentPageUri": {
+      "runAfter": {
+        "Initialize_ContentBlobs": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ContentPageUri",
+            "type": "string",
+            "value": ""
+          }
+        ]
+      }
+    },
+    "List_Active_Agent_Scopes": {
+      "runAfter": {
+        "Initialize_ContentPageUri": [
           "Succeeded"
         ]
       },
@@ -134,34 +168,76 @@
       },
       "type": "Scope",
       "actions": {
-        "HTTP_Get_Content_Blobs": {
+        "Set_Initial_Content_Page_Uri": {
           "runAfter": {},
-          "type": "Http",
+          "type": "SetVariable",
           "inputs": {
-            "method": "GET",
-            "uri": "https://manage.office.com/api/v1.0/@{variables('TenantId')}/activity/feed/subscriptions/content",
-            "queries": {
-              "contentType": "Audit.General",
-              "startTime": "@{variables('LastCheckTime')}",
-              "endTime": "@{utcNow()}"
+            "name": "ContentPageUri",
+            "value": "https://manage.office.com/api/v1.0/@{variables('TenantId')}/activity/feed/subscriptions/content?contentType=Audit.General&startTime=@{variables('LastCheckTime')}&endTime=@{utcNow()}"
+          }
+        },
+        "Paginate_Content_Blobs": {
+          "runAfter": {
+            "Set_Initial_Content_Page_Uri": [
+              "Succeeded"
+            ]
+          },
+          "type": "Until",
+          "expression": "@equals(variables('ContentPageUri'), '')",
+          "limit": {
+            "count": 50,
+            "timeout": "PT10M"
+          },
+          "actions": {
+            "HTTP_Get_Content_Page": {
+              "runAfter": {},
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@{variables('ContentPageUri')}",
+                "authentication": {
+                  "type": "ActiveDirectoryOAuth",
+                  "audience": "https://manage.office.com",
+                  "tenant": "@{variables('TenantId')}",
+                  "clientId": "@{parameters('fsi_SDM_ClientId')}",
+                  "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+                }
+              }
             },
-            "authentication": {
-              "type": "ActiveDirectoryOAuth",
-              "audience": "https://manage.office.com",
-              "tenant": "@{variables('TenantId')}",
-              "clientId": "@{parameters('fsi_SDM_ClientId')}",
-              "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+            "Append_Page_Content_Blobs": {
+              "runAfter": {
+                "HTTP_Get_Content_Page": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "ContentBlobs",
+                "value": "@union(variables('ContentBlobs'), coalesce(body('HTTP_Get_Content_Page'), json('[]')))"
+              }
+            },
+            "Set_Next_Page_Uri": {
+              "runAfter": {
+                "Append_Page_Content_Blobs": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "ContentPageUri",
+                "value": "@coalesce(outputs('HTTP_Get_Content_Page')?['headers']?['NextPageUri'], '')"
+              }
             }
           }
         },
         "For_Each_Content_Blob": {
           "runAfter": {
-            "HTTP_Get_Content_Blobs": [
+            "Paginate_Content_Blobs": [
               "Succeeded"
             ]
           },
           "type": "Foreach",
-          "foreach": "@body('HTTP_Get_Content_Blobs')",
+          "foreach": "@variables('ContentBlobs')",
           "actions": {
             "HTTP_Get_Blob_Content": {
               "runAfter": {},

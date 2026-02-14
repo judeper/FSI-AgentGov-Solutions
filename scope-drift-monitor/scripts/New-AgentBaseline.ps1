@@ -170,7 +170,7 @@ function Get-CopilotAuditEvents {
                 # and optionally filter by agent ID if event contains it
                 $copilotEvents = $blobEvents | Where-Object {
                     $_.RecordType -eq 261 -and
-                    ($_.EventData.AppHost -eq "CopilotStudio" -or $null -eq $AgentId)
+                    $_.EventData.AgentId -eq $AgentId
                 }
 
                 $events += $copilotEvents
