@@ -43,7 +43,11 @@ function Connect-CMMDataverse {
         # Attempt to get token via Az.Accounts
         try {
             $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
-            $script:AccessToken = $token.Token
+            if ($token.Token -is [System.Security.SecureString]) {
+                $script:AccessToken = $token.Token | ConvertFrom-SecureString -AsPlainText
+            } else {
+                $script:AccessToken = $token.Token
+            }
             Write-Verbose "Acquired Dataverse token via Az.Accounts"
         } catch {
             Write-Warning "No access token provided and Az.Accounts token acquisition failed. Use Connect-EnvironmentDataverse for authenticated access."

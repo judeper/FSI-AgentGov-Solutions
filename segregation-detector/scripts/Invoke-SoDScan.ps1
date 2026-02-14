@@ -179,9 +179,14 @@ function Get-ConflictRules {
         "OData-Version" = "4.0"
     }
 
-    $uri = "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_enabled eq true"
-    $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-    return $response.value
+    $results = @()
+    $nextLink = "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_enabled eq true"
+    while ($nextLink) {
+        $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+        $results += $response.value
+        $nextLink = $response.'@odata.nextLink'
+    }
+    return $results
 }
 
 function Get-ExistingViolations {
@@ -197,9 +202,14 @@ function Get-ExistingViolations {
         "OData-Version" = "4.0"
     }
 
-    $uri = "$Environment/api/data/v9.2/fsi_sodviolations?`$filter=fsi_status lt 5"
-    $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-    return $response.value
+    $results = @()
+    $nextLink = "$Environment/api/data/v9.2/fsi_sodviolations?`$filter=fsi_status lt 5"
+    while ($nextLink) {
+        $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+        $results += $response.value
+        $nextLink = $response.'@odata.nextLink'
+    }
+    return $results
 }
 
 function New-Violation {

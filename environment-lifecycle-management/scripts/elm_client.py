@@ -191,13 +191,24 @@ class ELMClient:
         Returns:
             List of records
         """
-        response = self.session.get(
-            urljoin(self.api_url, entity_set),
-            headers=self._get_headers(),
-            params={"fetchXml": fetchxml},
-        )
-        response.raise_for_status()
-        return response.json().get("value", [])
+        all_records = []
+        page = 1
+        paged_xml = fetchxml
+        while True:
+            if page > 1:
+                paged_xml = fetchxml.replace('</fetch>', f' page="{page}" count="5000"></fetch>')
+            response = self.session.get(
+                urljoin(self.api_url, entity_set),
+                headers=self._get_headers(),
+                params={"fetchXml": paged_xml},
+            )
+            response.raise_for_status()
+            data = response.json()
+            all_records.extend(data.get("value", []))
+            if "@Microsoft.Dynamics.CRM.fetchxmlpagingcookie" not in data:
+                break
+            page += 1
+        return all_records
 
     def create(self, entity_set: str, data: dict) -> str:
         """

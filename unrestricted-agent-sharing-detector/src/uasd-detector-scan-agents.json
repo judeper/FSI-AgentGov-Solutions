@@ -1944,7 +1944,10 @@
     },
     "displayName": "fsi-UASD-Detector-ScanAgents",
     "description": "Scans Copilot Studio agents for unsafe sharing configurations and records violations in Dataverse. Implements 5 violation rules: ORG_WIDE_SHARING, PUBLIC_INTERNET_LINK, UNAPPROVED_GROUP, EXCESSIVE_INDIVIDUAL, CROSS_TENANT_ACCESS. Supports compliance with FINRA 4511/3110, SEC 17a-3/4, SOX 302/404. Part of the FSI Agent Governance — Unrestricted Agent Sharing Detector solution.",
-    "state": "Started"
+    "state": "Started",
+    "_known_limitations": {
+      "pagination": "List_Environments and List_Agents_In_Environment use plain HTTP GET without @odata.nextLink handling. Organizations with >100 environments or >100 agents per environment may see truncated results. A future update should add Do Until pagination loops following the nextLink pattern."
+    }
   },
   "schemaVersion": "1.0.0.0"
 }

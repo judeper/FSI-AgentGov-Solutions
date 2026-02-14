@@ -90,7 +90,10 @@ function Get-KnowledgeSources {
 
     $filter = "fsi_status eq 1"  # Active sources
     if ($SourceId) {
-        $filter = "fsi_knowledgesourceid eq $SourceId"
+        if ($SourceId -notmatch '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+            throw "Invalid SourceId format: '$SourceId'. Expected GUID."
+        }
+        $filter = "fsi_knowledgesourceid eq '$SourceId'"
     }
 
     $results = @()

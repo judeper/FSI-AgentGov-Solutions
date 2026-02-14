@@ -216,7 +216,7 @@
     {
       "type": "Action.OpenUrl",
       "title": "View Documentation",
-      "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-2-management/2.5-agent-sharing-and-distribution/"
+      "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-and-restriction-governance/"
     }
   ],
   "msteams": {

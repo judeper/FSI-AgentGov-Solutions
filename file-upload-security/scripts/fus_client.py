@@ -15,6 +15,8 @@ from typing import Any, Optional
 try:
     import msal
     import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
 except ImportError:
     print(
         "ERROR: Required packages missing. Install with:\n"
@@ -47,6 +49,10 @@ class FUSClient:
         self.dry_run = dry_run
         self._token: Optional[str] = None
         self._token_expires: float = 0
+        self._session = requests.Session()
+        retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self._session.mount("https://", adapter)
 
     def _get_token(self) -> str:
         """Acquire or refresh OAuth2 token."""
@@ -98,7 +104,7 @@ class FUSClient:
     ) -> requests.Response:
         """Make authenticated request with error handling."""
         headers = self._headers()
-        response = requests.request(
+        response = self._session.request(
             method, url, headers=headers,
             json=data if data else None, **kwargs,
         )

@@ -21,6 +21,8 @@ import random
 try:
     from msal import ConfidentialClientApplication
     import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install msal requests")
@@ -69,11 +71,17 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
 
     api_url = f"{dataverse_url}/api/data/v9.2/fsi_controlmasters"
 
+    # Configure retry adapter
+    session = requests.Session()
+    retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+
     # Check existing records (with pagination)
     existing_records = []
     next_url = api_url
     while next_url:
-        existing = requests.get(next_url, headers=headers).json()
+        existing = session.get(next_url, headers=headers).json()
         existing_records.extend(existing.get("value", []))
         next_url = existing.get("@odata.nextLink")
     existing_ids = {r.get("fsi_controlid") for r in existing_records}
@@ -87,7 +95,7 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
         if control["fsi_controlid"] in existing_ids and not force:
             continue
 
-        response = requests.post(api_url, headers=headers, json=control)
+        response = session.post(api_url, headers=headers, json=control)
 
         if response.status_code in [201, 204]:
             loaded += 1

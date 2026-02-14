@@ -29,7 +29,7 @@ Automated Power Platform environment provisioning with zone-based governance cla
 !!! warning "Service Principal Permissions"
     This solution uses a Service Principal for automated environment provisioning. Service Principals are application identities that bypass security group-based access controls. Ensure:
 
-    - Service Principal has minimum required Power Platform API permissions (Environment.Manage.All)
+    - Service Principal has System Administrator security role assigned via `pac admin create-service-principal`
     - Service Principal sign-ins are restricted via Named Locations to trusted networks
     - Service Principal authentication is monitored via Entra ID Sign-in Logs
     - Service Principal credentials are rotated quarterly and stored in Azure Key Vault

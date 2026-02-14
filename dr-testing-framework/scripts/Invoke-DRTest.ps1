@@ -325,12 +325,16 @@ $actualRTO = ($testEndTime - $testStartTime).TotalHours
 $rtoMet = $actualRTO -le $RTOTargets[$TestType]
 
 # Prepare result summary
+# TODO: Implement actual RPO measurement by comparing last backup timestamp with recovery point
 $finalResult = @{
     TestType = $TestType
     ExecutedOn = $testStartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     ActualRTO = [math]::Round($actualRTO, 2)
     TargetRTO = $RTOTargets[$TestType]
     RTOMet = $rtoMet
+    ActualRPO = "Not measured — requires backup timestamp comparison"
+    TargetRPO = $RPOTargets[$TestType]
+    RPOMet = "N/A"
     Success = $testResult.Success -and $rtoMet
     ValidationChecks = $testResult.ValidationChecks
 }

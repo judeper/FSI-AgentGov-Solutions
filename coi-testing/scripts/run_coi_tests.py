@@ -330,6 +330,20 @@ class COITestRunner:
         warnings = sum(1 for r in self.results if r["status"] == "WARN")
         errors = sum(1 for r in self.results if r["status"] == "ERROR")
 
+        if format == "json":
+            return json.dumps(self.results, indent=2, default=str)
+        elif format == "html":
+            html = "<html><body><h1>COI Test Results</h1>"
+            html += f"<p>Execution Time: {datetime.utcnow().isoformat()}</p>"
+            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Warn: {warnings} | Error: {errors}</p>"
+            html += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
+            for r in self.results:
+                html += f"<tr><td>{r.get('scenario_id','')} - {r.get('scenario_name','')}</td>"
+                html += f"<td>{r.get('status','')}</td>"
+                html += f"<td>FINRA {r.get('finra_rule','N/A')}</td></tr>"
+            html += "</table></body></html>"
+            return html
+
         report = f"""
 ========================================
   COI Testing Report

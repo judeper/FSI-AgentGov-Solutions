@@ -140,7 +140,9 @@ def generate_sla_metrics(queue_records: list) -> dict:
         reviewed_date = record.get("fsi_revieweddate")
         sla_due = record.get("fsi_sladue")
         if reviewed_date and sla_due:
-            if reviewed_date > sla_due:
+            reviewed_dt = datetime.fromisoformat(reviewed_date.rstrip('Z'))
+            sla_dt = datetime.fromisoformat(sla_due.rstrip('Z'))
+            if reviewed_dt > sla_dt:
                 sla_breached += 1
 
     # Calculate average review time for completed items

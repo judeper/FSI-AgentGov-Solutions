@@ -281,8 +281,10 @@ try {
 
         Write-Verbose "Loaded $($baselineMap.Count) active baseline(s) into lookup hashtable"
     } catch {
-        Write-Verbose "Baseline query failed: $($_.Exception.Message). Failing open — no drift detection."
+        Write-Warning "Baseline query failed — treating as potential drift for safety"
+        Write-Verbose "Baseline query error: $($_.Exception.Message)"
         $baselineQueryFailed = $true
+        $AlertRequired = $true
     }
 
     #endregion
