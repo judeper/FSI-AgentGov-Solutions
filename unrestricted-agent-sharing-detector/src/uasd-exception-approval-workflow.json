@@ -142,6 +142,42 @@
           },
           "description": "Microsoft Teams channel ID for exception notifications. Set via environment variable fsi_UASD_TeamsChannelId."
         },
+        "Initialize_SecurityApproverEmail": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "SecurityApproverEmail",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_TeamsChannelId": [
+              "Succeeded"
+            ]
+          },
+          "description": "Security team approver email for dual-approval workflow. Set via environment variable fsi_UASD_SecurityApproverEmail."
+        },
+        "Initialize_DataOwnerApproverEmail": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DataOwnerApproverEmail",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_SecurityApproverEmail": [
+              "Succeeded"
+            ]
+          },
+          "description": "Data owner approver email for dual-approval workflow. Set via environment variable fsi_UASD_DataOwnerApproverEmail."
+        },
         "Scope_Try": {
           "type": "Scope",
           "actions": {
@@ -191,7 +227,7 @@
                 "parameters": {
                   "approvalType": "Basic",
                   "ApprovalCreationInput/title": "UASD Exception Request — Security Approval",
-                  "ApprovalCreationInput/assignedTo": "",
+                  "ApprovalCreationInput/assignedTo": "@variables('SecurityApproverEmail')",
                   "ApprovalCreationInput/details": "## Sharing Exception Request — Security Review\n\nA sharing exception has been requested and requires Security team approval.\n\n**Agent:** @{outputs('Get_Exception_Details')?['body/fsi_agent_name']}\n**Environment:** @{outputs('Get_Exception_Details')?['body/fsi_environment_name']}\n**Violation Type:** @{outputs('Get_Exception_Details')?['body/fsi_violation_type']}\n**Data Classification:** @{outputs('Get_Exception_Details')?['body/fsi_data_classification']}\n**Requested By:** @{outputs('Get_Exception_Details')?['body/fsi_requested_by']}\n\n### Business Justification\n@{outputs('Get_Exception_Details')?['body/fsi_business_justification']}\n\n### Exception Details\n- **Duration:** @{variables('DefaultExceptionDays')} days\n- **Expires At:** @{variables('ExpiresAt')}\n- **Approval Chain:** Security → Data Owner (both required)\n\n### Action Required\nApprove if the business justification is acceptable and the risk is manageable. Rejection terminates the exception request.",
                   "ApprovalCreationInput/itemLink": "https://admin.powerplatform.microsoft.com/",
                   "ApprovalCreationInput/itemLinkDescription": "View in Power Platform Admin Center",
@@ -243,7 +279,7 @@
                     "parameters": {
                       "approvalType": "Basic",
                       "ApprovalCreationInput/title": "UASD Exception Request — Data Owner Approval",
-                      "ApprovalCreationInput/assignedTo": "",
+                      "ApprovalCreationInput/assignedTo": "@variables('DataOwnerApproverEmail')",
                       "ApprovalCreationInput/details": "## Sharing Exception Request — Data Owner Review\n\nA sharing exception has been requested. Security approval has been granted. Data Owner approval is the final step.\n\n**Agent:** @{outputs('Get_Exception_Details')?['body/fsi_agent_name']}\n**Environment:** @{outputs('Get_Exception_Details')?['body/fsi_environment_name']}\n**Violation Type:** @{outputs('Get_Exception_Details')?['body/fsi_violation_type']}\n**Data Classification:** @{outputs('Get_Exception_Details')?['body/fsi_data_classification']}\n**Requested By:** @{outputs('Get_Exception_Details')?['body/fsi_requested_by']}\n\n### Business Justification\n@{outputs('Get_Exception_Details')?['body/fsi_business_justification']}\n\n### Security Approval\n- **Approved By:** @{body('Security_Approval')?['responses'][0]?['responder']?['displayName']}\n- **Approved At:** @{body('Security_Approval')?['completionDate']}\n\n### Exception Details\n- **Duration:** @{variables('DefaultExceptionDays')} days\n- **Expires At:** @{variables('ExpiresAt')}\n\n### Action Required\nApprove if the data risk is acceptable. Rejection terminates the exception request despite Security approval.",
                       "ApprovalCreationInput/itemLink": "https://admin.powerplatform.microsoft.com/",
                       "ApprovalCreationInput/itemLinkDescription": "View in Power Platform Admin Center",
@@ -685,7 +721,7 @@
             }
           },
           "runAfter": {
-            "Initialize_TeamsChannelId": [
+            "Initialize_DataOwnerApproverEmail": [
               "Succeeded"
             ]
           },

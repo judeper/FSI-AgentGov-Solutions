@@ -148,8 +148,8 @@ The flow implements five violation detection rules:
 8. Log remediation action in audit table
 
 **Safety Controls:**
-- **Dry-run mode:** Environment variable `fsi_UASD_RemediationDryRun` (true/false)
-- **Break-glass exclusion:** Agents tagged with `fsi_break_glass_exclude=true` skip remediation
+- **Dry-run mode:** Environment variable `fsi_UASD_RemediationDryRun` (true/false, default: true for safe deployment)
+- **Break-glass exclusion:** Agents with `fsi_break_glass_exclude=true` are detected but never remediated — violations remain open for manual review
 - **Change validation:** Post-remediation verification via API query
 - **Rollback support:** Original sharing configuration stored in `fsi_evidence_json` field
 
@@ -195,7 +195,10 @@ The flow implements five violation detection rules:
 **Configuration Parameters:**
 - `fsi_UASD_DefaultExceptionDays` — Default duration (default: 90)
 - `fsi_UASD_SecurityApproverEmail` — Security team approver
-- `fsi_UASD_ComplianceApproverEmail` — Compliance team approver (for Restricted data)
+- `fsi_UASD_DataOwnerApproverEmail` — Data owner approver
+
+!!! warning "Required Configuration"
+    Approver emails MUST be set before enabling the exception approval workflow. The workflow cannot function with empty approver fields.
 
 #### 4. Exception Manager App
 **File:** `uasd-exception-manager-app.json`
@@ -430,9 +433,9 @@ Create environment variables in Power Platform:
 | `fsi_UASD_TeamsChannelId` | String | `19:abcd...@thread.tacv2` | Teams channel ID for alerts |
 | `fsi_UASD_MaxIndividualShares` | Number | `5` | Threshold for individual share violations |
 | `fsi_UASD_DefaultExceptionDays` | Number | `90` | Default exception duration |
-| `fsi_UASD_RemediationDryRun` | Boolean | `false` | Dry-run mode (true = no changes) |
+| `fsi_UASD_RemediationDryRun` | Boolean | `true` | Dry-run mode (true = no changes) |
 | `fsi_UASD_SecurityApproverEmail` | String | `security@contoso.com` | Security team approver |
-| `fsi_UASD_ComplianceApproverEmail` | String | `compliance@contoso.com` | Compliance approver |
+| `fsi_UASD_DataOwnerApproverEmail` | String | `dataowner@contoso.com` | Data owner approver |
 
 **Step 5: Populate Approved Security Groups**
 

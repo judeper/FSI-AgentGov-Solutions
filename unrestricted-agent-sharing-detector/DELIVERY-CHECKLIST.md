@@ -101,6 +101,7 @@ Before sending to customer, verify:
 - [ ] File sizes are reasonable (JSON files should be < 500KB each)
 - [ ] No sensitive data in JSON files (tenant IDs, email addresses should be placeholders)
 - [ ] Version numbers are consistent (v1.0.0) across all files
+- [ ] Approver email environment variables are documented in deployment instructions
 
 ### 6. Files NOT to Include
 

@@ -246,13 +246,13 @@
             },
             "Set_Max_Individual_Shares": {
               "type": "Compose",
-              "inputs": "@coalesce(first(body('Load_Sharing_Policy')?['value'])?['fsi_max_individual_shares'], 100)",
+              "inputs": "@coalesce(first(body('Load_Sharing_Policy')?['value'])?['fsi_max_individual_shares'], 5)",
               "runAfter": {
                 "Load_Sharing_Policy": [
                   "Succeeded"
                 ]
               },
-              "description": "Extract max individual shares from policy (default 100 if not configured)."
+              "description": "Extract max individual shares from policy (default 5 if not configured)."
             },
             "List_Environments": {
               "type": "Http",
