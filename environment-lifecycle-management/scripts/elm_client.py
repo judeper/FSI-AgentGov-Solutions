@@ -14,6 +14,8 @@ from urllib.parse import urljoin
 
 import msal
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 class ELMClient:
@@ -69,6 +71,18 @@ class ELMClient:
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
 
+        # HTTP session with retry for transient failures
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST", "PATCH", "DELETE"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+
     def _get_token(self) -> str:
         """Acquire access token with caching."""
         # Try to get cached token first
@@ -112,7 +126,7 @@ class ELMClient:
         Returns:
             Organization information if successful
         """
-        response = requests.get(
+        response = self.session.get(
             urljoin(self.api_url, "organizations"),
             headers=self._get_headers(),
             params={"$select": "organizationid,name"},
@@ -152,13 +166,16 @@ class ELMClient:
         if top:
             params["$top"] = str(top)
 
-        response = requests.get(
-            urljoin(self.api_url, entity_set),
-            headers=self._get_headers(),
-            params=params,
-        )
-        response.raise_for_status()
-        return response.json().get("value", [])
+        url = urljoin(self.api_url, entity_set)
+        results: list[dict] = []
+        while url:
+            response = self.session.get(url, headers=self._get_headers(), params=params)
+            response.raise_for_status()
+            data = response.json()
+            results.extend(data.get("value", []))
+            url = data.get("@odata.nextLink")
+            params = {}  # nextLink includes query parameters
+        return results
 
     def query_fetchxml(self, entity_set: str, fetchxml: str) -> list[dict]:
         """
@@ -174,7 +191,7 @@ class ELMClient:
         Returns:
             List of records
         """
-        response = requests.get(
+        response = self.session.get(
             urljoin(self.api_url, entity_set),
             headers=self._get_headers(),
             params={"fetchXml": fetchxml},
@@ -193,7 +210,7 @@ class ELMClient:
         Returns:
             Created record ID
         """
-        response = requests.post(
+        response = self.session.post(
             urljoin(self.api_url, entity_set),
             headers=self._get_headers(),
             json=data,
@@ -215,7 +232,7 @@ class ELMClient:
             record_id: Record GUID
             data: Fields to update
         """
-        response = requests.patch(
+        response = self.session.patch(
             urljoin(self.api_url, f"{entity_set}({record_id})"),
             headers=self._get_headers(),
             json=data,
@@ -238,7 +255,7 @@ class ELMClient:
         if select:
             params["$select"] = ",".join(select)
 
-        response = requests.get(
+        response = self.session.get(
             urljoin(self.api_url, f"{entity_set}({record_id})"),
             headers=self._get_headers(),
             params=params,
@@ -298,7 +315,7 @@ class ELMClient:
             Entity metadata dict or None if not found
         """
         try:
-            response = requests.get(
+            response = self.session.get(
                 urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
                 headers=self._get_headers(),
             )
@@ -321,7 +338,7 @@ class ELMClient:
         Returns:
             Created entity metadata
         """
-        response = requests.post(
+        response = self.session.post(
             urljoin(self.api_url, "EntityDefinitions"),
             headers=self._get_headers(),
             json=entity_metadata,
@@ -331,7 +348,7 @@ class ELMClient:
         # Get the created entity
         entity_id = response.headers.get("OData-EntityId", "")
         if entity_id:
-            get_response = requests.get(entity_id, headers=self._get_headers())
+            get_response = self.session.get(entity_id, headers=self._get_headers())
             if get_response.ok:
                 return get_response.json()
         return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
@@ -347,7 +364,7 @@ class ELMClient:
         Returns:
             Created attribute metadata
         """
-        response = requests.post(
+        response = self.session.post(
             urljoin(
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
@@ -372,7 +389,7 @@ class ELMClient:
             Attribute metadata or None if not found
         """
         try:
-            response = requests.get(
+            response = self.session.get(
                 urljoin(
                     self.api_url,
                     f"EntityDefinitions(LogicalName='{entity_logical_name}')"
@@ -399,7 +416,7 @@ class ELMClient:
         Returns:
             Created optionset metadata
         """
-        response = requests.post(
+        response = self.session.post(
             urljoin(self.api_url, "GlobalOptionSetDefinitions"),
             headers=self._get_headers(),
             json=optionset_metadata,
@@ -418,7 +435,7 @@ class ELMClient:
             OptionSet metadata or None if not found
         """
         try:
-            response = requests.get(
+            response = self.session.get(
                 urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"),
                 headers=self._get_headers(),
             )
@@ -476,7 +493,7 @@ class ELMClient:
             privilege_id: Privilege GUID
             depth: Privilege depth (1=User, 2=BU, 4=Parent:Child, 8=Org)
         """
-        response = requests.post(
+        response = self.session.post(
             urljoin(self.api_url, "AddPrivilegesRole"),
             headers=self._get_headers(),
             json={

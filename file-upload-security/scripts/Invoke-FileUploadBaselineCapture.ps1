@@ -105,10 +105,7 @@ $ErrorActionPreference = 'Stop'
 # ── Load Dependencies ─────────────────────────────────────────────
 $privatePath = Join-Path $PSScriptRoot 'private'
 
-. (Join-Path $privatePath 'Connect-EnvironmentDataverse.ps1')
-. (Join-Path $privatePath 'Get-ZoneClassification.ps1')
 . (Join-Path $privatePath 'Test-ParameterValidation.ps1')
-. (Join-Path $privatePath 'Get-ExpectedFileUploadPolicy.ps1')
 
 Import-Module (Join-Path $privatePath 'FUSClient.psm1') -Force
 

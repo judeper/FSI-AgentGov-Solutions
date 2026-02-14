@@ -64,6 +64,7 @@ function Get-FUSConnection {
 
     [PSCustomObject]@{
         DataverseUrl = $script:DataverseUrl
+        AccessToken  = $script:AccessToken
         IsConnected  = $null -ne $script:DataverseUrl -and $null -ne $script:AccessToken
     }
 }

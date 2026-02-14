@@ -260,9 +260,10 @@ Examples:
         # Write manifest
         print()
         print("Writing manifest...")
-        manifest_content = json.dumps(manifest, indent=2)
-        manifest_hash = calculate_sha256(manifest_content)
-        manifest["manifestHash"] = manifest_hash
+        # Hash the files list only (before adding hash to manifest) so
+        # the stored hash never includes itself and verification is stable.
+        files_content = json.dumps(manifest["files"], indent=2, sort_keys=True)
+        manifest["manifestHash"] = calculate_sha256(files_content)
 
         manifest_path = output_path / "manifest.json"
         manifest_path.write_text(json.dumps(manifest, indent=2))
