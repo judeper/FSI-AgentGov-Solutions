@@ -240,7 +240,7 @@ Add owner information to your inventory:
 
 1. Export environments needing action to separate CSV
 2. Add `OwnerEmail` and `OwnerName` columns
-3. Look up owners in admin center or via Azure AD
+3. Look up owners in admin center or via Microsoft Entra ID
 
 ### Step 4: Notify Owners
 

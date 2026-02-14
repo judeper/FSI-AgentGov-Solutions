@@ -59,7 +59,7 @@ agent-sharing-access-restriction-detector/
 
 ## Prerequisites
 
-- Azure AD app registration with BAP Admin API and Microsoft Graph permissions
+- Microsoft Entra ID app registration with BAP Admin API and Microsoft Graph permissions
 - Power Platform admin role (or Global Admin)
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`

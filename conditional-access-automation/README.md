@@ -208,7 +208,7 @@ After testing in report-only mode:
 ### Zone 3 - Enterprise Managed
 
 - MFA always required
-- Compliant or Hybrid Azure AD joined device required
+- Compliant or Microsoft Entra hybrid joined device required
 - Short session timeout (1 hour)
 - Block access from any risky sign-in
 - Required for agents accessing sensitive/regulated data

@@ -115,7 +115,7 @@ After import, configure these environment variables in Power Apps:
 
 | Variable | Value |
 |----------|-------|
-| `fsi_SDM_TenantId` | Your Azure AD tenant ID |
+| `fsi_SDM_TenantId` | Your Microsoft Entra ID tenant ID |
 | `fsi_SDM_DataverseEnvironment` | `https://your-org.crm.dynamics.com` |
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
@@ -129,7 +129,7 @@ Connect each connection reference to an appropriate connection:
 - `fsi_cr_office365` - Office 365 Outlook connection
 - `fsi_cr_teams` - Microsoft Teams connection
 - `fsi_cr_approvals` - Approvals connection
-- `fsi_cr_o365management` - HTTP with Azure AD (Office 365 Management APIs)
+- `fsi_cr_o365management` - HTTP with Microsoft Entra ID (Office 365 Management APIs)
 
 ### 4. Capture Agent Baselines
 

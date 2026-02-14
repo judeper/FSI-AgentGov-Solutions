@@ -124,7 +124,7 @@ python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.
 2. Open in Power BI Desktop
 3. Enter parameters:
    - `DataverseEnvironmentUrl`: Your environment URL
-   - `TenantId`: Your Azure AD tenant ID
+   - `TenantId`: Your Microsoft Entra ID tenant ID
 4. Authenticate with organizational account
 5. Publish to Power BI Service
 6. Configure scheduled refresh (daily at 7:00 AM)
