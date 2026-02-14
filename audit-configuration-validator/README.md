@@ -244,11 +244,8 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ## Documentation
 
-- [Service Principal Setup](./docs/service-principal-setup.md) - App registration, permissions
-- [Dataverse Schema Guide](./docs/dataverse-schema.md) - Table structure, relationships
 - [Flow Setup Guide](./docs/FLOW_SETUP.md) - Power Automate flow creation and configuration
 - [Evidence Export Guide](./docs/evidence-export-guide.md) - Compliance evidence collection and verification
-- [Troubleshooting](./docs/troubleshooting.md) - Common issues, resolutions
 
 ## Related Controls
 
