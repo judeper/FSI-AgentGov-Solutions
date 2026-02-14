@@ -31,6 +31,8 @@ except ImportError:
 class FUSClient:
     """Dataverse REST API client for File Upload Security Configurator."""
 
+    API_VERSION = "v9.2"
+
     def __init__(
         self,
         tenant_id: str,
@@ -42,7 +44,7 @@ class FUSClient:
     ):
         self.tenant_id = tenant_id
         self.environment_url = environment_url.rstrip("/")
-        self.api_url = f"{self.environment_url}/api/data/v9.2"
+        self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}"
         self.client_id = client_id
         self.client_secret = client_secret
         self.interactive = interactive

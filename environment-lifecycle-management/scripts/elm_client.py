@@ -21,6 +21,8 @@ from urllib3.util.retry import Retry
 class ELMClient:
     """Dataverse Web API client with MSAL authentication."""
 
+    API_VERSION = "v9.2"
+
     def __init__(
         self,
         tenant_id: str,
@@ -43,7 +45,7 @@ class ELMClient:
         self.client_id = client_id
         self.client_secret = client_secret
         self.environment_url = environment_url.rstrip("/")
-        self.api_url = f"{self.environment_url}/api/data/v9.2/"
+        self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}/"
         self.interactive = interactive
 
         # Dataverse requires the environment URL as the scope
