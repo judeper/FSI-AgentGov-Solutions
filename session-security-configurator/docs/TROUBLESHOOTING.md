@@ -9,7 +9,7 @@ This guide covers common issues encountered during SSC deployment and operation,
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | "Context already exists" | Authentication context c1-c5 already defined | Use `-Force` to overwrite, or manually update in Entra portal |
-| "Insufficient permissions" | Missing Security Administrator role | Assign Security Administrator or Global Administrator |
+| "Insufficient permissions" | Missing Security Administrator role | Assign Security Administrator or Entra Global Admin |
 | Graph API timeout | Large tenant with many CA policies | Retry with `-Verbose`; consider off-hours deployment |
 | "Invalid context ID format" | Context ID doesn't match c1-c5 pattern | Verify context IDs in Deploy-AuthContexts.ps1 |
 

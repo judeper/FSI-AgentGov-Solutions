@@ -25,7 +25,7 @@ Complete requirements for deploying the Environment Lifecycle Management solutio
 
 | Role | Entra ID / Power Platform | Purpose |
 |------|---------------------------|---------|
-| **Global Administrator** | Entra ID | Initial app registration (can delegate) |
+| **Entra Global Admin** | Entra ID | Initial app registration (can delegate) |
 | **Application Administrator** | Entra ID | Service Principal registration |
 | **Power Platform Admin** | Power Platform | Environment creation, SP management app registration |
 | **System Administrator** | Dataverse | Table creation, security roles |

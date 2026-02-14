@@ -138,11 +138,11 @@ Sends governance notification emails to environment/pipeline owners.
 
 ## Service Principal Setup for Unattended Automation
 
-For fully automated notification workflows (e.g., scheduled Azure Automation runbooks), configure an Azure AD app registration with application permissions.
+For fully automated notification workflows (e.g., scheduled Azure Automation runbooks), configure an Entra ID app registration with application permissions.
 
 ### Prerequisites
 
-- Azure AD Global Administrator or Application Administrator role
+- Entra ID Entra Global Admin or Application Administrator role
 - Certificate (recommended) or client secret for authentication
 
 ### Step 1: Create App Registration

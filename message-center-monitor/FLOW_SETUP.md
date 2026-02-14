@@ -195,7 +195,7 @@ If you can configure an alternate key on your Dataverse table, use the simpler "
    - Table: MessageCenterLog
    - Alternate Key: messagecenterId = `@{items('Apply_to_each')?['id']}`
 
-This eliminates the need for List + Condition logic.
+This replaces the List + Condition logic.
 
 **Alternative: Manual Check Pattern**
 

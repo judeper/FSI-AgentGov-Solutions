@@ -21,7 +21,7 @@ Requirements for deploying the Scope Drift Monitor.
 
 | Role | Required For |
 |------|--------------|
-| **Compliance Administrator** | Audit log queries |
+| **Purview Compliance Admin** | Audit log queries |
 | **Security Reader** | Defender CloudAppEvents |
 
 ### Power Platform Roles

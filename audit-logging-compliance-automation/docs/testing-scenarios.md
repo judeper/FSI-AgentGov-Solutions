@@ -267,12 +267,12 @@
 - Error: `Connect-ExchangeOnline : Failed to acquire token`
 
 **Possible causes:**
-- Managed Identity not assigned **Exchange Administrator** role
+- Managed Identity not assigned **Exchange Online Admin** role
 - ExchangeOnlineManagement module not imported or wrong version
 - Incorrect `-Organization` parameter
 
 **Resolution:**
-1. Verify role: **Entra ID** → **Roles and administrators** → **Exchange Administrator** → Check MI is listed
+1. Verify role: **Entra ID** → **Roles and administrators** → **Exchange Online Admin** → Check MI is listed
 2. Verify module: **Automation Account** → **Modules** → `ExchangeOnlineManagement` Status = Available on Runtime 7.2
 3. Verify TenantDomain parameter matches `yourdomain.onmicrosoft.com` format
 

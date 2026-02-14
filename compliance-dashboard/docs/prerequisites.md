@@ -31,7 +31,7 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 
 | Role | Required For | Minimum Scope |
 |------|--------------|---------------|
-| **Compliance Administrator** | Purview Compliance Manager API | Tenant |
+| **Purview Compliance Admin** | Purview Compliance Manager API | Tenant |
 | **Power Platform Administrator** | Environment and DLP data access | Tenant |
 | **Global Reader** | Read-only access to configuration | Tenant |
 

@@ -60,7 +60,7 @@ Assign these Entra ID roles to the Managed Identity:
 | Role | Purpose | How to Assign |
 |------|---------|---------------|
 | **Power Platform Administrator** | Environment enumeration, audit config access | Entra ID → Roles and administrators |
-| **Exchange Administrator** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
+| **Exchange Online Admin** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
 
 **Steps:**
 
@@ -69,7 +69,7 @@ Assign these Entra ID roles to the Managed Identity:
 3. Click **+ Add assignments** → **Select members**
 4. Search for `FSI-AgentGov-Automation` (the MI Object ID)
 5. Click **Select** → **Next** → **Assign**
-6. Repeat for **Exchange Administrator**
+6. Repeat for **Exchange Online Admin**
 
 ### 2.2 Microsoft Graph API Permission (Mail.Send)
 

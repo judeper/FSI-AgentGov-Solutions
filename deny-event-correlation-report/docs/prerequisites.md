@@ -31,7 +31,7 @@
 
 | Role | Scope | Capabilities |
 |------|-------|--------------|
-| **Compliance Administrator** | Tenant | Full audit access, search, export |
+| **Purview Compliance Admin** | Tenant | Full audit access, search, export |
 | **View-Only Audit Logs** | Tenant | Search and export only |
 | **Security Reader** | Tenant | Read-only access |
 

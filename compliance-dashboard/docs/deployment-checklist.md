@@ -17,7 +17,7 @@ Verify all prerequisites are met before starting deployment.
 
 ### Permissions
 
-- [ ] User has **Compliance Administrator** role (required for Purview Compliance Manager API access)
+- [ ] User has **Purview Compliance Admin** role (required for Purview Compliance Manager API access)
 - [ ] User has **Power Platform Administrator** role (required for environment access and DLP policy data)
 - [ ] User has **Power BI Admin** role (required for workspace creation and sharing)
 - [ ] User has **System Administrator** role in target Dataverse environment (required for table creation)

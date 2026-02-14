@@ -76,7 +76,7 @@ Admin consent URL: https://login.microsoftonline.com/<tenant-id>/adminconsent?cl
 ```
 
 1. Open the URL in a browser
-2. Sign in as Global Administrator
+2. Sign in as Entra Global Admin
 3. Review permissions and grant consent
 
 ### 2.3 Verify Service Principal

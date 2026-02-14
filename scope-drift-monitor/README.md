@@ -93,7 +93,7 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 
 | Role | Required For |
 |------|--------------|
-| **Compliance Administrator** | Audit log queries |
+| **Purview Compliance Admin** | Audit log queries |
 | **Security Reader** | Defender CloudAppEvents |
 | **System Administrator** | Dataverse table creation |
 

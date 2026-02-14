@@ -33,7 +33,7 @@ Automated Power Platform environment provisioning with zone-based governance cla
     - Service Principal sign-ins are restricted via Named Locations to trusted networks
     - Service Principal authentication is monitored via Entra ID Sign-in Logs
     - Service Principal credentials are rotated quarterly and stored in Azure Key Vault
-    - Service Principal does NOT have Global Administrator or Power Platform Administrator directory roles (use least-privilege API permissions instead)
+    - Service Principal does NOT have Entra Global Admin or Power Platform Administrator directory roles (use least-privilege API permissions instead)
 
     See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for security configuration guidance.
 

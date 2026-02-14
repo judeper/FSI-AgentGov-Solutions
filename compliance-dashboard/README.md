@@ -72,7 +72,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 
 | Role | Required For |
 |------|--------------|
-| Compliance Administrator | Purview Compliance Manager API access |
+| Purview Compliance Admin | Purview Compliance Manager API access |
 | Power Platform Administrator | Environment and DLP data |
 | Power BI Admin | Workspace creation and sharing |
 | System Administrator (Dataverse) | Table creation and data access |
