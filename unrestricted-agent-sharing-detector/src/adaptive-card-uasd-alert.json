@@ -211,12 +211,12 @@
     {
       "type": "Action.OpenUrl",
       "title": "Run Audit Script",
-      "url": "https://your-org.github.io/FSI-AgentGov/playbooks/advanced-implementations/uasd-deployment-guide/"
+      "url": "https://your-org.github.io/FSI-AgentGov/playbooks/advanced-implementations/unrestricted-agent-sharing-detector/deployment-guide/"
     },
     {
       "type": "Action.OpenUrl",
       "title": "View Documentation",
-      "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-and-restriction-governance/"
+      "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.1-restrict-agent-publishing-by-authorization/"
     }
   ],
   "msteams": {
