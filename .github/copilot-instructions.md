@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **16 solutions** covering 28+ controls across all 4 pillars
+- **25 solutions** covering 28+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, Power Automate, KQL, Dataverse
 - **Audience:** M365 administrators and DevOps engineers in US financial services
