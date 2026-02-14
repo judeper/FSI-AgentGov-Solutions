@@ -230,24 +230,38 @@ def query_telemetry_data(
     """
 
     try:
+        # Extract workspace GUID from ARM resource ID
+        # Format: /subscriptions/.../providers/Microsoft.OperationalInsights/workspaces/{name}
+        # query_workspace() requires the workspace ID (GUID), not the name.
+        # Use the full resource ID which the SDK resolves to the correct workspace.
+        workspace_resource_id = workspace_id
         response = logs_client.query_workspace(
-            workspace_id=workspace_id.split("/")[-1],  # Extract workspace ID from resource ID
+            workspace_id=workspace_resource_id,
             query=query,
             timespan=timedelta(hours=hours),
         )
     except HttpResponseError as e:
-        # Try with full workspace resource ID
-        try:
-            # Extract workspace ID from ARM resource ID format
-            # /subscriptions/.../resourceGroups/.../providers/Microsoft.OperationalInsights/workspaces/{name}
-            workspace_name = workspace_id.split("/")[-1]
-            response = logs_client.query_workspace(
-                workspace_id=workspace_name,
-                query=query,
-                timespan=timedelta(hours=hours),
-            )
-        except Exception as inner_e:
-            print(f"  Telemetry query: FAILED - {inner_e}")
+        # Retry with exponential backoff for transient errors
+        max_retries = 3
+        last_error = e
+        for attempt in range(1, max_retries + 1):
+            import time
+            delay = 2 ** attempt
+            if verbose:
+                print(f"  Telemetry query failed (attempt {attempt}/{max_retries}), retrying in {delay}s...")
+            time.sleep(delay)
+            try:
+                response = logs_client.query_workspace(
+                    workspace_id=workspace_resource_id,
+                    query=query,
+                    timespan=timedelta(hours=hours),
+                )
+                last_error = None
+                break
+            except HttpResponseError as retry_e:
+                last_error = retry_e
+        if last_error is not None:
+            print(f"  Telemetry query: FAILED after {max_retries} retries - {last_error}")
             return (False, False, [])
 
     if response.status == LogsQueryStatus.PARTIAL:

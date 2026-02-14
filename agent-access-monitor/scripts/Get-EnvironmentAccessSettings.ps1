@@ -155,7 +155,7 @@ function Get-ExtendedSetting {
     return $null
 }
 
-function Test-EnvironmentFilter {
+function Test-LocalEnvironmentFilter {
     <#
     .SYNOPSIS
         Tests if an environment passes the configured filters.
@@ -254,7 +254,7 @@ foreach ($env in $environments) {
     Write-Verbose "Processing environment: $($env.DisplayName)"
     
     # Apply filters
-    if (-not (Test-EnvironmentFilter -Environment $env -FilterConfig $filterConfig)) {
+    if (-not (Test-LocalEnvironmentFilter -Environment $env -FilterConfig $filterConfig)) {
         continue
     }
     

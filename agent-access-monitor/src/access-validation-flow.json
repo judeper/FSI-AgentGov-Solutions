@@ -1,4 +1,5 @@
 {
+  "_deployment_note": "Replace all placeholder values (contoso.onmicrosoft.com, your-client-id-here, your-certificate-thumbprint-here, your-subscription-id-here, your-teams-group-id-here, your-teams-channel-id-here, compliance-alerts@contoso.com) with your tenant-specific values before importing.",
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {

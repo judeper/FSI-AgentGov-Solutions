@@ -6,7 +6,7 @@ FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with 
 
 ## Architecture Overview
 
-The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (immutable ADLS Gen2 export), supporting Control 2.8 (Access Control and Segregation of Duties).
+The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2; enable Hierarchical Namespace post-deployment for ADLS Gen2 capabilities), supporting Control 2.8 (Access Control and Segregation of Duties).
 
 This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that satisfy FINRA 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
 
@@ -17,7 +17,7 @@ All Azure resources are provisioned via Python scripts using the Azure SDK for P
 ### Telemetry Infrastructure
 - **Deploys Application Insights** with 730-day retention for Copilot Studio telemetry capture (customEvents with CopilotInteraction schema)
 - **Creates Log Analytics workspace** with 2-year interactive query capability using PerGB2018 pricing tier
-- **Configures ADLS Gen2 export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM)
+- **Configures Azure Blob Storage (StorageV2) export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM). Enable Hierarchical Namespace post-deployment for ADLS Gen2 capabilities.
 - **Establishes RBAC separation** between operational monitoring (Monitoring Reader) and compliance audit paths (Storage Blob Data Reader)
 - **Provides PII sanitization guidance** for conversation data in customDimensions fields (text, speak, fromName, recipientName)
 - **Includes cost management configuration** with sampling defaults and cost alert thresholds
@@ -180,9 +180,9 @@ agent-observability-foundation/
 │   └── requirements.txt               # Python dependencies
 ├── queries/
 │   ├── README.md                      # KQL query library overview
-│   ├── foundation/                    # Core operational queries (6 queries)
+│   ├── performance/                   # Core operational queries (6 queries)
 │   ├── compliance/                    # Regulatory audit queries (5 queries)
-│   ├── sr-11-7/                       # SR 11-7 model governance (3 queries)
+│   ├── sr11-7-model-risk/             # SR 11-7 model governance (3 queries)
 │   └── governance-queries.md          # Query-to-control mapping
 ├── workbooks/
 │   ├── README.md                      # Workbooks overview and deployment

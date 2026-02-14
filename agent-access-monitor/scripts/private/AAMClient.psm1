@@ -104,6 +104,47 @@ function Get-AAMConnection {
 
 #endregion
 
+#region Retry Helper
+
+function Invoke-DataverseRequest {
+    <#
+    .SYNOPSIS
+        Wraps Invoke-RestMethod with retry/backoff for transient Dataverse errors.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Uri,
+
+        [string]$Method = 'GET',
+
+        $Body,
+
+        $Headers,
+
+        [int]$MaxRetries = 3
+    )
+
+    for ($i = 0; $i -lt $MaxRetries; $i++) {
+        try {
+            $params = @{ Uri = $Uri; Method = $Method; Headers = $Headers }
+            if ($Body) { $params['Body'] = $Body }
+            return Invoke-RestMethod @params
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if ($statusCode -eq 429 -or $statusCode -ge 500) {
+                $delay = [math]::Pow(2, $i)
+                Write-Verbose "Dataverse request failed (HTTP $statusCode), retrying in ${delay}s..."
+                Start-Sleep -Seconds $delay
+            } else {
+                throw
+            }
+        }
+    }
+    throw "Max retries ($MaxRetries) exceeded for $Uri"
+}
+
+#endregion
+
 #region Environment Variable Functions
 
 function Get-AAMEnvironmentVariable {
@@ -252,12 +293,12 @@ function Write-AAMValidationHistory {
             'Accept' = 'application/json'
         }
         
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
         Write-Verbose "Validation history record created"
         return $response
     } catch {
-        Write-Warning "Failed to write validation history: $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to write validation history (audit trail gap): $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -323,12 +364,12 @@ function Write-AAMViolation {
             'Accept' = 'application/json'
         }
         
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
         Write-Verbose "Violation record createdfor $($Violation.EnvironmentDisplayName)"
         return $response
     } catch {
-        Write-Warning "Failed to write violation: $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to write violation record for '$($Violation.EnvironmentDisplayName)': $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -388,14 +429,14 @@ function Save-AAMBaseline {
         $filter = "fsi_is_active eq true and fsi_environment_guid eq '$EnvironmentGuid'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?`$filter=$filter&`$select=fsi_accessbaselineid"
 
-        $existing = Invoke-RestMethod -Uri $queryUri -Headers $headers -Method Get
+        $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers
 
         foreach ($baseline in $existing.value) {
             $baselineId = $baseline.fsi_accessbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $baselineId", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines($baselineId)"
                 $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json
-                Invoke-RestMethod -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
+                Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
                 Write-Verbose "Deactivated previous baseline: $baselineId"
             }
         }
@@ -421,13 +462,13 @@ function Save-AAMBaseline {
 
         if ($PSCmdlet.ShouldProcess("$EnvironmentName (Zone $Zone)", "Save new access baseline")) {
             $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines"
-            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+            $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
             Write-Verbose "Baseline saved for $EnvironmentName (Zone $Zone)"
             return $response
         }
     } catch {
-        Write-Warning "Failed to save baseline for '$EnvironmentName': $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to save baseline for '$EnvironmentName': $($_.Exception.Message)"
+        throw
     }
 }
 

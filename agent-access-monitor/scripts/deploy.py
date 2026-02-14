@@ -47,7 +47,7 @@ def print_banner():
     print()
     print("  This script deploys AAM components to Dataverse:")
     print("    - Option sets (zone, severity — shared with ACV)")
-    print("    - AccessBaseline table (org-owned, access snapshots)")
+    print("    - AccessBaseline table (user-owned, access snapshots)")
     print("    - AccessValidationHistory table (org-owned, immutable audit trail)")
     print("    - AccessViolation table (org-owned, compliance violations)")
     print("    - Environment variables (scan config, alerting params)")
