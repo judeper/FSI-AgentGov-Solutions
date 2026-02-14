@@ -4,15 +4,14 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-## Available Solutions (25)
+## Available Solutions (24)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
 | [Agent Access Governance Monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.0 | 3.8 |
 | [Agent Observability Foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.0.0 | — |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.0 | 1.18, 2.8 |
-| [Audit Configuration Validator](./audit-configuration-validator/) | Automated validation of tenant and environment audit configurations | v1.0.0 | 1.7 |
-| [Audit Logging Compliance Automation](./audit-logging-compliance-automation/) | Automated detection and remediation of Purview and Dataverse audit logging gaps | v1.0.0 | 1.7 |
+| [Audit Compliance Manager](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.0 | 1.7 |
 | [COI Testing Framework](./coi-testing/) | Conflict of interest testing for agent recommendations | v1.0.0 | 2.18, 2.11, 2.5 |
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls with zone-based filtering | v1.0.0 | 3.3, 3.1, 3.2 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.0 | 1.11, 1.23, 1.18 |
@@ -38,7 +37,7 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 
 1. Navigate to the solution folder
 2. Follow the README for prerequisites
-3. Set up Azure AD app registration (where required)
+3. Set up Microsoft Entra ID app registration (where required)
 4. Deploy Dataverse schema and Power Automate flows
 5. Configure Teams notifications
 
