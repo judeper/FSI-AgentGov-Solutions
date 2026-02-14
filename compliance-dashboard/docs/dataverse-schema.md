@@ -9,7 +9,7 @@ Table definitions for the Compliance Dashboard data model.
 ```
 ┌─────────────────────┐     ┌─────────────────────┐
 │  fsi_controlmaster  │────<│ fsi_controlassessment│
-│  (62 controls)      │     │  (assessments)       │
+│  (71 controls)      │     │  (assessments)       │
 └─────────────────────┘     └─────────────────────┘
          │                            │
          │                            │
@@ -30,7 +30,7 @@ Table definitions for the Compliance Dashboard data model.
 
 ## Table: fsi_controlmaster
 
-Master list of all 62 controls in the FSI Agent Governance Framework.
+Master list of all 71 controls in the FSI Agent Governance Framework.
 
 ### Columns
 

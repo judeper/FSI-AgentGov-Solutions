@@ -73,7 +73,7 @@ All notable changes to the Compliance Dashboard solution.
   - DAX measure library
   - Troubleshooting guide
 - **Sample Data:**
-  - Control master JSON (62 controls)
+  - Control master JSON (71 controls)
   - Python script for loading sample data
 
 ### Regulatory Alignment

@@ -9,7 +9,7 @@ These solutions help Financial Services organizations implement operational cont
 
 **FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation:
 - `docs/framework/` - Governance principles
-- `docs/controls/` - 62 control specifications
+- `docs/controls/` - 71 control specifications
 - `docs/playbooks/` - Implementation guides including references to solutions here
 
 ### Cross-Repository Workflow

@@ -56,7 +56,7 @@ Common issues and solutions for the Compliance Dashboard.
 ### Missing Controls
 
 **Symptoms:**
-- Fewer than 62 controls displayed
+- Fewer than 71 controls displayed
 - Specific controls missing from list
 
 **Solutions:**
@@ -68,7 +68,7 @@ Common issues and solutions for the Compliance Dashboard.
 
 2. **Verify Control Master Table**
    - Check `fsi_controlmaster` row count
-   - Ensure all 62 controls present
+   - Ensure all 71 controls present
 
 3. **Check Filter Context**
    - Clear all slicers

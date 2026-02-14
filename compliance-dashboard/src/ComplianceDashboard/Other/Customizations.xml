@@ -12,7 +12,7 @@
             <LocalizedCollectionName description="Control Masters" languagecode="1033" />
           </LocalizedCollectionNames>
           <Descriptions>
-            <Description description="Master list of all 62 controls in the FSI Agent Governance Framework" languagecode="1033" />
+            <Description description="Master list of all 71 controls in the FSI Agent Governance Framework" languagecode="1033" />
           </Descriptions>
           <attributes>
             <attribute PhysicalName="fsi_controlmasterid">

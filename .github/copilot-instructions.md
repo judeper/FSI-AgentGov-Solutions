@@ -19,7 +19,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | deny-event-correlation-report | v1.1.0 | 1.5, 1.7, 3.4 | Daily deny event correlation across Purview and App Insights |
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | conditional-access-automation | v1.0.0 | 1.11, 1.23, 1.18 | CA policy deployment and compliance monitoring for AI workloads |
-| compliance-dashboard | v1.0.0-beta | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 62 controls |
+| compliance-dashboard | v1.0.0-beta | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 71 controls |
 | segregation-detector | v1.0.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | scope-drift-monitor | v1.0.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | rag-source-validator | v1.0.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
@@ -78,7 +78,7 @@ FSI-AgentGov-Solutions/
 
 **FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework:
 - `docs/framework/` — Governance principles
-- `docs/controls/` — 62 control specifications (10-section format)
+- `docs/controls/` — 71 control specifications (10-section format)
 - `docs/playbooks/` — Implementation guides referencing solutions here
 - `docs/reference/solutions-index.md` — Complete solutions catalog
 - `docs/framework/solutions-integration.md` — Framework-to-solutions mapping

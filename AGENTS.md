@@ -10,7 +10,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, Power Automate, KQL, Dataverse
 
-**Companion Repository:** `FSI-AgentGov` (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation (62 controls, 248 playbooks, MkDocs site).
+**Companion Repository:** `FSI-AgentGov` (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation (71 controls, 284 playbooks, MkDocs site).
 
 ## Solution Catalog
 
@@ -22,7 +22,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | deny-event-correlation-report | v1.1.0 | 1.5, 1.7, 3.4 | Daily deny event correlation across Purview and App Insights |
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | conditional-access-automation | v1.0.0 | 1.11, 1.23, 1.18 | CA policy deployment and compliance monitoring for AI workloads |
-| compliance-dashboard | v1.0.0-beta | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 62 controls |
+| compliance-dashboard | v1.0.0-beta | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 71 controls |
 | segregation-detector | v1.0.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | scope-drift-monitor | v1.0.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | rag-source-validator | v1.0.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |

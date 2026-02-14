@@ -161,7 +161,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 ### Verify Sample Data
 
 - [ ] Navigate to **Power Apps** > **Tables** > **fsi_controlmaster**
-- [ ] Verify 62 control records exist (one for each framework control)
+- [ ] Verify 71 control records exist (one for each framework control)
 - [ ] Check sample controls: "1.1 - Identity and Access Management", "2.12 - Supervision and Oversight"
 - [ ] Navigate to **fsi_compliancescore** table
 - [ ] Verify 90 daily score snapshots exist (today going back 90 days)
@@ -253,7 +253,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
   - [ ] Pillar Trend line chart shows historical trends
   - [ ] Non-Compliant Controls table displays affected controls
 - [ ] **Page 3 - Control Details:**
-  - [ ] Control List table shows all 62 controls
+  - [ ] Control List table shows all 71 controls
   - [ ] Assessment History line chart displays (click control to populate)
   - [ ] Evidence List table shows linked evidence
   - [ ] Regulatory Tags slicer displays filter options
@@ -337,7 +337,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 
 ### Control Details Page
 
-- [ ] All 62 controls display in table
+- [ ] All 71 controls display in table
 - [ ] Filtering by pillar/zone/status works correctly
 - [ ] Click control in table populates assessment history chart
 - [ ] Evidence list shows linked evidence items
