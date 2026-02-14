@@ -2,7 +2,7 @@
 
 > **Status:** Production Ready
 
-Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 62 controls with zone-based filtering.
+Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 71 controls with zone-based filtering.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 | **Executive Summary** | Overall compliance score with trend indicators |
 | **Pillar Breakdown** | Compliance status by pillar (Security, Management, Reporting, SharePoint) |
 | **Zone Filtering** | Filter by governance zone (Zone 1/2/3) |
-| **Control Drill-Down** | Detailed status for each of 62 controls |
+| **Control Drill-Down** | Detailed status for each of 71 controls |
 | **Trend Analysis** | Historical compliance tracking over time |
 | **Exception Tracking** | Open exceptions with remediation status |
 
@@ -112,7 +112,7 @@ export AZURE_TENANT_ID="your-tenant-id"
 export AZURE_CLIENT_ID="your-client-id"
 export AZURE_CLIENT_SECRET="your-client-secret"
 
-# Load sample data (62 controls, 90 days history)
+# Load sample data (71 controls, 90 days history)
 python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com"
 ```
 
@@ -248,7 +248,7 @@ This section documents limitations and design decisions for v1.0.0 deployment.
 | **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop GUI | Follow [Power BI Template Specification](docs/power-bi-template-spec.md) for step-by-step instructions |
 | **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
 | **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX filters |
-| **Sample data is demo only** | Sample data uses realistic distributions but should not be used in production environments | Clear sample data with `--clear` flag before loading production assessments |
+| **Sample data is demo only** | Sample data uses realistic distributions but should not be used in production environments | To clear existing data before loading, manually delete records via Power Apps or Dataverse API |
 | **Single deployment path** | No Quick Start option, full deployment required for all scenarios | Complete all steps in [Deployment Checklist](docs/deployment-checklist.md) |
 | **Upgrade path not documented** | Migration from v1.0.0 to future versions not yet specified | Upgrade documentation will be added in v1.1.0 release |
 | **Unmanaged solution only** | Solution package is unmanaged to allow customer customization | Convert to managed solution post-customization if needed |
@@ -295,7 +295,7 @@ For complete removal including all data:
 2. Turn off all flows in solution
 3. Delete solution from Power Apps
 4. (Optional) Manually delete Dataverse tables if solution deletion left remnants
-5. Clear sample data: `python scripts/load_sample_data.py --clear`
+5. (Optional) Manually delete sample data records via Power Apps or Dataverse API
 
 See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rollback-procedure) for detailed steps.
 

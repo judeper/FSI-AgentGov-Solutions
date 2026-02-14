@@ -114,16 +114,7 @@ Complete infrastructure recovery.
 pac solution import --path ./templates/DRTestingFramework_1_0_0.zip
 ```
 
-### 2. Configure Test Schedule
-
-```powershell
-.\scripts\New-DRTestSchedule.ps1 `
-    -TestType "AgentRestore" `
-    -Frequency "Quarterly" `
-    -Environment "https://your-org.crm.dynamics.com"
-```
-
-### 3. Run DR Test
+### 2. Run DR Test
 
 ```powershell
 .\scripts\Invoke-DRTest.ps1 `
@@ -132,23 +123,17 @@ pac solution import --path ./templates/DRTestingFramework_1_0_0.zip
     -Environment "https://your-org.crm.dynamics.com"
 ```
 
-### 4. Review Results
+### 3. Review Results
 
-Check test results in Dataverse or export evidence:
+Check test results in Dataverse.
 
-```powershell
-.\scripts\Export-DREvidence.ps1 -TestId "guid" -OutputPath "./evidence"
-```
+**Planned:** `New-DRTestSchedule.ps1` and `Export-DREvidence.ps1` are under development.
+
+> **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Prerequisites](docs/prerequisites.md) | Requirements |
-| [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
-| [Test Scenarios](docs/test-scenarios.md) | Scenario details |
-| [Validation Checks](docs/validation-checks.md) | Post-recovery validation |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues |
+Detailed documentation is planned for a future release. See inline comments in `Invoke-DRTest.ps1` for usage.
 
 ## Test Execution Workflow
 

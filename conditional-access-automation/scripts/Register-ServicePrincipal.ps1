@@ -201,15 +201,15 @@ if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials (
         Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
 
         # Store client ID
-        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue $app.AppId | Out-Null
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue (ConvertTo-SecureString $app.AppId -AsPlainText -Force) | Out-Null
         Write-Verbose "  Stored: CAA-SP-ClientId"
 
         # Store client secret
-        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue $secret.SecretText | Out-Null
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue (ConvertTo-SecureString $secret.SecretText -AsPlainText -Force) | Out-Null
         Write-Verbose "  Stored: CAA-SP-ClientSecret"
 
         # Store tenant ID
-        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue $TenantId | Out-Null
+        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue (ConvertTo-SecureString $TenantId -AsPlainText -Force) | Out-Null
         Write-Verbose "  Stored: CAA-TenantId"
     }
     catch {

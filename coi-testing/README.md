@@ -133,13 +133,7 @@ python scripts/run_coi_tests.py --category "proprietary_bias"
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Prerequisites](docs/prerequisites.md) | Requirements |
-| [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
-| [Test Scenarios](docs/test-scenarios.md) | Scenario library |
-| [Writing Tests](docs/writing-tests.md) | Custom test creation |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues |
+Detailed documentation is planned for a future release. See inline comments in `run_coi_tests.py` for usage.
 
 ## Test Execution
 
@@ -156,9 +150,6 @@ Configure Power Automate flow for scheduled execution:
 ### On-Demand Testing
 
 ```bash
-# Test specific agent
-python scripts/run_coi_tests.py --agent-id "guid"
-
 # Test with verbose output
 python scripts/run_coi_tests.py --verbose
 

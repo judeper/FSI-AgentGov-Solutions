@@ -102,6 +102,11 @@ function Test-AgentRestore {
 
     $startTime = Get-Date
 
+    # IMPORTANT: Recovery steps below are stub implementations using Start-Sleep.
+    # RTO/RPO measurements reflect simulated timing only.
+    # Replace Start-Sleep calls with actual backup/restore API calls for production use.
+    Write-Warning "IMPORTANT: Recovery steps are currently simulated (stub implementation). RTO/RPO measurements reflect simulated timing only. Replace Start-Sleep calls with actual backup/restore API calls for production use."
+
     Write-Host "  Step 1: Locate agent backup..." -ForegroundColor Gray
     if (-not $DryRun) {
         Start-Sleep -Seconds 2

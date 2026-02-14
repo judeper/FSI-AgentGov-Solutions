@@ -178,6 +178,7 @@ Write-Host "  Found $($sources.Count) sources to validate"
 $passed = 0
 $failed = 0
 $changed = 0
+$skipped = 0
 
 foreach ($source in $sources) {
     Write-Host ""
@@ -199,45 +200,61 @@ foreach ($source in $sources) {
                 $content = Get-SharePointContent -Token $graphToken -Uri $source.fsi_sourceuri
             }
             4 { # Dataverse Table
-                # Query Dataverse table and hash results
-                $content = "Dataverse content placeholder"
+                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Marking as 'RequiresManualReview'."
+                $result.fsi_result = 3  # RequiresManualReview
+                $result.fsi_currenthash = $null
+                $result.fsi_hashchanged = $false
+                $result.fsi_validationstatus = "RequiresManualReview"
+                Write-Host "  SKIPPED - Dataverse validation not yet implemented" -ForegroundColor Yellow
+                $skipped++
+                # Skip hash comparison for unsupported types
+                $content = $null
             }
             default {
-                $content = "Source type not yet supported"
-            }
-        }
-
-        # Compute hash
-        $currentHash = Get-ContentHash -Content $content
-        $result.fsi_currenthash = $currentHash
-
-        # Compare to baseline
-        if ($source.fsi_baselinehash) {
-            if ($currentHash -eq $source.fsi_baselinehash) {
-                $result.fsi_result = 1  # Passed
+                Write-Warning "Source type $($source.fsi_sourcetype) not yet supported for source '$($source.fsi_name)'. Marking as 'Unsupported'."
+                $result.fsi_result = 3  # Unsupported
+                $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
-                Write-Host "  PASSED - Hash matches baseline" -ForegroundColor Green
-                $passed++
-            } else {
-                $result.fsi_result = 2  # Failed - Hash Mismatch
-                $result.fsi_hashchanged = $true
-                Write-Host "  CHANGED - Hash mismatch detected" -ForegroundColor Yellow
-                $changed++
+                $result.fsi_validationstatus = "Unsupported"
+                Write-Host "  SKIPPED - Source type not yet supported" -ForegroundColor Yellow
+                $skipped++
+                $content = $null
             }
-        } else {
-            # No baseline - capture it and write back as baseline
-            $result.fsi_result = 1
-            $result.fsi_hashchanged = $false
-            Write-Host "  BASELINE CAPTURED" -ForegroundColor Cyan
-            $passed++
         }
 
-        # Update source hash (write baseline on first run)
-        $baselineParam = @{}
-        if (-not $source.fsi_baselinehash) {
-            $baselineParam.BaselineHash = $currentHash
+        # Compute hash and compare (only for supported source types)
+        if ($null -ne $content) {
+            $currentHash = Get-ContentHash -Content $content
+            $result.fsi_currenthash = $currentHash
+
+            # Compare to baseline
+            if ($source.fsi_baselinehash) {
+                if ($currentHash -eq $source.fsi_baselinehash) {
+                    $result.fsi_result = 1  # Passed
+                    $result.fsi_hashchanged = $false
+                    Write-Host "  PASSED - Hash matches baseline" -ForegroundColor Green
+                    $passed++
+                } else {
+                    $result.fsi_result = 2  # Failed - Hash Mismatch
+                    $result.fsi_hashchanged = $true
+                    Write-Host "  CHANGED - Hash mismatch detected" -ForegroundColor Yellow
+                    $changed++
+                }
+            } else {
+                # No baseline - capture it and write back as baseline
+                $result.fsi_result = 1
+                $result.fsi_hashchanged = $false
+                Write-Host "  BASELINE CAPTURED" -ForegroundColor Cyan
+                $passed++
+            }
+
+            # Update source hash (write baseline on first run)
+            $baselineParam = @{}
+            if (-not $source.fsi_baselinehash) {
+                $baselineParam.BaselineHash = $currentHash
+            }
+            Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
         }
-        Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
 
     } catch {
         $result.fsi_result = 5  # Failed - Source Unavailable
@@ -261,3 +278,4 @@ Write-Host ""
 Write-Host "Passed:  $passed"
 Write-Host "Changed: $changed"
 Write-Host "Failed:  $failed"
+Write-Host "Skipped: $skipped"

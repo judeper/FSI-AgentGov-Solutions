@@ -149,8 +149,13 @@ function Invoke-DataverseQuery {
     Write-Verbose "GET $url"
 
     try {
-        $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
-        return $response.value
+        $allRecords = @()
+        while ($url) {
+            $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
+            $allRecords += $response.value
+            $url = $response.'@odata.nextLink'
+        }
+        return $allRecords
     } catch {
         Write-Warning "Failed to query $EntitySet : $($_.Exception.Message)"
         return @()
