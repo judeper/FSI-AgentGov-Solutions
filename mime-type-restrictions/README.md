@@ -41,7 +41,11 @@ mime-type-restrictions/
 
 ## Deployment
 
-See the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) in FSI-AgentGov.
+1. Register the Dataverse plugin using the Plugin Registration Tool
+2. Import the DLP policy template into your Power Platform environment
+3. Configure `MimeConfig.json` with your organization's allowed/blocked MIME types
+4. Deploy Sentinel queries to your Log Analytics workspace
+5. Verify deployment using the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) in FSI-AgentGov
 
 ## Troubleshooting
 

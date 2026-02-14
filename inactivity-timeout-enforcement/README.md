@@ -34,7 +34,10 @@ inactivity-timeout-enforcement/
 
 ## Deployment
 
-See the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov.
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Activate cloud flows
+4. Verify deployment using the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
 
 ## License
 

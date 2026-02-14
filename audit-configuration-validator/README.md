@@ -258,9 +258,26 @@ This solution helps support implementation of:
 - Automated daily validation with drift detection (Power Automate)
 - Evidence export with SHA-256 integrity hashing
 
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/environment-validation-flow.json`, `src/tenant-validation-flow.json` |
+| `compliance-alerts@contoso.com` | Your compliance team email | `src/environment-validation-flow.json`, `src/tenant-validation-flow.json` |
+
+## Deployment
+
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Update placeholder values (see Configuration Placeholders above)
+4. Activate cloud flows
+5. Verify deployment using the verification steps below
+
 ## Security Considerations
 
-- Validation history is **organization-owned** - security roles must remove Write/Delete privileges post-deployment
+- Validation history is **organization-owned**- security roles must remove Write/Delete privileges post-deployment
 - Service Principal requires **Office 365 Exchange Online** and **Power Platform Administrator** API permissions
 - Connection references bind at runtime - use managed identities in production
 - Grace period prevents false positives for newly enabled configurations (default: 24 hours)

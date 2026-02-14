@@ -429,6 +429,24 @@ Implementation guidance in FSI-AgentGov:
 | CAAClient Module | `scripts/private/CAAClient.psm1` | 8 Dataverse functions (Connect, Read, Write) |
 | Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` | Unattended daily execution via Azure Automation |
 
+## Configuration Placeholders
+
+The following placeholder values in solution flow files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `DataverseUrl` (empty) | Your Dataverse environment URL | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `TenantId` (empty) | Your Entra ID tenant ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `ClientId` (empty) | Your app registration client ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `CertificateThumbprint` (empty) | Your certificate thumbprint | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `SubscriptionId` (empty) | Your Azure subscription ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `ResourceGroup` (empty) | Your Azure resource group name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `AutomationAccount` (empty) | Your Azure Automation account name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `TeamsGroupId` (empty) | Your Teams group ID for alerts | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `TeamsChannelId` (empty) | Your Teams channel ID for alerts | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+| `ComplianceDistributionList` (empty) | Your compliance team distribution list | `src/caa-daily-compliance-flow.json` |
+| `your-org` | Your GitHub organization name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+
 ## Version
 
 1.1.0 - February 2026

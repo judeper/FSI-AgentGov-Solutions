@@ -103,6 +103,14 @@ pac solution import --path ./templates/RAGSourceValidator_1_0_0.zip
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
 ```
 
+## Deployment
+
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Register knowledge sources using `Register-KnowledgeSource.ps1`
+4. Capture initial baseline using `New-SourceBaseline.ps1`
+5. Activate cloud flows for scheduled validation
+
 ## Documentation
 
 | Document | Description |

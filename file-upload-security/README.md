@@ -108,9 +108,18 @@ Import-Module ./scripts/private/FUSClient.psm1
 - [FLOW_SETUP.md](docs/FLOW_SETUP.md) — Power Automate flow deployment
 - [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — Common issues and resolution
 
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/fileupload-validation-flow.json` |
+| `compliance-alerts@contoso.com` | Your compliance team email | `src/fileupload-validation-flow.json` |
+
 ## Related Controls
 
-- **1.14** — Data Minimization and Agent Scope Control (primary)
+- **1.14** — Data Minimizationand Agent Scope Control (primary)
 - **1.8** — Content Moderation Configuration (cross-check)
 - **1.4** — Connector and DLP Policies (data boundary)
 

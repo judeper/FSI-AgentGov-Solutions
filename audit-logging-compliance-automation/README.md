@@ -125,6 +125,17 @@ This solution helps support implementation of:
 - Shared mailbox for email notifications (no user mailbox access)
 - WhatIf mode for safe remediation dry runs
 
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/audit-remediation-approval-flow.json`, `src/Check-AuditLoggingCompliance.ps1`, `src/Enable-AuditLogging.ps1` |
+| `governance-lead@contoso.com` | Your governance lead email | `src/audit-remediation-approval-flow.json` |
+| `compliance-team@contoso.com` | Your compliance team email | `src/audit-remediation-approval-flow.json` |
+| `https://YOUR-ORG.crm.dynamics.com` | Your Dataverse environment URL | `src/audit-remediation-approval-flow.json` |
+
 ## Version History
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.

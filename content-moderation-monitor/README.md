@@ -125,9 +125,18 @@ This means:
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
 
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/moderation-validation-flow.json` |
+| `compliance-alerts@contoso.com` | Your compliance team email | `src/moderation-validation-flow.json` |
+
 ## Documentation
 
-- [Prerequisites](docs/PREREQUISITES.md) — Module and permission requirements
+- [Prerequisites](docs/PREREQUISITES.md)— Module and permission requirements
 - [Dataverse Schema](docs/SCHEMA.md) — Table, column, and option set reference
 - [Evidence Export](docs/EVIDENCE_EXPORT.md) — Compliance evidence export guide
 - [Flow Setup](docs/FLOW_SETUP.md) — Power Automate deployment guide

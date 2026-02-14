@@ -131,6 +131,10 @@ python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com
 python scripts/run_coi_tests.py --category "proprietary_bias"
 ```
 
+## Deployment
+
+> **Planned** — Deployment instructions will be added when implementation is complete.
+
 ## Documentation
 
 Detailed documentation is planned for a future release. See inline comments in `run_coi_tests.py` for usage.

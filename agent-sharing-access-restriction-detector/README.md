@@ -66,6 +66,11 @@ agent-sharing-access-restriction-detector/
 
 ## Deployment
 
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Activate cloud flows
+4. Verify deployment using the guides below
+
 See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) in FSI-AgentGov, which covers:
 
 - [Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) — End-to-end setup

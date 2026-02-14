@@ -131,6 +131,10 @@ Check test results in Dataverse.
 
 > **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
 
+## Deployment
+
+> **Planned** — Deployment instructions will be added when implementation is complete.
+
 ## Documentation
 
 Detailed documentation is planned for a future release. See inline comments in `Invoke-DRTest.ps1` for usage.

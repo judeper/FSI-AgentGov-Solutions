@@ -65,7 +65,6 @@ agent-access-monitor/
 │       ├── Get-ZoneClassification.ps1     # Zone lookup helper
 │       ├── Get-ExpectedSettings.ps1       # Settings reference helper
 │       └── Get-AAMValidationResults.ps1   # Evidence query helper
-├── src/dataverse/                         # Dataverse schema (Phase 2)
 ├── templates/
 │   └── zone-settings-baseline.json        # Zone requirements reference
 └── docs/
@@ -89,6 +88,28 @@ agent-access-monitor/
 ## Prerequisites
 
 See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
+
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/access-validation-flow.json` |
+| `your-client-id-here` | Your app registration client ID | `src/access-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Your certificate thumbprint | `src/access-validation-flow.json` |
+| `your-subscription-id-here` | Your Azure subscription ID | `src/access-validation-flow.json` |
+| `your-teams-group-id-here` | Your Teams group ID for alerts | `src/access-validation-flow.json` |
+| `your-teams-channel-id-here` | Your Teams channel ID for alerts | `src/access-validation-flow.json` |
+| `compliance-alerts@contoso.com` | Your compliance team email | `src/access-validation-flow.json` |
+
+## Deployment
+
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Update placeholder values (see Configuration Placeholders above)
+4. Activate cloud flows
+5. Verify deployment using the verification steps below
 
 ## License
 

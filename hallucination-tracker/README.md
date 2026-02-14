@@ -131,6 +131,14 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 Import `templates/HallucinationDashboard.pbit` into Power BI.
 
+## Deployment
+
+1. Import the solution ZIP into your Power Platform environment
+2. Configure connection references (see prerequisites)
+3. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
+4. Activate cloud flows
+5. Deploy the Power BI dashboard
+
 ## Documentation
 
 | Document | Description |

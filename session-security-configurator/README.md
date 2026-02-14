@@ -212,6 +212,15 @@ SSC validates six session security dimensions:
 - [Evidence Export Guide](docs/EVIDENCE-EXPORT-GUIDE.md) — Compliance evidence export instructions
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and resolutions
 
+## Configuration Placeholders
+
+The following placeholder values in solution files must be replaced with your organization's values before deployment:
+
+| Placeholder | Replace With | Files |
+|------------|-------------|-------|
+| `contoso.onmicrosoft.com` | Your tenant domain | `src/session-validation-flow.json` |
+| `compliance-alerts@contoso.com` | Your compliance team email | `src/session-validation-flow.json` |
+
 ## FSI-AgentGov Integration
 
 This solution supports the following FSI-AgentGov controls:
