@@ -1,4 +1,4 @@
-# Audit Configuration Validator - Python Dependencies
+# Audit Compliance Manager - Python Dependencies
 # Python 3.10 or later required
 
 # MSAL for Entra ID authentication
@@ -7,6 +7,6 @@ msal>=1.30.0
 # HTTP requests for Dataverse Web API
 requests>=2.32.0
 
-# Azure SDK for managed identity and Key Vault (future use)
+# Azure SDK for managed identity and Key Vault
 azure-identity>=1.18.0
 azure-keyvault-secrets>=4.7.0
