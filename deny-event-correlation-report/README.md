@@ -86,14 +86,16 @@ Connect-ExchangeOnline
 For RAI telemetry, you need:
 
 1. Application Insights resource in Azure
-2. API key with read permissions
+2. Entra ID authentication with Monitoring Reader role on the Application Insights resource
 3. Copilot Studio agents configured with App Insights connection string
 
 ```powershell
+# Authenticate with Entra ID
+Connect-AzAccount
+
 # Export RAI telemetry
 .\scripts\Export-RaiTelemetry.ps1 `
     -AppInsightsAppId "your-app-id" `
-    -ApiKey "your-api-key" `
     -OutputPath ".\RaiTelemetry.csv"
 ```
 

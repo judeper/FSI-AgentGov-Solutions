@@ -303,7 +303,7 @@ try {
     if (-not $SkipRaiTelemetry) {
         Write-StepHeader "3/3" "Extracting RAI Telemetry from Application Insights"
 
-        if ($AppInsightsAppId -and $AppInsightsApiKey) {
+        if ($AppInsightsAppId) {
             try {
                 $raiScript = Join-Path $scriptDir "Export-RaiTelemetry.ps1"
 
@@ -328,7 +328,7 @@ try {
             }
         }
         else {
-            Write-Warning "Skipping RAI telemetry: AppInsightsAppId or ApiKey not provided."
+            Write-Warning "Skipping RAI telemetry: AppInsightsAppId not provided."
         }
     }
     else {
