@@ -43,6 +43,21 @@ mime-type-restrictions/
 
 See the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) in FSI-AgentGov.
 
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Plugin not triggering | Plugin not registered or registration step inactive | Re-register plugin in Dataverse Plugin Registration Tool; verify step is active |
+| Allowed MIME type blocked | `MimeConfig.json` allowlist missing the type | Add the MIME type to the allowlist and redeploy configuration |
+| Sentinel queries return empty | Diagnostic logs not flowing to workspace | Verify Dataverse audit logging is enabled and connected to Sentinel |
+| DLP policy not enforcing | Policy in audit-only mode or not assigned | Switch policy to enforce mode; verify policy scope includes target environment |
+
+### Logs
+
+Review Dataverse plugin trace logs for errors. For Sentinel queries, check the `SigninLogs` and `DataverseActivity` tables.
+
 ## License
 
 MIT License — see [LICENSE](../LICENSE)

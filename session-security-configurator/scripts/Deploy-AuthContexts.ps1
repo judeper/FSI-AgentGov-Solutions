@@ -71,9 +71,10 @@
 #Requires -Version 7.0
 #Requires -Modules Microsoft.Graph.Identity.SignIns
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string]$TenantId,
 
     [Parameter(Mandatory = $false)]
@@ -275,33 +276,37 @@ foreach ($context in $authContexts) {
 
         if ($existingContexts.ContainsKey($contextId)) {
             # Update existing context
-            Write-Host "    Updating existing context..." -ForegroundColor Yellow
-            Update-MgIdentityConditionalAccessAuthenticationContextClassReference `
-                -AuthenticationContextClassReferenceId $contextId `
-                -BodyParameter $bodyParams `
-                -ErrorAction Stop
-            Write-Host "    Status: Updated (forced)" -ForegroundColor Yellow
+            if ($PSCmdlet.ShouldProcess("Auth context: $contextId ($displayName)", "Update in tenant $TenantId")) {
+                Write-Host "    Updating existing context..." -ForegroundColor Yellow
+                Update-MgIdentityConditionalAccessAuthenticationContextClassReference `
+                    -AuthenticationContextClassReferenceId $contextId `
+                    -BodyParameter $bodyParams `
+                    -ErrorAction Stop
+                Write-Host "    Status: Updated (forced)" -ForegroundColor Yellow
 
-            $deployedContexts += @{
-                Id = $contextId
-                DisplayName = $displayName
-                Status = "Updated"
-                Reason = "Force overwrite"
+                $deployedContexts += @{
+                    Id = $contextId
+                    DisplayName = $displayName
+                    Status = "Updated"
+                    Reason = "Force overwrite"
+                }
             }
         }
         else {
             # Create new context
-            Write-Host "    Creating new context..." -ForegroundColor Cyan
-            New-MgIdentityConditionalAccessAuthenticationContextClassReference `
-                -BodyParameter $bodyParams `
-                -ErrorAction Stop
-            Write-Host "    Status: Created" -ForegroundColor Green
+            if ($PSCmdlet.ShouldProcess("Auth context: $contextId ($displayName)", "Create in tenant $TenantId")) {
+                Write-Host "    Creating new context..." -ForegroundColor Cyan
+                New-MgIdentityConditionalAccessAuthenticationContextClassReference `
+                    -BodyParameter $bodyParams `
+                    -ErrorAction Stop
+                Write-Host "    Status: Created" -ForegroundColor Green
 
-            $deployedContexts += @{
-                Id = $contextId
-                DisplayName = $displayName
-                Status = "Created"
-                Reason = "New deployment"
+                $deployedContexts += @{
+                    Id = $contextId
+                    DisplayName = $displayName
+                    Status = "Created"
+                    Reason = "New deployment"
+                }
             }
         }
     }

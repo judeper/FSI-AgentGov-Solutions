@@ -43,7 +43,7 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET,
+    [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET),
 
     [Parameter(Mandatory = $false)]
     [switch]$DryRun
@@ -52,6 +52,18 @@ param(
 #Requires -Version 7.0
 
 $ErrorActionPreference = "Stop"
+
+# Structured audit logging
+function Write-AuditLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$CorrelationId = $script:CorrelationId
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+}
+$script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
 #region Helper Functions
 
@@ -253,10 +265,13 @@ if ($DryRun) {
 }
 
 # Validate parameters
-if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
-    Write-Error "Missing credentials. Set environment variables or provide parameters."
-    exit 1
+if (-not $ClientSecret) {
+    throw "ClientSecret is required. Set FSI_CLIENT_SECRET environment variable or pass -ClientSecret parameter."
 }
+if (-not $TenantId -or -not $ClientId) {
+    throw "TenantId and ClientId are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID environment variables or pass parameters."
+}
+Write-Warning "For production use, store secrets in Azure Key Vault and use Managed Identity."
 
 Write-Host "Environment: $Environment"
 Write-Host "Tenant: $TenantId"

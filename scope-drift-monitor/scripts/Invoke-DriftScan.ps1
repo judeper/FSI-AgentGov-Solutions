@@ -65,6 +65,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Structured audit logging
+function Write-AuditLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$CorrelationId = $script:CorrelationId
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+}
+$script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
+
 #region Helper Functions
 
 function Get-AccessToken {

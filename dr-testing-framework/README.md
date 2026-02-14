@@ -300,6 +300,21 @@ The framework generates compliance evidence:
 |---------|------|---------|
 | 1.0.0 | February 2026 | Initial release |
 
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Authentication failure | Expired token or insufficient permissions | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles |
+| RTO target exceeded | Recovery steps slower than expected | Review environment size; pre-stage backups closer to target region |
+| Validation checks fail | Agent or connectors not restored correctly | Verify backup integrity; re-run individual test scenario with `-Verbose` |
+| Dataverse save error | Missing schema or insufficient Dataverse capacity | Import solution package; check storage quota |
+
+### Logs
+
+Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+
 ## Support
 
 For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions/issues).

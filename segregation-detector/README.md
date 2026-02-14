@@ -288,6 +288,21 @@ For supervision queue assignments:
 |---------|------|---------|
 | 1.0.0 | February 2026 | Initial release |
 
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Authentication failure | Expired token or wrong service principal permissions | Re-authenticate; verify Global Reader and Power Platform Administrator roles |
+| No conflict rules found | Rules not imported or all disabled | Run `Import-ConflictRules.ps1`; verify `fsi_enabled` is `true` in Dataverse |
+| Empty scan results | No role assignments returned from Graph API | Check service principal has `Directory.Read.All` permission |
+| Violation creation fails | Dataverse schema missing or permission denied | Import solution package; verify System Administrator role on Dataverse |
+
+### Logs
+
+Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+
 ## Support
 
 For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions/issues) repository.

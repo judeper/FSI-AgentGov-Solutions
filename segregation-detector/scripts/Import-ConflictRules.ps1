@@ -22,9 +22,10 @@
     .\Import-ConflictRules.ps1 -Environment "https://contoso.crm.dynamics.com" -RuleFile "my-rules.json"
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -267,14 +268,16 @@ $imported = 0
 $failed = 0
 
 foreach ($rule in $rulesToImport) {
-    $result = Import-Rule -Environment $Environment -Token $token -Rule $rule
+    if ($PSCmdlet.ShouldProcess("Rule: $($rule.fsi_name)", "Import to $Environment")) {
+        $result = Import-Rule -Environment $Environment -Token $token -Rule $rule
 
-    if ($result.Success) {
-        $imported++
-        Write-Host "  Imported: $($result.Rule)" -ForegroundColor Green
-    } else {
-        $failed++
-        Write-Host "  Failed: $($result.Rule) - $($result.Error)" -ForegroundColor Red
+        if ($result.Success) {
+            $imported++
+            Write-Host "  Imported: $($result.Rule)" -ForegroundColor Green
+        } else {
+            $failed++
+            Write-Host "  Failed: $($result.Rule) - $($result.Error)" -ForegroundColor Red
+        }
     }
 }
 

@@ -202,6 +202,21 @@ For documents with references, validates all links are accessible.
 |---------|------|---------|
 | 1.0.0 | February 2026 | Initial release |
 
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Resolution |
+|-------|-------|------------|
+| Authentication failure | Expired token or insufficient SharePoint/Dataverse permissions | Re-authenticate; verify SharePoint Reader and Dataverse Reader roles |
+| Hash mismatch on first run | No baseline captured for the source | Run `New-SourceBaseline.ps1` to establish initial hashes |
+| Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register with `Register-KnowledgeSource.ps1` |
+| Stale content alerts | Source not updated within freshness threshold | Review source update schedule; adjust threshold if appropriate |
+
+### Logs
+
+Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+
 ## Support
 
 For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions/issues).
