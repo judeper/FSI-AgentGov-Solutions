@@ -27,10 +27,16 @@ except ImportError:
     sys.exit(1)
 
 
-def get_access_token(tenant_id: str, client_id: str, client_secret: str) -> str:
+def get_access_token(tenant_id: str, client_id: str, client_secret: str, environment_url: str = None) -> str:
     """Acquire access token for Dataverse API."""
     authority = f"https://login.microsoftonline.com/{tenant_id}"
-    scope = ["https://admin.services.crm.dynamics.com/.default"]
+    # Use environment-specific scope; fall back to env var or error
+    base_url = environment_url or os.environ.get("DATAVERSE_URL")
+    if not base_url:
+        raise ValueError(
+            "Dataverse environment URL required. Pass --environment or set DATAVERSE_URL."
+        )
+    scope = [f"{base_url.rstrip('/')}/.default"]
 
     app = ConfidentialClientApplication(
         client_id,
@@ -174,13 +180,13 @@ def generate_sample_scores(days: int = 90) -> list:
         zone2 = round(min(100, max(0, overall + random.uniform(-3, 3))), 1)
         zone3 = round(min(100, max(0, overall + random.uniform(-10, -5))), 1)
 
-        # Calculate counts based on score (62 total controls)
+        # Calculate counts based on score (71 total controls)
         # Score formula: (compliant*100 + partial*50 + noncompliant*0) / total
         # Work backwards from overall score
-        compliant_count = int(62 * overall / 100)
-        remaining = 62 - compliant_count
+        compliant_count = int(71 * overall / 100)
+        remaining = 71 - compliant_count
         noncompliant_count = random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4)))
-        partial_count = 62 - compliant_count - noncompliant_count
+        partial_count = 71 - compliant_count - noncompliant_count
 
         score = {
             "fsi_scoredate": date.strftime("%Y-%m-%d"),
@@ -378,7 +384,7 @@ def main():
         sys.exit(1)
 
     print(f"\nConnecting to: {args.environment}")
-    token = get_access_token(tenant_id, client_id, client_secret)
+    token = get_access_token(tenant_id, client_id, client_secret, environment_url=args.environment)
     print("Authentication successful")
 
     if not args.assessments_only:

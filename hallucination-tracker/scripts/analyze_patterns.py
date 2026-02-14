@@ -35,10 +35,10 @@ CATEGORIES = {
 }
 
 SEVERITY_WEIGHTS = {
-    "critical": 4,
-    "high": 3,
-    "medium": 2,
-    "low": 1
+    100000003: 4,  # critical
+    100000002: 3,  # high
+    100000001: 2,  # medium
+    100000000: 1,  # low
 }
 
 
@@ -115,7 +115,7 @@ class PatternAnalyzer:
 
         for item in feedback:
             agent_id = item.get("fsi_agentid", "unknown")
-            severity = item.get("fsi_severity", "low")
+            severity = item.get("fsi_severity", 100000000)
 
             if agent_id not in agent_data:
                 agent_data[agent_id] = {"total": 0, "weighted_issues": 0}
@@ -167,7 +167,7 @@ class PatternAnalyzer:
         patterns = self.detect_patterns(feedback)
 
         total = len(feedback)
-        critical = sum(1 for f in feedback if f.get("fsi_severity") == "critical")
+        critical = sum(1 for f in feedback if f.get("fsi_severity") == 100000003)
 
         report = f"""
 ========================================
@@ -229,11 +229,11 @@ def main():
         print("\n[DRY RUN - Using sample data]")
         # Sample data for testing
         feedback = [
-            {"fsi_category": 1, "fsi_severity": "high", "fsi_agentid": "agent-001"},
-            {"fsi_category": 1, "fsi_severity": "medium", "fsi_agentid": "agent-001"},
-            {"fsi_category": 3, "fsi_severity": "high", "fsi_agentid": "agent-002"},
-            {"fsi_category": 2, "fsi_severity": "critical", "fsi_agentid": "agent-001"},
-            {"fsi_category": 1, "fsi_severity": "low", "fsi_agentid": "agent-003"},
+            {"fsi_category": 1, "fsi_severity": 100000002, "fsi_agentid": "agent-001"},
+            {"fsi_category": 1, "fsi_severity": 100000001, "fsi_agentid": "agent-001"},
+            {"fsi_category": 3, "fsi_severity": 100000002, "fsi_agentid": "agent-002"},
+            {"fsi_category": 2, "fsi_severity": 100000003, "fsi_agentid": "agent-001"},
+            {"fsi_category": 1, "fsi_severity": 100000000, "fsi_agentid": "agent-003"},
         ]
     else:
         print("\nAuthenticating...")

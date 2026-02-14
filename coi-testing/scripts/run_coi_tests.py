@@ -250,18 +250,19 @@ class COITestRunner:
         }
 
         try:
-            # In production, this would call the agent via Direct Line API
-            # For now, simulate test execution
+            # TODO: Implement actual agent interaction via Direct Line API
+            # See: https://learn.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts
             if verbose:
                 print(f"    Input: {json.dumps(scenario['input'], indent=2)}")
 
-            # Simulated response analysis
-            # In production: response = self.call_agent(scenario["input"])
-            # analysis = self.analyze_response(response, scenario)
-
-            # Placeholder for actual agent interaction
-            result["status"] = "PASS"
-            result["notes"] = "Test executed successfully (simulation mode)"
+            # FIXME: No agent interaction implemented — test cannot validate COI behavior
+            import logging
+            logging.warning(
+                "COI test '%s' skipped: Direct Line API integration not yet implemented",
+                scenario["id"]
+            )
+            result["status"] = "SKIPPED"
+            result["notes"] = "Test not yet implemented — requires Direct Line API integration"
 
         except Exception as e:
             result["status"] = "ERROR"

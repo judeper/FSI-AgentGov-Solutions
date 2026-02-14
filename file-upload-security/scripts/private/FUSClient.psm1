@@ -44,7 +44,12 @@ function Connect-FUSDataverse {
         # Attempt to get token via Az.Accounts
         try {
             $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
-            $script:AccessToken = $token.Token
+            # Az.Accounts 5.0+ returns SecureString for .Token; convert to plain text
+            $script:AccessToken = if ($token.Token -is [securestring]) {
+                $token.Token | ConvertFrom-SecureString -AsPlainText
+            } else {
+                $token.Token
+            }
             Write-Verbose "Acquired Dataverse token via Az.Accounts"
         } catch {
             Write-Warning "No access token provided and Az.Accounts token acquisition failed. Use Connect-EnvironmentDataverse for authenticated access."
