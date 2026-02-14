@@ -258,13 +258,9 @@ Exports include:
 
 Quarterly testing reports per FINRA Rule 3120:
 
-```bash
-python scripts/generate_3120_report.py \
-    --environment-url https://org.crm.dynamics.com \
-    --output-path ./reports \
-    --quarter Q1 \
-    --year 2026
-```
+<!-- TODO: generate_3120_report.py is planned for a future release -->
+
+> **Planned — not yet implemented.** A `generate_3120_report.py` script for automated quarterly report generation is planned for a future release. In the interim, use the weekly supervision evidence exports to compile quarterly testing evidence manually.
 
 ## FSI Regulatory Alignment
 

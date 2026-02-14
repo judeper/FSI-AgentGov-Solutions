@@ -163,15 +163,11 @@ Import `templates/HallucinationDashboard.pbit` into Power BI.
 
 ## Pattern Detection
 
-### Clustering Algorithm
+### Pattern Analysis
 
-Groups similar hallucinations to identify systemic issues:
+Pattern analysis uses frequency counting with configurable thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
 
-1. Extract key terms from hallucination reports
-2. Compute semantic similarity
-3. Cluster using DBSCAN
-4. Label clusters by dominant category
-5. Prioritize clusters by frequency and severity
+> **Note:** Advanced pattern detection (clustering, semantic similarity) is planned for a future release.
 
 ### Root Cause Analysis
 

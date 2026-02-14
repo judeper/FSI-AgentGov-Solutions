@@ -25,13 +25,13 @@ except ImportError:
     sys.exit(1)
 
 
-# Hallucination categories
+# Hallucination categories (Dataverse option set values)
 CATEGORIES = {
-    1: "factual_error",
-    2: "fabricated_data",
-    3: "citation_missing",
-    4: "outdated_info",
-    5: "confidence_overstatement"
+    100000000: "factual_error",
+    100000001: "fabricated_data",
+    100000002: "citation_missing",
+    100000003: "outdated_info",
+    100000004: "confidence_overstatement"
 }
 
 SEVERITY_WEIGHTS = {
@@ -235,11 +235,11 @@ def main():
         print("\n[DRY RUN - Using sample data]")
         # Sample data for testing
         feedback = [
-            {"fsi_category": 1, "fsi_severity": 100000002, "fsi_agentid": "agent-001"},
-            {"fsi_category": 1, "fsi_severity": 100000001, "fsi_agentid": "agent-001"},
-            {"fsi_category": 3, "fsi_severity": 100000002, "fsi_agentid": "agent-002"},
-            {"fsi_category": 2, "fsi_severity": 100000003, "fsi_agentid": "agent-001"},
-            {"fsi_category": 1, "fsi_severity": 100000000, "fsi_agentid": "agent-003"},
+            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001"},
+            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001"},
+            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002"},
+            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001"},
+            {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003"},
         ]
     else:
         print("\nAuthenticating...")

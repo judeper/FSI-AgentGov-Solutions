@@ -295,40 +295,173 @@
           },
           "description": "Variable to hold current zone classification during loop iteration. Set via SetVariable inside Apply_to_each_Agent."
         },
+        "Initialize_SkipCount": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "SkipCount",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_CurrentZone": [
+              "Succeeded"
+            ]
+          },
+          "description": "Pagination offset for Dataverse query. Incremented by 100 each iteration."
+        },
+        "Initialize_HasMoreRecords": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "HasMoreRecords",
+                "type": "boolean",
+                "value": true
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_SkipCount": [
+              "Succeeded"
+            ]
+          },
+          "description": "Pagination flag: set to false when Dataverse returns fewer than 100 records."
+        },
+        "Initialize_AllAgents": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AllAgents",
+                "type": "array",
+                "value": []
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_HasMoreRecords": [
+              "Succeeded"
+            ]
+          },
+          "description": "Accumulator array for all non-compliant agents across paginated Dataverse queries."
+        },
         "Scope_Main": {
           "type": "Scope",
           "actions": {
-            "List_NonCompliant_Agents": {
-              "type": "OpenApiConnection",
-              "inputs": {
-                "parameters": {
-                  "entityName": "fsi_agentsharingcompliances",
-                  "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
-                  "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
-                  "$orderby": "fsi_last_checked desc",
-                  "$top": 100
+            "Do_Until_All_Pages_Fetched": {
+              "type": "Until",
+              "expression": "@equals(variables('HasMoreRecords'), false)",
+              "limit": {
+                "count": 50,
+                "timeout": "PT1H"
+              },
+              "actions": {
+                "List_NonCompliant_Agents_Page": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "fsi_agentsharingcompliances",
+                      "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
+                      "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
+                      "$orderby": "fsi_last_checked desc",
+                      "$top": 100,
+                      "$skip": "@variables('SkipCount')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {},
+                  "description": "Query Dataverse for non-compliant agents with pagination ($skip offset)."
                 },
-                "host": {
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                  "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "ListRecords"
+                "Append_Page_To_AllAgents": {
+                  "type": "Compose",
+                  "inputs": "@union(variables('AllAgents'), outputs('List_NonCompliant_Agents_Page')?['body/value'])",
+                  "runAfter": {
+                    "List_NonCompliant_Agents_Page": [
+                      "Succeeded"
+                    ]
+                  },
+                  "description": "Merge current page results into accumulated array."
+                },
+                "Set_AllAgents": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "AllAgents",
+                    "value": "@outputs('Append_Page_To_AllAgents')"
+                  },
+                  "runAfter": {
+                    "Append_Page_To_AllAgents": [
+                      "Succeeded"
+                    ]
+                  },
+                  "description": "Update AllAgents variable with merged results."
+                },
+                "Check_More_Records": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "less": [
+                          "@length(outputs('List_NonCompliant_Agents_Page')?['body/value'])",
+                          100
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Set_HasMoreRecords_False": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "HasMoreRecords",
+                        "value": false
+                      },
+                      "runAfter": {},
+                      "description": "No more pages — fewer than 100 records returned."
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Increment_SkipCount": {
+                        "type": "IncrementVariable",
+                        "inputs": {
+                          "name": "SkipCount",
+                          "value": 100
+                        },
+                        "runAfter": {},
+                        "description": "Advance skip offset by 100 for next page."
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Set_AllAgents": [
+                      "Succeeded"
+                    ]
+                  },
+                  "description": "If page returned fewer than 100 records, stop pagination. Otherwise increment skip."
                 }
               },
               "runAfter": {},
-              "description": "Query Dataverse for non-compliant agents (compliance_status=1) checked within last 24 hours. Limit 100 agents per run."
+              "description": "Paginate through all non-compliant agents in Dataverse, 100 per page."
             },
             "Set_TotalAgents": {
               "type": "SetVariable",
               "inputs": {
                 "name": "TotalAgents",
-                "value": "@length(outputs('List_NonCompliant_Agents')?['body/value'])"
+                "value": "@length(variables('AllAgents'))"
               },
               "runAfter": {
-                "List_NonCompliant_Agents": [
+                "Do_Until_All_Pages_Fetched": [
                   "Succeeded"
                 ]
               },
-              "description": "Count non-compliant agents returned from Dataverse query."
+              "description": "Count all non-compliant agents across all pages."
             },
             "Condition_Check_Agents_Found": {
               "type": "If",
@@ -345,7 +478,7 @@
               "actions": {
                 "Apply_to_each_Agent": {
                   "type": "Foreach",
-                  "foreach": "@outputs('List_NonCompliant_Agents')?['body/value']",
+                  "foreach": "@variables('AllAgents')",
                   "actions": {
                     "Set_AgentId": {
                       "type": "SetVariable",
@@ -432,6 +565,58 @@
                       },
                       "description": "Parse JSON array of current sharing principals from Dataverse record."
                     },
+                    "Select_Current_Principals_Display": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Parse_Current_Principals')",
+                        "select": "@concat(item()?['type'], ': ', item()?['displayName'])"
+                      },
+                      "runAfter": {
+                        "Parse_Current_Principals": [
+                          "Succeeded"
+                        ]
+                      },
+                      "description": "Transform current principals into 'type: displayName' strings for display."
+                    },
+                    "Select_Remove_Principals_Display": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@body('Parse_Current_Principals')",
+                        "select": "@concat('❌ ', item()?['displayName'])"
+                      },
+                      "runAfter": {
+                        "Select_Current_Principals_Display": [
+                          "Succeeded"
+                        ]
+                      },
+                      "description": "Transform current principals into removal display strings."
+                    },
+                    "Select_Add_Groups_Display": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('Query_Approved_Groups_For_Zone')?['body/value']",
+                        "select": "@concat('✅ ', item()?['fsi_security_group_name'], ' (', item()?['fsi_member_count'], ' members)')"
+                      },
+                      "runAfter": {
+                        "Select_Remove_Principals_Display": [
+                          "Succeeded"
+                        ]
+                      },
+                      "description": "Transform approved groups into addition display strings."
+                    },
+                    "Select_Proposed_Member_Counts": {
+                      "type": "Select",
+                      "inputs": {
+                        "from": "@outputs('Query_Approved_Groups_For_Zone')?['body/value']",
+                        "select": "@item()?['fsi_member_count']"
+                      },
+                      "runAfter": {
+                        "Select_Add_Groups_Display": [
+                          "Succeeded"
+                        ]
+                      },
+                      "description": "Extract member counts from approved groups for sum calculation."
+                    },
                     "Build_Approval_Card_Data": {
                       "type": "Compose",
                       "inputs": {
@@ -444,14 +629,14 @@
                         "zone_rules": "@{if(equals(variables('CurrentZone'), 1), 'No group sharing allowed', if(equals(variables('CurrentZone'), 2), 'Named groups only (no Everyone/Public)', 'Approved groups only'))}",
                         "violation_type": "@{items('Apply_to_each_Agent')?['fsi_violation_type']}",
                         "detection_date": "@{items('Apply_to_each_Agent')?['fsi_last_checked']}",
-                        "current_principals_list": "@{join(select(body('Parse_Current_Principals'), concat(item()?['type'], ': ', item()?['displayName'])), '\n')}",
+                        "current_principals_list": "@{join(body('Select_Current_Principals_Display'), '\n')}",
                         "member_count_current": "@{length(body('Parse_Current_Principals'))}",
                         "access_scope_current": "Organization-wide or unapproved groups",
-                        "remove_principals_list": "@{join(select(body('Parse_Current_Principals'), concat('❌ ', item()?['displayName'])), '\n')}",
+                        "remove_principals_list": "@{join(body('Select_Remove_Principals_Display'), '\n')}",
                         "remove_count": "@{length(body('Parse_Current_Principals'))}",
-                        "add_principals_list": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(select(outputs('Query_Approved_Groups_For_Zone')?['body/value'], concat('✅ ', item()?['fsi_security_group_name'], ' (', item()?['fsi_member_count'], ' members)')), '\n'), 'None (all access removed per Zone 1 policy)')}",
+                        "add_principals_list": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Add_Groups_Display'), '\n'), 'None (all access removed per Zone 1 policy)')}",
                         "add_count": "@{length(outputs('Query_Approved_Groups_For_Zone')?['body/value'])}",
-                        "member_count_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), string(sum(select(outputs('Query_Approved_Groups_For_Zone')?['body/value'], item()?['fsi_member_count']))), '0')}",
+                        "member_count_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), string(length(body('Select_Proposed_Member_Counts'))), '0')}",
                         "access_scope_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), 'Approved security groups only', 'No group access (Zone 1)')}",
                         "impact_summary": "@{concat('Access change: ', length(body('Parse_Current_Principals')), ' principals removed, ', length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups added')}",
                         "approved_groups_policy": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), concat(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups configured for this zone'), 'No approved groups (Zone 1 — no group sharing allowed)')}",
@@ -459,7 +644,7 @@
                         "last_checked": "@{items('Apply_to_each_Agent')?['fsi_last_checked']}"
                       },
                       "runAfter": {
-                        "Parse_Current_Principals": [
+                        "Select_Proposed_Member_Counts": [
                           "Succeeded"
                         ]
                       },
@@ -533,11 +718,68 @@
                           "runAfter": {},
                           "description": "Increment approved counter for summary statistics."
                         },
-                        "Build_Permission_Objects": {
-                          "type": "Compose",
-                          "inputs": "@if(equals(variables('CurrentZone'), 1), json('[]'), if(equals(variables('CurrentZone'), 2), select(where(body('Parse_Current_Principals'), not(or(contains(item()?['id'], 'everyone'), contains(item()?['id'], 'public')))), json(concat('{\"properties\": {\"roleName\": \"CanView\", \"principal\": {\"id\": \"', item()?['id'], '\", \"type\": \"', item()?['type'], '\", \"displayName\": \"', item()?['displayName'], '\"}}}'))), select(outputs('Query_Approved_Groups_For_Zone')?['body/value'], json(concat('{\"properties\": {\"roleName\": \"CanView\", \"principal\": {\"id\": \"', item()?['fsi_security_group_id'], '\", \"type\": \"Group\", \"displayName\": \"', item()?['fsi_security_group_name'], '\"}}}')))))",
+                        "Filter_NonPublic_Principals": {
+                          "type": "Query",
+                          "inputs": {
+                            "from": "@body('Parse_Current_Principals')",
+                            "where": "@and(not(contains(toLower(item()?['id']), 'everyone')), not(contains(toLower(item()?['id']), 'public')))"
+                          },
                           "runAfter": {
                             "Increment_ApprovedCount": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Filter out Everyone/Public principals for Zone 2 remediation."
+                        },
+                        "Select_Zone2_Permissions": {
+                          "type": "Select",
+                          "inputs": {
+                            "from": "@body('Filter_NonPublic_Principals')",
+                            "select": {
+                              "properties": {
+                                "roleName": "CanView",
+                                "principal": {
+                                  "id": "@item()?['id']",
+                                  "type": "@item()?['type']",
+                                  "displayName": "@item()?['displayName']"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Filter_NonPublic_Principals": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Build permission objects from filtered principals for Zone 2."
+                        },
+                        "Select_Zone3_Permissions": {
+                          "type": "Select",
+                          "inputs": {
+                            "from": "@outputs('Query_Approved_Groups_For_Zone')?['body/value']",
+                            "select": {
+                              "properties": {
+                                "roleName": "CanView",
+                                "principal": {
+                                  "id": "@item()?['fsi_security_group_id']",
+                                  "type": "Group",
+                                  "displayName": "@item()?['fsi_security_group_name']"
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Select_Zone2_Permissions": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Build permission objects from approved groups for Zone 3."
+                        },
+                        "Build_Permission_Objects": {
+                          "type": "Compose",
+                          "inputs": "@if(equals(variables('CurrentZone'), 1), json('[]'), if(equals(variables('CurrentZone'), 2), body('Select_Zone2_Permissions'), body('Select_Zone3_Permissions')))",
+                          "runAfter": {
+                            "Select_Zone3_Permissions": [
                               "Succeeded"
                             ]
                           },

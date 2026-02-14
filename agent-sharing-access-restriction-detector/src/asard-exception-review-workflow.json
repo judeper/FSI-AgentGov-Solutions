@@ -234,30 +234,67 @@
                       "type": "Foreach",
                       "foreach": "@outputs('Query_Expired_Exceptions')?['body/value']",
                       "actions": {
-                        "Update_Expired_Exception_To_NonCompliant": {
-                          "type": "OpenApiConnection",
-                          "inputs": {
-                            "host": {
-                              "connectionName": "shared_commondataserviceforapps",
-                              "operationId": "UpdateRecord",
-                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                            },
-                            "parameters": {
-                              "entityName": "fsi_agentsharingcompliances",
-                              "recordId": "@item()?['fsi_agentsharingcomplianceid']",
-                              "item/fsi_compliance_status": 914430001,
-                              "item/fsi_exception_expires_at": null,
-                              "item/fsi_exception_justification": null,
-                              "item/fsi_exception_approved_by": null,
-                              "item/fsi_exception_approved_at": null,
-                              "item/fsi_exception_review_date": null
-                            },
-                            "authentication": "@parameters('$authentication')"
+                        "Scope_Update_Exception": {
+                          "type": "Scope",
+                          "actions": {
+                            "Update_Expired_Exception_To_NonCompliant": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateRecord",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                                },
+                                "parameters": {
+                                  "entityName": "fsi_agentsharingcompliances",
+                                  "recordId": "@item()?['fsi_agentsharingcomplianceid']",
+                                  "item/fsi_compliance_status": 914430001,
+                                  "item/fsi_exception_expires_at": null,
+                                  "item/fsi_exception_justification": null,
+                                  "item/fsi_exception_approved_by": null,
+                                  "item/fsi_exception_approved_at": null,
+                                  "item/fsi_exception_review_date": null
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              },
+                              "description": "Reset compliance_status to NonCompliant (914430001) and clear all exception fields"
+                            }
                           },
-                          "description": "Reset compliance_status to NonCompliant (914430001) and clear all exception fields"
+                          "runAfter": {},
+                          "description": "Scope wrapping Dataverse update to enable error handling per iteration"
+                        },
+                        "Scope_Handle_Update_Error": {
+                          "type": "Scope",
+                          "actions": {
+                            "Post_Update_Error_Notification": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "host": {
+                                  "connectionName": "shared_teams",
+                                  "operationId": "PostCardToChannelV3",
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                                },
+                                "parameters": {
+                                  "poster": "Flow bot",
+                                  "location": "{{TEAMS_CHANNEL_ID}}",
+                                  "body/messageBody": "⚠️ Failed to update expired exception record @{item()?['fsi_agentsharingcomplianceid']} for agent @{item()?['fsi_agent_name']}. Review flow run history for details.",
+                                  "body/messageTitle": "⚠️ Exception Review — Update Failed"
+                                },
+                                "authentication": "@parameters('$authentication')"
+                              },
+                              "description": "Notify governance channel of Dataverse update failure for this record"
+                            }
+                          },
+                          "runAfter": {
+                            "Scope_Update_Exception": [
+                              "Failed",
+                              "TimedOut"
+                            ]
+                          },
+                          "description": "Error handler for Dataverse update failures — posts notification and continues to next record"
                         }
                       },
-                      "description": "Iterate over expired exceptions and update each record"
+                      "description": "Iterate over expired exceptions and update each record with error handling per iteration"
                     },
                     "Build_Expired_List": {
                       "type": "Select",
