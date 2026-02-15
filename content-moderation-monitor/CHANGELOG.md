@@ -2,6 +2,20 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.0.1] - 2026-02-15
+
+### Fixed
+- Corrected primary control reference from 1.14 to 1.27 (AI Agent Content Moderation Enforcement) in README.md and SOLUTION-DOCUMENTATION.md
+- Fixed Related Controls URL slug to `1.27-ai-agent-content-moderation-enforcement/`
+- Added explicit `src/` path prefix to flow file reference in DELIVERY-CHECKLIST.md
+- Fixed FSI language compliance: "Ensure consistent" → "Help ensure consistent" in SOLUTION-DOCUMENTATION.md and DELIVERY-CHECKLIST.md
+
+### Removed
+- Empty `flows/` directory (flow file lives in `src/moderation-validation-flow.json`)
+
+### Added
+- `src/dataverse/README.md` explaining placeholder subdirectories and programmatic schema deployment
+
 ## [1.0.0] - 2026-02-10
 
 ### Added — Phase 4: Evidence Export & Framework Integration

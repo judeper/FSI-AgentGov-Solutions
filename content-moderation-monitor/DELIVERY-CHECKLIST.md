@@ -24,7 +24,7 @@
 - [ ] **Test-ParameterValidation.ps1** — Parameter validators
 
 **Power Automate:**
-- [ ] **moderation-validation-flow.json** — Daily scheduled validation flow
+- [ ] **src/moderation-validation-flow.json** — Daily scheduled validation flow
 
 **Templates:**
 - [ ] **moderation-baseline.json** — Zone requirements reference
@@ -98,7 +98,7 @@ Violation Severity Matrix:
 • Zone 2 + Low moderation = HIGH (SOX 404 — Inadequate content controls)
 
 Business Value:
-• Ensure consistent content moderation across all AI agents (100% coverage)
+• Help ensure consistent content moderation across all AI agents (100% coverage)
 • Detect and remediate Critical violations within 24 hours (daily scans)
 • Support regulatory examinations with automated compliance evidence
 • Enable zone-based risk management with tailored moderation requirements

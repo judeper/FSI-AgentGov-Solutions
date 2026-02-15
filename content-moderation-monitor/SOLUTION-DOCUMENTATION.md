@@ -34,7 +34,7 @@ The **Content Moderation Monitor** provides automated per-agent validation of co
 - **Evidence Export:** SHA-256 integrity-hashed JSON evidence for audit examinations
 
 **Business Value:**
-- Ensure consistent content moderation across all AI agents (100% coverage)
+- Help ensure consistent content moderation across all AI agents (100% coverage)
 - Detect and remediate High/Critical violations within 24 hours (daily scans)
 - Support regulatory examinations with automated compliance evidence
 - Prevent customer-facing agents from operating with insufficient content controls
@@ -312,7 +312,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   "metadata": {
     "framework": "FSI Agent Governance",
     "solution": "Content Moderation Monitor v1.0.0",
-    "controlReference": "1.14"
+    "controlReference": "1.27"
   }
 }
 ```
