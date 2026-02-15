@@ -33,6 +33,50 @@ $script:IntToZone = @{
 
 #endregion
 
+#region Request Helper
+
+function Invoke-DataverseRequest {
+    <#
+    .SYNOPSIS
+        Wraps Invoke-RestMethod with retry/backoff for transient Dataverse errors.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Uri,
+
+        [string]$Method = 'GET',
+
+        $Body,
+
+        $Headers,
+
+        [int]$MaxRetries = 3
+    )
+
+    for ($i = 0; $i -lt $MaxRetries; $i++) {
+        try {
+            $params = @{ Uri = $Uri; Method = $Method; Headers = $Headers }
+            if ($Body) { $params['Body'] = $Body }
+            if ($Method -in @('Post', 'Patch') -and $Headers -and -not $Headers.ContainsKey('Content-Type')) {
+                $params['ContentType'] = 'application/json'
+            }
+            return Invoke-RestMethod @params -ErrorAction Stop
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            # Retry on throttle (429) or server errors (5xx)
+            if ($statusCode -in @(429, 500, 502, 503, 504) -and $i -lt ($MaxRetries - 1)) {
+                $delay = [math]::Pow(2, $i)
+                Write-Verbose "Dataverse request failed ($statusCode), retrying in ${delay}s..."
+                Start-Sleep -Seconds $delay
+                continue
+            }
+            throw
+        }
+    }
+}
+
+#endregion
+
 #region Connection Functions
 
 function Connect-CMMDataverse {
@@ -127,7 +171,7 @@ function Get-CMMEnvironmentVariable {
             'OData-Version'    = '4.0'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        $response = Invoke-DataverseRequest -Uri $uri -Method Get -Headers $headers
 
         if ($response.value.Count -gt 0) {
             $varDef = $response.value[0]
@@ -205,7 +249,7 @@ function Get-ModerationBaseline {
         $nextLink = $uri
 
         while ($nextLink) {
-            $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -ErrorAction Stop
+            $response = Invoke-DataverseRequest -Uri $nextLink -Method Get -Headers $headers
             $allRecords += $response.value
             $nextLink = $response.'@odata.nextLink'
         }
@@ -289,12 +333,12 @@ function Write-ModerationValidationHistory {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
         Write-Verbose "Validation history record created"
         return $response
     } catch {
-        Write-Warning "Failed to write validation history: $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to write validation history (audit trail gap): $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -359,12 +403,12 @@ function Write-ModerationViolation {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
         Write-Verbose "Violation record created for $($Violation.AgentName)"
         return $response
     } catch {
-        Write-Warning "Failed to write violation: $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to write violation record for '$($Violation.AgentName)': $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -431,7 +475,7 @@ function Get-AgentBots {
         $nextLink = $uri
 
         while ($nextLink) {
-            $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -ErrorAction Stop
+            $response = Invoke-DataverseRequest -Uri $nextLink -Method Get -Headers $headers
             $allBots += $response.value
             $nextLink = $response.'@odata.nextLink'
         }
@@ -611,14 +655,14 @@ function Save-CMMBaseline {
         $deactivateFilter = "fsi_is_active eq true and fsi_agent_id eq '$AgentId'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?`$filter=$deactivateFilter&`$select=fsi_moderationbaselineid"
 
-        $existing = Invoke-RestMethod -Uri $queryUri -Headers $headers -Method Get
+        $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers
 
         foreach ($prev in $existing.value) {
             $prevId = $prev.fsi_moderationbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines($prevId)"
                 $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json
-                Invoke-RestMethod -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
+                Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
                 Write-Verbose "Deactivated previous baseline: $prevId"
             }
         }
@@ -649,13 +693,13 @@ function Save-CMMBaseline {
 
         if ($PSCmdlet.ShouldProcess("$AgentName in $EnvironmentName ($Zone)", "Save moderation baseline")) {
             $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines"
-            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
+            $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
             Write-Verbose "Baseline saved for $AgentName in $EnvironmentName ($Zone)"
             return $response
         }
     } catch {
-        Write-Warning "Failed to save baseline for '$AgentName': $($_.Exception.Message)"
-        return $null
+        Write-Error "CRITICAL: Failed to save baseline for '$AgentName': $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -694,7 +738,7 @@ function Get-CMMLastValidation {
             'OData-Version'    = '4.0'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        $response = Invoke-DataverseRequest -Uri $uri -Method Get -Headers $headers
 
         if ($response.value.Count -gt 0) {
             return $response.value | ForEach-Object {

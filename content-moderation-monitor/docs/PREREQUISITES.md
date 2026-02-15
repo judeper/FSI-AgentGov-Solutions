@@ -76,3 +76,25 @@ For Dataverse persistence features (validation history, violation tracking):
 | `fsi_moderationbaselines` | Captured moderation baselines |
 | `fsi_moderationvalidationhistory` | Immutable validation run records |
 | `fsi_moderationviolations` | Individual agent-level violations |
+
+### Deployment Scripts
+
+Deploy the Dataverse schema using the Python scripts in `scripts/`:
+
+```bash
+# Install Python dependencies
+pip install -r scripts/requirements.txt
+
+# Deploy all components (schema, connection refs, env vars)
+python scripts/deploy.py \
+    --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --interactive
+
+# Or deploy individual components
+python scripts/create_dataverse_schema.py --interactive
+python scripts/create_connection_references.py --interactive
+python scripts/create_environment_variables.py --interactive
+```
+
+**Python Requirements:** Python 3.9+, packages listed in `scripts/requirements.txt`.
