@@ -32,8 +32,8 @@ The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated
 - **Audit Trail:** Immutable violation and remediation history in Dataverse
 
 **Business Value:**
-- Reduce security incident risk by 85%+ through proactive violation detection
-- Eliminate manual audit overhead with automated compliance validation
+- Supports reduction of security incident risk through proactive violation detection
+- Helps reduce manual audit overhead with automated compliance validation
 - Support regulatory examinations with complete audit trails and evidence export
 - Enable controlled exceptions for legitimate business cases without compromising governance
 
@@ -64,8 +64,8 @@ UASD operates as an integrated solution of Power Automate cloud flows, Dataverse
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Dataverse Tables                             │
 ├──────────────────────┬──────────────────────┬────────────────────────┤
-│ fsi_sharingviolation │ fsi_sharingexception │ fsi_approvedsecurity   │
-│                      │                      │         group          │
+│ fsi_SharingViolation │ fsi_SharingException │ fsi_ApprovedSecurity   │
+│                      │                      │         Group          │
 └──────────────────────┴──────────────────────┴────────────────────────┘
                                     │
         ┌───────────────────────────┼───────────────────────────┐
@@ -123,7 +123,7 @@ The flow implements five violation detection rules:
 **Purpose:** Automated enforcement of approved sharing policies when violations are detected.
 
 **Trigger:**
-- **Event:** Dataverse webhook on `fsi_sharingviolation` table
+- **Event:** Dataverse webhook on `fsi_SharingViolation` table
 - **Filter:** `fsi_violation_status eq 0` (Open status only)
 - **Scope:** Organization-level
 
@@ -159,7 +159,7 @@ The flow implements five violation detection rules:
 **Purpose:** Time-bound exception management with dual approval and expiration tracking.
 
 **Trigger:**
-- **Event:** Dataverse webhook on `fsi_sharingexception` table
+- **Event:** Dataverse webhook on `fsi_SharingException` table
 - **Filter:** `fsi_exception_status eq 0` (Pending status only)
 - **Scope:** Organization-level
 
@@ -208,7 +208,7 @@ The flow implements five violation detection rules:
 **Functionality:**
 
 **Exception Submission Form:**
-- **Agent Selection:** Dropdown populated from `fsi_agentsharingsettings` table
+- **Agent Selection:** Dropdown populated from `fsi_AgentSharingSetting` table
 - **Violation Type:** Choice field (ORG_WIDE_SHARING, PUBLIC_INTERNET_LINK, etc.)
 - **Data Classification:** Public, Internal, Confidential, Restricted
 - **Business Justification:** Multi-line text (minimum 50 characters, maximum 2000)
@@ -221,9 +221,9 @@ The flow implements five violation detection rules:
 - **Renewal Action:** Button to create new exception request for expired items
 
 **Dataverse Tables Used:**
-- `fsi_sharingexceptions` — Primary CRUD table
-- `fsi_agentsharingsettings` — Agent lookup for dropdown
-- `fsi_approvedsecuritygroups` — Reference data for display context
+- `fsi_SharingException` — Primary CRUD table
+- `fsi_AgentSharingSetting` — Agent lookup for dropdown
+- `fsi_ApprovedSecurityGroup` — Reference data for display context
 
 #### 5. Teams Alert Card
 **File:** `adaptive-card-uasd-alert.json`
@@ -269,7 +269,7 @@ The flow implements five violation detection rules:
 
 #### Dataverse Tables
 
-**1. fsi_sharingviolation (Sharing Violations)**
+**1. fsi_SharingViolation (Sharing Violations)**
 
 Stores detected sharing policy violations with remediation status.
 
@@ -292,7 +292,7 @@ Stores detected sharing policy violations with remediation status.
 | `fsi_remediation_result` | Memo | Remediation action result (success/error) |
 | `fsi_scan_run_id` | String(50) | Correlation ID for batch scans |
 
-**2. fsi_sharingexception (Sharing Exceptions)**
+**2. fsi_SharingException (Sharing Exceptions)**
 
 Manages time-bound exceptions with approval tracking.
 
@@ -315,9 +315,9 @@ Manages time-bound exceptions with approval tracking.
 | `fsi_approved_by_compliance` | String(200) | Compliance approver email (Restricted only) |
 | `fsi_approved_at` | DateTime | Final approval timestamp |
 | `fsi_expires_at` | DateTime | Calculated expiration (requested_at + duration) |
-| `fsi_related_violation_id` | Lookup | Optional link to `fsi_sharingviolation` record |
+| `fsi_related_violation_id` | Lookup | Optional link to `fsi_SharingViolation` record |
 
-**3. fsi_agentsharingsetting (Agent Sharing Settings)**
+**3. fsi_AgentSharingSetting (Agent Sharing Settings)**
 
 Audit trail of all scanned agent sharing configurations.
 
@@ -336,7 +336,7 @@ Audit trail of all scanned agent sharing configurations.
 | `fsi_last_scanned_at` | DateTime | Most recent scan timestamp |
 | `fsi_break_glass_exclude` | Boolean | Exclude from remediation flag |
 
-**4. fsi_approvedsecuritygroup (Approved Security Groups)**
+**4. fsi_ApprovedSecurityGroup (Approved Security Groups)**
 
 Registry of security groups authorized for agent sharing.
 
@@ -350,6 +350,25 @@ Registry of security groups authorized for agent sharing.
 | `fsi_is_active` | Boolean | Active status (inactive groups excluded from remediation) |
 | `fsi_approved_by` | String(200) | Security architect approver |
 | `fsi_approved_at` | DateTime | Approval timestamp |
+
+**5. fsi_SharingPolicy (Sharing Policies)**
+
+Per-zone sharing policy definitions including thresholds and enforcement settings.
+
+| Column Name | Type | Description |
+|-------------|------|-------------|
+| `fsi_sharingpolicyid` | GUID | Primary key |
+| `fsi_name` | String(100) | Policy display name |
+| `fsi_zone_classification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
+| `fsi_max_individual_shares` | Integer | Maximum individual shares per agent (default: 5) |
+| `fsi_allow_org_wide_sharing` | Boolean | Whether organization-wide sharing is permitted |
+| `fsi_allow_public_link` | Boolean | Whether public internet links are permitted |
+| `fsi_allow_cross_tenant` | Boolean | Whether cross-tenant access is permitted |
+| `fsi_approved_groups_only` | Boolean | Restrict sharing to approved security groups only |
+| `fsi_is_active` | Boolean | Active policy flag |
+| `fsi_created_by` | String(200) | Policy creator email |
+| `fsi_created_at` | DateTime | Policy creation timestamp |
+| `fsi_modified_at` | DateTime | Last modification timestamp |
 
 ### Configuration and Prerequisites
 
@@ -397,11 +416,12 @@ The solution requires the following connection references in Power Platform:
 
 Execute the following in Dataverse (via Power Apps maker portal → Tables → New table):
 
-1. Create `fsi_sharingviolation` table with columns per Data Model section
-2. Create `fsi_sharingexception` table with columns per Data Model section
-3. Create `fsi_agentsharingsetting` table with columns per Data Model section
-4. Create `fsi_approvedsecuritygroup` table with columns per Data Model section
-5. Create choice fields:
+1. Create `fsi_SharingViolation` table with columns per Data Model section
+2. Create `fsi_SharingException` table with columns per Data Model section
+3. Create `fsi_AgentSharingSetting` table with columns per Data Model section
+4. Create `fsi_ApprovedSecurityGroup` table with columns per Data Model section
+5. Create `fsi_SharingPolicy` table with columns per Data Model section
+6. Create choice fields:
    - `fsi_UASD_violationtype` (0-4)
    - `fsi_UASD_violationstatus` (0-3)
    - `fsi_UASD_severity` (0-3)
@@ -439,7 +459,7 @@ Create environment variables in Power Platform:
 
 **Step 5: Populate Approved Security Groups**
 
-Add approved security groups to `fsi_approvedsecuritygroup` table:
+Add approved security groups to `fsi_ApprovedSecurityGroup` table:
 
 ```
 Example Records:
@@ -459,8 +479,8 @@ Example Records:
 2. Click "Turn on" to activate
 3. Verify trigger configuration:
    - Detector: Confirm recurrence schedule (daily 06:00 UTC)
-   - Remediation: Confirm Dataverse webhook on `fsi_sharingviolation`
-   - Exception Approval: Confirm Dataverse webhook on `fsi_sharingexception`
+   - Remediation: Confirm Dataverse webhook on `fsi_SharingViolation`
+   - Exception Approval: Confirm Dataverse webhook on `fsi_SharingException`
 
 **Step 7: Share Exception Manager App**
 
@@ -468,23 +488,23 @@ Example Records:
 2. Select Exception Manager app → Share
 3. Share with security groups or users who should submit exceptions
 4. Assign Dataverse security role with:
-   - Read/Write on `fsi_sharingexception`
-   - Read on `fsi_agentsharingsetting`
-   - Read on `fsi_approvedsecuritygroup`
+   - Read/Write on `fsi_SharingException`
+   - Read on `fsi_AgentSharingSetting`
+   - Read on `fsi_ApprovedSecurityGroup`
 
 ### Deployment Validation
 
 **Test 1: Manual Detector Scan**
 
 1. Open Detector flow → Run → Confirm success
-2. Check Dataverse `fsi_agentsharingsetting` table for scanned agents
+2. Check Dataverse `fsi_AgentSharingSetting` table for scanned agents
 3. Verify Teams channel received scan summary alert (if violations detected)
 
 **Test 2: Violation Creation**
 
 1. Create a test agent in Copilot Studio
 2. Share with entire organization (violates ORG_WIDE_SHARING rule)
-3. Run Detector flow → Verify violation record created in `fsi_sharingviolation` table
+3. Run Detector flow → Verify violation record created in `fsi_SharingViolation` table
 4. Verify Remediation flow triggered → Check run history
 
 **Test 3: Exception Workflow**
@@ -541,7 +561,7 @@ Example Records:
 **Resolution:**
 1. Open Remediation flow → Edit trigger
 2. Verify webhook parameters:
-   - Entity name: `fsi_sharingviolation`
+   - Entity name: `fsi_SharingViolation`
    - Message: 1 (Create) and 2 (Update)
    - Scope: 4 (Organization)
    - Filter: `fsi_violation_status eq 0`
@@ -580,7 +600,7 @@ For regulatory examinations, export violation and exception records:
 ```sql
 -- Dataverse FetchXML query for violation evidence
 <fetch>
-  <entity name="fsi_sharingviolation">
+  <entity name="fsi_SharingViolation">
     <filter>
       <condition attribute="fsi_detected_at" operator="last-x-days" value="90"/>
     </filter>
@@ -654,7 +674,7 @@ Evidence files should include:
 
 **Risk:** Unvetted user populations gain access, potentially including users with insufficient training, conflicting duties, or inappropriate access levels.
 
-**Detection:** Security group GUIDs in agent sharing configuration not present in `fsi_approvedsecuritygroup` table with `fsi_is_active = true`.
+**Detection:** Security group GUIDs in agent sharing configuration not present in `fsi_ApprovedSecurityGroup` table with `fsi_is_active = true`.
 
 **Remediation:** Remove unapproved groups, add approved groups for environment's zone classification.
 
