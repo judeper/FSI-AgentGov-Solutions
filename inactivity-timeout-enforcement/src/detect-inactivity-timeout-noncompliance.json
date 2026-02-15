@@ -52,20 +52,6 @@
         }
       },
       "actions": {
-        "Initialize_DataverseUrl": {
-          "type": "InitializeVariable",
-          "inputs": {
-            "variables": [
-              {
-                "name": "DataverseUrl",
-                "type": "string",
-                "value": ""
-              }
-            ]
-          },
-          "runAfter": {},
-          "description": "Dataverse environment URL (e.g., https://org.crm.dynamics.com). Set via environment variable fsi_ITE_DataverseUrl."
-        },
         "Initialize_NotificationRecipients": {
           "type": "InitializeVariable",
           "inputs": {
@@ -73,16 +59,12 @@
               {
                 "name": "NotificationRecipients",
                 "type": "string",
-                "value": ""
+                "value": "@{environmentVariables('fsi_ITE_NotificationRecipients')}"
               }
             ]
           },
-          "runAfter": {
-            "Initialize_DataverseUrl": [
-              "Succeeded"
-            ]
-          },
-          "description": "Semicolon-separated email addresses for compliance alert notifications. Set via environment variable fsi_ITE_NotificationRecipients."
+          "runAfter": {},
+          "description": "Semicolon-separated email addresses for compliance alert notifications. Reads from environment variable fsi_ITE_NotificationRecipients."
         },
         "Initialize_ScanRunId": {
           "type": "InitializeVariable",
@@ -109,7 +91,7 @@
               {
                 "name": "ConcurrencyLimit",
                 "type": "integer",
-                "value": 5
+                "value": "@int(coalesce(environmentVariables('fsi_ITE_ConcurrencyLimit'), '5'))"
               }
             ]
           },
@@ -118,7 +100,7 @@
               "Succeeded"
             ]
           },
-          "description": "Informational: parallel degree for environment evaluation. Actual concurrency is set in Apply_to_Each_Environment runtimeConfiguration. Set via environment variable fsi_ITE_ConcurrencyLimit."
+          "description": "Informational: parallel degree for environment evaluation. Actual concurrency is set in Apply_to_Each_Environment runtimeConfiguration. Reads from environment variable fsi_ITE_ConcurrencyLimit (default: 5)."
         },
         "Scope_Try": {
           "type": "Scope",
@@ -160,6 +142,12 @@
                 "authentication": {
                   "type": "ManagedServiceIdentity",
                   "audience": "https://api.bap.microsoft.com"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT30S",
+                  "maximumInterval": "PT5M"
                 }
               },
               "runAfter": {
@@ -167,7 +155,7 @@
                   "Succeeded"
                 ]
               },
-              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication."
+              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication. Retries on transient failures with exponential backoff."
             },
             "Apply_to_Each_Environment": {
               "type": "Foreach",
@@ -251,10 +239,16 @@
                             "authentication": {
                               "type": "ManagedServiceIdentity",
                               "audience": "https://api.bap.microsoft.com"
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT30S",
+                              "maximumInterval": "PT5M"
                             }
                           },
                           "runAfter": {},
-                          "description": "Retrieve inactivity timeout privacy settings for this environment via BAP Admin API."
+                          "description": "Retrieve inactivity timeout privacy settings for this environment via BAP Admin API. Retries on transient failures with exponential backoff."
                         },
                         "Parse_Privacy_Response": {
                           "type": "ParseJson",
@@ -607,7 +601,7 @@
                   "type": "Select",
                   "inputs": {
                     "from": "@union(body('Query_NonCompliant_Records')?['value'], body('Query_Unknown_Records')?['value'])",
-                    "select": "<tr><td>@{item()?['fsi_environmentname']}</td><td>@{item()?['fsi_zone']}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{item()?['fsi_notes']}</td></tr>"
+                    "select": "<tr><td>@{item()?['fsi_environmentname']}</td><td>@{if(equals(item()?['fsi_zone'], 1), 'Personal', if(equals(item()?['fsi_zone'], 2), 'Team', if(equals(item()?['fsi_zone'], 3), 'Enterprise', string(item()?['fsi_zone']))))}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{item()?['fsi_notes']}</td></tr>"
                   },
                   "runAfter": {},
                   "description": "Transform Non-Compliant and Unknown records into HTML table rows for the notification email."
@@ -631,27 +625,47 @@
                   },
                   "description": "Build full HTML email body with scan summary, compliance/non-compliant/unknown counts, and detailed issues table."
                 },
-                "Send_Alert_Email": {
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "parameters": {
-                      "emailMessage/To": "@variables('NotificationRecipients')",
-                      "emailMessage/Subject": "@outputs('Compose_Email_Subject')",
-                      "emailMessage/Body": "@outputs('Compose_Email_Body')",
-                      "emailMessage/Importance": "High"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
-                      "connectionName": "shared_office365",
-                      "operationId": "SendEmailV2"
+                "Check_Recipients_Before_Alert": {
+                  "type": "If",
+                  "expression": {
+                    "not": [
+                      {
+                        "equals": [
+                          "@variables('NotificationRecipients')",
+                          ""
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Send_Alert_Email": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "emailMessage/To": "@variables('NotificationRecipients')",
+                          "emailMessage/Subject": "@outputs('Compose_Email_Subject')",
+                          "emailMessage/Body": "@outputs('Compose_Email_Body')",
+                          "emailMessage/Importance": "High"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                          "connectionName": "shared_office365",
+                          "operationId": "SendEmailV2"
+                        }
+                      },
+                      "runAfter": {},
+                      "description": "Send compliance alert email with Non-Compliant and Unknown environment details. Uses Office 365 SendEmailV2 with High importance."
                     }
+                  },
+                  "else": {
+                    "actions": {}
                   },
                   "runAfter": {
                     "Compose_Email_Body": [
                       "Succeeded"
                     ]
                   },
-                  "description": "Send compliance alert email with Non-Compliant and Unknown environment details. Only sent when issues are detected (guarded notification). Uses Office 365 SendEmailV2 with High importance."
+                  "description": "Guard: only send alert email when NotificationRecipients is configured. Prevents SendEmailV2 failure on empty To field."
                 }
               },
               "else": {
@@ -681,23 +695,43 @@
         "Scope_Catch": {
           "type": "Scope",
           "actions": {
-            "Send_Flow_Error_Email": {
-              "type": "OpenApiConnection",
-              "inputs": {
-                "parameters": {
-                  "emailMessage/To": "@variables('NotificationRecipients')",
-                  "emailMessage/Subject": "[CRITICAL] ITE Inactivity Timeout Compliance Scan — Flow Failure",
-                  "emailMessage/Body": "<html><body><h2>[CRITICAL] Inactivity Timeout Compliance Scan — Flow Failure</h2><p>The ITE daily compliance scan flow encountered an unexpected error during execution.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Flow Run ID</strong></td><td>@{workflow()['run']['name']}</td></tr><tr><td><strong>Timestamp</strong></td><td>@{utcNow()}</td></tr><tr><td><strong>Scan Run ID</strong></td><td>@{variables('ScanRunId')}</td></tr></table><p>Please investigate the flow run history in the <a href='https://make.powerautomate.com'>Power Automate portal</a> for detailed error information.</p><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow error handler.</em></p></body></html>",
-                  "emailMessage/Importance": "High"
-                },
-                "host": {
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
-                  "connectionName": "shared_office365",
-                  "operationId": "SendEmailV2"
+            "Check_Recipients_Before_Error_Email": {
+              "type": "If",
+              "expression": {
+                "not": [
+                  {
+                    "equals": [
+                      "@variables('NotificationRecipients')",
+                      ""
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Send_Flow_Error_Email": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "emailMessage/To": "@variables('NotificationRecipients')",
+                      "emailMessage/Subject": "[CRITICAL] ITE Inactivity Timeout Compliance Scan — Flow Failure",
+                      "emailMessage/Body": "<html><body><h2>[CRITICAL] Inactivity Timeout Compliance Scan — Flow Failure</h2><p>The ITE daily compliance scan flow encountered an unexpected error during execution.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Flow Run ID</strong></td><td>@{workflow()['run']['name']}</td></tr><tr><td><strong>Timestamp</strong></td><td>@{utcNow()}</td></tr><tr><td><strong>Scan Run ID</strong></td><td>@{variables('ScanRunId')}</td></tr></table><p>Please investigate the flow run history in the <a href='https://make.powerautomate.com'>Power Automate portal</a> for detailed error information.</p><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow error handler.</em></p></body></html>",
+                      "emailMessage/Importance": "High"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    }
+                  },
+                  "runAfter": {},
+                  "description": "Send CRITICAL error email when any unexpected failure occurs in the main execution scope."
                 }
               },
+              "else": {
+                "actions": {}
+              },
               "runAfter": {},
-              "description": "Send CRITICAL error email when any unexpected failure occurs in the main execution scope."
+              "description": "Guard: only send error email when NotificationRecipients is configured. Prevents SendEmailV2 failure on empty To field."
             }
           },
           "runAfter": {

@@ -139,8 +139,7 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 1. **Initialization:**
    - Generate unique scan run ID (GUID) for correlation
-   - Load environment variables:
-     - `fsi_ITE_DataverseUrl` — Dataverse environment URL
+   - Read environment variables via `@environmentVariables()`:
      - `fsi_ITE_NotificationRecipients` — Semicolon-separated email addresses
      - `fsi_ITE_ConcurrencyLimit` — Parallel environment evaluation degree (default: 5)
 
@@ -195,9 +194,10 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
-| `fsi_ITE_DataverseUrl` | String | `https://org.crm.dynamics.com` | Dataverse environment URL |
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses for compliance alerts |
 | `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel degree for environment evaluation (1-50) |
+
+> **Note:** The flow reads environment variables using Power Automate's `@environmentVariables()` function at initialization. The Dataverse connection uses the connection reference — no separate URL variable is needed. Email send actions are guarded: if `fsi_ITE_NotificationRecipients` is empty, emails are silently skipped rather than causing a flow error.
 
 **Email Alert Format:**
 
@@ -404,9 +404,9 @@ Create environment variables in Power Platform:
 
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
-| `fsi_ITE_DataverseUrl` | String | `https://org.crm.dynamics.com` | Dataverse environment URL |
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses |
 | `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel environment evaluation degree |
+| `fsi_ITE_ScanFrequencyHours` | Number | `24` | Scan interval in hours |
 
 **Step 6: Configure Managed Service Identity**
 

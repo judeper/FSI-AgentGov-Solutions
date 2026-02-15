@@ -57,7 +57,7 @@ Package Contents:
 
 Key Capabilities:
 ✓ Daily automated scans across all Power Platform environments
-✓ Zone-based policy enforcement (Personal: 60min, Team: 90min, Enterprise: 120min)
+✓ Zone-based policy enforcement (Personal: optional ≤120min, Team: ≤120min, Enterprise: ≤60min)
 ✓ Three-state compliance classification (Compliant, Non-Compliant, Unknown)
 ✓ Guarded email alerting (notifications sent only when issues detected)
 ✓ Immutable compliance audit trail in Dataverse
@@ -130,7 +130,7 @@ Remind customer they will need:
 
 **Data Setup:**
 - Environment policy registry (`fsi_environmentpolicies` table) populated with zone-based timeout requirements
-- Recommended zone policy: Zone 1 (Personal) = 60min, Zone 2 (Team) = 90min, Zone 3 (Enterprise) = 120min
+- Recommended zone policy: Zone 1 (Personal) = optional (≤120min), Zone 2 (Team) = ≤120min, Zone 3 (Enterprise) = ≤60min
 
 ### 8. Follow-Up Support
 
@@ -156,10 +156,10 @@ Offer these follow-up services:
    - Without proper MSI permissions, all environments will show **Unknown** status with Unauthorized errors
 
 3. **Timeout Policy Recommendation:**
-   - **Zone 1 (Personal):** 60 minutes — Individual development environments
-   - **Zone 2 (Team):** 90 minutes — Team collaboration environments
-   - **Zone 3 (Enterprise):** 120 minutes — Production environments (maximum per regulatory guidance)
-   - **CRITICAL:** No environment should exceed 120 minutes per NIST 800-53 AC-11 and FINRA 4511 requirements
+   - **Zone 1 (Personal):** Optional; ≤120 minutes if enabled — Individual development environments
+   - **Zone 2 (Team):** ≤120 minutes (required) — Team collaboration environments
+   - **Zone 3 (Enterprise):** ≤60 minutes (required) — Production environments processing sensitive financial data
+   - **CRITICAL:** Zone 3 environments must have the shortest timeouts per NIST 800-53 AC-11 and FINRA 4511 requirements
 
 4. **Guarded Notification:**
    - Email alerts are only sent when Non-Compliant or Unknown environments are detected
@@ -183,9 +183,9 @@ Provide this checklist to customer for post-deployment validation:
 □ Flow imported successfully and connection references configured
 
 □ Environment variables set:
-  □ fsi_ITE_DataverseUrl
   □ fsi_ITE_NotificationRecipients
   □ fsi_ITE_ConcurrencyLimit
+  □ fsi_ITE_ScanFrequencyHours
 
 □ Flow activated with daily 06:00 UTC schedule
 
