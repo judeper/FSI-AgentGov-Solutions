@@ -306,8 +306,8 @@ namespace FsiAgentGovernance.Plugins
                 throw new InvalidPluginExecutionException(message);
             }
 
-            // LogOnly mode — record but allow
-            tracingService.Trace("[FSI-MIME] EnforcementMode=LogOnly — upload permitted despite violation.");
+            // Non-blocking mode — record but allow
+            tracingService.Trace("[FSI-MIME] EnforcementMode={0} — upload permitted despite violation.", _config.EnforcementMode);
         }
 
         // ═══════════════════════════════════════════════════════════════════

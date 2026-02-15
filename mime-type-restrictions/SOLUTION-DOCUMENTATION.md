@@ -384,10 +384,10 @@ PowerPlatformDlpActivity_CL
 
 **Alert Configuration:**
 
-- **Frequency:** Every 5 minutes
+- **Frequency:** Every 1 hour
 - **Threshold:** 10 blocked uploads per user per hour
 - **Severity:** Medium
-- **MITRE ATT&CK:** T1566.001 (Phishing: Spearphishing Attachment)
+- **MITRE ATT&CK:** T1566 (Phishing), T1204 (User Execution)
 - **Response:** Create incident, notify security operations team
 
 **Incident Actions:**
@@ -481,6 +481,39 @@ PowerPlatformDlpActivity_CL
      - **Secure Configuration:** (Optional) Same as unsecure for encrypted storage
    - **Filtering Attributes:** `documentbody, mimetype, filename`
 5. Click **Register New Step**
+
+**Step 2 (Alternative): Register Plugin using PAC CLI**
+
+If you prefer command-line deployment over the Plugin Registration Tool:
+
+1. Install PAC CLI:
+   ```bash
+   dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+   ```
+
+2. Authenticate:
+   ```bash
+   pac auth create --url https://your-org.crm.dynamics.com
+   ```
+
+3. Register plugin:
+   ```bash
+   pac plugin push --plugin-folder ./bin/Debug
+   ```
+
+4. Register step (verify exact syntax against current PAC CLI documentation):
+   ```bash
+   pac plugin step create \
+     --name "ValidateMimeTypePlugin: Create of annotation" \
+     --message Create \
+     --primary-entity annotation \
+     --stage PreValidation \
+     --mode Synchronous \
+     --assembly FsiAgentGovernance.Plugins \
+     --plugin ValidateMimeTypePlugin
+   ```
+
+> **Note:** PAC CLI syntax may vary by version. Consult the [PAC CLI documentation](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/plugin) for current parameters.
 
 **Step 3: Import DLP Policy Template**
 
@@ -607,6 +640,39 @@ Based on Sentinel query results, adjust MIME type allowlist:
    - Validate magic byte signature exists
    - Add to `MimeConfig.json` with magic byte pattern
    - Re-register plugin with updated configuration
+
+#### Rollback Procedure
+
+If the MIME Type Restrictions plugin causes issues in production, use one of the following options to disable enforcement:
+
+**Option 1: Disable Plugin Step (Recommended)**
+
+1. Open Plugin Registration Tool
+2. Connect to your Dataverse environment
+3. Navigate to `FsiAgentGovernance.Plugins` assembly
+4. Find the step `ValidateMimeTypePlugin: Create of annotation`
+5. Right-click → **Disable**
+6. The plugin stops processing but remains registered for quick re-enablement
+
+> This is the recommended approach — it allows immediate re-enablement after troubleshooting without re-registration.
+
+**Option 2: Switch to TestWithNotifications Mode**
+
+1. Edit `MimeConfig.json`
+2. Change `"enforcementMode": "Block"` to `"enforcementMode": "TestWithNotifications"`
+3. Update the plugin step configuration in Plugin Registration Tool:
+   - Right-click step → **Update**
+   - Paste updated `MimeConfig.json` into unsecure configuration
+4. Upload violations will be logged to plugin trace but not blocked
+
+**Option 3: Unregister Plugin (Emergency Only)**
+
+1. Open Plugin Registration Tool
+2. Select the `FsiAgentGovernance.Plugins` assembly
+3. Click **Unregister** → Confirm deletion
+4. The plugin and all steps are permanently removed
+
+> **Warning:** Unregistering requires full re-registration to restore. Use only when Options 1-2 are insufficient.
 
 #### Troubleshooting
 
@@ -795,7 +861,62 @@ The MIME Type Restrictions solution supports compliance with the following regul
 - Coordinate DLP policy updates with business unit stakeholders (advance notice recommended)
 
 **Version History:**
+- **v1.0.1 (February 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
 - **v1.0.0 (February 2026):** Initial release with Dataverse plugin, DLP template, and Sentinel queries
+
+---
+
+## Design Decisions
+
+### Intentionally Excluded File Types
+
+The following file types are intentionally excluded from the default allowlist. Organizations may add them with appropriate risk acceptance.
+
+**Legacy Office Formats (.doc, .xls, .ppt)**
+
+Legacy Office files use the OLE Compound File Binary Format, which can contain embedded macros and ActiveX controls. These formats present a higher risk of malicious code execution compared to modern OpenXML formats (DOCX, XLSX, PPTX), which separate content from code. If your organization requires legacy format support, add entries with the shared magic bytes `D0 CF 11 E0 A1 B1 1A E1` and ensure macro scanning is enabled upstream.
+
+**SVG Files (.svg)**
+
+SVG (Scalable Vector Graphics) files are XML-based and can contain embedded JavaScript, making them a vector for cross-site scripting (XSS) attacks when rendered in web contexts. If your organization requires SVG support, implement SVG sanitization (stripping `<script>` tags and event handlers) before rendering in any web-facing application.
+
+### Rate Limiting Architecture
+
+Rate limiting is intentionally handled at the Sentinel monitoring layer (Layer 3) rather than in the Dataverse plugin (Layer 2). The high-volume-blocks alert rule detects patterns of >10 blocked attempts per user per hour and creates a Sentinel incident. This design avoids plugin complexity and leverages Sentinel's incident management, correlation, and response capabilities.
+
+---
+
+## PowerShell Module (Optional Component)
+
+The **FsiMimeControl** PowerShell module provides additional management capabilities for MIME type restrictions beyond the core plugin and DLP policy. It is maintained in the FSI-AgentGov repository under `scripts/governance/`.
+
+### Functionality
+
+- Bulk MIME type configuration management across environments
+- Plugin deployment validation and health checks
+- Configuration comparison between zone templates (Zone 1, 2, 3)
+- Exception register management and reporting
+
+### Installation
+
+1. Download `FsiMimeControl.psm1` from the FSI-AgentGov repository: `scripts/governance/FsiMimeControl.psm1`
+2. Import the module:
+   ```powershell
+   Import-Module .\FsiMimeControl.psm1
+   ```
+
+### Zone Templates
+
+Pre-configured MIME type templates for each governance zone are available at:
+- `scripts/governance/mime-templates/zone1.json` — Personal Productivity (broadest allowlist)
+- `scripts/governance/mime-templates/zone2.json` — Team Collaboration (moderate restrictions)
+- `scripts/governance/mime-templates/zone3.json` — Enterprise Managed (strictest allowlist)
+
+### Relationship to This Solution
+
+The FsiMimeControl module is **optional** — the core solution (plugin, DLP policy, Sentinel queries) operates independently. The module adds operational convenience for organizations managing MIME restrictions across multiple environments or zones.
+
+For detailed usage instructions, see the FSI-AgentGov documentation for Control 1.25.
 
 ---
 

@@ -11,6 +11,21 @@ This solution provides enforcement and monitoring artifacts for restricting file
 
 > **Note:** The PowerShell module (`FsiMimeControl`) remains in FSI-AgentGov under `scripts/governance/`.
 
+## PowerShell Module (Optional)
+
+The **FsiMimeControl** PowerShell module provides bulk configuration management, deployment validation, and zone template support. It is maintained separately in the FSI-AgentGov repository.
+
+**Location:** `FSI-AgentGov/scripts/governance/FsiMimeControl.psm1`
+
+**Installation:**
+```powershell
+Import-Module .\FsiMimeControl.psm1
+```
+
+**Zone Templates:** Pre-configured MIME allowlists are available for Zone 1, 2, and 3 under `scripts/governance/mime-templates/`.
+
+This module is optional — the core solution operates independently without it. See SOLUTION-DOCUMENTATION.md for details.
+
 ## Related Controls
 
 | Control | Relationship |

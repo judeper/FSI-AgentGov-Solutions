@@ -196,6 +196,9 @@ Remind customer they will need:
 - Diagnostic settings: "Send to Log Analytics" enabled
 - Log Analytics workspace connected to Sentinel
 
+**Optional Component:**
+- **FsiMimeControl PowerShell module** — Available in FSI-AgentGov repository under `scripts/governance/`. Provides bulk configuration management, deployment validation, and zone template support. Not required for core functionality but recommended for multi-environment deployments.
+
 ### 8. Follow-Up Support
 
 Offer these follow-up services:
