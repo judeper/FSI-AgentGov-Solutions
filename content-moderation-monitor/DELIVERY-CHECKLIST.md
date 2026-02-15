@@ -22,6 +22,7 @@
 - [ ] **Get-ExpectedModerationLevel.ps1** — Moderation level reference
 - [ ] **Connect-EnvironmentDataverse.ps1** — Per-env Dataverse auth
 - [ ] **Test-ParameterValidation.ps1** — Parameter validators
+- [ ] **Get-CMMValidationResults.ps1** — Evidence query helper
 
 **Power Automate:**
 - [ ] **src/moderation-validation-flow.json** — Daily scheduled validation flow

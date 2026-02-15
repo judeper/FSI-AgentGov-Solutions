@@ -24,7 +24,7 @@
     File: Test-ContentModerationCompliance.ps1
     Version: 1.1.0
     Solution: Content Moderation Monitor (v7)
-    Controls: 1.8 (Content Moderation)
+    Controls: 1.27 (AI Agent Content Moderation Enforcement), 1.8 (Runtime Protection)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
 
     Part of FSI Agent Governance Framework

@@ -20,7 +20,8 @@
     CMM operates at the agent level: violation records include per-agent detail
     (fsi_agent_id, fsi_agent_name, fsi_expected_level, fsi_actual_level) for
     content moderation governance. This script supports FSI-AgentGov Controls
-    1.12/1.13 evidence collection requirements for content moderation governance.
+    1.27 (AI Agent Content Moderation Enforcement) and 1.8 (Runtime Protection)
+    evidence collection requirements for content moderation governance.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
