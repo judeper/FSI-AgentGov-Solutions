@@ -5,14 +5,21 @@ Deploys seven environment variables with fsi_CMM_* prefix that control
 scan behavior, grace periods, and alerting configuration. All operations
 are idempotent — safe to re-run.
 
-Variables:
+Variables consumed by Start-ModerationValidationRunbook.ps1 (via CMMClient):
   - fsi_CMM_GracePeriodHours: Hours to exclude newly provisioned environments
-  - fsi_CMM_ScanFrequencyHours: Automated scan interval
   - fsi_CMM_IncludeSandbox: Whether to include sandbox environments
   - fsi_CMM_IncludeDrafts: Whether to include draft/unpublished agents
+
+Variables consumed by Test-ContentModerationCompliance.ps1 (via CMMClient):
+  - fsi_CMM_GracePeriodHours: Grace period override
+  - fsi_CMM_IncludeSandbox: Include sandbox override
+  - fsi_CMM_IncludeDrafts: Include drafts override
+
+Variables for future use (not yet consumed by flow or scripts):
+  - fsi_CMM_ScanFrequencyHours: Automated scan interval (flow uses Recurrence trigger)
   - fsi_CMM_BaselineMaxAgeDays: Alert threshold for stale baselines
-  - fsi_CMM_TeamsGroupId: Teams group GUID for alerts
-  - fsi_CMM_TeamsChannelId: Teams channel GUID for alerts
+  - fsi_CMM_TeamsGroupId: Teams group GUID (flow uses InitializeVariable)
+  - fsi_CMM_TeamsChannelId: Teams channel GUID (flow uses InitializeVariable)
 """
 
 import argparse

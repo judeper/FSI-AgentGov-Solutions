@@ -53,6 +53,16 @@ CONNECTION_REF_DEFINITIONS = [
             "governance channel."
         ),
     },
+    {
+        "logical_name": "fsi_cr_azureautomation_moderationmonitor",
+        "display_name": "Azure Automation - Content Moderation Monitor",
+        "connector_id": "shared_azureautomation",
+        "description": (
+            "Azure Automation connection for Content Moderation Monitor. "
+            "Used to invoke the validation runbook that scans agent "
+            "content moderation levels across Power Platform environments."
+        ),
+    },
 ]
 
 

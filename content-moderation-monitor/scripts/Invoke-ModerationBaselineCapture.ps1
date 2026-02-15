@@ -263,7 +263,7 @@ try {
             CapturedOn    = (Get-Date -Format 'o')
             CapturedBy    = $CapturedBy
             TotalCaptured = 0
-            ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
+            ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
             Agents        = @()
         }
 
@@ -300,7 +300,7 @@ try {
             CapturedOn    = (Get-Date -Format 'o')
             CapturedBy    = $CapturedBy
             TotalCaptured = 0
-            ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
+            ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
             Agents        = @()
         }
 
@@ -335,7 +335,7 @@ try {
     Write-Verbose "Capturing baselines for $($agentSettings.Count) agent(s)..."
 
     $capturedAgents = @()
-    $zoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
+    $zoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
 
     foreach ($agent in $agentSettings) {
         $envId = $agent.EnvironmentId
@@ -383,8 +383,11 @@ try {
         }
 
         # Update zone breakdown
-        $zoneKey = if ($zoneBreakdown.ContainsKey($agentZone)) { $agentZone } else { 'Zone1' }
-        $zoneBreakdown[$zoneKey]++
+        if ($zoneBreakdown.ContainsKey($agentZone)) {
+            $zoneBreakdown[$agentZone]++
+        } else {
+            $zoneBreakdown['Unknown']++
+        }
     }
 
     Write-Verbose "Baseline capture complete. Total captured: $($capturedAgents.Count)"

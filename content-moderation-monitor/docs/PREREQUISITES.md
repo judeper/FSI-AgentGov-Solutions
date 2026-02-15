@@ -73,6 +73,6 @@ For Dataverse persistence features (validation history, violation tracking):
 
 | Table | Purpose |
 |-------|---------|
-| `fsi_moderationbaseline` | Captured moderation baselines |
+| `fsi_moderationbaselines` | Captured moderation baselines |
 | `fsi_moderationvalidationhistory` | Immutable validation run records |
-| `fsi_moderationviolation` | Individual agent-level violations |
+| `fsi_moderationviolations` | Individual agent-level violations |

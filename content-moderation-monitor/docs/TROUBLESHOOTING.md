@@ -89,5 +89,3 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 ---
 
 *Content Moderation Governance Monitor — Troubleshooting Guide v1.0.0*
-- Check if `botcomponent` records contain moderation configuration
-- Some bot types (classic PVA) may not expose moderation via the Dataverse API

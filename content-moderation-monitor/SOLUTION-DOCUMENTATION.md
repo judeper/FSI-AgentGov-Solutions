@@ -1,4 +1,4 @@
-# Ensuring AI Agent Content Moderation Compliance
+# Monitoring AI Agent Content Moderation Compliance
 ## Content Moderation Monitor
 
 **Version:** 1.0.0
@@ -321,7 +321,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 
 ```
 evidence-cmm-Zone3-2026-02-14-153000.json.sha256:
-abc123def456789012345678901234567890123456789012345678901234  evidence-cmm-Zone3-2026-02-14-153000.json
+abc123def456789012345678901234567890123456789012345678901234  cmm-evidence-Zone3-2026-02-14-153000.json
 ```
 
 **Integrity Verification:**
@@ -433,7 +433,7 @@ Test-ContentModerationCompliance -WhatIf -ExcludeSandbox
 For Dataverse persistence and drift detection:
 
 ```bash
-cd /path/to/content-moderation-monitor/src/dataverse
+cd /path/to/content-moderation-monitor/scripts
 python deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \

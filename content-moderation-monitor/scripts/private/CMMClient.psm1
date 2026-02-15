@@ -8,7 +8,7 @@
 
 .NOTES
     Module: CMMClient.psm1
-    Version: 0.3.0
+    Version: 1.0.0
     Author: FSI Agent Governance Team
 #>
 
@@ -16,6 +16,20 @@
 
 $script:DataverseUrl = $null
 $script:AccessToken = $null
+
+# Zone string-to-integer mapping for Dataverse picklist column (fsi_acv_zone option set)
+$script:ZoneToInt = @{
+    'Unknown' = 0
+    'Zone1'   = 1
+    'Zone2'   = 2
+    'Zone3'   = 3
+}
+$script:IntToZone = @{
+    0 = 'Unknown'
+    1 = 'Zone1'
+    2 = 'Zone2'
+    3 = 'Zone3'
+}
 
 #endregion
 
@@ -198,12 +212,18 @@ function Get-ModerationBaseline {
 
         # Map Dataverse fields to friendly property names
         return $allRecords | ForEach-Object {
+            # Convert picklist integer back to zone string
+            $zoneValue = $_.fsi_zone
+            $zoneName = if ($null -ne $zoneValue -and $script:IntToZone.ContainsKey([int]$zoneValue)) {
+                $script:IntToZone[[int]$zoneValue]
+            } else { 'Unknown' }
+
             [PSCustomObject]@{
                 BaselineId       = $_.fsi_moderationbaselineid
                 Name             = $_.fsi_name
                 EnvironmentGuid  = $_.fsi_environment_guid
                 EnvironmentName  = $_.fsi_environment_name
-                Zone             = $_.fsi_zone
+                Zone             = $zoneName
                 AgentId          = $_.fsi_agent_id
                 AgentName        = $_.fsi_agent_name
                 ModerationLevel  = $_.fsi_moderation_level
@@ -308,13 +328,18 @@ function Write-ModerationViolation {
     }
 
     try {
+        # Convert zone string to picklist integer for Dataverse
+        $zoneInt = if ($script:ZoneToInt.ContainsKey($Violation.Zone)) {
+            $script:ZoneToInt[$Violation.Zone]
+        } else { 0 }
+
         $record = @{
             fsi_name                = "$($Violation.AgentName)-$($Violation.Zone)-$(Get-Date -Format 'yyyy-MM-dd')"
             fsi_environment_guid    = $Violation.EnvironmentId
             fsi_environment_name    = $Violation.EnvironmentDisplayName
             fsi_agent_id            = $Violation.AgentId
             fsi_agent_name          = $Violation.AgentName
-            fsi_zone                = $Violation.Zone
+            fsi_zone                = $zoneInt
             fsi_expected_level      = $Violation.ExpectedLevel
             fsi_actual_level        = $Violation.ActualLevel
             fsi_severity            = $Violation.Severity
@@ -603,11 +628,16 @@ function Save-CMMBaseline {
         $capturedByValue = if ($CapturedBy) { $CapturedBy } else { "System" }
         $rawJsonValue = if ($RawJson) { $RawJson } else { "" }
 
+        # Convert zone string to picklist integer for Dataverse
+        $zoneInt = if ($script:ZoneToInt.ContainsKey($Zone)) {
+            $script:ZoneToInt[$Zone]
+        } else { 0 }
+
         $record = @{
             fsi_name               = "$AgentName-$Zone-$timestamp"
             fsi_environment_guid   = $EnvironmentGuid
             fsi_environment_name   = $EnvironmentName
-            fsi_zone               = $Zone
+            fsi_zone               = $zoneInt
             fsi_agent_id           = $AgentId
             fsi_agent_name         = $AgentName
             fsi_moderation_level   = $ModerationLevel

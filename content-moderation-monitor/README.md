@@ -123,6 +123,7 @@ This means:
 | Control | Relationship |
 |---------|--------------|
 | [1.27 - Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/) | Primary — Agent content moderation levels |
+| [1.8 - Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-security-monitoring/) | Related — Runtime security monitoring |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
 

@@ -26,9 +26,9 @@ Before creating the flow, ensure you have:
   - Modules installed: MSAL.PS
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with CMM schema deployed (Phase 2):
-  - 3 tables: `fsi_ModerationValidationHistory`, `fsi_ModerationBaseline`, `fsi_ModerationZoneAssignment`
+  - 3 tables: `fsi_ModerationValidationHistory`, `fsi_ModerationBaseline`, `fsi_ModerationViolation`
   - 7 environment variables configured
-  - 3 connection references created
+  - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
@@ -105,13 +105,14 @@ Update these variables in the flow designer (Initialize Variable actions):
 
 ## Step 3: Bind Connection References
 
-The flow uses three connection references deployed during Phase 2:
+The flow uses four connection references deployed during Phase 2:
 
 | Connection Reference | Service | Purpose |
 |---------------------|---------|---------|
 | `fsi_cr_dataverse_moderationmonitor` | Dataverse | Write validation history records |
 | `fsi_cr_teams_moderationmonitor` | Microsoft Teams | Post adaptive card alerts |
 | `fsi_cr_office365_moderationmonitor` | Office 365 Outlook | Send email alerts |
+| `fsi_cr_azureautomation_moderationmonitor` | Azure Automation | Execute validation runbook |
 
 **To bind connection references:**
 
@@ -292,13 +293,17 @@ Additional checks:
 
 - Check the `AlertRequired` logic in the runbook — drift alone can trigger alerts
 - Review `AlertSeverity` in the runbook output to understand the classification
-- Verify zone assignments are current in `fsi_ModerationZoneAssignment` table
+- Verify zone assignments are current via ELM zone classification or naming convention
 
 ### Drift Detection Shows All Agents as First Run
 
 - Baselines have not been captured yet
 - Run `Invoke-ModerationBaselineCapture.ps1` to establish initial baselines
 - After capture, the next scan will compare against the baseline and detect actual drift
+
+### Adaptive Card Template Updates
+
+> **Note:** The adaptive card template is defined inline within the flow JSON (`src/moderation-validation-flow.json`) in the `Post_Teams_Card` action. A standalone copy also exists at `src/adaptive-card-moderation-alert.json` for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/). Changes to the card design must be applied to **both** locations to keep them in sync.
 
 ### Flow Errors (Scope_Catch)
 

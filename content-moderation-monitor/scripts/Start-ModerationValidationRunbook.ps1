@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -350,7 +350,7 @@ try {
             IsFirstRun      = $false
             Direction       = $null
             BaselineLevel   = $null
-            CurrentLevel    = $agent.ContentModerationLevel
+            CurrentLevel    = $agent.CurrentModerationLevel
         }
 
         if ($globalIsFirstRun) {
@@ -359,10 +359,10 @@ try {
             $baseline = $baselineMap[$agentId]
             $driftEntry.BaselineLevel = $baseline.ModerationLevel
 
-            if ($agent.ContentModerationLevel -ne $baseline.ModerationLevel) {
+            if ($agent.CurrentModerationLevel -ne $baseline.ModerationLevel) {
                 $direction = Get-ModerationDriftDirection `
                     -BaselineLevel $baseline.ModerationLevel `
-                    -CurrentLevel $agent.ContentModerationLevel
+                    -CurrentLevel $agent.CurrentModerationLevel
 
                 $driftEntry.HasDrift = $true
                 $driftEntry.Direction = $direction
