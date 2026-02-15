@@ -4,7 +4,7 @@ Complete schema documentation for the Content Moderation Governance Monitor (CMM
 
 ## Overview
 
-The CMM solution uses three Dataverse tables, two shared option sets, seven environment variables, and three connection references. All entities use the `fsi_` publisher prefix for consistency with the FSI Agent Governance Framework.
+The CMM solution uses three Dataverse tables, two shared option sets, seven environment variables, and four connection references. All entities use the `fsi_` publisher prefix for consistency with the FSI Agent Governance Framework.
 
 ---
 
@@ -73,7 +73,7 @@ Per-agent violation records with severity classification and regulatory context.
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Yes | Zone classification |
 | `fsi_expected_level` | String (50) | Yes | Zone-required moderation level |
 | `fsi_actual_level` | String (50) | Yes | Agent's current moderation level |
-| `fsi_severity` | OptionSet (fsi_acv_severity) | Yes | Violation severity |
+| `fsi_severity` | String (50) | Yes | Violation severity (Critical/High/Medium/Warning) |
 | `fsi_regulatory_context` | String (2000) | No | FINRA/SOX/GLBA regulatory impact context |
 | `fsi_detected_at` | DateTime | Yes | When violation was detected (UTC) |
 | `fsi_run_id` | String (36) | No | Correlating scan run GUID |
@@ -97,7 +97,7 @@ Zone classification for governance grouping.
 
 ### fsi_acv_severity
 
-Severity classification for validation outcomes.
+Severity classification for validation outcomes. Shared with the Audit Configuration Validator (ACV) solution. Note: CMM's `fsi_severity` column uses a String type rather than this option set because CMM severity labels (Critical/High/Medium/Warning) differ from ACV labels. The option set is retained in the schema for cross-solution consistency but is not bound to any CMM column.
 
 | Value | Label |
 |-------|-------|
@@ -134,6 +134,7 @@ Power Automate connection references for the CMM flow.
 | `fsi_cr_dataverse_moderationmonitor` | Microsoft Dataverse | Read/write validation results, baselines, violations |
 | `fsi_cr_office365_moderationmonitor` | Office 365 Outlook | Email alerts for high/critical violations |
 | `fsi_cr_teams_moderationmonitor` | Microsoft Teams | Teams adaptive card alert delivery |
+| `fsi_cr_azureautomation_moderationmonitor` | Azure Automation | Invoke validation runbook from Power Automate flow |
 
 ---
 
@@ -162,7 +163,7 @@ Power Automate connection references for the CMM flow.
 │  fsi_violation_count        │  id  │  fsi_agent_name             │
 │  fsi_overall_status         │      │  fsi_expected_level         │
 │  fsi_summary_json           │      │  fsi_actual_level           │
-└─────────────────────────────┘      │  fsi_severity (fsi_acv_sev) │
+└─────────────────────────────┘      │  fsi_severity (string)       │
                                      │  fsi_run_id                 │
                                      │  fsi_zone (fsi_acv_zone)    │
                                      └─────────────────────────────┘

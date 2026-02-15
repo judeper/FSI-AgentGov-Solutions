@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Create Dataverse connection references for Content Moderation Monitor.
 
-Deploys three connection references that Power Automate flows use to
-interact with Dataverse, Office 365 email, and Microsoft Teams. All
-operations are idempotent — safe to re-run.
+Deploys four connection references that Power Automate flows use to
+interact with Dataverse, Office 365 email, Microsoft Teams, and Azure
+Automation. All operations are idempotent — safe to re-run.
 
 Connection References:
   - fsi_cr_dataverse_moderationmonitor: Core data operations
   - fsi_cr_office365_moderationmonitor: Email alerts
   - fsi_cr_teams_moderationmonitor: Teams adaptive card alerts
+  - fsi_cr_azureautomation_moderationmonitor: Runbook invocation
 """
 
 import argparse
@@ -115,8 +116,9 @@ def create_connection_references(
 ) -> None:
     """Deploy all CMM connection references to Dataverse.
 
-    Creates three connection references for Dataverse, Office 365, and
-    Teams connectors. All operations are idempotent — safe to re-run.
+    Creates four connection references for Dataverse, Office 365, Teams,
+    and Azure Automation connectors. All operations are idempotent — safe
+    to re-run.
 
     Args:
         client: CMMClient instance

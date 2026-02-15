@@ -333,54 +333,63 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-Zone3-*.json"
 
 ### Dataverse Schema
 
+> For the complete schema reference including option sets, environment variables, connection references, and entity relationship diagram, see [docs/SCHEMA.md](docs/SCHEMA.md).
+
 #### Table: fsi_moderationvalidationhistory
 
-Purpose: Immutable audit trail of validation scans with summary statistics.
+Purpose: Organization-owned immutable audit trail of validation scans with summary statistics.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationvalidationhistoryid` | GUID | Primary key |
-| `fsi_runid` | String(50) | Correlation ID for batch scan (GUID) |
-| `fsi_runtimestamp` | DateTime | Scan execution timestamp (UTC) |
-| `fsi_totalagentsscanned` | Number | Count of agents evaluated |
-| `fsi_violationcount` | Number | Total violations detected |
-| `fsi_criticalcount` | Number | Critical severity violations |
-| `fsi_highcount` | Number | High severity violations |
-| `fsi_mediumcount` | Number | Medium severity violations |
-| `fsi_warningcount` | Number | Warning severity violations |
+| `fsi_name` | String(500) | Record name (`{Status}-{Timestamp}`) |
+| `fsi_run_id` | String(36) | Correlation GUID for batch scan |
+| `fsi_validation_time` | DateTime | Scan execution timestamp (UTC) |
+| `fsi_total_agents` | Integer | Count of agents evaluated |
+| `fsi_compliant_count` | Integer | Agents passing moderation checks |
+| `fsi_violation_count` | Integer | Total violations detected |
+| `fsi_overall_status` | String(50) | Passed, Failed, Warning, or Critical |
+| `fsi_environments_scanned` | String(2000) | Comma-separated environment list |
+| `fsi_summary_json` | Memo | Full JSON summary blob |
 
 #### Table: fsi_moderationviolations
 
-Purpose: Per-agent violation records with severity and regulatory context.
+Purpose: Per-agent violation records with severity classification and regulatory context.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationviolationid` | GUID | Primary key |
-| `fsi_runid` | String(50) | Correlation to validation history (FK) |
-| `fsi_agentid` | String(50) | Copilot Studio agent GUID |
-| `fsi_agentname` | String(200) | Agent display name |
-| `fsi_environmentid` | String(50) | Power Platform environment GUID |
-| `fsi_environmentname` | String(200) | Environment display name |
-| `fsi_zone` | Choice | Zone 1/2/3/Unknown |
-| `fsi_actuallevel` | Choice | Low/Medium/High/Unknown |
-| `fsi_requiredlevel` | Choice | Medium/High |
-| `fsi_severity` | Choice | Critical/High/Medium/Warning |
-| `fsi_regulatory` | String(500) | Regulatory context (FINRA 3110, SOX 404, etc.) |
-| `fsi_detectedat` | DateTime | Detection timestamp (UTC) |
+| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Date}`) |
+| `fsi_environment_guid` | String(100) | Power Platform environment GUID |
+| `fsi_environment_name` | String(500) | Environment display name |
+| `fsi_agent_id` | String(100) | Copilot Studio agent GUID |
+| `fsi_agent_name` | String(500) | Agent display name |
+| `fsi_zone` | OptionSet (fsi_acv_zone) | Zone 1/2/3/Unclassified |
+| `fsi_expected_level` | String(50) | Zone-required moderation level |
+| `fsi_actual_level` | String(50) | Agent's current moderation level |
+| `fsi_severity` | String(50) | Violation severity (Critical/High/Medium/Warning) |
+| `fsi_regulatory_context` | String(2000) | Regulatory impact context (FINRA 3110, SOX 404, etc.) |
+| `fsi_detected_at` | DateTime | Detection timestamp (UTC) |
+| `fsi_run_id` | String(36) | Correlating scan GUID |
 
-#### Table: fsi_moderationbaseline
+#### Table: fsi_moderationbaselines
 
-Purpose: Active baseline for drift detection (one active baseline per agent).
+Purpose: Per-agent moderation level snapshots for drift detection (one active baseline per agent).
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationbaselineid` | GUID | Primary key |
-| `fsi_agentid` | String(50) | Copilot Studio agent GUID |
-| `fsi_agentname` | String(200) | Agent display name at baseline capture |
-| `fsi_baselinelevel` | Choice | Low/Medium/High |
-| `fsi_baselinetimestamp` | DateTime | Baseline capture timestamp (UTC) |
-| `fsi_isactive` | Boolean | Active status (only one active baseline per agent) |
-| `fsi_capturedby` | String(100) | User or service principal that captured baseline |
+| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
+| `fsi_environment_guid` | String(100) | Power Platform environment GUID |
+| `fsi_environment_name` | String(500) | Environment display name |
+| `fsi_zone` | OptionSet (fsi_acv_zone) | Zone classification |
+| `fsi_agent_id` | String(100) | Copilot Studio agent GUID |
+| `fsi_agent_name` | String(500) | Agent display name at baseline capture |
+| `fsi_moderation_level` | String(50) | Captured moderation level (Low/Medium/High) |
+| `fsi_is_active` | Boolean | Active status (one active per agent) |
+| `fsi_captured_at` | DateTime | Baseline capture timestamp (UTC) |
+| `fsi_captured_by` | String(200) | User or service principal that captured baseline |
+| `fsi_raw_json` | Memo | Full JSON snapshot of moderation settings |
 
 ### Configuration and Prerequisites
 
