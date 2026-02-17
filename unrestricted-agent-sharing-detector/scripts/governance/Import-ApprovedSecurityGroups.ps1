@@ -56,7 +56,8 @@ if (-not (Get-AzContext)) {
     else { Connect-AzAccount | Out-Null }
 }
 
-$token = (Get-AzAccessToken -ResourceUrl $DataverseUrl).Token
+$tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl -AsSecureString
+$token = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
 $headers = @{
     "Authorization"    = "Bearer $token"
     "Content-Type"     = "application/json"
@@ -89,9 +90,9 @@ foreach ($col in $requiredColumns) {
 
 # --- Map zone values to Dataverse option set ---
 $zoneMap = @{
-    "1" = 100000001  # Zone 1 (Personal)
-    "2" = 100000002  # Zone 2 (Team)
-    "3" = 100000003  # Zone 3 (Enterprise)
+    "1" = 1  # Zone 1 (Personal)
+    "2" = 2  # Zone 2 (Team)
+    "3" = 3  # Zone 3 (Enterprise)
 }
 
 # --- Upsert Groups ---
@@ -111,25 +112,31 @@ foreach ($group in $groups) {
         continue
     }
 
+    if ($groupId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+        Write-Host "  Skipping $groupName: GroupId '$groupId' is not a valid GUID" -ForegroundColor Yellow
+        $errors++
+        continue
+    }
+
     $zoneValue = $zoneMap[$zone]
     if (-not $zoneValue) {
         Write-Host "  Warning: Invalid zone '$zone' for $groupName, defaulting to Zone 2" -ForegroundColor Yellow
-        $zoneValue = 100000002
+        $zoneValue = 2
     }
 
     $payload = @{
-        fsi_entraid_group_id   = $groupId
-        fsi_display_name       = $groupName
-        fsi_zone_classification = $zoneValue
-        fsi_is_active          = $true
-        fsi_approved_by        = $approvedBy
-        fsi_approved_at        = $timestamp
+        fsi_entraidgroupid    = $groupId
+        fsi_displayname       = $groupName
+        fsi_zoneclassification = $zoneValue
+        fsi_isactive          = $true
+        fsi_approvedby        = $approvedBy
+        fsi_approvedat        = $timestamp
     } | ConvertTo-Json
 
     if ($PSCmdlet.ShouldProcess("$groupName ($groupId)", "Import to fsi_ApprovedSecurityGroup")) {
         try {
             # Check if group exists
-            $checkUrl = "$apiBase/fsi_approvedsecuritygroups?`$filter=fsi_entraid_group_id eq '$groupId'&`$select=fsi_approvedsecuritygroupid"
+            $checkUrl = "$apiBase/fsi_approvedsecuritygroups?`$filter=fsi_entraidgroupid eq '$groupId'&`$select=fsi_approvedsecuritygroupid"
             $existing = Invoke-RestMethod -Uri $checkUrl -Headers $headers -Method Get
 
             if ($existing.value.Count -gt 0) {

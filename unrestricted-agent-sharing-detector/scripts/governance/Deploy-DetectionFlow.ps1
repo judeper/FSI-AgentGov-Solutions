@@ -6,12 +6,18 @@
     Deploys the UASD detection flow to a Power Platform environment.
 
 .DESCRIPTION
-    Imports the Unrestricted Agent Sharing Detector detection flow
-    (uasd-detector-scan-agents.json) into the target Power Platform
-    environment using the Dataverse Web API solution import endpoint.
+    Deploys the Unrestricted Agent Sharing Detector detection flow
+    into the target Power Platform environment using the Dataverse
+    Web API solution import endpoint.
 
-    The script authenticates via Az.Accounts and uploads the flow
-    definition as a managed or unmanaged solution component.
+    The script authenticates via Az.Accounts and uploads a flow
+    definition JSON file as a managed or unmanaged solution component.
+
+    The -SolutionPath parameter must point to a flow definition JSON
+    file exported from Power Automate. As of v1.0.1, flow JSON files
+    are no longer shipped with the solution — you must first export
+    the flow from your source environment (Power Automate > Solutions >
+    UASD > Export) to obtain the JSON file.
 
 .PARAMETER DataverseUrl
     Dataverse environment URL (e.g., https://org.crm.dynamics.com)
@@ -23,10 +29,10 @@
     Entra ID tenant GUID (optional, uses current Az context if omitted)
 
 .EXAMPLE
-    .\Deploy-DetectionFlow.ps1 -DataverseUrl "https://org.crm.dynamics.com" -SolutionPath "..\..\src\uasd-detector-scan-agents.json"
+    .\Deploy-DetectionFlow.ps1 -DataverseUrl "https://org.crm.dynamics.com" -SolutionPath ".\exported-detection-flow.json"
 
 .EXAMPLE
-    .\Deploy-DetectionFlow.ps1 -DataverseUrl "https://org.crm.dynamics.com" -SolutionPath "..\..\src\uasd-detector-scan-agents.json" -WhatIf
+    .\Deploy-DetectionFlow.ps1 -DataverseUrl "https://org.crm.dynamics.com" -SolutionPath ".\exported-detection-flow.json" -WhatIf
 
 .NOTES
     FSI Agent Governance Framework - Unrestricted Agent Sharing Detector
@@ -62,7 +68,8 @@ if (-not (Get-AzContext)) {
     }
 }
 
-$token = (Get-AzAccessToken -ResourceUrl $DataverseUrl).Token
+$tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl -AsSecureString
+$token = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
 $headers = @{
     "Authorization"    = "Bearer $token"
     "Content-Type"     = "application/json"
@@ -88,15 +95,17 @@ Write-Host "  Flow: $flowName"
 $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 $checkUrl = "$apiBase/workflows?`$filter=name eq '$flowName'&`$select=workflowid,name,statecode"
 
+$existing = $null
 try {
     $existing = Invoke-RestMethod -Uri $checkUrl -Headers $headers -Method Get
-    if ($existing.value.Count -gt 0) {
+    if ($null -ne $existing -and $existing.value.Count -gt 0) {
         $existingId = $existing.value[0].workflowid
         Write-Host "  Existing flow found: $existingId" -ForegroundColor Yellow
         Write-Host "  Flow will be updated (overwrite)"
     }
 } catch {
-    Write-Host "  No existing flow found, creating new" -ForegroundColor Green
+    Write-Host "  ERROR: Failed to query existing flows: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
 }
 
 # --- Deploy ---
@@ -107,7 +116,7 @@ if ($PSCmdlet.ShouldProcess($flowName, "Deploy detection flow to $DataverseUrl")
             "category"   = 5  # Cloud Flow
         } | ConvertTo-Json -Depth 10
 
-        if ($existing.value.Count -gt 0) {
+        if ($null -ne $existing -and $existing.value.Count -gt 0) {
             # Update existing
             $updateUrl = "$apiBase/workflows($existingId)"
             Invoke-RestMethod -Uri $updateUrl -Headers $headers -Method Patch -Body $importPayload

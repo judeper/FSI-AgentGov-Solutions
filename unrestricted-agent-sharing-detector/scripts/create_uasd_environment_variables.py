@@ -65,6 +65,13 @@ ENV_VARIABLES = [
         "defaultvalue": "",
     },
     {
+        "schemaname": "fsi_UASD_ComplianceApproverEmail",
+        "displayname": "UASD - Compliance Approver Email",
+        "description": "Compliance/regulatory approver email for Restricted data classification approval",
+        "type": "String",
+        "defaultvalue": "",
+    },
+    {
         "schemaname": "fsi_UASD_RemediationDryRun",
         "displayname": "UASD - Remediation Dry Run",
         "description": "Dry-run mode prevents remediation changes (default: true)",
@@ -75,6 +82,13 @@ ENV_VARIABLES = [
         "schemaname": "fsi_UASD_TeamsGroupId",
         "displayname": "UASD - Teams Group ID",
         "description": "Teams group/team ID for violation alert notifications",
+        "type": "String",
+        "defaultvalue": "",
+    },
+    {
+        "schemaname": "fsi_UASD_TeamsChannelId",
+        "displayname": "UASD - Teams Channel ID",
+        "description": "Teams channel ID for posting violation alert notifications",
         "type": "String",
         "defaultvalue": "",
     },
@@ -174,8 +188,10 @@ Environment variables created:
   - fsi_UASD_DefaultExceptionDays (90 days)
   - fsi_UASD_SecurityApproverEmail
   - fsi_UASD_DataOwnerApproverEmail
+  - fsi_UASD_ComplianceApproverEmail
   - fsi_UASD_RemediationDryRun (true)
   - fsi_UASD_TeamsGroupId
+  - fsi_UASD_TeamsChannelId
   - fsi_UASD_DataverseUrl
 
 Examples:

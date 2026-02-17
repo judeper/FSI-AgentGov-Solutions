@@ -452,6 +452,16 @@ COLUMNS = {
             "DateTimeBehavior": {"Value": "UserLocal"},
         },
         {
+            "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_RequestedDuration",
+            "RequiredLevel": {"Value": "ApplicationRequired"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Requested Duration (Days)", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Requested exception duration in days", "LanguageCode": 1033}]},
+            "Precision": 0,
+            "MinValue": 1,
+            "MaxValue": 36500,
+        },
+        {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_ApprovedBySecurity",
             "RequiredLevel": {"Value": "None"},
@@ -1091,8 +1101,8 @@ def main():
 
     if not args.tenant_id or not args.environment_url:
         parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set UASD_TENANT_ID and UASD_ENVIRONMENT_URL env vars)")
-    if not args.client_id:
-        parser.error("--client-id is required (or set UASD_CLIENT_ID env var)")
+    if not args.client_id and not args.interactive:
+        parser.error("--client-id is required (or set UASD_CLIENT_ID env var) unless --interactive is specified")
 
     client_secret = args.client_secret
     if not args.interactive:

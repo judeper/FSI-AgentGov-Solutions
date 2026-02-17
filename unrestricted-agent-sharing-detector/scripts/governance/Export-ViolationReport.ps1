@@ -78,7 +78,8 @@ if (-not (Get-AzContext)) {
     else { Connect-AzAccount | Out-Null }
 }
 
-$token = (Get-AzAccessToken -ResourceUrl $DataverseUrl).Token
+$tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl -AsSecureString
+$token = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
 $headers = @{
     "Authorization"    = "Bearer $token"
     "Content-Type"     = "application/json"
@@ -94,14 +95,14 @@ $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 Write-Host "  Querying violations (last $DaysBack days)..." -ForegroundColor Gray
 
 $cutoffDate = (Get-Date).AddDays(-$DaysBack).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$select = "fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_violation_type,fsi_violation_status,fsi_severity,fsi_description,fsi_detected_at,fsi_remediated_at,fsi_remediation_result,fsi_scan_run_id"
+$select = "fsi_name,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_violationtype,fsi_violationstatus,fsi_severity,fsi_description,fsi_detectedat,fsi_remediatedat,fsi_remediationresult,fsi_scanrunid"
 
 if ($IncludeEvidence) {
-    $select += ",fsi_evidence_json,fsi_principal_details"
+    $select += ",fsi_evidencejson,fsi_principaldetails"
 }
 
-$filter = "fsi_detected_at ge $cutoffDate"
-$url = "$apiBase/fsi_sharingviolations?`$select=$select&`$filter=$filter&`$orderby=fsi_detected_at desc"
+$filter = "fsi_detectedat ge $cutoffDate"
+$url = "$apiBase/fsi_sharingviolations?`$select=$select&`$filter=$filter&`$orderby=fsi_detectedat desc"
 
 $violations = [System.Collections.ArrayList]::new()
 while ($url) {
@@ -123,7 +124,7 @@ Write-Host "  Violations retrieved: $($violations.Count)"
 $exceptions = @()
 if ($IncludeExceptions) {
     Write-Host "  Querying exceptions..." -ForegroundColor Gray
-    $exUrl = "$apiBase/fsi_sharingexceptions?`$orderby=fsi_requested_at desc"
+    $exUrl = "$apiBase/fsi_sharingexceptions?`$orderby=fsi_requestedat desc"
     $exList = [System.Collections.ArrayList]::new()
     while ($exUrl) {
         try {
@@ -145,9 +146,9 @@ if ($IncludeExceptions) {
 if ($IncludeEvidence) {
     Write-Host "  Computing evidence hashes..." -ForegroundColor Gray
     foreach ($v in $violations) {
-        if ($v.fsi_evidence_json) {
+        if ($v.fsi_evidencejson) {
             $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
-                [System.Text.Encoding]::UTF8.GetBytes($v.fsi_evidence_json)
+                [System.Text.Encoding]::UTF8.GetBytes($v.fsi_evidencejson)
             )
             $v | Add-Member -NotePropertyName "evidence_hash" -NotePropertyValue (
                 [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()

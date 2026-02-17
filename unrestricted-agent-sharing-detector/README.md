@@ -30,10 +30,13 @@ unrestricted-agent-sharing-detector/
     ├── create_uasd_dataverse_schema.py
     ├── create_uasd_environment_variables.py
     ├── create_uasd_connection_references.py
+    ├── requirements.txt
     └── governance/
         ├── Invoke-SharingAudit.ps1
         ├── Export-ViolationReport.ps1
-        └── Import-ApprovedSecurityGroups.ps1
+        ├── Import-ApprovedSecurityGroups.ps1
+        ├── Deploy-DetectionFlow.ps1
+        └── Deploy-RemediationFlow.ps1
 ```
 
 Power Automate flows and Canvas apps are built manually using the instructions in `docs/flow-configuration.md`.

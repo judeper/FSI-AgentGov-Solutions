@@ -16,16 +16,28 @@ from dataverse_client import DataverseClient
 
 CONNECTION_REFS = [
     {
-        "logical_name": "fsi_cr_dataverse_uasd",
+        "logical_name": "fsi_cr_dataverse_sharingdetector",
         "display_name": "Dataverse - UASD",
         "connector": "shared_commondataserviceforapps",
         "description": "Dataverse connector for UASD violation, exception, and policy data",
     },
     {
-        "logical_name": "fsi_cr_teams_uasd",
+        "logical_name": "fsi_cr_teams_sharingdetector",
         "display_name": "Teams - UASD",
         "connector": "shared_teams",
         "description": "Teams connector for sharing violation alert notifications",
+    },
+    {
+        "logical_name": "fsi_cr_approvals_sharingdetector",
+        "display_name": "Approvals - UASD",
+        "connector": "shared_approvals",
+        "description": "Approvals connector for UASD exception approval workflows",
+    },
+    {
+        "logical_name": "fsi_cr_powerplatformadmin_sharingdetector",
+        "display_name": "Power Platform for Admins - UASD",
+        "connector": "shared_powerappsforadmins",
+        "description": "Power Platform for Admins connector for environment and agent discovery",
     },
 ]
 
@@ -98,8 +110,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Connection references created:
-  - fsi_cr_dataverse_uasd (Dataverse connector)
-  - fsi_cr_teams_uasd (Teams connector)
+  - fsi_cr_dataverse_sharingdetector (Dataverse connector)
+  - fsi_cr_teams_sharingdetector (Teams connector)
+  - fsi_cr_approvals_sharingdetector (Approvals connector)
+  - fsi_cr_powerplatformadmin_sharingdetector (Power Platform for Admins connector)
 
 These connection references must be bound to actual connections in Power Automate
 before flows can use them.

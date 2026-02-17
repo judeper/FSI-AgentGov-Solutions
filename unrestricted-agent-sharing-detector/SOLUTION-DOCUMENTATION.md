@@ -124,7 +124,7 @@ The flow implements five violation detection rules:
 
 **Trigger:**
 - **Event:** Dataverse webhook on `fsi_SharingViolation` table
-- **Filter:** `fsi_violationstatus eq 0` (Open status only)
+- **Filter:** `fsi_violationstatus eq 0 and fsi_remediatedat eq null` (Open, not yet remediated)
 - **Scope:** Organization-level
 
 **Remediation Actions:**
@@ -188,8 +188,16 @@ The flow implements five violation detection rules:
    - Send Teams notification with rejection reason
 
 **Expiration Handling:**
-- **Warning:** Teams alert 7 days before expiration
-- **Expiration:** Automated status change to `Expired`, violation returns to `Open` status
+
+!!! note "Not Yet Implemented"
+    Exception expiration monitoring (7-day warning alerts and automated status change to `Expired`) is **planned but not yet implemented** in the current flows. The three existing flows (Detector, Remediation, Exception Approval) do not check for approaching or past expiration dates. Expired exceptions are effectively handled passively: on the next Detector scan, a violation previously covered by an expired exception will no longer match an active exception (the `fsi_expiresat gt utcNow()` filter in Flow 2 Step 4b will exclude it), and a new violation record will be created.
+
+    **To implement active expiration handling**, create a fourth scheduled flow (`UASD-Exception-Expiration-Monitor`) that:
+
+    1. Runs daily and queries `fsi_SharingException` for records where `fsi_exceptionstatus eq 1` (Approved) and `fsi_expiresat lt utcNow()`
+    2. Updates matched records to `fsi_exceptionstatus = 3` (Expired)
+    3. Sends Teams warning alerts for exceptions expiring within 7 days (`fsi_expiresat lt addDays(utcNow(), 7)`)
+
 - **Renewal:** Users can submit new exception requests via Exception Manager app
 
 **Configuration Parameters:**
@@ -227,7 +235,7 @@ The flow implements five violation detection rules:
 - `fsi_ApprovedSecurityGroup` — Reference data for display context
 
 #### 5. Teams Alert Card
-**Template:** [docs/adaptive-card-template.md](docs/adaptive-card-template.md)
+**Template:** See the Adaptive Card JSON in `docs/flow-configuration.md` (Flow 1, step 8)
 
 **Purpose:** Rich Teams notifications with severity-based styling and actionable links.
 
@@ -271,6 +279,9 @@ The flow implements five violation detection rules:
 For complete table definitions, column names (with Dataverse logical names), option sets, and relationships, see **[docs/dataverse-schema.md](docs/dataverse-schema.md)** — auto-generated from the schema script.
 
 **Tables:** `fsi_SharingViolation`, `fsi_SharingException`, `fsi_AgentSharingSetting`, `fsi_ApprovedSecurityGroup`, `fsi_SharingPolicy`
+
+!!! note "`fsi_SharingPolicy` — Reserved for Future Use"
+    The `fsi_SharingPolicy` table is defined in the Dataverse schema and provisioned by the setup scripts, but is **not currently referenced by any flow, Canvas app, or governance script**. It is intended for future per-zone policy enforcement (e.g., zone-specific thresholds for `fsi_maxindividualshares`, `fsi_alloworgwidesharing`). Currently, the Remediation flow (Flow 2 Step 5) queries `fsi_ApprovedSecurityGroup` by zone but does not consult `fsi_SharingPolicy` for zone-specific rules. The table can be safely ignored until policy-driven remediation is implemented.
 
 To regenerate the schema reference after any changes:
 ```bash
@@ -427,13 +438,32 @@ The solution requires the following connection references in Power Platform:
    ```
 3. Verify tables created: `fsi_SharingViolation`, `fsi_SharingException`, `fsi_AgentSharingSetting`, `fsi_ApprovedSecurityGroup`, `fsi_SharingPolicy`
 
-**Step 2: Build Flows in Power Automate**
+**Step 2: Set Environment Variables**
 
-Follow the step-by-step instructions in [docs/flow-configuration.md](docs/flow-configuration.md) to manually build each flow in Power Automate designer:
-   - UASD-Detector-Scan-Agents → Scheduled Cloud Flow
-   - UASD-Remediation-Apply-Sharing-Policy → Automated Cloud Flow
-   - UASD-Exception-Approval-Workflow → Automated Cloud Flow
-   - UASD-Exception-Manager → Canvas App
+Run the environment variables setup script:
+```bash
+python scripts/create_uasd_environment_variables.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://org.crm.dynamics.com \
+    --interactive
+```
+
+Then configure values in Power Platform:
+
+| Variable Name | Type | Example Value | Description |
+|---------------|------|---------------|-------------|
+| `fsi_UASD_DataverseUrl` | String | `https://org.crm.dynamics.com` | Dataverse environment URL |
+| `fsi_UASD_HomeTenantId` | String | `12345678-1234-1234-1234-123456789012` | Your Entra tenant ID |
+| `fsi_UASD_TeamsGroupId` | String | `87654321-4321-4321-4321-210987654321` | Teams group ID for alerts |
+| `fsi_UASD_TeamsChannelId` | String | `19:abcd...@thread.tacv2` | Teams channel ID for alerts |
+| `fsi_UASD_MaxIndividualShares` | Number | `5` | Threshold for individual share violations |
+| `fsi_UASD_DefaultExceptionDays` | Number | `90` | Default exception duration |
+| `fsi_UASD_RemediationDryRun` | String | `true` | Dry-run mode (true = no changes) |
+| `fsi_UASD_ScanFrequencyHours` | Number | `24` | Detection scan interval in hours |
+| `fsi_UASD_AutoRemediatePublicLink` | String | `false` | Automatically remediate public internet link violations |
+| `fsi_UASD_SecurityApproverEmail` | String | `security@contoso.com` | Security team approver |
+| `fsi_UASD_DataOwnerApproverEmail` | String | `dataowner@contoso.com` | Data owner approver |
+| `fsi_UASD_ComplianceApproverEmail` | String | `compliance@contoso.com` | Compliance approver (required for Restricted data) |
 
 **Step 3: Configure Connection References**
 
@@ -455,30 +485,13 @@ Then bind each connection reference in Power Automate:
    - Approvals (`fsi_cr_approvals_sharingdetector`): Use current user authentication
 4. Map connections to connection references
 
-**Step 4: Set Environment Variables**
+**Step 4: Build Flows in Power Automate**
 
-Run the environment variables setup script:
-```bash
-python scripts/create_uasd_environment_variables.py \
-    --tenant-id <tenant-id> \
-    --environment-url https://org.crm.dynamics.com \
-    --interactive
-```
-
-Then configure values in Power Platform:
-
-| Variable Name | Type | Example Value | Description |
-|---------------|------|---------------|-------------|
-| `fsi_UASD_DataverseUrl` | String | `https://org.crm.dynamics.com` | Dataverse environment URL |
-| `fsi_UASD_HomeTenantId` | String | `12345678-1234-1234-1234-123456789012` | Your Entra tenant ID |
-| `fsi_UASD_TeamsGroupId` | String | `87654321-4321-4321-4321-210987654321` | Teams group ID for alerts |
-| `fsi_UASD_TeamsChannelId` | String | `19:abcd...@thread.tacv2` | Teams channel ID for alerts |
-| `fsi_UASD_MaxIndividualShares` | Number | `5` | Threshold for individual share violations |
-| `fsi_UASD_DefaultExceptionDays` | Number | `90` | Default exception duration |
-| `fsi_UASD_RemediationDryRun` | String | `true` | Dry-run mode (true = no changes) |
-| `fsi_UASD_SecurityApproverEmail` | String | `security@contoso.com` | Security team approver |
-| `fsi_UASD_DataOwnerApproverEmail` | String | `dataowner@contoso.com` | Data owner approver |
-| `fsi_UASD_ComplianceApproverEmail` | String | `compliance@contoso.com` | Compliance approver (required for Restricted data) |
+Follow the step-by-step instructions in [docs/flow-configuration.md](docs/flow-configuration.md) to manually build each flow in Power Automate designer:
+   - UASD-Detector-Scan-Agents → Scheduled Cloud Flow
+   - UASD-Remediation-Apply-Sharing-Policy → Automated Cloud Flow
+   - UASD-Exception-Approval-Workflow → Automated Cloud Flow
+   - UASD-Exception-Manager → Canvas App
 
 **Step 5: Populate Approved Security Groups**
 
@@ -487,8 +500,9 @@ Add approved security groups to `fsi_ApprovedSecurityGroup` table:
 ```
 Example Records:
 ┌──────────────────────────────────┬────────────────────────┬──────────┬───────────┐
-│ fsi_entraid_group_id             │ fsi_display_name       │ fsi_zone │ fsi_is_   │
-│                                  │                        │          │ active    │
+│ fsi_entraidgroupid                │ fsi_displayname        │ fsi_zone │ fsi_is_   │
+│                                  │                        │ classifi │ active    │
+│                                  │                        │ cation   │           │
 ├──────────────────────────────────┼────────────────────────┼──────────┼───────────┤
 │ aaaaaaaa-bbbb-cccc-dddd-eeee...  │ Zone2-PowerUsers       │ 2        │ Yes       │
 │ bbbbbbbb-cccc-dddd-eeee-ffff...  │ Zone3-EnterpriseUsers  │ 3        │ Yes       │
@@ -635,7 +649,7 @@ For regulatory examinations, export violation and exception records:
 **Export Format:**
 
 Evidence files should include:
-- Violation records with `fsi_evidence_json` (full sharing configuration snapshot)
+- Violation records with `fsi_evidencejson` (full sharing configuration snapshot)
 - Exception records with business justification and approval chain
 - Remediation logs with timestamps and results
 - Approved security group registry

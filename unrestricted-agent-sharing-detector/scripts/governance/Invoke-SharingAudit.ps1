@@ -166,12 +166,19 @@ try {
                             }
                         }
                     }
+
+                    # Check for public/anonymous link access
+                    if ($app.Internal -and $app.Internal.properties -and
+                        $app.Internal.properties.sharingConfiguration -and
+                        $app.Internal.properties.sharingConfiguration.publicLinkEnabled -eq $true) {
+                        $publicLinkEnabled = $true
+                    }
                 } catch {
                     Write-Host "    Warning: Could not read permissions for $agentName" -ForegroundColor Yellow
                     continue
                 }
 
-                if ($securityGroups.Count -gt 0) { $sharingScope = "securityGroups" }
+                if ($securityGroups.Count -gt 0 -and $sharingScope -ne "organization") { $sharingScope = "securityGroups" }
                 if ($individualShares.Count -gt 0 -and $sharingScope -eq "unknown") { $sharingScope = "individuals" }
 
                 # --- Rule Engine: Check 5 violation types ---
@@ -217,9 +224,8 @@ try {
                 }
 
                 # Rule 3: UNAPPROVED_GROUP
-                if ($approvedGroups.Count -gt 0) {
-                    foreach ($group in $securityGroups) {
-                        if (-not $approvedGroups.ContainsKey($group.GroupId)) {
+                foreach ($group in $securityGroups) {
+                    if ($approvedGroups.Count -eq 0 -or (-not $approvedGroups.ContainsKey($group.GroupId))) {
                             $violation = @{
                                 scan_run_id      = $scanRunId
                                 agent_id         = $agentId
@@ -232,7 +238,6 @@ try {
                                 detected_at      = $scanTimestamp
                             }
                             [void]$violations.Add($violation)
-                        }
                     }
                 }
 

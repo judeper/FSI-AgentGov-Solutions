@@ -54,6 +54,7 @@
 | fsi_ApprovedByCompliance | fsi_approvedbycompliance | String | No | UPN of compliance approver |  |
 | fsi_ApprovedAt | fsi_approvedat | DateTime | No | When the exception was approved |  |
 | fsi_ExpiresAt | fsi_expiresat | DateTime | No | When the exception expires |  |
+| fsi_RequestedDuration | fsi_requestedduration | Decimal | Yes | Requested exception duration in days |  |
 | fsi_RelatedViolationId | fsi_relatedviolationid | Lookup | No | Optional link to the violation record this exception addresses |  |
 
 ### fsi_AgentSharingSetting (`fsi_agentsharingsetting`)
