@@ -1,9 +1,9 @@
 # Unrestricted Agent Sharing Detector
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
-Continuous detectionof overly permissive agent sharing configurations with automated remediation and exception management.
+Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
 
 ## Overview
 
@@ -22,13 +22,21 @@ The Unrestricted Agent Sharing Detector (UASD) monitors Power Platform environme
 unrestricted-agent-sharing-detector/
 ├── README.md
 ├── CHANGELOG.md
-└── src/
-    ├── uasd-detector-scan-agents.json            # Detector scan flow
-    ├── uasd-remediation-apply-sharing-policy.json # Automated remediation flow
-    ├── uasd-exception-approval-workflow.json      # Exception approval workflow
-    ├── uasd-exception-manager-app.json            # Exception manager app
-    └── adaptive-card-uasd-alert.json              # Teams adaptive card alert
+├── SOLUTION-DOCUMENTATION.md
+├── docs/
+│   ├── dataverse-schema.md          # Auto-generated schema reference
+│   └── flow-configuration.md        # Manual build instructions for flows
+└── scripts/
+    ├── create_uasd_dataverse_schema.py
+    ├── create_uasd_environment_variables.py
+    ├── create_uasd_connection_references.py
+    └── governance/
+        ├── Invoke-SharingAudit.ps1
+        ├── Export-ViolationReport.ps1
+        └── Import-ApprovedSecurityGroups.ps1
 ```
+
+Power Automate flows and Canvas apps are built manually using the instructions in `docs/flow-configuration.md`.
 
 ## Prerequisites
 
@@ -39,10 +47,11 @@ unrestricted-agent-sharing-detector/
 
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment
-2. Configure connection references (see prerequisites)
-3. Activate cloud flows
-4. Verify deployment using the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/advanced-implementations/unrestricted-agent-sharing-detector/) in FSI-AgentGov
+1. Create Dataverse schema: `python scripts/create_uasd_dataverse_schema.py`
+2. Create environment variables: `python scripts/create_uasd_environment_variables.py`
+3. Create connection references: `python scripts/create_uasd_connection_references.py`
+4. Build flows manually following `docs/flow-configuration.md`
+5. Verify deployment using the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/advanced-implementations/unrestricted-agent-sharing-detector/) in FSI-AgentGov
 
 ## License
 
