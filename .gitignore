@@ -22,5 +22,8 @@ Thumbs.db
 # Solution artifacts (local testing)
 *.zip
 
+# Copilot review logs
+.copilot-logs/
+
 # Working documents
 GAP_ANALYSIS_REPORT.md
