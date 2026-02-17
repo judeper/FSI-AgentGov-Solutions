@@ -92,6 +92,20 @@ python scripts/create_{prefix}_dataverse_schema.py --output-docs
 
 **If a `src/` directory exists with flow JSON files**, it must be replaced with documentation in `docs/` that describes how to create the flow manually in Power Automate designer.
 
+## Dataverse Column Naming (CRITICAL)
+
+Dataverse uses two names for every column:
+- **SchemaName** (PascalCase with prefix): `fsi_AgentId`, `fsi_EnvironmentName`, `fsi_ViolationType`
+- **Logical name** (all-lowercase, NO underscores between words): `fsi_agentid`, `fsi_environmentname`, `fsi_violationtype`
+
+The logical name is the SchemaName lowercased. Dataverse NEVER inserts underscores between words.
+
+**In PowerShell OData queries, scripts, and documentation, ALWAYS use the logical name:**
+- CORRECT: `fsi_agentid`, `fsi_environmentname`, `fsi_violationtype`
+- WRONG: `fsi_agent_id`, `fsi_environment_name`, `fsi_violation_type`
+
+The single source of truth for column names is each solution's `create_*_dataverse_schema.py`. When in doubt, find the SchemaName there and lowercase it.
+
 ## Before Making Changes
 
 1. **Read the solution's README** for prerequisites and architecture

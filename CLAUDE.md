@@ -81,6 +81,18 @@ FSI-AgentGov-Solutions/
 
 **Note:** The nested hooks in `pipeline-governance-cleanup/scripts/hooks/` are intentionally different from root hooks. They allow all commands when that solution is used standalone.
 
+## Dataverse Column Naming (CRITICAL)
+
+Dataverse uses two names for every column:
+- **SchemaName** (PascalCase with prefix): `fsi_AgentId`, `fsi_EnvironmentName`
+- **Logical name** (all-lowercase, NO underscores between words): `fsi_agentid`, `fsi_environmentname`
+
+The logical name is the SchemaName lowercased. Dataverse NEVER inserts underscores between words.
+
+**CORRECT:** `fsi_agentid`, `fsi_violationtype` | **WRONG:** `fsi_agent_id`, `fsi_violation_type`
+
+Source of truth: each solution's `create_*_dataverse_schema.py`.
+
 ## Language Guidelines (CRITICAL)
 
 When writing documentation in this repository, follow the language guidelines from FSI-AgentGov:
