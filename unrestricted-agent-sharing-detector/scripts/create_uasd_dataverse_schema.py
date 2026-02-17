@@ -12,7 +12,9 @@ import os
 import sys
 from typing import Optional
 
-from uasd_client import UASDClient
+import requests
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
+from dataverse_client import DataverseClient
 
 PUBLISHER_PREFIX = "fsi"
 
@@ -763,8 +765,208 @@ COLUMNS = {
     ],
 }
 
+RELATIONSHIPS = [
+    {
+        "@odata.type": "#Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
+        "SchemaName": f"{PUBLISHER_PREFIX}_SharingViolation_SharingException",
+        "ReferencedEntity": "fsi_sharingviolation",
+        "ReferencingEntity": "fsi_sharingexception",
+        "CascadeConfiguration": {
+            "Assign": "NoCascade",
+            "Delete": "RemoveLink",
+            "Merge": "NoCascade",
+            "Reparent": "NoCascade",
+            "Share": "NoCascade",
+            "Unshare": "NoCascade",
+        },
+        "Lookup": {
+            "SchemaName": f"{PUBLISHER_PREFIX}_RelatedViolationId",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Related Violation", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Optional link to the violation record this exception addresses", "LanguageCode": 1033}]},
+        },
+    },
+]
 
-def create_optionsets(client: UASDClient, dry_run: bool) -> dict:
+
+def _label(obj: dict) -> str:
+    """Extract the English label from a Dataverse LocalizedLabels structure."""
+    labels = obj.get("LocalizedLabels", [])
+    for lbl in labels:
+        if lbl.get("LanguageCode") == 1033:
+            return lbl.get("Label", "")
+    return labels[0].get("Label", "") if labels else ""
+
+
+def _col_type(col: dict) -> str:
+    """Return a human-friendly column type from the @odata.type."""
+    odata = col.get("@odata.type", "")
+    mapping = {
+        "Microsoft.Dynamics.CRM.StringAttributeMetadata": "String",
+        "Microsoft.Dynamics.CRM.MemoAttributeMetadata": "Memo",
+        "Microsoft.Dynamics.CRM.PicklistAttributeMetadata": "Picklist",
+        "Microsoft.Dynamics.CRM.BooleanAttributeMetadata": "Boolean",
+        "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata": "DateTime",
+        "Microsoft.Dynamics.CRM.IntegerAttributeMetadata": "Integer",
+        "Microsoft.Dynamics.CRM.DecimalAttributeMetadata": "Decimal",
+        "Microsoft.Dynamics.CRM.MoneyAttributeMetadata": "Money",
+        "Microsoft.Dynamics.CRM.LookupAttributeMetadata": "Lookup",
+    }
+    return mapping.get(odata, odata.split(".")[-1] if odata else "Unknown")
+
+
+def _optionset_name_from_bind(col: dict) -> Optional[str]:
+    """Extract the global option-set name from a GlobalOptionSet@odata.bind value."""
+    bind = col.get("GlobalOptionSet@odata.bind", "")
+    if "Name='" in bind:
+        return bind.split("Name='")[1].rstrip("')")
+    return None
+
+
+def _resolve_optionset(name: str) -> Optional[dict]:
+    """Look up an option set by name across OPTIONSETS and SHARED_OPTIONSETS."""
+    if name in OPTIONSETS:
+        return OPTIONSETS[name]
+    if name in SHARED_OPTIONSETS:
+        return SHARED_OPTIONSETS[name]
+    return None
+
+
+def _format_option_values(options: list) -> str:
+    """Return a compact string of value/label pairs for an option set."""
+    parts = []
+    for opt in options:
+        val = opt.get("Value", "")
+        lbl = _label(opt.get("Label", {}))
+        parts.append(f"`{val}` = {lbl}")
+    return ", ".join(parts)
+
+
+def generate_schema_docs() -> str:
+    """Generate a Markdown reference document from the in-memory schema definitions."""
+    lines: list[str] = []
+
+    # ── Header ──────────────────────────────────────────────────────────
+    lines.append("# Dataverse Schema Reference")
+    lines.append("")
+    lines.append("> Auto-generated from `create_uasd_dataverse_schema.py`. Do not edit manually.")
+    lines.append("")
+
+    # ── Tables ──────────────────────────────────────────────────────────
+    lines.append("## Tables")
+    lines.append("")
+    lines.append("| SchemaName | Logical Name | Description | Primary Name Attribute |")
+    lines.append("|---|---|---|---|")
+    for schema_name, tbl in TABLES.items():
+        logical = schema_name.lower()
+        desc = _label(tbl.get("Description", {}))
+        pna = tbl.get("PrimaryNameAttribute", "")
+        lines.append(f"| {schema_name} | {logical} | {desc} | {pna} |")
+    lines.append("")
+
+    # ── Columns (per table) ─────────────────────────────────────────────
+    lines.append("## Columns")
+    lines.append("")
+
+    for table_schema_name, tbl in TABLES.items():
+        table_logical = table_schema_name.lower()
+        # Combine the primary attribute(s) defined in TABLES.Attributes with COLUMNS
+        primary_attrs = tbl.get("Attributes", [])
+        extra_cols = COLUMNS.get(table_logical, [])
+        all_cols = primary_attrs + extra_cols
+
+        # Also include any lookup columns coming from relationships
+        rel_lookups: list[dict] = []
+        for rel in RELATIONSHIPS:
+            if rel.get("ReferencingEntity", "").lower() == table_logical:
+                lookup = rel.get("Lookup", {})
+                if lookup:
+                    lk = dict(lookup)
+                    lk["@odata.type"] = "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+                    rel_lookups.append(lk)
+        all_cols = all_cols + rel_lookups
+
+        lines.append(f"### {table_schema_name} (`{table_logical}`)")
+        lines.append("")
+        lines.append("| SchemaName | Logical Name | Type | Required | Description | Option Set |")
+        lines.append("|---|---|---|---|---|---|")
+
+        for col in all_cols:
+            sn = col.get("SchemaName", "")
+            ln = sn.lower()
+            ctype = _col_type(col)
+            req_val = col.get("RequiredLevel", {}).get("Value", "None")
+            required = "Yes" if req_val == "ApplicationRequired" else "No"
+            desc = _label(col.get("Description", {}))
+
+            # Option set info
+            os_cell = ""
+            os_name = _optionset_name_from_bind(col)
+            if os_name:
+                os_def = _resolve_optionset(os_name)
+                if os_def:
+                    os_cell = f"**{os_name}**: {_format_option_values(os_def.get('Options', []))}"
+                else:
+                    os_cell = os_name
+            elif ctype == "Boolean":
+                opt = col.get("OptionSet", {})
+                true_lbl = _label(opt.get("TrueOption", {}).get("Label", {})) if opt.get("TrueOption") else "Yes"
+                false_lbl = _label(opt.get("FalseOption", {}).get("Label", {})) if opt.get("FalseOption") else "No"
+                os_cell = f"`1` = {true_lbl}, `0` = {false_lbl}"
+
+            lines.append(f"| {sn} | {ln} | {ctype} | {required} | {desc} | {os_cell} |")
+
+        lines.append("")
+
+    # ── Option Sets ─────────────────────────────────────────────────────
+    lines.append("## Option Sets")
+    lines.append("")
+
+    lines.append("### Shared Option Sets")
+    lines.append("")
+    for name, osdef in SHARED_OPTIONSETS.items():
+        desc = _label(osdef.get("Description", {}))
+        lines.append(f"#### {name}")
+        lines.append("")
+        lines.append(f"{desc}")
+        lines.append("")
+        lines.append("| Value | Label |")
+        lines.append("|---|---|")
+        for opt in osdef.get("Options", []):
+            lines.append(f"| {opt['Value']} | {_label(opt['Label'])} |")
+        lines.append("")
+
+    lines.append("### UASD Option Sets")
+    lines.append("")
+    for name, osdef in OPTIONSETS.items():
+        desc = _label(osdef.get("Description", {}))
+        lines.append(f"#### {name}")
+        lines.append("")
+        lines.append(f"{desc}")
+        lines.append("")
+        lines.append("| Value | Label |")
+        lines.append("|---|---|")
+        for opt in osdef.get("Options", []):
+            lines.append(f"| {opt['Value']} | {_label(opt['Label'])} |")
+        lines.append("")
+
+    # ── Relationships ───────────────────────────────────────────────────
+    lines.append("## Relationships")
+    lines.append("")
+    lines.append("| SchemaName | Referenced Entity | Referencing Entity | Lookup Column |")
+    lines.append("|---|---|---|---|")
+    for rel in RELATIONSHIPS:
+        sn = rel.get("SchemaName", "")
+        ref_entity = rel.get("ReferencedEntity", "")
+        refing_entity = rel.get("ReferencingEntity", "")
+        lookup_sn = rel.get("Lookup", {}).get("SchemaName", "")
+        lines.append(f"| {sn} | {ref_entity} | {refing_entity} | {lookup_sn} |")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     """Create global option sets (shared and UASD-specific)."""
     print("\n=== Creating Option Sets ===")
     created = 0
@@ -795,7 +997,7 @@ def create_optionsets(client: UASDClient, dry_run: bool) -> dict:
     return {"created": created, "skipped": skipped}
 
 
-def create_tables(client: UASDClient, dry_run: bool) -> dict:
+def create_tables(client: DataverseClient, dry_run: bool) -> dict:
     """Create tables."""
     print("\n=== Creating Tables ===")
     created = 0
@@ -812,7 +1014,7 @@ def create_tables(client: UASDClient, dry_run: bool) -> dict:
     return {"created": created, "skipped": skipped}
 
 
-def create_columns(client: UASDClient, dry_run: bool) -> None:
+def create_columns(client: DataverseClient, dry_run: bool) -> None:
     """Create columns on tables."""
     print("\n=== Creating Columns ===")
     for table_logical_name, columns in COLUMNS.items():
@@ -827,16 +1029,36 @@ def create_columns(client: UASDClient, dry_run: bool) -> None:
                 client.create_column(table_logical_name, column_metadata)
 
 
-def create_schema(client: UASDClient, dry_run: bool) -> dict:
+def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
+    """Create one-to-many relationships (lookup columns)."""
+    print("\n=== Creating Relationships ===")
+    created = 0
+    skipped = 0
+    for rel_metadata in RELATIONSHIPS:
+        schema_name = rel_metadata.get("SchemaName", "")
+        if client.get_relationship(schema_name):
+            print(f"  {schema_name}: Already exists")
+            skipped += 1
+        else:
+            print(f"  {schema_name}: Creating")
+            if not dry_run:
+                client.create_relationship(rel_metadata)
+            created += 1
+    return {"created": created, "skipped": skipped}
+
+
+def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
+    relationship_results = create_relationships(client, dry_run)
     print("\n=== Schema Creation Complete ===")
     return {
         "errors": 0,
         "option_sets": option_set_results,
         "tables": table_results,
+        "relationships": relationship_results,
     }
 
 
@@ -851,7 +1073,21 @@ def main():
     parser.add_argument("--environment-url", default=os.environ.get("UASD_ENVIRONMENT_URL"), help="Dataverse environment URL (or set UASD_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
     parser.add_argument("--dry-run", action="store_true", help="Preview schema operations without API calls")
+    parser.add_argument("--output-docs", action="store_true", help="Generate docs/dataverse-schema.md and exit (no credentials required)")
     args = parser.parse_args()
+
+    # --output-docs: generate schema reference docs and exit immediately
+    if args.output_docs:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        solution_root = os.path.dirname(script_dir)
+        docs_dir = os.path.join(solution_root, "docs")
+        os.makedirs(docs_dir, exist_ok=True)
+        out_path = os.path.join(docs_dir, "dataverse-schema.md")
+        md = generate_schema_docs()
+        with open(out_path, "w", encoding="utf-8") as fh:
+            fh.write(md)
+        print(f"Schema docs written to {out_path}")
+        sys.exit(0)
 
     if not args.tenant_id or not args.environment_url:
         parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set UASD_TENANT_ID and UASD_ENVIRONMENT_URL env vars)")
@@ -865,7 +1101,7 @@ def main():
             client_secret = getpass.getpass("Client secret: ")
 
     try:
-        client = UASDClient(
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,

@@ -1,7 +1,7 @@
 # Securing Copilot Studio AI Agent Access
 ## Unrestricted Agent Sharing Detector (UASD)
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Solution Type:** Automated Detection, Remediation, and Exception Management
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -80,7 +80,7 @@ UASD operates as an integrated solution of Power Automate cloud flows, Dataverse
 ### Solution Components
 
 #### 1. Detector Scan Flow
-**File:** `uasd-detector-scan-agents.json`
+**Build instructions:** [docs/flow-configuration.md](docs/flow-configuration.md#flow-1-uasd-detector-scan-agents)
 
 **Purpose:** Continuous monitoring of agent sharing configurations across Power Platform environments.
 
@@ -118,13 +118,13 @@ The flow implements five violation detection rules:
 - `fsi_UASD_MaxIndividualShares` — Threshold for EXCESSIVE_INDIVIDUAL violations (default: 5)
 
 #### 2. Remediation Flow
-**File:** `uasd-remediation-apply-sharing-policy.json`
+**Build instructions:** [docs/flow-configuration.md](docs/flow-configuration.md#flow-2-uasd-remediation-apply-sharing-policy)
 
 **Purpose:** Automated enforcement of approved sharing policies when violations are detected.
 
 **Trigger:**
 - **Event:** Dataverse webhook on `fsi_SharingViolation` table
-- **Filter:** `fsi_violation_status eq 0` (Open status only)
+- **Filter:** `fsi_violationstatus eq 0` (Open status only)
 - **Scope:** Organization-level
 
 **Remediation Actions:**
@@ -149,18 +149,18 @@ The flow implements five violation detection rules:
 
 **Safety Controls:**
 - **Dry-run mode:** Environment variable `fsi_UASD_RemediationDryRun` (true/false, default: true for safe deployment)
-- **Break-glass exclusion:** Agents with `fsi_break_glass_exclude=true` are detected but never remediated — violations remain open for manual review
+- **Break-glass exclusion:** Agents with `fsi_breakglassexclude=true` are detected but never remediated — violations remain open for manual review
 - **Change validation:** Post-remediation verification via API query
-- **Rollback support:** Original sharing configuration stored in `fsi_evidence_json` field
+- **Rollback support:** Original sharing configuration stored in `fsi_evidencejson` field
 
 #### 3. Exception Approval Workflow
-**File:** `uasd-exception-approval-workflow.json`
+**Build instructions:** [docs/flow-configuration.md](docs/flow-configuration.md#flow-3-uasd-exception-approval-workflow)
 
 **Purpose:** Time-bound exception management with dual approval and expiration tracking.
 
 **Trigger:**
 - **Event:** Dataverse webhook on `fsi_SharingException` table
-- **Filter:** `fsi_exception_status eq 0` (Pending status only)
+- **Filter:** `fsi_exceptionstatus eq 0` (Pending status only)
 - **Scope:** Organization-level
 
 **Approval Requirements:**
@@ -196,12 +196,13 @@ The flow implements five violation detection rules:
 - `fsi_UASD_DefaultExceptionDays` — Default duration (default: 90)
 - `fsi_UASD_SecurityApproverEmail` — Security team approver
 - `fsi_UASD_DataOwnerApproverEmail` — Data owner approver
+- `fsi_UASD_ComplianceApproverEmail` — Compliance approver (required for Restricted data)
 
 !!! warning "Required Configuration"
     Approver emails MUST be set before enabling the exception approval workflow. The workflow cannot function with empty approver fields.
 
 #### 4. Exception Manager App
-**File:** `uasd-exception-manager-app.json`
+**Build instructions:** [docs/flow-configuration.md](docs/flow-configuration.md#canvas-app-uasd-exception-manager)
 
 **Purpose:** Self-service Canvas app for submitting and tracking sharing exceptions.
 
@@ -215,7 +216,7 @@ The flow implements five violation detection rules:
 - **Validation:** Form submission blocked until justification meets minimum length
 
 **Exception Tracking View:**
-- **My Exceptions:** Grid view filtered by `fsi_requested_by = User().Email`
+- **My Exceptions:** Grid view filtered by `fsi_requestedby = User().Email`
 - **Status Indicators:** Pending (yellow), Approved (green), Rejected (red), Expired (gray)
 - **Expiration Warnings:** Visual indicator for exceptions expiring within 7 days
 - **Renewal Action:** Button to create new exception request for expired items
@@ -226,7 +227,7 @@ The flow implements five violation detection rules:
 - `fsi_ApprovedSecurityGroup` — Reference data for display context
 
 #### 5. Teams Alert Card
-**File:** `adaptive-card-uasd-alert.json`
+**Template:** [docs/adaptive-card-template.md](docs/adaptive-card-template.md)
 
 **Purpose:** Rich Teams notifications with severity-based styling and actionable links.
 
@@ -267,8 +268,21 @@ The flow implements five violation detection rules:
 
 ### Data Model
 
-#### Dataverse Tables
+For complete table definitions, column names (with Dataverse logical names), option sets, and relationships, see **[docs/dataverse-schema.md](docs/dataverse-schema.md)** — auto-generated from the schema script.
 
+**Tables:** `fsi_SharingViolation`, `fsi_SharingException`, `fsi_AgentSharingSetting`, `fsi_ApprovedSecurityGroup`, `fsi_SharingPolicy`
+
+To regenerate the schema reference after any changes:
+```bash
+python scripts/create_uasd_dataverse_schema.py --output-docs
+```
+
+<!--
+REMOVED: Hand-maintained column listings previously here (lines 273-372).
+Now auto-generated in docs/dataverse-schema.md from the schema script.
+-->
+
+<!-- BEGIN REMOVED SECTION (preserved as comment for reference)
 **1. fsi_SharingViolation (Sharing Violations)**
 
 Stores detected sharing policy violations with remediation status.
@@ -277,20 +291,20 @@ Stores detected sharing policy violations with remediation status.
 |-------------|------|-------------|
 | `fsi_sharingviolationid` | GUID | Primary key |
 | `fsi_name` | String(100) | Auto-generated violation name |
-| `fsi_agent_id` | String(50) | Copilot Studio agent GUID |
-| `fsi_agent_name` | String(200) | Agent display name |
-| `fsi_environment_id` | String(50) | Power Platform environment GUID |
-| `fsi_environment_name` | String(200) | Environment display name |
-| `fsi_violation_type` | Choice | 0=ORG_WIDE, 1=PUBLIC_LINK, 2=UNAPPROVED_GROUP, 3=EXCESSIVE_INDIVIDUAL, 4=CROSS_TENANT |
-| `fsi_violation_status` | Choice | 0=Open, 1=Remediated, 2=Exception Approved, 3=False Positive |
+| `fsi_agentid` | String(50) | Copilot Studio agent GUID |
+| `fsi_agentname` | String(200) | Agent display name |
+| `fsi_environmentid` | String(50) | Power Platform environment GUID |
+| `fsi_environmentname` | String(200) | Environment display name |
+| `fsi_violationtype` | Choice | 0=ORG_WIDE, 1=PUBLIC_LINK, 2=UNAPPROVED_GROUP, 3=EXCESSIVE_INDIVIDUAL, 4=CROSS_TENANT |
+| `fsi_violationstatus` | Choice | 0=Open, 1=Remediated, 2=Exception Approved, 3=False Positive |
 | `fsi_severity` | Choice | 0=Critical, 1=High, 2=Medium, 3=Low |
 | `fsi_description` | Memo | Human-readable violation description |
-| `fsi_principal_details` | Memo | JSON array of principals (groups/users) causing violation |
-| `fsi_evidence_json` | Memo | Full sharing configuration snapshot for audit |
-| `fsi_detected_at` | DateTime | Timestamp when violation was first detected |
-| `fsi_remediated_at` | DateTime | Timestamp when remediation was applied |
-| `fsi_remediation_result` | Memo | Remediation action result (success/error) |
-| `fsi_scan_run_id` | String(50) | Correlation ID for batch scans |
+| `fsi_principaldetails` | Memo | JSON array of principals (groups/users) causing violation |
+| `fsi_evidencejson` | Memo | Full sharing configuration snapshot for audit |
+| `fsi_detectedat` | DateTime | Timestamp when violation was first detected |
+| `fsi_remediatedat` | DateTime | Timestamp when remediation was applied |
+| `fsi_remediationresult` | Memo | Remediation action result (success/error) |
+| `fsi_scanrunid` | String(50) | Correlation ID for batch scans |
 
 **2. fsi_SharingException (Sharing Exceptions)**
 
@@ -300,22 +314,22 @@ Manages time-bound exceptions with approval tracking.
 |-------------|------|-------------|
 | `fsi_sharingexceptionid` | GUID | Primary key |
 | `fsi_name` | String(100) | Auto-generated exception name |
-| `fsi_agent_id` | String(50) | Copilot Studio agent GUID |
-| `fsi_agent_name` | String(200) | Agent display name |
-| `fsi_environment_id` | String(50) | Power Platform environment GUID |
-| `fsi_environment_name` | String(200) | Environment display name |
-| `fsi_violation_type` | Choice | Type of violation being excepted |
-| `fsi_exception_status` | Choice | 0=Pending, 1=Approved, 2=Rejected, 3=Expired |
-| `fsi_data_classification` | Choice | 0=Public, 1=Internal, 2=Confidential, 3=Restricted |
-| `fsi_business_justification` | Memo | Business reason (minimum 50 characters) |
-| `fsi_requested_by` | String(200) | Email of requester |
-| `fsi_requested_at` | DateTime | Submission timestamp |
-| `fsi_approved_by_security` | String(200) | Security approver email |
-| `fsi_approved_by_data_owner` | String(200) | Data owner approver email (Confidential/Restricted) |
-| `fsi_approved_by_compliance` | String(200) | Compliance approver email (Restricted only) |
-| `fsi_approved_at` | DateTime | Final approval timestamp |
-| `fsi_expires_at` | DateTime | Calculated expiration (requested_at + duration) |
-| `fsi_related_violation_id` | Lookup | Optional link to `fsi_SharingViolation` record |
+| `fsi_agentid` | String(50) | Copilot Studio agent GUID |
+| `fsi_agentname` | String(200) | Agent display name |
+| `fsi_environmentid` | String(50) | Power Platform environment GUID |
+| `fsi_environmentname` | String(200) | Environment display name |
+| `fsi_violationtype` | Choice | Type of violation being excepted |
+| `fsi_exceptionstatus` | Choice | 0=Pending, 1=Approved, 2=Rejected, 3=Expired |
+| `fsi_dataclassification` | Choice | 0=Public, 1=Internal, 2=Confidential, 3=Restricted |
+| `fsi_businessjustification` | Memo | Business reason (minimum 50 characters) |
+| `fsi_requestedby` | String(200) | Email of requester |
+| `fsi_requestedat` | DateTime | Submission timestamp |
+| `fsi_approvedbysecurity` | String(200) | Security approver email |
+| `fsi_approvedbydataowner` | String(200) | Data owner approver email (Confidential/Restricted) |
+| `fsi_approvedbycompliance` | String(200) | Compliance approver email (Restricted only) |
+| `fsi_approvedat` | DateTime | Final approval timestamp |
+| `fsi_expiresat` | DateTime | Calculated expiration (requested_at + duration) |
+| `fsi_relatedviolationid` | Lookup | Optional link to `fsi_SharingViolation` record |
 
 **3. fsi_AgentSharingSetting (Agent Sharing Settings)**
 
@@ -324,17 +338,17 @@ Audit trail of all scanned agent sharing configurations.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_agentsharingsettingid` | GUID | Primary key |
-| `fsi_agent_id` | String(50) | Copilot Studio agent GUID |
-| `fsi_agent_display_name` | String(200) | Agent display name |
-| `fsi_environment_id` | String(50) | Power Platform environment GUID |
-| `fsi_environment_display_name` | String(200) | Environment display name |
-| `fsi_sharing_scope` | String(50) | organization, securityGroups, individuals |
-| `fsi_security_groups_json` | Memo | JSON array of security group GUIDs |
-| `fsi_individual_shares_json` | Memo | JSON array of individual user emails |
-| `fsi_public_link_enabled` | Boolean | Public internet link status |
-| `fsi_cross_tenant_enabled` | Boolean | Cross-tenant access status |
-| `fsi_last_scanned_at` | DateTime | Most recent scan timestamp |
-| `fsi_break_glass_exclude` | Boolean | Exclude from remediation flag |
+| `fsi_agentid` | String(50) | Copilot Studio agent GUID |
+| `fsi_agentdisplayname` | String(200) | Agent display name |
+| `fsi_environmentid` | String(50) | Power Platform environment GUID |
+| `fsi_environmentdisplayname` | String(200) | Environment display name |
+| `fsi_sharingscope` | String(50) | organization, securityGroups, individuals |
+| `fsi_securitygroupsjson` | Memo | JSON array of security group GUIDs |
+| `fsi_individualsharesjson` | Memo | JSON array of individual user emails |
+| `fsi_publiclinkenabled` | Boolean | Public internet link status |
+| `fsi_crosstenantenabled` | Boolean | Cross-tenant access status |
+| `fsi_lastscannedat` | DateTime | Most recent scan timestamp |
+| `fsi_breakglassexclude` | Boolean | Exclude from remediation flag |
 
 **4. fsi_ApprovedSecurityGroup (Approved Security Groups)**
 
@@ -343,13 +357,13 @@ Registry of security groups authorized for agent sharing.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_approvedsecuritygroupid` | GUID | Primary key |
-| `fsi_entraid_group_id` | String(50) | Entra ID security group GUID |
-| `fsi_display_name` | String(200) | Security group display name |
+| `fsi_entraidgroupid` | String(50) | Entra ID security group GUID |
+| `fsi_displayname` | String(200) | Security group display name |
 | `fsi_description` | Memo | Purpose and scope of group |
-| `fsi_zone_classification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
-| `fsi_is_active` | Boolean | Active status (inactive groups excluded from remediation) |
-| `fsi_approved_by` | String(200) | Security architect approver |
-| `fsi_approved_at` | DateTime | Approval timestamp |
+| `fsi_zoneclassification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
+| `fsi_isactive` | Boolean | Active status (inactive groups excluded from remediation) |
+| `fsi_approvedby` | String(200) | Security architect approver |
+| `fsi_approvedat` | DateTime | Approval timestamp |
 
 **5. fsi_SharingPolicy (Sharing Policies)**
 
@@ -359,16 +373,17 @@ Per-zone sharing policy definitions including thresholds and enforcement setting
 |-------------|------|-------------|
 | `fsi_sharingpolicyid` | GUID | Primary key |
 | `fsi_name` | String(100) | Policy display name |
-| `fsi_zone_classification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
-| `fsi_max_individual_shares` | Integer | Maximum individual shares per agent (default: 5) |
-| `fsi_allow_org_wide_sharing` | Boolean | Whether organization-wide sharing is permitted |
-| `fsi_allow_public_link` | Boolean | Whether public internet links are permitted |
-| `fsi_allow_cross_tenant` | Boolean | Whether cross-tenant access is permitted |
-| `fsi_approved_groups_only` | Boolean | Restrict sharing to approved security groups only |
-| `fsi_is_active` | Boolean | Active policy flag |
-| `fsi_created_by` | String(200) | Policy creator email |
-| `fsi_created_at` | DateTime | Policy creation timestamp |
-| `fsi_modified_at` | DateTime | Last modification timestamp |
+| `fsi_zoneclassification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
+| `fsi_maxindividualshares` | Integer | Maximum individual shares per agent (default: 5) |
+| `fsi_alloworgwidesharing` | Boolean | Whether organization-wide sharing is permitted |
+| `fsi_allowpubliclink` | Boolean | Whether public internet links are permitted |
+| `fsi_allowcrosstenant` | Boolean | Whether cross-tenant access is permitted |
+| `fsi_approvedgroupsonly` | Boolean | Restrict sharing to approved security groups only |
+| `fsi_isactive` | Boolean | Active policy flag |
+| `fsi_createdby` | String(200) | Policy creator email |
+| `fsi_createdat` | DateTime | Policy creation timestamp |
+| `fsi_modifiedat` | DateTime | Last modification timestamp |
+END REMOVED SECTION -->
 
 ### Configuration and Prerequisites
 
@@ -400,50 +415,57 @@ The solution requires the following connection references in Power Platform:
 
 #### Configuration Steps
 
-**Step 1: Import Solution Files**
+**Step 1: Create Dataverse Schema**
 
-1. Navigate to Power Platform Admin Center → Environments
-2. Select your target environment (recommended: dedicated governance environment)
-3. Navigate to Solutions → Import
-4. Import each JSON file as a cloud flow or Canvas app:
-   - `uasd-detector-scan-agents.json` → Cloud flow
-   - `uasd-remediation-apply-sharing-policy.json` → Cloud flow
-   - `uasd-exception-approval-workflow.json` → Cloud flow
-   - `uasd-exception-manager-app.json` → Canvas app
-   - `adaptive-card-uasd-alert.json` → Reference file (used by flows)
+1. Install Python dependencies: `pip install -r scripts/requirements.txt`
+2. Run the Dataverse schema setup script:
+   ```bash
+   python scripts/create_uasd_dataverse_schema.py \
+       --tenant-id <tenant-id> \
+       --environment-url https://org.crm.dynamics.com \
+       --interactive
+   ```
+3. Verify tables created: `fsi_SharingViolation`, `fsi_SharingException`, `fsi_AgentSharingSetting`, `fsi_ApprovedSecurityGroup`, `fsi_SharingPolicy`
 
-**Step 2: Create Dataverse Tables**
+**Step 2: Build Flows in Power Automate**
 
-Execute the following in Dataverse (via Power Apps maker portal → Tables → New table):
-
-1. Create `fsi_SharingViolation` table with columns per Data Model section
-2. Create `fsi_SharingException` table with columns per Data Model section
-3. Create `fsi_AgentSharingSetting` table with columns per Data Model section
-4. Create `fsi_ApprovedSecurityGroup` table with columns per Data Model section
-5. Create `fsi_SharingPolicy` table with columns per Data Model section
-6. Create choice fields:
-   - `fsi_UASD_violationtype` (0-4)
-   - `fsi_UASD_violationstatus` (0-3)
-   - `fsi_UASD_severity` (0-3)
-   - `fsi_UASD_exceptionstatus` (0-3)
-   - `fsi_UASD_dataclassification` (0-3)
-   - `fsi_UASD_zoneclassification` (1-3)
+Follow the step-by-step instructions in [docs/flow-configuration.md](docs/flow-configuration.md) to manually build each flow in Power Automate designer:
+   - UASD-Detector-Scan-Agents → Scheduled Cloud Flow
+   - UASD-Remediation-Apply-Sharing-Policy → Automated Cloud Flow
+   - UASD-Exception-Approval-Workflow → Automated Cloud Flow
+   - UASD-Exception-Manager → Canvas App
 
 **Step 3: Configure Connection References**
 
-For each imported flow:
+Run the connection references setup script:
+```bash
+python scripts/create_uasd_connection_references.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://org.crm.dynamics.com \
+    --interactive
+```
 
-1. Open flow in edit mode
+Then bind each connection reference in Power Automate:
+
+1. Open each flow in edit mode
 2. Navigate to Data → Connection References
 3. Create connections:
-   - Dataverse: Use Entra ID authentication
-   - Teams: Use current user authentication
-   - Approvals: Use current user authentication
+   - Dataverse (`fsi_cr_dataverse_sharingdetector`): Use Entra ID authentication
+   - Teams (`fsi_cr_teams_sharingdetector`): Use current user authentication
+   - Approvals (`fsi_cr_approvals_sharingdetector`): Use current user authentication
 4. Map connections to connection references
 
 **Step 4: Set Environment Variables**
 
-Create environment variables in Power Platform:
+Run the environment variables setup script:
+```bash
+python scripts/create_uasd_environment_variables.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://org.crm.dynamics.com \
+    --interactive
+```
+
+Then configure values in Power Platform:
 
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
@@ -453,9 +475,10 @@ Create environment variables in Power Platform:
 | `fsi_UASD_TeamsChannelId` | String | `19:abcd...@thread.tacv2` | Teams channel ID for alerts |
 | `fsi_UASD_MaxIndividualShares` | Number | `5` | Threshold for individual share violations |
 | `fsi_UASD_DefaultExceptionDays` | Number | `90` | Default exception duration |
-| `fsi_UASD_RemediationDryRun` | Boolean | `true` | Dry-run mode (true = no changes) |
+| `fsi_UASD_RemediationDryRun` | String | `true` | Dry-run mode (true = no changes) |
 | `fsi_UASD_SecurityApproverEmail` | String | `security@contoso.com` | Security team approver |
 | `fsi_UASD_DataOwnerApproverEmail` | String | `dataowner@contoso.com` | Data owner approver |
+| `fsi_UASD_ComplianceApproverEmail` | String | `compliance@contoso.com` | Compliance approver (required for Restricted data) |
 
 **Step 5: Populate Approved Security Groups**
 
@@ -564,7 +587,7 @@ Example Records:
    - Entity name: `fsi_SharingViolation`
    - Message: 1 (Create) and 2 (Update)
    - Scope: 4 (Organization)
-   - Filter: `fsi_violation_status eq 0`
+   - Filter: `fsi_violationstatus eq 0`
 3. Save and re-test with new violation creation
 
 **Issue: Exception approvals not sending**
@@ -602,9 +625,9 @@ For regulatory examinations, export violation and exception records:
 <fetch>
   <entity name="fsi_SharingViolation">
     <filter>
-      <condition attribute="fsi_detected_at" operator="last-x-days" value="90"/>
+      <condition attribute="fsi_detectedat" operator="last-x-days" value="90"/>
     </filter>
-    <order attribute="fsi_detected_at" descending="true"/>
+    <order attribute="fsi_detectedat" descending="true"/>
   </entity>
 </fetch>
 ```
@@ -674,7 +697,7 @@ Evidence files should include:
 
 **Risk:** Unvetted user populations gain access, potentially including users with insufficient training, conflicting duties, or inappropriate access levels.
 
-**Detection:** Security group GUIDs in agent sharing configuration not present in `fsi_ApprovedSecurityGroup` table with `fsi_is_active = true`.
+**Detection:** Security group GUIDs in agent sharing configuration not present in `fsi_ApprovedSecurityGroup` table with `fsi_isactive = true`.
 
 **Remediation:** Remove unapproved groups, add approved groups for environment's zone classification.
 
@@ -747,7 +770,7 @@ Evidence files should include:
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.1
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -758,6 +781,7 @@ Evidence files should include:
 - Coordinate exception expiration renewals with business owners 2 weeks in advance
 
 **Version History:**
+- **v1.0.1 (February 2026):** Replaced exported flow JSON with step-by-step documentation; fixed setup scripts
 - **v1.0.0 (February 2026):** Initial release with 5 violation types, automated remediation, and exception management
 
 ---

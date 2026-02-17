@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dataverse Web API client for Unrestricted Agent Sharing Detector.
+Shared Dataverse Web API client for FSI-AgentGov-Solutions.
 
 Uses MSAL for authentication (interactive browser or service principal).
 Includes retry logic and dry-run mode for safe deployments.
@@ -18,7 +18,7 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 
-class UASDClient:
+class DataverseClient:
     """Dataverse Web API client with MSAL authentication and retry logic."""
 
     API_VERSION = "v9.2"
@@ -33,7 +33,7 @@ class UASDClient:
         dry_run: bool = False,
     ):
         """
-        Initialize UASD client.
+        Initialize Dataverse client.
 
         Args:
             tenant_id: Entra ID tenant ID
@@ -253,28 +253,52 @@ class UASDClient:
         if self.get_attribute_metadata(entity_logical_name, col_logical_name): return None
         return self.create_attribute(entity_logical_name, column_metadata)
 
+    def create_relationship(self, relationship_metadata):
+        """Create a one-to-many relationship (and its lookup column)."""
+        if self.dry_run:
+            schema_name = relationship_metadata.get("SchemaName", "Unknown")
+            print(f"  [DRY RUN] Would create relationship: {schema_name}")
+            return None
+        url = urljoin(self.api_url, "RelationshipDefinitions")
+        response = self._session.post(url, headers=self._get_headers(), json=relationship_metadata)
+        response.raise_for_status()
+        return response.headers.get("OData-EntityId")
+
+    def get_relationship(self, schema_name):
+        """Check if a relationship exists by schema name."""
+        if self.dry_run:
+            print(f"  [DRY RUN] Would check relationship: {schema_name}")
+            return None
+        url = urljoin(self.api_url, f"RelationshipDefinitions?$filter=SchemaName eq '{schema_name}'")
+        response = self._session.get(url, headers=self._get_headers())
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        data = response.json()
+        return data.get("value", [None])[0] if data.get("value") else None
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Dataverse Web API client for Unrestricted Agent Sharing Detector", formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--tenant-id", default=os.environ.get("UASD_TENANT_ID"), help="Entra ID tenant ID (or set UASD_TENANT_ID env var)")
-    parser.add_argument("--client-id", default=os.environ.get("UASD_CLIENT_ID"), help="Application (client) ID (or set UASD_CLIENT_ID env var)")
-    parser.add_argument("--client-secret", default=os.environ.get("UASD_CLIENT_SECRET"), help="Client secret (or set UASD_CLIENT_SECRET env var)")
-    parser.add_argument("--environment-url", default=os.environ.get("UASD_ENVIRONMENT_URL"), help="Dataverse environment URL (or set UASD_ENVIRONMENT_URL env var)")
+    parser = argparse.ArgumentParser(description="Shared Dataverse Web API client for FSI-AgentGov-Solutions", formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--tenant-id", default=os.environ.get("DATAVERSE_TENANT_ID"), help="Entra ID tenant ID (or set DATAVERSE_TENANT_ID env var)")
+    parser.add_argument("--client-id", default=os.environ.get("DATAVERSE_CLIENT_ID"), help="Application (client) ID (or set DATAVERSE_CLIENT_ID env var)")
+    parser.add_argument("--client-secret", default=os.environ.get("DATAVERSE_CLIENT_SECRET"), help="Client secret (or set DATAVERSE_CLIENT_SECRET env var)")
+    parser.add_argument("--environment-url", default=os.environ.get("DATAVERSE_ENVIRONMENT_URL"), help="Dataverse environment URL (or set DATAVERSE_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
     parser.add_argument("--test-connection", action="store_true", help="Test connection to Dataverse")
     parser.add_argument("--dry-run", action="store_true", help="Log API calls without executing them")
     args = parser.parse_args()
     if not args.tenant_id or not args.environment_url:
-        parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set UASD_TENANT_ID and UASD_ENVIRONMENT_URL env vars)")
+        parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set DATAVERSE_TENANT_ID and DATAVERSE_ENVIRONMENT_URL env vars)")
     if not args.client_id:
-        parser.error("--client-id is required (or set UASD_CLIENT_ID env var)")
+        parser.error("--client-id is required (or set DATAVERSE_CLIENT_ID env var)")
     client_secret = args.client_secret
     if not args.interactive:
         if not client_secret:
             import getpass
             client_secret = getpass.getpass("Client secret: ")
     try:
-        client = UASDClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, interactive=args.interactive, dry_run=args.dry_run)
+        client = DataverseClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, interactive=args.interactive, dry_run=args.dry_run)
         if args.test_connection:
             print("Testing Dataverse connection...")
             org = client.test_connection()

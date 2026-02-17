@@ -59,15 +59,16 @@ FSI-AgentGov-Solutions/
 │   ├── settings.json          # Team-shared settings
 │   └── settings.local.json    # Local overrides (not committed)
 ├── scripts/
-│   └── hooks/                  # Claude Code hooks (root-level)
-├── environment-lifecycle-management/
-│   ├── docs/                   # Setup and configuration guides
-│   ├── scripts/                # Python automation (SP registration, evidence export)
-│   └── templates/              # JSON samples, Copilot output schema
-├── message-center-monitor/
-├── pipeline-governance-cleanup/
-│   └── scripts/hooks/          # Standalone pass-through hooks (intentionally different)
-└── deny-event-correlation-report/
+│   ├── hooks/                  # Claude Code hooks (root-level)
+│   └── shared/                 # Shared utilities
+│       ├── dataverse_client.py     # Shared Dataverse Web API client (MSAL, retry, dry-run)
+│       └── Get-ZoneClassification.ps1
+├── {solution-name}/
+│   ├── docs/
+│   │   ├── dataverse-schema.md     # Auto-generated (python create_*_schema.py --output-docs)
+│   │   └── flow-configuration.md   # Manual build instructions
+│   └── scripts/                # Python setup + PowerShell governance
+└── ...
 ```
 
 ## Hooks

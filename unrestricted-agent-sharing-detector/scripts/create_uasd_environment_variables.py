@@ -11,7 +11,8 @@ import os
 import sys
 from typing import Optional
 
-from uasd_client import UASDClient
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
+from dataverse_client import DataverseClient
 
 ENV_VARIABLES = [
     {
@@ -87,12 +88,12 @@ ENV_VARIABLES = [
 ]
 
 
-def create_environment_variables(client: UASDClient, dry_run: bool = False) -> dict:
+def create_environment_variables(client: DataverseClient, dry_run: bool = False) -> dict:
     """
     Create environment variables for sharing detection and remediation thresholds.
 
     Args:
-        client: UASDClient instance
+        client: DataverseClient instance
         dry_run: If True, preview changes without creating
 
     Returns:
@@ -246,7 +247,7 @@ Examples:
 
     try:
         # Initialize client
-        client = UASDClient(
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,

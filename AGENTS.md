@@ -43,13 +43,34 @@ FSI-AgentGov-Solutions/
 │   ├── copilot-instructions.md    # GitHub Copilot context
 │   └── instructions/              # Auto-included instruction files
 ├── scripts/
-│   └── hooks/                 # Claude Code hooks
+│   ├── hooks/                 # Claude Code hooks
+│   └── shared/                # Shared utilities (see below)
+│       ├── dataverse_client.py    # Shared Dataverse Web API client
+│       └── Get-ZoneClassification.ps1  # Zone classification utility
 ├── {solution-name}/
 │   ├── README.md              # Solution overview and setup
-│   ├── docs/                  # Setup and configuration guides
-│   ├── scripts/               # Automation scripts
-│   └── templates/             # JSON samples, schemas
+│   ├── CHANGELOG.md           # Version history
+│   ├── docs/
+│   │   ├── dataverse-schema.md    # Auto-generated from schema script
+│   │   └── flow-configuration.md  # Manual build instructions for flows
+│   └── scripts/
+│       ├── create_{prefix}_dataverse_schema.py   # Schema definition + doc generation
+│       ├── create_{prefix}_environment_variables.py
+│       ├── create_{prefix}_connection_references.py
+│       └── governance/            # Operational PowerShell scripts
 └── CHANGELOG.md
+```
+
+### Shared Infrastructure (`scripts/shared/`)
+
+| File | Purpose | Used By |
+|------|---------|---------|
+| `dataverse_client.py` | Dataverse Web API client with MSAL auth, retry logic, dry-run mode | All solutions with Dataverse tables |
+| `Get-ZoneClassification.ps1` | Zone classification utility | ELM, conditional-access-automation |
+
+**Schema-generated docs:** Each solution's `create_*_dataverse_schema.py` supports `--output-docs` to generate `docs/dataverse-schema.md`. This is the single source of truth for column names and option sets. Always regenerate after schema changes:
+```bash
+python scripts/create_{prefix}_dataverse_schema.py --output-docs
 ```
 
 ## Solution Content Policy (CRITICAL)
