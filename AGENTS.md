@@ -8,7 +8,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 - **16 solutions** covering 28+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
-- **Technologies:** PowerShell, Python, Power Automate, KQL, Dataverse
+- **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
 **Companion Repository:** `FSI-AgentGov` (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation (71 controls, 284 playbooks, MkDocs site).
 
@@ -51,6 +51,25 @@ FSI-AgentGov-Solutions/
 │   └── templates/             # JSON samples, schemas
 └── CHANGELOG.md
 ```
+
+## Solution Content Policy (CRITICAL)
+
+**Solutions must NOT contain Power Platform runtime artifacts.** This includes:
+- Power Automate flow JSON definitions (exported `.json` flow files)
+- Canvas app packages or specifications
+- Connection reference definitions
+- Environment variable JSON exports
+- Any other exported Power Platform components
+
+**Solutions MUST contain only:**
+- **Documentation** — Step-by-step instructions for administrators to manually build flows, apps, and configurations in the Power Platform designer
+- **Scripts** — PowerShell, Python, and KQL automation for setup, governance, and monitoring
+- **Templates** — JSON schemas, sample payloads, and configuration examples (not exported flows)
+- **README and docs/** — Architecture diagrams, prerequisites, and deployment guides
+
+**Why:** Exported flow JSON files create cross-file reference bugs (action names, connection IDs, environment variable schema mismatches) that are fragile and difficult to validate. Manual instructions with documentation ensure administrators understand what they are building and can adapt to their environment.
+
+**If a `src/` directory exists with flow JSON files**, it must be replaced with documentation in `docs/` that describes how to create the flow manually in Power Automate designer.
 
 ## Before Making Changes
 

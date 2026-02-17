@@ -6,7 +6,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 - **25 solutions** covering 28+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
-- **Technologies:** PowerShell, Python, Power Automate, KQL, Dataverse
+- **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
 
 ## Solution Catalog
@@ -45,6 +45,15 @@ FSI-AgentGov-Solutions/
 │   └── templates/             # JSON samples, schemas
 └── CHANGELOG.md
 ```
+
+## Solution Content Policy (CRITICAL)
+
+**Solutions must NOT contain Power Platform runtime artifacts** — no exported Power Automate flow JSON, Canvas app packages, connection references, or environment variable exports. Solutions provide only:
+- **Documentation** — Step-by-step instructions for manually building flows/apps in Power Platform designer
+- **Scripts** — PowerShell, Python, KQL for setup, governance, and monitoring
+- **Templates** — JSON schemas and sample payloads (not exported flows)
+
+If a `src/` directory exists with flow JSON files, replace it with documentation in `docs/`.
 
 ## Coding Patterns
 

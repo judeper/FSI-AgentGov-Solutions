@@ -27,12 +27,16 @@ Each repo has separate git history. Always verify your working directory before 
 git rev-parse --show-toplevel
 ```
 
+## Solution Content Policy (CRITICAL)
+
+**Solutions must NOT contain Power Platform runtime artifacts** — no exported flow JSON, Canvas app packages, connection references, or environment variable exports. Solutions provide only documentation (manual step-by-step instructions for building flows in Power Automate designer), scripts (PowerShell, Python, KQL), and templates (schemas, sample payloads). If a `src/` directory exists with flow JSON files, replace it with documentation in `docs/`.
+
 ## Solutions
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
-| [environment-lifecycle-management](./environment-lifecycle-management/) | Automated Power Platform environment provisioning with zone-based governance | Python/Power Automate | v1.0.1 |
-| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Power Automate/Dataverse | v2.0.0 |
+| [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.0.1 |
+| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.0.0 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.7 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
 
