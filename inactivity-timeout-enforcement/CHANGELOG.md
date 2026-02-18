@@ -2,6 +2,26 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [1.0.3] — February 2026
+
+### Fixed
+- Fix post-loop reporting queries (`Query_NonCompliant_Records`, `Query_Unknown_Records`, `Query_Compliant_Count`) skipped when any ForEach iteration catch handler fails — added `"Failed"` to `runAfter` conditions for partial-result reporting
+- Fix `Determine_Error_Type` misclassifying non-HTTP failures as `ParseError` — now returns `ActionError` when Get_Privacy_Settings has no status code or returned 200 (downstream action failed), `HttpError` for unknown HTTP errors
+- Fix `Create_Unknown_APIErrorRecord` setting `fsi_inactivitytimeoutenabled` to `false` — changed to `null` for consistency with Unknown (2) compliance status and `Create_Unknown_NoPolicyRecord`
+- Fix false-negative compliance when `inactivityTimeoutEnabled` is `true` but `inactivityTimeoutDuration` is `null` — `Parse_Duration_Minutes` now returns -1 sentinel, `Evaluate_Compliance` treats as Non-Compliant
+- Mitigate BAP Admin API pagination gap — added `$top=5000` to `List_Environments` URI to request larger result set
+- Add partial-results note to `Scope_Catch` error email body so recipients know compliance data may already be in Dataverse
+
+## [1.0.2] — February 2026
+
+### Fixed
+- **CRITICAL:** Fix `Build_Issue_Rows` zone-mapping crash when `fsi_zone` is null — `string(null)` replaced with `'Unassigned'` fallback for Unknown records without a policy
+- **CRITICAL:** Fix false Compliant status when BAP API returns null `inactivityTimeoutEnabled` — added null checks in `Parse_Duration_Minutes`, `Evaluate_Compliance`, and `Set_Compliance_Notes`
+- **CRITICAL (SOLUTION-DOCUMENTATION):** Fix inverted zone timeout recommendations throughout — Zone 3 (Enterprise) corrected to 60min (most restrictive), Zone 1 (Personal) to 120min (most lenient), per NIST 800-53 AC-11 risk-based guidance
+- Remove phantom `fsi_ITE_ScanFrequencyHours` environment variable from SOLUTION-DOCUMENTATION.md and DELIVERY-CHECKLIST.md — variable does not exist in the flow (uses fixed daily recurrence trigger)
+- Revert `ConcurrencyLimit` to hardcoded value (5); environment variable `fsi_ITE_ConcurrencyLimit` is informational only
+- Fix `Apply_to_Each_Environment` description to reflect hardcoded concurrency
+
 ## [1.0.1] — February 2026
 
 ### Fixed

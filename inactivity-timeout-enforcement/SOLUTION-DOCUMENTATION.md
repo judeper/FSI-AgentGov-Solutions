@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.0
+**Version:** 1.0.3
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -129,9 +129,9 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 | Zone | Classification | Recommended Max Timeout | Rationale |
 |------|----------------|------------------------|-----------|
-| **Zone 1** | Personal Development | 60 minutes | Individual developers with minimal data exposure |
+| **Zone 1** | Personal Development | 120 minutes | Individual developers with minimal data exposure |
 | **Zone 2** | Team Collaboration | 90 minutes | Team environments with moderate data sensitivity |
-| **Zone 3** | Enterprise Production | 120 minutes | Production environments with regulatory requirements |
+| **Zone 3** | Enterprise Production | 60 minutes | Production environments with highest security requirements |
 
 **Note:** All timeouts should not exceed 120 minutes (2 hours) per regulatory best practices (NIST 800-53 AC-11, FINRA 4511).
 
@@ -139,9 +139,8 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 1. **Initialization:**
    - Generate unique scan run ID (GUID) for correlation
-   - Read environment variables via `@environmentVariables()`:
-     - `fsi_ITE_NotificationRecipients` — Semicolon-separated email addresses
-     - `fsi_ITE_ConcurrencyLimit` — Parallel environment evaluation degree (default: 5)
+   - Read `fsi_ITE_NotificationRecipients` via `@environmentVariables()` — Semicolon-separated email addresses
+   - `fsi_ITE_ConcurrencyLimit` is defined as an environment variable but is **not** read via `@environmentVariables()` — concurrency is hardcoded at 5 (informational only)
 
 2. **Policy Loading:**
    - Query `fsi_environmentpolicies` table from Dataverse
@@ -149,12 +148,13 @@ Environments are classified into governance zones with tailored maximum timeout 
    - Cache policy array in memory for fast lookup
 
 3. **Environment Enumeration:**
-   - Call BAP Admin API: `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments`
+   - Call BAP Admin API: `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?$top=5000`
    - Use Managed Service Identity (MSI) authentication
    - Retrieve all environments in tenant
+   - **Known Limitation:** The API call does not follow `@odata.nextLink` pagination. Tenants with more than ~100 environments may receive partial results, causing some environments to be silently excluded from compliance evaluation. For large tenants, consider extending the flow to handle pagination.
 
 4. **Per-Environment Evaluation (Parallel):**
-   - **Concurrency:** Configurable (default: 5 parallel evaluations)
+   - **Concurrency:** Hardcoded at 5 parallel evaluations (the `fsi_ITE_ConcurrencyLimit` environment variable is informational only)
    - For each environment:
      - Extract environment name (canonical ID) and display name
      - Resolve policy from cached array by environment ID
@@ -195,9 +195,9 @@ Environments are classified into governance zones with tailored maximum timeout 
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses for compliance alerts |
-| `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel degree for environment evaluation (1-50) |
+| `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel degree for environment evaluation (informational only — does not control runtime concurrency) |
 
-> **Note:** The flow reads environment variables using Power Automate's `@environmentVariables()` function at initialization. The Dataverse connection uses the connection reference — no separate URL variable is needed. Email send actions are guarded: if `fsi_ITE_NotificationRecipients` is empty, emails are silently skipped rather than causing a flow error.
+> **Note:** The flow reads `fsi_ITE_NotificationRecipients` using Power Automate's `@environmentVariables()` function at initialization. `fsi_ITE_ConcurrencyLimit` is **not** read via `@environmentVariables()` — concurrency is hardcoded at 5. The Dataverse connection uses the connection reference — no separate URL variable is needed. Email send actions are guarded: if `fsi_ITE_NotificationRecipients` is empty, emails are silently skipped rather than causing a flow error.
 
 **Email Alert Format:**
 
@@ -223,12 +223,12 @@ Unknown:           1
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Issues Requiring Attention
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Environment         | Zone | Status         | Timeout  | Actual  | Req Max | Notes
-                    |      |                | Enabled  | (min)   | (min)   |
-────────────────────┼──────┼────────────────┼──────────┼─────────┼─────────┼───────────────────────
-Finance-Prod        | 3    | Non-Compliant  | True     | 180     | 120     | Duration 180m exceeds maximum 120m
-HR-Team-Sandbox     | 2    | Non-Compliant  | False    | 0       | 90      | Inactivity timeout is disabled
-Legal-Dev           | 1    | Unknown        | False    | 0       | 0       | No explicit policy found for environment
+Environment         | Zone       | Status         | Timeout  | Actual  | Req Max | Notes
+                    |            |                | Enabled  | (min)   | (min)   |
+────────────────────┼────────────┼────────────────┼──────────┼─────────┼─────────┼───────────────────────
+Finance-Prod        | Enterprise | Non-Compliant  | True     | 180     | 60      | Duration 180m exceeds maximum 60m
+HR-Team-Sandbox     | Team       | Non-Compliant  | False    | 0       | 90      | Inactivity timeout is disabled
+Legal-Dev           | Unassigned | Unknown        |          | 0       | 0       | No explicit policy found for environment
 ```
 
 ### Data Model
@@ -252,8 +252,8 @@ Master registry of environment-to-zone mappings with required timeout policies.
 │ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
 │                                  │ name                   │ zone │ duration            │
 ├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
-│ Default-aaaaaaaa-bbbb-cccc-dddd  │ Finance-Prod           │ 3    │ 120                 │
-│ Development-bbbbbbbb-cccc-dddd   │ Legal-Dev              │ 1    │ 60                  │
+│ Default-aaaaaaaa-bbbb-cccc-dddd  │ Finance-Prod           │ 3    │ 60                  │
+│ Development-bbbbbbbb-cccc-dddd   │ Legal-Dev              │ 1    │ 120                 │
 │ Sandbox-cccccccc-dddd-eeee       │ HR-Team-Sandbox        │ 2    │ 90                  │
 └──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
 ```
@@ -291,7 +291,7 @@ Diagnostic logs for API errors and missing policy issues.
 | `fsi_inactivitytimeouterrorlogid` | GUID | Primary key |
 | `fsi_name` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
 | `fsi_environmentid` | String(100) | Canonical environment name where error occurred |
-| `fsi_errortype` | String(50) | Error classification: `MissingPolicy`, `Unauthorized`, `Forbidden`, `NotFound`, `Throttled`, `ParseError` |
+| `fsi_errortype` | String(50) | Error classification: `MissingPolicy`, `Unauthorized`, `Forbidden`, `NotFound`, `Throttled`, `ActionError`, `HttpError` |
 | `fsi_errorraw` | Memo | Raw error response from BAP API or policy lookup |
 | `fsi_timestamp` | DateTime | Error occurrence timestamp (UTC) |
 
@@ -301,7 +301,8 @@ Diagnostic logs for API errors and missing policy issues.
 - **Forbidden (403):** Access denied to environment privacy settings
 - **NotFound (404):** Environment not found or deleted
 - **Throttled (429):** BAP API rate limit exceeded
-- **ParseError:** Unable to parse BAP API response or ISO 8601 duration
+- **ActionError:** Non-HTTP failure — Get_Privacy_Settings did not execute or returned 200 but a downstream action failed
+- **HttpError:** Unrecognized HTTP status code from BAP Privacy Settings API
 
 ### Configuration and Prerequisites
 
@@ -370,10 +371,10 @@ Example Policy Records:
 │ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
 │ (Power Platform Env Name)        │ name                   │ zone │ duration (minutes)  │
 ├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
-│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 3    │ 120                 │
+│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 3    │ 60                  │
 │ Sandbox-87654321-bcde-2345-bcde  │ Finance UAT            │ 2    │ 90                  │
-│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 1    │ 60                  │
-│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 3    │ 120                 │
+│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 1    │ 120                 │
+│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 3    │ 60                  │
 └──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
 ```
 
@@ -405,8 +406,7 @@ Create environment variables in Power Platform:
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses |
-| `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel environment evaluation degree |
-| `fsi_ITE_ScanFrequencyHours` | Number | `24` | Scan interval in hours |
+| `fsi_ITE_ConcurrencyLimit` | Number | `5` | Parallel environment evaluation degree (informational only — does not control runtime concurrency) |
 
 **Step 6: Configure Managed Service Identity**
 
@@ -481,13 +481,13 @@ For **Non-Compliant** environments (timeout disabled):
 1. Navigate to [Power Platform Admin Center](https://admin.powerplatform.microsoft.com)
 2. Environments → Select environment → Settings → Privacy + Security
 3. Enable **Inactivity timeout**
-4. Set duration to required maximum (60/90/120 minutes per zone)
+4. Set duration to required maximum per zone (Zone 1: 120, Zone 2: 90, Zone 3: 60 minutes)
 5. Verify next scan shows **Compliant** status
 
 For **Non-Compliant** environments (timeout exceeds max):
 1. Navigate to Power Platform Admin Center → Environment Settings
 2. Reduce **Inactivity timeout** to required maximum or lower
-3. Example: Zone 3 (Enterprise) requires ≤ 120 minutes → Set to 120 minutes
+3. Example: Zone 3 (Enterprise) requires ≤ 60 minutes → Set to 60 minutes
 4. Verify next scan shows **Compliant** status
 
 For **Unknown** environments (missing policy):
@@ -496,7 +496,7 @@ For **Unknown** environments (missing policy):
    - Environment ID: Canonical environment name (from PPAC)
    - Display Name: Environment display name
    - Zone: 1/2/3 (Personal/Team/Enterprise)
-   - Required Max Duration: 60/90/120 minutes per zone
+   - Required Max Duration: per zone (Zone 1: 120, Zone 2: 90, Zone 3: 60 minutes)
 3. Verify next scan evaluates environment and removes **Unknown** status
 
 For **Unknown** environments (API error):
@@ -505,7 +505,8 @@ For **Unknown** environments (API error):
 3. **Forbidden (403):** Verify MSI permissions on specific environment
 4. **NotFound (404):** Environment may have been deleted → Remove policy record
 5. **Throttled (429):** BAP API rate limit exceeded → Contact Microsoft Support
-6. **ParseError:** Investigate flow run history for malformed API response
+6. **ActionError:** Non-HTTP failure or downstream action error → Investigate flow run history for action-level failures
+7. **HttpError:** Unrecognized HTTP status code → Investigate flow run history for unexpected API responses
 
 #### Troubleshooting
 
@@ -556,9 +557,9 @@ For **Unknown** environments (API error):
 **Cause:** BAP Admin API rate limit exceeded due to high concurrency
 
 **Resolution:**
-1. Reduce `fsi_ITE_ConcurrencyLimit` environment variable (default: 5 → reduce to 3)
-2. Re-run flow to verify throttling resolved
-3. If issue persists → Contact Microsoft Support for rate limit increase
+1. Wait and retry — the flow includes an exponential retry policy (3 retries, 30s interval, 5m max) that handles transient 429 errors automatically
+2. If throttling persists across multiple runs → Contact Microsoft Support for a BAP Admin API rate limit increase
+3. Note: The `fsi_ITE_ConcurrencyLimit` environment variable does not control runtime concurrency (loop concurrency is hardcoded to 5 in the flow definition)
 
 #### Audit and Evidence Export
 
@@ -610,10 +611,10 @@ Evidence files should include:
 Environment: Finance Production
 Zone: 3 (Enterprise)
 Timeout Enabled: true
-Actual Duration: 120 minutes
-Required Max: 120 minutes
+Actual Duration: 55 minutes
+Required Max: 60 minutes
 Status: Compliant
-Notes: Compliant: 120m within 120m maximum
+Notes: Compliant: 55m within 60m maximum
 ```
 
 ### Non-Compliant (Code: 1)
@@ -621,7 +622,7 @@ Notes: Compliant: 120m within 120m maximum
 **Description:** Environment has inactivity timeout disabled OR timeout duration exceeds required maximum for its zone.
 
 **Criteria:**
-- `inactivityTimeoutEnabled = false` (timeout disabled)
+- `inactivityTimeoutEnabled = false OR null` (timeout disabled or not set)
 - OR `timeoutDuration > requiredMaxDuration` (exceeds maximum)
 
 **Example 1 (Timeout Disabled):**
@@ -641,9 +642,9 @@ Environment: Legal Production
 Zone: 3 (Enterprise)
 Timeout Enabled: true
 Actual Duration: 240 minutes
-Required Max: 120 minutes
+Required Max: 60 minutes
 Status: Non-Compliant
-Notes: Duration 240m exceeds maximum 120m
+Notes: Duration 240m exceeds maximum 60m
 ```
 
 **Remediation:**
@@ -662,7 +663,7 @@ Notes: Duration 240m exceeds maximum 120m
 ```
 Environment: Developer Sandbox
 Zone: null
-Timeout Enabled: false
+Timeout Enabled: (null)
 Actual Duration: 0 minutes
 Required Max: 0 minutes
 Status: Unknown
@@ -674,9 +675,9 @@ Error Log: MissingPolicy - No fsi_environmentpolicy row exists for EnvironmentNa
 ```
 Environment: External Sandbox
 Zone: 2 (from policy)
-Timeout Enabled: false
+Timeout Enabled: (null)
 Actual Duration: 0 minutes
-Required Max: 90 minutes
+Required Max: 120 minutes
 Status: Unknown
 Notes: BAP API call failed: Forbidden
 Error Log: Forbidden (403) - Access denied to privacy settings for environment
@@ -706,7 +707,8 @@ The solution parses ISO 8601 duration strings from the BAP Privacy Settings API 
 2. **If format contains both H and M:** Extract hours and minutes, convert to total minutes
 3. **If format contains only H:** Extract hours, multiply by 60
 4. **If format contains only M:** Extract minutes directly
-5. **If format is invalid:** Log `ParseError` to error log table
+5. **If timeout enabled but duration is null:** Return `-1` sentinel (treated as Non-Compliant by `Evaluate_Compliance`)
+6. **If format is unrecognized:** Parsing fails with a runtime error (caught by `Scope_BAP_API_Catch` and classified as `ActionError`)
 
 **Example Conversions:**
 
@@ -738,7 +740,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Management must establish and maintain adequate internal controls to ensure reliability of financial reporting, including IT controls for session management.
 
 **ITE Support:**
-- Zone-based policy enforcement ensures financial production environments (Zone 3) meet 120-minute maximum timeout
+- Zone-based policy enforcement ensures financial production environments (Zone 3) meet 60-minute maximum timeout
 - Immutable compliance records provide audit trail for internal control effectiveness
 - Daily monitoring enables timely detection of control deficiencies
 
@@ -756,8 +758,8 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Information systems must prevent further access by initiating a session lock after a period of inactivity (recommended: ≤ 15-120 minutes based on risk).
 
 **ITE Support:**
-- Enforces maximum 120-minute timeout for production environments (Zone 3)
-- Zone-based tiering allows risk-appropriate timeout durations (60/90/120 minutes)
+- Enforces maximum 60-minute timeout for production environments (Zone 3)
+- Zone-based tiering allows risk-appropriate timeout durations (Zone 1: 120, Zone 2: 90, Zone 3: 60 minutes)
 - Compliance detection identifies disabled or excessive timeouts
 
 ### NIST 800-53 AC-12 — Session Termination
@@ -773,7 +775,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.3
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -784,6 +786,9 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Coordinate timeout policy updates with user communication (advance notice recommended)
 
 **Version History:**
+- **v1.0.3 (February 2026):** Fix post-loop reporting `runAfter` conditions, replace `ParseError` with `ActionError`/`HttpError` error types, fix `Create_Unknown_APIErrorRecord` setting `fsi_inactivitytimeoutenabled` to `null`, add `-1` sentinel for null `inactivityTimeoutDuration` (Non-Compliant), add `$top=5000` to `List_Environments` URI, add partial-results note to `Scope_Catch` error email
+- **v1.0.2 (February 2026):** Fix zone-mapping crash on null `fsi_zone`, fix false Compliant status on null `inactivityTimeoutEnabled`, fix inverted zone timeout recommendations in documentation, remove phantom `fsi_ITE_ScanFrequencyHours` variable, revert `ConcurrencyLimit` to hardcoded value (5) — `fsi_ITE_ConcurrencyLimit` is informational only
+- **v1.0.1 (February 2026):** Wire `NotificationRecipients` to `@environmentVariables()`, add recipient guard on email actions, add exponential retry policy to HTTP actions, map zone integers to friendly names, remove vestigial `DataverseUrl` variable (note: `ConcurrencyLimit` was also wired to `@environmentVariables()` in this release but reverted to hardcoded in v1.0.2)
 - **v1.0.0 (February 2026):** Initial release with zone-based policy enforcement, daily compliance detection, and guarded email alerting
 
 ---

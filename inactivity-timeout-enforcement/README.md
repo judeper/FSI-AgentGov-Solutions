@@ -1,9 +1,9 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.0
+> **Version:** v1.0.3
 > **Status:** Completed
 
-Cloud Flow templatefor daily compliance detection of inactivity timeout settings across Power Platform environments.
+Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
 
 ## Overview
 
@@ -23,6 +23,8 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 inactivity-timeout-enforcement/
 ├── README.md
 ├── CHANGELOG.md
+├── SOLUTION-DOCUMENTATION.md
+├── DELIVERY-CHECKLIST.md
 └── src/
     └── detect-inactivity-timeout-noncompliance.json  # Daily compliance detection flow
 ```
