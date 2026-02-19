@@ -12,7 +12,7 @@ All notable changes to the Hallucination Feedback Tracker.
 - **Feedback Sources:**
   - User thumbs-down reactions
   - Supervisor rejections from FSW
-  - Automated verification checks
+  - Automated checks (citation verification, date validation, number sanity)
 - **Hallucination Categories:**
   - Factual error
   - Fabricated data
@@ -23,7 +23,6 @@ All notable changes to the Hallucination Feedback Tracker.
   - Category clustering
   - Agent-specific patterns
   - Severity distribution
-  - Trend detection
 - **Python Scripts:**
   - `analyze_patterns.py` - Pattern detection
 - **Agent Scoring:**

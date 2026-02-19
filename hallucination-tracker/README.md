@@ -1,6 +1,16 @@
 # Hallucination Feedback Tracker
 
 > **Status:** Work In Progress
+>
+> **Known Gaps:**
+> - Power Platform solution artifacts (solution.xml, customizations.xml, workflow definitions, canvas app files, Dataverse table definitions) are not yet included — tables must be created manually
+> - Solution package and Power BI template files are planned for a future release
+>
+> **FSI Governance Gaps:**
+> The following controls are required for FSI compliance but are not yet implemented:
+> - **DLP Enforcement:** No Data Loss Prevention policies are applied to the Dataverse tables or Power Automate flows. Feedback data containing PII or regulated content may flow to unintended connectors. A DLP policy scoping the environment to approved connectors (Dataverse, Office 365, Power BI) must be configured before production use.
+> - **Audit Logging:** Dataverse standard auditing is not enabled on the feedback tables. Read/write/delete operations are not tracked. Enable Dataverse auditing on all `fsi_` tables and configure log retention per your organization's record-keeping requirements.
+> - **Sharing Restrictions:** No role-based access controls or sharing rules are defined for feedback data. By default, any user with Dataverse access can read all hallucination reports. Security roles restricting access to authorized compliance and supervisory personnel must be created before deployment.
 
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 
@@ -13,9 +23,9 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 | Feature | Description |
 |---------|-------------|
 | **Multi-Source Collection** | Feedback from users, supervisors, and automated checks |
-| **Auto-Categorization** | Classify hallucination types automatically |
+| **Auto-Categorization** | Classify hallucination types automatically (Planned) |
 | **Pattern Detection** | Identify recurring error patterns |
-| **Trend Analysis** | Track hallucination rates over time |
+| **Trend Analysis** | Track hallucination rates over time (Planned) |
 | **Agent Comparison** | Compare accuracy across agents |
 
 ## Architecture
@@ -24,7 +34,7 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 ┌─────────────────────────────────────────────────────────────────┐
 │                  Hallucination Tracker                           │
 ├─────────────────────────────────────────────────────────────────┤
-│  Collector  │  Categorizer  │  Analyzer  │  Dashboard            │
+│  Collector  │  Categorizer (Planned)  │  Analyzer  │  Dashboard  │
 └─────────────┴───────────────┴────────────┴──────────────────────┘
                               ▲
                               │ Analysis
@@ -41,6 +51,7 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
 │ User        │ Supervisor    │ Automated     │ Customer          │
 │ Thumbs-Down │ Rejections    │ Checks        │ Complaints        │
+│             │               │               │ (Planned)         │
 └─────────────┴───────────────┴───────────────┴───────────────────┘
 ```
 
@@ -113,13 +124,11 @@ Programmatic verification where possible.
 
 ### 1. Deploy Dataverse Schema
 
-```powershell
-pac solution import --path ./templates/HallucinationTracker_1_0_0.zip
-```
+> **Note:** Solution package (`HallucinationTracker_1_0_0.zip`) is not yet available. Dataverse tables must be created manually — see the schema in the Architecture section above.
 
 ### 2. Configure Feedback Sources
 
-See [docs/source-configuration.md](docs/source-configuration.md).
+Configure your Dataverse environment to receive feedback from users, supervisors, and automated checks as described in the Feedback Sources section above.
 
 ### 3. Run Pattern Analysis
 
@@ -129,25 +138,21 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 ### 4. Deploy Dashboard
 
-Import `templates/HallucinationDashboard.pbit` into Power BI.
+> **Note:** Power BI dashboard template (`HallucinationDashboard.pbit`) is not yet available. Dashboard must be built manually using OData connection to your Dataverse environment.
 
 ## Deployment
 
+> **Note:** The solution package, cloud flows, and Power BI template are not yet available. The steps below describe the intended deployment process for a future release.
+
 1. Import the solution ZIP into your Power Platform environment
 2. Configure connection references (see prerequisites)
-3. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
+3. Configure feedback sources (see Feedback Sources section above)
 4. Activate cloud flows
 5. Deploy the Power BI dashboard
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Prerequisites](docs/prerequisites.md) | Requirements |
-| [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
-| [Source Configuration](docs/source-configuration.md) | Connecting feedback sources |
-| [Pattern Analysis](docs/pattern-analysis.md) | Detection algorithms |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues |
+> **Note:** Detailed documentation is planned for a future release. See the sections below for current guidance on prerequisites, schema, and configuration.
 
 ## Metrics
 
@@ -173,7 +178,7 @@ Import `templates/HallucinationDashboard.pbit` into Power BI.
 
 ### Pattern Analysis
 
-Pattern analysis uses frequency counting with configurable thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
+Pattern analysis uses frequency counting with fixed thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
 
 > **Note:** Advanced pattern detection (clustering, semantic similarity) is planned for a future release.
 
