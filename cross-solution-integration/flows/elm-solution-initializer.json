@@ -19,6 +19,12 @@
               "recordId": "@triggerBody()?['_fsi_environmentrequest_value']"
             }
           },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "maximumInterval": "PT1M"
+          },
           "runAfter": {}
         },
         "Extract_Provisioning_Data": {
@@ -54,6 +60,12 @@
                   "$top": 1
                 }
               },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
               "runAfter": {}
             },
             "ACV_Not_Registered": {
@@ -84,6 +96,12 @@
                       }
                     }
                   },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "maximumInterval": "PT1M"
+                  },
                   "runAfter": {}
                 }
               },
@@ -106,6 +124,12 @@
                           "fsi_notes": "Updated via ELM re-provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
                         }
                       }
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1M"
                     },
                     "runAfter": {}
                   }
@@ -134,39 +158,64 @@
                 "fsi_name": "INT-Init-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
                 "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
                 "fsi_action": 11,
-                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":true,\"zone\":@{outputs('Extract_Provisioning_Data')?['zone']},\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
+                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":@{equals(actions('Register_In_ACV')?['status'], 'Succeeded')},\"zone\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['zone'], '')}\",\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
                 "fsi_actor": "CrossSolutionIntegration",
                 "fsi_actortype": 3,
-                "fsi_success": true
+                "fsi_success": "@equals(actions('Register_In_ACV')?['status'], 'Succeeded')"
               }
             }
           },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "maximumInterval": "PT1M"
+          },
           "runAfter": {
-            "Register_In_ACV": ["Succeeded"]
+            "Register_In_ACV": ["Succeeded", "Failed"]
           }
         },
-        "Notify_Teams": {
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_teams",
-              "operationId": "PostMessageToConversation",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
-            },
-            "parameters": {
-              "poster": "Flow bot",
-              "location": "Channel",
-              "body": {
-                "recipient": {
-                  "groupId": "@parameters('fsi_INT_TeamsGroupId')",
-                  "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+        "Scope_Notify_Teams": {
+          "type": "Scope",
+          "actions": {
+            "Notify_Teams": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
                 },
-                "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ✅ Registered<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
-              }
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body": {
+                    "recipient": {
+                      "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                      "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                    },
+                    "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: @{if(equals(actions('Register_In_ACV')?['status'], 'Succeeded'), '✅ Registered', '❌ Registration Failed')}<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
+                  }
+                }
+              },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
+              "runAfter": {}
             }
           },
           "runAfter": {
-            "Log_Initialization": ["Succeeded"]
+            "Log_Initialization": ["Succeeded", "Failed"]
+          }
+        },
+        "Handle_Notify_Outcome": {
+          "type": "Compose",
+          "inputs": "Notification @{coalesce(actions('Scope_Notify_Teams')?['status'], 'Skipped')}",
+          "runAfter": {
+            "Scope_Notify_Teams": ["Succeeded", "Failed", "Skipped"]
           }
         }
       },

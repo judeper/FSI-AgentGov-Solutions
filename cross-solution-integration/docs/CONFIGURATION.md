@@ -33,20 +33,15 @@ $params = @{
 
 ### Cross-Environment (Advanced)
 
-If solutions are in different environments, each solution's Dataverse URL must be specified:
+If solutions are in different environments, configure separate connections per solution in Power Automate, or run `Sync-SolutionAssessments.ps1` once per environment:
 
 ```powershell
-$params = @{
-    TenantId     = "tenant-guid"
-    CDDataverseUrl  = "https://cd-org.crm.dynamics.com"
-    ACVDataverseUrl = "https://acv-org.crm.dynamics.com"
-    SSCDataverseUrl = "https://ssc-org.crm.dynamics.com"
-    AAMDataverseUrl = "https://aam-org.crm.dynamics.com"
-    CMMDataverseUrl = "https://cmm-org.crm.dynamics.com"
-    FUSDataverseUrl = "https://fus-org.crm.dynamics.com"
-    Interactive     = $true
-}
-.\Sync-SolutionAssessments.ps1 @params
+# Run against each environment separately
+.\Sync-SolutionAssessments.ps1 -DataverseUrl "https://acv-org.crm.dynamics.com" `
+    -TenantId "tenant-guid" -Solutions ACV -Interactive
+
+.\Sync-SolutionAssessments.ps1 -DataverseUrl "https://ssc-org.crm.dynamics.com" `
+    -TenantId "tenant-guid" -Solutions SSC -Interactive
 ```
 
 ## Security Roles

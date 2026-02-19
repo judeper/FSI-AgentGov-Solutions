@@ -11,6 +11,7 @@ All of the following solutions must be deployed before enabling integration:
 | Agent Access Governance Monitor (AAM) | v1.0.0 | Dashboard feed for Control 3.8 |
 | Content Moderation Governance Monitor (CMM) | v1.0.0 | Dashboard feed for Control 1.8 |
 | File Upload Security Configurator (FUS) | v1.0.0 | Dashboard feed for Control 1.14 |
+| Conditional Access Automation (CAA) | v1.1.0 | Dashboard feed for Controls 1.11, 1.23, 1.18 |
 | Compliance Dashboard (CD) | v1.0.0 | Assessment target |
 | Environment Lifecycle Management (ELM) | v1.1.2 | Provisioning hook source (optional) |
 

@@ -1,6 +1,6 @@
 # Cross-Solution Integration
 
-Integration layer that connects the 5 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
+Integration layer that connects the 6 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
 
 > **Status:** Completed
 
@@ -8,7 +8,7 @@ Integration layer that connects the 5 Tier 2 governance solutions into the Compl
 
 The FSI Agent Governance Framework includes standalone governance solutions that each validate specific aspects of Copilot Studio agent compliance. This integration layer:
 
-1. **Dashboard Feeds** — Pulls daily validation results from 5 Tier 2 solutions into the Compliance Dashboard for unified scoring
+1. **Dashboard Feeds** — Pulls daily validation results from 6 Tier 2 solutions into the Compliance Dashboard for unified scoring
 2. **ELM Provisioning Hooks** — Automatically registers newly provisioned environments in downstream solutions
 3. **Unified Evidence Export** — Aggregates per-solution compliance evidence into a single regulatory examination package
 
@@ -21,6 +21,7 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | Agent Access Governance Monitor (AAM) | 3.8 | Dashboard Assessment |
 | Content Moderation Governance Monitor (CMM) | 1.8 | Dashboard Assessment |
 | File Upload Security Configurator (FUS) | 1.14 | Dashboard Assessment |
+| Conditional Access Automation (CAA) | 1.11, 1.23, 1.18 | Dashboard Assessment |
 | Environment Lifecycle Management (ELM) | — | Provisioning Hook |
 | Compliance Dashboard (CD) | — | Assessment Target |
 
@@ -31,9 +32,11 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | Script | Purpose |
 |--------|---------|
 | `IntegrationConfig.psm1` | Shared constants, mappings, and translation functions |
+| `IntegrationConfig.psd1` | Module manifest for IntegrationConfig |
 | `Sync-SolutionAssessments.ps1` | Pull Tier 2 results → CD assessments |
 | `Export-UnifiedComplianceEvidence.ps1` | Aggregate per-solution evidence into master package |
 | `Test-UnifiedEvidenceIntegrity.ps1` | Verify SHA-256 chain integrity of master evidence package |
+| `Register-ProvisionedEnvironment.ps1` | Register a newly provisioned environment in ACV (PowerShell alternative to ELM flow) |
 
 ### Power Automate Flows
 
@@ -50,12 +53,15 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | `STATUS_MAPPING.md` | Per-solution status → CD assessment translation logic |
 | `CONFIGURATION.md` | Setup and configuration guide |
 | `TROUBLESHOOTING.md` | Common issues and resolution |
+| `ELM_INTEGRATION.md` | ELM provisioning hook integration guide |
+| `EVIDENCE_EXPORT.md` | Unified evidence export pipeline documentation |
+| `SCORE_CALCULATOR_UPDATE.md` | CD score calculator update for automated assessments |
 
 ## Quick Start
 
 ### Prerequisites
 
-- All 5 Tier 2 solutions deployed (ACV, SSC, AAM, CMM, FUS)
+- All 6 Tier 2 solutions deployed (ACV, SSC, AAM, CMM, FUS, CAA)
 - Compliance Dashboard deployed with `fsi_controlmaster` table populated
 - Environment Lifecycle Management deployed (for provisioning hooks)
 - PowerShell 7.x with Microsoft.PowerApps.Administration.PowerShell module

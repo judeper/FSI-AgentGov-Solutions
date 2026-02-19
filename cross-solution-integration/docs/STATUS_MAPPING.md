@@ -18,7 +18,7 @@ This document defines the per-solution logic for translating Tier 2 governance s
 | CAA | 1.23 | Step-Up Authentication for Agent Operations | Daily |
 | CAA | 1.18 | RBAC and Least-Privilege for Agent Identities | Daily |
 
-**Total:** 6 solutions → 10 control assessments (SSC and CAA share Control 1.11)
+**Total:** 6 solutions → 9 control assessments (SSC and CAA share Controls 1.11 and 1.23)
 
 ---
 
@@ -94,14 +94,14 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 ```
 
-| Compliance Rate | CD Status | CD Score | Logic |
-|----------------|-----------|----------|-------|
+| Compliance Rate | CD Status | Status Threshold | Logic |
+|----------------|-----------|------------------|-------|
 | 100% | 1 (Compliant) | 100 | All agents meet zone moderation requirements |
 | ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some gaps |
 | < 80% | 3 (Non-Compliant) | 0 | Significant moderation policy gaps |
 | 0 agents | 4 (Not Applicable) | — | No agents to validate |
 
-**Score formula:** `fsi_score = compliance_rate` (direct percentage, not threshold-based). The `fsi_status` derivation uses thresholds above; `fsi_score` preserves the actual rate for trend analysis.
+**Score formula:** `fsi_score = compliance_rate` (direct percentage, not threshold-based). The Status Threshold column shows the default score per status tier; the actual `fsi_score` written to `fsi_controlassessment` is the raw compliance rate for trend analysis.
 
 ---
 
@@ -111,14 +111,14 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 **Source field:** `fsi_compliance_rate` (Decimal)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
-| Compliance Rate | CD Status | CD Score | Logic |
-|----------------|-----------|----------|-------|
+| Compliance Rate | CD Status | Status Threshold | Logic |
+|----------------|-----------|------------------|-------|
 | 100% | 1 (Compliant) | 100 | All agents meet zone file upload policy |
 | ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some with unauthorized uploads |
 | < 80% | 3 (Non-Compliant) | 0 | Significant file upload policy violations |
 | 0 agents | 4 (Not Applicable) | — | No agents to validate |
 
-**Score formula:** Same as CMM — direct compliance rate for `fsi_score`, threshold-based for `fsi_status`.
+**Score formula:** Same as CMM — direct compliance rate for `fsi_score`, threshold-based for `fsi_status`. The Status Threshold column shows defaults per status tier; the actual `fsi_score` is the raw compliance rate.
 
 ---
 

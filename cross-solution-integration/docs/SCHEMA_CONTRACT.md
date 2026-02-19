@@ -75,6 +75,7 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 | AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | `fsi_accessviolation` |
 | CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | `fsi_moderationviolation` |
 | FUS | `fsi_fileupload_baseline` | `fsi_fileupload_validationhistory` | `fsi_fileupload_violation` |
+| CAA | — | `fsi_capolicyvalidationhistory` | — |
 
 ### Correlation
 
@@ -92,7 +93,7 @@ All Tier 2 solutions produce evidence packages with identical structure:
     "exportedAt": "ISO 8601 timestamp",
     "scope": "Tenant|Environment",
     "exportVersion": "1.0.0",
-    "solution": "ACV|SSC|AAM|CMM|FUS",
+    "solution": "ACV|SSC|AAM|CMM|FUS|CAA",
     "recordCount": 0
   },
   "summary": {
@@ -124,7 +125,7 @@ Each solution defines its own connection references (not shared):
 | AAM | `fsi_cr_dataverse_aam` | `fsi_cr_office365_aam` | `fsi_cr_teams_aam` |
 | CMM | `fsi_cr_dataverse_cmm` | `fsi_cr_office365_cmm` | `fsi_cr_teams_cmm` |
 | FUS | `fsi_cr_dataverse_fus` | `fsi_cr_office365_fus` | `fsi_cr_teams_fus` |
-| INT | `fsi_cr_dataverse_int` | — | — |
+| INT | `fsi_cr_dataverse_int` | — | `fsi_cr_teams_int` |
 
 **Integration** uses a single Dataverse connection reference (`fsi_cr_dataverse_int`) that has read access to all solution tables and write access to the Compliance Dashboard tables.
 

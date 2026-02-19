@@ -23,7 +23,7 @@
     Export records through this date (inclusive). Default: today.
 
 .PARAMETER Solutions
-    Which solutions to export. Default: all (ACV,SSC,AAM,CMM,FUS).
+    Which solutions to export. Default: all (ACV,SSC,AAM,CMM,FUS,CAA).
 
 .PARAMETER ClientId
     App registration client ID for service principal auth.
@@ -71,8 +71,8 @@ param(
     [datetime]$EndDate = (Get-Date),
 
     [Parameter()]
-    [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS')]
-    [string[]]$Solutions = @('ACV', 'SSC', 'AAM', 'CMM', 'FUS'),
+    [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA')]
+    [string[]]$Solutions = @('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA'),
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [string]$ClientId,
@@ -125,62 +125,64 @@ function Connect-DataverseApi {
 $SolutionEvidence = @{
     ACV = @{
         Validations = @{
-            EntitySet = 'fsi_acv_validationhistorys'
+            EntitySet = 'fsi_auditvalidationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_settingname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity', 'fsi_environmentname', 'fsi_zone')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_acv_violations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_settingname', 'fsi_severity', 'fsi_status', 'fsi_environmentname', 'fsi_zone')
         }
     }
     SSC = @{
         Validations = @{
-            EntitySet = 'fsi_ssc_validationhistorys'
+            EntitySet = 'fsi_validationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_policyname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
         }
         Violations  = @{
-            EntitySet = 'fsi_ssc_violations'
+            EntitySet = 'fsi_driftviolations'
             DateField = 'fsi_detectedon'
             Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_policyname', 'fsi_severity', 'fsi_status')
         }
     }
     AAM = @{
         Validations = @{
-            EntitySet = 'fsi_aam_validationhistorys'
+            EntitySet = 'fsi_accessvalidationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_agentname', 'fsi_permissiontype', 'fsi_expectedaccess', 'fsi_actualaccess', 'fsi_severity')
         }
         Violations  = @{
-            EntitySet = 'fsi_aam_violations'
+            EntitySet = 'fsi_accessviolations'
             DateField = 'fsi_detectedon'
             Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_agentname', 'fsi_severity', 'fsi_status')
         }
     }
     CMM = @{
         Validations = @{
-            EntitySet = 'fsi_cmm_validationhistorys'
+            EntitySet = 'fsi_moderationvalidationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_agentname', 'fsi_moderationpolicy', 'fsi_expectedconfig', 'fsi_actualconfig', 'fsi_severity')
         }
         Violations  = @{
-            EntitySet = 'fsi_cmm_violations'
+            EntitySet = 'fsi_moderationviolations'
             DateField = 'fsi_detectedon'
             Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_agentname', 'fsi_severity', 'fsi_status')
         }
     }
     FUS = @{
         Validations = @{
-            EntitySet = 'fsi_fus_validationhistorys'
+            EntitySet = 'fsi_fileupload_validationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_settingname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
         }
         Violations  = @{
-            EntitySet = 'fsi_fus_violations'
+            EntitySet = 'fsi_fileupload_violations'
             DateField = 'fsi_detectedon'
             Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_settingname', 'fsi_severity', 'fsi_status')
+        }
+    }
+    CAA = @{
+        Validations = @{
+            EntitySet = 'fsi_capolicyvalidationhistories'
+            DateField = 'fsi_scannedon'
+            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_policyname', 'fsi_severity', 'fsi_environmentname', 'fsi_zone')
         }
     }
 }
@@ -190,17 +192,23 @@ $SolutionEvidence = @{
 #region Query and Export Functions
 
 function Get-DataverseRecords {
-    param([hashtable]$Connection, [string]$EntitySet, [string]$Filter, [string[]]$Fields)
+    param([hashtable]$Connection, [string]$EntitySet, [string]$Filter, [string[]]$Fields, [string]$OrderBy)
 
     $select = $Fields -join ','
-    $url = "$($Connection.BaseUrl)/$($EntitySet)?`$filter=$Filter&`$select=$select&`$orderby=$($Fields[1]) desc"
+    $url = "$($Connection.BaseUrl)/$($EntitySet)?`$filter=$Filter&`$select=$select&`$orderby=$OrderBy desc"
     
     $allRecords = @()
-    do {
-        $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
-        $allRecords += $response.value
-        $url = $response.'@odata.nextLink'
-    } while ($url)
+    try {
+        do {
+            $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
+            $allRecords += $response.value
+            $url = $response.'@odata.nextLink'
+        } while ($url)
+    }
+    catch {
+        Write-Warning "Failed to query $EntitySet : $_"
+        throw
+    }
 
     return $allRecords
 }
@@ -225,7 +233,7 @@ function Export-ToCsv {
 
 function Get-FileHashSHA256 {
     param([string]$FilePath)
-    return (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash
+    return (Get-FileHash -Path $FilePath -Algorithm SHA256).Hash.ToLower()
 }
 
 #endregion
@@ -249,7 +257,11 @@ if ($DryRun) {
         $tables = $SolutionEvidence[$sol]
         Write-Host "  $sol:" -ForegroundColor Yellow
         Write-Host "    Validations: $($tables.Validations.EntitySet)" -ForegroundColor Yellow
-        Write-Host "    Violations:  $($tables.Violations.EntitySet)" -ForegroundColor Yellow
+        if ($tables.ContainsKey('Violations')) {
+            Write-Host "    Violations:  $($tables.Violations.EntitySet)" -ForegroundColor Yellow
+        } else {
+            Write-Host "    Violations:  N/A" -ForegroundColor Yellow
+        }
     }
     Write-Host "`n[DryRun] No data exported.`n" -ForegroundColor Yellow
     return
@@ -285,41 +297,61 @@ foreach ($sol in $Solutions) {
     $tables = $SolutionEvidence[$sol]
     Write-Host "`nExporting $sol..." -ForegroundColor Cyan
 
-    # Validations
-    $vFilter = "$($tables.Validations.DateField) ge $startStr and $($tables.Validations.DateField) le $endStr"
-    $validations = Get-DataverseRecords -Connection $connection `
-        -EntitySet $tables.Validations.EntitySet `
-        -Filter $vFilter `
-        -Fields $tables.Validations.Fields
+    try {
+        # Validations
+        $vFilter = "$($tables.Validations.DateField) ge $startStr and $($tables.Validations.DateField) le $endStr"
+        $validations = Get-DataverseRecords -Connection $connection `
+            -EntitySet $tables.Validations.EntitySet `
+            -Filter $vFilter `
+            -Fields $tables.Validations.Fields `
+            -OrderBy $tables.Validations.DateField
 
-    $vPath = Join-Path $solDir 'validations.csv'
-    Export-ToCsv -Records $validations -FilePath $vPath -Fields $tables.Validations.Fields
-    $vHash = Get-FileHashSHA256 -FilePath $vPath
-    Write-Host "  Validations: $($validations.Count) records" -ForegroundColor Green
+        $vPath = Join-Path $solDir 'validations.csv'
+        Export-ToCsv -Records $validations -FilePath $vPath -Fields $tables.Validations.Fields
+        $vHash = Get-FileHashSHA256 -FilePath $vPath
+        Write-Host "  Validations: $($validations.Count) records" -ForegroundColor Green
 
-    # Violations
-    $xFilter = "$($tables.Violations.DateField) ge $startStr and $($tables.Violations.DateField) le $endStr"
-    $violations = Get-DataverseRecords -Connection $connection `
-        -EntitySet $tables.Violations.EntitySet `
-        -Filter $xFilter `
-        -Fields $tables.Violations.Fields
+        $manifest.fileHashes["$solKey/validations.csv"] = $vHash
+        $allHashes += $vHash
 
-    $xPath = Join-Path $solDir 'violations.csv'
-    Export-ToCsv -Records $violations -FilePath $xPath -Fields $tables.Violations.Fields
-    $xHash = Get-FileHashSHA256 -FilePath $xPath
-    Write-Host "  Violations:  $($violations.Count) records" -ForegroundColor Green
+        # Violations (not all solutions have violation tables)
+        $violationCount = 0
+        if ($tables.ContainsKey('Violations')) {
+            $xFilter = "$($tables.Violations.DateField) ge $startStr and $($tables.Violations.DateField) le $endStr"
+            $violations = Get-DataverseRecords -Connection $connection `
+                -EntitySet $tables.Violations.EntitySet `
+                -Filter $xFilter `
+                -Fields $tables.Violations.Fields `
+                -OrderBy $tables.Violations.DateField
 
-    # Record manifest entries
-    $manifest.solutions[$solKey] = @{
-        validationCount = $validations.Count
-        violationCount  = $violations.Count
-        exportedAt      = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $xPath = Join-Path $solDir 'violations.csv'
+            Export-ToCsv -Records $violations -FilePath $xPath -Fields $tables.Violations.Fields
+            $xHash = Get-FileHashSHA256 -FilePath $xPath
+            $violationCount = $violations.Count
+            Write-Host "  Violations:  $violationCount records" -ForegroundColor Green
+
+            $manifest.fileHashes["$solKey/violations.csv"] = $xHash
+            $allHashes += $xHash
+        } else {
+            Write-Host "  Violations:  N/A (no violation table)" -ForegroundColor Gray
+        }
+
+        # Record manifest entries
+        $manifest.solutions[$solKey] = @{
+            validationCount = $validations.Count
+            violationCount  = $violationCount
+            exportedAt      = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
     }
-
-    $manifest.fileHashes["$solKey/validations.csv"] = $vHash
-    $manifest.fileHashes["$solKey/violations.csv"]  = $xHash
-    $allHashes += $vHash
-    $allHashes += $xHash
+    catch {
+        Write-Warning "Failed to export $sol : $_"
+        $manifest.solutions[$solKey] = @{
+            validationCount = 0
+            violationCount  = 0
+            exportedAt      = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            error           = $_.Exception.Message
+        }
+    }
 }
 
 # Calculate master hash (SHA-256 of sorted concatenated file hashes)
@@ -327,7 +359,7 @@ $sortedHashes = ($allHashes | Sort-Object) -join ''
 $hashBytes = [System.Text.Encoding]::UTF8.GetBytes($sortedHashes)
 $sha = [System.Security.Cryptography.SHA256]::Create()
 $masterHashBytes = $sha.ComputeHash($hashBytes)
-$manifest.masterHash = [System.BitConverter]::ToString($masterHashBytes) -replace '-', ''
+$manifest.masterHash = ([System.BitConverter]::ToString($masterHashBytes) -replace '-', '').ToLower()
 
 # Write manifest
 $manifestPath = Join-Path $exportDir 'manifest.json'

@@ -1,7 +1,7 @@
 {
   "properties": {
     "displayName": "CD-SolutionFeedCollector",
-    "description": "Daily automated feed from Tier 2 governance solutions (ACV, SSC, AAM, CMM, FUS, CAA) into Compliance Dashboard assessments. Queries each solution's validation history, translates results, and upserts fsi_controlassessment records.",
+    "description": "Daily automated feed from Tier 2 governance solutions (ACV, AAM, CAA — abbreviated template; SSC, CMM, FUS follow same pattern) into Compliance Dashboard assessments. Queries each solution's validation history, translates results, and upserts fsi_controlassessment records.",
     "state": "Suspended",
     "definition": {
       "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -18,21 +18,6 @@
             ]
           },
           "runAfter": {}
-        },
-        "Initialize_SyncResults": {
-          "type": "InitializeVariable",
-          "inputs": {
-            "variables": [
-              {
-                "name": "SyncResults",
-                "type": "array",
-                "value": []
-              }
-            ]
-          },
-          "runAfter": {
-            "Initialize_RunId": ["Succeeded"]
-          }
         },
         "Sync_ACV": {
           "type": "Scope",
@@ -52,6 +37,12 @@
                   "$top": 1
                 }
               },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
               "runAfter": {}
             },
             "ACV_Has_Records": {
@@ -60,40 +51,149 @@
                 "greater": ["@length(body('Query_ACV_Latest')?['value'])", 0]
               },
               "actions": {
-                "Map_ACV_Status": {
-                  "type": "Compose",
-                  "inputs": {
-                    "solution": "ACV",
-                    "controlId": "1.7",
-                    "severity": "@first(body('Query_ACV_Latest')?['value'])?['fsi_severity']",
-                    "status": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 1, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 2, 3))",
-                    "score": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 100, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 50, 0))",
-                    "runId": "@first(body('Query_ACV_Latest')?['value'])?['fsi_runid']",
-                    "timestamp": "@first(body('Query_ACV_Latest')?['value'])?['fsi_timestamp']"
-                  },
-                  "runAfter": {}
-                },
-                "Upsert_ACV_Assessment": {
+                "Resolve_ACV_ControlMaster": {
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
                       "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
+                      "operationId": "ListRecords",
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                     },
                     "parameters": {
-                      "entityName": "fsi_controlassessments",
-                      "item": {
-                        "fsi_status": "@outputs('Map_ACV_Status')?['status']",
-                        "fsi_score": "@outputs('Map_ACV_Status')?['score']",
-                        "fsi_assessmentdate": "@utcNow()",
-                        "fsi_notes": "Automated: ACV v1.0.0. Run: @{outputs('Map_ACV_Status')?['runId']}. Severity: @{outputs('Map_ACV_Status')?['severity']}",
-                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                      "entityName": "fsi_controlmasters",
+                      "$filter": "fsi_controlid eq '1.7'",
+                      "$top": 1
+                    }
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "maximumInterval": "PT1M"
+                  },
+                  "runAfter": {}
+                },
+                "ACV_ControlMaster_Found": {
+                  "type": "If",
+                  "expression": {
+                    "greater": ["@length(body('Resolve_ACV_ControlMaster')?['value'])", 0]
+                  },
+                  "actions": {
+                    "Map_ACV_Status": {
+                      "type": "Compose",
+                      "inputs": {
+                        "solution": "ACV",
+                        "controlId": "1.7",
+                        "severity": "@first(body('Query_ACV_Latest')?['value'])?['fsi_severity']",
+                        "status": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 1, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 2, 3))",
+                        "score": "@if(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 1), 100, if(or(equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_ACV_Latest')?['value'])?['fsi_severity'], 3)), 50, 0))",
+                        "runId": "@first(body('Query_ACV_Latest')?['value'])?['fsi_runid']",
+                        "timestamp": "@first(body('Query_ACV_Latest')?['value'])?['fsi_timestamp']"
+                      },
+                      "runAfter": {}
+                    },
+                    "Check_Existing_ACV_Assessment": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_controlassessments",
+                          "$filter": "_fsi_controlmasterid_value eq '@{first(body('Resolve_ACV_ControlMaster')?['value'])?['fsi_controlmasterid']}' and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow(\"yyyy-MM-dd\")}')",
+                          "$top": 1
+                        }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "maximumInterval": "PT1M"
+                      },
+                      "runAfter": {
+                        "Map_ACV_Status": ["Succeeded"]
+                      }
+                    },
+                    "ACV_Assessment_Exists": {
+                      "type": "If",
+                      "expression": {
+                        "greater": ["@length(body('Check_Existing_ACV_Assessment')?['value'])", 0]
+                      },
+                      "actions": {
+                        "Update_ACV_Assessment": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "fsi_controlassessments",
+                              "recordId": "@first(body('Check_Existing_ACV_Assessment')?['value'])?['fsi_controlassessmentid']",
+                              "item": {
+                                "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Resolve_ACV_ControlMaster')?['value'])?['fsi_controlmasterid']})",
+                                "fsi_status": "@outputs('Map_ACV_Status')?['status']",
+                                "fsi_score": "@outputs('Map_ACV_Status')?['score']",
+                                "fsi_assessmentdate": "@utcNow()",
+                                "fsi_notes": "Automated: ACV v1.0.0. Run: @{outputs('Map_ACV_Status')?['runId']}. Severity: @{outputs('Map_ACV_Status')?['severity']}",
+                                "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                              }
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "maximumInterval": "PT1M"
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_ACV_Assessment": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                              },
+                              "parameters": {
+                                "entityName": "fsi_controlassessments",
+                                "item": {
+                                  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Resolve_ACV_ControlMaster')?['value'])?['fsi_controlmasterid']})",
+                                  "fsi_status": "@outputs('Map_ACV_Status')?['status']",
+                                  "fsi_score": "@outputs('Map_ACV_Status')?['score']",
+                                  "fsi_assessmentdate": "@utcNow()",
+                                  "fsi_notes": "Automated: ACV v1.0.0. Run: @{outputs('Map_ACV_Status')?['runId']}. Severity: @{outputs('Map_ACV_Status')?['severity']}",
+                                  "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                                }
+                              }
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT10S",
+                              "maximumInterval": "PT1M"
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_Existing_ACV_Assessment": ["Succeeded"]
                       }
                     }
                   },
+                  "else": {
+                    "actions": {}
+                  },
                   "runAfter": {
-                    "Map_ACV_Status": ["Succeeded"]
+                    "Resolve_ACV_ControlMaster": ["Succeeded"]
                   }
                 }
               },
@@ -106,7 +206,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Initialize_RunId": ["Succeeded"]
           }
         },
         "Sync_AAM": {
@@ -126,6 +226,12 @@
                   "$top": 1
                 }
               },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
               "runAfter": {}
             },
             "AAM_Has_Records": {
@@ -134,37 +240,148 @@
                 "greater": ["@length(body('Query_AAM_Latest')?['value'])", 0]
               },
               "actions": {
-                "Map_AAM_Status": {
-                  "type": "Compose",
-                  "inputs": {
-                    "solution": "AAM",
-                    "controlId": "3.8",
-                    "status": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 1, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 2, 3))",
-                    "score": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 100, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 50, 0))"
-                  },
-                  "runAfter": {}
-                },
-                "Upsert_AAM_Assessment": {
+                "Resolve_AAM_ControlMaster": {
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
                       "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
+                      "operationId": "ListRecords",
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                     },
                     "parameters": {
-                      "entityName": "fsi_controlassessments",
-                      "item": {
-                        "fsi_status": "@outputs('Map_AAM_Status')?['status']",
-                        "fsi_score": "@outputs('Map_AAM_Status')?['score']",
-                        "fsi_assessmentdate": "@utcNow()",
-                        "fsi_notes": "Automated: AAM v1.0.0. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
-                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                      "entityName": "fsi_controlmasters",
+                      "$filter": "fsi_controlid eq '3.8'",
+                      "$top": 1
+                    }
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "maximumInterval": "PT1M"
+                  },
+                  "runAfter": {}
+                },
+                "AAM_ControlMaster_Found": {
+                  "type": "If",
+                  "expression": {
+                    "greater": ["@length(body('Resolve_AAM_ControlMaster')?['value'])", 0]
+                  },
+                  "actions": {
+                    "Map_AAM_Status": {
+                      "type": "Compose",
+                      "inputs": {
+                        "solution": "AAM",
+                        "controlId": "3.8",
+                        "status": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 1, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 2, 3))",
+                        "score": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 100, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 50, 0))",
+                        "runId": "@first(body('Query_AAM_Latest')?['value'])?['fsi_runid']",
+                        "timestamp": "@first(body('Query_AAM_Latest')?['value'])?['fsi_timestamp']"
+                      },
+                      "runAfter": {}
+                    },
+                    "Check_Existing_AAM_Assessment": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_controlassessments",
+                          "$filter": "_fsi_controlmasterid_value eq '@{first(body('Resolve_AAM_ControlMaster')?['value'])?['fsi_controlmasterid']}' and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow(\"yyyy-MM-dd\")}')",
+                          "$top": 1
+                        }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "maximumInterval": "PT1M"
+                      },
+                      "runAfter": {
+                        "Map_AAM_Status": ["Succeeded"]
+                      }
+                    },
+                    "AAM_Assessment_Exists": {
+                      "type": "If",
+                      "expression": {
+                        "greater": ["@length(body('Check_Existing_AAM_Assessment')?['value'])", 0]
+                      },
+                      "actions": {
+                        "Update_AAM_Assessment": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "fsi_controlassessments",
+                              "recordId": "@first(body('Check_Existing_AAM_Assessment')?['value'])?['fsi_controlassessmentid']",
+                              "item": {
+                                "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Resolve_AAM_ControlMaster')?['value'])?['fsi_controlmasterid']})",
+                                "fsi_status": "@outputs('Map_AAM_Status')?['status']",
+                                "fsi_score": "@outputs('Map_AAM_Status')?['score']",
+                                "fsi_assessmentdate": "@utcNow()",
+                                "fsi_notes": "Automated: AAM v1.0.0. Run: @{outputs('Map_AAM_Status')?['runId']}. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
+                                "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                              }
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "maximumInterval": "PT1M"
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_AAM_Assessment": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                              },
+                              "parameters": {
+                                "entityName": "fsi_controlassessments",
+                                "item": {
+                                  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Resolve_AAM_ControlMaster')?['value'])?['fsi_controlmasterid']})",
+                                  "fsi_status": "@outputs('Map_AAM_Status')?['status']",
+                                  "fsi_score": "@outputs('Map_AAM_Status')?['score']",
+                                  "fsi_assessmentdate": "@utcNow()",
+                                  "fsi_notes": "Automated: AAM v1.0.0. Run: @{outputs('Map_AAM_Status')?['runId']}. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
+                                  "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                                }
+                              }
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT10S",
+                              "maximumInterval": "PT1M"
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_Existing_AAM_Assessment": ["Succeeded"]
                       }
                     }
                   },
+                  "else": {
+                    "actions": {}
+                  },
                   "runAfter": {
-                    "Map_AAM_Status": ["Succeeded"]
+                    "Resolve_AAM_ControlMaster": ["Succeeded"]
                   }
                 }
               },
@@ -197,6 +414,12 @@
                   "$top": 1
                 }
               },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
               "runAfter": {}
             },
             "CAA_Has_Records": {
@@ -205,86 +428,367 @@
                 "greater": ["@length(body('Query_CAA_Latest')?['value'])", 0]
               },
               "actions": {
-                "Map_CAA_Status": {
-                  "type": "Compose",
+                "Resolve_CAA_ControlMasters": {
+                  "type": "OpenApiConnection",
                   "inputs": {
-                    "solution": "CAA",
-                    "controlIds": ["1.11", "1.23", "1.18"],
-                    "severity": "@first(body('Query_CAA_Latest')?['value'])?['fsi_severity']",
-                    "status": "@if(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 1), 1, if(or(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 3)), 2, 3))",
-                    "score": "@if(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 1), 100, if(or(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 3)), 50, 0))",
-                    "runId": "@first(body('Query_CAA_Latest')?['value'])?['fsi_runid']",
-                    "timestamp": "@first(body('Query_CAA_Latest')?['value'])?['fsi_timestamp']"
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "fsi_controlmasters",
+                      "$filter": "fsi_controlid eq '1.11' or fsi_controlid eq '1.23' or fsi_controlid eq '1.18'"
+                    }
+                  },
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "maximumInterval": "PT1M"
                   },
                   "runAfter": {}
                 },
-                "Upsert_CAA_Assessment_1_11": {
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                "CAA_ControlMasters_Found": {
+                  "type": "If",
+                  "expression": {
+                    "greater": ["@length(body('Resolve_CAA_ControlMasters')?['value'])", 0]
+                  },
+                  "actions": {
+                    "Filter_CAA_Control_1_11": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Resolve_CAA_ControlMasters')?['value']",
+                        "where": "@equals(item()?['fsi_controlid'], '1.11')"
+                      },
+                      "runAfter": {}
                     },
-                    "parameters": {
-                      "entityName": "fsi_controlassessments",
-                      "item": {
-                        "fsi_status": "@outputs('Map_CAA_Status')?['status']",
-                        "fsi_score": "@outputs('Map_CAA_Status')?['score']",
-                        "fsi_assessmentdate": "@utcNow()",
-                        "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.11 (primary, dual-feed with SSC).",
-                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                    "Filter_CAA_Control_1_23": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Resolve_CAA_ControlMasters')?['value']",
+                        "where": "@equals(item()?['fsi_controlid'], '1.23')"
+                      },
+                      "runAfter": {}
+                    },
+                    "Filter_CAA_Control_1_18": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Resolve_CAA_ControlMasters')?['value']",
+                        "where": "@equals(item()?['fsi_controlid'], '1.18')"
+                      },
+                      "runAfter": {}
+                    },
+                    "Map_CAA_Status": {
+                      "type": "Compose",
+                      "inputs": {
+                        "solution": "CAA",
+                        "controlIds": ["1.11", "1.23", "1.18"],
+                        "severity": "@first(body('Query_CAA_Latest')?['value'])?['fsi_severity']",
+                        "status": "@if(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 1), 1, if(or(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 3)), 2, 3))",
+                        "score": "@if(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 1), 100, if(or(equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 2), equals(first(body('Query_CAA_Latest')?['value'])?['fsi_severity'], 3)), 50, 0))",
+                        "runId": "@first(body('Query_CAA_Latest')?['value'])?['fsi_runid']",
+                        "timestamp": "@first(body('Query_CAA_Latest')?['value'])?['fsi_timestamp']"
+                      },
+                      "runAfter": {}
+                    },
+                    "Check_Existing_CAA_1_11": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_controlassessments",
+                          "$filter": "_fsi_controlmasterid_value eq '@{first(body('Filter_CAA_Control_1_11'))?['fsi_controlmasterid']}' and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow(\"yyyy-MM-dd\")}')",
+                          "$top": 1
+                        }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "maximumInterval": "PT1M"
+                      },
+                      "runAfter": {
+                        "Map_CAA_Status": ["Succeeded"],
+                        "Filter_CAA_Control_1_11": ["Succeeded"]
+                      }
+                    },
+                    "CAA_1_11_Exists": {
+                      "type": "If",
+                      "expression": {
+                        "greater": ["@length(body('Check_Existing_CAA_1_11')?['value'])", 0]
+                      },
+                      "actions": {
+                        "Update_CAA_Assessment_1_11": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "fsi_controlassessments",
+                              "recordId": "@first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_controlassessmentid']",
+                              "item": {
+                                "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_11'))?['fsi_controlmasterid']})",
+                                "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                "fsi_assessmentdate": "@utcNow()",
+                                "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.11 (primary, dual-feed with SSC).",
+                                "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                              }
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "maximumInterval": "PT1M"
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_CAA_Assessment_1_11": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                              },
+                              "parameters": {
+                                "entityName": "fsi_controlassessments",
+                                "item": {
+                                  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_11'))?['fsi_controlmasterid']})",
+                                  "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                  "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                  "fsi_assessmentdate": "@utcNow()",
+                                  "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.11 (primary, dual-feed with SSC).",
+                                  "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                                }
+                              }
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT10S",
+                              "maximumInterval": "PT1M"
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_Existing_CAA_1_11": ["Succeeded"]
+                      }
+                    },
+                    "Check_Existing_CAA_1_23": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_controlassessments",
+                          "$filter": "_fsi_controlmasterid_value eq '@{first(body('Filter_CAA_Control_1_23'))?['fsi_controlmasterid']}' and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow(\"yyyy-MM-dd\")}')",
+                          "$top": 1
+                        }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "maximumInterval": "PT1M"
+                      },
+                      "runAfter": {
+                        "Map_CAA_Status": ["Succeeded"],
+                        "Filter_CAA_Control_1_23": ["Succeeded"]
+                      }
+                    },
+                    "CAA_1_23_Exists": {
+                      "type": "If",
+                      "expression": {
+                        "greater": ["@length(body('Check_Existing_CAA_1_23')?['value'])", 0]
+                      },
+                      "actions": {
+                        "Update_CAA_Assessment_1_23": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "fsi_controlassessments",
+                              "recordId": "@first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_controlassessmentid']",
+                              "item": {
+                                "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_23'))?['fsi_controlmasterid']})",
+                                "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                "fsi_assessmentdate": "@utcNow()",
+                                "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.23 (secondary).",
+                                "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                              }
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "maximumInterval": "PT1M"
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_CAA_Assessment_1_23": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                              },
+                              "parameters": {
+                                "entityName": "fsi_controlassessments",
+                                "item": {
+                                  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_23'))?['fsi_controlmasterid']})",
+                                  "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                  "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                  "fsi_assessmentdate": "@utcNow()",
+                                  "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.23 (secondary).",
+                                  "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                                }
+                              }
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT10S",
+                              "maximumInterval": "PT1M"
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_Existing_CAA_1_23": ["Succeeded"]
+                      }
+                    },
+                    "Check_Existing_CAA_1_18": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_controlassessments",
+                          "$filter": "_fsi_controlmasterid_value eq '@{first(body('Filter_CAA_Control_1_18'))?['fsi_controlmasterid']}' and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow(\"yyyy-MM-dd\")}')",
+                          "$top": 1
+                        }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "maximumInterval": "PT1M"
+                      },
+                      "runAfter": {
+                        "Map_CAA_Status": ["Succeeded"],
+                        "Filter_CAA_Control_1_18": ["Succeeded"]
+                      }
+                    },
+                    "CAA_1_18_Exists": {
+                      "type": "If",
+                      "expression": {
+                        "greater": ["@length(body('Check_Existing_CAA_1_18')?['value'])", 0]
+                      },
+                      "actions": {
+                        "Update_CAA_Assessment_1_18": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord",
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                            },
+                            "parameters": {
+                              "entityName": "fsi_controlassessments",
+                              "recordId": "@first(body('Check_Existing_CAA_1_18')?['value'])?['fsi_controlassessmentid']",
+                              "item": {
+                                "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_18'))?['fsi_controlmasterid']})",
+                                "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                "fsi_assessmentdate": "@utcNow()",
+                                "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.18 (secondary).",
+                                "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                              }
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "maximumInterval": "PT1M"
+                          },
+                          "runAfter": {}
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Create_CAA_Assessment_1_18": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "CreateRecord",
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                              },
+                              "parameters": {
+                                "entityName": "fsi_controlassessments",
+                                "item": {
+                                  "fsi_controlmasterid@odata.bind": "/fsi_controlmasters(@{first(body('Filter_CAA_Control_1_18'))?['fsi_controlmasterid']})",
+                                  "fsi_status": "@outputs('Map_CAA_Status')?['status']",
+                                  "fsi_score": "@outputs('Map_CAA_Status')?['score']",
+                                  "fsi_assessmentdate": "@utcNow()",
+                                  "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.18 (secondary).",
+                                  "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
+                                }
+                              }
+                            },
+                            "retryPolicy": {
+                              "type": "exponential",
+                              "count": 3,
+                              "interval": "PT10S",
+                              "maximumInterval": "PT1M"
+                            },
+                            "runAfter": {}
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Check_Existing_CAA_1_18": ["Succeeded"]
                       }
                     }
                   },
-                  "runAfter": {
-                    "Map_CAA_Status": ["Succeeded"]
-                  }
-                },
-                "Upsert_CAA_Assessment_1_23": {
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                    },
-                    "parameters": {
-                      "entityName": "fsi_controlassessments",
-                      "item": {
-                        "fsi_status": "@outputs('Map_CAA_Status')?['status']",
-                        "fsi_score": "@outputs('Map_CAA_Status')?['score']",
-                        "fsi_assessmentdate": "@utcNow()",
-                        "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.23 (secondary).",
-                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
-                      }
-                    }
+                  "else": {
+                    "actions": {}
                   },
                   "runAfter": {
-                    "Upsert_CAA_Assessment_1_11": ["Succeeded"]
-                  }
-                },
-                "Upsert_CAA_Assessment_1_18": {
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                    },
-                    "parameters": {
-                      "entityName": "fsi_controlassessments",
-                      "item": {
-                        "fsi_status": "@outputs('Map_CAA_Status')?['status']",
-                        "fsi_score": "@outputs('Map_CAA_Status')?['score']",
-                        "fsi_assessmentdate": "@utcNow()",
-                        "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.18 (secondary).",
-                        "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
-                      }
-                    }
-                  },
-                  "runAfter": {
-                    "Upsert_CAA_Assessment_1_23": ["Succeeded"]
+                    "Resolve_CAA_ControlMasters": ["Succeeded"]
                   }
                 }
               },
@@ -300,28 +804,47 @@
             "Sync_AAM": ["Succeeded", "Failed"]
           }
         },
-        "Send_Summary_Teams": {
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_teams",
-              "operationId": "PostMessageToConversation",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
-            },
-            "parameters": {
-              "poster": "Flow bot",
-              "location": "Channel",
-              "body": {
-                "recipient": {
-                  "groupId": "@parameters('fsi_INT_TeamsGroupId')",
-                  "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+        "Scope_Send_Summary_Teams": {
+          "type": "Scope",
+          "actions": {
+            "Send_Summary_Teams": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
                 },
-                "messageBody": "<p><strong>📊 Compliance Dashboard Feed Complete</strong></p><p>Run ID: @{variables('RunId')}<br/>Timestamp: @{utcNow()}<br/>Solutions synced: ACV, SSC, AAM, CMM, FUS, CAA</p>"
-              }
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body": {
+                    "recipient": {
+                      "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                      "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                    },
+                    "messageBody": "<p><strong>📊 Compliance Dashboard Feed Complete</strong></p><p>Run ID: @{variables('RunId')}<br/>Timestamp: @{utcNow()}<br/>ACV: @{actions('Sync_ACV')?['status']}<br/>AAM: @{actions('Sync_AAM')?['status']}<br/>CAA: @{actions('Sync_CAA')?['status']}</p><p><em>Note: SSC, CMM, FUS follow same pattern (see template metadata).</em></p>"
+                  }
+                }
+              },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              },
+              "runAfter": {}
             }
           },
           "runAfter": {
             "Sync_CAA": ["Succeeded", "Failed"]
+          }
+        },
+        "Handle_Summary_Outcome": {
+          "type": "Compose",
+          "inputs": "Notification @{coalesce(actions('Scope_Send_Summary_Teams')?['status'], 'Skipped')}",
+          "runAfter": {
+            "Scope_Send_Summary_Teams": ["Succeeded", "Failed", "Skipped"]
           }
         }
       },
@@ -359,7 +882,7 @@
   "_metadata": {
     "solution": "Cross-Solution Integration",
     "version": "1.1.0",
-    "description": "Abbreviated flow definition showing ACV, AAM, and CAA sync patterns. SSC, CMM, and FUS follow the same pattern with solution-specific query and mapping logic. Full flow should be manually created in Power Automate using this template.",
+    "description": "Abbreviated flow definition showing ACV, AAM, and CAA sync patterns. SSC, CMM, and FUS follow the same pattern with solution-specific query and mapping logic. Full flow should be manually created in Power Automate using this template. IMPORTANT: Controls 1.11 and 1.23 are dual-feed (both SSC and CAA write assessments). When expanding to include SSC, implement worst-of-two status resolution — if either SSC or CAA reports Non-Compliant, the control assessment must reflect Non-Compliant. See STATUS_MAPPING.md (Dual-Feed Resolution) and Sync-SolutionAssessments.ps1 for reference implementation.",
     "schedule": "Daily at 6:30 AM UTC (30 min after Tier 2 daily scans)",
     "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation."
   }

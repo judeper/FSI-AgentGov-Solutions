@@ -8,7 +8,7 @@ This document describes the unified compliance evidence export pipeline that agg
 
 Financial services organizations require consolidated evidence packages for regulatory examinations. The unified export pipeline:
 
-1. Queries validation and violation records from 5 Tier 2 solutions
+1. Queries validation and violation records from 6 Tier 2 solutions
 2. Exports per-solution CSV files with standardized field sets
 3. Generates a master manifest with SHA-256 hash chain
 4. Produces a self-contained, tamper-evident evidence directory
@@ -21,8 +21,7 @@ Financial services organizations require consolidated evidence packages for regu
 evidence-export-YYYY-MM-DD-HHmmss/
 ├── manifest.json
 ├── acv/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 ├── ssc/
 │   ├── validations.csv
 │   └── violations.csv
@@ -32,9 +31,11 @@ evidence-export-YYYY-MM-DD-HHmmss/
 ├── cmm/
 │   ├── validations.csv
 │   └── violations.csv
-└── fus/
-    ├── validations.csv
-    └── violations.csv
+├── fus/
+│   ├── validations.csv
+│   └── violations.csv
+└── caa/
+    └── validations.csv
 ```
 
 ---
@@ -52,13 +53,19 @@ evidence-export-YYYY-MM-DD-HHmmss/
     "solutions": {
         "acv": {
             "validationCount": 150,
-            "violationCount": 3,
+            "violationCount": 0,
+            "exportedAt": "ISO 8601 timestamp"
+        },
+        "ssc": {
+            "validationCount": 200,
+            "violationCount": 5,
             "exportedAt": "ISO 8601 timestamp"
         }
     },
     "fileHashes": {
         "acv/validations.csv": "SHA-256 hex",
-        "acv/violations.csv": "SHA-256 hex"
+        "ssc/validations.csv": "SHA-256 hex",
+        "ssc/violations.csv": "SHA-256 hex"
     },
     "masterHash": "SHA-256 hex"
 }
@@ -99,11 +106,12 @@ This approach is consistent with the per-solution evidence export pattern used b
 
 | Solution | Validation Table | Violation Table | Date Field | Key Fields |
 |----------|-----------------|-----------------|------------|------------|
-| ACV | `fsi_acv_validationhistorys` | `fsi_acv_violations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity, zone |
-| SSC | `fsi_ssc_validationhistorys` | `fsi_ssc_violations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
-| AAM | `fsi_aam_validationhistorys` | `fsi_aam_violations` | `fsi_scannedon` / `fsi_detectedon` | agentName, permissionType, expectedAccess, actualAccess |
-| CMM | `fsi_cmm_validationhistorys` | `fsi_cmm_violations` | `fsi_scannedon` / `fsi_detectedon` | agentName, moderationPolicy, expectedConfig, actualConfig |
-| FUS | `fsi_fus_validationhistorys` | `fsi_fus_violations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
+| ACV | `fsi_auditvalidationhistories` | — | `fsi_scannedon` | settingName, expectedValue, actualValue, severity, zone |
+| SSC | `fsi_validationhistories` | `fsi_driftviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
+| AAM | `fsi_accessvalidationhistories` | `fsi_accessviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, permissionType, expectedAccess, actualAccess |
+| CMM | `fsi_moderationvalidationhistories` | `fsi_moderationviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, moderationPolicy, expectedConfig, actualConfig |
+| FUS | `fsi_fileupload_validationhistories` | `fsi_fileupload_violations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
+| CAA | `fsi_capolicyvalidationhistories` | — | `fsi_scannedon` | policyName, severity, environmentName, zone |
 
 ---
 
