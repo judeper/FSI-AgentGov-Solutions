@@ -102,10 +102,14 @@ VAR PriorDate = MAX(ComplianceScore[fsi_scoredate]) - 30
 VAR PriorScore =
     CALCULATE(
         AVERAGE(ComplianceScore[fsi_overallscore]),
-        ComplianceScore[fsi_scoredate] = PriorDate
+        ComplianceScore[fsi_scoredate] =
+            CALCULATE(
+                MAX(ComplianceScore[fsi_scoredate]),
+                ComplianceScore[fsi_scoredate] <= PriorDate
+            )
     )
 RETURN
-    CurrentScore - PriorScore
+    IF(ISBLANK(PriorScore), BLANK(), CurrentScore - PriorScore)
 ```
 
 ### Score Change Direction
@@ -172,9 +176,20 @@ Total Controls = COUNTROWS(ControlMaster)
 
 ```dax
 Compliant Controls =
-CALCULATE(
-    COUNTROWS(ControlAssessment),
-    ControlAssessment[fsi_status] = 1
+VAR LatestAssessments =
+    SUMMARIZE(
+        ControlAssessment,
+        ControlAssessment[fsi_controlmasterid],
+        ControlAssessment[fsi_zone],
+        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    )
+RETURN
+COUNTROWS(
+    FILTER(
+        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
+        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+            && ControlAssessment[fsi_status] = 1
+    )
 )
 ```
 
@@ -182,9 +197,20 @@ CALCULATE(
 
 ```dax
 Partial Controls =
-CALCULATE(
-    COUNTROWS(ControlAssessment),
-    ControlAssessment[fsi_status] = 2
+VAR LatestAssessments =
+    SUMMARIZE(
+        ControlAssessment,
+        ControlAssessment[fsi_controlmasterid],
+        ControlAssessment[fsi_zone],
+        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    )
+RETURN
+COUNTROWS(
+    FILTER(
+        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
+        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+            && ControlAssessment[fsi_status] = 2
+    )
 )
 ```
 
@@ -192,9 +218,41 @@ CALCULATE(
 
 ```dax
 Non-Compliant Controls =
-CALCULATE(
-    COUNTROWS(ControlAssessment),
-    ControlAssessment[fsi_status] = 3
+VAR LatestAssessments =
+    SUMMARIZE(
+        ControlAssessment,
+        ControlAssessment[fsi_controlmasterid],
+        ControlAssessment[fsi_zone],
+        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    )
+RETURN
+COUNTROWS(
+    FILTER(
+        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
+        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+            && ControlAssessment[fsi_status] = 3
+    )
+)
+```
+
+### Not Applicable Controls
+
+```dax
+Not Applicable Controls =
+VAR LatestAssessments =
+    SUMMARIZE(
+        ControlAssessment,
+        ControlAssessment[fsi_controlmasterid],
+        ControlAssessment[fsi_zone],
+        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    )
+RETURN
+COUNTROWS(
+    FILTER(
+        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
+        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+            && ControlAssessment[fsi_status] = 4
+    )
 )
 ```
 
@@ -202,9 +260,26 @@ CALCULATE(
 
 ```dax
 Compliance Rate =
+VAR LatestAssessments =
+    SUMMARIZE(
+        ControlAssessment,
+        ControlAssessment[fsi_controlmasterid],
+        ControlAssessment[fsi_zone],
+        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    )
+VAR LatestRows =
+    FILTER(
+        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
+        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+    )
+VAR TotalActive =
+    COUNTROWS(FILTER(LatestRows, ControlAssessment[fsi_status] <> 4))
+VAR CompliantCount =
+    COUNTROWS(FILTER(LatestRows, ControlAssessment[fsi_status] = 1))
+RETURN
 DIVIDE(
-    [Compliant Controls],
-    [Total Controls] - [Not Applicable Controls],
+    CompliantCount,
+    TotalActive,
     0
 )
 ```
@@ -233,7 +308,7 @@ SWITCH(
 Open Exceptions =
 CALCULATE(
     COUNTROWS(ComplianceException),
-    ComplianceException[fsi_status] IN {1, 2, 3}
+    ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
 )
 ```
 
@@ -244,7 +319,7 @@ Critical Exceptions =
 CALCULATE(
     COUNTROWS(ComplianceException),
     ComplianceException[fsi_severity] = 1,
-    ComplianceException[fsi_status] IN {1, 2, 3}
+    ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
 )
 ```
 
@@ -255,7 +330,7 @@ SLA Breached =
 CALCULATE(
     COUNTROWS(ComplianceException),
     ComplianceException[fsi_slastatus] = 3,
-    ComplianceException[fsi_status] IN {1, 2, 3}
+    ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
 )
 ```
 
@@ -267,7 +342,7 @@ VAR OnTrack =
     CALCULATE(
         COUNTROWS(ComplianceException),
         ComplianceException[fsi_slastatus] = 1,
-        ComplianceException[fsi_status] IN {1, 2, 3}
+        ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
     )
 VAR Total = [Open Exceptions]
 RETURN
@@ -280,7 +355,7 @@ RETURN
 Avg Days Open =
 CALCULATE(
     AVERAGE(ComplianceException[fsi_daysopen]),
-    ComplianceException[fsi_status] IN {1, 2, 3}
+    ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
 )
 ```
 

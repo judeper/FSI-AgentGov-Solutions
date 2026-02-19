@@ -12,18 +12,6 @@
       "connectionReferenceDisplayName": "Office 365 Outlook Connection",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365",
       "description": "Office 365 Outlook connection for sending email notifications"
-    },
-    {
-      "connectionReferenceLogicalName": "fsi_cr_teams",
-      "connectionReferenceDisplayName": "Microsoft Teams Connection",
-      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-      "description": "Microsoft Teams connection for posting alerts to Teams channels"
-    },
-    {
-      "connectionReferenceLogicalName": "fsi_cr_http_azuread",
-      "connectionReferenceDisplayName": "HTTP with Azure AD Connection",
-      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
-      "description": "HTTP with Azure AD connection for calling Graph API and Power Platform API"
     }
   ]
 }

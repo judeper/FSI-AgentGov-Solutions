@@ -9,28 +9,27 @@ Table definitions for the Compliance Dashboard data model.
 ```
 ┌─────────────────────┐     ┌─────────────────────┐
 │  fsi_controlmaster  │────<│ fsi_controlassessment│
-│  (71 controls)      │     │  (assessments)       │
+│  (62 controls)      │     │  (assessments)       │
 └─────────────────────┘     └─────────────────────┘
-         │                            │
-         │                            │
-         ▼                            ▼
-┌─────────────────────┐     ┌─────────────────────┐
-│ fsi_compliancescore │     │ fsi_complianceexception│
-│  (daily snapshots)  │     │  (open exceptions)   │
-└─────────────────────┘     └─────────────────────┘
-                                      │
-                                      ▼
-                            ┌─────────────────────┐
-                            │ fsi_complianceevidence│
-                            │  (evidence links)    │
-                            └─────────────────────┘
+                                      │ 1:N
+                             ┌────────┴────────┐
+                             ▼                  ▼
+                    ┌─────────────────────┐  ┌─────────────────────┐
+                    │fsi_complianceexception│  │ fsi_complianceevidence│
+                    │  (open exceptions)   │  │  (evidence links)    │
+                    └─────────────────────┘  └─────────────────────┘
+
+┌─────────────────────┐
+│ fsi_compliancescore │
+│  (daily snapshots)  │
+└─────────────────────┘
 ```
 
 ---
 
 ## Table: fsi_controlmaster
 
-Master list of all 71 controls in the FSI Agent Governance Framework.
+Master list of all 62 controls in the FSI Agent Governance Framework.
 
 ### Columns
 
@@ -79,7 +78,7 @@ Master list of all 71 controls in the FSI Agent Governance Framework.
   "fsi_zone2applicable": true,
   "fsi_zone3applicable": true,
   "fsi_regulatoryreference": "FINRA Rule 3110, FINRA Rule 3120",
-  "fsi_weight": 2.5,
+  "fsi_weight": 3.0,
   "fsi_category": 2
 }
 ```
@@ -143,9 +142,9 @@ Daily compliance score snapshots for trend analysis.
 | `fsi_zone1score` | Decimal | No | Zone 1 score |
 | `fsi_zone2score` | Decimal | No | Zone 2 score |
 | `fsi_zone3score` | Decimal | No | Zone 3 score |
-| `fsi_compliantcount` | Integer | Yes | Count of compliant controls |
-| `fsi_partialcount` | Integer | Yes | Count of partial controls |
-| `fsi_noncompliantcount` | Integer | Yes | Count of non-compliant controls |
+| `fsi_compliantcount` | Integer | Yes | Count of compliant control+zone assessments (max 200) |
+| `fsi_partialcount` | Integer | Yes | Count of partial control+zone assessments (max 200) |
+| `fsi_noncompliantcount` | Integer | Yes | Count of non-compliant control+zone assessments (max 200) |
 | `fsi_exceptioncount` | Integer | Yes | Count of open exceptions |
 | `createdon` | DateTime | Auto | Record creation timestamp |
 
@@ -167,7 +166,7 @@ Open compliance exceptions requiring remediation.
 | `fsi_name` | String (200) | Yes | Exception title |
 | `fsi_controlassessmentid` | Lookup | Yes | Related assessment |
 | `fsi_severity` | Choice | Yes | Exception severity |
-| `fsi_status` | Choice | Yes | Exception status |
+| `fsi_exceptionstatus` | Choice | Yes | Exception status |
 | `fsi_owner` | Lookup (User) | Yes | Assigned owner |
 | `fsi_description` | Text | Yes | Exception description |
 | `fsi_rootcause` | Text | No | Root cause analysis |
@@ -188,7 +187,7 @@ Open compliance exceptions requiring remediation.
 | 3 | Medium | 30 |
 | 4 | Low | 90 |
 
-### Choice: fsi_status
+### Choice: fsi_exceptionstatus
 
 | Value | Label |
 |-------|-------|
@@ -209,7 +208,7 @@ Open compliance exceptions requiring remediation.
 ### Business Rule: Calculate SLA Status
 
 ```
-IF fsi_status IN (1, 2, 3) THEN
+IF fsi_exceptionstatus IN (1, 2, 3) THEN
   IF fsi_daysopen > SLA[fsi_severity] THEN
     fsi_slastatus = 3 (Breached)
   ELSE IF fsi_daysopen > SLA[fsi_severity] * 0.8 THEN
@@ -235,7 +234,7 @@ Evidence items linked to assessments for audit purposes.
 | `fsi_controlassessmentid` | Lookup | Yes | Related assessment |
 | `fsi_evidencetype` | Choice | Yes | Type of evidence |
 | `fsi_sourceurl` | URL | No | Link to evidence source |
-| `fsi_description` | Text | No | Evidence description |
+| `fsi_evidencedescription` | Text | No | Evidence description |
 | `fsi_collecteddate` | DateTime | Yes | Date evidence was collected |
 | `fsi_collectedby` | Lookup (User) | Yes | Person who collected evidence |
 | `fsi_hash` | String (64) | No | SHA-256 hash for integrity |

@@ -12,7 +12,7 @@
             <LocalizedCollectionName description="Control Masters" languagecode="1033" />
           </LocalizedCollectionNames>
           <Descriptions>
-            <Description description="Master list of all 71 controls in the FSI Agent Governance Framework" languagecode="1033" />
+            <Description description="Master list of all 62 controls in the FSI Agent Governance Framework" languagecode="1033" />
           </Descriptions>
           <attributes>
             <attribute PhysicalName="fsi_controlmasterid">
@@ -436,7 +436,7 @@
               <RequiredLevel>ApplicationRequired</RequiredLevel>
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <MinValue>0</MinValue>
-              <MaxValue>62</MaxValue>
+              <MaxValue>200</MaxValue>
             </attribute>
             <attribute PhysicalName="fsi_partialcount">
               <Type>int</Type>
@@ -445,7 +445,7 @@
               <RequiredLevel>ApplicationRequired</RequiredLevel>
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <MinValue>0</MinValue>
-              <MaxValue>62</MaxValue>
+              <MaxValue>200</MaxValue>
             </attribute>
             <attribute PhysicalName="fsi_noncompliantcount">
               <Type>int</Type>
@@ -454,7 +454,7 @@
               <RequiredLevel>ApplicationRequired</RequiredLevel>
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <MinValue>0</MinValue>
-              <MaxValue>62</MaxValue>
+              <MaxValue>200</MaxValue>
             </attribute>
             <attribute PhysicalName="fsi_exceptioncount">
               <Type>int</Type>
@@ -804,8 +804,50 @@
       </EntityInfo>
     </Entity>
   </Entities>
+  <!-- Security roles (CD Viewer, CD Assessor, CD Admin) must be created manually post-import. See docs/dataverse-schema.md for role definitions. -->
   <roles />
-  <workflows />
+  <workflows>
+    <Workflow WorkflowId="{a1b2c3d4-0001-0000-0000-000000000001}" Name="CD-ScoreCalculator">
+      <JsonFileName>/Workflows/CD-ScoreCalculator.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <Description>CD-ScoreCalculator: Calculates daily compliance scores from control assessments</Description>
+    </Workflow>
+    <Workflow WorkflowId="{a1b2c3d4-0002-0000-0000-000000000002}" Name="CD-ExceptionMonitor">
+      <JsonFileName>/Workflows/CD-ExceptionMonitor.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <Description>CD-ExceptionMonitor: Updates exception SLA status and sends alerts for at-risk items</Description>
+    </Workflow>
+  </workflows>
   <fieldSecurityProfiles />
   <templates />
   <EntityMaps />
@@ -818,7 +860,7 @@
       <ReferencingEntityName>fsi_controlassessment</ReferencingEntityName>
       <ReferencedEntityName>fsi_controlmaster</ReferencedEntityName>
       <CascadeAssign>NoCascade</CascadeAssign>
-      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeDelete>Restrict</CascadeDelete>
       <CascadeReparent>NoCascade</CascadeReparent>
       <CascadeShare>NoCascade</CascadeShare>
       <CascadeUnshare>NoCascade</CascadeUnshare>
@@ -837,7 +879,7 @@
       <ReferencingEntityName>fsi_complianceexception</ReferencingEntityName>
       <ReferencedEntityName>fsi_controlassessment</ReferencedEntityName>
       <CascadeAssign>NoCascade</CascadeAssign>
-      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeDelete>Restrict</CascadeDelete>
       <CascadeReparent>NoCascade</CascadeReparent>
       <CascadeShare>NoCascade</CascadeShare>
       <CascadeUnshare>NoCascade</CascadeUnshare>
@@ -856,7 +898,7 @@
       <ReferencingEntityName>fsi_complianceevidence</ReferencingEntityName>
       <ReferencedEntityName>fsi_controlassessment</ReferencedEntityName>
       <CascadeAssign>NoCascade</CascadeAssign>
-      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeDelete>Restrict</CascadeDelete>
       <CascadeReparent>NoCascade</CascadeReparent>
       <CascadeShare>NoCascade</CascadeShare>
       <CascadeUnshare>NoCascade</CascadeUnshare>

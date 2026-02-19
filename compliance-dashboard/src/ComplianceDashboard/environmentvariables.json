@@ -21,8 +21,8 @@
     },
     {
       "schemaName": "fsi_CD_DataverseEnvironment",
-      "displayName": "Dataverse Environment URL",
-      "description": "Dataverse environment URL for API calls",
+      "displayName": "Dataverse Environment URL (Future Use)",
+      "description": "Reserved for future use — not referenced by any current flow. Flows use connection references instead. Leave blank during import.",
       "type": "String",
       "defaultValue": "",
       "isRequired": false,
@@ -30,8 +30,8 @@
     },
     {
       "schemaName": "fsi_CD_SLAMultiplier",
-      "displayName": "SLA Multiplier",
-      "description": "Multiplier for SLA calculations (default: 1.0). Use values >1.0 to extend SLA periods, <1.0 to shorten",
+      "displayName": "SLA Multiplier (Future Use)",
+      "description": "Reserved for future use — not referenced by any current flow. SLA periods are hardcoded in CD-ExceptionMonitor. Leave at default during import.",
       "type": "Decimal",
       "defaultValue": "1.0",
       "isRequired": false,

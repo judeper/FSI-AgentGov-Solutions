@@ -10,7 +10,8 @@ Power Automate flows for automated compliance data collection.
 |------|---------|---------|-----------|
 | **CD-ScoreCalculator** | Scheduled | Calculate daily compliance scores | Daily (6 AM) |
 | **CD-ExceptionMonitor** | Scheduled | Update exception SLA status | Hourly |
-| **CD-EvidenceCollector** | Manual/Scheduled | Collect evidence from configured sources | Weekly |
+
+> **Note:** `CD-EvidenceCollector` is planned for a future release and is not included in the current solution package.
 
 ---
 
@@ -36,7 +37,8 @@ Calculates and stores daily compliance scores for trend analysis.
    - ZoneScores = {}
 
 2. List all control assessments (most recent per control)
-   - Filter: Latest assessment per fsi_controlmasterid
+   - Order by: fsi_assessmentdate desc
+   - Deduplication: Track processed control IDs, skip if already seen
    - Expand: fsi_controlmaster for weight and pillar
 
 3. For each assessment:
@@ -88,8 +90,9 @@ Calculates and stores daily compliance scores for trend analysis.
 
 ### Error Handling
 
-- On failure: Send notification to Compliance Admin
-- Retry policy: 3 attempts with exponential backoff
+- On failure: Send failure notification email to Compliance Admin via `fsi_CD_NotificationEmail` environment variable (skipped if email not configured)
+- Retry policy: 3 attempts with exponential backoff on Dataverse actions
+- Success notification: Not sent (failure-only notification to avoid daily email noise)
 
 ---
 
@@ -107,7 +110,7 @@ Updates exception SLA status and sends alerts for at-risk items.
 
 ```
 1. List all open exceptions
-   - Filter: fsi_status IN (1, 2, 3)  // Open, In Progress, Pending Verification
+   - Filter: fsi_exceptionstatus IN (1, 2, 3)  // Open, In Progress, Pending Verification
 
 2. For each exception:
    - Calculate DaysOpen = DateDiff(createdon, today)
@@ -130,8 +133,10 @@ Updates exception SLA status and sends alerts for at-risk items.
    - Update fsi_daysopen
    - Update fsi_slastatus
 
-3. Send daily summary if any breached exceptions
+3. Send daily summary if any breached exceptions (includes all currently breached, not just newly changed)
 ```
+
+> **Note:** The daily summary is sent at 9 AM UTC. See [Environment Variables](#environment-variables) for timezone adjustment instructions.
 
 ### SLA Configuration
 
@@ -156,7 +161,9 @@ Updates exception SLA status and sends alerts for at-risk items.
 
 ---
 
-## Flow 3: CD-EvidenceCollector
+## Flow 3: CD-EvidenceCollector (Planned)
+
+> **Status:** Not yet implemented. Planned for a future release.
 
 Collects compliance evidence from configured sources.
 
@@ -222,12 +229,12 @@ Authorization: Bearer {token}
 |------------|---------|
 | **Dataverse** | Read/write compliance tables |
 | **Office 365 Outlook** | Send email notifications |
-| **Microsoft Teams** | Send Teams notifications |
-| **HTTP with Azure AD** | Call Graph API and Power Platform API |
 
-### Service Principal Connection
+> **Note:** Teams alerts are sent via HTTP webhook using the `fsi_CD_TeamsWebhook` environment variable, not a Teams connector. The HTTP with Azure AD and Microsoft Teams connection references are reserved for the planned CD-EvidenceCollector flow and are not included in the current solution package.
 
-For Graph API and Power Platform API calls:
+### Service Principal Connection (Planned)
+
+> **Note:** Service principal connections are reserved for the planned CD-EvidenceCollector flow (Graph API and Power Platform API calls). They are not required for the current release.
 
 1. Create connection using service principal
 2. Use client credentials flow
@@ -248,10 +255,14 @@ For Graph API and Power Platform API calls:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `CD_NotificationEmail` | Email for compliance notifications | compliance@contoso.com |
-| `CD_TeamsWebhook` | Teams webhook URL for alerts | (none) |
-| `CD_DataverseEnvironment` | Dataverse environment URL | (current) |
-| `CD_SLAMultiplier` | Multiplier for SLA calculations | 1.0 |
+| `fsi_CD_NotificationEmail` | Email for compliance notifications (**required** — must be set during import; flows skip email actions if left blank) | (none) |
+| `fsi_CD_TeamsWebhook` | Teams webhook URL for alerts | (none) |
+| `fsi_CD_DataverseEnvironment` | *Not used by current flows* — reserved for future use | (current) |
+| `fsi_CD_SLAMultiplier` | *Not used by current flows* — reserved for future use | 1.0 |
+
+> **Note:** `fsi_CD_DataverseEnvironment` and `fsi_CD_SLAMultiplier` are defined in the solution but **not referenced by any current flow**. You can safely skip these during import. SLA periods are hardcoded in the CD-ExceptionMonitor flow as Critical=7, High=14, Medium=30, Low=90 days. To adjust SLA periods, edit the `Initialize_SLA_Days` action in CD-ExceptionMonitor directly until a future release wires the multiplier variable.
+
+> **Important:** The daily summary email hour check uses UTC (`formatDateTime(utcNow(), 'HH')` compared to `"09"`). Organizations outside UTC should edit the `Condition_Send_Daily_Summary` action in CD-ExceptionMonitor and change `"09"` to the desired hour in UTC (e.g., `"14"` for 9 AM EST).
 
 ---
 
@@ -261,7 +272,7 @@ For Graph API and Power Platform API calls:
 
 1. Navigate to Power Automate
 2. Click **Import** > **Import Package**
-3. Upload `templates/ComplianceDashboard-Flows.zip`
+3. Upload the solution package `ComplianceDashboard_1_0_0.zip` (flows are included in the main solution)
 4. Configure connection references
 5. Set environment variables
 6. Turn on flows

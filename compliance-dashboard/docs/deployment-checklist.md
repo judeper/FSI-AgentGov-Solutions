@@ -56,20 +56,19 @@ Verify all prerequisites are met before starting deployment.
   - [ ] Select existing connection or create new
   - [ ] Authenticate with service account or user account
   - [ ] Verify connection for exception notification emails
-- [ ] **Microsoft Teams connection (optional):**
-  - [ ] Select existing connection or create new
-  - [ ] Required only if using Teams notifications
+- [ ] **Note:** Teams alerts use an HTTP webhook via the `fsi_CD_TeamsWebhook` environment variable, not a Teams connector. No Teams connection reference is required.
 
 ### Configure Environment Variables
 
-- [ ] **CD_NotificationEmail:**
+- [ ] **fsi_CD_NotificationEmail:**
   - [ ] Enter compliance administrator email address
   - [ ] Format: `compliance@contoso.com`
   - [ ] This address receives exception SLA notifications
-- [ ] **CD_TeamsWebhook (optional):**
+- [ ] **fsi_CD_TeamsWebhook (optional):**
   - [ ] Enter Teams webhook URL if using Teams notifications
   - [ ] Format: `https://contoso.webhook.office.com/...`
   - [ ] Leave blank if not using Teams notifications
+- [ ] **fsi_CD_DataverseEnvironment** and **fsi_CD_SLAMultiplier**: Skip — not used by current flows (reserved for future use)
 
 ### Complete Import
 
@@ -96,7 +95,7 @@ Navigate to **Power Apps** > **Tables** and confirm the following tables exist:
   - [ ] Verify columns: `fsi_scoredate`, `fsi_overallscore`, `fsi_pillar1score`
   - [ ] Check index on `fsi_scoredate` column exists
 - [ ] **fsi_complianceexception** - Exception tracking table
-  - [ ] Verify columns: `fsi_severity`, `fsi_status`, `fsi_slastatus`, `fsi_daysopen`
+  - [ ] Verify columns: `fsi_severity`, `fsi_exceptionstatus`, `fsi_slastatus`, `fsi_daysopen`
   - [ ] Check business rule for SLA calculation exists
 - [ ] **fsi_complianceevidence** - Evidence collection table
   - [ ] Verify columns: `fsi_evidencetype`, `fsi_sourceurl`, `fsi_hash`
@@ -115,13 +114,13 @@ Navigate to **Power Automate** > **Solutions** > **Compliance Dashboard** and co
   - [ ] Trigger: Recurrence (Hourly)
   - [ ] Owner: Solution importer
 
-### Verify Security Roles
+### Create Security Roles
 
-Navigate to **Power Apps** > **Security roles** and confirm roles exist:
+Security roles are not included in the solution package and must be created manually. Navigate to **Power Apps** > **Security roles** and create the following roles per the definitions in [Dataverse Schema](dataverse-schema.md#security-roles):
 
-- [ ] **CD Viewer** - Read-only access
-- [ ] **CD Assessor** - Assessment entry and exception management
-- [ ] **CD Admin** - Full administrative access
+- [ ] **CD Viewer** - Read-only access (create manually)
+- [ ] **CD Assessor** - Assessment entry and exception management (create manually)
+- [ ] **CD Admin** - Full administrative access (create manually)
 
 ---
 
@@ -154,15 +153,13 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 - [ ] Navigate to `scripts/` directory
 - [ ] Run: `python load_sample_data.py --environment "https://your-org.crm.dynamics.com"`
 - [ ] Verify output: "Loaded X control master records"
-- [ ] Verify output: "Loaded X assessment records"
-- [ ] Verify output: "Generated X score snapshots (90 days)"
-- [ ] Verify output: "Loaded X exception records"
+- [ ] **Note:** The `--environment` mode only loads control master data. To generate assessment, score, and exception sample files, use `--export` separately.
 
 ### Verify Sample Data
 
 - [ ] Navigate to **Power Apps** > **Tables** > **fsi_controlmaster**
-- [ ] Verify 71 control records exist (one for each framework control)
-- [ ] Check sample controls: "1.1 - Identity and Access Management", "2.12 - Supervision and Oversight"
+- [ ] Verify 62 control records exist (one for each framework control)
+- [ ] Check sample controls: "1.1 - Restrict Agent Publishing to Designated Makers", "2.12 - Supervision and Oversight (FINRA Rule 3110)"
 - [ ] Navigate to **fsi_compliancescore** table
 - [ ] Verify 90 daily score snapshots exist (today going back 90 days)
 - [ ] Check score values are realistic (not all 100 or all 0)
@@ -253,7 +250,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
   - [ ] Pillar Trend line chart shows historical trends
   - [ ] Non-Compliant Controls table displays affected controls
 - [ ] **Page 3 - Control Details:**
-  - [ ] Control List table shows all 71 controls
+  - [ ] Control List table shows all 62 controls
   - [ ] Assessment History line chart displays (click control to populate)
   - [ ] Evidence List table shows linked evidence
   - [ ] Regulatory Tags slicer displays filter options
@@ -337,7 +334,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 
 ### Control Details Page
 
-- [ ] All 71 controls display in table
+- [ ] All 62 controls display in table
 - [ ] Filtering by pillar/zone/status works correctly
 - [ ] Click control in table populates assessment history chart
 - [ ] Evidence list shows linked evidence items
@@ -412,11 +409,12 @@ If deployment issues are encountered and rollback is required:
 
 If sample data was loaded but production data is needed:
 
-- [ ] Run sample data loader with `--clear` flag:
+- [ ] Run sample data loader with `--force` flag to overwrite existing data:
   ```bash
-  python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com" --clear
+  python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com" --force
   ```
-- [ ] Verify all sample records deleted
+- [ ] Manually delete remaining records via Power Apps if needed
+- [ ] Verify sample records cleared
 - [ ] Ready for production data loading
 
 ---

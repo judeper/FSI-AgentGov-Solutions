@@ -22,8 +22,7 @@ Common issues and solutions for the Compliance Dashboard.
 
 2. **Check Data Exists in Dataverse**
    - Open Power Apps > Tables
-   - Verify `fsi_controlmaster` has 62 rows
-   - Verify `fsi_controlassessment` has assessment records
+   - Verify `fsi_controlmaster` has 62 rows   - Verify `fsi_controlassessment` has assessment records
 
 3. **Refresh Dataset**
    - Click Refresh in Power BI Desktop
@@ -56,7 +55,7 @@ Common issues and solutions for the Compliance Dashboard.
 ### Missing Controls
 
 **Symptoms:**
-- Fewer than 71 controls displayed
+- Fewer than 62 controls displayed
 - Specific controls missing from list
 
 **Solutions:**
@@ -68,7 +67,7 @@ Common issues and solutions for the Compliance Dashboard.
 
 2. **Verify Control Master Table**
    - Check `fsi_controlmaster` row count
-   - Ensure all 71 controls present
+   - Ensure all 62 controls present
 
 3. **Check Filter Context**
    - Clear all slicers
@@ -162,6 +161,15 @@ Solution:
 **Symptoms:**
 - SLA status not updating
 - No alert notifications sent
+
+**Error: "Empty 'To' field" or notification actions skipped**
+```
+Solution:
+1. Verify fsi_CD_NotificationEmail environment variable is set
+2. Navigate to Power Apps > Solutions > Compliance Dashboard > Environment Variables
+3. Set fsi_CD_NotificationEmail to a valid email address
+4. Flows guard against empty email — notifications are silently skipped if unconfigured
+```
 
 **Error: "User not found"**
 ```
@@ -317,21 +325,20 @@ Solution:
 
 ### Rebuild Score History
 
-If score history is corrupted or missing:
+If score history is corrupted or missing, manually trigger the CD-ScoreCalculator flow for each missing date, or delete and re-import the solution with sample data:
 
 ```powershell
-# Run score calculation for past dates
-python scripts/rebuild_score_history.py --start-date 2025-01-01 --end-date 2026-01-31
+# Reload sample data including 90-day score history
+python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com" --force
 ```
 
 ### Reset Exception SLA Status
 
-If SLA calculations are incorrect:
+If SLA calculations are incorrect, manually trigger the CD-ExceptionMonitor flow to recalculate all open exceptions:
 
-```powershell
-# Recalculate all exception SLA status
-python scripts/reset_exception_sla.py
-```
+1. Navigate to Power Automate > CD-ExceptionMonitor
+2. Click **Test** > **Manually** to run immediately
+3. Verify SLA statuses are updated correctly in the fsi_complianceexception table
 
 ### Restore Control Master
 
