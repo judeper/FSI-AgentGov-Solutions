@@ -60,13 +60,27 @@ agent-access-monitor/
 │   ├── Get-EnvironmentAccessSettings.ps1  # Query environments
 │   ├── Compare-ZoneCompliance.ps1         # Compare settings vs requirements
 │   ├── Test-AgentAccessCompliance.ps1     # Validation orchestrator
+│   ├── Start-AccessValidationRunbook.ps1  # Azure Automation runbook wrapper
+│   ├── Invoke-AccessBaselineCapture.ps1   # Baseline capture operator script
 │   ├── Export-AgentAccessEvidence.ps1     # Evidence export with SHA-256
 │   ├── Test-EvidenceIntegrity.ps1         # Hash verification utility
+│   ├── aam_client.py                      # Python Dataverse Web API client
+│   ├── create_dataverse_schema.py         # Schema deployment script
+│   ├── create_environment_variables.py    # Environment variable deployment
+│   ├── create_connection_references.py    # Connection reference deployment
+│   ├── deploy.py                          # Deployment orchestrator
+│   ├── requirements.txt                   # Python dependencies
+│   ├── agent-access-monitor.psd1          # PowerShell module manifest
 │   └── private/
 │       ├── AAMClient.psm1                 # Dataverse client
 │       ├── Get-ZoneClassification.ps1     # Zone lookup helper
 │       ├── Get-ExpectedSettings.ps1       # Settings reference helper
-│       └── Get-AAMValidationResults.ps1   # Evidence query helper
+│       ├── Get-AAMValidationResults.ps1   # Evidence query helper
+│       └── Test-ParameterValidation.ps1   # Parameter validation helper
+├── src/
+│   ├── access-validation-flow.json        # Power Automate cloud flow
+│   ├── adaptive-card-access-alert.json    # Teams adaptive card template
+│   └── adaptive-card-zone-access-alert.json  # Zone-specific alert card
 ├── templates/
 │   └── zone-settings-baseline.json        # Zone requirements reference
 └── docs/
@@ -104,6 +118,10 @@ The following placeholder values in solution files must be replaced with your or
 | `your-teams-group-id-here` | Your Teams group ID for alerts | `src/access-validation-flow.json` |
 | `your-teams-channel-id-here` | Your Teams channel ID for alerts | `src/access-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/access-validation-flow.json` |
+| `https://governance.crm.dynamics.com` | Your Dataverse organization URL | `src/access-validation-flow.json` |
+| `https://your-org.github.io/FSI-AgentGov/...` | Your organization's FSI-AgentGov documentation URL | `src/access-validation-flow.json`, `src/adaptive-card-zone-access-alert.json` |
+| `rg-agent-access-monitor` | Your Azure resource group name | `src/access-validation-flow.json` |
+| `aa-agent-access-monitor` | Your Azure Automation Account name | `src/access-validation-flow.json` |
 
 ## Deployment
 

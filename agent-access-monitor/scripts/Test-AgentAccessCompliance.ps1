@@ -75,7 +75,7 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 0.1.0
+    Version: 1.0.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
@@ -127,7 +127,7 @@ $scriptRoot = $PSScriptRoot
 
 # Banner
 Write-Verbose "========================================="
-Write-Verbose "Agent Access Governance Monitor v0.1.0"
+Write-Verbose "Agent Access Governance Monitor v1.0.0"
 Write-Verbose "========================================="
 
 #endregion
@@ -206,14 +206,6 @@ if ($DataverseUrl) {
 #region Query Environment Settings
 
 Write-Verbose "Querying Power Platform environments..."
-
-# Build argument list for script invocation
-$argList = @()
-if ($ExcludeSandbox) { $argList += '-ExcludeSandbox' }
-if ($ExcludeTrial) { $argList += '-ExcludeTrial' }
-if ($ExcludeDefault) { $argList += '-ExcludeDefault' }
-$argList += "-GracePeriodHours", $GracePeriodHours
-if ($DataverseUrl) { $argList += "-DataverseUrl", $DataverseUrl }
 
 $environmentSettings = & $getSettingsScript @getSettingsParams
 
@@ -364,10 +356,11 @@ $zoneSummary = [PSCustomObject]@{
 }
 
 $result = [PSCustomObject]@{
-    Summary       = $summary
-    ZoneSummary   = $zoneSummary
-    Environments  = if ($IncludeCompliant) { $complianceResults } else { $nonCompliantEnvs }
-    OverallStatus = $overallStatus
+    Summary              = $summary
+    ZoneSummary          = $zoneSummary
+    Environments         = if ($IncludeCompliant) { $complianceResults } else { $nonCompliantEnvs }
+    OverallStatus        = $overallStatus
+    EnvironmentSettings  = $environmentSettings
 }
 
 #endregion

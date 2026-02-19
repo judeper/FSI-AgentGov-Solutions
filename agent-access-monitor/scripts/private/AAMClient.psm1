@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 0.1.0
+    Version: 1.0.0
     Author: FSI Agent Governance Team
 #>
 
@@ -185,7 +185,7 @@ function Get-AAMEnvironmentVariable {
             'OData-Version' = '4.0'
         }
         
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        $response = Invoke-DataverseRequest -Uri $uri -Headers $headers -Method Get
         
         if ($response.value.Count -gt 0) {
             $varDef = $response.value[0]
@@ -236,7 +236,7 @@ function Get-AAMActiveBaseline {
             'Accept' = 'application/json'
         }
         
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        $response = Invoke-DataverseRequest -Uri $uri -Headers $headers -Method Get
         return $response.value
     } catch {
         Write-Warning "Failed to get active baseline: $($_.Exception.Message)"
@@ -333,11 +333,19 @@ function Write-AAMViolation {
     
     try {
         $zoneMap = @{
-            "Zone1" = 100000000
-            "Zone2" = 100000001
-            "Zone3" = 100000002
+            "Zone1" = 1
+            "Zone2" = 2
+            "Zone3" = 3
         }
         $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { $Violation.Zone }
+
+        $severityMap = @{
+            'Critical' = 1
+            'High'     = 2
+            'Warning'  = 3
+            'Info'     = 4
+        }
+        $severityValue = if ($severityMap.ContainsKey($Violation.Severity)) { $severityMap[$Violation.Severity] } else { $Violation.Severity }
 
         $record = @{
             fsi_name              = "$($Violation.Zone)-$($Violation.ViolationType)-$(Get-Date -Format 'yyyy-MM-dd')"
@@ -347,7 +355,7 @@ function Write-AAMViolation {
             fsi_violation_type    = $Violation.ViolationType
             fsi_expected_value    = $Violation.Expected
             fsi_actual_value      = $Violation.Actual
-            fsi_severity          = $Violation.Severity
+            fsi_severity          = $severityValue
             fsi_regulatory_context = $Violation.RegulatoryContext
             fsi_detected_at       = (Get-Date).ToUniversalTime().ToString('o')
         }
@@ -365,7 +373,7 @@ function Write-AAMViolation {
         }
         
         $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
-        Write-Verbose "Violation record createdfor $($Violation.EnvironmentDisplayName)"
+        Write-Verbose "Violation record created for $($Violation.EnvironmentDisplayName)"
         return $response
     } catch {
         Write-Error "CRITICAL: Failed to write violation record for '$($Violation.EnvironmentDisplayName)': $($_.Exception.Message)"
@@ -506,7 +514,7 @@ function Get-AAMLastValidation {
             'OData-Version'    = '4.0'
         }
 
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        $response = Invoke-DataverseRequest -Uri $uri -Headers $headers -Method Get
 
         if ($response.value.Count -gt 0) {
             return $response.value | ForEach-Object {
@@ -536,6 +544,7 @@ Export-ModuleMember -Function @(
     'Connect-AAMDataverse',
     'Get-AAMConnection',
     'Get-ValidToken',
+    'Invoke-DataverseRequest',
     'Get-AAMEnvironmentVariable',
     'Get-AAMActiveBaseline',
     'Write-AAMValidationHistory',

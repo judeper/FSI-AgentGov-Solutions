@@ -48,7 +48,7 @@
 
 .NOTES
     File: Compare-ZoneCompliance.ps1
-    Version: 0.1.0
+    Version: 1.0.0
 #>
 
 [CmdletBinding()]
@@ -215,16 +215,42 @@ process {
                 $settingKey = $settingKeyMap[$settingProp]
                 $actualValue = $envSetting.$settingProp
                 
-                # Skip if setting is null (not configured)
-                if ($null -eq $actualValue) {
-                    Write-Verbose "Setting '$settingProp' is null, skipping check"
-                    continue
-                }
-                
-                # Get expected value
+                # Resolve expected value before null check
                 $expectedValue = $null
                 if ($zoneConfig.expected.PSObject.Properties.Name -contains $settingKey) {
                     $expectedValue = $zoneConfig.expected.$settingKey
+                }
+                
+                # Flag null (unconfigured) settings as violations for Zone 2/3
+                # where restrictive settings are required
+                if ($null -eq $actualValue) {
+                    if ($zone -in @('Zone2', 'Zone3') -and $null -ne $expectedValue) {
+                        $severity = Get-ViolationSeverity `
+                            -Zone $zone `
+                            -SettingKey $settingKey `
+                            -ActualValue 'null' `
+                            -ZoneConfig $zoneConfig
+
+                        $violation = [PSCustomObject]@{
+                            Setting           = $settingProp
+                            SettingKey        = $settingKey
+                            ExpectedValue     = $expectedValue
+                            ActualValue       = $null
+                            Severity          = $severity
+                            Description       = "Setting is not configured; governance policy requires explicit configuration"
+                            RegulatoryContext = Get-RegulatoryContext -Severity $severity -Baseline $baseline
+                        }
+
+                        $violations += $violation
+
+                        if ($severityRank.ContainsKey($severity) -and $severityRank[$severity] -gt $highestSeverityRank) {
+                            $highestSeverityRank = $severityRank[$severity]
+                            $highestSeverity = $severity
+                        }
+                    } else {
+                        Write-Verbose "Setting '$settingProp' is null, skipping check"
+                    }
+                    continue
                 }
                 
                 # Compare values (handle boolean and string comparison)

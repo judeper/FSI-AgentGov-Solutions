@@ -1,5 +1,5 @@
 {
-  "_deployment_note": "Replace all placeholder values (contoso.onmicrosoft.com, your-client-id-here, your-certificate-thumbprint-here, your-subscription-id-here, your-teams-group-id-here, your-teams-channel-id-here, compliance-alerts@contoso.com) with your tenant-specific values before importing.",
+  "_deployment_note": "Replace all placeholder values (contoso.onmicrosoft.com, your-client-id-here, your-certificate-thumbprint-here, your-subscription-id-here, your-teams-group-id-here, your-teams-channel-id-here, compliance-alerts@contoso.com, https://governance.crm.dynamics.com, https://your-org.github.io/FSI-AgentGov/..., rg-agent-access-monitor, aa-agent-access-monitor) with your tenant-specific values before importing.",
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -19,7 +19,12 @@
         },
         "timeZone": "UTC"
       },
-      "type": "Recurrence"
+      "type": "Recurrence",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "runs": 1
+        }
+      }
     }
   },
   "actions": {
@@ -210,7 +215,14 @@
               }
             }
           },
-          "description": "Start Azure Automation runbook for agent access compliance validation"
+          "description": "Start Azure Automation runbook for agent access compliance validation",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "maximumInterval": "PT1M",
+            "minimumInterval": "PT5S"
+          }
         },
         "Wait_For_Job": {
           "runAfter": {
@@ -284,30 +296,8 @@
             ]
           },
           "actions": {
-            "Send_Job_Failure_Email": {
-              "runAfter": {},
-              "type": "ApiConnection",
-              "inputs": {
-                "host": {
-                  "connection": {
-                    "name": "@parameters('$connections')['office365']['connectionId']"
-                  }
-                },
-                "method": "post",
-                "path": "/v2/Mail",
-                "body": {
-                  "To": "@variables('ComplianceDistributionList')",
-                  "Subject": "[CRITICAL] Agent Access Validation Job Failed",
-                  "Body": "<p><strong>Azure Automation job failed</strong></p><p>Runbook: Start-AccessValidationRunbook<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
-                  "Importance": "High"
-                }
-              },
-              "description": "Send email notification on job failure"
-            },
             "Terminate_Failed": {
-              "runAfter": {
-                "Send_Job_Failure_Email": ["Succeeded"]
-              },
+              "runAfter": {},
               "type": "Terminate",
               "inputs": {
                 "runStatus": "Failed",
@@ -317,7 +307,7 @@
               }
             }
           },
-          "description": "Handle job failure - send alert and terminate"
+          "description": "Handle job failure - terminate flow (Scope_Catch sends notification)"
         },
         "Get_Job_Output": {
           "runAfter": {
@@ -336,7 +326,14 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "maximumInterval": "PT1M",
+            "minimumInterval": "PT5S"
+          }
         },
         "Parse_Results": {
           "runAfter": {
@@ -431,38 +428,9 @@
           },
           "description": "Parse JSON output from runbook into typed properties"
         },
-        "Write_Validation_History": {
-          "runAfter": {
-            "Parse_Results": ["Succeeded"]
-          },
-          "type": "Http",
-          "inputs": {
-            "method": "POST",
-            "uri": "@{variables('DataverseUrl')}/api/data/v9.2/fsi_accessvalidationhistory",
-            "headers": {
-              "Content-Type": "application/json",
-              "OData-MaxVersion": "4.0",
-              "OData-Version": "4.0"
-            },
-            "authentication": {
-              "type": "ManagedServiceIdentity",
-              "audience": "@{variables('DataverseUrl')}"
-            },
-            "body": {
-              "fsi_name": "Scan-@{body('Parse_Results')?['Timestamp']}",
-              "fsi_run_id": "@{guid()}",
-              "fsi_overall_status": "@{body('Parse_Results')?['OverallStatus']}",
-              "fsi_violation_count": "@{length(body('Parse_Results')?['Violations'])}",
-              "fsi_total_environments": "@{body('Parse_Results')?['TotalEnvironments']}",
-              "fsi_summary_json": "@{string(body('Parse_Results'))}",
-              "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}"
-            }
-          },
-          "description": "Write validation results to Dataverse immutable audit trail (runs for ALL results, not just alerts). This action runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails."
-        },
         "Check_Alert_Required": {
           "runAfter": {
-            "Write_Validation_History": ["Succeeded", "Failed"]
+            "Parse_Results": ["Succeeded"]
           },
           "type": "If",
           "expression": {
@@ -505,6 +473,13 @@
                 "Post_Teams_Card": {
                   "runAfter": {},
                   "type": "ApiConnection",
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "maximumInterval": "PT1M",
+                    "minimumInterval": "PT5S"
+                  },
                   "inputs": {
                     "host": {
                       "connection": {
@@ -522,7 +497,7 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Agent Access Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-agent-access-governance-monitor/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant']))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Agent Access Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"},{\"title\":\"Zone 1 (Compliant/Total)\",\"value\":\"${Z1Compliant}/${Z1Total}\"},{\"title\":\"Zone 2 (Compliant/Total)\",\"value\":\"${Z2Compliant}/${Z2Total}\"},{\"title\":\"Zone 3 (Compliant/Total)\",\"value\":\"${Z3Compliant}/${Z3Total}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-agent-access-governance-monitor/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
                           }
                         ]
                       }
@@ -538,9 +513,16 @@
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed"]
               },
               "type": "ApiConnection",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M",
+                "minimumInterval": "PT5S"
+              },
               "inputs": {
                 "host": {
                   "connection": {
@@ -591,7 +573,14 @@
               "Importance": "High"
             }
           },
-          "description": "Send CRITICAL error notification when the flow itself fails"
+          "description": "Send CRITICAL error notification when the flow itself fails",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "maximumInterval": "PT1M",
+            "minimumInterval": "PT5S"
+          }
         }
       },
       "runAfter": {

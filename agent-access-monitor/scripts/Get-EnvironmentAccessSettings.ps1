@@ -69,7 +69,7 @@
 
 .NOTES
     File: Get-EnvironmentAccessSettings.ps1
-    Version: 0.1.0
+    Version: 1.0.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 #>
 
@@ -250,6 +250,50 @@ try {
 # Process environments
 $results = @()
 
+# Pre-fetch zone classifications in a single batch query to avoid N+1 HTTP requests
+$zoneLookup = @{}
+if ($DataverseUrl -and $AccessToken) {
+    try {
+        $headers = @{
+            'Authorization'    = "Bearer $AccessToken"
+            'Accept'           = 'application/json'
+            'OData-MaxVersion' = '4.0'
+            'OData-Version'    = '4.0'
+        }
+        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_accessbaselines?`$filter=fsi_is_active eq true&`$select=fsi_environment_guid,fsi_zone"
+        $maxRetries = 3
+        $response = $null
+        for ($i = 0; $i -lt $maxRetries; $i++) {
+            try {
+                $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
+                break
+            } catch {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                if (($statusCode -eq 429 -or $statusCode -ge 500) -and $i -lt ($maxRetries - 1)) {
+                    $delay = [math]::Pow(2, $i)
+                    Write-Verbose "Zone batch query failed (HTTP $statusCode), retrying in ${delay}s..."
+                    Start-Sleep -Seconds $delay
+                } else {
+                    throw
+                }
+            }
+        }
+        $zoneMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
+        if ($response.value) {
+            foreach ($record in $response.value) {
+                $envGuid = $record.fsi_environment_guid
+                $zoneValue = $record.fsi_zone
+                if ($envGuid -and $zoneMap.ContainsKey([int]$zoneValue)) {
+                    $zoneLookup[$envGuid] = $zoneMap[[int]$zoneValue]
+                }
+            }
+        }
+        Write-Verbose "Pre-fetched zone classifications for $($zoneLookup.Count) environment(s)"
+    } catch {
+        Write-Verbose "Batch zone lookup failed: $($_.Exception.Message). Will fall back to per-environment lookup."
+    }
+}
+
 foreach ($env in $environments) {
     Write-Verbose "Processing environment: $($env.DisplayName)"
     
@@ -258,12 +302,23 @@ foreach ($env in $environments) {
         continue
     }
     
-    # Get zone classification
-    $zone = & (Join-Path $privateRoot 'Get-ZoneClassification.ps1') `
-        -EnvironmentId $env.EnvironmentName `
-        -EnvironmentDisplayName $env.DisplayName `
-        -DataverseUrl $DataverseUrl `
-        -AccessToken $AccessToken
+    # Get zone classification from pre-fetched lookup or fall back to naming convention
+    $zone = $null
+    if ($zoneLookup.ContainsKey($env.EnvironmentName)) {
+        $zone = $zoneLookup[$env.EnvironmentName]
+    } else {
+        # Fallback: naming convention heuristic (no HTTP call needed)
+        $name = $env.DisplayName
+        if ($name -match '(?i)(prod|production|enterprise|zone\s*3)') {
+            $zone = 'Zone3'
+        } elseif ($name -match '(?i)(team|department|shared|zone\s*2)') {
+            $zone = 'Zone2'
+        } elseif ($name -match '(?i)(personal|dev|sandbox|zone\s*1)') {
+            $zone = 'Zone1'
+        } else {
+            $zone = 'Unknown'
+        }
+    }
     
     Write-Verbose "Zone classification: $zone"
     

@@ -36,6 +36,12 @@ CONNECTION_REFS = [
         "connector": "shared_teams",
         "description": "Teams connector for sending compliance alert notifications",
     },
+    {
+        "logical_name": "fsi_cr_azureautomation_accessmonitor",
+        "display_name": "Azure Automation - Agent Access Monitor",
+        "connector": "shared_azureautomation",
+        "description": "Azure Automation connector for triggering and monitoring validation runbook jobs",
+    },
 ]
 
 

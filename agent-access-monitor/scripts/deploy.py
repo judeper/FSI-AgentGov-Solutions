@@ -49,9 +49,9 @@ def print_banner():
     print("    - Option sets (zone, severity — shared with ACV)")
     print("    - AccessBaseline table (user-owned, access snapshots)")
     print("    - AccessValidationHistory table (org-owned, immutable audit trail)")
-    print("    - AccessViolation table (org-owned, compliance violations)")
+    print("    - AccessViolation table (user-owned, compliance violations)")
     print("    - Environment variables (scan config, alerting params)")
-    print("    - Connection references (Dataverse, Office 365, Teams)")
+    print("    - Connection references (Dataverse, Office 365, Teams, Azure Automation)")
     print()
 
 
@@ -147,7 +147,7 @@ def _print_post_deployment(is_dry_run: bool):
         print()
         print("  \u2713 Dataverse Schema: 3 tables, 2 shared option sets")
         print("  \u2713 Environment Variables: 6 variables (fsi_AAM_*)")
-        print("  \u2713 Connection References: 3 references (fsi_cr_*_accessmonitor)")
+        print("  \u2713 Connection References: 4 references (fsi_cr_*_accessmonitor)")
         print()
         print("  POST-DEPLOYMENT STEPS:")
         print("  1. Security: Remove Write/Delete privileges on fsi_AccessValidationHistory")

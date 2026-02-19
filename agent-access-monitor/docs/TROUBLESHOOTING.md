@@ -6,11 +6,11 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py --full`; check Dataverse System Administrator role |
-| Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --env-vars` to deploy variables only |
+| Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py` (full deployment is the default); check Dataverse System Administrator role |
+| Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --vars-only` to deploy variables only |
 | Connection reference errors | Connector not available in environment | Verify Power Automate Premium license; check connector availability in target environment |
 | `deploy.py` authentication failure | Expired or invalid token | Re-authenticate with `az login`; verify tenant and environment URL |
-| Schema version mismatch | Partial upgrade from earlier version | Run full deployment with `--full` flag to reconcile schema |
+| Schema version mismatch | Partial upgrade from earlier version | Re-run `python scripts/deploy.py` (full deployment is the default) to reconcile schema |
 
 ## Authentication Issues
 
@@ -27,8 +27,8 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | No environments returned | PowerApps Admin module not connected | Run `Add-PowerAppsAccount` before validation; verify Power Platform Admin role |
-| Zone classification errors | ELM solution not deployed or empty | Deploy ELM solution, or verify naming convention fallback matches environment names |
-| False positive violations | Zone assignment incorrect | Check zone classification in ELM Dataverse table; update `fsi_environment` records |
+| Zone classification errors | Baseline record missing or zone not set | Verify `fsi_accessbaselines` has an active record for the environment, or check naming convention fallback matches environment names |
+| False positive violations | Zone assignment incorrect | Check zone classification in `fsi_accessbaselines` Dataverse table; re-capture baseline with correct zone via `Invoke-AccessBaselineCapture.ps1` |
 | Grace period not applied | `fsi_AAM_GracePeriodHours` set to 0 | Set environment variable to desired hours (default: 48) in Dataverse |
 | Sandbox environments included | `fsi_AAM_IncludeSandbox` is true | Set to false in Dataverse environment variables, or use `-ExcludeSandbox` flag |
 
@@ -56,10 +56,10 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Flow not triggering | Disabled or suspended flow | Check flow status in Power Automate portal; re-enable if suspended |
-| Adaptive card not sent | Teams connection ref expired | Re-authorize `fsi_cr_teams` connection reference in Power Automate |
+| Adaptive card not sent | Teams connection ref expired | Re-authorize `fsi_cr_teams_accessmonitor` connection reference in Power Automate |
 | Dataverse write failure (403) | Managed identity lacks Create permission | Assign Security role with Organization-level Create on `fsi_accessvalidationhistory` |
 | Azure Automation job timeout | Runbook exceeds default timeout | Increase job timeout in Automation Account; check for environment query delays |
-| Email alerts not received | Office 365 connection expired or DL invalid | Re-authorize `fsi_cr_office365`; verify distribution list address |
+| Email alerts not received | Office 365 connection expired or DL invalid | Re-authorize `fsi_cr_office365_accessmonitor`; verify distribution list address |
 | Connection auth expired | Connections need periodic re-authorization | Re-authorize all connection references; consider service principal connections |
 
 ## Related Documentation

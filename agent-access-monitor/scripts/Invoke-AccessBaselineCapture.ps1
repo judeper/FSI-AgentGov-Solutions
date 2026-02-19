@@ -137,7 +137,7 @@ param(
     [Parameter()]
     [string]$EnvironmentGuid,
 
-    [switch]$ExcludeSandbox = $true,
+    [bool]$ExcludeSandbox = $true,
 
     [Parameter()]
     [string]$CapturedBy,
@@ -359,7 +359,7 @@ try {
             -CapturedBy $CapturedBy `
             -RawJson $rawJson
 
-        if ($saveResult -ne $null) {
+        if ($null -ne $saveResult) {
             Write-Verbose "Baseline saved for $envName"
         } else {
             Write-Warning "Baseline save returned null for $envName"

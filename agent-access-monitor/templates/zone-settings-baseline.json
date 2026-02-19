@@ -22,7 +22,10 @@
       },
       "violations": {
         "bot-limitSharingMode_noLimit": "High",
-        "bot-publishedBotLimitSharingMode_noLimit": "High"
+        "bot-limitSharingMode_null": "High",
+        "bot-publishedBotLimitSharingMode_noLimit": "High",
+        "bot-publishedBotLimitSharingMode_null": "High",
+        "bot-authoringSharingDisabled_null": "High"
       }
     },
     "Zone3": {
@@ -34,8 +37,11 @@
       },
       "violations": {
         "bot-limitSharingMode_noLimit": "Critical",
+        "bot-limitSharingMode_null": "Critical",
         "bot-authoringSharingDisabled_false": "Critical",
-        "bot-publishedBotLimitSharingMode_noLimit": "Critical"
+        "bot-authoringSharingDisabled_null": "Critical",
+        "bot-publishedBotLimitSharingMode_noLimit": "Critical",
+        "bot-publishedBotLimitSharingMode_null": "Critical"
       }
     },
     "Unknown": {

@@ -109,6 +109,14 @@ function Get-AAMValidationResults {
 
     $ErrorActionPreference = "Stop"
 
+    # Import AAMClient for Invoke-DataverseRequest retry wrapper (use -NoClobber to preserve existing connection state)
+    $aamClientPath = Join-Path $PSScriptRoot 'AAMClient.psm1'
+    if (Test-Path $aamClientPath) {
+        if (-not (Get-Module -Name 'AAMClient')) {
+            Import-Module $aamClientPath -Force
+        }
+    }
+
     try {
         # Normalize Dataverse URL (remove trailing slash)
         $DataverseUrl = $DataverseUrl.TrimEnd('/')
@@ -156,11 +164,10 @@ function Get-AAMValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = Invoke-RestMethod `
+            $response = Invoke-DataverseRequest `
                 -Uri $nextLink `
                 -Method Get `
-                -Headers $headers `
-                -ErrorAction Stop
+                -Headers $headers
 
             if ($response.value) {
                 $allValidations += $response.value
@@ -194,7 +201,7 @@ function Get-AAMValidationResults {
 
             # Optional zone filter (not applied when 'All')
             if ($Zone -ne 'All') {
-                $violationFilters += "fsi_zone eq '$Zone'"
+                $violationFilters += "fsi_zone eq $Zone"
             }
 
             # Combine filters
@@ -213,11 +220,10 @@ function Get-AAMValidationResults {
             while ($nextLink) {
                 Write-Verbose "Fetching violations page: $nextLink"
 
-                $response = Invoke-RestMethod `
+                $response = Invoke-DataverseRequest `
                     -Uri $nextLink `
                     -Method Get `
-                    -Headers $headers `
-                    -ErrorAction Stop
+                    -Headers $headers
 
                 if ($response.value) {
                     $allViolations += $response.value

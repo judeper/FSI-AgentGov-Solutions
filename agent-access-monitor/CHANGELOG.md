@@ -2,7 +2,7 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
-## [1.0.0] - 2026-02-09
+## [1.0.0] - 2026-02-19
 
 ### Added — Phase 4: Evidence Export & Framework Integration
 
@@ -32,7 +32,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Control 3.8 tip admonition linking to Agent Access Governance Monitor solution
 - solutions-index.md catalog entry with regulatory alignment (FINRA 4511, SOX 404)
 
-## [0.3.0] - 2025-07-17
+## [0.3.0] - 2026-02-17
 
 ### Added
 - Start-AccessValidationRunbook.ps1 - Azure Automation runbook wrapper for non-interactive daily access validation with certificate-based auth and structured JSON output
@@ -44,7 +44,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Get-AAMLastValidation function in AAMClient.psm1 for querying validation history (drift detection support)
 
 ### Changed
-- AAMClient.psm1 now exports 8 functions (was 6): added Save-AAMBaseline and Get-AAMLastValidation
+- AAMClient.psm1 now exports 10 functions (was 6): added Save-AAMBaseline, Get-AAMLastValidation, Get-ValidToken, and Invoke-DataverseRequest
 - Start-AccessValidationRunbook.ps1 enriches ZoneSummary to per-zone objects with Total/Compliant/Violations for flow and adaptive card consumption
 
 ## [0.2.0] - 2026-02-09
@@ -72,7 +72,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Get-EnvironmentAccessSettings.ps1 — Query Power Platform environments for agent access settings
 - Compare-ZoneCompliance.ps1 — Compare settings against zone-specific requirements
 - Test-AgentAccessCompliance.ps1 — Orchestrator with dry-run mode and multiple output formats
-- Zone classification via ELM Dataverse lookup with naming convention fallback
+- Zone classification via Dataverse baseline lookup (`fsi_accessbaselines`) with naming convention fallback
 - Severity classification (Critical/High/Warning/Info) per zone and violation type
 - Regulatory context (FINRA 4511, SOX 404) in violation output
 - Grace period filtering for newly provisioned environments

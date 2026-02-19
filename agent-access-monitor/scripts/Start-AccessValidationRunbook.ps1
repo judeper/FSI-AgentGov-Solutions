@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -109,9 +109,9 @@ param(
     [Parameter(Mandatory)]
     [string]$DataverseUrl,
 
-    [switch]$ExcludeSandbox = $true,
+    [bool]$ExcludeSandbox = $true,
 
-    [switch]$ExcludeTrial = $true,
+    [bool]$ExcludeTrial = $true,
 
     [ValidateRange(0, 168)]
     [int]$GracePeriodHours = 48
@@ -145,10 +145,10 @@ function Get-DriftDirection {
 
     # Restrictiveness orderings (most restrictive first)
     $sharingModeOrder = @{
-        'NoSharing'      = 1
-        'ExcludeSharing' = 2
-        'IncludeSharing' = 3
-        'NoRestriction'  = 4
+        'NoSharingToSecurityGroups'      = 1
+        'ExcludeSharingToSecurityGroups'  = 2
+        'IncludeSharingToSecurityGroups'  = 3
+        'noLimit'                         = 4
     }
 
     switch ($SettingName) {
@@ -252,7 +252,7 @@ try {
     $dvIncludeSandbox = Get-AAMEnvironmentVariable -Name "IncludeSandbox" -DefaultValue "false"
     if ($dvIncludeSandbox -eq "true" -and $ExcludeSandbox) {
         Write-Verbose "Dataverse override: IncludeSandbox=true, overriding -ExcludeSandbox switch"
-        $ExcludeSandbox = [switch]::new($false)
+        $ExcludeSandbox = $false
     }
 
     Write-Verbose "Dataverse parameters loaded"
@@ -279,6 +279,9 @@ try {
     if ($ExcludeSandbox) { $scanParams['ExcludeSandbox'] = $true }
     if ($ExcludeTrial)   { $scanParams['ExcludeTrial'] = $true }
 
+    # Include compliant environments so drift detection can examine all environments
+    $scanParams['IncludeCompliant'] = $true
+
     $scanResult = & $complianceScript @scanParams
 
     Write-Verbose "Scan complete. Overall status: $($scanResult.OverallStatus)"
@@ -289,6 +292,17 @@ try {
     #region Drift detection per environment
 
     Write-Verbose "Running per-environment drift detection against active baselines"
+
+    # Reuse environment access settings from the compliance scan to avoid duplicate API calls
+    $liveSettings = $scanResult.EnvironmentSettings
+
+    # Build lookup by EnvironmentId for drift comparison
+    $settingsLookup = @{}
+    if ($liveSettings) {
+        foreach ($s in $liveSettings) {
+            $settingsLookup[$s.EnvironmentId] = $s
+        }
+    }
 
     # Collect all environment results (both compliant and non-compliant)
     $driftResults = @()
@@ -326,22 +340,25 @@ try {
             } else {
                 $bl = $baseline | Select-Object -First 1
 
+                # Look up live access settings for this environment
+                $currentSettings = if ($settingsLookup.ContainsKey($envId)) { $settingsLookup[$envId] } else { $null }
+
                 # Compare 3 key settings
                 $settingsToCheck = @(
                     @{
                         Name     = 'bot-limitSharingMode'
                         Baseline = $bl.fsi_bot_limit_sharing_mode
-                        Current  = $env.BotLimitSharingMode
+                        Current  = if ($currentSettings) { $currentSettings.BotLimitSharingMode } else { $null }
                     },
                     @{
                         Name     = 'bot-authoringSharingDisabled'
                         Baseline = [string]$bl.fsi_bot_authoring_sharing_disabled
-                        Current  = [string]$env.BotAuthoringSharingDisabled
+                        Current  = if ($currentSettings) { [string]$currentSettings.BotAuthoringSharingDisabled } else { '' }
                     },
                     @{
                         Name     = 'bot-publishedBotLimitSharingMode'
                         Baseline = $bl.fsi_bot_published_limit_sharing_mode
-                        Current  = $env.BotPublishedLimitSharingMode
+                        Current  = if ($currentSettings) { $currentSettings.BotPublishedLimitSharingMode } else { $null }
                     }
                 )
 
@@ -455,7 +472,7 @@ try {
     if ($scanResult.Environments) {
         foreach ($env in $scanResult.Environments) {
             $z = $env.Zone
-            if ($z -and $zoneNonCompliant.ContainsKey($z)) {
+            if ($z -and $zoneNonCompliant.ContainsKey($z) -and -not $env.IsCompliant) {
                 $zoneNonCompliant[$z]++
             }
         }
@@ -510,12 +527,35 @@ try {
 } catch {
     Write-Verbose "Error occurred: $($_.Exception.Message)"
 
+    # Write failure record to Dataverse audit trail (FINRA 4511 evidence of all attempts)
+    try {
+        if ($script:DataverseUrl -or $DataverseUrl) {
+            $failureRecord = @{
+                TotalEnvironments = 0
+                CompliantCount    = 0
+                ViolationCount    = 0
+                OverallStatus     = 'Error'
+            }
+            Write-AAMValidationHistory -ValidationResult $failureRecord -RunId ([guid]::NewGuid().ToString())
+            Write-Verbose "Failure audit record written to Dataverse"
+        }
+    } catch {
+        Write-Verbose "Could not write failure audit record: $($_.Exception.Message)"
+    }
+
     $errorOutput = [PSCustomObject]@{
         RunType           = "AccessValidation"
         Timestamp         = (Get-Date -AsUTC -Format "o")
         TotalEnvironments = 0
         OverallStatus     = "Error"
         Reason            = $_.Exception.Message
+        ZoneSummary       = [PSCustomObject]@{
+            Zone1 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }
+            Zone2 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }
+            Zone3 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }
+        }
+        Violations        = @()
+        Drift             = @()
         AlertRequired     = $true
         AlertSeverity     = "Error"
     }

@@ -29,7 +29,7 @@ Before creating the flow, ensure you have:
 - [ ] **Managed Identity** configured for Dataverse access:
   - Flow's managed identity (or connection identity) has Create permission on `fsi_accessvalidationhistory` entity
   - Security role: System Administrator, or custom role with Organization-level Create on AccessValidationHistory
-  - Required for `Write_Validation_History` action (HTTP connector with MSI authentication)
+  - Required for Dataverse persistence (performed by the runbook via `-PersistResults`)
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
@@ -109,6 +109,7 @@ The flow uses three connection references deployed during Phase 2:
 | Connection Reference | Service | Purpose |
 |---------------------|---------|---------|
 | `fsi_cr_dataverse_accessmonitor` | Dataverse | Write validation history records |
+| `fsi_cr_azureautomation_accessmonitor` | Azure Automation | Trigger and monitor validation runbook jobs |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Post adaptive card alerts |
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Send email alerts |
 
@@ -124,7 +125,7 @@ The flow uses three connection references deployed during Phase 2:
 
 ## Step 4: Validation History Write
 
-> **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). The `Write_Validation_History` action runs **before** alerting to help ensure the audit trail exists even if alert delivery fails.
+> **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). Dataverse persistence is performed by the runbook (`Start-AccessValidationRunbook.ps1` via `-PersistResults`), **before** alerting, to help ensure the audit trail exists even if alert delivery fails.
 
 **Dataverse table:** `fsi_accessvalidationhistory` (OrganizationOwned, immutable)
 
@@ -150,7 +151,7 @@ The flow uses three connection references deployed during Phase 2:
 | 404 Not Found | Table not deployed to environment | Run `python scripts/deploy.py` to deploy Dataverse schema |
 | 400 Bad Request | Schema mismatch (column names don't match) | Verify column names match the schema deployed in Phase 2 |
 
-**Important:** The `Check_Alert_Required` action runs after `Write_Validation_History` with `runAfter: [Succeeded, Failed]`. This means alerting proceeds even if the Dataverse write fails, so operators are still notified of violations.
+**Important:** Dataverse persistence is handled by the runbook (via `-PersistResults`), not by a flow action. The flow proceeds to alerting based on the parsed runbook output regardless of persistence outcome.
 
 ## Step 5: Test the Flow
 
@@ -169,7 +170,7 @@ Watch for these key actions to complete successfully:
 - **Wait_For_Job**: Job status polling (max 2 hours, 30-second intervals)
 - **Get_Job_Output**: JSON output retrieved from completed runbook
 - **Parse_Results**: JSON schema validation passes
-- **Write_Validation_History**: Validation results written to Dataverse (HTTP 204 No Content = success)
+- **Dataverse persistence**: Handled by the runbook via `-PersistResults` (not a separate flow action)
 - **Check_Alert_Required**: Condition evaluates based on AlertRequired flag
 - **Post_Teams_Card** (if Critical/Failed/Error): Adaptive card posted to Teams
 - **Send_Alert_Email** (if alert required): Email sent to distribution list

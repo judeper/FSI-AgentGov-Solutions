@@ -6,7 +6,7 @@ Requirements for deploying the Agent Access Governance Monitor solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime |
+| PowerShell | 7.1+ | Core runtime |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform queries |
 | Microsoft.Graph | 2.0+ | Entra ID group queries (optional) |
 

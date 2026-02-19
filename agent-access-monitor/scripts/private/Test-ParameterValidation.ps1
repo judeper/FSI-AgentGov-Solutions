@@ -7,7 +7,7 @@
 
 .NOTES
     File: Test-ParameterValidation.ps1
-    Version: 0.1.0
+    Version: 1.0.0
 #>
 
 function Test-EnvironmentFilter {
