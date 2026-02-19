@@ -38,6 +38,36 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-RestMethodWithRetry {
+    param(
+        [Parameter(Mandatory)][string]$Uri,
+        [string]$Method = "Get",
+        [hashtable]$Headers,
+        [object]$Body,
+        [string]$ContentType,
+        [int]$MaxRetries = 3
+    )
+
+    $splat = @{ Uri = $Uri; Method = $Method }
+    if ($Headers) { $splat.Headers = $Headers }
+    if ($null -ne $Body) { $splat.Body = $Body }
+    if ($ContentType) { $splat.ContentType = $ContentType }
+
+    for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+        try {
+            return Invoke-RestMethod @splat
+        } catch {
+            $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
+            if ($attempt -eq $MaxRetries -or $statusCode -notin @(429, 503, 504)) {
+                throw
+            }
+            $delay = [Math]::Pow(2, $attempt)
+            Write-Warning "HTTP $statusCode on attempt $attempt/$MaxRetries. Retrying in ${delay}s..."
+            Start-Sleep -Seconds $delay
+        }
+    }
+}
+
 function Get-AccessToken {
     param([string]$TenantId, [string]$ClientId, [string]$ClientSecret, [string]$Scope)
 
@@ -49,7 +79,7 @@ function Get-AccessToken {
         grant_type    = "client_credentials"
     }
 
-    $response = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
+    $response = Invoke-RestMethodWithRetry -Uri $tokenUrl -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
     return $response.access_token
 }
 
@@ -71,7 +101,7 @@ function Get-SharePointContent {
     }
 
     try {
-        $response = Invoke-RestMethod -Uri $Uri -Headers $headers -Method Get
+        $response = Invoke-RestMethodWithRetry -Uri $Uri -Headers $headers -Method Get
         return $response | ConvertTo-Json -Depth 10
     } catch {
         throw "Failed to access SharePoint: $($_.Exception.Message)"
@@ -93,13 +123,13 @@ function Get-KnowledgeSources {
         if ($SourceId -notmatch '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
             throw "Invalid SourceId format: '$SourceId'. Expected GUID."
         }
-        $filter = "fsi_knowledgesourceid eq '$SourceId'"
+        $filter = "fsi_knowledgesourceid eq '$SourceId' and fsi_status eq 1"
     }
 
     $results = @()
     $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
     while ($nextLink) {
-        $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+        $response = Invoke-RestMethodWithRetry -Uri $nextLink -Headers $headers -Method Get
         $results += $response.value
         $nextLink = $response.'@odata.nextLink'
     }
@@ -119,7 +149,7 @@ function New-ValidationResult {
     $uri = "$Environment/api/data/v9.2/fsi_validationresults"
     $body = $Result | ConvertTo-Json -Depth 5
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body | Out-Null
+    Invoke-RestMethodWithRetry -Uri $uri -Headers $headers -Method Post -Body $body | Out-Null
 }
 
 function Update-SourceHash {
@@ -148,7 +178,39 @@ function Update-SourceHash {
     }
     $body = $update | ConvertTo-Json
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body | Out-Null
+    Invoke-RestMethodWithRetry -Uri $uri -Headers $headers -Method Patch -Body $body | Out-Null
+}
+
+function New-SourceChange {
+    param(
+        [string]$Environment,
+        [string]$Token,
+        [string]$SourceId,
+        [int]$ChangeType,
+        [string]$PreviousValue,
+        [string]$NewValue
+    )
+
+    $headers = @{
+        "Authorization" = "Bearer $Token"
+        "Content-Type"  = "application/json"
+        "OData-MaxVersion" = "4.0"
+        "OData-Version" = "4.0"
+    }
+
+    $change = @{
+        "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($SourceId)"
+        fsi_changetype = $ChangeType
+        fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        fsi_previousvalue = $PreviousValue
+        fsi_newvalue = $NewValue
+        fsi_reviewed = $false
+    }
+
+    $uri = "$Environment/api/data/v9.2/fsi_sourcechanges"
+    $body = $change | ConvertTo-Json -Depth 5
+
+    Invoke-RestMethodWithRetry -Uri $uri -Headers $headers -Method Post -Body $body | Out-Null
 }
 
 # Main script
@@ -182,6 +244,7 @@ $passed = 0
 $failed = 0
 $changed = 0
 $skipped = 0
+$writeFailures = 0
 
 foreach ($source in $sources) {
     Write-Host ""
@@ -203,25 +266,34 @@ foreach ($source in $sources) {
                 $content = Get-SharePointContent -Token $graphToken -Uri $source.fsi_sourceuri
             }
             4 { # Dataverse Table
-                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Marking as 'RequiresManualReview'."
-                $result.fsi_result = 3  # RequiresManualReview
-                $result.fsi_currenthash = $null
-                $result.fsi_hashchanged = $false
-                $result.fsi_validationstatus = "RequiresManualReview"
+                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Skipping."
                 Write-Host "  SKIPPED - Dataverse validation not yet implemented" -ForegroundColor Yellow
                 $skipped++
-                # Skip hash comparison for unsupported types
-                $content = $null
+                $result.fsi_result = 7  # Skipped - Not Yet Implemented
+                $result.fsi_hashchanged = $false
+                $result.fsi_duration = [int]((Get-Date) - $startTime).TotalMilliseconds
+                try {
+                    New-ValidationResult -Environment $Environment -Token $dataverseToken -Result $result
+                } catch {
+                    Write-Warning "Failed to record skip result for $($source.fsi_name): $($_.Exception.Message)"
+                    $writeFailures++
+                }
+                continue
             }
             default {
-                Write-Warning "Source type $($source.fsi_sourcetype) not yet supported for source '$($source.fsi_name)'. Marking as 'Unsupported'."
-                $result.fsi_result = 3  # Unsupported
-                $result.fsi_currenthash = $null
-                $result.fsi_hashchanged = $false
-                $result.fsi_validationstatus = "Unsupported"
+                Write-Warning "Source type $($source.fsi_sourcetype) not yet supported for source '$($source.fsi_name)'. Skipping."
                 Write-Host "  SKIPPED - Source type not yet supported" -ForegroundColor Yellow
                 $skipped++
-                $content = $null
+                $result.fsi_result = 7  # Skipped - Not Yet Implemented
+                $result.fsi_hashchanged = $false
+                $result.fsi_duration = [int]((Get-Date) - $startTime).TotalMilliseconds
+                try {
+                    New-ValidationResult -Environment $Environment -Token $dataverseToken -Result $result
+                } catch {
+                    Write-Warning "Failed to record skip result for $($source.fsi_name): $($_.Exception.Message)"
+                    $writeFailures++
+                }
+                continue
             }
         }
 
@@ -242,6 +314,13 @@ foreach ($source in $sources) {
                     $result.fsi_hashchanged = $true
                     Write-Host "  CHANGED - Hash mismatch detected" -ForegroundColor Yellow
                     $changed++
+                    try {
+                        New-SourceChange -Environment $Environment -Token $dataverseToken `
+                            -SourceId $source.fsi_knowledgesourceid -ChangeType 1 `
+                            -PreviousValue $source.fsi_baselinehash -NewValue $currentHash
+                    } catch {
+                        Write-Warning "Failed to record source change: $($_.Exception.Message)"
+                    }
                 }
             } else {
                 # No baseline - capture it and write back as baseline
@@ -261,15 +340,21 @@ foreach ($source in $sources) {
 
     } catch {
         $result.fsi_result = 5  # Failed - Source Unavailable
+        $result.fsi_hashchanged = $false
         $result.fsi_errordetails = $_.Exception.Message
         Write-Host "  FAILED - $($_.Exception.Message)" -ForegroundColor Red
         $failed++
     }
 
-    $result.fsi_duration = ((Get-Date) - $startTime).TotalMilliseconds
+    $result.fsi_duration = [int]((Get-Date) - $startTime).TotalMilliseconds
 
     # Record validation result
-    New-ValidationResult -Environment $Environment -Token $dataverseToken -Result $result
+    try {
+        New-ValidationResult -Environment $Environment -Token $dataverseToken -Result $result
+    } catch {
+        Write-Warning "Failed to record result for $($source.fsi_name): $($_.Exception.Message)"
+        $writeFailures++
+    }
 }
 
 # Summary
@@ -282,3 +367,14 @@ Write-Host "Passed:  $passed"
 Write-Host "Changed: $changed"
 Write-Host "Failed:  $failed"
 Write-Host "Skipped: $skipped"
+if ($writeFailures -gt 0) {
+    Write-Host "Write Failures: $writeFailures" -ForegroundColor Red
+}
+
+if ($failed -gt 0 -or $writeFailures -gt 0) {
+    exit 1
+}
+if ($changed -gt 0) {
+    Write-Warning "Integrity changes detected ($changed source(s)). Exit code 2."
+    exit 2
+}

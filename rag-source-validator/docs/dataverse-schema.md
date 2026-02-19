@@ -96,6 +96,7 @@ History of validation executions.
 | 4 | Failed - Stale Content |
 | 5 | Failed - Source Unavailable |
 | 6 | Warning - Minor Changes |
+| 7 | Skipped - Not Yet Implemented |
 
 ### Choice: fsi_validationtype
 

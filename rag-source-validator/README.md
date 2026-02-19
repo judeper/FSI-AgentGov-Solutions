@@ -13,10 +13,10 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 | Feature | Description |
 |---------|-------------|
 | **Hash Validation** | SHA-256 content hash verification |
-| **Change Detection** | Real-time and scheduled modification tracking |
+| **Change Detection** | Hash-based modification detection with `fsi_sourcechange` recording *(scheduled monitoring coming soon)* |
 | **Source Registry** | Centralized inventory of all knowledge sources |
-| **Freshness Monitoring** | Alert on stale or outdated content |
-| **Audit Trail** | Complete history of source changes |
+| **Freshness Monitoring** | *Coming Soon* — Alert on stale or outdated content |
+| **Audit Trail** | Validation results and source change records in Dataverse |
 
 ## Architecture
 
@@ -31,10 +31,10 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
                               │
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Dataverse (Source Registry)                   │
-├────────────────┬────────────────┬────────────────┬──────────────┤
-│ Knowledge      │ Validation     │ Source         │ Change       │
-│ Source         │ Result         │ Change         │ Alert        │
-└────────────────┴────────────────┴────────────────┴──────────────┘
+├────────────────────┬─────────────────────┬──────────────────────┤
+│ Knowledge          │ Validation          │ Source               │
+│ Source             │ Result              │ Change               │
+└────────────────────┴─────────────────────┴──────────────────────┘
                               ▲
                               │ Source Types
                               │
@@ -77,25 +77,15 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ### 1. Deploy Dataverse Schema
 
-```powershell
-pac solution import --path ./templates/RAGSourceValidator_1_0_0.zip
-```
+> **Coming Soon** — The solution template (`templates/RAGSourceValidator_1_0_0.zip`) is not yet available.
 
 ### 2. Register Knowledge Sources
 
-```powershell
-.\scripts\Register-KnowledgeSource.ps1 `
-    -SourceName "Product KB" `
-    -SourceType "SharePoint" `
-    -SourceUri "https://contoso.sharepoint.com/sites/products" `
-    -Environment "https://your-org.crm.dynamics.com"
-```
+> **Coming Soon** — `Register-KnowledgeSource.ps1` is not yet available. Register sources directly in Dataverse.
 
 ### 3. Capture Initial Baseline
 
-```powershell
-.\scripts\New-SourceBaseline.ps1 -Environment "https://your-org.crm.dynamics.com"
-```
+> **Coming Soon** — `New-SourceBaseline.ps1` is not yet available. Run `Invoke-SourceValidation.ps1` to capture baselines automatically on first run.
 
 ### 4. Run Validation
 
@@ -107,19 +97,19 @@ pac solution import --path ./templates/RAGSourceValidator_1_0_0.zip
 
 1. Import the solution ZIP into your Power Platform environment
 2. Configure connection references (see prerequisites)
-3. Register knowledge sources using `Register-KnowledgeSource.ps1`
-4. Capture initial baseline using `New-SourceBaseline.ps1`
+3. Register knowledge sources *(coming soon: `Register-KnowledgeSource.ps1`)*
+4. Capture initial baseline *(coming soon: `New-SourceBaseline.ps1`)*
 5. Activate cloud flows for scheduled validation
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Prerequisites](docs/prerequisites.md) | Licensing and permission requirements |
+| Prerequisites *(coming soon)* | Licensing and permission requirements |
 | [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
-| [Source Registration](docs/source-registration.md) | Adding knowledge sources |
-| [Validation Process](docs/validation-process.md) | How validation works |
-| [Troubleshooting](docs/troubleshooting.md) | Common issues |
+| Source Registration *(coming soon)* | Adding knowledge sources |
+| Validation Process *(coming soon)* | How validation works |
+| Troubleshooting *(coming soon)* | Common issues |
 
 ## Validation Types
 
@@ -157,6 +147,8 @@ Ensures content is current and not stale.
 For documents with references, validates all links are accessible.
 
 ## Alert Configuration
+
+> **Coming Soon** — Alert functionality is not yet implemented. The tables and channels described below represent planned capabilities.
 
 ### Alert Types
 
