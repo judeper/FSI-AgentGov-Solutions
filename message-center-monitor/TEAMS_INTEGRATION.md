@@ -5,7 +5,7 @@ This guide explains how to configure Microsoft Teams notifications for Message C
 ## Overview
 
 The solution sends adaptive card notifications to a Teams channel when:
-- A Message Center post has **high severity**
+- A Message Center post has **high or critical severity**
 - A post has an **action required deadline**
 
 ## Prerequisites
@@ -99,6 +99,7 @@ Only send notifications for important posts. In your flow:
 ```
 @or(
   equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['severity'], 'critical'),
   not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null))
 )
 ```
@@ -199,6 +200,7 @@ See `teams-notification-card.json` for the complete template with:
 Route different severity levels to different channels:
 
 ```
+Critical Severity → #platform-alerts-urgent (with @mentions)
 High Severity → #platform-alerts-urgent (with @mentions)
 Normal Severity → #platform-alerts (no notification)
 ```
@@ -221,7 +223,7 @@ Use a **Switch** action based on the services array, or multiple conditions.
 
 ### Don't Over-Notify
 
-- Only alert on high severity and action-required posts
+- Only alert on high/critical severity and action-required posts
 - Most Message Center posts are informational (normal severity)
 - Too many notifications = notification fatigue
 

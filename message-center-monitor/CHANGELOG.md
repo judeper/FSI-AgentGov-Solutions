@@ -38,6 +38,7 @@ This release addresses terminology and deprecation updates identified during tec
 | FLOW_SETUP.md | Entra ID terminology, Teams action update, max page size note |
 | TEAMS_INTEGRATION.md | Teams action name update, Adaptive Card version compatibility |
 | SECRETS_MANAGEMENT.md | Entra ID terminology (all Azure AD references) |
+| SETUP_CHECKLIST.md | Entra ID terminology (Azure AD references) |
 
 ---
 
@@ -54,7 +55,7 @@ This release addresses 12 issues identified during technical review of the docum
 - Added "Critical" severity option to match Microsoft Graph API values (README.md, SETUP_CHECKLIST.md)
 
 **Notification Logic:**
-- Updated notification condition to include both `high` and `critical` severity levels (FLOW_SETUP.md)
+- Updated notification conditions to include both `high` and `critical` severity levels (FLOW_SETUP.md, TEAMS_INTEGRATION.md)
 
 **Implementation Guidance:**
 - Added step-by-step alternate key creation instructions for Dataverse upsert (FLOW_SETUP.md)

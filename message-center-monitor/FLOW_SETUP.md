@@ -8,7 +8,7 @@ The flow:
 1. Runs on a daily schedule
 2. Calls Microsoft Graph API to get Message Center posts
 3. Upserts posts to Dataverse
-4. Sends Teams notifications for high-severity posts
+4. Sends Teams notifications for high or critical severity posts
 
 ## Prerequisites
 
@@ -75,7 +75,9 @@ Configure:
 └─────────────────────────────────────────────┘
 ```
 
-## Step 4: Parse JSON Response
+## Step 4: Parse JSON Response (Single-Request Path Only)
+
+> **Important:** This step applies only if you are **not** using the pagination pattern in Step 5. When using the Do Until pagination loop, messages are extracted directly via `body('HTTP')?['value']` inside the loop, so a separate Parse JSON action is unnecessary. If you use pagination, skip this step.
 
 Add action: **Parse JSON**
 
@@ -127,7 +129,7 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 2. **Initialize variable** `allMessages` (Array) = `[]`
 3. **Do Until** `@empty(variables('nextLink'))`:
    - HTTP GET to `@{variables('nextLink')}` (with same authentication)
-   - **Append to array** `allMessages`: `@{body('HTTP')?['value']}`
+   - **Set variable** `allMessages`: `@{union(variables('allMessages'), body('HTTP')?['value'])}`
    - **Set variable** `nextLink` = `@{coalesce(body('HTTP')?['@odata.nextLink'], '')}`
 4. Process `allMessages` in the Apply to each loop
 
@@ -139,7 +141,7 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 │
 ├─ Do Until (nextLink is empty)
 │   ├─ HTTP GET nextLink
-│   ├─ Append value to allMessages
+│   ├─ Set allMessages = union(allMessages, value)
 │   └─ Set nextLink = @odata.nextLink (or empty)
 │
 └─ Apply to each (allMessages)
@@ -230,6 +232,7 @@ If you cannot modify the table schema, use this pattern:
 **Severity mapping:**
 - high → High
 - normal → Normal
+- critical → Critical
 
 ### Choice Field Implementation with Switch
 
@@ -252,19 +255,38 @@ For category and severity, you need to map API text values to Dataverse choice v
 3. Add cases:
    - Case `high`: Set variable `severityValue` = `High`
    - Case `normal`: Set variable `severityValue` = `Normal`
+   - Case `critical`: Set variable `severityValue` = `Critical`
    - Default: Set variable `severityValue` = `Normal`
 
 > **Tip:** If your Dataverse choices use numeric IDs (e.g., `100000000` for High), use those IDs instead of text values in your Switch cases.
 
-## Step 7: Teams Notification for High Severity
+## Step 7: Teams Notification for High/Critical Severity (New Messages Only)
 
-Inside the Apply to each loop, after the Dataverse action:
+Inside the Apply to each loop, after the Dataverse upsert/add action:
 
-Add **Condition** to notify when action is truly needed:
+### Prevent Duplicate Notifications
+
+The flow runs daily and processes all messages. Without a dedup check, the same high/critical posts trigger repeated Teams alerts on every run. **You must guard against this.**
+
+**Approach: Check if the record already existed in Dataverse**
+
+If using the **Manual Check Pattern** (List rows → Condition → Add or Update):
+- Only send the Teams notification inside the **"If no" (Add)** branch. Existing records have already been notified.
+
+If using the **Alternate Key (Upsert)** pattern:
+1. Before the upsert, add **Dataverse - List rows** with filter: `messagecenterId eq '@{items('Apply_to_each')?['id']}'`
+2. Add a **Condition**: `@empty(outputs('List_rows')?['body/value'])` is equal to `true`
+3. Only send the Teams notification when the condition is true (record is new)
+
+> **Why this matters:** Without this check, a daily flow with 5 high-severity posts sends 5 duplicate notifications every day, indefinitely.
+
+### Notification Condition
+
+Inside the "record is new" branch, add a **Condition** to notify when action is truly needed:
 
 **Option A: Basic Check**
 ```
-@equals(items('Apply_to_each')?['severity'], 'high')
+@or(equals(items('Apply_to_each')?['severity'], 'high'), equals(items('Apply_to_each')?['severity'], 'critical'))
 ```
 
 OR
@@ -278,6 +300,7 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 ```
 @or(
   equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['severity'], 'critical'),
   and(
     not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
     greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
@@ -292,6 +315,7 @@ This prevents notifications for posts with past deadlines.
 ```
 @or(
   equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['severity'], 'critical'),
   equals(items('Apply_to_each')?['isMajorChange'], true),
   and(
     not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
@@ -351,32 +375,31 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 3. Wait for the flow to complete
 4. Check:
    - Dataverse table has new rows
-   - Teams channel received notifications (if high-severity posts exist)
+   - Teams channel received notifications (if high or critical severity posts exist)
 
 ## Complete Flow Structure
 
 ```
 ┌─ Recurrence (Daily at 9 AM)
 │
+├─ Initialize variables (nextLink, allMessages)
+│
 ├─ [Scope: Try]
 │   ├─ Get secret (Azure Key Vault)
-│   ├─ Initialize variables (nextLink, allMessages)
 │   │
 │   ├─ Do Until (nextLink is empty)
 │   │   ├─ HTTP GET nextLink
-│   │   ├─ Append to allMessages
+│   │   ├─ Set allMessages = union(allMessages, value)
 │   │   └─ Set nextLink = @odata.nextLink
 │   │
-│   └─ Parse JSON (optional, for schema validation)
-│
-├─ Apply to each (allMessages)
-│   ├─ Upsert row (alternate key)
-│   │   OR
-│   │   ├─ List rows (check if exists)
-│   │   └─ Condition → Add or Update
-│   │
-│   └─ Condition (high severity OR future action required?)
-│       └─ Yes: Post adaptive card to Teams
+│   └─ Apply to each (allMessages)
+│       ├─ Upsert row (alternate key)
+│       │   OR
+│       │   ├─ List rows (check if exists)
+│       │   └─ Condition → Add or Update
+│       │
+│       └─ Condition (new message AND high/critical severity?)
+│           └─ Yes: Post adaptive card to Teams
 │
 └─ [Scope: Catch] (runs on failure)
     └─ Post error notification to Teams
@@ -424,11 +447,11 @@ Daily polling is well within these limits. Even hourly polling (not recommended)
 
 ---
 
-## Optional Optimizations
+## Recommended Optimization: Delta Tracking
 
 ### Delta Tracking with lastModifiedDateTime
 
-After your first sync, you can filter to only retrieve recently modified posts. This reduces processing time and API payload size.
+For production deployments, delta tracking is **strongly recommended** to reduce unnecessary processing and complement the dedup notification check in Step 7. While the dedup check prevents duplicate Teams notifications, delta tracking also reduces API payload size and Dataverse operations.
 
 **Pattern:**
 

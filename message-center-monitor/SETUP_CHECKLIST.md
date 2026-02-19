@@ -12,9 +12,9 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 
 ## Checklist
 
-### Step 1: Create Azure AD App Registration
+### Step 1: Create Microsoft Entra ID App Registration
 
-- [ ] Go to Azure Portal > Azure Active Directory > App Registrations
+- [ ] Go to [Microsoft Entra admin center](https://entra.microsoft.com) > Applications > App Registrations
 - [ ] Click "New registration"
 - [ ] Name: `Message Center Monitor`
 - [ ] Account type: Single tenant
@@ -33,7 +33,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Search for and add `ServiceMessage.Read.All`
 - [ ] Click "Grant admin consent"
 
-**Details:** [README.md - Azure AD App Registration](./README.md#1-azure-ad-app-registration)
+**Details:** [README.md - Microsoft Entra ID App Registration](./README.md#1-microsoft-entra-id-app-registration)
 
 ---
 
