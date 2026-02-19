@@ -171,7 +171,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     config["storage"].setdefault("account_kind", "StorageV2")
     config["storage"].setdefault("replication", "Standard_GRS")
     config["diagnostic_settings"].setdefault("name", "export-to-storage")
-    config["diagnostic_settings"].setdefault("log_categories", ["AppTraces", "AppEvents"])
+    config["diagnostic_settings"].setdefault("log_categories", ["AppTraces", "AppEvents", "AppRequests", "AppExceptions"])
 
     return config
 
@@ -295,8 +295,8 @@ def create_log_analytics_workspace(
     """
     Create or update Log Analytics workspace with 730-day retention.
 
-    IMPORTANT: Sets BOTH retention_in_days AND total_retention_in_days to
-    ensure full interactive query access for the retention period.
+    Sets retention_in_days for the workspace. Azure defaults
+    total_retention_in_days to match retention_in_days for new workspaces.
     (Pitfall #2 from research: confusing analytics vs total retention)
 
     Args:
@@ -441,8 +441,8 @@ def create_storage_account(
     Create or update Storage account for diagnostic settings export.
 
     IMPORTANT: Creates StorageV2 WITHOUT hierarchical namespace.
-    Diagnostic settings export does NOT support ADLS Gen2 with hierarchical
-    namespace enabled. (Pitfall #1 from research)
+    Diagnostic settings export does NOT support StorageV2 with hierarchical
+    namespace (ADLS Gen2) enabled. (Pitfall #1 from research)
 
     Args:
         config: Configuration dictionary
@@ -487,7 +487,7 @@ def create_storage_account(
     print(f"  Creating storage account {account_name}...")
 
     # CRITICAL: Do NOT enable hierarchical namespace
-    # Diagnostic settings export to ADLS Gen2 with HNS enabled is NOT supported
+    # Diagnostic settings export to StorageV2 with HNS (hierarchical namespace) enabled is NOT supported
     storage_params = StorageAccountCreateParameters(
         location=location,
         sku=Sku(name=replication),

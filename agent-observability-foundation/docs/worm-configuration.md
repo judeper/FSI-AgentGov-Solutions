@@ -1,6 +1,6 @@
 # WORM Configuration Guide
 
-Manual setup for Write Once Read Many (WORM) immutable storage policies on ADLS Gen2 for SEC 17a-4 compliance.
+Manual setup for Write Once Read Many (WORM) immutable storage policies on Azure Blob Storage (StorageV2) for SEC 17a-4 compliance.
 
 ---
 
@@ -21,7 +21,7 @@ This is why WORM configuration is excluded from the `provision.py` automation sc
 
 WORM (Write Once Read Many) policies enable immutable storage for Azure Blob Storage, meeting SEC 17a-4(f) requirements for non-erasable, non-rewritable storage of broker-dealer communications and records.
 
-**Cohasset Validation:** Microsoft Azure ADLS Gen2 immutable storage has been validated by Cohasset Associates for compliance with:
+**Cohasset Validation:** Microsoft Azure Blob Storage immutable storage has been validated by Cohasset Associates for compliance with:
 - SEC Rule 17a-4(f)
 - FINRA Rule 4511(c)
 - CFTC Rule 1.31(c)-(d)

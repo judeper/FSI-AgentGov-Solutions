@@ -10,7 +10,7 @@ This document lists all requirements for deploying the Agent Observability Found
 | Resource Group | Contributor | (included in subscription) | Target for all telemetry resources |
 | Application Insights | Contributor | Azure Monitor (included) | 730-day retention may incur additional cost |
 | Log Analytics Workspace | Log Analytics Contributor | Azure Monitor (included) | PerGB2018 pricing tier; 730-day retention |
-| Storage Account (StorageV2) | Storage Account Contributor | Standard | For Diagnostic Settings export to ADLS Gen2 |
+| Storage Account (StorageV2) | Storage Account Contributor | Standard | For Diagnostic Settings export to Azure Blob Storage |
 | RBAC Assignments | User Access Administrator | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
 
 ### Cost Considerations
@@ -19,7 +19,7 @@ This document lists all requirements for deploying the Agent Observability Found
 |----------|----------------------|-------------|
 | Application Insights | $2.30/GB ingested | Telemetry volume |
 | Log Analytics | $2.76/GB (730-day retention tier) | Retention period and query volume |
-| ADLS Gen2 Storage | $0.018/GB (Cool tier) | Stored data volume |
+| Azure Blob Storage (StorageV2) | $0.018/GB (Cool tier) | Stored data volume |
 
 > **Note:** Costs scale with telemetry volume. See [docs/cost-tuning-guide.md](docs/cost-tuning-guide.md) for sampling configuration to manage costs.
 

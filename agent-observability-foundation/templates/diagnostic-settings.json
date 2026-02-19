@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to ADLS Gen2 storage for long-term SEC 17a-4 retention.",
+    "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to Azure Blob Storage (StorageV2) for long-term SEC 17a-4 retention.",
     "version": "0.1.0",
     "lastUpdated": "February 2026"
   },
@@ -16,12 +16,12 @@
     "storageAccountId": {
       "type": "string",
       "metadata": {
-        "description": "Full resource ID of the ADLS Gen2 storage account for log export (e.g., /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name})"
+        "description": "Full resource ID of the Azure Blob Storage (StorageV2) account for log export (e.g., /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name})"
       }
     },
     "settingName": {
       "type": "string",
-      "defaultValue": "export-to-adls",
+      "defaultValue": "export-to-storage",
       "metadata": {
         "description": "Name for the diagnostic settings configuration"
       }

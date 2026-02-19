@@ -53,7 +53,7 @@ let vw_session_fact = (startDate: datetime, endDate: datetime) {
         AgentId = tostring(customDimensions["recipientId"]),
         ZoneId = tostring(customDimensions["Zone"]),
         ErrorCode = tostring(customDimensions["errorCodeText"]),
-        LatencyMs = todouble(customDimensions["latencyMs"])
+        LatencyMs = todouble(customDimensions["duration"])
     | summarize
         SessionCount = dcount(session_Id),
         MessageCount = count(),

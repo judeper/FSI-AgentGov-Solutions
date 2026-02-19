@@ -219,7 +219,7 @@ table _Measures
 				COUNTROWS(
 					FILTER(
 						FactAgentEvents,
-						NOT(ISBLANK(FactAgentEvents[ErrorCategoryId]))
+						NOT(ISBLANK(FactAgentEvents[ErrorCategoryId])) && FactAgentEvents[ErrorCategoryId] <> ""
 					)
 				),
 				COUNTROWS(FactAgentEvents)

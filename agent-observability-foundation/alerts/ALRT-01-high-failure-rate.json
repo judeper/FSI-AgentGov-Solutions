@@ -73,7 +73,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'zone1';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
+              "query": "let ZoneFilter = 'Zone 1 - Personal Productivity';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",
@@ -118,7 +118,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'zone2';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
+              "query": "let ZoneFilter = 'Zone 2 - Team Collaboration';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",
@@ -163,7 +163,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'zone3';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
+              "query": "let ZoneFilter = 'Zone 3 - Enterprise Managed';\ncustomEvents\n| where timestamp > ago(15m)\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter or ZoneFilter == 'all'\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize ErrorRate = todouble(countif(hasError)) / count() * 100",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",

@@ -3,11 +3,11 @@
 > **Version:** v1.1.0
 > **Status:** Completed
 
-FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
+FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
 
 ## Architecture Overview
 
-The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2; enable Hierarchical Namespace post-deployment for ADLS Gen2 capabilities), supporting Control 2.8 (Access Control and Segregation of Duties).
+The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2; do NOT enable Hierarchical Namespace as diagnostic settings export does not support it), supporting Control 2.8 (Access Control and Segregation of Duties).
 
 This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that satisfy FINRA 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
 
@@ -18,7 +18,7 @@ All Azure resources are provisioned via Python scripts using the Azure SDK for P
 ### Telemetry Infrastructure
 - **Deploys Application Insights** with 730-day retention for Copilot Studio telemetry capture (customEvents with CopilotInteraction schema)
 - **Creates Log Analytics workspace** with 2-year interactive query capability using PerGB2018 pricing tier
-- **Configures Azure Blob Storage (StorageV2) export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM). Enable Hierarchical Namespace post-deployment for ADLS Gen2 capabilities.
+- **Configures Azure Blob Storage (StorageV2) export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM). Do NOT enable Hierarchical Namespace — diagnostic settings export does not support it.
 - **Establishes RBAC separation** between operational monitoring (Monitoring Reader) and compliance audit paths (Storage Blob Data Reader)
 - **Provides PII sanitization guidance** for conversation data in customDimensions fields (text, speak, fromName, recipientName)
 - **Includes cost management configuration** with sampling defaults and cost alert thresholds
@@ -202,6 +202,13 @@ agent-observability-foundation/
 │   ├── cost-tuning-guide.md           # Sampling and cost management
 │   ├── alert-tuning-guide.md          # Dynamic threshold tuning guidance
 │   └── worm-configuration.md          # Manual WORM setup steps (not automated)
+├── src/
+│   └── agent-usage-workbook.json      # Legacy workbook (superseded by workbooks/)
+├── power-bi/
+│   ├── README.md                      # Power BI integration overview
+│   ├── docs/                          # Power BI documentation
+│   ├── kql-views/                     # KQL views for Power BI data sources
+│   └── semantic-model/                # Power BI semantic model definition
 └── templates/
     └── diagnostic-settings.json       # ARM template for export config
 ```
@@ -226,7 +233,7 @@ agent-observability-foundation/
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Diagnostic settings export shows no data | ADLS Gen2 hierarchical namespace enabled | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
+| Diagnostic settings export shows no data | Hierarchical namespace enabled on storage account | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
 | Queries return "no data" after 90 days | Only `retentionInDays` set, not `totalRetentionInDays` | Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full interactive access |
 | WORM policy locked production data permanently | WORM applied via automation script | Never automate WORM - use manual `worm-configuration.md` steps with explicit confirmation |
 | Adaptive sampling not reducing costs | Python SDK does not support adaptive sampling | Configure ingestion sampling at workspace level, not SDK level; see `cost-tuning-guide.md` |

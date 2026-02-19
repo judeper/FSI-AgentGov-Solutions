@@ -23,6 +23,12 @@
     Full resource ID of the Application Insights instance to monitor.
     Format: /subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{name}
 
+.PARAMETER TeamsTeamId
+    Microsoft Teams Team ID for alert notifications. Required for Logic App deployment.
+
+.PARAMETER TeamsChannelId
+    Microsoft Teams Channel ID for alert notifications. Required for Logic App deployment.
+
 .PARAMETER Environment
     Environment name (dev or prod). Used for resource naming and parameter file selection.
 
@@ -63,6 +69,12 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$ApplicationInsightsId,
+
+    [Parameter(Mandatory=$true)]
+    [string]$TeamsTeamId,
+
+    [Parameter(Mandatory=$true)]
+    [string]$TeamsChannelId,
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("dev","prod")]
@@ -196,9 +208,10 @@ function Test-Prerequisites {
     Write-Host "  Checking Application Insights..." -NoNewline
     try {
         $appInsightsName = ($ApplicationInsightsId -split '/')[-1]
+        $appInsightsResourceGroup = ($ApplicationInsightsId -split '/')[4]
         $appInsightsCheck = az monitor app-insights component show `
             --app $appInsightsName `
-            --resource-group $ResourceGroup `
+            --resource-group $appInsightsResourceGroup `
             --query "name" -o tsv 2>$null
         if ($LASTEXITCODE -ne 0) {
             Write-Host " NOT FOUND" -ForegroundColor Red
@@ -297,6 +310,8 @@ function Deploy-LogicApp {
             --name $deploymentName `
             --template-file $templatePath `
             --parameters logicAppName=$logicAppName `
+            --parameters teamsTeamId=$TeamsTeamId `
+            --parameters teamsChannelId=$TeamsChannelId `
             --query "properties.outputs" `
             --output json | Out-Null
 

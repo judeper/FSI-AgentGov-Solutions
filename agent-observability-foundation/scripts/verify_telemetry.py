@@ -387,7 +387,7 @@ def print_verification_summary(
         print("    1. Ensure Copilot Studio agent is connected to Application Insights")
         print("    2. Generate some agent interactions")
         print("    3. Wait a few minutes and re-run verification")
-        print("    4. See docs/troubleshooting.md for connection guidance")
+        print("    4. See README.md Troubleshooting section or scripts/validation-checklist.md for guidance")
         print()
         return 2
 

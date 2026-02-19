@@ -1,5 +1,5 @@
 # Agent Observability Foundation - Python Dependencies
-# Python 3.10+ required
+# Python 3.9+ required
 
 # Authentication
 azure-identity>=1.18.0              # DefaultAzureCredential with CAE support

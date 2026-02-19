@@ -23,7 +23,7 @@ All notable changes to the Agent Observability Foundation are documented here.
 ### Added
 - Application Insights provisioning with 730-day retention for Copilot Studio telemetry
 - Log Analytics workspace with 2-year interactive query capability (PerGB2018 pricing)
-- ADLS Gen2 diagnostic settings export for SEC 17a-4 long-term retention
+- Azure Blob Storage (StorageV2) diagnostic settings export for SEC 17a-4 long-term retention
 - RBAC separation between operational monitoring and compliance audit paths
 - KQL query library: 6 foundation queries, 5 compliance queries, 3 SR 11-7 model governance queries
 - KQL governance views for query-to-control mapping

@@ -70,7 +70,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-### ADLS Gen2 Storage Export
+### Azure Blob Storage (StorageV2) Export
 
 **Description:** StorageV2 storage account (hierarchical namespace disabled) receiving Diagnostic Settings exports with WORM policy capability for immutable archival.
 
@@ -150,13 +150,13 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-## Future Phase Placeholders
+## Delivered in v1.1.0
 
-### Phase 2: KQL Query Library
+### KQL Query Library
 
-**Artifacts:** GOV-01 (Governance Evidence KQL), GOV-02 (Performance KQL), GOV-03 (Compliance KQL)
+**Artifacts:** GOV-01 (Governance Evidence KQL), GOV-02 (Performance KQL), GOV-03 (Compliance KQL) — 14 production queries
 
-**Will provide evidence for:**
+**Provides evidence for:**
 
 | Control | Evidence Type |
 |---------|---------------|
@@ -167,11 +167,11 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-### Phase 3: Workbooks and Alerts
+### Workbooks and Alerts
 
-**Artifacts:** WKBK-01 (Agent Health Workbook), WKBK-02 (Usage Workbook), ALRT-01 through ALRT-04 (Alert Rules)
+**Artifacts:** Operational Health Workbook, Error Diagnostics Workbook, Usage Overview Workbook, ALRT-01 through ALRT-03 (Alert Rules)
 
-**Will provide evidence for:**
+**Provides evidence for:**
 
 | Control | Evidence Type |
 |---------|---------------|
@@ -180,7 +180,9 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-### Phase 4: Power BI and Viva Insights
+## Future Phase Placeholders
+
+### Power BI and Viva Insights
 
 **Artifacts:** PBI-01 (Executive Dashboard), PBI-02 (Compliance Report), VIVA-01 (Adoption Metrics), VIVA-02 (Productivity Correlation)
 
@@ -197,8 +199,8 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Regulation | Requirement | Phase 1 Coverage | Future Phase |
 |------------|-------------|------------------|--------------|
-| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + ADLS Gen2 with WORM capability | Phase 5: Validation testing |
-| **FINRA 4511** | 6-year record retention | ADLS Gen2 with WORM policy | Phase 2: Audit trail KQL queries |
+| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + Azure Blob Storage (StorageV2) with WORM capability | Phase 5: Validation testing |
+| **FINRA 4511** | 6-year record retention | Azure Blob Storage (StorageV2) with WORM policy | Phase 2: Audit trail KQL queries |
 | **FINRA 3110** | Supervisory procedures | Telemetry foundation | Phase 2: Decision audit KQL queries |
 | **SOX 302/404** | Internal controls evidence | RBAC separation + immutable storage | Phase 2: Control evidence collection |
 | **SR 11-7** | Model risk management and ongoing monitoring | Performance telemetry foundation | Phase 2: Risk monitoring KQL queries |
@@ -213,7 +215,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | 1.3 | SharePoint Content Governance | PII Sanitization Guidance | Primary |
 | 1.4 | Advanced Connector Policies | RBAC Separation | Supporting |
 | 1.6 | DSPM for AI | RBAC Separation, Log Analytics, PII Guidance | Primary + Supporting |
-| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, ADLS Gen2 | Primary |
+| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, Azure Blob Storage (StorageV2) | Primary |
 | 2.6 | Model Risk Management | App Insights (telemetry available) | Partial |
 | 2.8 | Access Control and Segregation of Duties | RBAC Separation | Supporting |
 | 2.9 | Agent Performance Monitoring | App Insights, Sampling Configuration | Primary + Supporting |

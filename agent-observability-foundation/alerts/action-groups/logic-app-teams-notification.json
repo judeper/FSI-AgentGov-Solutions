@@ -3,6 +3,7 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "description": "Logic App for transforming Azure Monitor common alert schema to Microsoft Teams notifications. Acts as intermediary between Action Groups and Teams channels (direct webhooks produce malformed messages).",
+    "prerequisite": "A Teams API connection (Microsoft.Web/connections) must be pre-created and OAuth-authorized in Azure Portal before this Logic App will execute successfully. Navigate to Azure Portal > API Connections > Add > Microsoft Teams, then complete the OAuth consent flow. The connection name must match the 'teamsConnectionName' parameter.",
     "version": "0.1.0",
     "lastUpdated": "February 2026"
   },
@@ -26,6 +27,18 @@
       "defaultValue": "teams-connection",
       "metadata": {
         "description": "Name of the Microsoft Teams API connection resource"
+      }
+    },
+    "teamsTeamId": {
+      "type": "string",
+      "metadata": {
+        "description": "Microsoft Teams Team ID for alert notifications. Find via Teams Admin Center or Graph API."
+      }
+    },
+    "teamsChannelId": {
+      "type": "string",
+      "metadata": {
+        "description": "Microsoft Teams Channel ID for alert notifications. Find via Teams Admin Center or Graph API."
       }
     }
   },
@@ -151,12 +164,21 @@
                   }
                 },
                 "method": "post",
-                "path": "/v1.0/teams/@{encodeURIComponent('TEAM_ID')}/channels/@{encodeURIComponent('CHANNEL_ID')}/messages",
+                "path": "[concat('/v1.0/teams/', parameters('teamsTeamId'), '/channels/', parameters('teamsChannelId'), '/messages')]",
                 "body": {
                   "body": {
                     "contentType": "html",
                     "content": "@{outputs('Format_Teams_Message')}"
                   }
+                }
+              },
+              "runtimeConfiguration": {
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT30S",
+                  "minimumInterval": "PT15S",
+                  "maximumInterval": "PT1H"
                 }
               }
             }

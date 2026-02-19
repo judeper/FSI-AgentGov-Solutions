@@ -163,12 +163,12 @@ def verify_storage_account(
     print(f"  Storage account: {account_name}")
     print(f"    - Kind: {account.kind}")
 
-    # Check if hierarchical namespace is enabled (ADLS Gen2)
+    # Check if hierarchical namespace is enabled (makes it ADLS Gen2, which is unsupported)
     hns_enabled = account.is_hns_enabled or False
     if hns_enabled:
         print(f"    - Hierarchical namespace: ENABLED (not compatible with diagnostic settings)")
         print()
-        print("    WARNING: ADLS Gen2 with hierarchical namespace is not supported for")
+        print("    WARNING: StorageV2 with hierarchical namespace (ADLS Gen2) is not supported for")
         print("    diagnostic settings export. WORM policy may exist but telemetry export")
         print("    will not work. Consider recreating as StorageV2 without HNS.")
         return (True, False)

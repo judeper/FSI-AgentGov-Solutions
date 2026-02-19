@@ -12,7 +12,7 @@ Copilot Studio agents can generate high-cardinality telemetry events, especially
 |-----------|---------------|-----------------|
 | **Application Insights ingestion** | Per GB ingested | Event volume and event payload size |
 | **Log Analytics retention** | Per GB/month after free tier (31 days) | Retention period beyond free tier |
-| **ADLS Gen2 storage** | Per GB stored + operations | Retention duration and geo-replication |
+| **Azure Blob Storage (StorageV2)** | Per GB stored + operations | Retention duration and geo-replication |
 
 ### Current Pricing Reference (February 2026)
 
@@ -20,8 +20,8 @@ Copilot Studio agents can generate high-cardinality telemetry events, especially
 |---------|------|------------------|
 | Application Insights | Pay-as-you-go | ~$2.30/GB ingested |
 | Log Analytics | PerGB2018 | ~$2.76/GB/month retained |
-| ADLS Gen2 | Hot tier, LRS | ~$0.018/GB/month |
-| ADLS Gen2 | Hot tier, GRS | ~$0.036/GB/month |
+| Azure Blob Storage (StorageV2) | Hot tier, LRS | ~$0.018/GB/month |
+| Azure Blob Storage (StorageV2) | Hot tier, GRS | ~$0.036/GB/month |
 
 > **Note:** Prices vary by region and may change. Check [Azure pricing calculator](https://azure.microsoft.com/pricing/calculator/) for current rates.
 
@@ -124,7 +124,7 @@ Use this table to estimate monthly telemetry costs based on agent volume:
 | Tier | Storage | Retention | Query Access | Cost Profile | Use Case |
 |------|---------|-----------|--------------|--------------|----------|
 | **Hot (Interactive)** | Log Analytics | 730 days | Real-time KQL | Higher cost/GB | Daily operations, incident response |
-| **Archive** | ADLS Gen2 | 6+ years | Blob access / Search jobs | Lower cost/GB | SEC 17a-4 long-term retention |
+| **Archive** | Azure Blob Storage (StorageV2) | 6+ years | Blob access / Search jobs | Lower cost/GB | SEC 17a-4 long-term retention |
 
 ### Basic Logs Option
 
@@ -148,11 +148,11 @@ For high-volume tables with infrequent queries, consider Basic Logs:
 - Primary agent interaction telemetry (customEvents)
 - Any data needed for real-time monitoring or alerting
 
-### Archive Tier for ADLS Gen2
+### Archive Tier for Azure Blob Storage (StorageV2)
 
 For data beyond Log Analytics retention:
 
-1. Configure Diagnostic Settings export to ADLS Gen2
+1. Configure Diagnostic Settings export to Azure Blob Storage (StorageV2)
 2. Set blob lifecycle management policy:
    - Hot tier: First 30-90 days
    - Cool tier: 90 days to 1 year

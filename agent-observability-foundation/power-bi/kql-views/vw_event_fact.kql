@@ -57,11 +57,11 @@ let vw_event_fact = (startDate: datetime, endDate: datetime) {
         AgentId = tostring(customDimensions["recipientId"]),
         SessionId = session_Id,
         EventType = name,
-        LatencyMs = todouble(customDimensions["latencyMs"]),
+        LatencyMs = todouble(customDimensions["duration"]),
         ErrorCategoryId = iff(
             isnotempty(tostring(customDimensions["errorCodeText"])),
             tostring(customDimensions["errorCategory"]),
-            ""
+            dynamic(null)
         ),
         UserIdRaw = tostring(customDimensions["from_Id"]),
         ControlId = tostring(customDimensions["controlId"])

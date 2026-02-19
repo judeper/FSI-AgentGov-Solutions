@@ -26,7 +26,7 @@
 .PARAMETER DryRun
     Preview deployment without making changes. Shows what would be deployed.
 
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Show detailed output including full az CLI commands and resource IDs.
 
 .EXAMPLE
@@ -76,7 +76,7 @@ param(
     [switch]$DryRun,
 
     [Parameter(Mandatory=$false)]
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 Set-StrictMode -Version Latest
@@ -283,7 +283,7 @@ function Deploy-SingleWorkbook {
         [switch]$DryRun,
 
         [Parameter(Mandatory=$false)]
-        [switch]$Verbose
+        [switch]$DetailedOutput
     )
 
     # Resolve paths relative to script location
@@ -324,7 +324,7 @@ function Deploy-SingleWorkbook {
     # Deploy workbook
     Write-Host "  Deploying workbook '$DisplayName'..." -ForegroundColor Cyan
 
-    if ($Verbose) {
+    if ($DetailedOutput) {
         Write-Host "    Template: $templateFullPath" -ForegroundColor Gray
         Write-Host "    Parameters: $parametersFullPath" -ForegroundColor Gray
     }
@@ -355,7 +355,7 @@ function Deploy-SingleWorkbook {
         Write-Host "    ${COLOR_GREEN}✓ Workbook deployed successfully${COLOR_RESET}"
         Write-Host "    Workbook ID: $workbookId" -ForegroundColor White
 
-        if ($Verbose) {
+        if ($DetailedOutput) {
             Write-Host "    Provisioning State: $($deployment.properties.provisioningState)" -ForegroundColor Gray
         }
 
@@ -437,7 +437,7 @@ try {
             -ResourceGroup $ResourceGroup `
             -ApplicationInsightsId $ApplicationInsightsId `
             -DryRun:$DryRun `
-            -Verbose:$Verbose
+            -DetailedOutput:$DetailedOutput
 
         if ($success) {
             $deployedCount++
@@ -502,7 +502,7 @@ try {
             Write-Host "    - Review error messages above" -ForegroundColor White
             Write-Host "    - Verify Application Insights resource ID is correct" -ForegroundColor White
             Write-Host "    - Check Azure RBAC permissions (need Contributor or Owner)" -ForegroundColor White
-            Write-Host "    - Run with -Verbose for detailed output" -ForegroundColor White
+            Write-Host "    - Run with -DetailedOutput for detailed output" -ForegroundColor White
         }
     }
 
@@ -522,7 +522,7 @@ try {
     Write-Host "${COLOR_RED}ERROR: Unexpected error occurred${COLOR_RESET}" -ForegroundColor Red
     Write-Host "  $_" -ForegroundColor Red
 
-    if ($Verbose) {
+    if ($DetailedOutput) {
         Write-Host ""
         Write-Host "Stack trace:" -ForegroundColor Gray
         Write-Host $_.ScriptStackTrace -ForegroundColor Gray

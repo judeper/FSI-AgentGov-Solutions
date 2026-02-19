@@ -103,7 +103,7 @@
           "type": "string",
           "description": "Storage account kind. Must be StorageV2 for diagnostic settings export",
           "default": "StorageV2",
-          "enum": ["StorageV2", "Storage", "BlobStorage"]
+          "enum": ["StorageV2"]
         },
         "replication": {
           "type": "string",
@@ -121,7 +121,7 @@
           "type": "string",
           "description": "Diagnostic settings name",
           "default": "export-to-storage",
-          "examples": ["export-to-adls-sec17a4"]
+          "examples": ["export-to-storage-sec17a4"]
         },
         "log_categories": {
           "type": "array",
