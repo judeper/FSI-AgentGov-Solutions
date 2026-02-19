@@ -4,7 +4,7 @@
   "metadata": {
     "controlReference": "1.25",
     "framework": "FSI Agent Governance",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Microsoft Sentinel scheduled analytics rule that detects high-volume blocked file upload attempts (>10 per user per hour). Supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12 by surfacing persistent attempts to upload unauthorized file types through Power Platform environments."
   },
   "parameters": {
@@ -35,14 +35,14 @@
       "tags": {
         "controlReference": "1.25",
         "framework": "FSI Agent Governance",
-        "version": "1.0.0"
+        "version": "1.0.1"
       },
       "properties": {
         "displayName": "FSI-MIME: High-Volume Blocked Upload Attempts",
         "description": "Detects users with more than 10 blocked file upload attempts within one hour, which may indicate persistent attempts to upload malicious or unauthorized file types. Part of Control 1.25 — MIME Type Restrictions for File Uploads.",
         "severity": "Medium",
         "enabled": true,
-        "query": "PowerPlatformDlpActivity_CL\n| where OperationType_s in (\"Blocked\", \"Denied\", \"BlockedUpload\") or ActionTaken_s == \"Block\"\n| where TimeGenerated > ago(1h)\n| summarize BlockCount = count() by UserPrincipalName = UserPrincipalName_s, EnvironmentName = EnvironmentName_s, TimeWindow = bin(TimeGenerated, 1h)\n| where BlockCount > 10\n| project UserPrincipalName, EnvironmentName, BlockCount, TimeWindow",
+        "query": "PowerPlatformDlpActivity_CL\n| where OperationType_s in (\"Blocked\", \"Denied\", \"BlockedUpload\") or ActionTaken_s == \"Block\"\n| where TimeGenerated > ago(1h)\n| summarize BlockCount = count() by UserPrincipalName = UserPrincipalName_s, EnvironmentName = EnvironmentName_s\n| where BlockCount > 10\n| project UserPrincipalName, EnvironmentName, BlockCount",
         "queryFrequency": "PT1H",
         "queryPeriod": "PT1H",
         "triggerOperator": "GreaterThan",

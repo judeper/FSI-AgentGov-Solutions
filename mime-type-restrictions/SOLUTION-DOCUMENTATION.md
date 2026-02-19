@@ -1,7 +1,7 @@
 # Securing AI Agent File Uploads with MIME Type Restrictions
 ## MIME Type Restrictions for File Uploads
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Solution Type:** Server-Side Validation + DLP Policy + Monitoring
 **Platform:** Dataverse Plugin + Power Platform DLP + Microsoft Sentinel
 
@@ -28,7 +28,7 @@ The **MIME Type Restrictions for File Uploads** solution provides defense-in-dep
 - **Server-Side Validation:** Dataverse pre-validation plugin inspects file content (magic bytes) to verify actual file type matches declared MIME type
 - **Magic Byte Inspection:** Validates file signatures (headers) against known patterns (PDF: %PDF, PNG: 89 50 4E 47, etc.)
 - **Blocked Signature Detection:** Automatically blocks executable signatures (PE/DOS, ELF, Mach-O, Java class files)
-- **DLP Policy Enforcement:** Power Platform DLP policy restricts file upload connectors to approved MIME types
+- **DLP Policy Enforcement:** Power Platform DLP policy blocks dangerous file extensions at the connector level
 - **OpenXML Deep Inspection:** Validates Office documents (DOCX, XLSX, PPTX) by inspecting internal ZIP structure and [Content_Types].xml
 - **Sentinel Monitoring:** KQL queries aggregate blocked upload attempts for security operations review
 
@@ -113,7 +113,9 @@ The MIME Type Restrictions solution operates across three enforcement layers wit
 - **Message:** `Create`
 - **Stage:** Pre-Validation (stage 10)
 - **Mode:** Synchronous
-- **Deployment:** Server (not sandbox)
+- **Deployment:** Sandbox (required for Dataverse cloud environments)
+
+> **Known Limitation:** The plugin registers only on the `Create` message for the `annotation` entity. Updates to an existing annotation's `documentbody` field are not validated. The DLP policy (Layer 1) and Sentinel monitoring (Layer 3) provide compensating controls for this gap. Organizations requiring `Update` coverage should register an additional plugin step on the `Update` message for the `annotation` entity with a filtering attribute of `documentbody`.
 
 **Validation Process:**
 
@@ -128,6 +130,7 @@ The MIME Type Restrictions solution operates across three enforcement layers wit
      - **PE/MS-DOS:** `4D 5A` (Windows EXE/DLL)
      - **ELF:** `7F 45 4C 46` (Linux binaries)
      - **Mach-O 32/64-bit:** `FE ED FA CE`, `FE ED FA CF` (macOS binaries)
+     - **Mach-O 32/64-bit (reversed):** `CE FA ED FE`, `CF FA ED FE` (macOS binaries, reversed byte order)
      - **Java Class:** `CA FE BA BE` (compiled Java)
    - If match found → Blocked immediately
 
@@ -162,7 +165,7 @@ The MIME Type Restrictions solution operates across three enforcement layers wit
 |------|----------|----------|
 | **Block** | Throws `InvalidPluginExecutionException` on violation | Production enforcement (default) |
 | **TestWithNotifications** | Logs violation to trace, allows upload | Testing and impact assessment |
-| **Disabled** | Plugin executes but performs no validation | Emergency bypass (requires code change) |
+| **Disabled** | Plugin executes validation and logs violations but does not block uploads | Emergency bypass (change `enforcementMode` in `MimeConfig.json`) |
 
 **Configuration Loading:**
 
@@ -174,12 +177,12 @@ Plugin reads `MimeConfig.json` from plugin step configuration:
 
 | Error Scenario | Plugin Behavior | User Experience |
 |----------------|-----------------|-----------------|
-| Invalid Base64 | Block with error message | Upload fails with "Invalid file content" |
-| File size exceeded | Block with size limit message | Upload fails with "File too large (limit: 10 MB)" |
-| Blocked signature | Block with signature name | Upload fails with "File type not permitted (PE Executable detected)" |
-| MIME not in allowlist | Block with MIME type | Upload fails with "File type 'application/x-msdownload' not allowed" |
-| Magic byte mismatch | Block with inconsistency details | Upload fails with "File content does not match declared type" |
-| OpenXML validation failure | Block with ZIP structure error | Upload fails with "Invalid Office document structure" |
+| Invalid Base64 | Block with error message | Upload fails with "File '{name}' contains invalid Base64 content: {details}" |
+| File size exceeded | Block with size limit message | Upload fails with "File '{name}' ({size} bytes) exceeds the maximum allowed size of {limit} bytes for Zone {zone}." |
+| Blocked signature | Block with signature name | Upload fails with "File '{name}' matches blocked signature '{sig}'. This file type is not permitted in Zone {zone} environments. Contact your administrator if you believe this is in error." |
+| MIME not in allowlist | Block with MIME type | Upload fails with "MIME type '{type}' for file '{name}' is not in the Zone {zone} allowed list. Review the allowed types configuration or contact your administrator." |
+| Magic byte mismatch | Block with inconsistency details | Upload fails with "File '{name}' declares MIME type '{type}' but its content header does not match the expected magic bytes for that type. The file may have been renamed or corrupted." |
+| OpenXML validation failure | Block with ZIP structure error | Upload fails with "File '{name}' declares OpenXML MIME type '{type}' but does not contain a valid Office Open XML structure (missing [Content_Types].xml). The file may be corrupted or mislabeled." |
 
 **Trace Logging:**
 
@@ -189,15 +192,15 @@ Plugin writes detailed trace logs for troubleshooting:
 [FSI-MIME] Validating file 'document.pdf', declared MIME='application/pdf'
 [FSI-MIME] File size OK: 245,680 bytes
 [FSI-MIME] No blocked signatures detected
-[FSI-MIME] MIME type 'application/pdf' is in allowlist
-[FSI-MIME] Magic byte validation: Expected=[25 50 44 46], Actual=[25 50 44 46] (Match)
+[FSI-MIME] MIME type 'application/pdf' is in the allowlist.
+[FSI-MIME] Magic bytes match for 'application/pdf'.
 [FSI-MIME] Validation PASSED for 'document.pdf'
 ```
 
 #### 2. DLP Policy Template — dlp-policy-template.json
 **File:** `src/dlp-policy-template.json`
 
-**Purpose:** Power Platform DLP policy template that restricts file upload connectors to approved MIME types at the connector level (Layer 1 enforcement).
+**Purpose:** Power Platform DLP policy template that blocks uploads of dangerous file extensions at the connector level (Layer 1 enforcement).
 
 **Policy Configuration:**
 
@@ -210,26 +213,29 @@ Plugin writes detailed trace logs for troubleshooting:
 
 **MIME Restrictions:**
 
-The policy applies connector-level MIME type filters:
+The policy applies connector-level file extension filters:
 
 ```json
 {
-  "connectorId": "shared_copilot",
-  "actionRules": [
+  "rules": [
     {
-      "actionName": "UploadFile",
-      "behavior": "Block",
-      "allowedMimeTypes": [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/gif",
-        "text/plain",
-        "text/csv",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-      ]
+      "ruleName": "Block Executable File Uploads",
+      "ruleDescription": "Blocks uploads of core executable file types.",
+      "priority": 1,
+      "severity": "High",
+      "conditions": {
+        "fileExtensionMatches": {
+          "operator": "anyOf",
+          "extensions": [
+            "exe", "bat", "cmd", "ps1", "vbs",
+            "js", "jar", "dll", "msi", "scr", "hta"
+          ]
+        }
+      },
+      "actions": {
+        "blockAccess": true,
+        "generateAuditLog": true
+      }
     }
   ]
 }
@@ -239,8 +245,8 @@ The policy applies connector-level MIME type filters:
 
 | Policy Mode | Behavior | Audit Log Entry |
 |-------------|----------|-----------------|
-| **Enforce** | Blocks uploads of disallowed MIME types | `ActionTaken=Block`, `OperationType=BlockedUpload` |
-| **Audit** | Allows uploads but logs violations | `ActionTaken=Audit`, `OperationType=AllowedWithAudit` |
+| **Block** | Blocks uploads of disallowed file extensions | `ActionTaken=Block`, `OperationType=BlockedUpload` |
+| **TestWithNotifications** | Allows uploads but logs violations | `ActionTaken=Audit`, `OperationType=AllowedWithAudit` |
 
 **Customization:**
 
@@ -266,7 +272,7 @@ Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "enforcementMode": "Block",
   "maxFileSizeBytes": 10485760,
   "zone": 3,
@@ -287,6 +293,7 @@ Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -
 | `text/csv` | `.csv` | `null` | Comma-separated values |
 | `application/vnd...sheet` | `.xlsx` | `50 4B 03 04` | Excel spreadsheet (OpenXML ZIP) |
 | `application/vnd...document` | `.docx` | `50 4B 03 04` | Word document (OpenXML ZIP) |
+| `image/tiff` | `.tif`, `.tiff` | `49 49 2A 00` / `4D 4D 00 2A` | Tagged Image File Format (LE/BE) |
 | `application/vnd...presentation` | `.pptx` | `50 4B 03 04` | PowerPoint presentation (OpenXML ZIP) |
 
 **Blocked Signatures:**
@@ -297,6 +304,8 @@ Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -
 | ELF Executable | `7F 45 4C 46` | Linux | Code execution (binaries) |
 | Mach-O 32-bit | `FE ED FA CE` | macOS | Code execution (binaries) |
 | Mach-O 64-bit | `FE ED FA CF` | macOS | Code execution (binaries) |
+| Mach-O 32-bit (reversed) | `CE FA ED FE` | macOS | Code execution (reversed byte order) |
+| Mach-O 64-bit (reversed) | `CF FA ED FE` | macOS | Code execution (reversed byte order) |
 | Java Class File | `CA FE BA BE` | JVM | Code execution (compiled Java) |
 
 **Configuration Updates:**
@@ -376,10 +385,11 @@ PowerPlatformDlpActivity_CL
 
 ```kql
 PowerPlatformDlpActivity_CL
+| where OperationType_s in ("Blocked", "Denied", "BlockedUpload") or ActionTaken_s == "Block"
 | where TimeGenerated > ago(1h)
-| where OperationType_s in ("Blocked", "Denied", "BlockedUpload")
-| summarize BlockCount = count() by UserPrincipalName = UserPrincipalName_s
+| summarize BlockCount = count() by UserPrincipalName = UserPrincipalName_s, EnvironmentName = EnvironmentName_s
 | where BlockCount > 10
+| project UserPrincipalName, EnvironmentName, BlockCount
 ```
 
 **Alert Configuration:**
@@ -405,19 +415,7 @@ PowerPlatformDlpActivity_CL
 
 **Query Logic:**
 
-```kql
-PowerPlatformDlpActivity_CL
-| where TimeGenerated > ago(90d)
-| where OperationType_s == "Exception" or ActionTaken_s == "AllowWithException"
-| extend FileExtension = tolower(extract(@"\.([a-zA-Z0-9]+)$", 1, FileName_s))
-| summarize
-    ExceptionCount = count(),
-    FirstUsed = min(TimeGenerated),
-    LastUsed = max(TimeGenerated),
-    UniqueUsers = dcount(UserPrincipalName_s)
-    by FileExtension, EnvironmentName = EnvironmentName_s
-| sort by ExceptionCount desc
-```
+The query correlates file upload activity against a predefined list of exception-approved MIME types over a 90-day window. It calculates weekly upload baselines per MIME type and environment, compares current-week volumes against those baselines, and computes deviation ratios to surface anomalous usage patterns. See `src/query-exception-usage.kql` for the full query.
 
 **Use Cases:**
 
@@ -457,10 +455,15 @@ PowerPlatformDlpActivity_CL
 **Step 1: Build Dataverse Plugin**
 
 1. Open Visual Studio → Create new Class Library (.NET Framework 4.6.2)
-2. Add NuGet packages:
+2. Sign the assembly with a strong name key: Project Properties → Signing → Sign the assembly → New/Browse for a `.snk` file. Dataverse sandbox-mode plugins require strong-name signing.
+3. Add NuGet packages:
    - `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+)
-3. Copy `ValidateMimeTypePlugin.cs` to project
-4. Build solution → Output: `FsiAgentGovernance.Plugins.dll`
+   - `System.Text.Json` (6.0.0+)
+4. Add assembly reference: `System.IO.Compression` (via Add Reference → Assemblies → Framework). Required for `ZipArchive` usage in the plugin.
+5. Install `ILRepack` NuGet package (or use ILMerge) and configure a post-build event to merge `System.Text.Json` and its transitive dependencies into the output assembly. Dataverse sandbox isolation only loads GAC-resident assemblies, so all NuGet dependencies must be embedded in the plugin DLL.
+6. Add `<LangVersion>8.0</LangVersion>` to the `<PropertyGroup>` in the `.csproj` file (required for `using var` syntax on .NET Framework 4.6.2)
+7. Copy `ValidateMimeTypePlugin.cs` to project
+8. Build solution → Output: `FsiAgentGovernance.Plugins.dll`
 
 **Step 2: Register Dataverse Plugin**
 
@@ -513,11 +516,18 @@ If you prefer command-line deployment over the Plugin Registration Tool:
      --plugin ValidateMimeTypePlugin
    ```
 
+> **⚠️ CRITICAL — Plugin Step Configuration Required:** PAC CLI does not currently support setting plugin step unsecure/secure configuration inline during step creation. After running the command above, you **must** set the step configuration containing the full `MimeConfig.json` content using one of these methods:
+>
+> - **Plugin Registration Tool** (recommended): Open the registered step, paste the entire `MimeConfig.json` content into the **Unsecure Configuration** field, and save.
+> - **Dataverse SDK**: Use the `SdkMessageProcessingStep` entity to update the `Configuration` attribute programmatically.
+>
+> Without this configuration, the plugin will throw `InvalidPluginExecutionException` on every file upload.
+>
 > **Note:** PAC CLI syntax may vary by version. Consult the [PAC CLI documentation](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/plugin) for current parameters.
 
 **Step 3: Import DLP Policy Template**
 
-1. Customize `dlp-policy-template.json` with organization-specific MIME types
+1. Customize `dlp-policy-template.json` with organization-specific file extensions
 2. Import via PowerShell:
    ```powershell
    Connect-MgGraph -Scopes "Policy.ReadWrite.All"
@@ -540,17 +550,17 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 
 1. Navigate to **Microsoft Sentinel** → **Analytics** → **+ Create** → **Scheduled query rule**
 2. **Name:** High-Volume MIME Type Block Attempts
-3. **Tactics:** Initial Access (T1566.001)
+3. **Tactics:** Initial Access (T1566), Execution (T1204)
 4. **Severity:** Medium
-5. **Rule query:** Paste contents of `high-volume-blocks.json`
+5. **Rule query:** Extract the KQL from the `properties.query` field in `high-volume-blocks.json`, or deploy the file directly as an ARM template via **Azure Portal** → **Deploy a custom template** → **Build your own template** → paste `high-volume-blocks.json`
 6. **Query scheduling:**
-   - **Run query every:** 5 minutes
+   - **Run query every:** 1 hour
    - **Lookup data from the last:** 1 hour
 7. **Alert threshold:** Generate alert when query results > 0
 8. **Event grouping:** Group all events into a single alert
 9. **Incident settings:**
    - **Create incidents:** Enabled
-   - **Alert grouping:** Disabled (create separate incident per alert)
+   - **Alert grouping:** Enabled — groups alerts for the same user account within a 5-hour window into a single incident
 10. Click **Create**
 
 ### Deployment Validation
@@ -568,28 +578,28 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 
 1. Attempt to upload Windows executable (e.g., `notepad.exe`)
 2. **Expected Result:**
-   - Upload fails with error: "File 'notepad.exe' matches blocked signature 'PE/MS-DOS Executable'"
-   - Plugin trace log shows: `[FSI-MIME] Blocked signature detected: PE/MS-DOS Executable`
+   - Upload fails with error: "File 'notepad.exe' matches blocked signature 'PE/MS-DOS Executable'. This file type is not permitted in Zone 3 environments. Contact your administrator if you believe this is in error."
+   - Plugin trace log shows: `[FSI-MIME] VIOLATION: File 'notepad.exe' matches blocked signature 'PE/MS-DOS Executable'. ...`
 3. Verify no annotation record created
 
 **Test 3: MIME Type Not in Allowlist (ZIP)**
 
 1. Attempt to upload ZIP archive (e.g., `archive.zip`)
 2. **Expected Result:**
-   - Upload fails with error: "File type 'application/zip' is not in the allowed list for Zone 3 environments"
-   - Plugin trace log shows: `[FSI-MIME] MIME type not in allowlist: application/zip`
+   - Upload fails with error: "MIME type 'application/zip' for file 'archive.zip' is not in the Zone 3 allowed list. Review the allowed types configuration or contact your administrator."
+   - Plugin trace log shows: `[FSI-MIME] VIOLATION: MIME type 'application/zip' for file 'archive.zip' is not in the Zone 3 allowed list. ...`
 
-**Test 4: Magic Byte Mismatch (Disguised EXE as PDF)**
+**Test 4: Magic Byte Mismatch (Disguised PNG as PDF)**
 
-1. Rename `notepad.exe` to `fake-document.pdf`
+1. Rename a PNG image (e.g., `screenshot.png`) to `fake-document.pdf`
 2. Attempt to upload with declared MIME type `application/pdf`
 3. **Expected Result:**
-   - Upload fails with error: "File content does not match declared type 'application/pdf'"
-   - Plugin trace log shows: `[FSI-MIME] Magic byte validation FAILED. Expected=[25 50 44 46], Actual=[4D 5A]`
+   - Upload fails with error: "File 'fake-document.pdf' declares MIME type 'application/pdf' but its content header does not match the expected magic bytes for that type. The file may have been renamed or corrupted."
+   - Plugin trace log shows: `[FSI-MIME] VIOLATION: File 'fake-document.pdf' declares MIME type 'application/pdf' but its content header does not match ...`
 
 **Test 5: DLP Policy Enforcement**
 
-1. Ensure DLP policy is in **Enforce** mode
+1. Ensure DLP policy is in **Block** mode
 2. Attempt to upload EXE file through Copilot Studio
 3. **Expected Result:**
    - Upload blocked by DLP policy before reaching plugin
@@ -599,7 +609,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 **Test 6: Sentinel Alert Trigger**
 
 1. Simulate high-volume attack: Attempt to upload EXE file 15 times in 10 minutes
-2. Wait 5 minutes for alert rule execution
+2. Wait up to 1 hour for alert rule execution (query frequency is PT1H)
 3. **Expected Result:**
    - Sentinel incident created: "High-Volume MIME Type Block Attempts"
    - Incident details show user, block count, file extension
@@ -627,7 +637,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 Based on Sentinel query results, adjust MIME type allowlist:
 
 1. **Frequent Legitimate Blocks:**
-   - Query: `MimeExceptionUsage | where ExceptionCount > 50`
+   - Query: `MimeExceptionUsage | where UploadCount > 50`
    - Action: Add MIME type to `MimeConfig.json` allowlist if justified
    - Example: Organization frequently uploads MP3 audio files for training → Add `audio/mpeg`
 
@@ -733,12 +743,12 @@ If the MIME Type Restrictions plugin causes issues in production, use one of the
 
 **Issue: DLP policy not enforcing MIME restrictions**
 
-**Cause:** Policy in audit-only mode or connector not in scope
+**Cause:** Policy in TestWithNotifications mode or connector not in scope
 
 **Resolution:**
 1. Navigate to Power Platform Admin Center → DLP Policies
 2. Select MIME restriction policy → Edit
-3. **Enforcement mode:** Change from **Audit** to **Enforce**
+3. **Enforcement mode:** Change from **TestWithNotifications** to **Block**
 4. **Connector scope:** Verify Copilot Studio connector is classified as **Business** (not Blocked)
 5. Save policy → Wait 5 minutes for propagation
 6. Test with disallowed MIME type upload
@@ -833,7 +843,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 **Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including technology controls for data uploads and transfers.
 
 **Solution Support:**
-- DLP policy enforces MIME type restrictions across all Copilot Studio agents
+- DLP policy enforces file extension restrictions across all Copilot Studio agents
 - Sentinel monitoring detects high-volume upload attempts (potential policy violation or attack)
 - Audit trail provides evidence of supervisory controls effectiveness
 
@@ -850,7 +860,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.1
 **Release Date:** February 2026
 **License:** MIT License
 

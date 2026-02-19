@@ -12,6 +12,7 @@ All files located in the `src/` directory:
 **Server-Side Validation:**
 - [ ] **ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
 - [ ] **MimeConfig.json** — MIME type allowlist/blocklist configuration
+- [ ] **BUILD-INSTRUCTIONS.md** — Step-by-step plugin build guide (ILRepack, strong-name verification)
 
 **DLP Policy:**
 - [ ] **dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
@@ -26,10 +27,11 @@ All files located in the `src/` directory:
 **Option A: Create ZIP Archive**
 ```bash
 # From the mime-type-restrictions directory:
-zip -r MIME-Type-Restrictions-v1.0.0.zip \
+zip -r MIME-Type-Restrictions-v1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
   src/ValidateMimeTypePlugin.cs \
   src/MimeConfig.json \
+  src/BUILD-INSTRUCTIONS.md \
   src/dlp-policy-template.json \
   src/query-mime-blocks.kql \
   src/high-volume-blocks.json \
@@ -38,11 +40,12 @@ zip -r MIME-Type-Restrictions-v1.0.0.zip \
 
 **Option B: Create Structured Folder**
 ```
-MIME-Type-Restrictions-v1.0.0/
+MIME-Type-Restrictions-v1.0.1/
 ├── SOLUTION-DOCUMENTATION.md
 ├── Dataverse-Plugin/
 │   ├── ValidateMimeTypePlugin.cs
-│   └── MimeConfig.json
+│   ├── MimeConfig.json
+│   └── BUILD-INSTRUCTIONS.md
 ├── DLP-Policy/
 │   └── dlp-policy-template.json
 └── Sentinel-Monitoring/
@@ -53,14 +56,14 @@ MIME-Type-Restrictions-v1.0.0/
 
 ### 4. Email Template
 
-**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.0
+**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.1
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.0.0.
+Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.0.1.
 
 This solution provides defense-in-depth validation of file uploads in Copilot Studio agents
 through server-side magic byte inspection, DLP policy enforcement, and Sentinel monitoring.
@@ -74,11 +77,12 @@ Package Contents:
   • Operational guidance and troubleshooting
   • Magic byte reference and regulatory alignment
 
-- 6 Solution Component Files:
+- 7 Solution Component Files:
   • Dataverse pre-validation plugin (C# source)
   • MIME type configuration (JSON allowlist/blocklist)
+  • Plugin build guide (ILRepack, strong-name verification)
   • DLP policy template (Power Platform connector restrictions)
-  • 3 Sentinel KQL queries (monitoring, alerting, exception tracking)
+  • 2 Sentinel KQL queries and 1 Sentinel alert rule (monitoring, exception tracking, high-volume alerting)
 
 Key Capabilities:
 ✓ Server-side magic byte inspection (defense against disguised executables)
@@ -125,7 +129,7 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Max file size: 10 MB default (adjust based on business requirements)
 
 2. **Allowed MIME Types:**
-   - Default allowlist: PDF, PNG, JPEG, GIF, TXT, CSV, DOCX, XLSX, PPTX
+   - Default allowlist: PDF, PNG, JPEG, GIF, TIFF, TXT, CSV, DOCX, XLSX, PPTX
    - Customize based on organization's legitimate file upload needs
    - Require business justification for new MIME type additions
 
@@ -135,9 +139,9 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Add custom signatures if organization-specific threats identified
 
 4. **DLP Policy Mode:**
-   - Start with "Audit" mode to assess impact (log violations, allow uploads)
+   - Start with "TestWithNotifications" mode to assess impact (log violations, allow uploads)
    - Review audit logs for 2-4 weeks
-   - Switch to "Enforce" mode after validation (block disallowed uploads)
+   - Switch to "Block" mode after validation (block disallowed uploads)
 
 5. **Sentinel Workspace:**
    - Requires Dataverse audit logs flowing to Log Analytics workspace
@@ -155,12 +159,12 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 7 files are included (1 doc, 1 C#, 1 config, 1 DLP template, 3 KQL queries)
+- [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)
-- [ ] Version numbers are consistent (v1.0.0) across all files
+- [ ] Version numbers are consistent (v1.0.1) across all files
 
 ### 6. Files NOT to Include
 
@@ -215,7 +219,8 @@ Offer these follow-up services:
 1. **Build Plugin DLL:**
    - Customer MUST build the plugin from C# source code
    - Visual Studio project type: Class Library (.NET Framework 4.6.2)
-   - Required NuGet package: `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+)
+   - Required NuGet packages: `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+), `System.Text.Json` (6.0.0+)
+   - Add `<LangVersion>8.0</LangVersion>` to `.csproj` `<PropertyGroup>` for `using var` syntax
    - Output: `FsiAgentGovernance.Plugins.dll`
 
 2. **Plugin Registration:**
@@ -225,16 +230,16 @@ Offer these follow-up services:
    - Without configuration, plugin will throw error on first upload
 
 3. **MimeConfig.json Customization:**
-   - Review default allowlist (9 MIME types) and adjust based on business needs
+   - Review default allowlist (10 MIME types) and adjust based on business needs
    - **DO NOT remove blocked signatures** without security team approval
    - Add magic byte patterns for new allowed types (consult file format specifications)
    - Test magic byte validation with sample files before deploying
 
 4. **DLP Policy Testing:**
-   - Start in "Audit" mode for 2-4 weeks
+   - Start in "TestWithNotifications" mode for 2-4 weeks
    - Review audit logs to identify impact on legitimate users
    - Create exceptions for business-justified use cases
-   - Switch to "Enforce" mode only after validation complete
+   - Switch to "Block" mode only after validation complete
 
 5. **Sentinel Alert Tuning:**
    - Default threshold: 10 blocked uploads per user per hour
@@ -249,7 +254,7 @@ Provide this checklist to customer for post-deployment validation:
 ```
 Plugin Build and Registration:
 □ Visual Studio project created (Class Library .NET Framework 4.6.2)
-□ NuGet package installed: Microsoft.CrmSdk.CoreAssemblies
+□ NuGet packages installed: Microsoft.CrmSdk.CoreAssemblies, System.Text.Json
 □ ValidateMimeTypePlugin.cs compiled successfully
 □ DLL output generated: FsiAgentGovernance.Plugins.dll
 
@@ -270,7 +275,7 @@ MimeConfig.json Validation:
 DLP Policy Deployment:
 □ dlp-policy-template.json customized with organization MIME types
 □ Policy imported via PowerShell successfully
-□ Policy mode set: "Audit" (initial testing) or "Enforce" (production)
+□ Policy mode set: "TestWithNotifications" (initial testing) or "Block" (production)
 □ Policy scope configured: All environments or specific groups
 □ Copilot Studio connector classified as "Business" (not Blocked)
 
@@ -279,7 +284,7 @@ Sentinel Queries:
 □ query-mime-blocks.kql saved as function: MimeTypeBlocks
 □ query-exception-usage.kql saved as function: MimeExceptionUsage
 □ high-volume-blocks.json imported as alert rule
-□ Alert rule enabled and configured (5-minute frequency, Medium severity)
+□ Alert rule enabled and configured (1-hour frequency, Medium severity)
 
 Test Execution:
 □ Test 1: Upload allowed PDF → Success (annotation created)
@@ -304,6 +309,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.0
+**Package Version:** v1.0.1
 **Release Date:** February 2026
 **Solution:** MIME Type Restrictions for File Uploads

@@ -1,10 +1,9 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zone 3 server-side MIME validation configuration for Dataverse plugin. Defines allowed file types with magic byte signatures and blocked executable signatures. Supports compliance with FINRA 4511 and SEC 17a-4 by providing defense-in-depth file type validation for Enterprise Managed environments.",
   "enforcementMode": "Block",
   "maxFileSizeBytes": 10485760,
   "zone": 3,
-  "correlationIdHeader": "x-fsi-correlation-id",
   "allowedTypes": [
     {
       "mimeType": "application/pdf",

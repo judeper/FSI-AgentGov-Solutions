@@ -8,7 +8,7 @@
 // Enterprise Managed (Zone 3) environments.
 //
 // Control: 1.25 — MIME Type Restrictions
-// Version: 1.0.0
+// Version: 1.0.1
 // ---------------------------------------------------------------------------
 
 using System;
@@ -38,7 +38,7 @@ namespace FsiAgentGovernance.Plugins
     ///   <item>Blocked signature scan — compares leading bytes against known executable headers.</item>
     ///   <item>Allowlist check — verifies the declared MIME type is in the allowed set.</item>
     ///   <item>Magic-byte consistency — for types with known signatures, confirms the header matches.</item>
-    ///   <item>OpenXML deep inspection — for DOCX/XLSX/PPTX, verifies PK header and <c>[Content_Types].xml</c>.</item>
+    ///   <item>OpenXML deep inspection — for DOCX/XLSX/PPTX, verifies PK header, <c>[Content_Types].xml</c>, and rejects macro-enabled content under macro-free MIME types.</item>
     /// </list>
     /// </para>
     /// <para>
@@ -94,13 +94,17 @@ namespace FsiAgentGovernance.Plugins
             // Validate enforcement mode against known values
             var validModes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 { "Block", "TestWithNotifications", "Disabled" };
-            if (!string.IsNullOrEmpty(_config.EnforcementMode) &&
+            if (string.IsNullOrEmpty(_config.EnforcementMode) ||
                 !validModes.Contains(_config.EnforcementMode))
             {
                 throw new InvalidPluginExecutionException(
-                    $"Invalid EnforcementMode '{_config.EnforcementMode}'. " +
-                    "Valid values are: Block, TestWithNotifications, Disabled.");
+                    $"EnforcementMode is required and must be one of: Block, TestWithNotifications, Disabled. " +
+                    $"Current value: '{_config.EnforcementMode ?? "(null)"}'.");
             }
+
+            // Validate hex strings in configuration at load time so typos
+            // surface immediately rather than on the first upload attempt.
+            ValidateConfigHexStrings();
         }
 
         /// <summary>
@@ -276,11 +280,81 @@ namespace FsiAgentGovernance.Plugins
                     return;
                 }
 
+                if (ContainsMacroContent(fileBytes, tracingService, fileName))
+                {
+                    HandleViolation(tracingService,
+                        $"File '{fileName}' declares macro-free MIME type '{declaredMimeType}' " +
+                        "but contains macro-enabled content (e.g., VBA project). " +
+                        "Macro-enabled content is not permitted under the declared content type. " +
+                        "Use the appropriate macro-enabled MIME type or remove macro content.",
+                        correlationId);
+                    return;
+                }
+
                 tracingService.Trace("[FSI-MIME] OpenXML structure validated for '{0}'.", fileName);
             }
 
             tracingService.Trace("[FSI-MIME] Validation PASSED for '{0}'. CorrelationId={1}",
                 fileName, correlationId);
+        }
+
+        /// <summary>
+        /// Validates all hex strings in the loaded configuration, ensuring they
+        /// can be parsed successfully. Called once during construction so that
+        /// configuration errors are caught at plugin registration time rather
+        /// than at runtime.
+        /// </summary>
+        private void ValidateConfigHexStrings()
+        {
+            if (_config.BlockedSignatures != null)
+            {
+                foreach (var sig in _config.BlockedSignatures)
+                {
+                    try
+                    {
+                        var parsed = ParseHexString(sig.MagicBytes);
+                        if (parsed == null)
+                        {
+                            throw new InvalidPluginExecutionException(
+                                $"BlockedSignatures entry '{sig.Name}' has no magic bytes configured. " +
+                                "Each blocked signature must specify a non-empty magicBytes value.");
+                        }
+                    }
+                    catch (FormatException ex)
+                    {
+                        throw new InvalidPluginExecutionException(
+                            $"Invalid hex value in blockedSignatures entry '{sig.Name}': " +
+                            $"'{sig.MagicBytes}'. {ex.Message}");
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new InvalidPluginExecutionException(
+                            $"Invalid hex value in blockedSignatures entry '{sig.Name}': " +
+                            $"'{sig.MagicBytes}'. {ex.Message}");
+                    }
+                }
+            }
+
+            if (_config.AllowedTypes != null)
+            {
+                foreach (var allowed in _config.AllowedTypes)
+                {
+                    try
+                    {
+                        allowed.GetMagicByteArrays();
+                    }
+                    catch (FormatException ex)
+                    {
+                        throw new InvalidPluginExecutionException(
+                            $"Invalid hex value in allowedTypes entry '{allowed.MimeType}': {ex.Message}");
+                    }
+                    catch (OverflowException ex)
+                    {
+                        throw new InvalidPluginExecutionException(
+                            $"Invalid hex value in allowedTypes entry '{allowed.MimeType}': {ex.Message}");
+                    }
+                }
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -290,7 +364,7 @@ namespace FsiAgentGovernance.Plugins
         /// <summary>
         /// Handles a validation violation based on the configured enforcement mode.
         /// In <c>Block</c> mode, throws <see cref="InvalidPluginExecutionException"/>.
-        /// In <c>LogOnly</c> mode, writes a trace warning and allows the operation.
+        /// In <c>TestWithNotifications</c> or <c>Disabled</c> mode, writes a trace warning and allows the operation.
         /// </summary>
         /// <param name="tracingService">Dataverse tracing service for logging.</param>
         /// <param name="message">Descriptive violation message.</param>
@@ -323,7 +397,7 @@ namespace FsiAgentGovernance.Plugins
             if (string.IsNullOrWhiteSpace(hex))
                 return null;
 
-            var parts = hex.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = hex.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var bytes = new byte[parts.Length];
 
             for (var i = 0; i < parts.Length; i++)
@@ -373,10 +447,6 @@ namespace FsiAgentGovernance.Plugins
                 var b = data[i];
                 if (b < 0x09 || (b > 0x0D && b < 0x20))
                 {
-                    // Allow NULL (0x00) only if it's a UTF-16 BOM pattern
-                    if (b == 0x00 && i == 0 && data.Length > 1 && (data[1] == 0xFE || data[1] == 0xFF))
-                        continue;
-
                     return true;
                 }
             }
@@ -432,6 +502,59 @@ namespace FsiAgentGovernance.Plugins
             {
                 tracingService.Trace("[FSI-MIME] OpenXML check failed for '{0}': {1}", fileName, ex.Message);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks whether an OpenXML archive contains macro-related content types
+        /// in its <c>[Content_Types].xml</c>, such as VBA projects or macro-enabled parts.
+        /// Used to detect macro-enabled content uploaded under a macro-free MIME type.
+        /// </summary>
+        private static bool ContainsMacroContent(byte[] fileBytes, ITracingService tracingService, string fileName)
+        {
+            try
+            {
+                using var stream = new MemoryStream(fileBytes);
+                using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+
+                var contentTypesEntry = archive.Entries
+                    .FirstOrDefault(e => string.Equals(e.FullName, "[Content_Types].xml",
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (contentTypesEntry == null)
+                    return false;
+
+                using var entryStream = contentTypesEntry.Open();
+                using var reader = new StreamReader(entryStream, Encoding.UTF8);
+                var contentTypesXml = reader.ReadToEnd();
+
+                var macroIndicators = new[]
+                {
+                    "vbaProject",
+                    "macroEnabled",
+                    "application/vnd.ms-excel.sheet.macroEnabled",
+                    "application/vnd.ms-word.document.macroEnabled",
+                    "application/vnd.ms-powerpoint.presentation.macroEnabled",
+                    "application/vnd.ms-office.vbaProject"
+                };
+
+                foreach (var indicator in macroIndicators)
+                {
+                    if (contentTypesXml.IndexOf(indicator, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        tracingService.Trace(
+                            "[FSI-MIME] Macro content detected in '{0}': found '{1}' in [Content_Types].xml.",
+                            fileName, indicator);
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace("[FSI-MIME] Macro content check failed for '{0}': {1}", fileName, ex.Message);
+                return true; // Fail-closed: assume macros present when detection fails
             }
         }
 
