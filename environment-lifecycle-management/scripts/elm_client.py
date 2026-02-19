@@ -193,12 +193,20 @@ class ELMClient:
         Returns:
             List of records
         """
+        from urllib.parse import unquote
+        from xml.sax.saxutils import quoteattr
+
         all_records = []
         page = 1
-        paged_xml = fetchxml
+        paging_cookie = ""
         while True:
             if page > 1:
-                paged_xml = fetchxml.replace('</fetch>', f' page="{page}" count="5000"></fetch>')
+                cookie_attr = f' paging-cookie={quoteattr(paging_cookie)}' if paging_cookie else ""
+                paged_xml = fetchxml.replace(
+                    '<fetch', f'<fetch page="{page}" count="5000"{cookie_attr}', 1
+                )
+            else:
+                paged_xml = fetchxml
             response = self.session.get(
                 urljoin(self.api_url, entity_set),
                 headers=self._get_headers(),
@@ -209,6 +217,9 @@ class ELMClient:
             all_records.extend(data.get("value", []))
             if "@Microsoft.Dynamics.CRM.fetchxmlpagingcookie" not in data:
                 break
+            paging_cookie = unquote(
+                data["@Microsoft.Dynamics.CRM.fetchxmlpagingcookie"]
+            )
             page += 1
         return all_records
 
@@ -504,7 +515,7 @@ class ELMClient:
         Args:
             role_id: Role GUID
             privilege_id: Privilege GUID
-            depth: Privilege depth (1=User, 2=BU, 4=Parent:Child, 8=Org)
+            depth: Privilege depth enum (0=User, 1=BU, 2=Parent:Child, 3=Org)
         """
         response = self.session.post(
             urljoin(self.api_url, "AddPrivilegesRole"),

@@ -49,7 +49,7 @@ The JSON schema for the Copilot Studio agent output when submitting to Power Aut
     "zone": 1|2|3,
     "autoFlags": string[],
     "dataSensitivity": Public|Internal|Confidential|Restricted,
-    "zoneRationale": string (Zone 3 only)
+    "zoneRationale": string (Zone 2/3)
   },
   "access": {
     "securityGroupId": GUID (Zone 2/3),

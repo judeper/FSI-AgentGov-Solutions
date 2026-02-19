@@ -39,6 +39,7 @@ Common issues, error recovery procedures, and rollback guidance.
      --tenant-id <tenant> \
      --app-name ELM-Provisioning-ServicePrincipal \
      --key-vault-name <vault> \
+     --expiry-days 90 \
      --rotate-secret \
      --verbose
    ```

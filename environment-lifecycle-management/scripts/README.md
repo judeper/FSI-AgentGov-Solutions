@@ -37,6 +37,7 @@ pip install -r requirements.txt
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <your-tenant-id> \
+  --client-id <your-client-id> \
   --interactive \
   --dry-run
 
@@ -44,13 +45,14 @@ python deploy.py \
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <your-tenant-id> \
+  --client-id <your-client-id> \
   --interactive
 ```
 
 The deployment creates:
 - 8 global option sets (State, Zone, Region, etc.)
 - EnvironmentRequest table (22 columns, user-owned)
-- ProvisioningLog table (11 columns, org-owned, immutable)
+- ProvisioningLog table (12 columns, org-owned, immutable)
 - 4 security roles (Requester, Approver, Admin, Auditor)
 - 3 business rules (conditional required fields)
 - 8 model-driven app views
@@ -107,12 +109,14 @@ Main deployment orchestrator that creates all ELM Dataverse components.
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <tenant-id> \
+  --client-id <app-id> \
   --interactive
 
 # Dry run to preview changes
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <tenant-id> \
+  --client-id <app-id> \
   --interactive \
   --dry-run
 
@@ -120,6 +124,7 @@ python deploy.py \
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <tenant-id> \
+  --client-id <app-id> \
   --interactive \
   --tables-only
 
@@ -127,6 +132,7 @@ python deploy.py \
 python deploy.py \
   --environment-url https://org.crm.dynamics.com \
   --tenant-id <tenant-id> \
+  --client-id <app-id> \
   --interactive \
   --roles-only
 
@@ -240,6 +246,7 @@ from elm_client import ELMClient
 # Interactive auth (for manual runs)
 client = ELMClient(
     tenant_id="...",
+    client_id="...",
     environment_url="https://org.crm.dynamics.com",
     interactive=True,
 )
@@ -275,6 +282,7 @@ client.create_attribute("fsi_environmentrequest", column_metadata)
 # Test connection with interactive auth
 python elm_client.py \
   --tenant-id <tenant> \
+  --client-id <client> \
   --environment-url https://org.crm.dynamics.com \
   --interactive \
   --test-connection
@@ -299,6 +307,7 @@ python register_service_principal.py \
   --tenant-id <tenant> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault> \
+  --expiry-days 90 \
   --dry-run
 
 # Create new Service Principal
@@ -306,6 +315,7 @@ python register_service_principal.py \
   --tenant-id <tenant> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault> \
+  --expiry-days 90 \
   --secret-name ELM-ServicePrincipal-Secret
 
 # Rotate existing secret
@@ -313,6 +323,7 @@ python register_service_principal.py \
   --tenant-id <tenant> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault> \
+  --expiry-days 90 \
   --rotate-secret
 ```
 

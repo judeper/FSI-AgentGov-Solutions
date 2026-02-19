@@ -132,8 +132,13 @@ BUSINESS_RULES = [
 ]
 
 
-def create_business_rules(client: ELMClient, dry_run: bool = False) -> None:
-    """Create business rules for ELM entities."""
+def create_business_rules(client: ELMClient, dry_run: bool = False) -> bool:
+    """Create business rules for ELM entities.
+
+    Returns:
+        True if all operations succeeded, False if any failures occurred.
+    """
+    success = True
     print("\n" + "=" * 60)
     print("ELM Business Rules Deployment")
     print("=" * 60)
@@ -182,6 +187,7 @@ def create_business_rules(client: ELMClient, dry_run: bool = False) -> None:
             print(f"    Created: {workflow_id}")
             print(f"    Entity: {entity}")
         except Exception as e:
+            success = False
             print(f"\n  {rule_name}:")
             print(f"    ERROR: {e}")
             print(f"    NOTE: Business rules may need to be created manually via maker portal")
@@ -197,6 +203,11 @@ def create_business_rules(client: ELMClient, dry_run: bool = False) -> None:
     print("  - Business rules created via API may need activation in maker portal")
     print("  - Verify rules trigger correctly on Zone and State changes")
     print("  - Test with Zone 2/3 requests to confirm conditional requirements")
+    print("  - NOTE: The XAML format used here is simplified; Dataverse may require")
+    print("    Windows Workflow Foundation XAML. If submission fails, create rules")
+    print("    manually via the maker portal (make.powerapps.com).")
+
+    return success
 
 
 def main():

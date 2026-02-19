@@ -68,7 +68,7 @@ EXPECTED_ROLES = {
             "Read": "Organization",
             "Write": None,  # CRITICAL: Must be None for immutability
             "Delete": None,  # CRITICAL: Must be None for immutability
-            "Append": None,
+            "Append": "Organization",
             "AppendTo": None,
         },
     },
@@ -159,7 +159,7 @@ def get_role_privileges(client: ELMClient, role_name: str) -> Optional[dict]:
         # Parse privilege name (e.g., "prvCreatefsi_environmentrequest")
         if priv_name.startswith("prv"):
             # Extract action and entity
-            for action in ["Create", "Read", "Write", "Delete", "Append", "AppendTo"]:
+            for action in ["Create", "Read", "Write", "Delete", "AppendTo", "Append"]:
                 if priv_name.startswith(f"prv{action}"):
                     entity = priv_name[len(f"prv{action}"):]
                     if entity not in priv_map:
@@ -247,8 +247,13 @@ def main():
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ELM_ENVIRONMENT_URL"),
-        required=True,
-        help="Dataverse environment URL",
+        required=not os.environ.get("ELM_ENVIRONMENT_URL"),
+        help="Dataverse environment URL (or set ELM_ENVIRONMENT_URL env var)",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Use interactive browser authentication",
     )
     parser.add_argument(
         "--role-name",
@@ -267,12 +272,15 @@ def main():
     args = parser.parse_args()
 
     # Validate required arguments
-    if not all([args.tenant_id, args.client_id, args.environment_url]):
+    if not all([args.tenant_id, args.environment_url]):
         parser.error("Missing required arguments or environment variables")
 
-    # Prompt for secret if not provided
+    if not args.interactive and not args.client_id:
+        parser.error("Either --interactive with --client-id or --client-id with --client-secret is required")
+
+    # Prompt for secret if needed
     client_secret = args.client_secret
-    if not client_secret:
+    if not args.interactive and not client_secret:
         import getpass
         client_secret = getpass.getpass("Client secret: ")
 
@@ -286,6 +294,7 @@ def main():
             client_id=args.client_id,
             client_secret=client_secret,
             environment_url=args.environment_url,
+            interactive=args.interactive,
         )
 
         results = {

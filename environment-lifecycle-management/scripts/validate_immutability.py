@@ -51,8 +51,13 @@ Examples:
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ELM_ENVIRONMENT_URL"),
-        required=True,
-        help="Dataverse environment URL",
+        required=not os.environ.get("ELM_ENVIRONMENT_URL"),
+        help="Dataverse environment URL (or set ELM_ENVIRONMENT_URL env var)",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Use interactive browser authentication",
     )
     parser.add_argument(
         "--start-date",
@@ -71,12 +76,15 @@ Examples:
     args = parser.parse_args()
 
     # Validate required arguments
-    if not all([args.tenant_id, args.client_id, args.environment_url]):
+    if not all([args.tenant_id, args.environment_url]):
         parser.error("Missing required arguments or environment variables")
 
-    # Prompt for secret if not provided
+    if not args.interactive and not args.client_id:
+        parser.error("Either --interactive with --client-id or --client-id with --client-secret is required")
+
+    # Prompt for secret if needed
     client_secret = args.client_secret
-    if not client_secret:
+    if not args.interactive and not client_secret:
         import getpass
         client_secret = getpass.getpass("Client secret: ")
 
@@ -102,6 +110,7 @@ Examples:
             client_id=args.client_id,
             client_secret=client_secret,
             environment_url=args.environment_url,
+            interactive=args.interactive,
         )
 
         # Count total records in range
@@ -109,8 +118,8 @@ Examples:
             "fsi_provisioninglogs",
             select=["fsi_provisioninglogid"],
             filter_expr=(
-                f"fsi_timestamp ge {start_date.isoformat()}Z and "
-                f"fsi_timestamp le {end_date.isoformat()}Z"
+                f"fsi_timestamp ge {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')} and "
+                f"fsi_timestamp le {end_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
             ),
         )
         record_count = len(logs)
@@ -124,16 +133,16 @@ Examples:
         update_attempts = client.query_audit(
             "fsi_provisioninglog",
             operations=[2],  # Update
-            start_date=start_date.isoformat() + "Z",
-            end_date=end_date.isoformat() + "Z",
+            start_date=start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            end_date=end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
         # Query for Delete operations (3)
         delete_attempts = client.query_audit(
             "fsi_provisioninglog",
             operations=[3],  # Delete
-            start_date=start_date.isoformat() + "Z",
-            end_date=end_date.isoformat() + "Z",
+            start_date=start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            end_date=end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
         violations_found = False
@@ -175,8 +184,8 @@ Examples:
 
         # Check for records with missing required fields
         missing_fields_query = (
-            f"fsi_timestamp ge {start_date.isoformat()}Z and "
-            f"fsi_timestamp le {end_date.isoformat()}Z and "
+            f"fsi_timestamp ge {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')} and "
+            f"fsi_timestamp le {end_date.strftime('%Y-%m-%dT%H:%M:%SZ')} and "
             "(fsi_action eq null or fsi_actor eq null or fsi_success eq null)"
         )
 
@@ -196,8 +205,8 @@ Examples:
 
         # Check for orphaned records (no parent request)
         orphan_query = (
-            f"fsi_timestamp ge {start_date.isoformat()}Z and "
-            f"fsi_timestamp le {end_date.isoformat()}Z and "
+            f"fsi_timestamp ge {start_date.strftime('%Y-%m-%dT%H:%M:%SZ')} and "
+            f"fsi_timestamp le {end_date.strftime('%Y-%m-%dT%H:%M:%SZ')} and "
             "_fsi_environmentrequest_value eq null"
         )
 

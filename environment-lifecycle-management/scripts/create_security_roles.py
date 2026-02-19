@@ -13,11 +13,11 @@ from typing import Optional
 
 from elm_client import ELMClient
 
-# Privilege depth constants
-DEPTH_USER = 1       # Own records only
-DEPTH_BU = 2         # Business unit records
-DEPTH_PARENT_BU = 4  # Parent:Child business units
-DEPTH_ORG = 8        # Organization-wide
+# Privilege depth constants (PrivilegeDepth enum values for AddPrivilegesRole API)
+DEPTH_USER = 0       # Basic - Own records only
+DEPTH_BU = 1         # Local - Business unit records
+DEPTH_PARENT_BU = 2  # Deep - Parent:Child business units
+DEPTH_ORG = 3        # Global - Organization-wide
 
 # Role definitions with privilege matrices
 ROLES = {
@@ -61,6 +61,7 @@ ROLES = {
             "fsi_provisioninglog": {
                 "Create": DEPTH_ORG,
                 "Read": DEPTH_ORG,
+                "Append": DEPTH_ORG,
                 # NOTE: No Write or Delete - enforces immutability
             },
         },
@@ -276,7 +277,8 @@ def main():
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ELM_ENVIRONMENT_URL"),
-        help="Dataverse environment URL",
+        required=not os.environ.get("ELM_ENVIRONMENT_URL"),
+        help="Dataverse environment URL (or set ELM_ENVIRONMENT_URL env var)",
     )
     parser.add_argument(
         "--interactive",
@@ -292,8 +294,8 @@ def main():
     args = parser.parse_args()
 
     # Validate required arguments
-    if not args.tenant_id or not args.environment_url:
-        parser.error("--tenant-id and --environment-url are required")
+    if not args.tenant_id:
+        parser.error("--tenant-id is required")
 
     # Get client secret if needed
     client_secret = args.client_secret

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Environment Request",
-  "description": "Schema for Copilot Studio agent output when submitting environment requests to Power Automate",
+  "description": "Schema for Copilot Studio agent output when submitting environment requests to Power Automate. NOTE: Copilot Studio outputs string values for choice fields (e.g., 'Production', 'Confidential'). The bridging Power Automate flow must map these to Dataverse integer values before writing to the EnvironmentRequest table. Mappings: environmentType: Sandbox=1, Production=2, Developer=3; region: United States=1, Europe=2, United Kingdom=3, Australia=4; dataSensitivity: Public=1, Internal=2, Confidential=3, Restricted=4; expectedUsers: Just me (1)=1, Small team (2-10)=2, Large team (11-50)=3, Department (50+)=4.",
   "type": "object",
   "required": [
     "requestId",
@@ -95,7 +95,7 @@
         },
         "zoneRationale": {
           "type": "string",
-          "description": "Business rationale for zone classification (required for Zone 3)"
+          "description": "Business rationale for zone classification (required for Zone 2 and Zone 3)"
         }
       }
     },

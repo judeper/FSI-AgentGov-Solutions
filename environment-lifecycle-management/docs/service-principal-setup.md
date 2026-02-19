@@ -54,6 +54,7 @@ python scripts/register_service_principal.py \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <your-keyvault-name> \
   --secret-name ELM-ServicePrincipal-Secret \
+  --expiry-days 90 \
   --dry-run
 
 # Execute registration
@@ -61,7 +62,8 @@ python scripts/register_service_principal.py \
   --tenant-id <your-tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <your-keyvault-name> \
-  --secret-name ELM-ServicePrincipal-Secret
+  --secret-name ELM-ServicePrincipal-Secret \
+  --expiry-days 90
 
 # With verbose output (shows stack traces on error)
 python scripts/register_service_principal.py \
@@ -69,6 +71,7 @@ python scripts/register_service_principal.py \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <your-keyvault-name> \
   --secret-name ELM-ServicePrincipal-Secret \
+  --expiry-days 90 \
   --verbose
 ```
 

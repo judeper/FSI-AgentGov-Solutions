@@ -84,7 +84,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 ### Choice Field Definitions
 
-#### er_state (Workflow State)
+#### fsi_er_state (Workflow State)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -96,8 +96,9 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Provisioning | 6 | Flow executing |
 | Completed | 7 | Environment ready |
 | Failed | 8 | Provisioning error |
+| Cancelled | 9 | Request cancelled by user |
 
-#### er_zone (Governance Zone)
+#### fsi_er_zone (Governance Zone)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -105,7 +106,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Zone 2 | 2 | Team collaboration |
 | Zone 3 | 3 | Enterprise managed |
 
-#### er_environmenttype (Environment Type)
+#### fsi_er_environmenttype (Environment Type)
 
 | Label | Value |
 |-------|-------|
@@ -113,7 +114,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Production | 2 |
 | Developer | 3 |
 
-#### er_region (Geographic Region)
+#### fsi_er_region (Geographic Region)
 
 | Label | Value | API Code |
 |-------|-------|----------|
@@ -122,7 +123,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | United Kingdom | 3 | unitedkingdom |
 | Australia | 4 | australia |
 
-#### er_datasensitivity (Data Sensitivity)
+#### fsi_er_datasensitivity (Data Sensitivity)
 
 | Label | Value |
 |-------|-------|
@@ -131,7 +132,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Confidential | 3 |
 | Restricted | 4 |
 
-#### er_expectedusers (Expected User Count)
+#### fsi_er_expectedusers (Expected User Count)
 
 | Label | Value |
 |-------|-------|
@@ -197,20 +198,21 @@ Action: Set fsi_approvalcomments to Business Required
 | Display Name | Logical Name | Type | Required | Description |
 |--------------|--------------|------|----------|-------------|
 | Log ID | `fsi_provisioninglogid` | GUID | Auto | Primary key |
+| Name | `fsi_name` | Text (100) | Auto | Primary name column (auto-generated, required by Dataverse) |
 | Environment Request | `fsi_environmentrequest` | Lookup | Yes | Parent request |
 | Sequence | `fsi_sequence` | Whole Number | Yes | Action sequence (1, 2, 3...) |
 | Action | `fsi_action` | Choice | Yes | Action type |
 | Action Details | `fsi_actiondetails` | Multiline | No | JSON payload |
 | Actor | `fsi_actor` | Text (200) | Yes | UPN or Service Principal ID |
 | Actor Type | `fsi_actortype` | Choice | Yes | User/ServicePrincipal/System |
-| Timestamp | `fsi_timestamp` | DateTime | Auto | Auto-set to Now() |
+| Timestamp | `fsi_timestamp` | DateTime | Yes | Set to `utcNow()` by flow |
 | Success | `fsi_success` | Boolean | Yes | Action succeeded |
 | Error Message | `fsi_errormessage` | Multiline | No | Error details if failed |
 | Correlation ID | `fsi_correlationid` | Text (100) | Yes | Power Automate run ID |
 
 ### Choice Field Definitions
 
-#### pl_action (Action Type)
+#### fsi_pl_action (Action Type)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -231,7 +233,7 @@ Action: Set fsi_approvalcomments to Business Required
 | RollbackInitiated | 15 | Rollback started |
 | RollbackCompleted | 16 | Rollback finished |
 
-#### pl_actortype (Actor Type)
+#### fsi_pl_actortype (Actor Type)
 
 | Label | Value |
 |-------|-------|

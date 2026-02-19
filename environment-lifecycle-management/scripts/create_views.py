@@ -267,8 +267,13 @@ PROVISIONING_LOG_VIEWS = [
 ]
 
 
-def create_views(client: ELMClient, dry_run: bool = False) -> None:
-    """Create model-driven app views for ELM entities."""
+def create_views(client: ELMClient, dry_run: bool = False) -> bool:
+    """Create model-driven app views for ELM entities.
+
+    Returns:
+        True if all operations succeeded, False if any failures occurred.
+    """
+    success = True
     print("\n" + "=" * 60)
     print("ELM Views Deployment")
     print("=" * 60)
@@ -283,7 +288,7 @@ def create_views(client: ELMClient, dry_run: bool = False) -> None:
 
     if not er_metadata:
         print("  ERROR: EnvironmentRequest table not found. Run create_dataverse_schema.py first.")
-        return
+        return False
 
     er_type_code = er_metadata.get("ObjectTypeCode", 10001)
     pl_type_code = pl_metadata.get("ObjectTypeCode", 10002) if pl_metadata else 10002
@@ -330,6 +335,7 @@ def create_views(client: ELMClient, dry_run: bool = False) -> None:
             print(f"\n  {view_name}:")
             print(f"    Created: {query_id}")
         except Exception as e:
+            success = False
             print(f"\n  {view_name}:")
             print(f"    ERROR: {e}")
 
@@ -370,6 +376,7 @@ def create_views(client: ELMClient, dry_run: bool = False) -> None:
                 print(f"\n  {view_name}:")
                 print(f"    Created: {query_id}")
             except Exception as e:
+                success = False
                 print(f"\n  {view_name}:")
                 print(f"    ERROR: {e}")
 
@@ -379,6 +386,8 @@ def create_views(client: ELMClient, dry_run: bool = False) -> None:
     else:
         print("VIEWS DEPLOYMENT COMPLETE")
     print("=" * 60)
+
+    return success
 
 
 def main():

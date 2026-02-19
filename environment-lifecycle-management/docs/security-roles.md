@@ -101,7 +101,7 @@ Grants automation (Service Principal) and admin users full access to manage prov
 | Table | Create | Read | Write | Delete | Append | AppendTo |
 |-------|--------|------|-------|--------|--------|----------|
 | **EnvironmentRequest** | Org | Org | Org | - | Org | Org |
-| **ProvisioningLog** | Org | Org | **-** | **-** | - | - |
+| **ProvisioningLog** | Org | Org | **-** | **-** | Org | - |
 
 ### Immutability Enforcement
 
@@ -113,7 +113,7 @@ The ELM Admin role intentionally **omits** Write and Delete privileges on Provis
 | `prvReadfsi_provisioninglog` | Yes | Allow reading log entries |
 | `prvWritefsi_provisioninglog` | **No** | Prevent modification |
 | `prvDeletefsi_provisioninglog` | **No** | Prevent deletion |
-| `prvAppendfsi_provisioninglog` | **No** | Not needed |
+| `prvAppendfsi_provisioninglog` | **Yes** | Required for lookup association on create |
 | `prvAppendTofsi_provisioninglog` | **No** | Not needed |
 
 ### Verification

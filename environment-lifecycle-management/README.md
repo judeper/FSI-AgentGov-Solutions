@@ -69,6 +69,7 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive \
     --dry-run
 
@@ -76,13 +77,14 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive
 ```
 
 The deployment script creates:
 - Option sets (State, Zone, Region, etc.)
 - EnvironmentRequest table (22 columns, user-owned)
-- ProvisioningLog table (11 columns, org-owned, immutable)
+- ProvisioningLog table (12 columns, org-owned, immutable)
 - Security roles (Requester, Approver, Admin, Auditor)
 - Business rules (conditional required fields)
 - Model-driven app views
@@ -154,7 +156,7 @@ Primary request table with 22 columns including zone classification, approval wo
 
 ### ProvisioningLog Table
 
-Immutable audit trail with 11 columns. Organization-owned with no Update/Delete privileges.
+Immutable audit trail with 12 columns. Organization-owned with no Update/Delete privileges.
 
 | Key Column | Type | Purpose |
 |------------|------|---------|
@@ -197,13 +199,15 @@ python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault-name> \
+  --expiry-days 90 \
   --dry-run
 
 # Execute registration
 python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
-  --key-vault-name <vault-name>
+  --key-vault-name <vault-name> \
+  --expiry-days 90
 ```
 
 ### Step 4: Create Environment Groups (Manual)
@@ -222,11 +226,17 @@ python scripts/register_service_principal.py \
 
 ### Step 6: Create Power Automate Flows (Manual)
 
-Create three flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
+Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
+0. **Zone 1 Auto-Approval Flow** - Auto-approves Zone 1 requests
 1. **Main Provisioning Flow** - Triggered on approval
 2. **Security Group Binding Flow** - Post-creation binding
 3. **Baseline Configuration Flow** - Child flow for settings
+
+> **Note:** Zone 2/3 Approval Routing is not yet implemented. Zone 2/3 requests
+> must be manually advanced by an ELM Admin until this flow is built. See
+> [docs/flow-configuration.md](./docs/flow-configuration.md) for the workaround
+> and segregation-of-duties caveats.
 
 ### Step 7: Validate Setup
 
@@ -319,8 +329,8 @@ python scripts/export_quarterly_evidence.py \
 ```
 
 Exports include:
-- `EnvironmentRequest-Q1-2026.json` - All requests with approvals
-- `ProvisioningLog-Q1-2026.json` - Complete audit trail
+- `EnvironmentRequest-2026-Q1.json` - All requests with approvals
+- `ProvisioningLog-2026-Q1.json` - Complete audit trail
 - `manifest.json` - SHA-256 hashes for integrity verification
 
 ### Integrity Verification

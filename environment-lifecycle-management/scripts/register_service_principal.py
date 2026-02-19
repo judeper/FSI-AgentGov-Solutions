@@ -14,9 +14,25 @@ try:
     from azure.identity import DefaultAzureCredential, InteractiveBrowserCredential
     from azure.keyvault.secrets import SecretClient
     import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
 except ImportError:
     print("Missing dependencies. Run: pip install -r requirements.txt", file=sys.stderr)
     sys.exit(4)
+
+
+def _get_graph_session() -> requests.Session:
+    """Create an HTTP session with retry logic for Graph API calls."""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("https://", adapter)
+    return session
 
 
 def get_graph_token(credential) -> str:
@@ -49,7 +65,7 @@ def create_app_registration(
     }
 
     # Check if app already exists
-    search_response = requests.get(
+    search_response = _get_graph_session().get(
         "https://graph.microsoft.com/v1.0/applications",
         headers=headers,
         params={"$filter": f"displayName eq '{app_name}'"},
@@ -73,7 +89,7 @@ def create_app_registration(
         "requiredResourceAccess": [],  # No Graph permissions needed
     }
 
-    response = requests.post(
+    response = _get_graph_session().post(
         "https://graph.microsoft.com/v1.0/applications",
         headers=headers,
         json=app_data,
@@ -123,7 +139,7 @@ def create_client_secret(
         }
     }
 
-    response = requests.post(
+    response = _get_graph_session().post(
         f"https://graph.microsoft.com/v1.0/applications/{app_object_id}/addPassword",
         headers=headers,
         json=secret_data,
@@ -136,6 +152,54 @@ def create_client_secret(
     print(f"  Expiry: {expiry_date.strftime('%Y-%m-%d')} ({expiry_days} days)")
 
     return secret
+
+
+def remove_existing_secrets(
+    token: str,
+    app_object_id: str,
+    dry_run: bool = False,
+) -> int:
+    """
+    Remove existing client secrets from application during rotation.
+
+    Args:
+        token: Graph API access token
+        app_object_id: Application object ID (not appId)
+        dry_run: If True, don't remove
+
+    Returns:
+        Number of secrets removed
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    response = _get_graph_session().get(
+        f"https://graph.microsoft.com/v1.0/applications/{app_object_id}",
+        headers=headers,
+        params={"$select": "passwordCredentials"},
+    )
+    response.raise_for_status()
+    credentials = response.json().get("passwordCredentials", [])
+
+    if not credentials:
+        print("  No existing secrets to revoke")
+        return 0
+
+    if dry_run:
+        print(f"  [DRY RUN] Would revoke {len(credentials)} existing secret(s)")
+        return len(credentials)
+
+    for cred in credentials:
+        _get_graph_session().post(
+            f"https://graph.microsoft.com/v1.0/applications/{app_object_id}/removePassword",
+            headers=headers,
+            json={"keyId": cred["keyId"]},
+        ).raise_for_status()
+        print(f"  Revoked secret: {cred['keyId']}")
+
+    return len(credentials)
 
 
 def store_in_keyvault(
@@ -183,13 +247,13 @@ def main():
         epilog="""
 Examples:
   # Dry run
-  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault --dry-run
+  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault --expiry-days 90 --dry-run
 
   # Create new SP
-  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault
+  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault --expiry-days 90
 
   # Rotate secret
-  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault --rotate-secret
+  python register_service_principal.py --tenant-id <id> --app-name ELM-SP --key-vault-name vault --expiry-days 90 --rotate-secret
         """,
     )
 
@@ -272,6 +336,16 @@ Examples:
             dry_run=args.dry_run,
         )
         print()
+
+        # Step 1b: Revoke existing secrets if rotating
+        if args.rotate_secret:
+            print("  Rotating: revoking existing Entra ID secrets...")
+            remove_existing_secrets(
+                token=token,
+                app_object_id=app["id"],
+                dry_run=args.dry_run,
+            )
+            print()
 
         # Step 2: Create client secret
         print("[2/4] Creating client secret...")
