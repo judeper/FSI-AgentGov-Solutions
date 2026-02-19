@@ -13,9 +13,9 @@ The Segregation of Duties (SoD) Detector identifies and prevents conflicts where
 | Feature | Description |
 |---------|-------------|
 | **Role Conflict Detection** | Identifies users with incompatible role combinations |
-| **Real-Time Alerts** | Immediate notification when violations are detected |
+| **Real-Time Alerts** | Immediate notification when violations are detected (planned) |
 | **Exception Workflow** | Documented approval process for justified exceptions |
-| **Pipeline Integration** | Blocks promotions when SoD violations exist |
+| **Pipeline Integration** | Blocks promotions when SoD violations exist (planned) |
 | **Audit Reporting** | Quarterly SoD compliance reports for auditors |
 
 ## Architecture
@@ -54,8 +54,10 @@ Same user cannot both create and approve in the same workflow.
 | Maker Role | Checker Role | Risk |
 |------------|--------------|------|
 | Agent Developer | Pipeline Approver | Self-approval of changes |
-| Flow Creator | Flow Approver | Bypass change management |
 | Solution Developer | Solution Promoter | Unreviewed deployments |
+| Flow Creator | Flow Approver | Bypass change management |
+| Connection Creator | Connection Approver | Unapproved connections |
+| DLP Policy Author | DLP Policy Approver | Self-exemption |
 
 ### Category 2: Segregation Conflicts
 
@@ -64,8 +66,10 @@ Roles that should never be held by the same person.
 | Role A | Role B | Risk |
 |--------|--------|------|
 | Environment Admin | Agent Publisher | Admin promotes own work |
-| DLP Policy Author | DLP Policy Approver | Self-exemption |
-| Security Admin | Regular User | Excessive privilege |
+| Security Admin | Agent Developer | Security role separation |
+| Compliance Admin | Agent Developer | Compliance role separation |
+| Environment Creator | Environment Approver | Environment lifecycle separation |
+| Data Steward | Data Consumer (sensitive) | Data access separation |
 
 ### Category 3: Privileged Access Conflicts
 
@@ -74,8 +78,9 @@ High-privilege roles that require additional controls.
 | Privileged Role | Incompatible With | Risk |
 |-----------------|-------------------|------|
 | Global Admin | Any maker role | God mode abuse |
-| Compliance Admin | Agent Developer | Policy circumvention |
 | Power Platform Admin | End user in same env | Admin as user |
+| Privileged Role Admin | Application Admin | Privilege escalation prevention |
+| Break-Glass Account | Any Non-Emergency Use | Emergency access only |
 
 ## Prerequisites
 
@@ -99,15 +104,20 @@ High-privilege roles that require additional controls.
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.1.0+ | Environment context |
+| Environment Lifecycle Management | v1.1.0+ | Environment context (optional) |
 
 ## Quick Start
 
 ### 1. Deploy Dataverse Schema
 
+> **Note:** This release includes PowerShell scripts for scanning and rule import only.
+> A deployable Power Platform solution package (solution.xml, customizations.xml, security
+> role definitions, and detection flows) is planned for a future release. For now, create
+> the Dataverse tables manually using the schema documentation below.
+
 ```powershell
-# Import the Dataverse solution
-pac solution import --path ./templates/SegregationDetector_1_0_0.zip
+# Create tables manually using docs/dataverse-schema.md
+# Solution package import will be available in a future release.
 ```
 
 Or create tables manually using [docs/dataverse-schema.md](docs/dataverse-schema.md).
@@ -128,7 +138,8 @@ Load the default conflict rule set:
 
 ### 4. Deploy Power Automate Flows
 
-See [docs/flow-configuration.md](docs/flow-configuration.md) for flow setup.
+Flow configuration documentation is planned for a future release.
+<!-- See [docs/flow-configuration.md](docs/flow-configuration.md) for flow setup. -->
 
 ### 5. Review Results
 
@@ -141,8 +152,8 @@ Open the SoD Detector dashboard in Power Apps to review detected conflicts.
 | [Prerequisites](docs/prerequisites.md) | Licensing and permission requirements |
 | [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
 | [Conflict Rules](docs/conflict-rules.md) | Rule configuration guide |
-| [Flow Configuration](docs/flow-configuration.md) | Power Automate setup |
-| [Exception Workflow](docs/exception-workflow.md) | Managing justified exceptions |
+| Flow Configuration | Power Automate setup (planned) |
+| Exception Workflow | Managing justified exceptions (planned) |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 
 ## Detection Process
@@ -151,11 +162,21 @@ Open the SoD Detector dashboard in Power Apps to review detected conflicts.
 
 1. Query all user role assignments from Entra ID
 2. Query Power Platform environment roles
-3. Query Dataverse security roles
-4. Compare against conflict rules matrix
-5. Generate violations for new conflicts
-6. Update status for resolved conflicts
-7. Send summary report
+3. Compare against conflict rules matrix
+4. Generate violations for new conflicts
+5. Send summary report
+
+> **Note:** Dataverse security role scanning (step 3 in architecture) and automatic resolution of stale violations are planned for a future release.
+> Audit log writing to `fsi_sodauditlog` is not yet implemented — `Write-AuditLog` currently outputs to console only.
+
+### Known Limitations
+
+| Limitation | Impact | Status |
+|------------|--------|--------|
+| **Dataverse Security Role scanning (context=4)** | 11 of 14 default rules reference Dataverse Security Roles; these rules will not match until context=4 scanning is implemented | Planned |
+| **Audit log persistence** | Scan events and violation detections are logged to console only, not written to `fsi_sodauditlog` in Dataverse | Planned |
+| **Stale violation auto-resolution** | When a conflicting role is removed, the corresponding violation record remains open indefinitely; manual resolution required | Planned |
+| **Power Automate flows** | Real-time detection (Graph API webhooks), scheduled scan automation, and pipeline-gate integration require flows not yet included | Planned |
 
 ### Real-Time Detection
 

@@ -42,12 +42,53 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET
+    [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
 )
 
 #Requires -Version 7.0
 
 $ErrorActionPreference = "Stop"
+
+function Invoke-RestMethodWithRetry {
+    param(
+        [string]$Uri,
+        [hashtable]$Headers,
+        [string]$Method = "Get",
+        $Body,
+        [string]$ContentType,
+        [int]$MaxRetries = 3
+    )
+    $attempt = 0
+    while ($true) {
+        try {
+            $params = @{
+                Uri     = $Uri
+                Headers = $Headers
+                Method  = $Method
+            }
+            if ($Body) { $params.Body = $Body }
+            if ($ContentType) { $params.ContentType = $ContentType }
+            return Invoke-RestMethod @params
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if (($statusCode -eq 429 -or $statusCode -ge 500) -and $attempt -lt $MaxRetries) {
+                $retryAfter = $_.Exception.Response.Headers['Retry-After']
+                $wait = if ($retryAfter) { [int]$retryAfter } else { [math]::Pow(2, $attempt + 1) }
+                Write-Warning "HTTP $statusCode. Retrying after $wait seconds (attempt $($attempt+1)/$MaxRetries)..."
+                Start-Sleep -Seconds $wait
+                $attempt++
+            } else {
+                throw
+            }
+        }
+    }
+}
+
+# Validate required parameters
+if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+    throw "TenantId, ClientId, and ClientSecret are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET (or FSI_CLIENT_SECRET) environment variables or pass parameters."
+}
+Write-Warning "For production use, store secrets in Azure Key Vault and use Managed Identity."
 
 # Default rule sets
 $DefaultRules = @{
@@ -87,6 +128,18 @@ $DefaultRules = @{
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Enforces flow change review process"
+        },
+        @{
+            fsi_name = "Connection Creator cannot be Connection Approver"
+            fsi_category = 1
+            fsi_rolea = "Connection Creator"
+            fsi_roleacontext = 4
+            fsi_roleb = "Connection Approver"
+            fsi_rolebcontext = 4
+            fsi_severity = 2
+            fsi_enabled = $true
+            fsi_allowexception = $true
+            fsi_description = "Ensures connection review process"
         },
         @{
             fsi_name = "DLP Policy Author cannot be DLP Policy Approver"
@@ -138,6 +191,30 @@ $DefaultRules = @{
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Compliance role separation from development"
+        },
+        @{
+            fsi_name = "Environment Creator cannot be Environment Approver"
+            fsi_category = 2
+            fsi_rolea = "Environment Creator"
+            fsi_roleacontext = 3
+            fsi_roleb = "Environment Approver"
+            fsi_rolebcontext = 3
+            fsi_severity = 2
+            fsi_enabled = $true
+            fsi_allowexception = $true
+            fsi_description = "Environment lifecycle separation"
+        },
+        @{
+            fsi_name = "Data Steward cannot be Data Consumer (sensitive)"
+            fsi_category = 2
+            fsi_rolea = "Data Steward"
+            fsi_roleacontext = 4
+            fsi_roleb = "Data Consumer"
+            fsi_rolebcontext = 4
+            fsi_severity = 3
+            fsi_enabled = $true
+            fsi_allowexception = $true
+            fsi_description = "Data access separation for sensitive data"
         }
     )
 
@@ -177,6 +254,18 @@ $DefaultRules = @{
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Prevents privilege escalation paths"
+        },
+        @{
+            fsi_name = "Break-Glass Account cannot be used for non-emergency operations"
+            fsi_category = 3
+            fsi_rolea = "Break-Glass Account"
+            fsi_roleacontext = 1
+            fsi_roleb = "Any Non-Emergency Use"
+            fsi_rolebcontext = 4
+            fsi_severity = 1
+            fsi_enabled = $true
+            fsi_allowexception = $false
+            fsi_description = "Emergency access accounts restricted to emergency use only"
         }
     )
 }
@@ -197,7 +286,7 @@ function Get-AccessToken {
         grant_type    = "client_credentials"
     }
 
-    $response = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
+    $response = Invoke-RestMethodWithRetry -Uri $tokenUrl -Headers @{} -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
     return $response.access_token
 }
 
@@ -215,11 +304,26 @@ function Import-Rule {
         "OData-Version" = "4.0"
     }
 
+    # Check for existing rule by name (idempotency)
+    $escapedName = $Rule.fsi_name -replace "'", "''"
+    $checkUri = "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_name eq '$escapedName'"
+    try {
+        $existing = Invoke-RestMethodWithRetry -Uri $checkUri -Headers $headers -Method Get
+        if ($existing.value.Count -gt 0) {
+            return @{ Success = $true; Rule = $Rule.fsi_name; Skipped = $true }
+        }
+    } catch {
+        if ($_.Exception.Response.StatusCode.value__ -ne 404) {
+            Write-Warning "Existence check failed for '$($Rule.fsi_name)': $($_.Exception.Message)"
+            throw
+        }
+    }
+
     $uri = "$Environment/api/data/v9.2/fsi_conflictrules"
     $body = $Rule | ConvertTo-Json -Depth 5
 
     try {
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
+        $response = Invoke-RestMethodWithRetry -Uri $uri -Headers $headers -Method Post -Body $body
         return @{ Success = $true; Rule = $Rule.fsi_name }
     } catch {
         return @{ Success = $false; Rule = $Rule.fsi_name; Error = $_.Exception.Message }
@@ -237,7 +341,7 @@ $rulesToImport = @()
 
 if ($RuleFile) {
     Write-Host "Loading rules from: $RuleFile"
-    $rulesToImport = Get-Content $RuleFile | ConvertFrom-Json
+    $rulesToImport = Get-Content $RuleFile -Raw | ConvertFrom-Json -AsHashtable
 } else {
     Write-Host "Loading rule set: $RuleSet"
 
@@ -265,13 +369,17 @@ Write-Host ""
 # Import rules
 Write-Host "Importing rules..." -ForegroundColor Gray
 $imported = 0
+$skipped = 0
 $failed = 0
 
 foreach ($rule in $rulesToImport) {
     if ($PSCmdlet.ShouldProcess("Rule: $($rule.fsi_name)", "Import to $Environment")) {
         $result = Import-Rule -Environment $Environment -Token $token -Rule $rule
 
-        if ($result.Success) {
+        if ($result.Success -and $result.Skipped) {
+            $skipped++
+            Write-Host "  Skipped (exists): $($result.Rule)" -ForegroundColor Yellow
+        } elseif ($result.Success) {
             $imported++
             Write-Host "  Imported: $($result.Rule)" -ForegroundColor Green
         } else {
@@ -287,4 +395,5 @@ Write-Host "  Import Complete" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Imported: $imported"
+Write-Host "Skipped:  $skipped"
 Write-Host "Failed:   $failed"

@@ -22,9 +22,9 @@ All notable changes to the Segregation of Duties Detector.
   - `Invoke-SoDScan.ps1` - Full directory scan for violations
   - `Import-ConflictRules.ps1` - Rule set import
 - **Default Rule Sets:**
-  - Maker/Checker rules (4 rules)
-  - Segregation rules (3 rules)
-  - Privileged Access rules (3 rules)
+  - Maker/Checker rules (5 rules)
+  - Segregation rules (5 rules)
+  - Privileged Access rules (4 rules)
 - **Documentation:**
   - Prerequisites and licensing
   - Dataverse schema definitions

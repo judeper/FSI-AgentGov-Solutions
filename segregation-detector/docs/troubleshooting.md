@@ -39,8 +39,11 @@ Common issues and solutions for the Segregation of Duties Detector.
 3. Scope mismatch
 
 **Solutions:**
-1. Verify rules: `Get-ConflictRules` returns active rules
-2. Import default rules: `.\Import-ConflictRules.ps1 -RuleSet Default`
+1. Verify rules are loaded by querying Dataverse directly:
+   ```
+   Invoke-RestMethod -Uri "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_enabled eq true" -Headers @{Authorization="Bearer $token"}
+   ```
+2. Import default rules: `.\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com" -RuleSet Default`
 3. Check role context matches actual assignments
 
 ### Too many false positives
@@ -70,7 +73,7 @@ Common issues and solutions for the Segregation of Duties Detector.
 **Cause:** Dataverse solution not deployed.
 
 **Solution:**
-1. Import solution: `pac solution import --path ./templates/SegregationDetector.zip`
+1. Create tables manually per [schema documentation](dataverse-schema.md)
 2. Or create tables manually per schema documentation
 
 ### Cannot create violation records

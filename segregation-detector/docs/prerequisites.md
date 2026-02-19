@@ -119,7 +119,7 @@ az keyvault secret set --vault-name "your-vault" --name "SoD-ClientSecret" --val
 |----------|---------|
 | `graph.microsoft.com` | Microsoft Graph API |
 | `*.crm.dynamics.com` | Dataverse |
-| `*.api.powerplatform.com` | Power Platform API |
+| `api.bap.microsoft.com` | Power Platform API |
 | `login.microsoftonline.com` | Authentication |
 
 ---
@@ -160,7 +160,7 @@ Before deployment, verify:
 
 1. [Deploy Dataverse Schema](dataverse-schema.md)
 2. [Configure Conflict Rules](conflict-rules.md)
-3. [Set Up Detection Flows](flow-configuration.md)
+3. Set Up Detection Flows (planned)
 
 ---
 

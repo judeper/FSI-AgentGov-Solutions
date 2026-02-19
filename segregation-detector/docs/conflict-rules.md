@@ -95,29 +95,13 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 ### Rule Syntax for PowerShell Import
 
 ```powershell
-$customRule = @{
-    fsi_name = "Custom Rule Name"
-    fsi_category = 1  # 1=Maker/Checker, 2=Segregation, 3=Privileged
-    fsi_rolea = "Role A Name"
-    fsi_roleacontext = 4  # 1=Entra Dir, 2=Entra App, 3=PP Env, 4=Dataverse, 5=Custom
-    fsi_roleb = "Role B Name"
-    fsi_rolebcontext = 4
-    fsi_severity = 2  # 1=Critical, 2=High, 3=Medium, 4=Low
-    fsi_enabled = $true
-    fsi_allowexception = $true
-    fsi_description = "Rule description"
-}
-
-.\scripts\Add-ConflictRule.ps1 -Rule $customRule
+# Custom rules can be imported using Import-ConflictRules.ps1 with a JSON file:
+# .\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com" -RuleFile "custom-rules.json"
 ```
 
 ### Disabling Rules
 
-To disable a rule without deleting:
-
-```powershell
-.\scripts\Set-ConflictRule.ps1 -RuleId "MC-001" -Enabled $false
-```
+To disable a rule without deleting, update the `fsi_enabled` field to `false` in the Dataverse `fsi_conflictrules` table, or use the SoD Detector app UI.
 
 ---
 
@@ -162,24 +146,18 @@ To disable a rule without deleting:
 Test rules without creating violations:
 
 ```powershell
-.\scripts\Invoke-SoDScan.ps1 -DryRun -Verbose
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -DryRun -Verbose
 ```
 
 ### Test Specific User
 
-Check a single user for conflicts:
-
-```powershell
-.\scripts\Test-UserSoD.ps1 -UserPrincipalName "user@contoso.com"
-```
+Single-user conflict testing is planned for a future release.
+<!-- .\scripts\Test-UserSoD.ps1 -UserPrincipalName "user@contoso.com" -->
 
 ### Rule Validation
 
-Validate rule syntax before import:
-
-```powershell
-.\scripts\Test-ConflictRule.ps1 -RuleFile "custom-rules.json"
-```
+Rule validation tooling is planned for a future release.
+<!-- .\scripts\Test-ConflictRule.ps1 -RuleFile "custom-rules.json" -->
 
 ---
 
