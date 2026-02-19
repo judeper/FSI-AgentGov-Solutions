@@ -107,7 +107,7 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret,
+    [SecureString]$ClientSecret,
 
     [Parameter(Mandatory = $false)]
     [switch]$IncludeTrialDev,
@@ -132,7 +132,6 @@ try {
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
 
-    . "$scriptRoot\Invoke-EnvironmentAuditValidation.ps1"
     . "$scriptRoot\private\Compare-ValidationBaseline.ps1"
 
     Write-Verbose "Scripts loaded successfully"
@@ -149,8 +148,7 @@ try {
     if ($CertificateThumbprint) { $envParams.CertificateThumbprint = $CertificateThumbprint }
 
     if ($ClientSecret) {
-        # Convert plain text secret to SecureString
-        $envParams.ClientSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+        $envParams.ClientSecret = $ClientSecret
     }
 
     if ($IncludeTrialDev) { $envParams.IncludeTrialDev = $true }
@@ -158,8 +156,8 @@ try {
 
     Write-Verbose "Invoking Invoke-EnvironmentAuditValidation with parameters: $($envParams.Keys -join ', ')"
 
-    # Execute environment validation orchestrator
-    $validationResults = Invoke-EnvironmentAuditValidation @envParams
+    # Execute environment validation orchestrator (invoke as script, not dot-sourced)
+    $validationResults = & "$scriptRoot\Invoke-EnvironmentAuditValidation.ps1" @envParams
 
     Write-Verbose "Validation complete. Total environments: $($validationResults.TotalEnvironments)"
     Write-Verbose "Overall status: $($validationResults.OverallStatus)"
@@ -187,11 +185,9 @@ try {
     }
     elseif ($ClientSecret) {
         # Client secret authentication
-        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-
         $tokenResult = Get-MsalToken `
             -ClientId $ClientId `
-            -ClientSecret $secureSecret `
+            -ClientSecret $ClientSecret `
             -TenantId $TenantId `
             -Scopes $dataverseScope `
             -ErrorAction Stop
@@ -240,6 +236,7 @@ try {
     }
 
     # Build output object with drift info and aggregated alerts
+    $perEnvResults = if ($validationResults.PerEnvironmentResults) { $validationResults.PerEnvironmentResults } else { @() }
     $output = [PSCustomObject]@{
         RunType                 = "EnvironmentValidation"
         RunId                   = $validationResults.RunId
@@ -250,7 +247,7 @@ try {
         NewEnvironments         = $validationResults.NewEnvironments
         SkippedUnclassified     = $validationResults.SkippedUnclassified
         SkippedTrialDev         = $validationResults.SkippedTrialDev
-        AlertsRequired          = @($validationResults.PerEnvironmentResults | Where-Object { $_.AlertRequired })
+        AlertsRequired          = @($perEnvResults | Where-Object { $_.AlertRequired })
     }
 
     Write-Verbose "Alerts required for $($output.AlertsRequired.Count) environment(s)"

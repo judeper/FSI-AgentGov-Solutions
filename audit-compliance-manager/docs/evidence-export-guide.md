@@ -199,7 +199,7 @@ sha256sum -c tenant-validation-20260206-143500.json.sha256
 - `environmentId` - Power Platform environment GUID (null for tenant scope)
 - `zone` - Governance zone at time of validation (Zone1, Zone2, Zone3, Unclassified)
 - `severity` - Passed, Warning, GracePeriod, Failed, Error
-- `validationType` - UnifiedAuditLog, MailboxAudit, PurviewRetention, PowerPlatformAudit, PowerPlatformRetention
+- `validationType` - UnifiedAuditLog, MailboxAudit, PurviewRetention, EnvironmentAudit, EnvironmentRetention, Orchestrator
 - `rawValue` - Actual configuration values retrieved during validation
 - `reason` - Human-readable explanation of validation result
 - `timestamp` - When validation ran (UTC)

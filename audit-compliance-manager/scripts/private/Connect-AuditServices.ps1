@@ -261,5 +261,7 @@ function Disconnect-AuditServices {
     }
 }
 
-# Export functions if this script is dot-sourced
-Export-ModuleMember -Function Connect-AuditServices, Connect-ComplianceSession, Disconnect-AuditServices
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Connect-AuditServices, Connect-ComplianceSession, Disconnect-AuditServices
+}

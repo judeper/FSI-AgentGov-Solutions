@@ -294,5 +294,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $authResult
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Connect-PowerPlatform
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Connect-PowerPlatform
+}

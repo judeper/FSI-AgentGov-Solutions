@@ -124,7 +124,6 @@ try {
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
 
-    . "$scriptRoot\Invoke-TenantAuditValidation.ps1"
     . "$scriptRoot\private\Compare-ValidationBaseline.ps1"
 
     Write-Verbose "Scripts loaded successfully"
@@ -143,8 +142,8 @@ try {
 
     Write-Verbose "Invoking Invoke-TenantAuditValidation with parameters: $($ualParams.Keys -join ', ')"
 
-    # Execute tenant validation orchestrator
-    $validationResults = Invoke-TenantAuditValidation @ualParams
+    # Execute tenant validation orchestrator (invoke as script, not dot-sourced)
+    $validationResults = & "$scriptRoot\Invoke-TenantAuditValidation.ps1" @ualParams
 
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
 

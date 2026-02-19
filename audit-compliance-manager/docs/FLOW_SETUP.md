@@ -31,7 +31,7 @@ Before creating the flows, ensure you have:
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
 - [ ] **Exchange Online admin role** (for tenant validation)
 - [ ] **Power Platform admin role** (for environment validation)
-- [ ] **Dataverse environment** with ACV schema deployed (see DATAVERSE_DEPLOYMENT.md)
+- [ ] **Dataverse environment** with ACV schema deployed (see [deployment-guide.md](deployment-guide.md))
 - [ ] **Certificate-based authentication** configured:
   - Azure AD App Registration with certificate
   - Exchange.ManageAsApp API permission (tenant validation)
@@ -113,7 +113,7 @@ Grant the App Registration (service principal) the following permissions:
 **Dataverse:**
 - System Administrator role in central governance environment (for validation history writes)
 
-See AUTHENTICATION.md for detailed permission configuration steps.
+See [deployment-guide.md](deployment-guide.md) for detailed permission configuration steps.
 
 ## Step 2: Power Automate Flow Creation
 
@@ -121,7 +121,7 @@ See AUTHENTICATION.md for detailed permission configuration steps.
 
 #### Option A: Import from JSON (Recommended)
 
-1. Download **src/tenant-validation-flow.json** from the solution repository
+1. Download **templates/tenant-validation-flow.json** from the solution repository
 2. Go to [make.powerautomate.com](https://make.powerautomate.com)
 3. Click **My flows** > **Import** > **Import Package (Legacy)**
 4. Upload the JSON file
@@ -312,11 +312,11 @@ Follow the same pattern as the tenant validation flow with these differences:
 }
 ```
 
-**Parse JSON schema:** Use schema from src/environment-validation-flow.json (includes PerEnvironmentResults array)
+**Parse JSON schema:** Use schema from templates/environment-validation-flow.json (includes PerEnvironmentResults array)
 
 **Alert routing:** After parsing results, use **Apply to each** on `@body('Parse_Results')?['AlertsRequired']` array and send per-environment Teams cards and emails.
 
-Alternatively, import **src/environment-validation-flow.json** directly using the import method described in section 2.1.
+Alternatively, import **templates/environment-validation-flow.json** directly using the import method described in section 2.1.
 
 ### 2.4 Configure Alert Destinations
 
@@ -340,7 +340,7 @@ Alternatively, import **src/environment-validation-flow.json** directly using th
 
 #### Adaptive Card Templates
 
-The adaptive card templates are provided in the `src/` directory:
+The adaptive card templates are provided in the `templates/` directory:
 
 - **adaptive-card-tenant-alert.json** — Tenant drift alert card
 - **adaptive-card-environment-alert.json** — Environment drift alert card
@@ -519,7 +519,7 @@ This table defines the alert behavior based on validation status:
 **Solution:**
 
 - Verify filter syntax: `fsi_zone eq 123456789` (not string, use integer for option set)
-- Check field names match schema: `fsi_validationtype`, `fsi_validationstatus`
+- Check field names match schema: `fsi_validationtype`, `fsi_severity`
 - Escape single quotes in filter values if needed
 
 ### 4. Teams Permissions
@@ -576,10 +576,8 @@ This table defines the alert behavior based on validation status:
 
 ## Related Documentation
 
-- **AUTHENTICATION.md** — Certificate-based authentication setup
-- **DATAVERSE_DEPLOYMENT.md** — Dataverse schema deployment
-- **RUNBOOK_REFERENCE.md** — Detailed runbook parameter reference
-- **TROUBLESHOOTING.md** — Advanced troubleshooting scenarios
+- **[deployment-guide.md](deployment-guide.md)** — Deployment, authentication, and Dataverse schema setup
+- **[testing-scenarios.md](testing-scenarios.md)** — Testing and troubleshooting scenarios
 
 ---
 

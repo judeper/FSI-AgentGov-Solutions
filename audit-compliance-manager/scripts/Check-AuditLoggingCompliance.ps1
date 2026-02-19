@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
@@ -99,7 +99,7 @@ Write-Output "[Step 1/6] Authenticating via Managed Identity..."
 try {
     # Authenticate to Power Platform
     $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com/"
-    Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -ApplicationId $null -AccessToken $ppToken
+    Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -AccessToken $ppToken
     Write-Output "  [OK] Power Platform authentication successful"
 }
 catch {
@@ -156,6 +156,27 @@ $compliantCount = 0
 $nonCompliantCount = 0
 $errorCount = 0
 
+# --- Tenant-level audit event search (done once, not per-environment) ---
+$tenantLastAuditEvent = $null
+try {
+    $startDate = (Get-Date).AddDays(-7)
+    $endDate = Get-Date
+    $auditResults = Search-UnifiedAuditLog `
+        -StartDate $startDate `
+        -EndDate $endDate `
+        -RecordType "PowerAppsApp" `
+        -ResultSize 1 `
+        -ErrorAction Stop
+
+    if ($auditResults) {
+        $tenantLastAuditEvent = ($auditResults | Select-Object -First 1).CreationDate
+    }
+}
+catch {
+    Write-Output "  [WARNING] Tenant audit event search failed: $($_.Exception.Message)"
+    Write-Output "  Verify the Managed Identity has Exchange Online permissions (Exchange Administrator role)."
+}
+
 try {
     foreach ($env in $environments) {
         $envIndex++
@@ -163,15 +184,21 @@ try {
         $envDisplayName = $env.DisplayName
         $hasDataverse = ($null -ne $env.Internal.Properties.LinkedEnvironmentMetadata)
 
+        # Refresh Dataverse token each iteration to avoid expiry during long scans
+        $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+
         Write-Output "  [$envIndex/$envCount] $envDisplayName ($envId)"
         Write-Output "           Dataverse provisioned: $hasDataverse"
 
         try {
             # --- Check Purview Unified Audit ---
+            # NOTE: The single-environment Get-AdminPowerAppEnvironment call is intentional.
+            # The bulk list call (line 137) may not populate Internal.Properties.AuditingEnabled;
+            # the per-environment call returns a more complete object with audit properties.
             $purviewEnabled = $false
             try {
-                $adminConfig = Get-AdminConfig -EnvironmentName $envId -ErrorAction Stop
-                $purviewEnabled = [bool]$adminConfig.UnifiedAuditLogIngestionEnabled
+                $adminConfig = Get-AdminPowerAppEnvironment -EnvironmentName $envId -ErrorAction Stop
+                $purviewEnabled = [bool]$adminConfig.Internal.Properties.AuditingEnabled
             }
             catch {
                 Write-Verbose "  Could not retrieve admin config for $envId : $($_.Exception.Message)"
@@ -204,26 +231,9 @@ try {
             }
             Write-Output "           Dataverse audit enabled: $(if ($hasDataverse) { $dataverseAuditEnabled } else { 'N/A' })"
 
-            # --- Validate Recent Audit Events ---
-            $lastEvent = $null
-            try {
-                $startDate = (Get-Date).AddDays(-7)
-                $endDate = Get-Date
-                $auditResults = Search-UnifiedAuditLog `
-                    -StartDate $startDate `
-                    -EndDate $endDate `
-                    -RecordType "PowerAppsApp" `
-                    -ResultSize 1 `
-                    -ErrorAction SilentlyContinue
-
-                if ($auditResults) {
-                    $lastEvent = ($auditResults | Select-Object -First 1).CreationDate
-                }
-            }
-            catch {
-                Write-Verbose "  Audit event search failed for $envId : $($_.Exception.Message)"
-            }
-            Write-Output "           Last audit event: $(if ($lastEvent) { $lastEvent.ToString('yyyy-MM-dd HH:mm') } else { 'None in last 7 days' })"
+            # --- Tenant-Level Audit Event (searched once before loop) ---
+            $lastEvent = $tenantLastAuditEvent
+            Write-Output "           Last audit event (tenant): $(if ($lastEvent) { $lastEvent.ToString('yyyy-MM-dd HH:mm') } else { 'None in last 7 days' })"
 
             # --- Determine Compliance ---
             $complianceStatus = "Non-Compliant"
@@ -389,7 +399,8 @@ $(
             default { '' }
         }
         $lastEvt = if ($_.LastAuditEvent) { ([datetime]$_.LastAuditEvent).ToString('yyyy-MM-dd HH:mm') } else { 'N/A' }
-        "<tr><td>$($_.EnvironmentName)</td><td>$($_.DataverseProvisioned)</td><td>$($_.PurviewAuditEnabled)</td><td>$($_.DataverseAuditEnabled)</td><td>$lastEvt</td><td class='$statusClass'>$($_.ComplianceStatus)</td></tr>"
+        $safeEnvName = [System.Net.WebUtility]::HtmlEncode($_.EnvironmentName)
+        "<tr><td>$safeEnvName</td><td>$($_.DataverseProvisioned)</td><td>$($_.PurviewAuditEnabled)</td><td>$($_.DataverseAuditEnabled)</td><td>$lastEvt</td><td class='$statusClass'>$($_.ComplianceStatus)</td></tr>"
     }
 )
 </table>

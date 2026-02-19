@@ -130,7 +130,8 @@ class ALCAClient:
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("value", [{}])[0]
+        values = data.get("value", [])
+        return values[0] if values else {}
 
     # =========================================================================
     # Metadata Operations (schema deployment)

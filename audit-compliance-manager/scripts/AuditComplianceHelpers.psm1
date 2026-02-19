@@ -430,8 +430,11 @@ function Write-DataverseComplianceRecord {
         $record.fsi_lasteventcaptured = $LastEventCaptured.ToUniversalTime().ToString("o")
     }
 
+    # Sanitize input for OData filter (escape single quotes)
+    $safeEnvironmentId = $EnvironmentId -replace "'", "''"
+
     # Query for existing record by environment ID (upsert key)
-    $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$EnvironmentId'&`$select=fsi_auditenvironmentcomplianceid"
+    $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$safeEnvironmentId'&`$select=fsi_auditenvironmentcomplianceid"
 
     try {
         $existing = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $filterUri -Token $Token -Method GET

@@ -1,5 +1,5 @@
 # Automating Audit Logging Compliance for AI Agent Environments
-## Audit Logging Compliance Automation (ALCA)
+## Audit Compliance Manager (ACM) — ALCA + ACV
 
 **Version:** 1.0.0
 **Solution Type:** Automated Detection and Remediation
@@ -1063,6 +1063,33 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 - Entity-level audit on systemuser entity tracks user access and permission changes
 - Continuous monitoring ensures audit controls remain active
 - Remediation prevents audit gaps that could obscure unauthorized access
+
+---
+
+## Audit Configuration Validator (ACV) Subsystem
+
+The ACM solution includes the **Audit Configuration Validator (ACV)** subsystem, which provides the Dataverse Web API integration layer and Power Automate validation flows.
+
+### ACV Components
+
+| Component | Description |
+|-----------|-------------|
+| `scripts/acv_client.py` | Dataverse Web API client with MSAL authentication (interactive browser or service principal), retry logic, and dry-run mode |
+| `templates/tenant-validation-flow.json` | Power Automate flow for tenant-level audit configuration drift detection with Teams and email alerting |
+| `templates/environment-validation-flow.json` | Power Automate flow for per-environment audit validation within an `Apply_To_Each_Alert` loop |
+| `templates/adaptive-card-tenant-alert.json` | Adaptive Card v1.4 template for tenant-level drift alerts posted to Teams |
+| `templates/adaptive-card-environment-alert.json` | Adaptive Card v1.4 template for environment-level drift alerts posted to Teams |
+| `scripts/create_dataverse_schema.py` | Creates the `fsi_auditenvironmentcompliance` Dataverse table and columns |
+| `scripts/create_connection_references.py` | Creates connection references for Power Automate flows |
+| `scripts/create_environment_variables.py` | Creates environment variables used by validation flows |
+
+### ACV Authentication
+
+ACV uses MSAL for Dataverse authentication, supporting both interactive browser login (development) and service principal with client secret (automation). The `ACVClient` class in `acv_client.py` handles token acquisition, caching, and refresh.
+
+### Relationship to ALCA
+
+ALCA provides the detection and remediation runbooks (Azure Automation). ACV provides the Dataverse schema, validation flows, and alerting infrastructure. Together they form the complete ACM solution: ACV detects drift via Power Automate flows and writes results to Dataverse; ALCA reads those results and remediates non-compliant environments via approval-gated runbooks.
 
 ---
 

@@ -139,7 +139,7 @@ function Test-MailboxAudit {
         if ($CertificateThumbprint) { $connectParams.CertificateThumbprint = $CertificateThumbprint }
         if ($CertificateFilePath) { $connectParams.CertificateFilePath = $CertificateFilePath }
 
-        Connect-ExchangeOnlineSession @connectParams
+        Connect-AuditServices @connectParams -ExchangeOnly
 
         Write-Host "Connected to Exchange Online." -ForegroundColor Green
         Write-Host ""
@@ -284,5 +284,7 @@ function Test-MailboxAudit {
     }
 }
 
-# Execute the validation
-Test-MailboxAudit @PSBoundParameters
+# Execute if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    Test-MailboxAudit @PSBoundParameters
+}

@@ -22,9 +22,9 @@ Usage:
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --interactive --tables-only
 
-    # With Service Principal (for CI/CD)
-    python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --client-secret <secret>
+    # With Service Principal (for CI/CD — set ACV_CLIENT_SECRET env var)
+    ACV_CLIENT_SECRET=<secret> python deploy.py --environment-url https://org.crm.dynamics.com \\
+        --tenant-id <tenant-id> --client-id <app-id>
 """
 
 import argparse
@@ -144,7 +144,7 @@ def deploy(
             print("    - AuditValidationHistory is organization-owned for immutability")
             print("    - Security roles must remove Write/Delete privileges")
             print("    - Only allow Create (append-only) for automation accounts")
-            print("    - See docs/security-configuration.md for details")
+            print("    - See docs/deployment-guide.md for security configuration details")
         print("=" * 70)
         print()
 
@@ -170,9 +170,9 @@ Examples:
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --interactive --dry-run
 
-  # With Service Principal (for CI/CD)
-  python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --client-id <app-id> --client-secret <secret>
+  # With Service Principal (for CI/CD — set ACV_CLIENT_SECRET env var)
+  ACV_CLIENT_SECRET=<secret> python deploy.py --environment-url https://org.crm.dynamics.com \\
+      --tenant-id <tenant-id> --client-id <app-id>
         """,
     )
 
@@ -193,11 +193,6 @@ Examples:
         "--client-id",
         default=os.environ.get("ACV_CLIENT_ID"),
         help="Application (client) ID for Service Principal auth",
-    )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("ACV_CLIENT_SECRET"),
-        help="Client secret for Service Principal auth",
     )
     parser.add_argument(
         "--interactive",
@@ -246,8 +241,8 @@ Examples:
     if sum(exclusive_flags) > 1:
         parser.error("Cannot use multiple selective deployment flags together")
 
-    # Get client secret if needed for SP auth
-    client_secret = args.client_secret
+    # Get client secret from env var or prompt (never via CLI arg to avoid shell history exposure)
+    client_secret = os.environ.get("ACV_CLIENT_SECRET")
     if not args.interactive and args.client_id and not client_secret:
         import getpass
         client_secret = getpass.getpass("Client secret: ")

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0' }
 #Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0' }
 
@@ -72,11 +72,11 @@ param(
     [string]$TenantDomain,
 
     [Parameter(Mandatory = $false)]
-    [ValidatePattern('^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
+    [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
     [string]$EnvironmentId,
 
     [Parameter(Mandatory = $false)]
-    [switch]$EnableTenantUnifiedAudit = $true
+    [bool]$EnableTenantUnifiedAudit = $true
 )
 
 # ============================================================================
@@ -253,7 +253,7 @@ try {
     }
     else {
         # Power Platform authentication
-        $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com"
+        $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com/"
         Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -ApplicationId $null -AccessToken $ppToken
         Write-Output "  Power Platform: Connected"
 
@@ -299,7 +299,8 @@ try {
             }
             else {
                 Write-Warning "Environment $EnvironmentId not found via Power Platform Admin. Attempting Dataverse lookup..."
-                $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$EnvironmentId'"
+                $safeEnvironmentId = $EnvironmentId -replace "'", "''"
+                $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$safeEnvironmentId'"
                 $dvRecord = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $filterUri -Token $dvToken -Method GET
                 if ($dvRecord.value -and $dvRecord.value.Count -gt 0) {
                     $targetEnvironments = @([PSCustomObject]@{
@@ -326,8 +327,21 @@ try {
             $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_compliancestatus eq 100000001&`$select=fsi_environmentid,fsi_environmentname"
             $nonCompliant = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $filterUri -Token $dvToken -Method GET
 
-            if ($nonCompliant.value -and $nonCompliant.value.Count -gt 0) {
-                foreach ($record in $nonCompliant.value) {
+            # Handle Dataverse pagination via @odata.nextLink
+            $allRecords = @()
+            if ($nonCompliant.value) {
+                $allRecords += $nonCompliant.value
+            }
+            while ($nonCompliant.'@odata.nextLink') {
+                $nextUri = $nonCompliant.'@odata.nextLink' -replace [regex]::Escape($DataverseEnvironmentUrl.TrimEnd('/')), ''
+                $nonCompliant = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $nextUri -Token $dvToken -Method GET
+                if ($nonCompliant.value) {
+                    $allRecords += $nonCompliant.value
+                }
+            }
+
+            if ($allRecords.Count -gt 0) {
+                foreach ($record in $allRecords) {
                     # Look up environment URL from Power Platform
                     $env = Get-AdminPowerAppEnvironment -EnvironmentName $record.fsi_environmentid -ErrorAction SilentlyContinue
                     $envUrl = if ($env) { $env.Internal.Properties.linkedEnvironmentMetadata.instanceUrl } else { $null }
@@ -401,6 +415,11 @@ try {
         $envName = $targetEnv.EnvironmentName
         $envUrl = $targetEnv.EnvironmentUrl
 
+        # Refresh Dataverse token each iteration to avoid expiry during long scans
+        if (-not $isWhatIf) {
+            $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+        }
+
         Write-Output "`n  --- Environment $envIndex/$($targetEnvironments.Count): $envName ($envId) ---"
 
         $envResult = [PSCustomObject]@{
@@ -448,6 +467,7 @@ try {
 
                 $orgId = $orgInfo.organizationid
                 $alreadyEnabled = [bool]$orgInfo.isauditenabled
+                $changesMade = $false
 
                 if ($alreadyEnabled) {
                     Write-Output "      Org-level audit: Already enabled"
@@ -458,6 +478,7 @@ try {
                         Enable-OrgLevelAudit -EnvUrl $envUrl -Token $envToken -OrgId $orgId -IsWhatIf $false
                         Write-Output "      Org-level audit: ENABLED"
                         $envResult.OrgAudit = "Enabled"
+                        $changesMade = $true
                     }
                 }
             }
@@ -527,8 +548,14 @@ try {
 
                 if ($orgValid -and $entityValidCount -eq $entityTotalCount) {
                     $envResult.Validation = "PASS"
-                    $envResult.Status = "Remediated"
-                    $envSuccessful++
+                    if ($changesMade) {
+                        $envResult.Status = "Remediated"
+                        $envSuccessful++
+                    }
+                    else {
+                        $envResult.Status = "No Changes"
+                        $envNoChanges++
+                    }
 
                     # Update Dataverse compliance record to Compliant
                     Write-Output "    [4d] Updating compliance record to Compliant..."

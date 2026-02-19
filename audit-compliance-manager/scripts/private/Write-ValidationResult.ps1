@@ -310,5 +310,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $recordId
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Write-ValidationResult
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Write-ValidationResult
+}

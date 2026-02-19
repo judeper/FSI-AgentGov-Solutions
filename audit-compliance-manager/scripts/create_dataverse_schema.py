@@ -439,15 +439,6 @@ def create_schema(client: ACVClient, dry_run: bool = False) -> dict:
     if dry_run:
         print("\n*** DRY RUN - No changes will be made ***\n")
 
-    results = {
-        "optionsets_created": 0,
-        "optionsets_skipped": 0,
-        "tables_created": 0,
-        "tables_skipped": 0,
-        "columns_created": 0,
-        "columns_skipped": 0,
-    }
-
     # Step 1: Create option sets (must exist before tables reference them)
     create_optionsets(client, dry_run)
 
@@ -463,8 +454,6 @@ def create_schema(client: ACVClient, dry_run: bool = False) -> dict:
     else:
         print("SCHEMA DEPLOYMENT COMPLETE")
     print("=" * 60)
-
-    return results
 
 
 def main():

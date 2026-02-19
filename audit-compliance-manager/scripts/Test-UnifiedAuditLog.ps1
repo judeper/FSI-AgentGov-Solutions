@@ -416,37 +416,39 @@ function Test-UnifiedAuditLog {
 
 #region Script execution
 
-# Execute validation with passed parameters
-$result = Test-UnifiedAuditLog `
-    -SkipCanaryValidation:$SkipCanaryValidation `
-    -GracePeriodHours $GracePeriodHours `
-    -CanaryWaitSeconds $CanaryWaitSeconds `
-    -Interactive:$Interactive `
-    -TenantId $TenantId `
-    -ClientId $ClientId `
-    -CertificateThumbprint $CertificateThumbprint `
-    -CertificateFilePath $CertificateFilePath
+# Execute if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    $result = Test-UnifiedAuditLog `
+        -SkipCanaryValidation:$SkipCanaryValidation `
+        -GracePeriodHours $GracePeriodHours `
+        -CanaryWaitSeconds $CanaryWaitSeconds `
+        -Interactive:$Interactive `
+        -TenantId $TenantId `
+        -ClientId $ClientId `
+        -CertificateThumbprint $CertificateThumbprint `
+        -CertificateFilePath $CertificateFilePath
 
-# Display result
-Write-Host "`n=== Validation Result ===" -ForegroundColor Cyan
-Write-Host "Overall Status: $($result.OverallStatus)" -ForegroundColor $(
-    switch ($result.OverallStatus) {
-        "Passed" { "Green" }
-        "Failed" { "Red" }
-        "Warning" { "Yellow" }
-        "GracePeriod" { "Yellow" }
-        default { "Gray" }
+    # Display result
+    Write-Host "`n=== Validation Result ===" -ForegroundColor Cyan
+    Write-Host "Overall Status: $($result.OverallStatus)" -ForegroundColor $(
+        switch ($result.OverallStatus) {
+            "Passed" { "Green" }
+            "Failed" { "Red" }
+            "Warning" { "Yellow" }
+            "GracePeriod" { "Yellow" }
+            default { "Gray" }
+        }
+    )
+    Write-Host "Confidence: $($result.Confidence)" -ForegroundColor Gray
+    Write-Host "Reason: $($result.Reason)" -ForegroundColor Gray
+    Write-Host "`nDetailed Checks:" -ForegroundColor Cyan
+    $result.Checks | ForEach-Object {
+        Write-Host "  - $($_.Name): $($_.Status)" -ForegroundColor Gray
     }
-)
-Write-Host "Confidence: $($result.Confidence)" -ForegroundColor Gray
-Write-Host "Reason: $($result.Reason)" -ForegroundColor Gray
-Write-Host "`nDetailed Checks:" -ForegroundColor Cyan
-$result.Checks | ForEach-Object {
-    Write-Host "  - $($_.Name): $($_.Status)" -ForegroundColor Gray
-}
-Write-Host ""
+    Write-Host ""
 
-# Return result object for pipeline use
-return $result
+    # Return result object for pipeline use
+    return $result
+}
 
 #endregion

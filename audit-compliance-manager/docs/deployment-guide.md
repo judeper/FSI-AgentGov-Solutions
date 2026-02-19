@@ -242,7 +242,7 @@ Import these modules from the PowerShell Gallery:
    - **Runtime version:** 7.2
    - **Description:** Scans all Power Platform environments for Purview unified audit and Dataverse audit compliance
 3. Click **Create**
-4. In the editor, paste the contents of `src/Check-AuditLoggingCompliance.ps1`
+4. In the editor, paste the contents of `scripts/Check-AuditLoggingCompliance.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.2 Create Remediation Runbook
@@ -254,7 +254,7 @@ Import these modules from the PowerShell Gallery:
    - **Runtime version:** 7.2
    - **Description:** Enables org-level and entity-level Dataverse auditing on non-compliant environments
 3. Click **Create**
-4. In the editor, paste the contents of `src/Enable-AuditLogging.ps1`
+4. In the editor, paste the contents of `scripts/Enable-AuditLogging.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.3 Verify Runbook Status

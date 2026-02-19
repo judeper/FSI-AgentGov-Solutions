@@ -368,7 +368,7 @@ elseif ($statuses -contains "Warning" -or $statuses -contains "GracePeriod") {
     $results.OverallStatus = "Warning"
     $results.Reason = "All validators passed, but warnings detected. Review individual validator results."
 }
-elseif ($statuses -match "Passed" -and $statuses.Count -eq 3) {
+elseif (($statuses | Where-Object { $_ -eq "Passed" }).Count -eq $statuses.Count -and $statuses.Count -eq 3) {
     $results.OverallStatus = "Passed"
     $results.Reason = "All validators passed successfully."
 }

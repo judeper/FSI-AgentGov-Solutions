@@ -18,6 +18,11 @@
         },
         "timeZone": "UTC"
       },
+      "runtimeConfiguration": {
+        "concurrency": {
+          "runs": 1
+        }
+      },
       "type": "Recurrence"
     }
   },
@@ -30,11 +35,11 @@
           {
             "name": "DataverseUrl",
             "type": "string",
-            "value": "https://governance.crm.dynamics.com"
+            "value": "https://YOUR-ORG.crm.dynamics.com"
           }
         ]
       },
-      "description": "Central Dataverse organization URL for validation history storage"
+      "description": "Central Dataverse organization URL for validation history storage. CONFIGURE: Replace with your Dataverse environment URL before deployment."
     },
     "Initialize_TenantId": {
       "runAfter": {
@@ -50,7 +55,7 @@
           }
         ]
       },
-      "description": "Azure AD tenant ID"
+      "description": "Azure AD tenant ID. CONFIGURE: Replace 'contoso.onmicrosoft.com' with your tenant domain before deployment."
     },
     "Initialize_ClientId": {
       "runAfter": {
@@ -148,9 +153,25 @@
       },
       "description": "Teams channel ID for alert notifications"
     },
-    "Initialize_ComplianceDistributionList": {
+    "Initialize_TeamsTeamId": {
       "runAfter": {
         "Initialize_TeamsChannelId": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "TeamsTeamId",
+            "type": "string",
+            "value": "your-teams-team-id-here"
+          }
+        ]
+      },
+      "description": "Teams team (group) ID for alert notifications"
+    },
+    "Initialize_ComplianceDistributionList": {
+      "runAfter": {
+        "Initialize_TeamsTeamId": ["Succeeded"]
       },
       "type": "InitializeVariable",
       "inputs": {
@@ -210,7 +231,11 @@
               }
             }
           },
-          "description": "Start Azure Automation runbook for tenant validation"
+          "description": "Start Azure Automation runbook for tenant validation",
+          "runtimeConfiguration": {
+            "contentTransfer": { "transferMode": "Chunked" },
+            "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT30S", "minimumInterval": "PT15S", "maximumInterval": "PT5M" }
+          }
         },
         "Wait_For_Job": {
           "runAfter": {
@@ -240,7 +265,10 @@
                   "x-ms-api-version": "2015-10-31"
                 }
               },
-              "description": "Check runbook job status"
+              "description": "Check runbook job status",
+              "runtimeConfiguration": {
+                "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT10S", "minimumInterval": "PT5S", "maximumInterval": "PT1M" }
+              }
             },
             "Delay": {
               "runAfter": {},
@@ -449,7 +477,7 @@
                       }
                     },
                     "method": "post",
-                    "path": "/v1.0/teams/@{variables('TeamsChannelId')}/channels/@{variables('TeamsChannelId')}/messages",
+                    "path": "/v1.0/teams/@{variables('TeamsTeamId')}/channels/@{variables('TeamsChannelId')}/messages",
                     "body": {
                       "rootMessage": {
                         "body": {
@@ -459,20 +487,23 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Audit Configuration Drift -- Tenant\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Unified Audit Log\",\"value\":\"${unifiedAuditLogStatus}\"},{\"title\":\"Mailbox Audit\",\"value\":\"${mailboxAuditStatus}\"},{\"title\":\"Purview Retention\",\"value\":\"${purviewRetentionStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', body('Parse_Results')?['OverallStatus']), '${timestamp}', body('Parse_Results')?['Timestamp']), '${zone}', body('Parse_Results')?['Zone']), '${baselineStatus}', body('Parse_Results')?['Drift']?['Overall']?['BaselineStatus']), '${currentStatus}', body('Parse_Results')?['Drift']?['Overall']?['CurrentStatus']), '${baselineDate}', body('Parse_Results')?['Drift']?['Overall']?['BaselineDate']), '${reason}', body('Parse_Results')?['Reason']), '${unifiedAuditLogStatus}', body('Parse_Results')?['Validators']?['UnifiedAuditLog']?['Status']), '${mailboxAuditStatus}', body('Parse_Results')?['Validators']?['MailboxAudit']?['Status']), '${purviewRetentionStatus}', body('Parse_Results')?['Validators']?['PurviewRetention']?['Status']), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Audit Configuration Drift -- Tenant\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Unified Audit Log\",\"value\":\"${unifiedAuditLogStatus}\"},{\"title\":\"Mailbox Audit\",\"value\":\"${mailboxAuditStatus}\"},{\"title\":\"Purview Retention\",\"value\":\"${purviewRetentionStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', body('Parse_Results')?['OverallStatus']), '${timestamp}', body('Parse_Results')?['Timestamp']), '${zone}', body('Parse_Results')?['Zone']), '${baselineStatus}', body('Parse_Results')?['Drift']?['Overall']?['BaselineStatus']), '${currentStatus}', body('Parse_Results')?['Drift']?['Overall']?['CurrentStatus']), '${baselineDate}', body('Parse_Results')?['Drift']?['Overall']?['BaselineDate']), '${reason}', body('Parse_Results')?['Reason']), '${unifiedAuditLogStatus}', body('Parse_Results')?['Validators']?['UnifiedAuditLog']?['Status']), '${mailboxAuditStatus}', body('Parse_Results')?['Validators']?['MailboxAudit']?['Status']), '${purviewRetentionStatus}', body('Parse_Results')?['Validators']?['PurviewRetention']?['Status']), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
                           }
                         ]
                       }
                     }
                   },
-                  "description": "Post adaptive card to Teams for Failed/Error severity"
+                  "description": "Post adaptive card to Teams for Failed/Error severity",
+                  "runtimeConfiguration": {
+                    "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT15S", "minimumInterval": "PT10S", "maximumInterval": "PT2M" }
+                  }
                 }
               },
               "description": "Only post Teams card for Failed or Error status"
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed", "Skipped", "TimedOut"]
               },
               "type": "ApiConnection",
               "inputs": {
@@ -490,7 +521,10 @@
                   "Importance": "@if(or(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
-              "description": "Send email alert to compliance distribution list"
+              "description": "Send email alert to compliance distribution list",
+              "runtimeConfiguration": {
+                "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT15S", "minimumInterval": "PT10S", "maximumInterval": "PT2M" }
+              }
             }
           },
           "description": "Send alerts if drift detected"

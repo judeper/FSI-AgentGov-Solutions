@@ -542,5 +542,7 @@ function Get-RequiredRetentionDuration {
     else { return "TenYears" }
 }
 
-# Execute the validation
-Test-PurviewRetention @PSBoundParameters
+# Execute if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    Test-PurviewRetention @PSBoundParameters
+}

@@ -238,7 +238,7 @@ Write-Host ""
 
 try {
     $authResult = Connect-PowerPlatform @authParams -DataverseUrl $DataverseUrl
-    $centralDataverseToken = $authResult.DataverseToken
+    $centralDataverseToken = $authResult.DataverseAccessToken
 
     Write-Host "✓ Authentication successful" -ForegroundColor Green
     Write-Host "  Power Platform Admin API: Connected" -ForegroundColor Gray
@@ -320,7 +320,7 @@ else {
             $registryFilter += " and (fsi_overrideinclude eq true or (fsi_environmenttype ne 3 and fsi_environmenttype ne 4))"
         }
 
-        $registryUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=$registryFilter&`$select=fsi_environmentid,fsi_name,fsi_url,fsi_zone,fsi_environmenttype"
+        $registryUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=$registryFilter&`$select=fsi_environmentid,fsi_name,fsi_environmenturl,fsi_zone,fsi_environmenttype"
 
         $headers = @{
             "Authorization"    = "Bearer $centralDataverseToken"
@@ -335,7 +335,7 @@ else {
             $validationSet += @{
                 EnvironmentId   = $env.fsi_environmentid
                 EnvironmentName = $env.fsi_name
-                EnvironmentUrl  = $env.fsi_url
+                EnvironmentUrl  = $env.fsi_environmenturl
                 Zone            = switch ($env.fsi_zone) {
                     1 { "Zone1" }
                     2 { "Zone2" }
@@ -400,7 +400,7 @@ foreach ($env in $validationSet) {
         $envAuthParams = $authParams.Clone()
         $envAuthParams.DataverseUrl = $envUrl
         $envAuth = Connect-PowerPlatform @envAuthParams
-        $envToken = $envAuth.DataverseToken
+        $envToken = $envAuth.DataverseAccessToken
     }
     catch {
         Write-Warning "  ✗ Failed to acquire token for $envName: $($_.Exception.Message)"
@@ -524,7 +524,8 @@ foreach ($env in $validationSet) {
 
     # Update fsi_lastvalidated in registry
     try {
-        $registryUpdateUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=fsi_environmentid eq '$envId'"
+        $safeEnvId = $envId -replace "'", "''"
+        $registryUpdateUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=fsi_environmentid eq '$safeEnvId'"
         $headers = @{
             "Authorization"    = "Bearer $centralDataverseToken"
             "Accept"           = "application/json"

@@ -310,6 +310,7 @@ function Invoke-EnvironmentDiscovery {
                     fsi_zone            = 0  # Unclassified
                     fsi_status          = 1  # Active
                     fsi_environmenttype = $env.EnvironmentTypeInt
+                    fsi_environmenturl  = $env.EnvironmentUrl
                     fsi_discoveredon    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
                     fsi_overrideinclude = $false
                 } | ConvertTo-Json
@@ -386,8 +387,13 @@ function Invoke-EnvironmentDiscovery {
             # Add to validation set
             $validationSet += @{
                 EnvironmentId   = $envId
-                DisplayName     = $env.DisplayName
-                Zone            = $registryEntry.fsi_zone
+                EnvironmentName = $env.DisplayName
+                Zone            = switch ($registryEntry.fsi_zone) {
+                    1 { "Zone1" }
+                    2 { "Zone2" }
+                    3 { "Zone3" }
+                    default { "Unclassified" }
+                }
                 EnvironmentUrl  = $env.EnvironmentUrl
                 EnvironmentType = $env.EnvironmentType
             }
@@ -432,5 +438,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $result
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Invoke-EnvironmentDiscovery
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Invoke-EnvironmentDiscovery
+}

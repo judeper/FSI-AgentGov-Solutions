@@ -110,43 +110,43 @@ python scripts/create_audit_compliance_schema.py \
 
 ```powershell
 # Validate tenant audit configuration for Zone 3 (730-day retention)
-.\scripts\Invoke-TenantAuditValidation.ps1 -Zone 3 -Verbose
+.\scripts\Invoke-TenantAuditValidation.ps1 -Zone "Zone3" -Verbose
 
 # With JSON output for automation
-.\scripts\Invoke-TenantAuditValidation.ps1 -Zone 3 -OutputPath .\results.json
+.\scripts\Invoke-TenantAuditValidation.ps1 -Zone "Zone3" -OutputPath .\results.json
 ```
 
 ### Step 4: Register and Validate Environments
 
-```python
+```powershell
 # Discover and register all Power Platform environments
-python scripts/discover_environments.py \
-    --environment-url https://org.crm.dynamics.com \
-    --tenant-id <your-tenant-id> \
-    --interactive
+.\scripts\Invoke-EnvironmentDiscovery.ps1 `
+    -DataverseUrl https://org.crm.dynamics.com `
+    -TenantId <your-tenant-id> `
+    -Interactive
 
 # Validate all registered environments
-python scripts/validate_environments.py \
-    --environment-url https://org.crm.dynamics.com \
-    --tenant-id <your-tenant-id> \
-    --interactive
+.\scripts\Invoke-EnvironmentAuditValidation.ps1 `
+    -DataverseUrl https://org.crm.dynamics.com `
+    -TenantId <your-tenant-id> `
+    -Interactive
 ```
 
 ### Step 5: Run Compliance Detection (ALCA)
 
 ```powershell
 # Detect audit logging compliance gaps across environments
-.\scripts\Check-AuditLoggingCompliance.ps1
+.\scripts\Check-AuditLoggingCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -TenantDomain "contoso.onmicrosoft.com"
 ```
 
 ### Step 6: Remediate Non-Compliant Environments (ALCA)
 
 ```powershell
 # Dry run remediation
-.\scripts\Enable-AuditLogging.ps1 -WhatIf
+.\scripts\Enable-AuditLogging.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -TenantDomain "contoso.onmicrosoft.com" -WhatIf
 
 # Execute remediation
-.\scripts\Enable-AuditLogging.ps1
+.\scripts\Enable-AuditLogging.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -TenantDomain "contoso.onmicrosoft.com"
 ```
 
 ### Step 7: Export Compliance Evidence
@@ -206,10 +206,13 @@ Immutable validation results (organization-owned, append-only):
 | `fsi_environmentid` | Text | Power Platform environment ID (null for tenant scope) |
 | `fsi_zone` | Choice | Zone at time of validation (denormalized) |
 | `fsi_severity` | Choice | Passed, Warning, GracePeriod, Failed, Error |
-| `fsi_validationtype` | Text | UnifiedAuditLog, MailboxAudit, PurviewRetention, etc. |
+| `fsi_validationtype` | Text | UnifiedAuditLog, MailboxAudit, PurviewRetention, EnvironmentAudit, EnvironmentRetention, Orchestrator |
 | `fsi_rawvalue` | Text | Actual config values |
 | `fsi_reason` | Text | Human-readable explanation |
+| `fsi_remediationhint` | Text | Suggested remediation for alerting |
 | `fsi_timestamp` | DateTime | When validation ran |
+| `fsi_checkcount` | Integer | Number of individual checks in this result |
+| `fsi_environmentname` | Text | Environment display name |
 
 ### EnvironmentRegistry Table (ACV)
 
@@ -222,8 +225,11 @@ Administrator-managed environment catalog:
 | `fsi_zone` | Choice | Assigned governance zone |
 | `fsi_status` | Choice | Active or Inactive |
 | `fsi_environmenttype` | Choice | Production, Sandbox, Developer, Trial, Default |
+| `fsi_environmenturl` | Text | Dataverse URL for API calls |
+| `fsi_discoveredon` | DateTime | When first discovered by API |
 | `fsi_overrideinclude` | Boolean | Admin override to include Trial/Dev environments |
 | `fsi_lastvalidated` | DateTime | Last successful validation timestamp |
+| `fsi_notes` | Memo | Admin notes |
 
 ### AuditEnvironmentCompliance Table (ALCA)
 
@@ -283,7 +289,7 @@ Compliance tracking with upsert by environment ID:
 │                                                                 │
 │  Phase 2: Python Infrastructure (Environment-Level)             │
 │  - deploy.py (Dataverse schema + env vars + connections)        │
-│  - discover_environments.py / validate_environments.py          │
+│  - Invoke-EnvironmentDiscovery.ps1 / Invoke-EnvironmentAuditValidation.ps1 │
 │                                                                 │
 │  Phase 3: Automated Orchestration & Alerting                    │
 │  - Azure Automation runbooks + Power Automate flows             │
@@ -319,8 +325,8 @@ Compliance tracking with upsert by environment ID:
 | Create environment variables | **Automated** | `deploy.py` |
 | Create connection references | **Automated** | `deploy.py` |
 | Tenant-level validation | **Automated** | PowerShell scripts |
-| Environment discovery | **Automated** | `discover_environments.py` |
-| Environment validation | **Automated** | `validate_environments.py` |
+| Environment discovery | **Automated** | `Invoke-EnvironmentDiscovery.ps1` |
+| Environment validation | **Automated** | `Invoke-EnvironmentAuditValidation.ps1` |
 | Compliance detection (ALCA) | **Automated** | `Check-AuditLoggingCompliance.ps1` |
 | Remediation (ALCA) | **Automated** | `Enable-AuditLogging.ps1` |
 | Power Automate flows | **Template** | Import from JSON templates |
@@ -348,14 +354,21 @@ The following placeholder values in solution files must be replaced with your or
 | `governance-lead@contoso.com` | Your governance lead email | `templates/audit-remediation-approval-flow.json` |
 | `compliance-team@contoso.com` | Your compliance team email | `templates/audit-remediation-approval-flow.json` |
 | `https://YOUR-ORG.crm.dynamics.com` | Your Dataverse environment URL | `templates/audit-remediation-approval-flow.json` |
+| `your-client-id-here` | Your Entra app registration client ID | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Your certificate thumbprint for Service Principal auth | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `your-subscription-id-here` | Your Azure subscription ID | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `rg-audit-validation` | Your Azure resource group name | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `aa-audit-validator` | Your Azure Automation account name | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `your-teams-channel-id-here` | Your Teams channel ID for alerts | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
+| `your-teams-team-id-here` | Your Teams team ID for alerts | `templates/tenant-validation-flow.json`, `templates/environment-validation-flow.json` |
 
 ## Security Considerations
 
 - Validation history is **organization-owned** — security roles must remove Write/Delete privileges post-deployment
-- ACV uses certificate-based Service Principal authentication; ALCA uses System-Assigned Managed Identity
+- ACV uses certificate-based Service Principal authentication; the ALCA subsystem uses System-Assigned Managed Identity
 - Connection references bind at runtime — use managed identities in production
 - Grace period helps prevent false positives for newly enabled configurations (default: 24 hours)
-- ALCA **never** uses interactive authentication or hardcoded credentials
+- The ALCA subsystem **never** uses interactive authentication or hardcoded credentials
 - WhatIf mode available for safe remediation dry runs
 - Shared mailbox for email notifications (no user mailbox access)
 

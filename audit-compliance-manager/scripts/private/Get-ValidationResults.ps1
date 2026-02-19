@@ -139,7 +139,8 @@ function Get-ValidationResults {
 
         # Optional RunId filter
         if ($RunId) {
-            $filters += "fsi_runid eq '$RunId'"
+            $safeRunId = $RunId -replace "'", "''"
+            $filters += "fsi_runid eq '$safeRunId'"
         }
 
         # Combine filters with 'and'
@@ -212,5 +213,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $results
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Get-ValidationResults
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Get-ValidationResults
+}

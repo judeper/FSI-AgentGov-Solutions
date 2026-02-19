@@ -169,12 +169,14 @@ function Compare-ValidationBaseline {
             if (-not $EnvironmentId) {
                 throw "EnvironmentId is required when Scope is 'Environment'."
             }
-            $filter += " and fsi_environmentid eq '$EnvironmentId'"
+            $safeEnvironmentId = $EnvironmentId -replace "'", "''"
+            $filter += " and fsi_environmentid eq '$safeEnvironmentId'"
 
             # For environment scope, typically we want Orchestrator type for overall status
             # Or we can filter by specific ValidationType if provided
             if ($ValidationType) {
-                $filter += " and fsi_validationtype eq '$ValidationType'"
+                $safeValidationType = $ValidationType -replace "'", "''"
+                $filter += " and fsi_validationtype eq '$safeValidationType'"
             }
             else {
                 # Default to Orchestrator for environment-level drift detection
@@ -183,7 +185,8 @@ function Compare-ValidationBaseline {
         }
         elseif ($ValidationType) {
             # For tenant scope, filter by ValidationType if provided
-            $filter += " and fsi_validationtype eq '$ValidationType'"
+            $safeValidationType = $ValidationType -replace "'", "''"
+            $filter += " and fsi_validationtype eq '$safeValidationType'"
         }
 
         # Construct API URL with OData query
@@ -212,7 +215,7 @@ function Compare-ValidationBaseline {
 
         # Parse baseline result
         $baseline = $response.value | Select-Object -First 1
-        $isFirstRun = $baseline -eq $null
+        $isFirstRun = $null -eq $baseline
 
         if ($isFirstRun) {
             # No baseline exists - this is first run
@@ -294,5 +297,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $result
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Compare-ValidationBaseline
+# Export function if this script is dot-sourced (no-op outside a module)
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Compare-ValidationBaseline
+}
