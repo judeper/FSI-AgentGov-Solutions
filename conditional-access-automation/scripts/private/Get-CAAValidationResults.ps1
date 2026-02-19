@@ -108,9 +108,9 @@ function Get-CAAValidationResults {
 
     # Determine timestamp column per table
     $timestampColumn = switch ($Table) {
-        'fsi_capolicyvalidationhistories' { 'fsi_validatedat' }
-        'fsi_capolicyviolations'          { 'fsi_detectedat' }
-        'fsi_capolicybaselines'           { 'fsi_capturedat' }
+        'fsi_capolicyvalidationhistories' { 'fsi_validation_time' }
+        'fsi_capolicyviolations'          { 'fsi_detected_at' }
+        'fsi_capolicybaselines'           { 'fsi_captured_at' }
     }
 
     # Build OData filter clauses
@@ -127,12 +127,14 @@ function Get-CAAValidationResults {
     }
 
     if ($RunId -and $Table -eq 'fsi_capolicyvalidationhistories') {
-        [void]$filters.Add("fsi_runid eq '$RunId'")
+        # Sanitize RunId to prevent OData injection
+        $sanitizedRunId = $RunId -replace "'", "''"
+        [void]$filters.Add("fsi_runid eq '$sanitizedRunId'")
     }
 
     # For baselines, only retrieve active records by default
     if ($Table -eq 'fsi_capolicybaselines') {
-        [void]$filters.Add("fsi_isactive eq true")
+        [void]$filters.Add("fsi_is_active eq true")
     }
 
     # Construct query URL

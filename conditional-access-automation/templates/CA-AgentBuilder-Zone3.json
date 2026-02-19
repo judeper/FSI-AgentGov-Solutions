@@ -20,6 +20,10 @@
       "value": 1,
       "type": "hours",
       "isEnabled": true
+    },
+    "persistentBrowser": {
+      "mode": "never",
+      "isEnabled": true
     }
   },
   "_metadata": {

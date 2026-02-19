@@ -180,7 +180,12 @@ Write-Verbose "Retrieving Conditional Access policies..."
 try {
     $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
     $fsiPolicies = $allPolicies | Where-Object {
-        $_.DisplayName -like "CA-FSI-*" -or $_.DisplayName -like "CA-CopilotStudio-*" -or $_.DisplayName -like "$($config.policyPrefix)-*"
+        $_.DisplayName -like "CA-CopilotStudio-*" -or
+        $_.DisplayName -like "CA-AgentBuilder-*" -or
+        $_.DisplayName -like "CA-M365Copilot-*" -or
+        $_.DisplayName -like "CA-BlockLegacyAuth-*" -or
+        $_.DisplayName -like "CA-RequireCompliantDevice-*" -or
+        ($config.policyPrefix -and $_.DisplayName -like "$($config.policyPrefix)-*")
     }
     Write-Verbose "Found $($fsiPolicies.Count) FSI policies out of $($allPolicies.Count) total."
 }
@@ -374,12 +379,14 @@ foreach ($policy in $fsiPolicies) {
         $freqType = $sessionControls.SignInFrequency.Type
         Write-Verbose "  [PASS] $($policy.DisplayName) - Sign-in frequency: $freqValue $freqType"
 
+        $zone3SessionFailed = $false
         if ($isZone3 -and $hasPersistentBrowser) {
             $browserMode = $sessionControls.PersistentBrowser.Mode
             if ($browserMode -eq "never") {
                 Write-Verbose "  [PASS] $($policy.DisplayName) - Persistent browser: $browserMode"
             }
             else {
+                $zone3SessionFailed = $true
                 Write-Verbose "  [WARN] $($policy.DisplayName) - Persistent browser mode is '$browserMode', expected 'never' for Zone3"
                 $complianceResults.gaps += @{
                     type = "SessionControlMisconfigured"
@@ -390,6 +397,7 @@ foreach ($policy in $fsiPolicies) {
             }
         }
         elseif ($isZone3 -and -not $hasPersistentBrowser) {
+            $zone3SessionFailed = $true
             Write-Verbose "  [WARN] $($policy.DisplayName) - Zone3 policy missing persistentBrowser control"
             $complianceResults.gaps += @{
                 type = "MissingSessionControl"
@@ -399,7 +407,12 @@ foreach ($policy in $fsiPolicies) {
             }
         }
 
-        $complianceResults.checksPassed++
+        if ($zone3SessionFailed) {
+            $complianceResults.checksFailed++
+        }
+        else {
+            $complianceResults.checksPassed++
+        }
     }
     else {
         $complianceResults.checksFailed++

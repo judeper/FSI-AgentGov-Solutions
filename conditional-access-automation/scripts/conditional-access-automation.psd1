@@ -1,6 +1,6 @@
 @{
     # Script module or binary module file associated with this manifest
-    # RootModule = ''
+    RootModule = 'conditional-access-automation.psm1'
     
     # Version number of this module
     ModuleVersion     = '1.1.0'
@@ -42,14 +42,17 @@
     # ScriptsToProcess = @()
     
     # Functions to export from this module
+    # Public scripts are standalone .ps1 files with top-level param() blocks;
+    # they are invoked directly, not as module-exported functions.
+    # Private helper functions (e.g., Get-CAAPolicyBaseline, Compare-CAAPolicyBaseline)
+    # are exported for use by the standalone scripts and advanced consumers.
     FunctionsToExport = @(
-        'Deploy-CAPolicies',
-        'Test-PolicyCompliance',
-        'Register-ServicePrincipal',
-        'Watch-PolicyDrift',
-        'Export-PolicyBaseline',
-        'Export-CAAComplianceEvidence',
-        'Test-EvidenceIntegrity'
+        'Get-CAAPolicyBaseline',
+        'Compare-CAAPolicyBaseline',
+        'Connect-CAAGraphSession',
+        'Get-CAAZoneClassification',
+        'Test-CAAConfigPath',
+        'Get-CAAValidationResults'
     )
     
     # Cmdlets to export from this module

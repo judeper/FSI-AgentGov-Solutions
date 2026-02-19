@@ -18,6 +18,11 @@
 .PARAMETER DataverseUrl
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
+.PARAMETER TenantId
+    The Azure AD tenant GUID for Dataverse authentication. When omitted,
+    the script attempts to resolve the tenant ID from an existing Graph
+    session (Get-MgContext).
+
 .PARAMETER OutputPath
     Directory path where the evidence JSON and SHA-256 files will be written.
     The directory is created automatically if it does not exist.
@@ -75,12 +80,17 @@
 #>
 
 #Requires -Version 5.1
+#Requires -Modules Az.Accounts
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
     [string]$DataverseUrl,
+
+    [Parameter()]
+    [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
+    [string]$TenantId,
 
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -151,14 +161,19 @@ if (-not (Test-Path $OutputPath)) {
 }
 
 # --- Authenticate ---
-Write-Verbose 'Connecting to Dataverse...'
-$connectionInfo = Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId ([string]::Empty)
-$accessToken = $script:AccessToken
+# Try CAAClient module first; fall back to Az token if Phase 2 stub throws
+$accessToken = $null
+try {
+    Write-Verbose 'Connecting to Dataverse via CAAClient...'
+    $connectionInfo = Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $TenantId
+    $accessToken = $script:AccessToken
+}
+catch {
+    Write-Verbose "CAAClient not available (Phase 2 stub): $($_.Exception.Message)"
+}
 
-# If CAAClient sets module-scoped token, retrieve it; otherwise fall back
-# to interactive token acquisition for the Dataverse resource
 if (-not $accessToken) {
-    Write-Verbose 'Acquiring access token for Dataverse...'
+    Write-Verbose 'Acquiring access token for Dataverse via Az module...'
     try {
         $tokenResponse = Get-AzAccessToken -ResourceUrl $DataverseUrl
         $accessToken = $tokenResponse.Token
@@ -212,15 +227,15 @@ if ($IncludeBaselines) {
 }
 
 # --- Compute summary ---
-$passedCount  = @($validations | Where-Object { $_.fsi_overallstatus -eq 'Passed' }).Count
-$failedCount  = @($validations | Where-Object { $_.fsi_overallstatus -in @('Failed', 'Error') }).Count
-$warningCount = @($validations | Where-Object { $_.fsi_overallstatus -in @('Warning', 'GracePeriod') }).Count
+$passedCount  = @($validations | Where-Object { $_.fsi_overall_status -eq 'Passed' }).Count
+$failedCount  = @($validations | Where-Object { $_.fsi_overall_status -in @('Failed', 'Error') }).Count
+$warningCount = @($validations | Where-Object { $_.fsi_overall_status -in @('Warning', 'GracePeriod') }).Count
 
 # Determine overall status (worst severity across all validation records)
 $overallStatus = 'Passed'
 $highestPriority = 0
 foreach ($v in $validations) {
-    $status = $v.fsi_overallstatus
+    $status = $v.fsi_overall_status
     if ($status -and $severityPriority.ContainsKey($status)) {
         $priority = $severityPriority[$status]
         if ($priority -gt $highestPriority) {
@@ -238,23 +253,25 @@ foreach ($v in $validations) {
         $zoneBreakdown[$zone] = @{ passed = 0; failed = 0; warning = 0; total = 0 }
     }
     $zoneBreakdown[$zone].total++
-    switch ($v.fsi_overallstatus) {
+    switch ($v.fsi_overall_status) {
         'Passed'      { $zoneBreakdown[$zone].passed++ }
         { $_ -in @('Failed', 'Error') } { $zoneBreakdown[$zone].failed++ }
         { $_ -in @('Warning', 'GracePeriod') } { $zoneBreakdown[$zone].warning++ }
     }
 }
 
-# --- Resolve tenant ID ---
-$tenantId = 'unknown'
-try {
-    $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-    if ($mgContext -and $mgContext.TenantId) {
-        $tenantId = $mgContext.TenantId
+# --- Resolve tenant ID for metadata ---
+$resolvedTenantId = if ($TenantId) { $TenantId } else { 'unknown' }
+if ($resolvedTenantId -eq 'unknown') {
+    try {
+        $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+        if ($mgContext -and $mgContext.TenantId) {
+            $resolvedTenantId = $mgContext.TenantId
+        }
     }
-}
-catch {
-    Write-Verbose "Could not determine tenant ID from Graph context: $_"
+    catch {
+        Write-Verbose "Could not determine tenant ID from Graph context: $_"
+    }
 }
 
 # --- Build evidence object ---
@@ -266,7 +283,7 @@ $evidence = [ordered]@{
     metadata    = [ordered]@{
         exportedAt     = (Get-Date).ToUniversalTime().ToString('o')
         scope          = 'Tenant'
-        tenantId       = $tenantId
+        tenantId       = $resolvedTenantId
         fromDate       = $FromDate.ToUniversalTime().ToString('o')
         toDate         = $ToDate.ToUniversalTime().ToString('o')
         runId          = if ($RunId) { $RunId } else { $null }

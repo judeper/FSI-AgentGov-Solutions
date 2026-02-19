@@ -60,7 +60,7 @@ All notable changes to the Conditional Access Automation solution are documented
 - `Deploy-CAPolicies.ps1` - Template deployment
 - `Test-PolicyCompliance.ps1` - Coverage verification
 - `Watch-PolicyDrift.ps1` - Drift detection
-- `Export-PolicyEvidence.ps1` - Compliance evidence
+- `Export-CAAComplianceEvidence.ps1` - Compliance evidence
 
 ### Security Alignment
 

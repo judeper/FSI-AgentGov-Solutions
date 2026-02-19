@@ -269,7 +269,8 @@ foreach ($templateFile in $templatesToDeploy) {
 
     # Check if policy exists and deploy
     try {
-        $existingPolicy = Get-MgIdentityConditionalAccessPolicy -Filter "displayName eq '$policyName'" -ErrorAction SilentlyContinue
+        $sanitizedPolicyName = $policyName -replace "'", "''"
+        $existingPolicy = Get-MgIdentityConditionalAccessPolicy -Filter "displayName eq '$sanitizedPolicyName'" -ErrorAction SilentlyContinue
 
         if ($existingPolicy) {
             if ($Force) {
