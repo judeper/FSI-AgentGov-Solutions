@@ -202,5 +202,3 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $result
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Test-BreakGlassExclusion

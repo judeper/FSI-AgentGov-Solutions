@@ -13,7 +13,7 @@
   },
   "grantControls": {
     "operator": "AND",
-    "builtInControls": ["mfa", "compliantDevice"],
+    "builtInControls": ["compliantDevice"],
     "authenticationStrength": {
       "id": "<phishing-resistant-mfa-policy-id>"
     }

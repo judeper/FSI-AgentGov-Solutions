@@ -12,6 +12,7 @@ import os
 import sys
 from typing import Optional
 
+import requests
 from ssc_client import SSCClient
 
 PUBLISHER_PREFIX = "fsi"
@@ -281,13 +282,13 @@ COLUMNS = {
             "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_ssc_validationtype')",
         },
         {
-            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_RawValue",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Raw Value", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "Actual config values checked", "LanguageCode": 1033}]},
-            "MaxLength": 4000,
-            "FormatName": {"Value": "Text"},
+            "MaxLength": 100000,
+            "Format": "Text",
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",

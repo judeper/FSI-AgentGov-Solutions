@@ -42,7 +42,7 @@ Install-Module Microsoft.Graph.Authentication, `
 
 Python scripts handle Dataverse schema deployment:
 
-- Python 3.8 or later
+- Python 3.10 or later
 - `msal` package (Microsoft Authentication Library)
 - `requests` package (HTTP client)
 
@@ -102,7 +102,7 @@ Before deployment, verify:
 - [ ] Privileged Role Administrator role assigned (for PIM)
 - [ ] Power Platform Administrator role assigned
 - [ ] PowerShell modules installed
-- [ ] Python 3.8+ installed
+- [ ] Python 3.10+ installed
 - [ ] Network access to required endpoints
 - [ ] Dataverse environment provisioned
 - [ ] Break-glass accounts identified for exclusion

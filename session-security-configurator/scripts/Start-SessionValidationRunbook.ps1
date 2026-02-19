@@ -122,13 +122,9 @@ try {
     Write-Verbose "DataverseUrl: $DataverseUrl"
     Write-Verbose "ConfigPath: $ConfigPath"
 
-    # Dot-source required scripts from same directory
+    # Resolve script root for sibling script invocation
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
-
-    . "$scriptRoot\Test-SessionCompliance.ps1"
-
-    Write-Verbose "Scripts loaded successfully"
 
     # Build parameters for Test-SessionCompliance
     # Do NOT pass -Interactive or -OutputPath (not suitable for runbook context)
@@ -147,8 +143,8 @@ try {
 
     Write-Verbose "Invoking Test-SessionCompliance with parameters: $($validationParams.Keys -join ', ')"
 
-    # Execute session validation orchestrator
-    $validationResults = Test-SessionCompliance @validationParams
+    # Execute session validation orchestrator (invoke as script, not function)
+    $validationResults = & "$scriptRoot\Test-SessionCompliance.ps1" @validationParams
 
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
 
@@ -194,10 +190,11 @@ try {
 
             # Map status strings to severity values (higher = worse)
             $severityMap = @{
-                "Passed"  = 1
-                "Warning" = 2
-                "Failed"  = 3
-                "Error"   = 4
+                "Passed"      = 1
+                "Warning"     = 2
+                "GracePeriod" = 3
+                "Failed"      = 4
+                "Error"       = 5
             }
 
             $currentSeverity = $severityMap[$CurrentStatus]
@@ -254,8 +251,9 @@ try {
             $reverseSeverityMap = @{
                 1 = "Passed"
                 2 = "Warning"
-                3 = "Failed"
-                4 = "Error"
+                3 = "GracePeriod"
+                4 = "Failed"
+                5 = "Error"
             }
             $baselineStatus = $reverseSeverityMap[$baselineSeverity]
 

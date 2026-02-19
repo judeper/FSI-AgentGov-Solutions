@@ -75,7 +75,10 @@ param(
     [object]$Policy,
 
     [Parameter(Mandatory = $true)]
-    [object]$Baseline
+    [object]$Baseline,
+
+    [Parameter(Mandatory = $false)]
+    [object[]]$AuthStrengthPolicies = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -87,7 +90,10 @@ function Compare-SessionBaseline {
         [object]$Policy,
 
         [Parameter(Mandatory = $true)]
-        [object]$Baseline
+        [object]$Baseline,
+
+        [Parameter(Mandatory = $false)]
+        [object[]]$AuthStrengthPolicies = @()
     )
 
     try {
@@ -166,25 +172,41 @@ function Compare-SessionBaseline {
         }
 
         # Check 3: Authentication strength
-        $policyAuthStrength = $Policy.GrantControls.AuthenticationStrength.Id
+        $policyAuthStrengthId = $Policy.GrantControls.AuthenticationStrength.Id
         $baselineAuthStrength = $Baseline.authenticationStrength
 
-        if ($policyAuthStrength -ne $baselineAuthStrength) {
-            # Handle null comparisons (Zone 1 has no auth strength requirement)
-            if ($baselineAuthStrength -eq $null -and $policyAuthStrength -eq $null) {
-                Write-Verbose "  ✓ authenticationStrength matches: null (not required)"
-            }
-            else {
-                $results.Mismatches += @{
-                    Property = "authenticationStrength"
-                    Expected = if ($baselineAuthStrength) { $baselineAuthStrength } else { "not required" }
-                    Actual = if ($policyAuthStrength) { $policyAuthStrength } else { "not configured" }
-                }
-                Write-Verbose "  Mismatch: authenticationStrength - Expected $baselineAuthStrength, Actual $policyAuthStrength"
-            }
+        # Resolve policy GUID to display name if auth strength policies are provided
+        $policyAuthStrengthName = $null
+        if ($policyAuthStrengthId -and $AuthStrengthPolicies.Count -gt 0) {
+            $matchedPolicy = $AuthStrengthPolicies | Where-Object { $_.Id -eq $policyAuthStrengthId }
+            $policyAuthStrengthName = $matchedPolicy.DisplayName
         }
-        else {
-            Write-Verbose "  ✓ authenticationStrength matches: $policyAuthStrength"
+
+        # Compare using resolved display name (case-insensitive contains match)
+        $authMatch = $false
+        if ($baselineAuthStrength -eq $null -and $policyAuthStrengthId -eq $null) {
+            $authMatch = $true
+            Write-Verbose "  ✓ authenticationStrength matches: null (not required)"
+        }
+        elseif ($baselineAuthStrength -and $policyAuthStrengthName) {
+            $authMatch = $policyAuthStrengthName -like "*$baselineAuthStrength*"
+        }
+        elseif ($baselineAuthStrength -eq $policyAuthStrengthId) {
+            # Fallback: direct comparison if no lookup available (backward compatibility)
+            $authMatch = $true
+        }
+
+        if (-not $authMatch) {
+            $actualDisplay = if ($policyAuthStrengthName) { $policyAuthStrengthName } elseif ($policyAuthStrengthId) { $policyAuthStrengthId } else { "not configured" }
+            $results.Mismatches += @{
+                Property = "authenticationStrength"
+                Expected = if ($baselineAuthStrength) { $baselineAuthStrength } else { "not required" }
+                Actual = $actualDisplay
+            }
+            Write-Verbose "  Mismatch: authenticationStrength - Expected $baselineAuthStrength, Actual $actualDisplay"
+        }
+        elseif (-not ($baselineAuthStrength -eq $null -and $policyAuthStrengthId -eq $null)) {
+            Write-Verbose "  ✓ authenticationStrength matches: $policyAuthStrengthName"
         }
 
         # Check 4: Compliant device requirement
@@ -232,5 +254,3 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $result
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Compare-SessionBaseline

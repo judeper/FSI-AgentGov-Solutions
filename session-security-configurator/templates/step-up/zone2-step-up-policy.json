@@ -13,7 +13,7 @@
   },
   "grantControls": {
     "operator": "AND",
-    "builtInControls": ["mfa"],
+    "builtInControls": [],
     "authenticationStrength": {
       "id": "<passwordless-mfa-policy-id>"
     }

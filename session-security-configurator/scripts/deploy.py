@@ -323,8 +323,8 @@ Environment Variables (optional):
         parser.error("--tenant-id and --environment-url are required")
 
     # Validate authentication method
-    if not args.interactive and not args.client_id:
-        parser.error("Must specify either --interactive or --client-id for authentication")
+    if not args.client_id:
+        parser.error("--client-id is required for all authentication modes (interactive and service principal)")
 
     # Validate mutual exclusivity of selective deployment flags
     selective_flags = [args.tables_only, args.vars_only, args.refs_only]

@@ -130,10 +130,8 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [switch]$Interactive,
+    [switch]$Interactive
 
-    [Parameter(Mandatory = $false)]
-    [switch]$WhatIf
 )
 
 $ErrorActionPreference = "Stop"
@@ -242,7 +240,7 @@ try {
     $baselineName = "$Zone-$capturedOn"
 
     # If WhatIf mode, display preview and exit
-    if ($WhatIf) {
+    if ($WhatIfPreference) {
         Write-Host "`n═════════════════════════════════════════════════" -ForegroundColor Cyan
         Write-Host "  BASELINE CAPTURE PREVIEW (WhatIf Mode)" -ForegroundColor Cyan
         Write-Host "═════════════════════════════════════════════════" -ForegroundColor Cyan

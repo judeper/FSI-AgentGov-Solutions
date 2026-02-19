@@ -181,5 +181,3 @@ function Disconnect-GraphSession {
     }
 }
 
-# Export functions if this script is dot-sourced
-Export-ModuleMember -Function Connect-GraphSession, Disconnect-GraphSession

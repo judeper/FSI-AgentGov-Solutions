@@ -132,7 +132,7 @@ Get-MgContext | Select-Object Scopes
 
 ```python
 python scripts/ssc_client.py --test-connection \
-    --dataverse-url https://org.crm.dynamics.com \
+    --environment-url https://org.crm.dynamics.com \
     --tenant-id your-tenant-id \
     --interactive
 ```
@@ -140,7 +140,7 @@ python scripts/ssc_client.py --test-connection \
 ### Validate CA Policy Configuration
 
 ```powershell
-.\scripts\Test-SessionCompliance.ps1 -Zone 3 -Verbose
+.\scripts\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\config\tenant-config.json" -Verbose
 ```
 
 ## Common Misconfigurations
@@ -152,9 +152,9 @@ Symptom: Validation passes but doesn't match expected zone requirements.
 Cause: Environment variables have incorrect default values.
 
 Resolution: Verify environment variable values in Dataverse:
-- `fsi_SSC_Zone1_SignInFrequencyMinutes` = 480
-- `fsi_SSC_Zone2_SignInFrequencyMinutes` = 240
-- `fsi_SSC_Zone3_SignInFrequencyMinutes` = 60
+- `fsi_SSC_Zone1SignInFrequencyMinutes` = 480
+- `fsi_SSC_Zone2SignInFrequencyMinutes` = 240
+- `fsi_SSC_Zone3SignInFrequencyMinutes` = 60
 
 ### CA Policy Targeting Wrong Users
 

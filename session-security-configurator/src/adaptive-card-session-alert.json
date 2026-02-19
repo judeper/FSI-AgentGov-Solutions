@@ -1,4 +1,5 @@
 {
+  "_note": "REFERENCE TEMPLATE ONLY — The flow (session-validation-flow.json) embeds this card inline in the Post_Teams_Card action. Edits here have no effect on production alerts. Update the inline card in the flow to change alert formatting.",
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "version": "1.4",

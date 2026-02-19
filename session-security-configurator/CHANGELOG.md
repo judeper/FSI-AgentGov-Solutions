@@ -42,7 +42,7 @@ All notable changes to the Session Security Configurator solution are documented
 ### Status
 
 Solution complete with all 4 phases delivered:
-- 11 scripts + 4 private helpers (~5,559 lines of code)
+- 11 scripts + 5 private helpers (~5,559 lines of code)
 - 3 Dataverse tables with immutable audit logging
 - Power Automate flow for daily validation
 - Comprehensive documentation suite

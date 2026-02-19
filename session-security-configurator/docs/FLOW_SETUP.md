@@ -80,6 +80,7 @@ Update these variables in the flow designer (Initialize Variable actions):
 | SubscriptionId | String | your-subscription-id-here | Azure subscription containing Automation Account |
 | ResourceGroup | String | rg-session-validation | Resource group with Automation Account |
 | AutomationAccount | String | aa-session-validator | Azure Automation Account name |
+| TeamsTeamId | String | your-teams-team-id-here | Teams team ID for drift alerts (get from team link) |
 | TeamsChannelId | String | your-channel-id-here | Teams channel ID for drift alerts (get from channel link) |
 | ComplianceDistributionList | String | alerts@your-org.com | Email distribution list for all alerts |
 | Zone | String | Zone3 | Governance zone to validate (Zone1, Zone2, or Zone3) |
@@ -381,10 +382,10 @@ The flow routes alerts based on validation status and drift detection:
 
 ## Related Documentation
 
-- **RUNBOOK_REFERENCE.md** — Detailed runbook parameter reference
-- **BASELINE_MANAGEMENT.md** — Best practices for baseline capture and updates
-- **DATAVERSE_DEPLOYMENT.md** — SSC schema deployment guide
-- **AUTHENTICATION.md** — Certificate-based authentication setup
+- **[Prerequisites](PREREQUISITES.md)** — Licensing, roles, and module requirements
+- **[Dataverse Schema](DATAVERSE-SCHEMA.md)** — SSC schema deployment guide
+- **[Evidence Export Guide](EVIDENCE-EXPORT-GUIDE.md)** — Compliance evidence export instructions
+- **[Troubleshooting](TROUBLESHOOTING.md)** — Common issues and resolutions
 
 ---
 

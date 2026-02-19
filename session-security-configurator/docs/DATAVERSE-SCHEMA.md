@@ -16,14 +16,17 @@ Stores zone-specific session security baseline configurations.
 | Column | Type | Description |
 |--------|------|-------------|
 | fsi_sessionbaselineid | GUID | Primary key |
-| fsi_name | String (100) | Baseline display name |
+| fsi_name | String (200) | Baseline display name |
 | fsi_zone | Option Set | Zone classification (fsi_acv_zone) |
 | fsi_signinfrequencyminutes | Integer | Expected sign-in frequency in minutes |
 | fsi_authstrength | String (200) | Expected authentication strength policy name |
 | fsi_requirecompliantdevice | Boolean | Whether compliant device is required |
-| fsi_pimintegration | String (500) | PIM configuration (activation window, approval requirements) |
+| fsi_pimmaxactivationhours | Integer | Max PIM activation duration in hours |
+| fsi_pimrequireapproval | Boolean | Whether PIM activation requires approval |
+| fsi_pimrequireauthcontext | Boolean | Whether PIM activation requires auth context |
 | fsi_isactive | Boolean | Whether this baseline is the current active configuration |
-| fsi_capturedat | DateTime | Timestamp when baseline was captured |
+| fsi_capturedon | DateTime | Timestamp when baseline was captured |
+| fsi_rawjson | Memo (100000) | Full JSON snapshot of CA session settings at capture time |
 | createdby | Lookup (User) | User who created the record |
 | createdon | DateTime | Record creation timestamp |
 | modifiedby | Lookup (User) | User who last modified the record |
@@ -39,19 +42,17 @@ Immutable audit log of all validation runs.
 | Column | Type | Description |
 |--------|------|-------------|
 | fsi_validationhistoryid | GUID | Primary key |
-| fsi_name | String (100) | Validation display name |
-| fsi_runid | String (50) | Unique identifier for the validation run |
+| fsi_name | String (200) | Validation display name |
+| fsi_runid | String (36) | Unique identifier for the validation run |
 | fsi_zone | Option Set | Zone validated (fsi_acv_zone) |
 | fsi_severity | Option Set | Result severity (fsi_acv_severity) |
 | fsi_validationtype | Option Set | Validation dimension (fsi_ssc_validationtype) |
-| fsi_signinfrequencyminutes | Integer | Observed sign-in frequency value |
-| fsi_authstrength | String (200) | Observed authentication strength policy |
-| fsi_requirecompliantdevice | Boolean | Observed compliant device requirement |
-| fsi_pimintegration | String (500) | Observed PIM configuration |
-| fsi_breakglassstatus | String (500) | Break-glass account exclusion status |
-| fsi_conflictauditstatus | String (500) | CA policy conflict detection status |
-| fsi_reason | String (2000) | Detailed result explanation |
+| fsi_rawvalue | Memo (100000) | Serialized validation results JSON |
+| fsi_reason | String (4000) | Detailed result explanation |
+| fsi_remediationhint | String (2000) | Suggested fix for alerting |
 | fsi_timestamp | DateTime | Validation execution timestamp |
+| fsi_checkcount | Integer | Number of individual checks |
+| fsi_baselineid | String (200) | Reference to baseline used for comparison |
 | createdby | Lookup (User) | System account that created the record |
 | createdon | DateTime | Record creation timestamp |
 
@@ -65,16 +66,19 @@ Threshold violations requiring operator attention.
 | Column | Type | Description |
 |--------|------|-------------|
 | fsi_driftviolationid | GUID | Primary key |
-| fsi_name | String (100) | Violation display name |
+| fsi_name | String (200) | Violation display name |
 | fsi_zone | Option Set | Affected zone (fsi_acv_zone) |
 | fsi_severity | Option Set | Violation severity (fsi_acv_severity) |
-| fsi_validationtype | Option Set | Dimension with drift (fsi_ssc_validationtype) |
-| fsi_expectedvalue | String (500) | Baseline expected value |
-| fsi_observedvalue | String (500) | Actual observed value |
-| fsi_detectedat | DateTime | When drift was detected |
-| fsi_acknowledgedat | DateTime | When operator acknowledged the violation |
+| fsi_drifttype | String (200) | Type of drift (e.g., SignInFrequencyWeakened, AuthStrengthDowngraded) |
+| fsi_expectedvalue | String (2000) | Baseline expected value |
+| fsi_actualvalue | String (2000) | Actual observed value |
+| fsi_policyid | String (200) | CA policy ID that drifted |
+| fsi_policyname | String (500) | CA policy display name |
+| fsi_detectedon | DateTime | When drift was detected |
+| fsi_acknowledged | Boolean | Whether operator has reviewed |
 | fsi_acknowledgedby | String (200) | UPN of operator who acknowledged |
-| fsi_remediatedat | DateTime | When drift was remediated |
+| fsi_acknowledgedon | DateTime | When operator acknowledged the violation |
+| fsi_notes | Memo (2000) | Operator notes on violation |
 | createdby | Lookup (User) | User who created the record |
 | createdon | DateTime | Record creation timestamp |
 
@@ -86,7 +90,7 @@ Global option set for governance zone classification.
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 0 | Unclassified | Zone not yet assigned |
+| 100000000 | Unclassified | Zone not yet assigned |
 | 100000001 | Zone 1 | Personal Productivity |
 | 100000002 | Zone 2 | Team Collaboration |
 | 100000003 | Zone 3 | Enterprise Managed |
@@ -105,16 +109,16 @@ Global option set for validation result severity.
 
 ### fsi_ssc_validationtype (SSC-specific)
 
-Local option set for session security validation dimensions.
+Global option set for session security validation dimensions.
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 100000001 | SessionControls | Sign-in frequency, persistent browser settings |
-| 100000002 | AuthStrength | Authentication strength policy validation |
-| 100000003 | PIMSettings | PIM activation window and approval settings |
-| 100000004 | BreakGlass | Break-glass account exclusion verification |
-| 100000005 | ConflictAudit | CA policy conflict detection |
-| 100000006 | Orchestrator | Overall validation run coordination |
+| 1 | SessionControls | Sign-in frequency, persistent browser settings |
+| 2 | AuthStrength | Authentication strength policy validation |
+| 3 | PIMSettings | PIM activation window and approval settings |
+| 4 | BreakGlass | Break-glass account exclusion verification |
+| 5 | ConflictAudit | CA policy conflict detection |
+| 6 | Orchestrator | Overall validation run coordination |
 
 ## Environment Variables
 
@@ -122,12 +126,12 @@ Configurable thresholds stored as Dataverse environment variables.
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
-| fsi_SSC_Zone1_SignInFrequencyMinutes | Decimal | 480 | Zone 1 session limit (8 hours) |
-| fsi_SSC_Zone2_SignInFrequencyMinutes | Decimal | 240 | Zone 2 session limit (4 hours) |
-| fsi_SSC_Zone3_SignInFrequencyMinutes | Decimal | 60 | Zone 3 session limit (1 hour) |
-| fsi_SSC_Zone1_AuthStrength | String | Standard MFA | Zone 1 authentication strength |
-| fsi_SSC_Zone2_AuthStrength | String | Passwordless | Zone 2 authentication strength |
-| fsi_SSC_Zone3_AuthStrength | String | Phishing-resistant | Zone 3 authentication strength |
+| fsi_SSC_Zone1SignInFrequencyMinutes | Decimal | 480 | Zone 1 session limit (8 hours) |
+| fsi_SSC_Zone2SignInFrequencyMinutes | Decimal | 240 | Zone 2 session limit (4 hours) |
+| fsi_SSC_Zone3SignInFrequencyMinutes | Decimal | 60 | Zone 3 session limit (1 hour) |
+| fsi_SSC_Zone1AuthStrength | String | standard | Zone 1 authentication strength |
+| fsi_SSC_Zone2AuthStrength | String | passwordless | Zone 2 authentication strength |
+| fsi_SSC_Zone3AuthStrength | String | phishing-resistant | Zone 3 authentication strength |
 
 ## Deployment
 
@@ -138,13 +142,13 @@ Deploy the schema using the provided deployment script:
 cd scripts
 
 # Deploy tables only
-python deploy.py --dataverse-url https://org.crm.dynamics.com --tables-only
+python deploy.py --environment-url https://org.crm.dynamics.com --tables-only
 
 # Deploy environment variables only
-python deploy.py --dataverse-url https://org.crm.dynamics.com --vars-only
+python deploy.py --environment-url https://org.crm.dynamics.com --vars-only
 
 # Full deployment (tables, option sets, environment variables)
-python deploy.py --dataverse-url https://org.crm.dynamics.com
+python deploy.py --environment-url https://org.crm.dynamics.com
 ```
 
 ## Security Configuration

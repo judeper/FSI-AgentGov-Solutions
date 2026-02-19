@@ -71,9 +71,8 @@
 
 .OUTPUTS
     Array of PSCustomObjects containing validation result records. Each object
-    includes fields: name, runId, zone, severity, validationType, signInFrequencyMinutes,
-    authStrength, requireCompliantDevice, pimIntegration, breakGlassStatus,
-    conflictAuditStatus, reason, timestamp.
+    includes fields: name, runId, zone, severity, validationType, rawValue,
+    reason, remediationHint, checkCount, baselineId, timestamp.
 
 .NOTES
     Version: 1.0.0
@@ -157,13 +156,13 @@ function Get-SSCValidationResults {
             # Attempt to get token from current Graph context
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
-                if ($context -and $context.AccessToken) {
-                    $token = $context.AccessToken
-                    Write-Verbose "Using access token from current Microsoft Graph session."
+                if ($context) {
+                    # Graph SDK v2 removed the AccessToken property from Get-MgContext
+                    Write-Warning "Microsoft Graph SDK context found but cannot extract Dataverse token. Graph SDK v2 removed the AccessToken property. Provide a Dataverse-scoped token via -AccessToken parameter."
                 }
             }
             catch {
-                Write-Verbose "Failed to retrieve token from Graph context: $($_.Exception.Message)"
+                Write-Verbose "Failed to retrieve Graph context: $($_.Exception.Message)"
             }
         }
 
@@ -208,13 +207,11 @@ function Get-SSCValidationResults {
             "fsi_zone",
             "fsi_severity",
             "fsi_validationtype",
-            "fsi_signinfrequencyminutes",
-            "fsi_authstrength",
-            "fsi_requirecompliantdevice",
-            "fsi_pimintegration",
-            "fsi_breakglassstatus",
-            "fsi_conflictauditstatus",
+            "fsi_rawvalue",
             "fsi_reason",
+            "fsi_remediationhint",
+            "fsi_checkcount",
+            "fsi_baselineid",
             "fsi_timestamp"
         ) -join ","
 
@@ -294,5 +291,3 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $results
 }
 
-# Export function if this script is dot-sourced
-Export-ModuleMember -Function Get-SSCValidationResults
