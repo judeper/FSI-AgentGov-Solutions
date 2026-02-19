@@ -3,7 +3,7 @@
 > **Version:** v1.0.0
 > **Status:** Completed
 
-Continuous detectionand restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
+Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
 
 ## Overview
 
@@ -52,10 +52,8 @@ agent-sharing-access-restriction-detector/
 
 | Table | Purpose |
 |-------|---------|
-| `gov_asardsharingviolation` | Detected sharing policy violations with agent identity, zone, and remediation status |
-| `gov_asardsecuritygrouppolicy` | Approved security group whitelist per zone |
-| `gov_asardexception` | Time-bound exception records with approval audit trail |
-| `gov_asardremediationlog` | Immutable remediation action history |
+| `fsi_agentsharingcompliances` | Agent sharing compliance records with violation details, exception fields, and remediation status |
+| `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per zone |
 
 ## Prerequisites
 

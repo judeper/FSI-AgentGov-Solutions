@@ -184,6 +184,7 @@
     ],
     "exceptionListFormat": "Agent: {agent_name} | Environment: {environment_name} | Expires: {expires_at} | Days Remaining: {days_remaining} | Approved By: {approved_by} | Justification: {justification_preview}",
     "cardStyle": "warning",
+    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
     "icon": "⚠️"
   }
 }

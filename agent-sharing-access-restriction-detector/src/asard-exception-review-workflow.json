@@ -27,6 +27,30 @@
         "$authentication": {
           "defaultValue": {},
           "type": "SecureObject"
+        },
+        "fsi_ASARD_TeamsChannelId": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "fsi_ASARD_TeamsChannelId",
+            "description": "Microsoft Teams channel ID for exception review notifications"
+          }
+        },
+        "fsi_ASARD_AdaptiveCardTemplateUrl": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "fsi_ASARD_AdaptiveCardTemplateUrl",
+            "description": "Base URL for adaptive card template hosting (e.g., GitHub raw content or Azure Blob Storage)"
+          }
+        },
+        "fsi_ASARD_PlaybookUrl": {
+          "defaultValue": "https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/",
+          "type": "String",
+          "metadata": {
+            "schemaName": "fsi_ASARD_PlaybookUrl",
+            "description": "URL to the ASARD exception management playbook for adaptive card links"
+          }
         }
       },
       "triggers": {
@@ -81,17 +105,10 @@
           },
           "description": "Calculate expiring threshold: 14 days from now"
         },
-        "Parallel_Branch_Expiring_And_Expired": {
-          "type": "Parallel",
-          "runAfter": {
-            "Initialize_ExpiringThreshold": [
-              "Succeeded"
-            ]
-          },
-          "branches": [
-            {
-              "actions": {
-                "Query_Expiring_Exceptions": {
+        "Scope_Main": {
+          "type": "Scope",
+          "actions": {
+            "Query_Expiring_Exceptions": {
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
@@ -107,7 +124,13 @@
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for exceptions expiring within 14 days (compliance_status=914430002, expires_at between today and today+14)"
+                  "runAfter": {},
+                  "runtimeConfiguration": {
+                    "paginationPolicy": {
+                      "minimumItemCount": 100000
+                    }
+                  },
+                  "description": "Query for exceptions expiring within 14 days. Uses runtime pagination policy for automatic @odata.nextLink continuation beyond 5000 records."
                 },
                 "Condition_Check_Expiring_Exceptions_Exist": {
                   "type": "If",
@@ -131,16 +154,9 @@
                       "type": "Select",
                       "inputs": {
                         "from": "@outputs('Query_Expiring_Exceptions')?['body/value']",
-                        "select": {
-                          "agent_name": "@item()?['fsi_agent_name']",
-                          "environment_name": "@item()?['fsi_environment_name']",
-                          "expires_at": "@item()?['fsi_exception_expires_at']",
-                          "days_remaining": "@string(div(sub(ticks(item()?['fsi_exception_expires_at']), ticks(utcNow())), 864000000000))",
-                          "approved_by": "@item()?['fsi_exception_approved_by']",
-                          "justification_preview": "@if(greater(length(item()?['fsi_exception_justification']), 100), concat(substring(item()?['fsi_exception_justification'], 0, 97), '...'), item()?['fsi_exception_justification'])"
-                        }
+                        "select": "@{concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expires: ', coalesce(item()?['fsi_exception_expires_at'], 'N/A'), ' | Days Remaining: ', string(div(sub(ticks(item()?['fsi_exception_expires_at']), ticks(utcNow())), 864000000000)), ' | Approved By: ', coalesce(item()?['fsi_exception_approved_by'], 'N/A'), ' | Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(coalesce(item()?['fsi_exception_justification'], ''), 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))}"
                       },
-                      "description": "Transform Dataverse records to expiring list with days_remaining calculation"
+                      "description": "Transform records to formatted strings with null-safe coalesce() field access"
                     },
                     "Post_Expiring_Notification": {
                       "type": "OpenApiConnection",
@@ -152,7 +168,7 @@
                         },
                         "parameters": {
                           "poster": "Flow bot",
-                          "location": "{{TEAMS_CHANNEL_ID}}",
+                          "location": "@parameters('fsi_ASARD_TeamsChannelId')",
                           "body/messageBody": "@{outputs('Build_Expiring_Adaptive_Card')}",
                           "body/messageTitle": "⚠️ Agent Sharing Exceptions Expiring Soon"
                         },
@@ -167,33 +183,35 @@
                     },
                     "Build_Expiring_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expiring_List'), '\\n')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expiring_List'), '\\n')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', parameters('fsi_ASARD_PlaybookUrl')))",
                       "runAfter": {
                         "Load_Expiring_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expiring exception data"
+                      "description": "Populate adaptive card template with expiring exception data including playbook URL"
                     },
                     "Load_Expiring_Card_Template": {
                       "type": "Http",
                       "inputs": {
                         "method": "GET",
-                        "uri": "{{ADAPTIVE_CARD_TEMPLATE_URL}}/adaptive-card-asard-exception-expiring.json"
+                        "uri": "@{parameters('fsi_ASARD_AdaptiveCardTemplateUrl')}/adaptive-card-asard-exception-expiring.json",
+                        "headers": {},
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S"
+                        }
                       },
                       "runAfter": {
                         "Build_Expiring_List": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template from source control or blob storage"
+                      "description": "Load adaptive card template with exponential retry policy for transient failures."
                     }
                   }
-                }
-              }
-            },
-            {
-              "actions": {
+                },
                 "Query_Expired_Exceptions": {
                   "type": "OpenApiConnection",
                   "inputs": {
@@ -210,7 +228,13 @@
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for expired exceptions (compliance_status=914430002, expires_at < today)"
+                  "runAfter": {},
+                  "runtimeConfiguration": {
+                    "paginationPolicy": {
+                      "minimumItemCount": 100000
+                    }
+                  },
+                  "description": "Query for expired exceptions (expires_at < today). Uses runtime pagination policy for automatic @odata.nextLink continuation beyond 5000 records."
                 },
                 "Condition_Check_Expired_Exceptions_Exist": {
                   "type": "If",
@@ -276,7 +300,7 @@
                                 },
                                 "parameters": {
                                   "poster": "Flow bot",
-                                  "location": "{{TEAMS_CHANNEL_ID}}",
+                                  "location": "@parameters('fsi_ASARD_TeamsChannelId')",
                                   "body/messageBody": "⚠️ Failed to update expired exception record @{item()?['fsi_agentsharingcomplianceid']} for agent @{item()?['fsi_agent_name']}. Review flow run history for details.",
                                   "body/messageTitle": "⚠️ Exception Review — Update Failed"
                                 },
@@ -300,19 +324,14 @@
                       "type": "Select",
                       "inputs": {
                         "from": "@outputs('Query_Expired_Exceptions')?['body/value']",
-                        "select": {
-                          "agent_name": "@item()?['fsi_agent_name']",
-                          "environment_name": "@item()?['fsi_environment_name']",
-                          "expired_date": "@formatDateTime(item()?['fsi_exception_expires_at'], 'yyyy-MM-dd')",
-                          "justification_preview": "@if(greater(length(item()?['fsi_exception_justification']), 100), concat(substring(item()?['fsi_exception_justification'], 0, 97), '...'), item()?['fsi_exception_justification'])"
-                        }
+                        "select": "@{concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expired: ', formatDateTime(item()?['fsi_exception_expires_at'], 'yyyy-MM-dd'), ' | Previous Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(coalesce(item()?['fsi_exception_justification'], ''), 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))}"
                       },
                       "runAfter": {
                         "Apply_To_Each_Expired_Exception": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Transform expired records to list for notification"
+                      "description": "Transform expired records to formatted strings with null-safe coalesce() field access"
                     },
                     "Post_Expired_Notification": {
                       "type": "OpenApiConnection",
@@ -324,7 +343,7 @@
                         },
                         "parameters": {
                           "poster": "Flow bot",
-                          "location": "{{TEAMS_CHANNEL_ID}}",
+                          "location": "@parameters('fsi_ASARD_TeamsChannelId')",
                           "body/messageBody": "@{outputs('Build_Expired_Adaptive_Card')}",
                           "body/messageTitle": "🔴 Agent Sharing Exceptions Expired"
                         },
@@ -339,32 +358,72 @@
                     },
                     "Build_Expired_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expired_List'), '\\n')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expired_List'), '\\n')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', parameters('fsi_ASARD_PlaybookUrl')))",
                       "runAfter": {
                         "Load_Expired_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expired exception data"
+                      "description": "Populate adaptive card template with expired exception data including playbook URL"
                     },
                     "Load_Expired_Card_Template": {
                       "type": "Http",
                       "inputs": {
                         "method": "GET",
-                        "uri": "{{ADAPTIVE_CARD_TEMPLATE_URL}}/adaptive-card-asard-exception-expired.json"
+                        "uri": "@{parameters('fsi_ASARD_AdaptiveCardTemplateUrl')}/adaptive-card-asard-exception-expired.json",
+                        "headers": {},
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S"
+                        }
                       },
                       "runAfter": {
                         "Build_Expired_List": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template from source control or blob storage"
+                      "description": "Load adaptive card template with exponential retry policy for transient failures."
                     }
                   }
                 }
-              }
+          },
+          "runAfter": {
+            "Initialize_ExpiringThreshold": [
+              "Succeeded"
+            ]
+          },
+          "description": "Main execution scope wrapping parallel exception processing for error handling"
+        },
+        "Scope_Error_Handler": {
+          "type": "Scope",
+          "actions": {
+            "Post_Flow_Error_Notification": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_teams",
+                  "operationId": "PostCardToChannelV3",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                },
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "@parameters('fsi_ASARD_TeamsChannelId')",
+                  "body/messageBody": "ASARD Exception Review workflow failed. Check flow run history for details.\n\nFlow: ASARD Exception Review Workflow\nTimestamp: @{utcNow()}",
+                  "body/messageTitle": "ASARD Exception Review — Flow Error"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "description": "Post error notification to Teams governance channel when exception review fails"
             }
-          ]
+          },
+          "runAfter": {
+            "Scope_Main": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "description": "Error handler for exception review flow failures — posts notification to governance channel"
         }
       }
     },
@@ -394,8 +453,9 @@
     "deploymentInstructions": [
       "Import flow into target environment via Power Automate portal or ALM pipelines",
       "Configure connection references: Dataverse (shared_commondataserviceforapps), Teams (shared_teams)",
-      "Update {{TEAMS_CHANNEL_ID}} placeholder with governance leads channel ID",
-      "Update {{ADAPTIVE_CARD_TEMPLATE_URL}} placeholder with adaptive card template hosting URL (e.g., GitHub raw content or Azure Blob Storage)",
+      "Set environment variable fsi_ASARD_TeamsChannelId with governance leads channel ID",
+      "Set environment variable fsi_ASARD_AdaptiveCardTemplateUrl with adaptive card template hosting URL (e.g., GitHub raw content or Azure Blob Storage)",
+      "Set environment variable fsi_ASARD_PlaybookUrl with exception management playbook URL (default provided)",
       "Enable flow and verify daily schedule (08:00 UTC)",
       "Test manually via 'Run' button in Power Automate portal"
     ],

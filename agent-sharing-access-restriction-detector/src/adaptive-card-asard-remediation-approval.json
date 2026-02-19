@@ -54,23 +54,23 @@
           "facts": [
             {
               "title": "Agent Name",
-              "value": "${agent_name}"
+              "value": "{{agent_name}}"
             },
             {
               "title": "Environment",
-              "value": "${environment_name}"
+              "value": "{{environment_name}}"
             },
             {
               "title": "Governance Zone",
-              "value": "${zone_name}"
+              "value": "{{zone_name}}"
             },
             {
               "title": "Violation Type",
-              "value": "${violation_type}"
+              "value": "{{violation_type}}"
             },
             {
               "title": "Detection Date",
-              "value": "${detection_date}"
+              "value": "{{detection_date}}"
             }
           ]
         }
@@ -103,7 +103,7 @@
           "items": [
             {
               "type": "TextBlock",
-              "text": "${current_principals_list}",
+              "text": "{{current_principals_list}}",
               "wrap": true,
               "spacing": "Small"
             }
@@ -115,11 +115,11 @@
           "facts": [
             {
               "title": "Current Member Count",
-              "value": "${member_count_current}"
+              "value": "{{member_count_current}}"
             },
             {
               "title": "Access Scope",
-              "value": "${access_scope_current}"
+              "value": "{{access_scope_current}}"
             }
           ]
         }
@@ -153,14 +153,14 @@
           "items": [
             {
               "type": "TextBlock",
-              "text": "REMOVE (${remove_count})",
+              "text": "REMOVE ({{remove_count}})",
               "weight": "Bolder",
               "color": "Attention",
               "spacing": "Small"
             },
             {
               "type": "TextBlock",
-              "text": "${remove_principals_list}",
+              "text": "{{remove_principals_list}}",
               "wrap": true,
               "spacing": "Small"
             }
@@ -173,14 +173,14 @@
           "items": [
             {
               "type": "TextBlock",
-              "text": "ADD (${add_count})",
+              "text": "ADD ({{add_count}})",
               "weight": "Bolder",
               "color": "Good",
               "spacing": "Small"
             },
             {
               "type": "TextBlock",
-              "text": "${add_principals_list}",
+              "text": "{{add_principals_list}}",
               "wrap": true,
               "spacing": "Small"
             }
@@ -191,16 +191,16 @@
           "spacing": "Medium",
           "facts": [
             {
-              "title": "Proposed Member Count",
-              "value": "${member_count_proposed}"
+              "title": "Approved Group Count",
+              "value": "{{approved_group_count}}"
             },
             {
               "title": "Access Scope",
-              "value": "${access_scope_proposed}"
+              "value": "{{access_scope_proposed}}"
             },
             {
               "title": "Impact Summary",
-              "value": "${impact_summary}"
+              "value": "{{impact_summary}}"
             }
           ]
         }
@@ -224,19 +224,19 @@
           "facts": [
             {
               "title": "Zone",
-              "value": "${zone}"
+              "value": "{{zone}}"
             },
             {
               "title": "Zone Name",
-              "value": "${zone_name}"
+              "value": "{{zone_name}}"
             },
             {
               "title": "Zone Rules",
-              "value": "${zone_rules}"
+              "value": "{{zone_rules}}"
             },
             {
               "title": "Approved Groups Policy",
-              "value": "${approved_groups_policy}"
+              "value": "{{approved_groups_policy}}"
             }
           ]
         }
@@ -260,19 +260,19 @@
           "facts": [
             {
               "title": "Scan Run ID",
-              "value": "${scan_run_id}"
+              "value": "{{scan_run_id}}"
             },
             {
               "title": "Last Checked",
-              "value": "${last_checked}"
+              "value": "{{last_checked}}"
             },
             {
               "title": "Agent ID",
-              "value": "${agent_id}"
+              "value": "{{agent_id}}"
             },
             {
               "title": "Environment ID",
-              "value": "${environment_id}"
+              "value": "{{environment_id}}"
             }
           ]
         }
@@ -304,7 +304,7 @@
       "remove_count",
       "add_principals_list",
       "add_count",
-      "member_count_proposed",
+      "approved_group_count",
       "access_scope_proposed",
       "impact_summary",
       "approved_groups_policy",
@@ -312,6 +312,7 @@
       "last_checked"
     ],
     "usageNotes": "This card is displayed in Power Automate approval requests. Approval actions (Approve/Reject) are provided by the Approvals connector, not the card itself.",
+    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
     "violationTypeMapping": {
       "Everyone": "🔴 Organization-wide sharing",
       "Public": "🟠 Public internet link",

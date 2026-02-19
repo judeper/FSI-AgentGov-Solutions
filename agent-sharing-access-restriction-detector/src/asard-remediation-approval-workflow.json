@@ -50,6 +50,14 @@
             "schemaName": "fsi_ASARD_TeamsChannelId",
             "description": "Microsoft Teams channel ID for remediation notifications"
           }
+        },
+        "fsi_ASARD_ApprovalTimeoutDays": {
+          "defaultValue": 7,
+          "type": "Int",
+          "metadata": {
+            "schemaName": "fsi_ASARD_ApprovalTimeoutDays",
+            "description": "Approval timeout in days. Unactioned approvals are auto-rejected after this period. Default: 7 days."
+          }
         }
       },
       "triggers": {
@@ -72,12 +80,12 @@
               {
                 "name": "ApprovalTimeoutDays",
                 "type": "integer",
-                "value": 7
+                "value": "@parameters('fsi_ASARD_ApprovalTimeoutDays')"
               }
             ]
           },
           "runAfter": {},
-          "description": "Approval timeout in days. Default 7 days. Override via environment variable fsi_ASARD_ApprovalTimeoutDays."
+          "description": "Approval timeout in days. Bound to environment variable fsi_ASARD_ApprovalTimeoutDays (default: 7)."
         },
         "Initialize_ApproverEmail": {
           "type": "InitializeVariable",
@@ -295,42 +303,6 @@
           },
           "description": "Variable to hold current zone classification during loop iteration. Set via SetVariable inside Apply_to_each_Agent."
         },
-        "Initialize_SkipCount": {
-          "type": "InitializeVariable",
-          "inputs": {
-            "variables": [
-              {
-                "name": "SkipCount",
-                "type": "integer",
-                "value": 0
-              }
-            ]
-          },
-          "runAfter": {
-            "Initialize_CurrentZone": [
-              "Succeeded"
-            ]
-          },
-          "description": "Pagination offset for Dataverse query. Incremented by 100 each iteration."
-        },
-        "Initialize_HasMoreRecords": {
-          "type": "InitializeVariable",
-          "inputs": {
-            "variables": [
-              {
-                "name": "HasMoreRecords",
-                "type": "boolean",
-                "value": true
-              }
-            ]
-          },
-          "runAfter": {
-            "Initialize_SkipCount": [
-              "Succeeded"
-            ]
-          },
-          "description": "Pagination flag: set to false when Dataverse returns fewer than 100 records."
-        },
         "Initialize_AllAgents": {
           "type": "InitializeVariable",
           "inputs": {
@@ -343,112 +315,50 @@
             ]
           },
           "runAfter": {
-            "Initialize_HasMoreRecords": [
+            "Initialize_CurrentZone": [
               "Succeeded"
             ]
           },
-          "description": "Accumulator array for all non-compliant agents across paginated Dataverse queries."
+          "description": "Accumulator array for all non-compliant agents from Dataverse query."
         },
         "Scope_Main": {
           "type": "Scope",
           "actions": {
-            "Do_Until_All_Pages_Fetched": {
-              "type": "Until",
-              "expression": "@equals(variables('HasMoreRecords'), false)",
-              "limit": {
-                "count": 50,
-                "timeout": "PT1H"
-              },
-              "actions": {
-                "List_NonCompliant_Agents_Page": {
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "parameters": {
-                      "entityName": "fsi_agentsharingcompliances",
-                      "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
-                      "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
-                      "$orderby": "fsi_last_checked desc",
-                      "$top": 100,
-                      "$skip": "@variables('SkipCount')"
-                    },
-                    "host": {
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "ListRecords"
-                    }
-                  },
-                  "runAfter": {},
-                  "description": "Query Dataverse for non-compliant agents with pagination ($skip offset)."
+            "List_All_NonCompliant_Agents": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "fsi_agentsharingcompliances",
+                  "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
+                  "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
+                  "$orderby": "fsi_last_checked desc"
                 },
-                "Append_Page_To_AllAgents": {
-                  "type": "Compose",
-                  "inputs": "@union(variables('AllAgents'), outputs('List_NonCompliant_Agents_Page')?['body/value'])",
-                  "runAfter": {
-                    "List_NonCompliant_Agents_Page": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "Merge current page results into accumulated array."
-                },
-                "Set_AllAgents": {
-                  "type": "SetVariable",
-                  "inputs": {
-                    "name": "AllAgents",
-                    "value": "@outputs('Append_Page_To_AllAgents')"
-                  },
-                  "runAfter": {
-                    "Append_Page_To_AllAgents": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "Update AllAgents variable with merged results."
-                },
-                "Check_More_Records": {
-                  "type": "If",
-                  "expression": {
-                    "and": [
-                      {
-                        "less": [
-                          "@length(outputs('List_NonCompliant_Agents_Page')?['body/value'])",
-                          100
-                        ]
-                      }
-                    ]
-                  },
-                  "actions": {
-                    "Set_HasMoreRecords_False": {
-                      "type": "SetVariable",
-                      "inputs": {
-                        "name": "HasMoreRecords",
-                        "value": false
-                      },
-                      "runAfter": {},
-                      "description": "No more pages — fewer than 100 records returned."
-                    }
-                  },
-                  "else": {
-                    "actions": {
-                      "Increment_SkipCount": {
-                        "type": "IncrementVariable",
-                        "inputs": {
-                          "name": "SkipCount",
-                          "value": 100
-                        },
-                        "runAfter": {},
-                        "description": "Advance skip offset by 100 for next page."
-                      }
-                    }
-                  },
-                  "runAfter": {
-                    "Set_AllAgents": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "If page returned fewer than 100 records, stop pagination. Otherwise increment skip."
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords"
                 }
               },
               "runAfter": {},
-              "description": "Paginate through all non-compliant agents in Dataverse, 100 per page."
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "description": "Query all non-compliant agents from Dataverse. Uses runtime pagination policy for automatic @odata.nextLink continuation — eliminates unreliable $skip offset pagination."
+            },
+            "Set_AllAgents_From_Query": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "AllAgents",
+                "value": "@outputs('List_All_NonCompliant_Agents')?['body/value']"
+              },
+              "runAfter": {
+                "List_All_NonCompliant_Agents": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Store all non-compliant agents from paginated Dataverse query into array variable."
             },
             "Set_TotalAgents": {
               "type": "SetVariable",
@@ -457,11 +367,11 @@
                 "value": "@length(variables('AllAgents'))"
               },
               "runAfter": {
-                "Do_Until_All_Pages_Fetched": [
+                "Set_AllAgents_From_Query": [
                   "Succeeded"
                 ]
               },
-              "description": "Count all non-compliant agents across all pages."
+              "description": "Count total non-compliant agents from query results."
             },
             "Condition_Check_Agents_Found": {
               "type": "If",
@@ -539,7 +449,7 @@
                     "Parse_Current_Principals": {
                       "type": "ParseJson",
                       "inputs": {
-                        "content": "@items('Apply_to_each_Agent')?['fsi_sharing_principals']",
+                        "content": "@if(empty(items('Apply_to_each_Agent')?['fsi_sharing_principals']), '[]', items('Apply_to_each_Agent')?['fsi_sharing_principals'])",
                         "schema": {
                           "type": "array",
                           "items": {
@@ -563,7 +473,7 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Parse JSON array of current sharing principals from Dataverse record."
+                      "description": "Parse JSON array of current sharing principals. Defaults to empty array if fsi_sharing_principals is null or empty to prevent runtime failure."
                     },
                     "Select_Current_Principals_Display": {
                       "type": "Select",
@@ -615,7 +525,7 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Extract member counts from approved groups for sum calculation."
+                      "description": "Extract approved groups for count calculation. Note: returns group count, not sum of member counts."
                     },
                     "Build_Approval_Card_Data": {
                       "type": "Compose",
@@ -636,7 +546,7 @@
                         "remove_count": "@{length(body('Parse_Current_Principals'))}",
                         "add_principals_list": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Add_Groups_Display'), '\n'), 'None (all access removed per Zone 1 policy)')}",
                         "add_count": "@{length(outputs('Query_Approved_Groups_For_Zone')?['body/value'])}",
-                        "member_count_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), string(length(body('Select_Proposed_Member_Counts'))), '0')}",
+                        "approved_group_count": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), string(length(body('Select_Proposed_Member_Counts'))), '0')}",
                         "access_scope_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), 'Approved security groups only', 'No group access (Zone 1)')}",
                         "impact_summary": "@{concat('Access change: ', length(body('Parse_Current_Principals')), ' principals removed, ', length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups added')}",
                         "approved_groups_policy": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), concat(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups configured for this zone'), 'No approved groups (Zone 1 — no group sharing allowed)')}",
@@ -694,7 +604,10 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Wait for approval decision (Approve/Reject). Blocks until decision made or timeout (7 days)."
+                      "limit": {
+                        "timeout": "@{concat('P', string(variables('ApprovalTimeoutDays')), 'D')}"
+                      },
+                      "description": "Wait for approval decision (Approve/Reject). Times out after ApprovalTimeoutDays (default 7 days). With concurrency=1, timeout prevents indefinite blocking of subsequent agents."
                     },
                     "Condition_Approval_Decision": {
                       "type": "If",
@@ -858,7 +771,7 @@
                                     "channelId": "@variables('TeamsChannelId')"
                                   },
                                   "subject": "✅ Agent Remediation — APPROVED & EXECUTED",
-                                  "messageBody": "## ✅ Agent Sharing Remediation — APPROVED\n\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n\n**Approval Decision:** APPROVED\n**Approver:** @{outputs('Wait_For_Approval')?['body/responder']}\n**Approval Date:** @{utcNow()}\n\n**Remediation Result:** ✅ SUCCESS\n- Replaced @{length(body('Parse_Current_Principals'))} principals with @{length(outputs('Query_Approved_Groups_For_Zone')?['body/value'])} approved security groups\n- Post-remediation validation: PASSED\n\n**Compliance Status:** COMPLIANT\n**Remediation Date:** @{utcNow()}"
+                                  "messageBody": "## ✅ Agent Sharing Remediation — APPROVED\n\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n\n**Approval Decision:** APPROVED\n**Approver:** @{outputs('Wait_For_Approval')?['body/responder']}\n**Approval Date:** @{utcNow()}\n\n**Remediation Result:** ✅ SUCCESS\n- Replaced @{length(body('Parse_Current_Principals'))} principals with @{length(outputs('Query_Approved_Groups_For_Zone')?['body/value'])} approved security groups\n- Post-remediation validation: BAP API PATCH completed successfully\n\n**Compliance Status:** COMPLIANT\n**Remediation Date:** @{utcNow()}"
                                 },
                                 "host": {
                                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -1085,7 +998,7 @@
             }
           },
           "runAfter": {
-            "Initialize_CurrentZone": [
+            "Initialize_AllAgents": [
               "Succeeded"
             ]
           }

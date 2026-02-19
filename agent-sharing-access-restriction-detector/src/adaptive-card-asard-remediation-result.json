@@ -6,7 +6,7 @@
     {
       "type": "Container",
       "id": "headerSection",
-      "style": "${header_style}",
+      "style": "{{header_style}}",
       "bleed": true,
       "items": [
         {
@@ -18,7 +18,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "${status_icon} Agent Sharing Remediation — ${status_text}",
+                  "text": "{{status_icon}} Agent Sharing Remediation — {{status_text}}",
                   "weight": "Bolder",
                   "size": "Large",
                   "wrap": true
@@ -54,19 +54,19 @@
           "facts": [
             {
               "title": "Agent Name",
-              "value": "${agent_name}"
+              "value": "{{agent_name}}"
             },
             {
               "title": "Environment",
-              "value": "${environment_name}"
+              "value": "{{environment_name}}"
             },
             {
               "title": "Governance Zone",
-              "value": "${zone_name}"
+              "value": "{{zone_name}}"
             },
             {
               "title": "Violation Type",
-              "value": "${violation_type}"
+              "value": "{{violation_type}}"
             }
           ]
         }
@@ -90,24 +90,24 @@
           "facts": [
             {
               "title": "Decision",
-              "value": "${approval_decision}"
+              "value": "{{approval_decision}}"
             },
             {
               "title": "Approver",
-              "value": "${approver_email}"
+              "value": "{{approver_email}}"
             },
             {
               "title": "Decision Date",
-              "value": "${approval_date}"
+              "value": "{{approval_date}}"
             }
           ]
         },
         {
           "type": "TextBlock",
-          "text": "${decision_notes}",
+          "text": "{{decision_notes}}",
           "wrap": true,
           "spacing": "Medium",
-          "isVisible": "${show_decision_notes}"
+          "isVisible": "{{show_decision_notes}}"
         }
       ]
     },
@@ -115,7 +115,7 @@
       "type": "Container",
       "id": "remediationResultSection",
       "separator": true,
-      "isVisible": "${show_remediation_result}",
+      "isVisible": "{{show_remediation_result}}",
       "items": [
         {
           "type": "TextBlock",
@@ -127,14 +127,14 @@
         },
         {
           "type": "TextBlock",
-          "text": "${remediation_status_text}",
-          "color": "${remediation_status_color}",
+          "text": "{{remediation_status_text}}",
+          "color": "{{remediation_status_color}}",
           "weight": "Bolder",
           "wrap": true
         },
         {
           "type": "TextBlock",
-          "text": "${remediation_details}",
+          "text": "{{remediation_details}}",
           "wrap": true,
           "spacing": "Small"
         }
@@ -144,7 +144,7 @@
       "type": "Container",
       "id": "currentAccessSection",
       "separator": true,
-      "isVisible": "${show_current_access}",
+      "isVisible": "{{show_current_access}}",
       "items": [
         {
           "type": "TextBlock",
@@ -156,7 +156,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "${current_access_list}",
+          "text": "{{current_access_list}}",
           "wrap": true,
           "spacing": "Small"
         },
@@ -166,11 +166,11 @@
           "facts": [
             {
               "title": "Total Members",
-              "value": "${total_members}"
+              "value": "{{total_members}}"
             },
             {
               "title": "Access Scope",
-              "value": "${access_scope}"
+              "value": "{{access_scope}}"
             }
           ]
         }
@@ -180,7 +180,7 @@
       "type": "Container",
       "id": "errorDetailsSection",
       "separator": true,
-      "isVisible": "${show_error_details}",
+      "isVisible": "{{show_error_details}}",
       "items": [
         {
           "type": "TextBlock",
@@ -193,7 +193,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "${error_message}",
+          "text": "{{error_message}}",
           "wrap": true,
           "color": "Attention",
           "spacing": "Small"
@@ -204,11 +204,11 @@
           "facts": [
             {
               "title": "Error Code",
-              "value": "${error_code}"
+              "value": "{{error_code}}"
             },
             {
               "title": "Timestamp",
-              "value": "${error_timestamp}"
+              "value": "{{error_timestamp}}"
             }
           ]
         }
@@ -229,7 +229,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "${next_steps_text}",
+          "text": "{{next_steps_text}}",
           "wrap": true,
           "spacing": "Small"
         }
@@ -253,15 +253,15 @@
           "facts": [
             {
               "title": "Compliance Status",
-              "value": "${compliance_status}"
+              "value": "{{compliance_status}}"
             },
             {
               "title": "Last Checked",
-              "value": "${last_checked}"
+              "value": "{{last_checked}}"
             },
             {
               "title": "Remediation Date",
-              "value": "${remediation_date}"
+              "value": "{{remediation_date}}"
             }
           ]
         }
@@ -272,14 +272,14 @@
     {
       "type": "Action.OpenUrl",
       "title": "View Agent Details",
-      "url": "${agent_details_url}",
-      "isVisible": "${show_action_buttons}"
+      "url": "{{agent_details_url}}",
+      "isVisible": "{{show_action_buttons}}"
     },
     {
       "type": "Action.OpenUrl",
       "title": "View Compliance Report",
-      "url": "${compliance_report_url}",
-      "isVisible": "${show_action_buttons}"
+      "url": "{{compliance_report_url}}",
+      "isVisible": "{{show_action_buttons}}"
     }
   ],
   "msteams": {
@@ -323,6 +323,7 @@
       "agent_details_url",
       "compliance_report_url"
     ],
+    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
     "usageExamples": {
       "success": {
         "status_icon": "✅",
@@ -333,7 +334,7 @@
         "show_remediation_result": "true",
         "remediation_status_text": "✅ Remediation executed successfully",
         "remediation_status_color": "Good",
-        "remediation_details": "✅ Replaced 5 principals with 2 approved security groups\\n✅ Post-remediation validation: PASSED",
+        "remediation_details": "✅ Replaced 5 principals with 2 approved security groups\\n✅ BAP API PATCH completed successfully",
         "show_current_access": "true",
         "show_error_details": "false",
         "next_steps_text": "Agent is now compliant. Sharing access restricted to approved security groups per zone policy.",

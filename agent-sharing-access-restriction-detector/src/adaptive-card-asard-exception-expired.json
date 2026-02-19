@@ -184,6 +184,7 @@
     ],
     "exceptionListFormat": "Agent: {agent_name} | Environment: {environment_name} | Expired: {expired_date} | Previous Justification: {justification_preview}",
     "cardStyle": "attention",
+    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
     "icon": "🔴"
   }
 }
