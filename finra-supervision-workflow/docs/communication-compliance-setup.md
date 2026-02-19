@@ -93,7 +93,7 @@ Repeat policy creation for each zone with appropriate sampling:
 | Setting | Value |
 |---------|-------|
 | Name | `AI Agent Supervision - Zone 1 Sampling` |
-| Sampling | 5% of messages |
+| Sampling | 5–25% of messages (varies by tier) |
 | Conditions | Same as Zone 3 |
 | Reviewers | FSW Supervisor group |
 
@@ -102,7 +102,7 @@ Repeat policy creation for each zone with appropriate sampling:
 | Setting | Value |
 |---------|-------|
 | Name | `AI Agent Supervision - Zone 2` |
-| Sampling | 25% of messages |
+| Sampling | 10–50% of messages (varies by tier) |
 | Conditions | Same as Zone 3 |
 | Reviewers | FSW Supervisor group |
 
@@ -136,7 +136,7 @@ Add these permissions:
 
 | API | Permission | Type |
 |-----|------------|------|
-| Microsoft Graph | `SecurityEvents.Read.All` | Application |
+| Microsoft Purview | Compliance Administrator role | Application |
 | Microsoft Graph | `User.Read.All` | Application |
 
 Grant admin consent after adding permissions.
@@ -164,11 +164,11 @@ Get-SupervisoryReviewPolicy |
     Format-Table
 ```
 
-### Via Graph API
+### Via Purview Compliance API
 
-```http
-GET https://graph.microsoft.com/v1.0/security/alerts_v2?$filter=alertType eq 'CommunicationCompliance'
-```
+> **Note:** The `security/alerts_v2` Graph API endpoint serves Microsoft Defender
+> alerts, not Communication Compliance alerts. Use PowerShell (shown above) or the
+> Purview Compliance portal REST API to retrieve policy IDs.
 
 Note the policy GUID values for flow configuration.
 
@@ -193,12 +193,15 @@ Note the policy GUID values for flow configuration.
 ### Verify API Access
 
 ```powershell
-# Test Graph API access
+# Test API access via PowerShell
+Connect-IPPSSession
+
+# Verify policies are visible
+Get-SupervisoryReviewPolicy | Select-Object Name, Guid, Enabled | Format-Table
+
+# Verify app registration token acquisition
 $token = Get-MsalToken -ClientId $clientId -ClientSecret $secret -TenantId $tenantId
-
-$headers = @{ Authorization = "Bearer $($token.AccessToken)" }
-
-Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/security/alerts_v2" -Headers $headers
+Write-Host "Token acquired successfully: $($token.AccessToken.Substring(0,20))..."
 ```
 
 ---

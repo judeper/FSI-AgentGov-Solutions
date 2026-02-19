@@ -183,24 +183,9 @@ No field-level security - entire table is read-only except Create.
 
 ---
 
-## Verification Script
+## Verification
 
-Verify role privileges match expected configuration:
-
-```bash
-python scripts/verify_role_privileges.py \
-    --environment-url https://org.crm.dynamics.com \
-    --role-name "FSW Admin"
-```
-
-Expected output:
-```
-Verifying role: FSW Admin
-✓ SupervisionQueue: Create=Organization, Read=Organization, Write=Organization
-✓ SupervisionLog: Create=Organization, Read=Organization, Write=None, Delete=None
-✓ SupervisionConfig: Full Organization access
-Role verification: PASSED
-```
+Verify role privileges match expected configuration by reviewing each role in the Power Platform admin center under **Settings > Security Roles**. Compare the privilege matrix above against the assigned access levels for each custom table.
 
 ---
 

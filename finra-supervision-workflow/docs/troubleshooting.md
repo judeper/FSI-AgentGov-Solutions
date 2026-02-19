@@ -48,7 +48,7 @@ Error: User does not have Dataverse System Administrator role
 
 **Resolution:**
 1. Manually create global option sets in Power Apps maker portal
-2. Re-run deploy script with `--skip-optionsets` flag
+2. Re-run deploy script with `--tables-only` flag to skip other components
 3. Or assign Solution.Add permissions to deployment account
 
 ---
@@ -64,16 +64,16 @@ Error: User does not have Dataverse System Administrator role
 **Resolution Checklist:**
 1. Verify flow is turned on
 2. Check flow run history for errors
-3. Verify Graph API permissions (`SecurityEvents.Read.All`)
+3. Verify Graph API permissions (`User.Read.All`) and Purview Compliance Administrator role
 4. Check `lastRunTime` in Key Vault isn't in the future
 5. Verify alert `alertType` matches filter condition
 
 **Quick Fix:**
 ```powershell
 # Reset lastRunTime to 1 hour ago
-az keyvault secret set \
-    --vault-name fsw-credentials-kv \
-    --name FSW-LastRunTime \
+az keyvault secret set `
+    --vault-name fsw-credentials-kv `
+    --name FSW-LastRunTime `
     --value (Get-Date).AddHours(-1).ToString("o")
 ```
 
@@ -152,8 +152,8 @@ $items = Get-CrmRecords -EntityLogicalName fsi_supervisionqueue -FilterAttribute
 
 foreach ($item in $items) {
     Set-CrmRecord -EntityLogicalName fsi_supervisionqueue -Id $item.Id -Fields @{
-        fsi_zone = 2
-        fsi_tier = 2
+        fsi_zone = 100000001
+        fsi_tier = 100000001
     }
 }
 ```
@@ -300,7 +300,7 @@ Error: Interactive authentication required
 **Cause:** Running in non-interactive context without proper credentials.
 
 **Resolution:**
-1. Use `--service-principal` flag with client ID and secret
+1. Use `--client-id <id> --client-secret <secret>` flags for non-interactive authentication
 2. Or run interactively first to cache token
 3. Verify token cache location is writable
 

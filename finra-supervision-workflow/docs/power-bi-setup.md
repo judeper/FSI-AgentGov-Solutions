@@ -42,16 +42,7 @@ The dashboard provides:
 
 ## Step 2: Configure Dataverse Connection
 
-### Option A: Using Template (Recommended)
-
-1. Download `templates/SupervisionDashboard.pbit` from this repository
-2. Open in Power BI Desktop
-3. When prompted, enter:
-   - Environment URL: `https://org.crm.dynamics.com`
-4. Sign in with organizational account
-5. Click **Load**
-
-### Option B: Manual Connection
+### Connect to Dataverse
 
 1. Open Power BI Desktop
 2. **Get Data** > **Dataverse**
@@ -68,12 +59,26 @@ The dashboard provides:
 
 ### Relationships
 
-The template includes these relationships (create if building manually):
+Create these relationships when building manually:
 
 | From | To | Cardinality | Cross Filter |
 |------|-----|-------------|--------------|
 | SupervisionLog.fsi_queueitem | SupervisionQueue.fsi_supervisionqueueid | Many-to-One | Single |
-| SupervisionQueue.fsi_zone | SupervisionConfig.fsi_zone | Many-to-One | Single |
+
+> **Important:** Do NOT create a direct relationship between SupervisionQueue and
+> SupervisionConfig on `fsi_zone` alone. SupervisionConfig has multiple rows per zone
+> (one per tier), so `fsi_zone` is not unique and cannot serve as the "one" side of a
+> Many-to-One relationship. Instead, use `LOOKUPVALUE` DAX to retrieve config values
+> by matching **both** zone and tier:
+>
+> ```dax
+> Config SLA Hours =
+> LOOKUPVALUE(
+>     SupervisionConfig[fsi_slahours],
+>     SupervisionConfig[fsi_zone], [fsi_zone],
+>     SupervisionConfig[fsi_tier], [fsi_tier]
+> )
+> ```
 
 ### Calculated Columns
 
@@ -90,7 +95,7 @@ IF(
 SLA Status =
 SWITCH(
     TRUE(),
-    [fsi_state] IN {3, 5}, "Completed",
+    [fsi_state] IN {100000002, 100000004}, "Completed",
     [fsi_sladue] < NOW(), "Breached",
     [fsi_sladue] < NOW() + 2/24, "At Risk",
     "On Track"
@@ -99,9 +104,9 @@ SWITCH(
 Zone Label =
 SWITCH(
     [fsi_zone],
-    1, "Zone 1 - Personal",
-    2, "Zone 2 - Team",
-    3, "Zone 3 - Enterprise",
+    100000000, "Zone 1 - Personal",
+    100000001, "Zone 2 - Team",
+    100000002, "Zone 3 - Enterprise",
     "Unknown"
 )
 ```
@@ -115,7 +120,7 @@ Total Queue Items = COUNTROWS(SupervisionQueue)
 Pending Items =
 CALCULATE(
     COUNTROWS(SupervisionQueue),
-    SupervisionQueue[fsi_state] = 1
+    SupervisionQueue[fsi_state] = 100000000
 )
 
 SLA Breach Rate =
@@ -137,7 +142,7 @@ CALCULATE(
 
 Approval Rate =
 DIVIDE(
-    CALCULATE(COUNTROWS(SupervisionQueue), SupervisionQueue[fsi_reviewoutcome] = 1),
+    CALCULATE(COUNTROWS(SupervisionQueue), SupervisionQueue[fsi_reviewoutcome] = 100000000),
     CALCULATE(COUNTROWS(SupervisionQueue), NOT(ISBLANK(SupervisionQueue[fsi_reviewoutcome]))),
     0
 )
@@ -272,20 +277,18 @@ For regulatory examinations, export compliance evidence:
 
 ---
 
-## Dashboard Template
+## Dashboard Reference
 
-The `templates/SupervisionDashboard.pbit` file includes:
+The dashboard setup above includes:
 
 - All pages configured
 - Calculated columns and measures
 - Relationships defined
-- Conditional formatting
+- Conditional formatting guidance
 - Default filters
 
-To use:
-1. Open in Power BI Desktop
-2. Enter Dataverse URL when prompted
-3. Publish to workspace
+> **Note:** No `.pbix` template file is included. Build the dashboard manually
+> following the steps above. A pre-built template is planned for a future release.
 
 ---
 

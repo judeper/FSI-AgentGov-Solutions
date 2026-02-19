@@ -9,7 +9,7 @@ Power Automate flow specifications for the FINRA Supervision Workflow solution.
 | FSW-IngestFlaggedItems | Scheduled (15 min) | Poll Communication Compliance for flagged items |
 | FSW-AssignmentFlow | Dataverse row created | Route items to supervisory principals |
 | FSW-EscalationFlow | Scheduled (hourly) | Monitor SLA and escalate overdue items |
-| FSW-ReviewComplete | Dataverse row updated | Log review completion, notify stakeholders |
+| FSW-ReviewComplete | Dataverse row updated | Log review completion, notify stakeholders (Approved/Rejected only) |
 
 ---
 
@@ -29,14 +29,20 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 ```
 1. Initialize variable: lastRunTime (from secure storage)
 
-2. HTTP - Get Communication Compliance Alerts
+2. HTTP - Get Communication Compliance Policy Matches
    Method: GET
-   URI: https://graph.microsoft.com/v1.0/security/alerts_v2
+   URI: https://compliance.microsoft.com/api/SupervisoryReview/Alerts
    Headers:
      Authorization: Bearer @{outputs('Get_Token')}
    Queries:
-     $filter: createdDateTime gt @{variables('lastRunTime')}
-     $filter: alertType eq 'CommunicationCompliance'
+     $filter: CreatedDate gt @{variables('lastRunTime')}
+   Note: Do NOT use the Graph API endpoint
+         https://graph.microsoft.com/v1.0/security/cases/ediscoveryCases
+         — that is the eDiscovery API, not Communication Compliance.
+         The security/alerts_v2 endpoint serves Microsoft Defender alerts,
+         also not Communication Compliance.
+   Alternative - PowerShell connector:
+     Cmdlet: Get-ComplianceCase -CaseType SupervisoryReview
 
 3. Apply to each: Alert
    3.1 Parse JSON - Extract alert details
@@ -138,7 +144,7 @@ For workload balancing when no default principal is configured:
 1. Get all users with FSW Supervisor role
 
 2. Get current queue counts per supervisor
-   - Filter: State in (Pending, InReview)
+   - Filter: State in (Pending, In Review)
    - Group by: Assigned Principal
 
 3. Select supervisor with lowest count
@@ -163,7 +169,7 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
 
 ```
 1. List SupervisionQueue - Approaching SLA
-   Filter: State in (Pending, InReview)
+   Filter: State in (Pending, In Review)
            and SLA Due lt @{addHours(utcNow(), 2)}
            and SLA Due gt @{utcNow()}
 
@@ -172,16 +178,17 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
        - "Item @{queueNumber} SLA due in @{dateDiff} hours"
 
 2. List SupervisionQueue - SLA Breached
-   Filter: State in (Pending, InReview)
+   Filter: State in (Pending, In Review)
+           and State ne Escalated
            and SLA Due lt @{utcNow()}
 
    2.1 Apply to each: Check escalation threshold
        2.1.1 Get SupervisionConfig
 
-       2.1.2 Calculate hours overdue
-             hoursOverdue = dateDiff(queuedDate, utcNow(), 'Hour')
+       2.1.2 Calculate hours since queued
+             hoursSinceQueued = dateDiff(queuedDate, utcNow(), 'Hour')
 
-       2.1.3 Condition: hoursOverdue >= escalationHours?
+       2.1.3 Condition: hoursSinceQueued >= escalationHours?
 
              If Yes:
                - Update SupervisionQueue: State = Escalated
@@ -222,14 +229,20 @@ This item has exceeded the escalation threshold and requires immediate review.
 
 ## FSW-ReviewComplete
 
-Triggered when a supervisor completes a review (State changes to Approved/Rejected/Escalated).
+Triggered when a supervisor completes a review (State changes to Approved or Rejected).
+
+> **Note:** This flow does NOT trigger on State = Escalated. Escalation is handled
+> exclusively by FSW-EscalationFlow to prevent infinite escalation cycles. If both
+> flows acted on escalated items, a loop could occur: EscalationFlow sets
+> State = Escalated → ReviewComplete resets State = Pending → EscalationFlow
+> re-escalates the same item.
 
 ### Trigger
 
 **When a row is modified (Dataverse)**
 - Table: SupervisionQueue
 - Scope: Organization
-- Filter: State has changed AND State in (Approved, Rejected, Escalated)
+- Filter: State has changed AND State in (Approved, Rejected)
 
 ### Actions
 
@@ -241,18 +254,8 @@ Triggered when a supervisor completes a review (State changes to Approved/Reject
    - Timestamp: @{utcNow()}
    - Details: @{triggerBody().reviewNotes}
 
-2. Condition: Outcome = Escalated?
-
-   2.1 If Yes:
-       - Get SupervisionConfig
-       - Reassign to escalationTo
-       - Reset SLA Due
-       - Update State to Pending
-       - Notify escalation recipient
-
-   2.2 If No (Approved or Rejected):
-       - Update State (already set by trigger)
-       - Close workflow
+2. Update State (already set by trigger)
+   - Close workflow
 
 3. Optional: Notify requester/stakeholders
    - If Rejected, may need follow-up action
@@ -270,7 +273,7 @@ All flows should use a dedicated service principal:
 
 1. Create app registration: `FSW-Automation-SP`
 2. Grant API permissions:
-   - Microsoft Graph: `SecurityEvents.Read.All`
+   - Purview: Compliance Administrator role (for Communication Compliance access)
    - Dataverse: `user_impersonation`
 3. Create client secret, store in Key Vault
 4. Use "HTTP with Azure AD" connector
@@ -279,7 +282,7 @@ All flows should use a dedicated service principal:
 
 | Flow | Required Permissions |
 |------|---------------------|
-| IngestFlaggedItems | Graph: SecurityEvents.Read.All |
+| IngestFlaggedItems | Purview: Compliance Administrator role |
 | AssignmentFlow | Dataverse: FSW Admin role |
 | EscalationFlow | Dataverse: FSW Admin role |
 | ReviewComplete | Dataverse: FSW Admin role |

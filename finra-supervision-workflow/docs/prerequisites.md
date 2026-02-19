@@ -107,7 +107,7 @@ If creating a new environment:
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `SecurityEvents.Read.All` | Application | Read Communication Compliance alerts |
+| Compliance Administrator role | Application | Access Communication Compliance alerts via Purview API |
 | `User.Read.All` | Application | Look up supervisor users |
 
 ### Power Platform API
