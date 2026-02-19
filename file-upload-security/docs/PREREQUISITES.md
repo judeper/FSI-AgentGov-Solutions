@@ -6,7 +6,6 @@
 
 | Permission | Scope | Purpose |
 |-----------|-------|---------|
-| Application.Read.All | Delegated or Application | Enumerate Entra ID app registrations |
 | Environment.Read | Power Platform | Enumerate environments |
 | Dynamics CRM user_impersonation | Delegated | Read/write Dataverse tables |
 
@@ -50,7 +49,6 @@ Required packages:
 2. Name: `FSI-FileUploadSecurity` (or your naming convention)
 3. Supported account types: **Single tenant**
 4. Add API permissions:
-   - Microsoft Graph: `Application.Read.All`
    - Dynamics CRM: `user_impersonation`
 5. Grant admin consent
 6. Create a certificate for non-interactive authentication:
@@ -60,7 +58,7 @@ Required packages:
        -KeySpec Signature `
        -KeyLength 2048 `
        -NotAfter (Get-Date).AddYears(2) `
-       -CertStoreLocation "Cert:\CurrentUser\My"
+       -CertStoreLocation "Cert:\LocalMachine\My"
    ```
 7. Upload the certificate public key (`.cer`) to the app registration
 
@@ -74,6 +72,14 @@ Set these for CLI-based deployment:
 | `FUS_CLIENT_ID` | App registration client ID | `12345-abcd-...` |
 | `FUS_CLIENT_SECRET` | Client secret (dev only) | `***` |
 | `FUS_DATAVERSE_URL` | Dataverse org URL | `https://governance.crm.dynamics.com` |
+
+## External Dependencies
+
+### Shared Zone Classification Script
+
+The zone classification logic (`scripts/private/Get-ZoneClassification.ps1`) delegates to a shared module at `scripts/shared/Get-ZoneClassification.ps1` in the parent repository. This shared script provides canonical environment-to-zone mapping used across all FSI Agent Governance solutions (ACV, SSC, AAM, CMM, FUS).
+
+Ensure the shared scripts directory is available at the expected relative path, or provide zone classification via the ELM Dataverse lookup (pass `-DataverseUrl` to `Get-AgentFileUploadSettings`).
 
 ## Network Requirements
 

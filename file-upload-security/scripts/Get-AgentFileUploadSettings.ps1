@@ -46,7 +46,7 @@ function Get-AgentFileUploadSettings {
         Exclude the default environment from the scan.
 
     .PARAMETER GracePeriodHours
-        Exclude environments created within this many hours. Valid range: 0-168 (default: 48).
+        Exclude environments created within this many hours. Valid range: 0-168 (default: 24).
 
     .PARAMETER IncludeDrafts
         Include draft/unpublished agents. By default, only published (active) agents
@@ -96,7 +96,7 @@ function Get-AgentFileUploadSettings {
 
         [Parameter()]
         [ValidateRange(0, 168)]
-        [int]$GracePeriodHours = 48,
+        [int]$GracePeriodHours = 24,
 
         [Parameter()]
         [switch]$IncludeDrafts,

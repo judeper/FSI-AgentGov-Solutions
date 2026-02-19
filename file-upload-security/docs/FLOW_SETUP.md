@@ -46,7 +46,7 @@ After import, edit the flow and update these variables:
 | `fsi_cr_dataverse_fileuploadsecurity` | Dataverse | Select existing connection |
 | `fsi_cr_office365_fileuploadsecurity` | Office 365 | Select existing connection |
 | `fsi_cr_teams_fileuploadsecurity` | Teams | Select existing connection |
-| Azure Automation | Azure Automation | Create or select connection |
+| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation | Create or select connection |
 
 ### 4. Test
 

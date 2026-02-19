@@ -18,7 +18,12 @@
         },
         "timeZone": "UTC"
       },
-      "type": "Recurrence"
+      "type": "Recurrence",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "runs": 1
+        }
+      }
     }
   },
   "actions": {
@@ -209,7 +214,10 @@
               }
             }
           },
-          "description": "Start Azure Automation runbook for file upload compliance validation"
+          "description": "Start Azure Automation runbook for file upload compliance validation",
+          "runtimeConfiguration": {
+            "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+          }
         },
         "Wait_For_Job": {
           "runAfter": {
@@ -250,7 +258,10 @@
                   "x-ms-api-version": "2015-10-31"
                 }
               },
-              "description": "Check runbook job status"
+              "description": "Check runbook job status",
+              "runtimeConfiguration": {
+                "retryPolicy": { "count": 3, "interval": "PT10S", "type": "exponential", "minimumInterval": "PT5S", "maximumInterval": "PT1M" }
+              }
             }
           },
           "description": "Wait until runbook job completes or fails (max 2 hours)"
@@ -301,7 +312,10 @@
                   "Importance": "High"
                 }
               },
-              "description": "Send email notification on job failure. Connection: fsi_cr_office365_fileuploadsecurity"
+              "description": "Send email notification on job failure. Connection: fsi_cr_office365_fileuploadsecurity",
+              "runtimeConfiguration": {
+                "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+              }
             },
             "Terminate_Failed": {
               "runAfter": {
@@ -335,7 +349,10 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "runtimeConfiguration": {
+            "retryPolicy": { "count": 3, "interval": "PT10S", "type": "exponential", "minimumInterval": "PT5S", "maximumInterval": "PT1M" }
+          }
         },
         "Parse_Results": {
           "runAfter": {
@@ -348,6 +365,7 @@
               "type": "object",
               "properties": {
                 "RunType": { "type": "string" },
+                "RunId": { "type": "string" },
                 "Timestamp": { "type": "string" },
                 "TotalAgents": { "type": "integer" },
                 "TotalEnvironments": { "type": "integer" },
@@ -394,7 +412,7 @@
                       "EnvironmentName": { "type": "string" },
                       "Zone": { "type": "string" },
                       "ViolationType": { "type": "string" },
-                      "FileUploadExpected": { "type": "boolean" },
+                      "FileUploadExpected": { "type": "string" },
                       "FileUploadActual": { "type": "boolean" },
                       "ContentModerationLevel": { "type": "string" },
                       "ModerationMinimum": { "type": "string" },
@@ -429,6 +447,8 @@
                     }
                   }
                 },
+                "ComplianceRate": { "type": "number" },
+                "ScanDurationSeconds": { "type": "integer" },
                 "AlertRequired": { "type": "boolean" },
                 "AlertSeverity": { "type": "string" }
               }
@@ -448,7 +468,7 @@
               }
             },
             "method": "post",
-            "path": "/api/data/v9.2/fsi_fileupload_validationhistory",
+            "path": "/api/data/v9.2/fsi_fileupload_validationhistorys",
             "headers": {
               "Content-Type": "application/json",
               "OData-MaxVersion": "4.0",
@@ -456,17 +476,21 @@
             },
             "body": {
               "fsi_name": "FileUploadScan-@{body('Parse_Results')?['Timestamp']}",
-              "fsi_run_id": "@{guid()}",
-              "fsi_overall_status": "@{body('Parse_Results')?['OverallStatus']}",
+              "fsi_run_id": "@{body('Parse_Results')?['RunId']}",
               "fsi_violation_count": "@{length(body('Parse_Results')?['Violations'])}",
               "fsi_total_agents": "@{body('Parse_Results')?['TotalAgents']}",
               "fsi_file_upload_enabled_count": "@{body('Parse_Results')?['FileUploadEnabledCount']}",
-              "fsi_environments_scanned": "@{string(body('Parse_Results')?['TotalEnvironments'])}",
-              "fsi_summary_json": "@{string(body('Parse_Results'))}",
-              "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}"
+              "fsi_environments_scanned": "@{int(body('Parse_Results')?['TotalEnvironments'])}",
+              "fsi_run_timestamp": "@{body('Parse_Results')?['Timestamp']}",
+              "fsi_compliant_count": "@{sub(body('Parse_Results')?['TotalAgents'], length(body('Parse_Results')?['Violations']))}",
+              "fsi_compliance_rate": "@{body('Parse_Results')?['ComplianceRate']}",
+              "fsi_scan_duration_seconds": "@{body('Parse_Results')?['ScanDurationSeconds']}"
             }
           },
-          "description": "Write validation results to Dataverse immutable audit trail. Runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_fileuploadsecurity"
+          "description": "Write validation results to Dataverse immutable audit trail. Runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_fileuploadsecurity",
+          "runtimeConfiguration": {
+            "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+          }
         },
         "Check_Alert_Required": {
           "runAfter": {
@@ -530,13 +554,16 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone Summary\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Zone 1 (Personal)\",\"value\":\"${Z1Compliant}/${Z1Total} compliant\"},{\"title\":\"Zone 2 (Team)\",\"value\":\"${Z2Compliant}/${Z2Total} compliant\"},{\"title\":\"Zone 3 (Enterprise)\",\"value\":\"${Z3Compliant}/${Z3Total} compliant\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
                           }
                         ]
                       }
                     }
                   },
-                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity. Connection: fsi_cr_teams_fileuploadsecurity"
+                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity. Connection: fsi_cr_teams_fileuploadsecurity",
+                  "runtimeConfiguration": {
+                    "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+                  }
                 }
               },
               "else": {
@@ -564,7 +591,10 @@
                   "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
-              "description": "Send email alert to compliance distribution list. Connection: fsi_cr_office365_fileuploadsecurity"
+              "description": "Send email alert to compliance distribution list. Connection: fsi_cr_office365_fileuploadsecurity",
+              "runtimeConfiguration": {
+                "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+              }
             }
           },
           "else": {
@@ -599,7 +629,10 @@
               "Importance": "High"
             }
           },
-          "description": "Send CRITICAL error notification when the flow itself fails"
+          "description": "Send CRITICAL error notification when the flow itself fails",
+          "runtimeConfiguration": {
+            "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
+          }
         }
       },
       "runAfter": {

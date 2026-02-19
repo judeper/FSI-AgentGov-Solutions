@@ -44,7 +44,7 @@ Import-Module ./scripts/private/FUSClient.psm1
 ./scripts/Test-FileUploadCompliance.ps1 -DryRun
 
 # Target specific environment
-./scripts/Test-FileUploadCompliance.ps1 -EnvironmentFilter "prod-*" -OutputFormat JSON
+./scripts/Test-FileUploadCompliance.ps1 -IncludeEnvironments "prod-*" -OutputFormat JSON
 
 # Include compliant agents in output
 ./scripts/Test-FileUploadCompliance.ps1 -IncludeCompliant -OutputFormat CSV
@@ -59,7 +59,7 @@ Import-Module ./scripts/private/FUSClient.psm1
 ### Export Evidence
 
 ```powershell
-./scripts/Export-FileUploadEvidence.ps1 -OutputPath ./evidence -IncludeHash
+./scripts/Export-FileUploadEvidence.ps1 -TenantId $tid -DataverseUrl $url -OutputPath ./evidence -Interactive
 ```
 
 ## Architecture
@@ -118,10 +118,18 @@ The following placeholder values in solution files must be replaced with your or
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/fileupload-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/fileupload-validation-flow.json` |
+| `your-client-id-here` | Service principal app (client) ID | `src/fileupload-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Certificate thumbprint for Automation Account | `src/fileupload-validation-flow.json` |
+| `your-subscription-id-here` | Azure subscription ID | `src/fileupload-validation-flow.json` |
+| `your-teams-group-id-here` | Target Teams group (team) ID | `src/fileupload-validation-flow.json` |
+| `your-teams-channel-id-here` | Target Teams channel ID | `src/fileupload-validation-flow.json` |
+| `https://governance.crm.dynamics.com` | Your Dataverse org URL | `src/fileupload-validation-flow.json` |
+
+See [FLOW_SETUP.md](docs/FLOW_SETUP.md) for the complete list of flow variables and deployment steps.
 
 ## Related Controls
 
-- **1.14** — Data Minimizationand Agent Scope Control (primary)
+- **1.14** — Data Minimization and Agent Scope Control (primary)
 - **1.8** — Content Moderation Configuration (cross-check)
 - **1.4** — Connector and DLP Policies (data boundary)
 

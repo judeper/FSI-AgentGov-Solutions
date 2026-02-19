@@ -1,4 +1,5 @@
 {
+  "_designNote": "Reference template only. The flow (fileupload-validation-flow.json) constructs its card inline with a replace chain. This file documents the full card schema including Zone Summary, Violations, and Drift Detection sections for design reference.",
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "version": "1.4",

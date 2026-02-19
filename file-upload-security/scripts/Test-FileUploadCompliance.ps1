@@ -40,7 +40,7 @@ param(
 
     [Parameter()]
     [ValidateRange(0, 168)]
-    [int]$GracePeriodHours = 48,
+    [int]$GracePeriodHours = 24,
 
     #endregion
 
@@ -162,7 +162,7 @@ if ($ExcludeEnvironments)  { $getParams['ExcludeEnvironments']  = $ExcludeEnviro
 if ($ExcludeSandbox)       { $getParams['ExcludeSandbox']       = $true }
 if ($ExcludeTrial)         { $getParams['ExcludeTrial']         = $true }
 if ($ExcludeDefault)       { $getParams['ExcludeDefault']       = $true }
-if ($GracePeriodHours)     { $getParams['GracePeriodHours']     = $GracePeriodHours }
+$getParams['GracePeriodHours'] = $GracePeriodHours
 if ($IncludeDrafts)        { $getParams['IncludeDrafts']        = $true }
 if ($DataverseUrl)         { $getParams['DataverseUrl']         = $DataverseUrl }
 if ($Top -gt 0)            { $getParams['Top']                  = $Top }
@@ -200,20 +200,24 @@ $severitySummary = @{
     Critical = ($violations | Where-Object { $_.Severity -eq 'Critical' }).Count
     High     = ($violations | Where-Object { $_.Severity -eq 'High' }).Count
     Medium   = ($violations | Where-Object { $_.Severity -eq 'Medium' }).Count
+    Low      = ($violations | Where-Object { $_.Severity -eq 'Low' }).Count
     Warning  = ($violations | Where-Object { $_.Severity -eq 'Warning' }).Count
+    Info     = ($violations | Where-Object { $_.Severity -eq 'Info' }).Count
 }
 
 Write-Host "        Compliant: $compliant / $totalAgents" -ForegroundColor $(if ($violations.Count -eq 0) { 'Green' } else { 'Yellow' })
 
 if ($violations.Count -gt 0) {
     Write-Host "        Violations: $($violations.Count)" -ForegroundColor Red
-    foreach ($sev in @('Critical', 'High', 'Medium', 'Warning')) {
+    foreach ($sev in @('Critical', 'High', 'Medium', 'Low', 'Warning', 'Info')) {
         if ($severitySummary[$sev] -gt 0) {
             $color = switch ($sev) {
                 'Critical' { 'Red' }
                 'High'     { 'Red' }
                 'Medium'   { 'Yellow' }
+                'Low'      { 'Cyan' }
                 'Warning'  { 'Yellow' }
+                'Info'     { 'Cyan' }
             }
             Write-Host "          $($sev): $($severitySummary[$sev])" -ForegroundColor $color
         }

@@ -42,8 +42,8 @@
             "regulations": ["FINRA 4511", "SEC 17a-3"]
         },
         "Zone2_FileUploadEnabled_NoApproval": {
-            "severity": "High",
-            "description": "File upload enabled in Zone 2 without documented approval",
+            "severity": "Info",
+            "description": "File upload enabled in Zone 2 with sufficient moderation but approval not programmatically verifiable",
             "regulations": ["FINRA 4511", "GLBA 501(b)"]
         },
         "Unknown_Zone_FileUploadEnabled": {
@@ -52,7 +52,7 @@
             "regulations": ["FINRA 4511"]
         },
         "Zone1_NoModeration": {
-            "severity": "Warning",
+            "severity": "Low",
             "description": "File upload enabled in Zone 1 without content moderation configured",
             "regulations": ["FINRA 25-07"]
         }

@@ -74,7 +74,7 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter()]
-    [string]$ClientSecret,
+    [securestring]$ClientSecret,
 
     [Parameter()]
     [string]$DataverseUrl,
@@ -106,6 +106,7 @@ $ErrorActionPreference = 'Stop'
 $privatePath = Join-Path $PSScriptRoot 'private'
 
 . (Join-Path $privatePath 'Test-ParameterValidation.ps1')
+. (Join-Path $privatePath 'Get-ZoneClassification.ps1')
 
 Import-Module (Join-Path $privatePath 'FUSClient.psm1') -Force
 
@@ -134,14 +135,27 @@ if (-not $DataverseUrl) {
 # ── Connect to Dataverse ──────────────────────────────────────────
 Write-Host 'Step 1/3: Connecting to Dataverse...' -ForegroundColor Cyan
 
-$connParams = @{ TenantId = $TenantId; DataverseUrl = $DataverseUrl }
-if ($ClientId) { $connParams.ClientId = $ClientId }
-if ($CertificateThumbprint) { $connParams.CertificateThumbprint = $CertificateThumbprint }
-if ($ClientSecret) { $connParams.ClientSecret = $ClientSecret }
+# Acquire access token for Dataverse
+$accessToken = $null
+if ($ClientId -and $CertificateThumbprint) {
+    Import-Module MSAL.PS -ErrorAction Stop
+    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
+    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+    $tokenResult = Get-MsalToken -ClientId $ClientId -ClientCertificate $cert `
+        -TenantId $TenantId -Scopes $dataverseScope -ErrorAction Stop
+    $accessToken = $tokenResult.AccessToken
+} elseif ($ClientId -and $ClientSecret) {
+    Import-Module MSAL.PS -ErrorAction Stop
+    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+    $tokenResult = Get-MsalToken -ClientId $ClientId -ClientSecret $ClientSecret `
+        -TenantId $TenantId -Scopes $dataverseScope -ErrorAction Stop
+    $accessToken = $tokenResult.AccessToken
+}
 
-$connection = Connect-FUSDataverse @connParams
+Connect-FUSDataverse -DataverseUrl $DataverseUrl -AccessToken $accessToken
 
-if (-not $connection) {
+$fusConn = Get-FUSConnection
+if (-not $fusConn.IsConnected) {
     throw 'Failed to connect to Dataverse. Verify credentials and URL.'
 }
 
@@ -150,31 +164,35 @@ Write-Host "  Connected successfully.`n" -ForegroundColor Green
 # ── Enumerate Agents ─────────────────────────────────────────────
 Write-Host 'Step 2/3: Enumerating agents...' -ForegroundColor Cyan
 
-$agents = Get-AgentBots -Connection $connection
+$agents = Get-AgentBots -DataverseUrl $DataverseUrl -AccessToken $fusConn.AccessToken
 
-if ($EnvironmentFilter -ne '*') {
-    $agents = $agents | Where-Object { $_.EnvironmentName -like $EnvironmentFilter }
+# Derive environment info from DataverseUrl (all bots come from a single environment)
+$envName = ([Uri]$DataverseUrl).Host.Split('.')[0]
+$envId = $DataverseUrl
+
+if ($EnvironmentFilter -ne '*' -and $envName -notlike $EnvironmentFilter) {
+    Write-Host "  Environment '$envName' does not match filter '$EnvironmentFilter'. Skipping." -ForegroundColor Yellow
+    return
 }
 
 if ($AgentFilter -ne '*') {
-    $agents = $agents | Where-Object { $_.AgentName -like $AgentFilter }
+    $agents = $agents | Where-Object { $_.name -like $AgentFilter }
 }
 
 # Enrich with zone and file upload status
 $enriched = foreach ($agent in $agents) {
-    $agentZone = Get-ZoneClassification -EnvironmentId $agent.EnvironmentId -Connection $connection
-    $fileUploadEnabled = Get-BotFileUploadEnabled -BotId $agent.AgentId -Connection $connection
-    $moderationLevel = Get-BotModerationLevel -BotId $agent.AgentId -Connection $connection
+    $agentZone = Get-ZoneClassification -EnvironmentId $envId -EnvironmentDisplayName $envName
+    $fileUploadEnabled = Get-BotFileUploadEnabled -Bot $agent
+    $moderationLevel = Get-BotModerationLevel -Bot $agent
 
     [PSCustomObject]@{
-        AgentId              = $agent.AgentId
-        AgentName            = $agent.AgentName
-        EnvironmentId        = $agent.EnvironmentId
-        EnvironmentName      = $agent.EnvironmentName
+        AgentId              = $agent.botid
+        AgentName            = $agent.name
+        EnvironmentId        = $envId
+        EnvironmentName      = $envName
         Zone                 = $agentZone
         FileUploadEnabled    = $fileUploadEnabled
         ContentModerationLevel = $moderationLevel
-        OwnerEmail           = $agent.OwnerEmail
     }
 }
 
@@ -201,10 +219,10 @@ $results = @()
 
 foreach ($agent in $enriched) {
     # Check existing baseline
-    $existing = Get-FUSLastBaseline -AgentId $agent.AgentId -Connection $connection
+    $existing = Get-FileUploadBaseline -AgentId $agent.AgentId
 
     if ($existing -and -not $OverwriteExisting) {
-        Write-Host "  SKIP: $($agent.AgentName) — baseline exists (captured $($existing.CapturedOn))" -ForegroundColor Yellow
+        Write-Host "  SKIP: $($agent.AgentName) — baseline exists (captured $($existing[0].CapturedAt))" -ForegroundColor Yellow
         $skipped++
         $results += [PSCustomObject]@{
             AgentName   = $agent.AgentName
@@ -212,7 +230,7 @@ foreach ($agent in $enriched) {
             Status      = 'Skipped'
             FileUpload  = $agent.FileUploadEnabled
             Moderation  = $agent.ContentModerationLevel
-            CapturedOn  = $existing.CapturedOn
+            CapturedOn  = if ($existing) { $existing[0].CapturedAt } else { $null }
         }
         continue
     }
@@ -232,14 +250,21 @@ foreach ($agent in $enriched) {
         fsi_content_moderation_level = $agent.ContentModerationLevel
         fsi_baseline_captured_on  = (Get-Date).ToUniversalTime().ToString('o')
         fsi_baseline_captured_by  = $env:USERNAME
-        fsi_owner_email           = $agent.OwnerEmail
     }
 
     if ($DryRun) {
         Write-Host "  DRY RUN: Would capture baseline for $($agent.AgentName) [Zone: $($agent.Zone), Upload: $($agent.FileUploadEnabled)]" -ForegroundColor DarkYellow
     }
     elseif ($PSCmdlet.ShouldProcess($agent.AgentName, 'Capture file upload baseline')) {
-        Save-FUSBaseline -Record $baselineRecord -Connection $connection
+        Save-FUSBaseline `
+            -EnvironmentGuid $agent.EnvironmentId `
+            -EnvironmentName $agent.EnvironmentName `
+            -Zone $agent.Zone `
+            -AgentId $agent.AgentId `
+            -AgentName $agent.AgentName `
+            -FileUploadEnabled ([bool]$agent.FileUploadEnabled) `
+            -ModerationLevel $agent.ContentModerationLevel `
+            -CapturedBy $env:USERNAME
         Write-Host "  CAPTURED: $($agent.AgentName) [Zone: $($agent.Zone), Upload: $($agent.FileUploadEnabled)]" -ForegroundColor Green
     }
 

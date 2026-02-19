@@ -101,6 +101,10 @@ Import-Module (Join-Path $scriptRoot 'private' 'FUSClient.psm1') -Force
 # ── Authenticate ──────────────────────────────────────────────────
 Write-Host 'Authenticating to Dataverse...' -ForegroundColor Cyan
 
+if (-not $DataverseUrl) {
+    throw 'DataverseUrl is required. Provide via -DataverseUrl parameter.'
+}
+
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
 if ($Interactive) {
@@ -114,7 +118,7 @@ if ($Interactive) {
     if (-not $CertificateThumbprint) {
         throw 'CertificateThumbprint required for non-interactive auth. Use -Interactive for browser auth.'
     }
-    $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
+    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
     $tokenResult = Get-MsalToken `
         -ClientId $ClientId `
         -ClientCertificate $cert `
@@ -137,6 +141,10 @@ if ($EndDate) {
     $filters += "fsi_run_timestamp le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
+    # Sanitize RunId to prevent OData filter injection
+    if ($RunId -notmatch '^[0-9a-fA-F\-]{1,64}$') {
+        throw "Invalid RunId format. Expected a GUID or alphanumeric identifier."
+    }
     $filters += "fsi_run_id eq '$RunId'"
 }
 
@@ -156,13 +164,18 @@ $headers = @{
 
 $baseUrl = "$($connection.DataverseUrl)/api/data/v9.2"
 
-$historyUrl = "$baseUrl/fsi_fileupload_validationhistory"
+$historyUrl = "$baseUrl/fsi_fileupload_validationhistorys"
 if ($filterString) {
     $historyUrl += "?`$filter=$filterString"
 }
 
-$historyResponse = Invoke-RestMethod -Uri $historyUrl -Headers $headers -Method Get
-$validations = $historyResponse.value
+$validations = @()
+$nextLink = $historyUrl
+while ($nextLink) {
+    $historyResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+    $validations += $historyResponse.value
+    $nextLink = $historyResponse.'@odata.nextLink'
+}
 Write-Host "  Found $($validations.Count) validation record(s)." -ForegroundColor Green
 
 # ── Query Violations ─────────────────────────────────────────────
@@ -176,27 +189,38 @@ if ($EndDate) {
     $violationFilters += "fsi_detected_on le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
+    # RunId already validated above
     $violationFilters += "fsi_run_id eq '$RunId'"
 }
 
 $violationFilterString = if ($violationFilters.Count -gt 0) { $violationFilters -join ' and ' } else { '' }
 
-$violationUrl = "$baseUrl/fsi_fileupload_violation"
+$violationUrl = "$baseUrl/fsi_fileupload_violations"
 if ($violationFilterString) {
     $violationUrl += "?`$filter=$violationFilterString"
 }
 
-$violationResponse = Invoke-RestMethod -Uri $violationUrl -Headers $headers -Method Get
-$violations = $violationResponse.value
+$violations = @()
+$nextLink = $violationUrl
+while ($nextLink) {
+    $violationResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+    $violations += $violationResponse.value
+    $nextLink = $violationResponse.'@odata.nextLink'
+}
 Write-Host "  Found $($violations.Count) violation(s)." -ForegroundColor Green
 
 # ── Query Baselines (Optional) ───────────────────────────────────
 $baselines = @()
 if ($IncludeBaselines) {
     Write-Host 'Querying baselines...' -ForegroundColor Cyan
-    $baselineUrl = "$baseUrl/fsi_fileupload_baseline"
-    $baselineResponse = Invoke-RestMethod -Uri $baselineUrl -Headers $headers -Method Get
-    $baselines = $baselineResponse.value
+    $baselineUrl = "$baseUrl/fsi_fileupload_baselines"
+    $baselines = @()
+    $nextLink = $baselineUrl
+    while ($nextLink) {
+        $baselineResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
+        $baselines += $baselineResponse.value
+        $nextLink = $baselineResponse.'@odata.nextLink'
+    }
     Write-Host "  Found $($baselines.Count) baseline(s)." -ForegroundColor Green
 }
 

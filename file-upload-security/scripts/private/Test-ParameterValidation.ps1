@@ -34,7 +34,7 @@ function Test-EnvironmentFilter {
         [switch]$ExcludeTrial,
 
         [Parameter()]
-        [int]$GracePeriodHours = 48
+        [int]$GracePeriodHours = 24
     )
 
     # Mutual exclusivity check

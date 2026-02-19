@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Create Dataverse connection references for File Upload Security Configurator.
 
-Provisions three connection references for the FUS solution:
+Provisions four connection references for the FUS solution:
   - Dataverse (for baseline/violation storage)
   - Office 365 (for owner resolution and email notifications)
   - Teams (for adaptive card violation alerts)
+  - Azure Automation (for scheduled runbook execution)
 
 All operations are idempotent — existing references are skipped.
 
@@ -47,6 +48,15 @@ CONNECTION_REFERENCES = [
         "description": (
             "Teams connection for File Upload Security Configurator. "
             "Used to post adaptive card violation alerts to governance channels."
+        ),
+    },
+    {
+        "connectionreferencedisplayname": "FUS - Azure Automation",
+        "connectionreferencelogicalname": "fsi_cr_azureautomation_fileuploadsecurity",
+        "connectorid": "/providers/Microsoft.PowerApps/apis/shared_azureautomation",
+        "description": (
+            "Azure Automation connection for File Upload Security Configurator. "
+            "Used to trigger the file upload validation runbook on a scheduled basis."
         ),
     },
 ]

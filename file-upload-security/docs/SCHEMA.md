@@ -15,7 +15,7 @@
 | `fsi_environment_name` | String(500) | No | Environment display name |
 | `fsi_zone` | Picklist | No | Governance zone (fsi_acv_zone: Zone 1/2/3) |
 | `fsi_file_upload_enabled` | Boolean | No | Whether file upload is enabled |
-| `fsi_content_moderation_level` | String(50) | No | Content moderation level (Low/Medium/High) |
+| `fsi_content_moderation_level` | String(50) | No | Content moderation level (Low/Medium/High/Highest) |
 | `fsi_baseline_captured_on` | DateTime | No | When baseline was captured |
 | `fsi_baseline_captured_by` | String(200) | No | Who captured the baseline |
 | `fsi_owner_email` | String(320) | No | Agent owner email |
@@ -52,7 +52,7 @@
 | `fsi_environment_name` | String(500) | No | Environment display name |
 | `fsi_zone` | Picklist | No | Governance zone |
 | `fsi_severity` | Picklist | No | Violation severity (fsi_acv_severity) |
-| `fsi_violation_type` | String(100) | No | Type: FileUploadNotAllowed, ModerationInsufficient |
+| `fsi_violation_type` | String(100) | No | Type: Zone3_FileUploadEnabled_NoApproval, Zone3_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_NoApproval, Zone2_FileUploadEnabled_InsufficientModeration, Zone1_NoModeration, Unknown_Zone_FileUploadEnabled, EvaluationFailed |
 | `fsi_file_upload_expected` | Boolean | No | Expected file upload status per zone |
 | `fsi_file_upload_actual` | Boolean | No | Actual file upload status |
 | `fsi_content_moderation_level` | String(50) | No | Current moderation level |
@@ -105,6 +105,7 @@ These option sets are shared across ACV/SSC/AAM/CMM/FUS solutions:
 | `fsi_cr_dataverse_fileuploadsecurity` | Dataverse | Baseline/violation storage |
 | `fsi_cr_office365_fileuploadsecurity` | Office 365 | Email notifications |
 | `fsi_cr_teams_fileuploadsecurity` | Teams | Adaptive card alerts |
+| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation | Runbook execution |
 
 ---
 
