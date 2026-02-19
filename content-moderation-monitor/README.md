@@ -143,6 +143,8 @@ The following placeholder values in solution files must be replaced with your or
 | `aa-content-moderation-monitor` | Your Azure Automation account name | `src/moderation-validation-flow.json` |
 | `your-teams-group-id-here` | Your Microsoft Teams group (team) ID | `src/moderation-validation-flow.json` |
 | `your-teams-channel-id-here` | Your Microsoft Teams channel ID | `src/moderation-validation-flow.json` |
+| `${ManualCheckUrl}` | URL for manual compliance check (e.g., runbook trigger or portal page) | `src/adaptive-card-moderation-alert.json` |
+| `${DocumentationUrl}` | URL for control documentation (e.g., GitHub Pages site for Control 1.27) | `src/adaptive-card-moderation-alert.json` |
 
 ## Documentation
 

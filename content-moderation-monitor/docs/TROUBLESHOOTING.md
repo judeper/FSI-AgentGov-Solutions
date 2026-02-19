@@ -49,7 +49,7 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 | Drift always detected | Baseline agent ID does not match current bot GUID | Re-capture baselines; bot GUIDs may change after republish |
 | Baseline deactivation failure | Dataverse update permission missing | Verify executing identity has write access to `fsi_moderationbaselines` table |
 | Runbook timeout on large tenant | Many environments with many agents per environment | Increase Azure Automation job timeout; consider filtering by zone (`-Zone 3`) |
-| Stale baseline warning | Baseline older than `fsi_CMM_BaselineAgeThresholdDays` | Re-capture baselines to refresh timestamps |
+| Stale baseline warning | Baseline older than `fsi_CMM_BaselineMaxAgeDays` | Re-capture baselines to refresh timestamps |
 
 ---
 

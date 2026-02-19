@@ -76,7 +76,7 @@
     - Timestamp: ISO 8601 UTC timestamp
     - TotalAgents: Count of scanned agents
     - TotalEnvironments: Count of scanned environments
-    - OverallStatus: Passed | Warning | Failed | Error
+    - OverallStatus: Passed | Critical | Failed | Review | Error
     - Reason: Summary explanation
     - ZoneSummary: Hashtable with Zone1/Zone2/Zone3 sub-objects { Total, Compliant, Violations }
     - Violations: Array of violation details
@@ -239,8 +239,10 @@ try {
     # Dot-source the script to load the function
     . $complianceScript
 
+    # Note: PersistResults is intentionally NOT set here. The Power Automate
+    # flow's Write_Validation_History action handles Dataverse persistence
+    # to avoid duplicate history records with uncorrelated run_ids.
     $scanParams = @{
-        PersistResults   = $true
         DataverseUrl     = $DataverseUrl
         DataverseToken   = $dataverseToken
         OutputFormat     = 'Object'
@@ -264,6 +266,8 @@ try {
     # Calculate summary from scan results
     $totalAgents = $scanResult.Count
     $uniqueEnvs = ($scanResult | Select-Object -Property EnvironmentId -Unique).Count
+    $environmentNameList = ($scanResult | Select-Object -Property EnvironmentDisplayName -Unique |
+        ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
     $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
@@ -276,11 +280,11 @@ try {
 
     $overallStatus = 'Passed'
     if ($criticalCount -gt 0) {
-        $overallStatus = 'Failed'
+        $overallStatus = 'Critical'
     } elseif ($highCount -gt 0) {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $violationCount -gt 0) {
-        $overallStatus = 'Warning'
+        $overallStatus = 'Review'
     }
 
     Write-Verbose "Scan complete. Overall status: $overallStatus"
@@ -408,8 +412,8 @@ try {
     $hasWeakenedDrift = @($driftedAgents | Where-Object { $_.Direction -eq 'Weakened' }).Count -gt 0
     $alertRequired = $hasViolations -or $hasWeakenedDrift
 
-    # Highest severity from violations (Critical > High > Warning > Info)
-    $severityOrder = @('Critical', 'High', 'Warning', 'Info')
+    # Highest severity from violations (Critical > High > Medium > Warning > Info)
+    $severityOrder = @('Critical', 'High', 'Medium', 'Warning', 'Info')
     $alertSeverity = $overallStatus
 
     if ($hasViolations) {
@@ -429,10 +433,11 @@ try {
 
     # Build reason string
     $reason = switch ($overallStatus) {
-        'Passed'  { "All $totalAgents agents across $uniqueEnvs environments compliant" }
-        'Warning' { "$violationCount violation(s) detected across $uniqueEnvs environments" }
-        'Failed'  { "$violationCount violation(s) detected including high/critical severity" }
-        default   { "Validation completed with status: $overallStatus" }
+        'Passed'   { "All $totalAgents agents across $uniqueEnvs environments compliant" }
+        'Review'   { "$violationCount violation(s) detected across $uniqueEnvs environments" }
+        'Failed'   { "$violationCount violation(s) detected including high severity" }
+        'Critical' { "$violationCount violation(s) detected including critical severity" }
+        default    { "Validation completed with status: $overallStatus" }
     }
 
     if ($hasDrift) {
@@ -444,13 +449,15 @@ try {
     #region Build enriched ZoneSummary
 
     # Count agents per zone from scan results
-    $zoneTotals = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
-    $zoneViolations = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0 }
+    $zoneTotals = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
+    $zoneViolations = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
 
     foreach ($agent in $scanResult) {
         $zoneKey = $agent.Zone
         if ($zoneKey -and $zoneTotals.ContainsKey($zoneKey)) {
             $zoneTotals[$zoneKey]++
+        } else {
+            $zoneTotals['Unknown']++
         }
     }
 
@@ -458,11 +465,13 @@ try {
         $zoneKey = $v.Zone
         if ($zoneKey -and $zoneViolations.ContainsKey($zoneKey)) {
             $zoneViolations[$zoneKey]++
+        } else {
+            $zoneViolations['Unknown']++
         }
     }
 
     $enrichedZoneSummary = [ordered]@{}
-    foreach ($z in @('Zone1', 'Zone2', 'Zone3')) {
+    foreach ($z in @('Zone1', 'Zone2', 'Zone3', 'Unknown')) {
         $total = [int]$zoneTotals[$z]
         $violCount = [int]$zoneViolations[$z]
 
@@ -479,23 +488,27 @@ try {
 
     #region Build and emit output
 
+    $runId = [guid]::NewGuid().ToString()
+
     $output = [PSCustomObject]@{
-        RunType           = "ModerationValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
-        TotalAgents       = $totalAgents
-        TotalEnvironments = $uniqueEnvs
-        OverallStatus     = $overallStatus
-        Reason            = $reason
-        ZoneSummary       = [PSCustomObject]$enrichedZoneSummary
-        Violations        = $violations
-        Drift             = [PSCustomObject]@{
+        RunType            = "ModerationValidation"
+        RunId              = $runId
+        Timestamp          = (Get-Date -AsUTC -Format "o")
+        TotalAgents        = $totalAgents
+        TotalEnvironments  = $uniqueEnvs
+        EnvironmentNames   = $environmentNameList
+        OverallStatus      = $overallStatus
+        Reason             = $reason
+        ZoneSummary        = [PSCustomObject]$enrichedZoneSummary
+        Violations         = $violations
+        Drift              = [PSCustomObject]@{
             HasDrift      = $hasDrift
             IsFirstRun    = $globalIsFirstRun
             DriftedAgents = $driftedAgents.Count
             Details       = $driftDetails
         }
-        AlertRequired     = $alertRequired
-        AlertSeverity     = $alertSeverity
+        AlertRequired      = $alertRequired
+        AlertSeverity      = $alertSeverity
     }
 
     Write-Verbose "Alert required: $($output.AlertRequired)"

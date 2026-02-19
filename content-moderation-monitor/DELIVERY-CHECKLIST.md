@@ -18,11 +18,19 @@
 
 **Private Helpers** (from `scripts/private/` directory):
 - [ ] **CMMClient.psm1** — Dataverse client module
-- [ ] **Get-ZoneClassification.ps1** — Zone lookup helper
+- [ ] **Get-ZoneClassification.ps1** — Zone lookup helper (delegates to shared module, see Dependencies below)
 - [ ] **Get-ExpectedModerationLevel.ps1** — Moderation level reference
 - [ ] **Connect-EnvironmentDataverse.ps1** — Per-env Dataverse auth
 - [ ] **Test-ParameterValidation.ps1** — Parameter validators
 - [ ] **Get-CMMValidationResults.ps1** — Evidence query helper
+
+**Python Deployment Scripts** (from `scripts/` directory):
+- [ ] **cmm_client.py** — Python Dataverse client library
+- [ ] **create_dataverse_schema.py** — Dataverse table/column deployment
+- [ ] **create_environment_variables.py** — Environment variable deployment
+- [ ] **create_connection_references.py** — Connection reference deployment
+- [ ] **deploy.py** — Orchestrates full Dataverse schema deployment
+- [ ] **requirements.txt** — Python package dependencies
 
 **Power Automate:**
 - [ ] **src/moderation-validation-flow.json** — Daily scheduled validation flow
@@ -40,6 +48,11 @@
 
 ### 3. Packaging Instructions
 
+> **External Dependency:** `scripts/private/Get-ZoneClassification.ps1` delegates to a shared
+> module at `scripts/shared/Get-ZoneClassification.ps1` (outside this solution directory).
+> Ensure the shared module is available on the deployment target or replace the delegate
+> script with a self-contained implementation. See `PREREQUISITES.md` for details.
+
 **Option A: Create ZIP Archive**
 ```bash
 # From the content-moderation-monitor directory:
@@ -48,6 +61,8 @@ zip -r Content-Moderation-Monitor-v1.0.0.zip \
   scripts/*.ps1 \
   scripts/private/*.ps1 \
   scripts/private/*.psm1 \
+  scripts/*.py \
+  scripts/requirements.txt \
   src/moderation-validation-flow.json \
   src/adaptive-card-moderation-alert.json \
   templates/moderation-baseline.json \
@@ -76,6 +91,8 @@ SHA-256 integrity-hashed evidence export.
 Package Contents:
 - SOLUTION-DOCUMENTATION.md — Complete technical documentation
 - 12 PowerShell Scripts (validation, evidence export, Dataverse integration)
+- 5 Python Scripts (Dataverse schema/variable/connection deployment)
+- 1 requirements.txt (Python dependencies)
 - 1 Power Automate flow (daily scheduled orchestration)
 - 2 Templates (zone requirements, Teams alert card)
 - 5 Supporting Documentation Files
@@ -157,7 +174,7 @@ Best regards,
 
 ### 5. Pre-Delivery Validation
 
-- [ ] All 20+ files included (scripts, templates, docs)
+- [ ] All 26+ files included (scripts, Python scripts, templates, docs)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly
 - [ ] PowerShell scripts have no syntax errors (use PSScriptAnalyzer)
 - [ ] moderation-baseline.json is valid JSON
@@ -181,6 +198,10 @@ Best regards,
 - Microsoft.PowerApps.Administration.PowerShell (2.0+)
 - Az.Accounts (2.0+)
 - MSAL.PS (4.37+)
+
+**Python (for Dataverse schema deployment):**
+- Python 3.9+
+- Dependencies listed in `scripts/requirements.txt`
 
 **Permissions:**
 - Power Platform Admin (tenant-wide environment enumeration)
@@ -213,7 +234,10 @@ Test Execution:
 □ JSON output tested: Test-ContentModerationCompliance -OutputFormat Json
 
 Dataverse (Optional):
-□ Dataverse schema deployed (3 tables created)
+□ Python 3.9+ installed with requirements.txt dependencies
+□ Dataverse schema deployed: python scripts/deploy.py (3 tables created)
+□ Environment variables deployed: python scripts/create_environment_variables.py
+□ Connection references deployed: python scripts/create_connection_references.py
 □ Validation history persisted: Test-ContentModerationCompliance -PersistResults
 □ Records visible in fsi_moderationvalidationhistory table
 

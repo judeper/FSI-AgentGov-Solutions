@@ -305,7 +305,7 @@
             },
             "Terminate_Failed": {
               "runAfter": {
-                "Send_Job_Failure_Email": ["Succeeded"]
+                "Send_Job_Failure_Email": ["Succeeded", "Failed"]
               },
               "type": "Terminate",
               "inputs": {
@@ -495,6 +495,12 @@
                   },
                   {
                     "equals": [
+                      "@body('Parse_Results')?['AlertSeverity']",
+                      "High"
+                    ]
+                  },
+                  {
+                    "equals": [
                       "@body('Parse_Results')?['OverallStatus']",
                       "Failed"
                     ]
@@ -540,11 +546,11 @@
               "else": {
                 "actions": {}
               },
-              "description": "Only post Teams card for Critical/Failed/Error status"
+              "description": "Only post Teams card for Critical/High/Failed/Error status"
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed"]
               },
               "type": "ApiConnection",
               "inputs": {
@@ -598,6 +604,19 @@
             }
           },
           "description": "Send CRITICAL error notification when the flow itself fails"
+        },
+        "Terminate_Catch": {
+          "runAfter": {
+            "Send_Critical_Error_Email": ["Succeeded", "Failed", "Skipped", "TimedOut"]
+          },
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Failed",
+            "runError": {
+              "message": "CMM flow execution failed. Scope_Try encountered an error. Review flow run history for details."
+            }
+          },
+          "description": "Terminate flow as Failed so run history accurately reflects the failure"
         }
       },
       "runAfter": {

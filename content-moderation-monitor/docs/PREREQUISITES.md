@@ -6,7 +6,7 @@ Requirements for deploying the Content Moderation Monitor solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime |
+| PowerShell | 7.1+ | Core runtime |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
 | MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
@@ -66,6 +66,24 @@ For zone classification via ELM, the ELM solution must be deployed with:
 - Environment records linked to Power Platform environment GUIDs
 
 Without ELM, zone classification falls back to naming convention matching (e.g., `-Z3-` in environment name maps to Zone 3).
+
+## External Dependency: Shared Zone Classification Module
+
+The private helper `scripts/private/Get-ZoneClassification.ps1` delegates to a shared
+module located at `scripts/shared/Get-ZoneClassification.ps1` (outside this solution
+directory, in the parent repository). This shared module provides the core zone
+classification logic used across multiple governance solutions.
+
+**Impact:** If the shared module is absent on the deployment target, zone classification
+will fail at runtime for all environments. Agents will not be assigned to zones, and all
+violations will be classified as "Warning" severity instead of their correct
+Critical/High/Medium severity.
+
+**Resolution options:**
+1. Ensure the shared module is deployed alongside this solution at the expected relative
+   path (`../../../scripts/shared/Get-ZoneClassification.ps1` from `scripts/private/`)
+2. Replace `scripts/private/Get-ZoneClassification.ps1` with a self-contained
+   implementation that does not delegate to the shared module
 
 ## Dataverse Schema (Phase 2+)
 

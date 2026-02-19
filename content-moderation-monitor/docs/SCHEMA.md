@@ -20,7 +20,7 @@ Per-agent moderation level snapshots used for drift detection comparison. Each r
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationbaselineid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
+| `fsi_name` | String (200) | Yes | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
 | `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
 | `fsi_environment_name` | String (500) | Yes | Environment display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Yes | Zone classification |
@@ -45,7 +45,7 @@ Organization-owned immutable scan summary records. Each record represents one co
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationvalidationhistoryid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (500) | Yes | Record name (`{Status}-{Timestamp}`) |
+| `fsi_name` | String (200) | Yes | Record name (`{Status}-{Timestamp}`) |
 | `fsi_run_id` | String (36) | Yes | GUID correlating all records from one scan |
 | `fsi_validation_time` | DateTime | Yes | When scan executed (UTC) |
 | `fsi_total_agents` | Integer | Yes | Total agents scanned |
@@ -65,7 +65,7 @@ Per-agent violation records with severity classification and regulatory context.
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationviolationid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Date}`) |
+| `fsi_name` | String (200) | Yes | Record name (`{AgentName}-{Zone}-{Date}`) |
 | `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
 | `fsi_environment_name` | String (500) | Yes | Environment display name |
 | `fsi_agent_id` | String (100) | Yes | Violating agent's bot GUID |
@@ -119,7 +119,7 @@ All environment variables use the `fsi_CMM_` prefix. Values are read by PowerShe
 | `fsi_CMM_GracePeriodHours` | Integer | 48 | Hours before newly provisioned environments are validated |
 | `fsi_CMM_IncludeSandbox` | Boolean | false | Whether to include sandbox environments in validation |
 | `fsi_CMM_IncludeDrafts` | Boolean | false | Whether to include draft (unpublished) agents |
-| `fsi_CMM_BaselineAgeThresholdDays` | Integer | 90 | Days before an active baseline is flagged as stale |
+| `fsi_CMM_BaselineMaxAgeDays` | Integer | 30 | Days before an active baseline is flagged as stale |
 | `fsi_CMM_TeamsGroupId` | String | — | Microsoft 365 Group ID for Teams alert channel |
 | `fsi_CMM_TeamsChannelId` | String | — | Teams channel ID for alert delivery |
 

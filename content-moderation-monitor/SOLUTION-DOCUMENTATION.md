@@ -83,7 +83,7 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 ┌───────────────────┐     ┌──────────────────┐      ┌──────────────────┐
 │  Teams Adaptive   │     │  Email Alert     │      │  Evidence Export │
 │  Card             │     │  (Critical/High) │      │  (SHA-256)       │
-│  (Critical only)  │     │                  │      │                  │
+│  (Critical/High)  │     │                  │      │                  │
 └───────────────────┘     └──────────────────┘      └──────────────────┘
 ```
 
@@ -205,8 +205,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
    - Extract individual violations (agent ID, environment, zone, severity, regulatory context)
 
 3. **Persist to Dataverse:**
-   - Write validation summary to `fsi_moderationvalidationhistory` table
-   - Write individual violations to `fsi_moderationviolations` table
+   - Write validation summary to `fsi_moderationvalidationhistory` table (includes full JSON summary blob with violation details)
    - Correlate via `RunId` (GUID for each scan)
 
 4. **Detect Drift:**
@@ -216,9 +215,9 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
    - Add drift violations to alert payload
 
 5. **Send Alerts (Conditional):**
-   - **Critical violations:** Teams adaptive card + Email
-   - **High violations:** Teams adaptive card + Email
-   - **Medium/Warning violations:** Logged to Dataverse, no alert
+   - **Critical violations:** Teams adaptive card + Email (High importance)
+   - **High violations:** Teams adaptive card + Email (High importance)
+   - **Warning violations:** Email only (Normal importance)
 
 **Adaptive Card Structure:**
 
@@ -348,7 +347,7 @@ Purpose: Organization-owned immutable audit trail of validation scans with summa
 | `fsi_total_agents` | Integer | Count of agents evaluated |
 | `fsi_compliant_count` | Integer | Agents passing moderation checks |
 | `fsi_violation_count` | Integer | Total violations detected |
-| `fsi_overall_status` | String(50) | Passed, Failed, Warning, or Critical |
+| `fsi_overall_status` | String(50) | Passed, Critical, Failed, Review, or Error |
 | `fsi_environments_scanned` | String(2000) | Comma-separated environment list |
 | `fsi_summary_json` | Memo | Full JSON summary blob |
 
@@ -457,9 +456,7 @@ python deploy.py \
    - Dataverse connection
    - Office 365 connection
    - Teams connection (if using Teams alerts)
-4. Set environment variables:
-   - `fsi_CMM_DataverseUrl`: Governance environment URL
-   - `fsi_CMM_NotificationRecipients`: Compliance team emails
+4. Update Initialize Variable actions in the flow designer with your environment-specific values (see [FLOW_SETUP.md](docs/FLOW_SETUP.md#step-2-configure-variables) for the full variable list)
 5. Activate flow
 
 **Step 6: Capture Initial Baseline**
@@ -494,7 +491,7 @@ Test-ContentModerationCompliance -OutputFormat Json | ConvertFrom-Json
 Test-ContentModerationCompliance `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -PersistResults
-# Expected: Records created in fsi_moderationvalidationhistory and fsi_moderationviolations tables
+# Expected: Records created in fsi_moderationvalidationhistory table
 ```
 
 **Test 4: Evidence Export**
