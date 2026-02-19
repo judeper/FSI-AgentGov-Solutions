@@ -13,7 +13,7 @@ The DR Testing Framework validates that AI agents and supporting infrastructure 
 | Feature | Description |
 |---------|-------------|
 | **Automated Testing** | Scheduled and on-demand DR test execution |
-| **RTO/RPO Measurement** | Track actual recovery times vs. targets |
+| **RTO/RPO Measurement** | Track actual recovery times vs. targets (RPO measurement not yet implemented — see [Known Limitations](#known-limitations)) |
 | **Validation Checks** | Verify agent functionality post-recovery |
 | **Evidence Collection** | Generate compliance artifacts |
 | **Gap Tracking** | Identify and monitor recovery gaps |
@@ -110,11 +110,32 @@ Complete infrastructure recovery.
 
 ### 1. Deploy Dataverse Schema
 
+> **Note:** The Dataverse schema package (`DRTestingFramework_1_0_0.zip`) is not yet included in this repository. You must manually create the `fsi_drtestresults` table with the required columns (`fsi_testtype`, `fsi_executedon`, `fsi_actualrto`, `fsi_targetrto`, `fsi_rtomet`, `fsi_actualrpo`, `fsi_targetrpo`, `fsi_rpomet`, `fsi_status`, `fsi_validationchecks`), or import a schema package when one is provided.
+
+#### `fsi_drtestresults` Table Schema
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `fsi_testtype` | Single Line of Text | Test type: `AgentRestore`, `EnvironmentFailover`, `DataRecovery`, or `FullDR` |
+| `fsi_executedon` | Single Line of Text | ISO 8601 UTC timestamp of test execution (e.g., `2026-02-19T04:00:00Z`) |
+| `fsi_actualrto` | Decimal Number | Measured recovery time in hours, rounded to 2 decimal places |
+| `fsi_targetrto` | Whole Number | Target RTO in hours (e.g., 4, 2, 8) |
+| `fsi_rtomet` | Two Options (Boolean) | Whether the actual RTO met the target (`true`/`false`) |
+| `fsi_actualrpo` | Decimal Number | Measured RPO in hours (currently `null`; reserved for future use) |
+| `fsi_targetrpo` | Whole Number | Target RPO in hours (e.g., 24, 1) |
+| `fsi_rpomet` | Two Options (Boolean) | Whether the actual RPO met the target (currently `null`; reserved for future use) |
+| `fsi_status` | Whole Number (Option Set) | Test outcome: `1` = Pass, `2` = Fail |
+| `fsi_validationchecks` | Multiple Lines of Text (Memo) | JSON-encoded array of validation check objects. Stored as a JSON string (not double-encoded). Each element has `Check` (string) and `Status` (string: `PASS`, `FAIL`, or `SKIPPED (DRY RUN)`). Example: `[{"Check":"Backup Located","Status":"PASS"}]`. Consumers should parse this field once with a JSON parser. |
+
 ```powershell
-pac solution import --path ./templates/DRTestingFramework_1_0_0.zip
+# Dataverse schema package is not yet included in this repository.
+# Create the fsi_drtestresults table manually or import a schema package when available.
+# pac solution import --path ./templates/DRTestingFramework_1_0_0.zip
 ```
 
 ### 2. Run DR Test
+
+> **Note:** The `-Environment` URL must be a valid Dataverse URL matching `https://<org>.crm[N].dynamics.<tld>` (e.g., `.com`, `.us`, `.cn`, `.de`) or `https://<org>.crm.microsoftdynamics.us` (GCC High). The script validates this to prevent sending OAuth tokens to unintended endpoints.
 
 ```powershell
 .\scripts\Invoke-DRTest.ps1 `
@@ -203,6 +224,8 @@ Actual RPO = Incident Start Time - Last Backup Time
 RPO Met = Actual RPO <= Target RPO
 ```
 
+> **Not yet implemented.** RPO targets are defined but actual RPO measurement requires backup timestamp comparison, which depends on integration with the backup/restore APIs. RPO fields are omitted from Dataverse results until measurement is implemented.
+
 ### Success Rate
 
 ```
@@ -274,6 +297,14 @@ The framework generates compliance evidence:
 
 **Coverage:** Documented testing with evidence collection.
 
+## Known Limitations
+
+| Limitation | Impact | Planned Resolution |
+|------------|--------|-------------------|
+| **RPO not measured** | `fsi_actualrpo` and `fsi_rpomet` are omitted from Dataverse results. RPO targets are defined but actual values require backup timestamp comparison via backup/restore APIs. | Future release will integrate with Azure Backup / Power Platform backup APIs to compute actual RPO. |
+| **Recovery steps are stubs** | All recovery functions use `Start-Sleep` instead of real API calls. RTO measurements reflect simulated timing only. | Replace stubs with actual backup/restore API calls for production use. |
+| **ClientSecret accepted as plaintext** | `$ClientSecret` is a `[string]` parameter. The value may appear in PowerShell transcript logs or process command lines. The script clears the variable after token acquisition. | Future release may accept `[SecureString]` or certificate-based authentication. |
+
 ## Related Controls
 
 | Control | Relationship |
@@ -297,12 +328,12 @@ The framework generates compliance evidence:
 |-------|-------|------------|
 | Authentication failure | Expired token or insufficient permissions | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles |
 | RTO target exceeded | Recovery steps slower than expected | Review environment size; pre-stage backups closer to target region |
-| Validation checks fail | Agent or connectors not restored correctly | Verify backup integrity; re-run individual test scenario with `-Verbose` |
+| Validation checks fail | Agent or connectors not restored correctly | Verify backup integrity; re-run individual test scenario and review console output |
 | Dataverse save error | Missing schema or insufficient Dataverse capacity | Import solution package; check storage quota |
 
 ### Logs
 
-Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+Review script console output for warnings and error messages. The script uses `Write-Host` and `Write-Warning` for diagnostic output.
 
 ## Support
 
