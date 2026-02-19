@@ -105,7 +105,7 @@ function Invoke-WithRetry {
             if ($_.Exception.Response) {
                 $statusCode = [int]$_.Exception.Response.StatusCode
             }
-            elseif ($_.Exception.Message -match '(\d{3})') {
+            elseif ($_.Exception.Message -match '\b(4\d{2}|5\d{2})\b') {
                 $candidateCode = [int]$Matches[1]
                 if ($candidateCode -ge 400 -and $candidateCode -le 599) {
                     $statusCode = $candidateCode

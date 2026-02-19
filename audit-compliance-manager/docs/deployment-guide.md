@@ -287,4 +287,34 @@ See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedure
 
 ---
 
+## Security Role Lockdown
+
+After deployment, enforce immutability on the `fsi_auditvalidationhistory` table by
+running the security role configuration script:
+
+```powershell
+# Acquire a Dataverse access token (e.g., via Managed Identity or interactive auth)
+$token = "<your-access-token>"
+
+# Preview changes (WhatIf)
+./scripts/Configure-SecurityRoles.ps1 `
+    -DataverseUrl "https://your-org.crm.dynamics.com" `
+    -AccessToken $token `
+    -WhatIf
+
+# Apply changes
+./scripts/Configure-SecurityRoles.ps1 `
+    -DataverseUrl "https://your-org.crm.dynamics.com" `
+    -AccessToken $token
+```
+
+This creates a security role named **ACV Automation - Append Only** that:
+- **Grants:** Create (append-only) and Read on `fsi_auditvalidationhistory`
+- **Denies:** Write and Delete (enforces immutability)
+
+After running the script, assign this role to the automation Managed Identity and
+**remove** the System Administrator role for production environments.
+
+---
+
 *Updated: February 2026 | Version: v1.0.0*

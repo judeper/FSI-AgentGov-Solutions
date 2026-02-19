@@ -146,11 +146,11 @@ function Compare-ValidationBaseline {
 
         # Map status strings to severity values (higher = worse)
         $severityMap = @{
-            "Passed"      = 1
-            "Warning"     = 2
-            "GracePeriod" = 3
-            "Failed"      = 4
-            "Error"       = 5
+            "Passed"      = 100000000
+            "Warning"     = 100000001
+            "GracePeriod" = 100000002
+            "Failed"      = 100000003
+            "Error"       = 100000004
         }
 
         $scopeMap = @{
@@ -162,8 +162,8 @@ function Compare-ValidationBaseline {
         $scopeValue = $scopeMap[$Scope]
 
         # Build OData filter for baseline query
-        # Find most recent Passed (severity=1) validation for this scope
-        $filter = "fsi_scope eq $scopeValue and fsi_severity eq 1"
+        # Find most recent Passed (severity=100000000) validation for this scope
+        $filter = "fsi_scope eq $scopeValue and fsi_severity eq 100000000"
 
         if ($Scope -eq "Environment") {
             if (-not $EnvironmentId) {

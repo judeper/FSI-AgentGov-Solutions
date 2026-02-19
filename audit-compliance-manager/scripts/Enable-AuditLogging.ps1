@@ -1,6 +1,6 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0' }
-#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0' }
+#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0.0' }
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0' }
 
 <#
 .SYNOPSIS
@@ -83,7 +83,7 @@ param(
 # Configuration
 # ============================================================================
 
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 
 # 6 Copilot Studio entities requiring entity-level audit
 $CopilotStudioEntities = @(
@@ -254,7 +254,7 @@ try {
     else {
         # Power Platform authentication
         $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com/"
-        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -ApplicationId $null -AccessToken $ppToken
+        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -AccessToken $ppToken
         Write-Output "  Power Platform: Connected"
 
         # Exchange Online authentication
@@ -500,10 +500,24 @@ try {
                         $entityResults += "$entity=WhatIf"
                     }
                     else {
-                        if ($PSCmdlet.ShouldProcess("Entity: $entity in $envName", "Enable entity-level auditing")) {
+                        # Check if entity-level audit is already enabled before making changes
+                        $entityAlreadyEnabled = $false
+                        try {
+                            $entityAlreadyEnabled = Test-EntityAuditEnabled -EnvUrl $envUrl -Token $envToken -EntityLogicalName $entity
+                        }
+                        catch {
+                            Write-Verbose "      Could not check entity audit status for $entity : $($_.Exception.Message)"
+                        }
+
+                        if ($entityAlreadyEnabled) {
+                            Write-Output "      $entity : Already enabled"
+                            $entityResults += "$entity=Already Enabled"
+                        }
+                        elseif ($PSCmdlet.ShouldProcess("Entity: $entity in $envName", "Enable entity-level auditing")) {
                             Enable-EntityLevelAudit -EnvUrl $envUrl -Token $envToken -EntityLogicalName $entity -IsWhatIf $false
                             Write-Output "      $entity : ENABLED"
                             $entityResults += "$entity=Enabled"
+                            $changesMade = $true
                         }
                     }
                 }

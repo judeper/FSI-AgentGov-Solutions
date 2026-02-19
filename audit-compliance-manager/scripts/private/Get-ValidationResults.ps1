@@ -60,8 +60,8 @@
 
     Option set mappings (must match Dataverse schema):
     - fsi_acv_scope: Tenant=100000000, Environment=100000001
-    - fsi_acv_severity: Passed=1, Warning=2, GracePeriod=3, Failed=4, Error=5
-    - fsi_acv_zone: Unclassified=0, Zone1=1, Zone2=2, Zone3=3
+    - fsi_acv_severity: Passed=100000000, Warning=100000001, GracePeriod=100000002, Failed=100000003, Error=100000004
+    - fsi_acv_zone: Unclassified=100000000, Zone1=100000001, Zone2=100000002, Zone3=100000003
 
     Query automatically handles pagination via @odata.nextLink to retrieve complete
     result sets (Dataverse default page size is 5000 records).

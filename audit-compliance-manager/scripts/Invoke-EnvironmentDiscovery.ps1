@@ -221,11 +221,11 @@ function Invoke-EnvironmentDiscovery {
 
         # Map environment type strings to integers
         $envTypeMap = @{
-            "Production" = 1
-            "Sandbox"    = 2
-            "Developer"  = 3
-            "Trial"      = 4
-            "Default"    = 5
+            "Production" = 100000000
+            "Sandbox"    = 100000001
+            "Developer"  = 100000002
+            "Trial"      = 100000003
+            "Default"    = 100000004
         }
 
         # Build discovered environment lookup
@@ -289,11 +289,11 @@ function Invoke-EnvironmentDiscovery {
                 }
 
                 # Ensure status is Active (might have been marked Inactive previously)
-                if ($registryEntry.fsi_status -ne 1) {
+                if ($registryEntry.fsi_status -ne 100000000) {
                     Write-Host "  Reactivating environment: $($env.DisplayName)" -ForegroundColor Yellow
 
                     $updateBody = @{
-                        fsi_status = 1
+                        fsi_status = 100000000
                     } | ConvertTo-Json
 
                     $updateUrl = "$dataverseUrl/api/data/v9.2/fsi_environmentregistries($($registryEntry.fsi_environmentregistryid))"
@@ -307,8 +307,8 @@ function Invoke-EnvironmentDiscovery {
                 $createBody = @{
                     fsi_name            = $env.DisplayName
                     fsi_environmentid   = $envId
-                    fsi_zone            = 0  # Unclassified
-                    fsi_status          = 1  # Active
+                    fsi_zone            = 100000000  # Unclassified
+                    fsi_status          = 100000000  # Active
                     fsi_environmenttype = $env.EnvironmentTypeInt
                     fsi_environmenturl  = $env.EnvironmentUrl
                     fsi_discoveredon    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -328,12 +328,12 @@ function Invoke-EnvironmentDiscovery {
         foreach ($registryEntry in $registryEntries) {
             $envId = $registryEntry.fsi_environmentid
 
-            if (-not $discoveredEnvLookup.ContainsKey($envId) -and $registryEntry.fsi_status -eq 1) {
+            if (-not $discoveredEnvLookup.ContainsKey($envId) -and $registryEntry.fsi_status -eq 100000000) {
                 # Environment no longer exists in API but is Active in registry: mark Inactive
                 Write-Host "  Environment no longer found, marking Inactive: $($registryEntry.fsi_name)" -ForegroundColor Yellow
 
                 $updateBody = @{
-                    fsi_status = 2  # Inactive
+                    fsi_status = 100000001  # Inactive
                 } | ConvertTo-Json
 
                 $updateUrl = "$dataverseUrl/api/data/v9.2/fsi_environmentregistries($($registryEntry.fsi_environmentregistryid))"
@@ -351,7 +351,7 @@ function Invoke-EnvironmentDiscovery {
         Write-Host "`nPhase C: Building validation set..." -ForegroundColor Cyan
 
         # Re-query registry to get updated state (includes new registrations)
-        $registryQueryUrl = "$dataverseUrl/api/data/v9.2/fsi_environmentregistries?`$select=fsi_environmentid,fsi_name,fsi_zone,fsi_status,fsi_environmenttype,fsi_overrideinclude&`$filter=fsi_status eq 1"
+        $registryQueryUrl = "$dataverseUrl/api/data/v9.2/fsi_environmentregistries?`$select=fsi_environmentid,fsi_name,fsi_zone,fsi_status,fsi_environmenttype,fsi_overrideinclude&`$filter=fsi_status eq 100000000"
         $registryResponse = Invoke-RestMethod -Uri $registryQueryUrl -Method Get -Headers $headers -ErrorAction Stop
         $activeRegistryEntries = $registryResponse.value
 
@@ -368,14 +368,14 @@ function Invoke-EnvironmentDiscovery {
             $env = $discoveredEnvLookup[$envId]
 
             # Filter 1: Exclude Unclassified environments
-            if ($registryEntry.fsi_zone -eq 0) {
+            if ($registryEntry.fsi_zone -eq 100000000) {
                 $skippedUnclassified += $env.DisplayName
                 Write-Warning "Skipping $($env.DisplayName): zone is Unclassified. Assign zone before validation."
                 continue
             }
 
             # Filter 2: Exclude Trial/Developer environments (unless IncludeTrialDev or OverrideInclude)
-            if (-not $IncludeTrialDev -and ($env.EnvironmentTypeInt -eq 3 -or $env.EnvironmentTypeInt -eq 4)) {
+            if (-not $IncludeTrialDev -and ($env.EnvironmentTypeInt -eq 100000002 -or $env.EnvironmentTypeInt -eq 100000003)) {
                 # Check OverrideInclude flag
                 if (-not $registryEntry.fsi_overrideinclude) {
                     $skippedTrialDev += $env.DisplayName
@@ -389,9 +389,9 @@ function Invoke-EnvironmentDiscovery {
                 EnvironmentId   = $envId
                 EnvironmentName = $env.DisplayName
                 Zone            = switch ($registryEntry.fsi_zone) {
-                    1 { "Zone1" }
-                    2 { "Zone2" }
-                    3 { "Zone3" }
+                    100000001 { "Zone1" }
+                    100000002 { "Zone2" }
+                    100000003 { "Zone3" }
                     default { "Unclassified" }
                 }
                 EnvironmentUrl  = $env.EnvironmentUrl

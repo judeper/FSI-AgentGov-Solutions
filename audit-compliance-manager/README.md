@@ -238,7 +238,15 @@ Compliance tracking with upsert by environment ID:
 | Key Column | Type | Purpose |
 |------------|------|---------|
 | `fsi_environmentid` | Text | Power Platform environment GUID (alternate key) |
-| `fsi_status` | Choice | Compliant, Non-Compliant, Remediation Pending |
+| `fsi_environmentname` | Text | Environment display name (primary column) |
+| `fsi_auditenabled` | Boolean | Purview unified audit log ingestion status |
+| `fsi_dataverseauditenabled` | Boolean | Dataverse org-level auditing status |
+| `fsi_lastchecked` | DateTime | UTC timestamp of last compliance check |
+| `fsi_compliancestatus` | Choice | Compliant, Non-Compliant, Remediation Pending, Error |
+| `fsi_remediationdate` | DateTime | When remediation was applied |
+| `fsi_remediatedby` | Text | Identity that performed remediation |
+| `fsi_errormessage` | Memo | Error details for failed checks or remediation |
+| `fsi_lasteventcaptured` | DateTime | Most recent audit event timestamp |
 
 ## Components
 
