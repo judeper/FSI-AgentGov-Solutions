@@ -29,7 +29,7 @@ Quick deployment checklist for the Pipeline Governance Cleanup solution.
 - [ ] Authenticate to Power Platform: `pac auth create`
 - [ ] Run inventory script:
   ```powershell
-  .\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
+  .\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
   ```
 - [ ] Review output CSV for environment list
 

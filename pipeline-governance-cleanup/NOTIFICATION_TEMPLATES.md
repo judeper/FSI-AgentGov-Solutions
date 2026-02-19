@@ -92,12 +92,12 @@ For simpler implementation, use the PowerShell notification script instead of Po
 ```powershell
 # Using delegated permissions (interactive sign-in)
 .\src\Send-OwnerNotifications.ps1 `
-    -InputPath ".\non-compliant-environments.csv" `
+    -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01"
 
 # Using application permissions (service principal automation)
 .\src\Send-OwnerNotifications.ps1 `
-    -InputPath ".\non-compliant-environments.csv" `
+    -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SenderEmail "noreply@contoso.com"
 ```

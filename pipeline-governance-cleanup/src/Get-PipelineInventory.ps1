@@ -170,7 +170,7 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
     }
 
     # Build inventory
-    $results = @()
+    $results = [System.Collections.Generic.List[PSCustomObject]]::new()
     $index = 0
 
     foreach ($env in $environments) {
@@ -226,7 +226,7 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
             Notes               = $notes
         }
 
-        $results += $result
+        $results.Add($result)
     }
 
     Write-Progress -Activity "Processing environments" -Completed

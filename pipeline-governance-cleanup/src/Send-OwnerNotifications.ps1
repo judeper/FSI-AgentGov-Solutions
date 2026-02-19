@@ -94,21 +94,26 @@ function Build-NotificationEmail {
 
     $formattedDate = $EnforcementDate.ToString("MMMM d, yyyy")
 
+    # HTML-encode CSV-sourced values to prevent markup injection
+    $safeOwnerName = [System.Net.WebUtility]::HtmlEncode($OwnerName)
+    $safeEnvironmentName = [System.Net.WebUtility]::HtmlEncode($EnvironmentName)
+    $safeEnvironmentId = [System.Net.WebUtility]::HtmlEncode($EnvironmentId)
+
     $body = @"
 <html>
 <body style="font-family: Segoe UI, Arial, sans-serif; line-height: 1.6; color: #333;">
-<p>Dear $OwnerName,</p>
+<p>Dear $safeOwnerName,</p>
 
 <p>As part of our Power Platform governance initiative, we are consolidating all deployment pipelines to our designated pipelines host environment.</p>
 
 <table style="border-collapse: collapse; margin: 20px 0;">
 <tr>
     <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;"><strong>Environment:</strong></td>
-    <td style="padding: 8px; border: 1px solid #ddd;">$EnvironmentName</td>
+    <td style="padding: 8px; border: 1px solid #ddd;">$safeEnvironmentName</td>
 </tr>
 <tr>
     <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;"><strong>Environment ID:</strong></td>
-    <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">$EnvironmentId</td>
+    <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">$safeEnvironmentId</td>
 </tr>
 <tr>
     <td style="padding: 8px; border: 1px solid #ddd; background: #f5f5f5;"><strong>Action Required By:</strong></td>
@@ -156,7 +161,7 @@ function Build-NotificationEmail {
 <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 <p style="font-size: 12px; color: #666;">
 This is an automated notification from the Pipeline Governance system.
-Environment ID: $EnvironmentId
+Environment ID: $safeEnvironmentId
 </p>
 </body>
 </html>
@@ -270,14 +275,16 @@ You may need to manually add owner information to your inventory before sending 
             Write-Host "Using application permissions with sender: $SenderEmail" -ForegroundColor Yellow
             Write-Host "Note: Ensure you have connected with application credentials before running this script." -ForegroundColor Yellow
         }
-        try {
-            Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop
-            Write-Host "Connected to Microsoft Graph" -ForegroundColor Green
-        }
-        catch {
-            Write-Error "Failed to connect to Microsoft Graph: $_"
-            Write-Host "Run with -TestMode to preview emails without sending."
-            exit 1
+        else {
+            try {
+                Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop
+                Write-Host "Connected to Microsoft Graph" -ForegroundColor Green
+            }
+            catch {
+                Write-Error "Failed to connect to Microsoft Graph: $_"
+                Write-Host "Run with -TestMode to preview emails without sending."
+                exit 1
+            }
         }
     }
     else {
