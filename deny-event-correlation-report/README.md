@@ -4,20 +4,16 @@
 
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 
-> ⚠️ **Deprecation Warning: x-api-key Authentication**
->
-> Application Insights x-api-key authentication is deprecated and will be removed **March 31, 2026**. After this date, `Export-RaiTelemetry.ps1` will fail unless migrated to Entra ID authentication. See [prerequisites.md](docs/prerequisites.md#authentication-migration) for migration guidance.
-
 ## Overview
 
 This solution provides automated extraction, correlation, and visualization of deny events from three Microsoft data sources:
 
 | Source | Event Types | Purpose |
 |--------|-------------|---------|
-| **Microsoft Purview Audit** | CopilotInteraction deny, XPIA, Jailbreak | Agent-level access blocks |
+| **Microsoft Purview Audit** | CopilotInteraction deny events | Agent-level access blocks |
 | **Microsoft Purview DLP** | DlpRuleMatch for Copilot location | Sensitivity-based blocks |
 | **Application Insights** | ContentFiltered RAI events | Model-layer content filtering |
-| **Defender CloudAppEvents** (optional) | UPIA/XPIA detections | Prompt injection detection (advanced) |
+| **Defender CloudAppEvents** (optional) | UPIA/XPIA detections, Jailbreak | Prompt injection detection (advanced) |
 
 ## Regulatory Alignment
 
@@ -34,10 +30,12 @@ This solution supports compliance evidence for:
 ```
 deny-event-correlation-report/
 ├── README.md                          # This file
+├── CHANGELOG.md                       # Version history
 ├── scripts/
 │   ├── Export-CopilotDenyEvents.ps1   # Purview CopilotInteraction extraction
 │   ├── Export-DlpCopilotEvents.ps1    # Purview DLP extraction
 │   ├── Export-RaiTelemetry.ps1        # Application Insights extraction
+│   ├── Export-DefenderCopilotEvents.ps1 # Defender CloudAppEvents extraction (XPIA/Jailbreak)
 │   └── Invoke-DailyDenyReport.ps1     # Orchestration script
 ├── kql-queries/
 │   ├── copilot-deny-events.kql        # Log Analytics queries
@@ -58,7 +56,7 @@ deny-event-correlation-report/
 - Power BI Pro or Premium
 - Azure subscription (for storage and automation)
 - Required permissions:
-  - Purview Audit Reader
+  - View-Only Audit Logs
   - Application Insights Reader
   - Storage Blob Data Contributor (optional, for blob upload)
 
@@ -67,8 +65,8 @@ deny-event-correlation-report/
 ```powershell
 # Install required modules
 Install-Module ExchangeOnlineManagement -Force
-Install-Module Az.Storage -Force
-Install-Module Az.KeyVault -Force
+# Optional: Install-Module Az.Storage -Force  (for blob upload)
+# Optional: Install-Module Az.KeyVault -Force  (for Key Vault credentials)
 
 # Connect to Exchange Online
 Connect-ExchangeOnline
@@ -139,4 +137,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*FSI Agent Governance Framework v2.0.0 - February 2026*

@@ -6,6 +6,10 @@
 // Purpose: Query DLP rule match events for Microsoft 365 Copilot policy location
 // Data Source: OfficeActivity table in Log Analytics (requires M365 audit connector)
 //
+// NOTE: These queries use coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+// to support both standard deployments (where the audit JSON is in AuditData)
+// and non-standard connector configurations (where it may be in OfficeObjectId).
+//
 // Prerequisites:
 //   - Azure Log Analytics workspace with Office 365 audit data connector
 //   - DLP policies configured for "Microsoft 365 Copilot and Copilot Chat" location
@@ -17,8 +21,8 @@
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(24h)
-| where RecordType == 55  // DlpRuleMatch
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
@@ -50,8 +54,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -70,8 +74,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend SensitiveInfoTypes = AuditData.SensitiveInfoTypeData
@@ -93,8 +97,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(1h)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -119,8 +123,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
@@ -141,8 +145,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -163,8 +167,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == 55
-| extend AuditData = parse_json(OfficeObjectId)
+| where RecordType == "DlpRuleMatch"
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails

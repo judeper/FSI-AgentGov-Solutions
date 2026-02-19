@@ -135,8 +135,8 @@ az keyvault secret set `
 
 az keyvault secret set `
     --vault-name "kv-deny-report" `
-    --name "AppInsightsApiKey" `
-    --value "your-api-key"
+    --name "AppInsightsAppId" `
+    --value "your-app-insights-app-id"
 ```
 
 ## Network Requirements
@@ -243,9 +243,12 @@ customEvents
    # Old (deprecated)
    $headers = @{ "x-api-key" = $ApiKey }
 
-   # New (Entra ID)
+   # New (Entra ID) — compatible with Az.Accounts 2.x and 3.x
    Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
-   $token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
+   $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+   $token = if ($tokenResult.Token -is [System.Security.SecureString]) {
+       $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+   } else { $tokenResult.Token }
    $headers = @{ "Authorization" = "Bearer $token" }
    ```
 
@@ -260,4 +263,4 @@ customEvents
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*FSI Agent Governance Framework v2.0.0 - February 2026*

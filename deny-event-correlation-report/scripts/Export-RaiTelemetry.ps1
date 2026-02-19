@@ -33,7 +33,7 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.3
+    Version: 2.0.0
     Requires: Az.Accounts module
     Authentication: Entra ID (Azure AD) - uses Connect-AzAccount
 
@@ -73,7 +73,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\RaiTelemetry-$(Get-Date -Format 'yyyy-MM-dd').csv"
+    [string]$OutputPath = ".\RaiTelemetry-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv"
 )
 
 #Requires -Version 7.0
@@ -94,9 +94,15 @@ function Invoke-AppInsightsQuery {
     # Get access token for Application Insights API
     # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026)
     try {
-        $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
-        if (-not $token) {
+        $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+        if (-not $tokenResult) {
             throw "Failed to acquire access token. Ensure you have authenticated with Connect-AzAccount."
+        }
+        # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+        $tokenString = if ($tokenResult.Token -is [System.Security.SecureString]) {
+            $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+        } else {
+            $tokenResult.Token
         }
     }
     catch {
@@ -104,7 +110,7 @@ function Invoke-AppInsightsQuery {
     }
 
     $headers = @{
-        "Authorization" = "Bearer $($token.Token)"
+        "Authorization" = "Bearer $tokenString"
         "Content-Type" = "application/json"
     }
 
@@ -114,24 +120,52 @@ function Invoke-AppInsightsQuery {
 
     $uri = "https://api.applicationinsights.io/v1/apps/$AppId/query?query=$encodedQuery"
 
-    try {
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-        return $response
-    }
-    catch {
-        if ($_.Exception.Response) {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            $statusDesc = $_.Exception.Response.StatusDescription
+    $maxRetries = 3
+    $attempt = 0
 
-            switch ($statusCode) {
-                401 { throw "Authentication failed. Ensure you have authenticated with Connect-AzAccount and have Monitoring Reader role on the Application Insights resource." }
-                403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
-                404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
-                429 { throw "Rate limited. Wait and retry." }
-                default { throw "API request failed: $statusCode - $statusDesc" }
-            }
+    while ($true) {
+        try {
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+            return $response
         }
-        throw "API request failed: $_"
+        catch {
+            if ($_.Exception.Response) {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                $statusDesc = $_.Exception.Response.StatusDescription
+
+                switch ($statusCode) {
+                    401 { throw "Authentication failed. Ensure you have authenticated with Connect-AzAccount and have Monitoring Reader role on the Application Insights resource." }
+                    403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
+                    404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
+                    429 {
+                        $attempt++
+                        if ($attempt -ge $maxRetries) {
+                            throw "Rate limited after $maxRetries retries. Try again later."
+                        }
+                        $retryAfter = 30 * $attempt
+                        $retryHeader = $_.Exception.Response.Headers | Where-Object { $_.Key -eq 'Retry-After' }
+                        if ($retryHeader) {
+                            $retryAfter = [int]$retryHeader.Value[0]
+                        }
+                        Write-Warning "Rate limited (HTTP 429). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
+                        Start-Sleep -Seconds $retryAfter
+                        continue
+                    }
+                    { $_ -ge 500 -and $_ -le 599 } {
+                        $attempt++
+                        if ($attempt -ge $maxRetries) {
+                            throw "Server error (HTTP $statusCode) after $maxRetries retries: $statusDesc"
+                        }
+                        $retryAfter = 30 * $attempt
+                        Write-Warning "Server error (HTTP $statusCode). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
+                        Start-Sleep -Seconds $retryAfter
+                        continue
+                    }
+                    default { throw "API request failed: $statusCode - $statusDesc" }
+                }
+            }
+            throw "API request failed: $_"
+        }
     }
 }
 
@@ -197,8 +231,8 @@ try {
     }
 
     # Build KQL query
-    $startIso = $StartDate.ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $endIso = $EndDate.ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
+    $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
 
     $kqlQuery = @"
 customEvents

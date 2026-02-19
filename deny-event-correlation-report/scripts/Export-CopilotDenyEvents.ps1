@@ -4,10 +4,9 @@
 
 .DESCRIPTION
     Extracts CopilotInteraction audit events where access was denied, including:
+    - Response-level blocks (ResponseOutcome = "Blocked")
     - Resource access failures (Status = "failure")
     - DLP/sensitivity policy blocks (PolicyDetails present)
-    - Cross-prompt injection attempts (XPIADetected = true)
-    - Jailbreak attempts (JailbreakDetected = true)
 
 .PARAMETER StartDate
     Start of the time window for audit log search. Defaults to yesterday.
@@ -31,7 +30,7 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.0
+    Version: 2.0.0
     Requires: ExchangeOnlineManagement module, Purview Audit Reader role
 
 .LINK
@@ -47,7 +46,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\CopilotDenyEvents-$(Get-Date -Format 'yyyy-MM-dd').csv",
+    [string]$OutputPath = ".\CopilotDenyEvents-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv",
 
     [Parameter()]
     [int]$MaxResults = 50000
@@ -111,7 +110,7 @@ function Get-CopilotAuditEvents {
         $results = Search-UnifiedAuditLog @params
 
         if ($results) {
-            $allEvents.AddRange($results)
+            $allEvents.AddRange(@($results))
             $retrievedCount = $allEvents.Count
             Write-Host "  Retrieved $retrievedCount events..." -ForegroundColor Gray
 
@@ -144,6 +143,13 @@ function ConvertTo-DenyEvent {
             $denyReasons = [System.Collections.Generic.List[string]]::new()
             $policyNames = [System.Collections.Generic.List[string]]::new()
             $resourceIds = [System.Collections.Generic.List[string]]::new()
+            $responseOutcome = $auditData.ResponseOutcome
+
+            # Check top-level ResponseOutcome for blocked responses
+            if ($responseOutcome -eq "Blocked") {
+                $isDeny = $true
+                $denyReasons.Add("ResponseBlocked")
+            }
 
             # Check AccessedResources for deny indicators
             foreach ($resource in $auditData.AccessedResources) {
@@ -167,20 +173,11 @@ function ConvertTo-DenyEvent {
                         $denyReasons.Add("PolicyBlock")
                     }
                 }
-
-                if ($resource.XPIADetected -eq $true) {
-                    $isDeny = $true
-                    $denyReasons.Add("XPIA")
-                }
             }
 
-            # Check Messages for jailbreak detection
-            foreach ($message in $auditData.Messages) {
-                if ($message.JailbreakDetected -eq $true) {
-                    $isDeny = $true
-                    $denyReasons.Add("Jailbreak")
-                }
-            }
+            # NOTE: XPIADetected and JailbreakDetected are NOT part of the CopilotInteraction
+            # audit schema. These detections are logged to Defender CloudAppEvents.
+            # See architecture.md for CloudAppEvents integration details.
 
             if ($isDeny) {
                 [PSCustomObject]@{
@@ -192,12 +189,11 @@ function ConvertTo-DenyEvent {
                     AgentVersion    = $auditData.AgentVersion
                     AppHost         = $auditData.AppHost
                     AppIdentity     = $auditData.AppIdentity
+                    ResponseOutcome = $responseOutcome
                     DenyReason      = ($denyReasons | Select-Object -Unique) -join "; "
                     PolicyNames     = ($policyNames | Select-Object -Unique) -join "; "
                     ResourceCount   = $resourceIds.Count
                     ResourceIds     = $resourceIds -join "; "
-                    HasXPIA         = $denyReasons -contains "XPIA"
-                    HasJailbreak    = $denyReasons -contains "Jailbreak"
                     HasPolicyBlock  = ($denyReasons | Where-Object { $_ -like "PolicyBlock*" }).Count -gt 0
                     RawAuditData    = $AuditRecord.AuditData
                 }
@@ -251,8 +247,6 @@ try {
     Write-Host "`n--- Summary ---" -ForegroundColor Cyan
     $summary = @{
         "Total Deny Events"  = $denyCount
-        "XPIA Detections"    = @($denyEvents | Where-Object { $_.HasXPIA }).Count
-        "Jailbreak Attempts" = @($denyEvents | Where-Object { $_.HasJailbreak }).Count
         "Policy Blocks"      = @($denyEvents | Where-Object { $_.HasPolicyBlock }).Count
         "Unique Users"       = @($denyEvents | Select-Object -ExpandProperty UserId -Unique).Count
         "Unique Agents"      = @($denyEvents | Where-Object { $_.AgentId } | Select-Object -ExpandProperty AgentId -Unique).Count

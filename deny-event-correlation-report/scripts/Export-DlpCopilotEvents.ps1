@@ -31,7 +31,7 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.0
+    Version: 2.0.0
     Requires: ExchangeOnlineManagement module, Purview Audit Reader role
 
 .LINK
@@ -47,7 +47,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\DlpCopilotEvents-$(Get-Date -Format 'yyyy-MM-dd').csv",
+    [string]$OutputPath = ".\DlpCopilotEvents-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv",
 
     [Parameter()]
     [int]$MaxResults = 50000,
@@ -66,7 +66,10 @@ function Connect-ToExchangeOnline {
     .SYNOPSIS
         Connects to Exchange Online if not already connected.
     #>
-    if (-not (Get-Command Search-UnifiedAuditLog -ErrorAction SilentlyContinue)) {
+    # Check for an active EXO session (not just module presence)
+    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
+        Where-Object { $_.State -eq 'Connected' }
+    if (-not $exoSession) {
         Write-Verbose "Connecting to Exchange Online..."
         try {
             Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
@@ -111,7 +114,7 @@ function Get-DlpAuditEvents {
         $results = Search-UnifiedAuditLog @params
 
         if ($results) {
-            $allEvents.AddRange($results)
+            $allEvents.AddRange(@($results))
             $retrievedCount = $allEvents.Count
             Write-Host "  Retrieved $retrievedCount events..." -ForegroundColor Gray
 
@@ -146,17 +149,15 @@ function ConvertTo-CopilotDlpEvent {
             $isCopilotRelated = (
                 $auditData.Workload -eq "MicrosoftCopilot" -or
                 $auditData.Workload -match "Copilot" -or
-                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" }) -or
-                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter -and $PolicyFilter -ne "*" })
+                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" })
             )
 
-            if (-not $isCopilotRelated -and $PolicyFilter -eq "*") {
-                # If no filter specified and not obviously Copilot-related, skip
-                # Unless Workload contains Copilot indicators
+            if (-not $isCopilotRelated) {
+                # Not a Copilot-related event, skip regardless of filter
                 return
             }
 
-            if ($isCopilotRelated -or $PolicyFilter -ne "*") {
+            if ($true) {
                 # Apply PolicyNameFilter: skip events that don't match when a filter is specified
                 if ($PolicyFilter -and $PolicyFilter -ne "*") {
                     $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
@@ -200,7 +201,7 @@ function ConvertTo-CopilotDlpEvent {
                     SensitiveInfoTypes  = $sitNames
                     SitMatchDetails     = $sitMatches
                     HasOverride         = $hasOverride
-                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo } else { "" }
+                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo | ConvertTo-Json -Compress -Depth 5 } else { "" }
                     RecordType          = $auditData.RecordType
                     RawAuditData        = $AuditRecord.AuditData
                 }

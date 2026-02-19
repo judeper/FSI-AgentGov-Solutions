@@ -141,11 +141,21 @@ customEvents
 | extend
     sessionId = tostring(customDimensions["ConversationId"]),
     agentId = tostring(customDimensions["BotId"])
+| extend severityRank = case(
+    tostring(customDimensions["FilterSeverity"]) == "High", 3,
+    tostring(customDimensions["FilterSeverity"]) == "Medium", 2,
+    tostring(customDimensions["FilterSeverity"]) == "Low", 1,
+    0)
 | summarize
     FilterCount = count(),
     FilterCategories = make_set(tostring(customDimensions["FilterCategory"])),
-    MaxSeverity = max(tostring(customDimensions["FilterSeverity"]))
+    MaxSeverityRank = max(severityRank)
     by sessionId, agentId
+| extend MaxSeverity = case(
+    MaxSeverityRank == 3, "High",
+    MaxSeverityRank == 2, "Medium",
+    MaxSeverityRank == 1, "Low",
+    "Unknown")
 | where FilterCount >= 3  // Sessions with multiple filters
 | order by FilterCount desc
 | take 50

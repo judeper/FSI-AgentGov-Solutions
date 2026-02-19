@@ -6,6 +6,10 @@
 // Purpose: Query CopilotInteraction audit events where access was denied
 // Data Source: OfficeActivity table in Log Analytics (requires M365 audit connector)
 //
+// NOTE: These queries use coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+// to support both standard deployments (where the audit JSON is in AuditData)
+// and non-standard connector configurations (where it may be in OfficeObjectId).
+//
 // Prerequisites:
 //   - Azure Log Analytics workspace with Office 365 audit data connector
 //   - Microsoft 365 E5 or E5 Compliance license
@@ -17,19 +21,17 @@
 OfficeActivity
 | where TimeGenerated > ago(24h)
 | where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | extend AccessedResources = AuditData.AccessedResources
 | mv-expand AccessedResources
 | where AccessedResources.Status == "failure"
     or isnotempty(AccessedResources.PolicyDetails)
-    or AccessedResources.XPIADetected == true
 | extend
     ResourceId = tostring(AccessedResources.ID),
     ResourceName = tostring(AccessedResources.Name),
     ResourceStatus = tostring(AccessedResources.Status),
     PolicyName = tostring(AccessedResources.PolicyDetails.PolicyName),
     PolicyAction = tostring(AccessedResources.PolicyDetails.Action),
-    XPIADetected = tobool(AccessedResources.XPIADetected),
     SensitivityLabelId = tostring(AccessedResources.SensitivityLabelId),
     AgentId = tostring(AuditData.AgentId),
     AgentName = tostring(AuditData.AgentName),
@@ -45,7 +47,6 @@ OfficeActivity
     ResourceStatus,
     PolicyName,
     PolicyAction,
-    XPIADetected,
     SensitivityLabelId
 | order by TimeGenerated desc
 
@@ -55,16 +56,14 @@ OfficeActivity
 OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | extend AccessedResources = AuditData.AccessedResources
 | mv-expand AccessedResources
 | extend
     IsFailure = AccessedResources.Status == "failure",
-    HasPolicy = isnotempty(AccessedResources.PolicyDetails),
-    IsXPIA = tobool(AccessedResources.XPIADetected)
-| where IsFailure or HasPolicy or IsXPIA
+    HasPolicy = isnotempty(AccessedResources.PolicyDetails)
+| where IsFailure or HasPolicy
 | extend DenyCategory = case(
-    IsXPIA, "XPIA Detection",
     HasPolicy, "Policy Block",
     IsFailure, "Resource Failure",
     "Unknown"
@@ -77,50 +76,52 @@ OfficeActivity
 | order by TimeGenerated desc, EventCount desc
 
 // -----------------------------------------------------------------------------
-// Query 3: XPIA (Cross-Prompt Injection) Detections
+// Query 3: XPIA (Cross-Prompt Injection) Detections — via Defender CloudAppEvents
+// NOTE: XPIADetected is NOT part of the CopilotInteraction audit schema.
+// Use Defender CloudAppEvents instead. Requires Defender for Cloud Apps license.
+// See architecture.md for details.
 // -----------------------------------------------------------------------------
-OfficeActivity
-| where TimeGenerated > ago(30d)
-| where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
-| extend AccessedResources = AuditData.AccessedResources
-| mv-expand AccessedResources
-| where AccessedResources.XPIADetected == true
+CloudAppEvents
+| where Timestamp > ago(30d)
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where RawEventData has "PromptInjection" or RawEventData has "XPIA"
 | extend
-    AgentId = tostring(AuditData.AgentId),
-    AgentName = tostring(AuditData.AgentName),
-    AppHost = tostring(AuditData.AppHost),
-    ResourceId = tostring(AccessedResources.ID)
+    ThreatCategory = tostring(parse_json(RawEventData).ThreatCategory),
+    AgentId = tostring(parse_json(RawEventData).AgentId),
+    AgentName = tostring(parse_json(RawEventData).AgentName),
+    AppHost = tostring(parse_json(RawEventData).AppHost)
 | project
-    TimeGenerated,
-    UserId,
+    Timestamp,
+    AccountDisplayName,
     AgentId,
     AgentName,
     AppHost,
-    ResourceId
-| order by TimeGenerated desc
+    ThreatCategory
+| order by Timestamp desc
 
 // -----------------------------------------------------------------------------
-// Query 4: Jailbreak Attempt Detections
+// Query 4: Jailbreak Attempt Detections — via Defender CloudAppEvents
+// NOTE: JailbreakDetected is NOT part of the CopilotInteraction audit schema.
+// Use Defender CloudAppEvents instead. Requires Defender for Cloud Apps license.
+// See architecture.md for details.
 // -----------------------------------------------------------------------------
-OfficeActivity
-| where TimeGenerated > ago(30d)
-| where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
-| extend Messages = AuditData.Messages
-| mv-expand Messages
-| where Messages.JailbreakDetected == true
+CloudAppEvents
+| where Timestamp > ago(30d)
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where RawEventData has "Jailbreak"
 | extend
-    AgentId = tostring(AuditData.AgentId),
-    AgentName = tostring(AuditData.AgentName),
-    AppHost = tostring(AuditData.AppHost)
+    ThreatCategory = tostring(parse_json(RawEventData).ThreatCategory),
+    AgentId = tostring(parse_json(RawEventData).AgentId),
+    AgentName = tostring(parse_json(RawEventData).AgentName),
+    AppHost = tostring(parse_json(RawEventData).AppHost)
 | project
-    TimeGenerated,
-    UserId,
+    Timestamp,
+    AccountDisplayName,
     AgentId,
     AgentName,
-    AppHost
-| order by TimeGenerated desc
+    AppHost,
+    ThreatCategory
+| order by Timestamp desc
 
 // -----------------------------------------------------------------------------
 // Query 5: Top Agents by Deny Event Count
@@ -128,12 +129,11 @@ OfficeActivity
 OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | extend AccessedResources = AuditData.AccessedResources
 | mv-expand AccessedResources
 | where AccessedResources.Status == "failure"
     or isnotempty(AccessedResources.PolicyDetails)
-    or AccessedResources.XPIADetected == true
 | extend
     AgentId = tostring(AuditData.AgentId),
     AgentName = tostring(AuditData.AgentName)
@@ -151,12 +151,11 @@ OfficeActivity
 OfficeActivity
 | where TimeGenerated > ago(1h)
 | where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | extend AccessedResources = AuditData.AccessedResources
 | mv-expand AccessedResources
 | where AccessedResources.Status == "failure"
     or isnotempty(AccessedResources.PolicyDetails)
-    or AccessedResources.XPIADetected == true
 | summarize DenyCount = count() by bin(TimeGenerated, 5m)
 | order by TimeGenerated desc
 
@@ -166,7 +165,7 @@ OfficeActivity
 OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "CopilotInteraction"
-| extend AuditData = parse_json(OfficeObjectId)
+| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
 | extend AccessedResources = AuditData.AccessedResources
 | mv-expand AccessedResources
 | where isnotempty(AccessedResources.PolicyDetails)

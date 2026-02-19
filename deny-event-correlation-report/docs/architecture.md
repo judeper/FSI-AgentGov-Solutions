@@ -49,7 +49,8 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 │  │  └── 2026-01-26/                                                 │   │
 │  │      ├── CopilotDenyEvents-2026-01-26.csv                       │   │
 │  │      ├── DlpCopilotEvents-2026-01-26.csv                        │   │
-│  │      └── RaiTelemetry-2026-01-26.csv                            │   │
+│  │      ├── RaiTelemetry-2026-01-26.csv                            │   │
+│  │      └── DefenderCopilotEvents-2026-01-26.csv                   │   │
 │  │                                                                  │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
@@ -124,7 +125,8 @@ CloudAppEvents
 | `Export-CopilotDenyEvents.ps1` | Extract CopilotInteraction deny events | Search-UnifiedAuditLog |
 | `Export-DlpCopilotEvents.ps1` | Extract DLP matches for Copilot | Search-UnifiedAuditLog |
 | `Export-RaiTelemetry.ps1` | Extract RAI telemetry | Application Insights REST API |
-| `Invoke-DailyDenyReport.ps1` | Orchestrate all extractions | N/A |
+| `Export-DefenderCopilotEvents.ps1` | Extract XPIA/Jailbreak detections (orchestrated — opt-out via -SkipDefenderEvents; requires Defender for Cloud Apps) | Defender Advanced Hunting |
+| `Invoke-DailyDenyReport.ps1` | Orchestrate all extractions (Purview Audit, DLP, RAI, Defender via opt-out) | N/A |
 
 ### 3. Storage Layer
 
@@ -138,13 +140,15 @@ CloudAppEvents
 
 ### 4. Visualization Layer
 
-**Power BI Template** provides:
+**Power BI Template** provides (planned — template not yet included in this repository; use `kql-queries/correlation-analysis.kql` for cross-source analysis in the interim):
 
 - Executive summary dashboard
 - Event detail drill-down
 - Multi-source correlation
 - Daily trend analysis
 - Alerting integration
+
+> **Note:** Use the KQL queries in `kql-queries/correlation-analysis.kql` for cross-source analysis until the Power BI template is available.
 
 ## Deployment Options
 
@@ -182,14 +186,13 @@ Power Automate Flow
 
 ### Authentication
 
-!!! danger "Deprecation Warning: x-api-key Authentication - March 31, 2026"
-    Application Insights API key authentication is **deprecated** and will **stop working** on **March 31, 2026**. After this date, scripts using the `-ApiKey` parameter will fail with authentication errors.
+!!! info "Authentication: Entra ID (Azure AD)"
+    Application Insights API key authentication was **deprecated** and has been removed.
+    `Export-RaiTelemetry.ps1` was migrated to Entra ID (OAuth 2.0) authentication on February 4, 2026.
 
-    Organizations should plan migration to Entra ID OAuth 2.0 authentication before this date to ensure RAI telemetry extraction continues to function.
+    See [Authentication Migration](prerequisites.md#authentication-migration) for details.
 
-    See [Authentication Migration](prerequisites.md#authentication-migration) for step-by-step guidance.
-
-    *Last verified: February 2, 2026*
+    *Migration completed: February 4, 2026*
 
 | Component | Authentication Method | Deprecation Status |
 |-----------|----------------------|-------------------|
@@ -250,4 +253,4 @@ The exported data may contain:
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*FSI Agent Governance Framework v2.0.0 - February 2026*

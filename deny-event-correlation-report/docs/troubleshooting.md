@@ -71,7 +71,13 @@ Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
 ```powershell
 # Test API connectivity with Entra ID authentication
 Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
-$token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
+$tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+# Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+$token = if ($tokenResult.Token -is [System.Security.SecureString]) {
+    $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+} else {
+    $tokenResult.Token
+}
 $headers = @{ "Authorization" = "Bearer $token" }
 $uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
 Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
@@ -253,4 +259,4 @@ When reporting issues, include:
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*FSI Agent Governance Framework v2.0.0 - February 2026*
