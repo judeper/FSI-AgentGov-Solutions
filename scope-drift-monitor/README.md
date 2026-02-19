@@ -16,7 +16,7 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 | **Real-Time Detection** | Monitor access within 15 minutes of occurrence |
 | **Drift Alerts** | Immediate notification when scope exceeded |
 | **Expansion Workflow** | Request and approve scope changes |
-| **Audit Reports** | Monthly scope drift analysis |
+| **Audit Trail** | Detection run history for compliance evidence |
 
 ## Architecture
 
@@ -24,7 +24,7 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Scope Drift Monitor                           │
 ├─────────────────────────────────────────────────────────────────┤
-│  Baseline Mgr  │  Drift Detector  │  Alert Engine  │  Reports   │
+│  Baseline Mgr  │  Drift Detector  │  Alert Engine  │ Audit Trail │
 └────────────────┴──────────────────┴────────────────┴────────────┘
                               ▲
                               │ Analysis
@@ -41,6 +41,7 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
 │ Unified     │ Defender      │ SharePoint    │ Dataverse         │
 │ Audit Log   │ CloudAppEvents│ Audit         │ Audit             │
+│ ✅ v1.1.0   │ 🔜 Planned    │ 🔜 Planned    │ 🔜 Planned        │
 └─────────────┴───────────────┴───────────────┴───────────────────┘
 ```
 
@@ -120,16 +121,19 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
+| `fsi_SDM_ClientId` | Azure AD application client ID |
+| `fsi_SDM_ClientSecret` | Azure AD application client secret |
+| `fsi_SDM_DefaultScopeOwner` | Systemuser GUID for auto-created placeholder scopes |
+| `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
 
 ### 3. Configure Connection References
 
 Connect each connection reference to an appropriate connection:
 
 - `fsi_cr_dataverse` - Dataverse connection
-- `fsi_cr_office365` - Office 365 Outlook connection
+- `fsi_cr_outlook` - Office 365 Outlook connection
 - `fsi_cr_teams` - Microsoft Teams connection
 - `fsi_cr_approvals` - Approvals connection
-- `fsi_cr_o365management` - HTTP with Microsoft Entra ID (Office 365 Management APIs)
 
 ### 4. Capture Agent Baselines
 
@@ -153,7 +157,7 @@ Connect each connection reference to an appropriate connection:
 .\scripts\Invoke-DriftScan.ps1 -Environment "https://your-org.crm.dynamics.com"
 
 # Test alert delivery
-.\scripts\Test-AlertDelivery.ps1 -Environment "https://your-org.crm.dynamics.com" -AgentScopeId "xxxxx"
+.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://..." -EmailRecipient "security@contoso.com" -FromEmail "alerts@contoso.com"
 ```
 
 ## Documentation
@@ -180,12 +184,14 @@ Connect each connection reference to an appropriate connection:
 
 ### Detection Sources
 
-| Source | Data Captured |
-|--------|---------------|
-| **Unified Audit Log** | CopilotInteraction events with connector details |
-| **CloudAppEvents** | Defender detections including shadow IT |
-| **SharePoint Audit** | Site/library access events |
-| **Dataverse Audit** | Table read/write operations |
+| Source | Data Captured | Status |
+|--------|---------------|--------|
+| **Unified Audit Log** | CopilotInteraction events with connector details | ✅ Implemented |
+| **CloudAppEvents** | Defender detections including shadow IT | 🔜 Planned |
+| **SharePoint Audit** | Site/library access events | 🔜 Planned |
+| **Dataverse Audit** | Table read/write operations | 🔜 Planned |
+
+> **Note:** v1.1.0 implements Unified Audit Log detection only. The architecture is designed to support additional sources in future releases.
 
 ### Detection Frequency
 

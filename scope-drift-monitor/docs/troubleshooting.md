@@ -159,9 +159,8 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 **Resolution:**
 
 - Default timeout is 7 days
-- After timeout, the flow stops waiting
-- Request remains in pending state
-- Manually update request status or resubmit
+- After timeout, the `Handle_Approval_Timeout` scope automatically sets the request status to Cancelled (6) and sends an expiration email to the requestor
+- No manual intervention is required — if the expansion is still needed, submit a new request
 
 **To change timeout:**
 
@@ -245,6 +244,28 @@ null
 ---
 
 ## Performance Issues
+
+### Events Dropped (High Volume)
+
+**Symptoms:** Detection summary shows `eventsSkipped > 0` or violations are not detected in high-volume environments.
+
+**Cause:** SDM-DriftDetector processes a maximum of **200 events per detection cycle**. Events beyond 200 are skipped until the next cycle.
+
+**Resolution:**
+
+| Action | Description |
+|--------|-------------|
+| Reduce detection window | Lower `fsi_SDM_DetectionWindowMinutes` (e.g., from 15 to 5) |
+| Increase frequency | Change flow recurrence interval to match the reduced window |
+| Monitor overflow | Check `fsi_detectionruns` records for `eventsSkipped` in the `fsi_summary` field |
+
+**Verify overflow:**
+
+1. Open a recent detection run record in Dataverse (`fsi_detectionruns`)
+2. Check the `fsi_summary` JSON for `eventsReceived`, `eventsProcessed`, and `eventsSkipped`
+3. If `eventsSkipped` is consistently > 0, reduce the detection window
+
+---
 
 ### Flow Runs Slowly
 

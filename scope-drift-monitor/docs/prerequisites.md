@@ -30,12 +30,11 @@ Requirements for deploying the Scope Drift Monitor.
 |------|--------------|
 | **System Administrator** | Dataverse table creation |
 
-### Microsoft Graph API Permissions
+### Office 365 Management API Permissions
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `AuditLog.Read.All` | Application | Unified Audit Log access |
-| `Directory.Read.All` | Application | User and app details |
+| `ActivityFeed.Read` | Application | Unified Audit Log access via Office 365 Management API |
 
 ---
 
@@ -59,4 +58,4 @@ Requirements for deploying the Scope Drift Monitor.
 
 ---
 
-*Scope Drift Monitor v1.0.0*
+*Scope Drift Monitor v1.1.0*

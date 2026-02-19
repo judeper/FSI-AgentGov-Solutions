@@ -629,6 +629,14 @@
                 <target>fsi_expansionrequest</target>
               </Targets>
             </attribute>
+            <attribute PhysicalName="fsi_notificationfailed">
+              <Type>bit</Type>
+              <Name>fsi_notificationfailed</Name>
+              <LogicalName>fsi_notificationfailed</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <DefaultValue>0</DefaultValue>
+            </attribute>
           </attributes>
         </entity>
       </EntityInfo>
@@ -805,6 +813,11 @@
                     <label description="Cancelled" languagecode="1033" />
                   </labels>
                 </option>
+                <option value="7">
+                  <labels>
+                    <label description="Failed" languagecode="1033" />
+                  </labels>
+                </option>
               </optionset>
             </attribute>
             <attribute PhysicalName="fsi_dataownerapproval">
@@ -895,6 +908,121 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <Format>DateAndTime</Format>
               <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_requestedaccesslevel">
+              <Type>picklist</Type>
+              <Name>fsi_requestedaccesslevel</Name>
+              <LogicalName>fsi_requestedaccesslevel</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <optionset Name="fsi_expansionrequest_requestedaccesslevel">
+                <OptionSetType>Picklist</OptionSetType>
+                <option value="1">
+                  <labels>
+                    <label description="Read Only" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="2">
+                  <labels>
+                    <label description="Read/Write" languagecode="1033" />
+                  </labels>
+                </option>
+                <option value="3">
+                  <labels>
+                    <label description="Full Control" languagecode="1033" />
+                  </labels>
+                </option>
+              </optionset>
+            </attribute>
+          </attributes>
+        </entity>
+      </EntityInfo>
+    </Entity>
+    <!-- Table: fsi_detectionrun -->
+    <Entity Name="fsi_detectionrun">
+      <EntityInfo>
+        <entity Name="fsi_detectionrun">
+          <LocalizedNames>
+            <LocalizedName description="Detection Run" languagecode="1033" />
+          </LocalizedNames>
+          <LocalizedCollectionNames>
+            <LocalizedCollectionName description="Detection Runs" languagecode="1033" />
+          </LocalizedCollectionNames>
+          <Descriptions>
+            <Description description="Audit trail of detection run executions for compliance evidence" languagecode="1033" />
+          </Descriptions>
+          <attributes>
+            <attribute PhysicalName="fsi_detectionrunid">
+              <Type>uniqueidentifier</Type>
+              <Name>fsi_detectionrunid</Name>
+              <LogicalName>fsi_detectionrunid</LogicalName>
+              <RequiredLevel>SystemRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <IsPrimaryId>1</IsPrimaryId>
+            </attribute>
+            <attribute PhysicalName="fsi_name">
+              <Type>nvarchar</Type>
+              <Name>fsi_name</Name>
+              <LogicalName>fsi_name</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>200</MaxLength>
+              <ImeMode>auto</ImeMode>
+              <IsPrimaryName>1</IsPrimaryName>
+            </attribute>
+            <attribute PhysicalName="fsi_runstart">
+              <Type>datetime</Type>
+              <Name>fsi_runstart</Name>
+              <LogicalName>fsi_runstart</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_runend">
+              <Type>datetime</Type>
+              <Name>fsi_runend</Name>
+              <LogicalName>fsi_runend</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <Format>DateAndTime</Format>
+              <ImeMode>Inactive</ImeMode>
+            </attribute>
+            <attribute PhysicalName="fsi_eventsprocessed">
+              <Type>int</Type>
+              <Name>fsi_eventsprocessed</Name>
+              <LogicalName>fsi_eventsprocessed</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>2147483647</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_violationscreated">
+              <Type>int</Type>
+              <Name>fsi_violationscreated</Name>
+              <LogicalName>fsi_violationscreated</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>2147483647</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_activescopescount">
+              <Type>int</Type>
+              <Name>fsi_activescopescount</Name>
+              <LogicalName>fsi_activescopescount</LogicalName>
+              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MinValue>0</MinValue>
+              <MaxValue>2147483647</MaxValue>
+            </attribute>
+            <attribute PhysicalName="fsi_summary">
+              <Type>ntext</Type>
+              <Name>fsi_summary</Name>
+              <LogicalName>fsi_summary</LogicalName>
+              <RequiredLevel>None</RequiredLevel>
+              <DisplayMask>ValidForAdvancedFind</DisplayMask>
+              <MaxLength>100000</MaxLength>
+              <ImeMode>auto</ImeMode>
             </attribute>
           </attributes>
         </entity>

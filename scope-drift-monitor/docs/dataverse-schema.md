@@ -19,10 +19,10 @@ Table definitions for the Scope Drift Monitor.
          │                  └─────────────────────┘
          │
          ▼
-┌─────────────────────┐
-│  fsi_scopeitem      │
-│  (allowed resources)│
-└─────────────────────┘
+┌─────────────────────┐     ┌─────────────────────┐
+│  fsi_scopeitem      │     │  fsi_detectionrun   │
+│  (allowed resources)│     │  (run audit trail)  │
+└─────────────────────┘     └─────────────────────┘
 ```
 
 ---
@@ -166,7 +166,7 @@ Detected scope drift violations.
 | 3 | Unauthorized Dataverse Table |
 | 4 | Unauthorized External API |
 | 5 | Expired Scope Item |
-| 6 | Revoked Access |
+| 6 | No Baseline Defined |
 
 ### Choice: fsi_severity
 
@@ -246,6 +246,7 @@ Requests to expand agent scope.
 | 4 | Approved |
 | 5 | Denied |
 | 6 | Cancelled |
+| 7 | Failed |
 
 ### Choice: fsi_dataownerapproval / fsi_securityapproval
 
@@ -255,6 +256,26 @@ Requests to expand agent scope.
 | 2 | Approved |
 | 3 | Denied |
 | 4 | Delegated |
+
+---
+
+## Table: fsi_detectionrun
+
+Audit trail of detection run executions for compliance evidence.
+
+### Columns
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| `fsi_detectionrunid` | Uniqueidentifier | Yes | Primary key |
+| `fsi_name` | String (200) | Yes | Run display name |
+| `fsi_runstart` | DateTime | Yes | Detection window start |
+| `fsi_runend` | DateTime | Yes | Detection window end |
+| `fsi_eventsprocessed` | Integer | Yes | Number of audit events processed |
+| `fsi_violationscreated` | Integer | Yes | Number of violations created |
+| `fsi_activescopescount` | Integer | Yes | Number of active scopes at run time |
+| `fsi_summary` | Text | No | JSON summary of run details |
+| `createdon` | DateTime | Auto | Record creation timestamp |
 
 ---
 
@@ -270,6 +291,7 @@ Read-only access.
 | fsi_scopeitem | Read |
 | fsi_scopeviolation | Read |
 | fsi_expansionrequest | Read |
+| fsi_detectionrun | Read |
 
 ### SDM Analyst
 
@@ -292,4 +314,4 @@ Full administrative access.
 
 ---
 
-*Scope Drift Monitor v1.0.0*
+*Scope Drift Monitor v1.1.0*

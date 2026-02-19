@@ -58,7 +58,13 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET
+    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET,
+
+    [Parameter(Mandatory = $false)]
+    [string]$EnvironmentId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$Owner
 )
 
 $ErrorActionPreference = "Stop"
@@ -285,6 +291,7 @@ function Build-ScopeFromHistory {
     $scope = @{
         fsi_name              = "Agent $AgentId Baseline"
         fsi_agentid           = $AgentId
+        fsi_environmentid     = $script:ResolvedEnvironmentId
         fsi_zone              = 2  # Default to Zone 2
         fsi_status            = 2  # Active (auto-generated baseline goes active immediately per CONTEXT.md)
         fsi_purpose           = "Auto-generated baseline from $Days-day audit history analysis"
@@ -293,6 +300,11 @@ function Build-ScopeFromHistory {
         fsi_allowedtables     = ($Resources.Tables | ConvertTo-Json -Compress)
         fsi_allowedapis       = ($Resources.APIs | ConvertTo-Json -Compress)
         fsi_lastvalidated     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    }
+
+    # Set owner lookup if available
+    if ($script:ResolvedOwner) {
+        $scope["fsi_owner@odata.bind"] = "/systemusers($($script:ResolvedOwner))"
     }
 
     # Handle empty arrays (ensure valid JSON)
@@ -350,6 +362,12 @@ Write-Host "Environment: $Environment"
 Write-Host "Analysis Period: $Days days"
 Write-Host ""
 
+# Validate AgentId format
+if ($AgentId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+    Write-Error "AgentId must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789012)"
+    exit 1
+}
+
 # Validate credentials
 if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
     Write-Error "Missing credentials. Set environment variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET"
@@ -380,6 +398,27 @@ catch {
 # Get CopilotInteraction audit events
 Write-Host ""
 Write-Host "Querying Office 365 Management API for CopilotInteraction events..." -ForegroundColor Gray
+
+# Resolve environment ID and owner via Dataverse WhoAmI
+$whoAmIHeaders = @{
+    "Authorization"    = "Bearer $dataverseToken"
+    "Content-Type"     = "application/json"
+    "OData-MaxVersion" = "4.0"
+    "OData-Version"    = "4.0"
+}
+
+try {
+    $whoAmI = Invoke-RestMethod -Uri "$Environment/api/data/v9.2/WhoAmI" -Headers $whoAmIHeaders -Method Get
+    $script:ResolvedEnvironmentId = if ($EnvironmentId) { $EnvironmentId } else { $whoAmI.OrganizationId }
+    $script:ResolvedOwner = if ($Owner) { $Owner } else { $whoAmI.UserId }
+    Write-Host "  Environment ID: $($script:ResolvedEnvironmentId)" -ForegroundColor Gray
+}
+catch {
+    Write-Warning "Could not call WhoAmI: $($_.Exception.Message)"
+    $script:ResolvedEnvironmentId = if ($EnvironmentId) { $EnvironmentId } else { "" }
+    $script:ResolvedOwner = $Owner
+}
+
 $events = Get-CopilotAuditEvents -Token $managementToken -TenantId $TenantId -AgentId $AgentId -Days $Days
 Write-Host "  Found $($events.Count) CopilotInteraction events (RecordType 261)"
 

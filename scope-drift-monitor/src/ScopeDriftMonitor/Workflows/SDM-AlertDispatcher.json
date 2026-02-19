@@ -45,6 +45,28 @@
           "$expand": "fsi_agentscopeid($select=fsi_name,fsi_agentid,fsi_zone;$expand=fsi_owner($select=internalemailaddress,fullname))"
         },
         "authentication": "@parameters('$authentication')"
+      },
+      "retryPolicy": {
+        "type": "exponential",
+        "count": 3,
+        "interval": "PT10S",
+        "minimumInterval": "PT10S",
+        "maximumInterval": "PT1H"
+      }
+    },
+    "Terminate_On_Read_Failure": {
+      "runAfter": {
+        "Get_Violation_Details": [
+          "Failed"
+        ]
+      },
+      "type": "Terminate",
+      "inputs": {
+        "runStatus": "Cancelled",
+        "runError": {
+          "code": "RecordNotFound",
+          "message": "Failed to retrieve violation details. The record may have been deleted between trigger and execution."
+        }
       }
     },
     "Get_Severity_Label": {
@@ -149,38 +171,74 @@
         ]
       }
     },
-    "Post_Teams_Adaptive_Card": {
+    "Condition_Teams_Configured": {
       "runAfter": {
         "Build_Adaptive_Card": [
           "Succeeded"
         ]
       },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "shared_teams",
-          "operationId": "PostCardToChannel",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
-        },
-        "parameters": {
-          "poster": "Flow bot",
-          "location": "Channel",
-          "groupId": "@{parameters('fsi_SDM_TeamsGroupId')}",
-          "channelId": "@{parameters('fsi_SDM_TeamsChannelId')}",
-          "card": "@outputs('Build_Adaptive_Card')"
-        },
-        "authentication": "@parameters('$authentication')"
+      "type": "If",
+      "expression": {
+        "and": [
+          {
+            "not": {
+              "equals": [
+                "@coalesce(parameters('fsi_SDM_TeamsGroupId'), '')",
+                ""
+              ]
+            }
+          },
+          {
+            "not": {
+              "equals": [
+                "@coalesce(parameters('fsi_SDM_TeamsChannelId'), '')",
+                ""
+              ]
+            }
+          }
+        ]
+      },
+      "actions": {
+        "Post_Teams_Adaptive_Card": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostCardToChannel",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "groupId": "@{parameters('fsi_SDM_TeamsGroupId')}",
+              "channelId": "@{parameters('fsi_SDM_TeamsChannelId')}",
+              "card": "@outputs('Build_Adaptive_Card')"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT1H"
+          }
+        }
+      },
+      "else": {
+        "actions": {}
       }
     },
     "Build_Email_Body": {
       "runAfter": {
-        "Post_Teams_Adaptive_Card": [
+        "Condition_Teams_Configured": [
           "Succeeded",
           "Failed"
         ]
       },
       "type": "Compose",
-      "inputs": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.alert-header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}.details-table{width:100%;border-collapse:collapse;margin-top:20px;}.details-table td{padding:10px;border:1px solid #ddd;}.details-table tr:nth-child(odd){background-color:#f9f9f9;}.label{font-weight:bold;width:150px;}.severity-high{color:#d13438;font-weight:bold;}.severity-medium{color:#ff8c00;font-weight:bold;}.severity-low{color:#107c10;font-weight:bold;}</style></head><body><div class=\"alert-header\">Scope Drift Violation Detected</div><table class=\"details-table\"><tr><td class=\"label\">Agent</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_name'], 'Unknown Agent')}</td></tr><tr><td class=\"label\">Violation Type</td><td>@{outputs('Get_Violation_Type_Label')}</td></tr><tr><td class=\"label\">Resource</td><td>@{outputs('Get_Violation_Details')?['body/fsi_resourcename']}</td></tr><tr><td class=\"label\">Resource URL</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_resourceurl'], 'N/A')}</td></tr><tr><td class=\"label\">Severity</td><td class=\"severity-@{toLower(outputs('Get_Severity_Label'))}\">@{outputs('Get_Severity_Label')}</td></tr><tr><td class=\"label\">Zone</td><td>@{outputs('Get_Zone_Label')}</td></tr><tr><td class=\"label\">Detected On</td><td>@{formatDateTime(outputs('Get_Violation_Details')?['body/fsi_detectedon'], 'MMMM dd, yyyy HH:mm:ss')} UTC</td></tr><tr><td class=\"label\">Audit Record ID</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_auditrecordid'], 'N/A')}</td></tr></table><p style=\"margin-top:20px;\"><strong>Action Required:</strong> Please review this violation and determine the appropriate resolution:</p><ul><li>If this access is legitimate, create a scope expansion request</li><li>If this is a security concern, investigate and remediate the agent</li><li>If this is a false positive, close the violation with appropriate documentation</li></ul><p><a href=\"@{concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_scopeviolation&id=', outputs('Get_Violation_Details')?['body/fsi_scopeviolationid'])}\">View Violation in Dataverse</a></p></body></html>"
+      "inputs": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.alert-header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}.details-table{width:100%;border-collapse:collapse;margin-top:20px;}.details-table td{padding:10px;border:1px solid #ddd;}.details-table tr:nth-child(odd){background-color:#f9f9f9;}.label{font-weight:bold;width:150px;}.severity-high{color:#d13438;font-weight:bold;}.severity-medium{color:#ff8c00;font-weight:bold;}.severity-low{color:#107c10;font-weight:bold;}.severity-critical{color:#a80000;font-weight:bold;text-transform:uppercase;}</style></head><body><div class=\"alert-header\">Scope Drift Violation Detected</div><table class=\"details-table\"><tr><td class=\"label\">Agent</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_name'], 'Unknown Agent')}</td></tr><tr><td class=\"label\">Violation Type</td><td>@{outputs('Get_Violation_Type_Label')}</td></tr><tr><td class=\"label\">Resource</td><td>@{outputs('Get_Violation_Details')?['body/fsi_resourcename']}</td></tr><tr><td class=\"label\">Resource URL</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_resourceurl'], 'N/A')}</td></tr><tr><td class=\"label\">Severity</td><td class=\"severity-@{toLower(outputs('Get_Severity_Label'))}\">@{outputs('Get_Severity_Label')}</td></tr><tr><td class=\"label\">Zone</td><td>@{outputs('Get_Zone_Label')}</td></tr><tr><td class=\"label\">Detected On</td><td>@{formatDateTime(outputs('Get_Violation_Details')?['body/fsi_detectedon'], 'MMMM dd, yyyy HH:mm:ss')} UTC</td></tr><tr><td class=\"label\">Audit Record ID</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_auditrecordid'], 'N/A')}</td></tr></table><p style=\"margin-top:20px;\"><strong>Action Required:</strong> Please review this violation and determine the appropriate resolution:</p><ul><li>If this access is legitimate, create a scope expansion request</li><li>If this is a security concern, investigate and remediate the agent</li><li>If this is a false positive, close the violation with appropriate documentation</li></ul><p><a href=\"@{concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_scopeviolation&id=', outputs('Get_Violation_Details')?['body/fsi_scopeviolationid'])}\">View Violation in Dataverse</a></p></body></html>"
     },
     "Determine_Email_Recipients": {
       "runAfter": {
@@ -189,7 +247,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "@concat(coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_owner/internalemailaddress'], ''), ';', parameters('fsi_SDM_SecurityTeamEmail'))"
+      "inputs": "@if(empty(coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_owner/internalemailaddress'], '')), parameters('fsi_SDM_SecurityTeamEmail'), concat(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_owner/internalemailaddress'], ';', parameters('fsi_SDM_SecurityTeamEmail')))"
     },
     "Send_Email_Notification": {
       "runAfter": {
@@ -213,13 +271,29 @@
           }
         },
         "authentication": "@parameters('$authentication')"
+      },
+      "retryPolicy": {
+        "type": "exponential",
+        "count": 3,
+        "interval": "PT10S",
+        "minimumInterval": "PT10S",
+        "maximumInterval": "PT1H"
       }
     },
-    "Update_Violation_Status": {
+    "Check_All_Notifications_Failed": {
       "runAfter": {
         "Send_Email_Notification": [
           "Succeeded",
           "Failed"
+        ]
+      },
+      "type": "Compose",
+      "inputs": "@not(or(equals(actions('Post_Teams_Adaptive_Card')?['status'], 'Succeeded'), equals(actions('Send_Email_Notification')?['status'], 'Succeeded')))"
+    },
+    "Update_Violation_Status": {
+      "runAfter": {
+        "Check_All_Notifications_Failed": [
+          "Succeeded"
         ]
       },
       "type": "OpenApiConnection",
@@ -233,7 +307,8 @@
           "entityName": "fsi_scopeviolations",
           "recordId": "@triggerOutputs()?['body/fsi_scopeviolationid']",
           "item": {
-            "fsi_status": 2
+            "fsi_status": "@if(outputs('Check_All_Notifications_Failed'), 1, 2)",
+            "fsi_notificationfailed": "@outputs('Check_All_Notifications_Failed')"
           }
         },
         "authentication": "@parameters('$authentication')"

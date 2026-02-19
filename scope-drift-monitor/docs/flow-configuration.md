@@ -51,10 +51,9 @@ Before importing the solution, configure connection references in your target en
 | Connection Reference | Connector | Purpose |
 |---------------------|-----------|---------|
 | `fsi_cr_dataverse` | Dataverse | Read/write scope and violation records |
-| `fsi_cr_office365` | Office 365 Outlook | Send email notifications |
+| `fsi_cr_outlook` | Office 365 Outlook | Send email notifications |
 | `fsi_cr_teams` | Microsoft Teams | Post adaptive cards to channels |
 | `fsi_cr_approvals` | Approvals | Process expansion approvals |
-| `fsi_cr_o365management` | HTTP with Azure AD | Query Office 365 Management API |
 
 ### Creating Connection References
 
@@ -71,12 +70,15 @@ Configure environment variables for your organization.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `fsi_SDM_TenantId` | Azure AD tenant ID | `contoso.onmicrosoft.com` |
+| `fsi_SDM_TenantId` | Azure AD tenant ID (GUID format) | `12345678-1234-1234-1234-123456789012` |
 | `fsi_SDM_DataverseEnvironment` | Dataverse environment URL | `https://contoso.crm.dynamics.com` |
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts | `19:xxxxx@thread.tacv2` |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals | `security@contoso.com` |
-| `fsi_SDM_DetectionFrequency` | Drift detection frequency | `15` (minutes) |
+| `fsi_SDM_DetectionWindowMinutes` | Detection lookback window | `15` (minutes) |
+| `fsi_SDM_ClientId` | Azure AD application client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `fsi_SDM_ClientSecret` | Azure AD application client secret | *(stored securely)* |
+| `fsi_SDM_DefaultScopeOwner` | Systemuser GUID for auto-created placeholder scopes | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
 ### Configuring Environment Variables
 
@@ -108,22 +110,24 @@ Configure environment variables for your organization.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Recurrence | 15 minutes | How often to check for drift |
-| Lookback window | 20 minutes | Audit events to analyze (overlap prevents gaps) |
-| Batch size | 100 | Events processed per run |
+| Lookback window | 15 minutes | Audit events to analyze (matches recurrence interval) |
 
 **To modify detection frequency:**
 
 1. Open the flow in edit mode
 2. Select the **Recurrence** trigger
 3. Change **Interval** to desired minutes
-4. Update the lookback window in **Initialize Lookback** to be slightly longer
+4. Update the `fsi_SDM_DetectionWindowMinutes` environment variable to match
 
 **Detection sources:**
 
-1. **Office 365 Management API** - CopilotInteraction events (RecordType 261)
-2. **Dataverse audit** - Agent table access (fallback)
+1. **Office 365 Management API** — CopilotInteraction events (RecordType 261)
 
-**Graceful degradation:** If a source is unavailable, the flow logs a warning and continues with remaining sources.
+> **Note:** The architecture supports additional detection sources (CloudAppEvents, SharePoint Audit, Dataverse Audit) but only the Unified Audit Log is implemented in v1.1.0. Additional sources are planned for future releases.
+
+**Event processing cap:** Each detection cycle processes a maximum of **200 audit events**. If the audit window returns more than 200 events, additional events are skipped until the next cycle. The detection summary records `eventsReceived`, `eventsProcessed`, and `eventsSkipped` counts so administrators can monitor for overflow. If events are consistently being skipped, reduce `fsi_SDM_DetectionWindowMinutes` or increase detection frequency to reduce per-cycle volume.
+
+**Graceful degradation:** If the Management API is unavailable, the flow logs a warning and skips the current detection cycle.
 
 ### SDM-AlertDispatcher
 
@@ -172,7 +176,7 @@ Configure environment variables for your organization.
 |---------|---------|
 | **Approved** | Update agent scope, close violation (if linked), notify requestor |
 | **Rejected** | Update request status, notify requestor with comments |
-| **Timeout** | No action (request stays pending) |
+| **Timeout** | Update request to Cancelled (status 6), notify requestor of expiration |
 
 ---
 
@@ -194,7 +198,7 @@ Configure environment variables for your organization.
 **Alternative:** Use `Test-AlertDelivery.ps1`:
 
 ```powershell
-.\scripts\Test-AlertDelivery.ps1 -Environment "https://contoso.crm.dynamics.com" -AgentScopeId "xxxxx-xxxxx"
+.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://..." -EmailRecipient "security@contoso.com" -FromEmail "alerts@contoso.com"
 ```
 
 ### Test SDM-ExpansionProcessor

@@ -18,17 +18,19 @@ All notable changes to the Scope Drift Monitor.
   - `Test-AlertDelivery.ps1` - Test alert delivery configuration
 - **Connection References:**
   - `fsi_cr_dataverse` - Dataverse connector
-  - `fsi_cr_office365` - Office 365 Outlook connector
+  - `fsi_cr_outlook` - Office 365 Outlook connector
   - `fsi_cr_teams` - Microsoft Teams connector
   - `fsi_cr_approvals` - Approvals connector
-  - `fsi_cr_o365management` - HTTP with Azure AD for Management API
 - **Environment Variables:**
   - `fsi_SDM_TenantId` - Azure AD tenant ID
   - `fsi_SDM_DataverseEnvironment` - Dataverse environment URL
   - `fsi_SDM_TeamsGroupId` - Teams team ID for alerts
   - `fsi_SDM_TeamsChannelId` - Teams channel ID for alerts
   - `fsi_SDM_SecurityTeamEmail` - Security team email
-  - `fsi_SDM_DetectionFrequency` - Detection interval in minutes
+  - `fsi_SDM_DetectionWindowMinutes` - Detection lookback window in minutes
+  - `fsi_SDM_ClientId` - Azure AD application client ID
+  - `fsi_SDM_ClientSecret` - Azure AD application client secret
+  - `fsi_SDM_DefaultScopeOwner` - Dataverse systemuser GUID for auto-created placeholder agent scopes
 - **Documentation:**
   - `flow-configuration.md` - Flow setup and configuration guide
   - `troubleshooting.md` - Common issues and resolutions
@@ -62,6 +64,7 @@ All notable changes to the Scope Drift Monitor.
   - `fsi_scopeitem` - Individual scope items
   - `fsi_scopeviolation` - Drift violations
   - `fsi_expansionrequest` - Scope expansion requests
+  - `fsi_detectionrun` - Drift detection run tracking
 - **Security Roles:**
   - SDM Viewer - Read-only access
   - SDM Analyst - Violation and request management

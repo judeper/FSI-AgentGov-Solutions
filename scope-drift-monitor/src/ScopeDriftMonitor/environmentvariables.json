@@ -43,7 +43,7 @@
       "description": "Dataverse environment URL for generating direct links to violation records",
       "type": "String",
       "defaultValue": "",
-      "isRequired": false,
+      "isRequired": true,
       "hint": "Example: https://org.crm.dynamics.com"
     },
     {
@@ -54,6 +54,15 @@
       "defaultValue": "15",
       "isRequired": false,
       "hint": "Default: 15 minutes (aligns with scheduled flow frequency)"
+    },
+    {
+      "schemaName": "fsi_SDM_DefaultScopeOwner",
+      "displayName": "Default Scope Owner",
+      "description": "Dataverse systemuser GUID used as owner for auto-created placeholder agent scopes",
+      "type": "String",
+      "defaultValue": "",
+      "isRequired": true,
+      "hint": "Example: 12345678-1234-1234-1234-123456789012 (systemuser GUID of a service account)"
     },
     {
       "schemaName": "fsi_SDM_ClientId",

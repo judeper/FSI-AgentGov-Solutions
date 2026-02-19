@@ -102,14 +102,14 @@ Create baselines manually for precise control over allowed resources.
 | 1 | **Draft** | Baseline being configured, not monitored |
 | 2 | **Active** | Baseline active, violations detected |
 | 3 | **Under Review** | Baseline under review (pauses monitoring) |
-| 4 | **Suspended** | Baseline suspended (violations still detected) |
+| 4 | **Suspended** | Baseline suspended (not monitored) |
 | 5 | **Archived** | Baseline archived (no monitoring) |
 
 **Monitoring behavior:**
 
 - **Active:** Full monitoring, violations created
 - **Draft/Under Review:** No violations created
-- **Suspended:** Violations created with "Suspended Baseline" flag
+- **Suspended:** No monitoring (baselines with status 4 are not scanned)
 - **Archived:** No monitoring
 
 ---

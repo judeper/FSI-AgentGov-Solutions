@@ -79,15 +79,80 @@ $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
 # Align with Power Automate flow enum values
 $ViolationType = @{
-    Connector    = 1
-    Scope        = 2
-    Permission   = 3
-    DataSource   = 4
-    Integration  = 5
-    NoBaseline   = 6
+    Connector      = 1
+    SharePoint     = 2
+    DataverseTable = 3
+    ExternalAPI    = 4
+    ExpiredScope   = 5
+    NoBaseline     = 6
 }
 
 #region Helper Functions
+
+function Get-OrCreate-PlaceholderScope {
+    <#
+    .SYNOPSIS
+        Gets or creates a Draft placeholder scope for unscoped agents.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Environment,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Token,
+
+        [Parameter(Mandatory = $true)]
+        [string]$AgentId
+    )
+
+    $headers = @{
+        "Authorization"    = "Bearer $Token"
+        "Content-Type"     = "application/json"
+        "OData-MaxVersion" = "4.0"
+        "OData-Version"    = "4.0"
+        "Prefer"           = "return=representation"
+    }
+
+    # Check if a placeholder scope already exists for this agent
+    $filter = "fsi_agentid eq '$AgentId' and fsi_status eq 1"
+    $uri = "$Environment/api/data/v9.2/fsi_agentscopes?`$filter=$filter&`$select=fsi_agentscopeid&`$top=1"
+
+    try {
+        $existing = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+        if ($existing.value.Count -gt 0) {
+            return $existing.value[0].fsi_agentscopeid
+        }
+    }
+    catch {
+        Write-Warning "Could not query placeholder scope: $($_.Exception.Message)"
+    }
+
+    # Create a new Draft placeholder scope
+    $scopeRecord = @{
+        fsi_name          = "Unscoped Agent - $AgentId"
+        fsi_agentid       = $AgentId
+        fsi_environmentid = $script:WhoAmIOrganizationId
+        fsi_zone          = 1
+        fsi_status        = 1  # Draft
+        fsi_purpose       = "Auto-created placeholder for unscoped agent drift detection"
+    }
+
+    if ($script:WhoAmIUserId) {
+        $scopeRecord["fsi_owner@odata.bind"] = "/systemusers($($script:WhoAmIUserId))"
+    }
+
+    $uri = "$Environment/api/data/v9.2/fsi_agentscopes"
+    $body = $scopeRecord | ConvertTo-Json -Depth 5
+
+    try {
+        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
+        return $response.fsi_agentscopeid
+    }
+    catch {
+        Write-Warning "Could not create placeholder scope: $($_.Exception.Message)"
+        return $null
+    }
+}
 
 function Get-AccessToken {
     param(
@@ -387,9 +452,9 @@ function Get-ViolationTypeCode {
     switch ($TypeName) {
         "No Baseline Defined"          { return $ViolationType.NoBaseline }
         "Unauthorized Connector"       { return $ViolationType.Connector }
-        "Unauthorized SharePoint Site" { return $ViolationType.Scope }
-        "Unauthorized Dataverse Table" { return $ViolationType.DataSource }
-        "Unauthorized External API"    { return $ViolationType.Integration }
+        "Unauthorized SharePoint Site" { return $ViolationType.SharePoint }
+        "Unauthorized Dataverse Table" { return $ViolationType.DataverseTable }
+        "Unauthorized External API"    { return $ViolationType.ExternalAPI }
         default                        { return 0 }
     }
 }
@@ -409,7 +474,7 @@ function Create-ViolationRecord {
         [Parameter(Mandatory = $true)]
         [hashtable]$Violation,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true)]
         [string]$ScopeId,
 
         [Parameter(Mandatory = $false)]
@@ -437,10 +502,8 @@ function Create-ViolationRecord {
         fsi_accessdetails = $Violation.Details
     }
 
-    # Add scope reference if available
-    if ($ScopeId) {
-        $violationRecord["fsi_agentscopeid@odata.bind"] = "/fsi_agentscopes($ScopeId)"
-    }
+    # Scope reference is required
+    $violationRecord["fsi_agentscopeid@odata.bind"] = "/fsi_agentscopes($ScopeId)"
 
     # Add audit record ID if available
     if ($AuditRecordId) {
@@ -482,6 +545,12 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
     exit 1
 }
 
+# Validate AgentId format if provided
+if ($AgentId -and $AgentId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+    Write-Error "AgentId must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789012)"
+    exit 1
+}
+
 # Authenticate
 Write-Host "Authenticating..." -ForegroundColor Gray
 
@@ -501,6 +570,24 @@ try {
 catch {
     Write-Error "Failed to authenticate to Dataverse: $($_.Exception.Message)"
     exit 1
+}
+
+# Get calling user context for placeholder scope creation
+try {
+    $whoAmIHeaders = @{
+        "Authorization"    = "Bearer $dataverseToken"
+        "Content-Type"     = "application/json"
+        "OData-MaxVersion" = "4.0"
+        "OData-Version"    = "4.0"
+    }
+    $whoAmI = Invoke-RestMethod -Uri "$Environment/api/data/v9.2/WhoAmI" -Headers $whoAmIHeaders -Method Get
+    $script:WhoAmIUserId = $whoAmI.UserId
+    $script:WhoAmIOrganizationId = $whoAmI.OrganizationId
+}
+catch {
+    Write-Warning "Could not call WhoAmI: $($_.Exception.Message)"
+    $script:WhoAmIUserId = $null
+    $script:WhoAmIOrganizationId = ""
 }
 
 # Get active scopes from Dataverse
@@ -571,6 +658,17 @@ foreach ($event in $events) {
     # Create violation records
     foreach ($violation in $violations) {
         $scopeId = if ($scope) { $scope.fsi_agentscopeid } else { $null }
+
+        # Ensure scope reference exists (required by Dataverse schema)
+        if (-not $scopeId) {
+            $agentIdForScope = if ($eventAgentId) { $eventAgentId } else { "unknown" }
+            $scopeId = Get-OrCreate-PlaceholderScope -Environment $Environment -Token $dataverseToken -AgentId $agentIdForScope
+            if (-not $scopeId) {
+                Write-Warning "Skipping violation — could not create placeholder scope for agent '$agentIdForScope'"
+                continue
+            }
+        }
+
         $auditRecordId = $event.Id
 
         $result = Create-ViolationRecord `
