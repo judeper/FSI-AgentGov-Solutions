@@ -136,8 +136,11 @@ function Get-CMMValidationResults {
         $historyFilters += "fsi_validation_time ge $fromDateUtc"
         $historyFilters += "fsi_validation_time le $toDateUtc"
 
-        # Optional RunId filter
+        # Optional RunId filter (with GUID format validation)
         if ($RunId) {
+            if ($RunId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+                throw "RunId '$RunId' is not a valid GUID format."
+            }
             $historyFilters += "fsi_run_id eq '$RunId'"
         }
 
@@ -160,11 +163,28 @@ function Get-CMMValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = Invoke-RestMethod `
-                -Uri $nextLink `
-                -Method Get `
-                -Headers $headers `
-                -ErrorAction Stop
+            $response = $null
+            $maxRetries = 3
+            for ($retryCount = 0; $retryCount -lt $maxRetries; $retryCount++) {
+                try {
+                    $response = Invoke-RestMethod `
+                        -Uri $nextLink `
+                        -Method Get `
+                        -Headers $headers `
+                        -ErrorAction Stop
+                    break
+                }
+                catch {
+                    $statusCode = $_.Exception.Response.StatusCode.value__
+                    if ($statusCode -in @(429, 500, 502, 503, 504) -and $retryCount -lt ($maxRetries - 1)) {
+                        $delay = [math]::Pow(2, $retryCount)
+                        Write-Warning "Transient error querying validation history ($statusCode), retrying in ${delay}s: $($_.Exception.Message)"
+                        Start-Sleep -Seconds $delay
+                        continue
+                    }
+                    throw
+                }
+            }
 
             if ($response.value) {
                 $allValidations += $response.value
@@ -191,14 +211,14 @@ function Get-CMMValidationResults {
             $violationFilters += "fsi_detected_at ge $fromDateUtc"
             $violationFilters += "fsi_detected_at le $toDateUtc"
 
-            # Optional RunId filter
+            # Optional RunId filter (already validated above)
             if ($RunId) {
                 $violationFilters += "fsi_run_id eq '$RunId'"
             }
 
             # Optional zone filter (not applied when 'All')
             if ($Zone -ne 'All') {
-                $violationFilters += "fsi_zone eq '$Zone'"
+                $violationFilters += "fsi_zone eq $Zone"
             }
 
             # Combine filters
@@ -217,11 +237,28 @@ function Get-CMMValidationResults {
             while ($nextLink) {
                 Write-Verbose "Fetching violations page: $nextLink"
 
-                $response = Invoke-RestMethod `
-                    -Uri $nextLink `
-                    -Method Get `
-                    -Headers $headers `
-                    -ErrorAction Stop
+                $response = $null
+                $maxRetries = 3
+                for ($retryCount = 0; $retryCount -lt $maxRetries; $retryCount++) {
+                    try {
+                        $response = Invoke-RestMethod `
+                            -Uri $nextLink `
+                            -Method Get `
+                            -Headers $headers `
+                            -ErrorAction Stop
+                        break
+                    }
+                    catch {
+                        $statusCode = $_.Exception.Response.StatusCode.value__
+                        if ($statusCode -in @(429, 500, 502, 503, 504) -and $retryCount -lt ($maxRetries - 1)) {
+                            $delay = [math]::Pow(2, $retryCount)
+                            Write-Warning "Transient error querying violations ($statusCode), retrying in ${delay}s: $($_.Exception.Message)"
+                            Start-Sleep -Seconds $delay
+                            continue
+                        }
+                        throw
+                    }
+                }
 
                 if ($response.value) {
                     $allViolations += $response.value

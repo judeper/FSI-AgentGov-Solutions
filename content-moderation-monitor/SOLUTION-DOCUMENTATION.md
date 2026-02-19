@@ -217,7 +217,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 
 5. **Send Alerts (Conditional):**
    - **Critical violations:** Teams adaptive card + Email
-   - **High violations:** Email only
+   - **High violations:** Teams adaptive card + Email
    - **Medium/Warning violations:** Logged to Dataverse, no alert
 
 **Adaptive Card Structure:**
@@ -342,7 +342,7 @@ Purpose: Organization-owned immutable audit trail of validation scans with summa
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationvalidationhistoryid` | GUID | Primary key |
-| `fsi_name` | String(500) | Record name (`{Status}-{Timestamp}`) |
+| `fsi_name` | String(200) | Record name (`{Status}-{Timestamp}`) |
 | `fsi_run_id` | String(36) | Correlation GUID for batch scan |
 | `fsi_validation_time` | DateTime | Scan execution timestamp (UTC) |
 | `fsi_total_agents` | Integer | Count of agents evaluated |
@@ -359,7 +359,7 @@ Purpose: Per-agent violation records with severity classification and regulatory
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationviolationid` | GUID | Primary key |
-| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Date}`) |
+| `fsi_name` | String(200) | Record name (`{AgentName}-{Zone}-{Date}`) |
 | `fsi_environment_guid` | String(100) | Power Platform environment GUID |
 | `fsi_environment_name` | String(500) | Environment display name |
 | `fsi_agent_id` | String(100) | Copilot Studio agent GUID |
@@ -379,7 +379,7 @@ Purpose: Per-agent moderation level snapshots for drift detection (one active ba
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationbaselineid` | GUID | Primary key |
-| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
+| `fsi_name` | String(200) | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
 | `fsi_environment_guid` | String(100) | Power Platform environment GUID |
 | `fsi_environment_name` | String(500) | Environment display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Zone classification |

@@ -135,6 +135,14 @@ The following placeholder values in solution files must be replaced with your or
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/moderation-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/moderation-validation-flow.json` |
+| `your-org.github.io` | Your GitHub Pages domain | `src/moderation-validation-flow.json` (adaptive card documentation URL) |
+| `your-client-id-here` | Your Azure AD app registration client ID | `src/moderation-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Your certificate thumbprint for app authentication | `src/moderation-validation-flow.json` |
+| `your-subscription-id-here` | Your Azure subscription ID | `src/moderation-validation-flow.json` |
+| `rg-content-moderation-monitor` | Your Azure resource group name | `src/moderation-validation-flow.json` |
+| `aa-content-moderation-monitor` | Your Azure Automation account name | `src/moderation-validation-flow.json` |
+| `your-teams-group-id-here` | Your Microsoft Teams group (team) ID | `src/moderation-validation-flow.json` |
+| `your-teams-channel-id-here` | Your Microsoft Teams channel ID | `src/moderation-validation-flow.json` |
 
 ## Documentation
 

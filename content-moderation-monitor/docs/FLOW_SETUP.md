@@ -137,11 +137,11 @@ The flow uses four connection references deployed during Phase 2:
 | Flow Expression | Dataverse Column | Type | Description |
 |----------------|------------------|------|-------------|
 | `"ModerationScan-" + Timestamp` | `fsi_name` | String | Display name with scan timestamp |
-| `guid()` | `fsi_run_id` | String (GUID) | Unique run identifier |
+| `guid()` | `fsi_run_id` | String (GUID) | Unique run identifier (from runbook output) |
 | `OverallStatus` | `fsi_overall_status` | String | Passed, Failed, or Error |
 | `length(Violations)` | `fsi_violation_count` | Integer | Number of violations detected |
 | `TotalAgents` | `fsi_total_agents` | Integer | Total agents scanned |
-| `string(TotalEnvironments)` | `fsi_environments_scanned` | String | Number of environments scanned |
+| `string(TotalEnvironments)` | `fsi_environments_scanned` | String | Comma-separated list of scanned environments |
 | Full JSON output | `fsi_summary_json` | Memo | Complete runbook output for audit |
 | `Timestamp` | `fsi_validation_time` | DateTime | Scan execution timestamp |
 
@@ -193,7 +193,8 @@ Watch for these key actions to complete successfully:
 
 - Flow completes successfully
 - **Critical/Failed/Error**: Teams card posted + email sent (High importance)
-- **High/Warning**: Email sent only (Normal importance)
+- **High**: Teams card posted + email sent (High importance)
+- **Warning**: Email sent only (Normal importance)
 - Validation history record written to Dataverse
 - Check Teams channel for adaptive card with per-agent violation and drift details
 - Check email for HTML table with zone summary, agent violations, and drift detection
@@ -252,7 +253,7 @@ After the flow is running, capture the initial baseline for drift detection:
 | Critical | Yes | Yes | High |
 | Failed | Yes | Yes | High |
 | Error | Yes | Yes | High |
-| High | No | Yes | Normal |
+| High | Yes | Yes | High |
 | Warning | No | Yes | Normal |
 | Passed/Info | No | No | - |
 
@@ -303,7 +304,11 @@ Additional checks:
 
 ### Adaptive Card Template Updates
 
-> **Note:** The adaptive card template is defined inline within the flow JSON (`src/moderation-validation-flow.json`) in the `Post_Teams_Card` action. A standalone copy also exists at `src/adaptive-card-moderation-alert.json` for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/). Changes to the card design must be applied to **both** locations to keep them in sync.
+> **Note:** The adaptive card template exists in two locations with **different scopes**:
+> - **Inline card** (`src/moderation-validation-flow.json`, `Post_Teams_Card` action): A summary-level alert card with run status and zone totals. This is the version deployed with the flow.
+> - **Standalone card** (`src/adaptive-card-moderation-alert.json`): An extended reference/testing version with additional Violations detail, Drift Detection, and "Run Manual Check" action sections, designed for use in the [Adaptive Card Designer](https://adaptivecards.io/designer/).
+>
+> These two cards are **not identical** — the standalone version contains sections not present in the inline flow card. When modifying shared sections (summary, zone columns, styling), update both locations. When adding violation-detail or drift-detection features, update only the standalone card unless you also intend to extend the flow card.
 
 ### Flow Errors (Scope_Catch)
 

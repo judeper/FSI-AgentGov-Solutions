@@ -226,11 +226,18 @@ function Get-ModerationBaseline {
     }
 
     try {
+        $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
         $filter = "statecode eq 0"
         if ($EnvironmentId) {
+            if ($EnvironmentId -notmatch $guidPattern) {
+                throw "EnvironmentId '$EnvironmentId' is not a valid GUID format."
+            }
             $filter += " and fsi_environment_guid eq '$EnvironmentId'"
         }
         if ($AgentId) {
+            if ($AgentId -notmatch $guidPattern) {
+                throw "AgentId '$AgentId' is not a valid GUID format."
+            }
             $filter += " and fsi_agent_id eq '$AgentId'"
         }
         if ($ActiveOnly) {
@@ -649,6 +656,12 @@ function Save-CMMBaseline {
             'Accept'           = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
+        }
+
+        # Validate GUID format to prevent OData injection
+        $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
+        if ($AgentId -notmatch $guidPattern) {
+            throw "AgentId '$AgentId' is not a valid GUID format."
         }
 
         # Deactivate existing active baseline for this agent
