@@ -121,6 +121,7 @@ The flow implements three-state compliance classification:
 |-------------------|------|-------------------|--------|
 | **Compliant** | 0 | Timeout enabled AND duration ≤ required maximum for zone | Pass |
 | **Non-Compliant** | 1 | Timeout disabled OR duration > required maximum for zone | Fail |
+| **Non-Compliant** | 1 | Timeout enabled but duration null (misconfigured) | Fail |
 | **Unknown** | 2 | Missing policy for environment OR BAP API error | Unknown |
 
 **Zone-Based Policy Enforcement:**
@@ -151,7 +152,7 @@ Environments are classified into governance zones with tailored maximum timeout 
    - Call BAP Admin API: `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?$top=5000`
    - Use Managed Service Identity (MSI) authentication
    - Retrieve all environments in tenant
-   - **Known Limitation:** The API call does not follow `@odata.nextLink` pagination. Tenants with more than ~100 environments may receive partial results, causing some environments to be silently excluded from compliance evaluation. For large tenants, consider extending the flow to handle pagination.
+   - **Known Limitation:** The API call does not follow `@odata.nextLink` pagination. Tenants with more than 5000 environments may receive partial results, causing some environments to be silently excluded from compliance evaluation. For large tenants, consider extending the flow to handle pagination.
 
 4. **Per-Environment Evaluation (Parallel):**
    - **Concurrency:** Hardcoded at 5 parallel evaluations (the `fsi_ITE_ConcurrencyLimit` environment variable is informational only)
@@ -164,6 +165,7 @@ Environments are classified into governance zones with tailored maximum timeout 
        - Convert ISO 8601 duration to minutes (handles `PT60M`, `PT2H`, `PT1H30M` formats)
        - **Evaluate compliance:**
          - If timeout disabled → **Non-Compliant**
+         - If timeout enabled but duration null → **Non-Compliant** (sentinel −1)
          - If timeout duration > required max → **Non-Compliant**
          - Otherwise → **Compliant**
        - Write immutable compliance record to `fsi_inactivitytimeoutcompliances` table
@@ -279,7 +281,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 
 **Compliance Status Mapping:**
 - **0 (Compliant):** Timeout enabled and duration ≤ required max
-- **1 (Non-Compliant):** Timeout disabled OR duration > required max
+- **1 (Non-Compliant):** Timeout disabled OR duration > required max OR timeout enabled but duration null
 - **2 (Unknown):** Missing policy OR BAP API error
 
 **3. fsi_inactivitytimeouterrorlogs (Error Logs)**

@@ -59,12 +59,12 @@
               {
                 "name": "NotificationRecipients",
                 "type": "string",
-                "value": "@{environmentVariables('fsi_ITE_NotificationRecipients')}"
+                "value": ""
               }
             ]
           },
           "runAfter": {},
-          "description": "Semicolon-separated email addresses for compliance alert notifications. Reads from environment variable fsi_ITE_NotificationRecipients."
+          "description": "Initialize NotificationRecipients to empty string. The actual value is read from the environment variable inside Scope_Try (Set_NotificationRecipients_FromEnvVar) so that a missing variable is caught by the error handler."
         },
         "Initialize_ScanRunId": {
           "type": "InitializeVariable",
@@ -105,6 +105,15 @@
         "Scope_Try": {
           "type": "Scope",
           "actions": {
+            "Set_NotificationRecipients_FromEnvVar": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "NotificationRecipients",
+                "value": "@{environmentVariables('fsi_ITE_NotificationRecipients')}"
+              },
+              "runAfter": {},
+              "description": "Read notification recipients from environment variable inside Scope_Try so that a missing variable is caught by Scope_Catch. The variable is pre-initialized to empty string to guarantee Scope_Catch can safely reference it."
+            },
             "Load_Environment_Policies": {
               "type": "OpenApiConnection",
               "inputs": {
@@ -118,7 +127,11 @@
                   "operationId": "ListRecords"
                 }
               },
-              "runAfter": {},
+              "runAfter": {
+                "Set_NotificationRecipients_FromEnvVar": [
+                  "Succeeded"
+                ]
+              },
               "description": "Retrieve all environment policy rows from Dataverse. Each row maps an EnvironmentName to its zone and required maximum inactivity timeout duration."
             },
             "Compose_Policy_Array": {
@@ -417,7 +430,8 @@
                           },
                           "runAfter": {
                             "Create_API_Error_Log": [
-                              "Succeeded"
+                              "Succeeded",
+                              "Failed"
                             ]
                           },
                           "description": "Write Unknown compliance record when BAP API call fails. Zone is preserved from policy lookup. Timeout enabled set to null (unknown) since the API did not respond."
@@ -478,7 +492,8 @@
                         },
                         "runAfter": {
                           "Create_Unknown_NoPolicyRecord": [
-                            "Succeeded"
+                            "Succeeded",
+                            "Failed"
                           ]
                         },
                         "description": "Write MissingPolicy error log entry. Action item: add an fsi_environmentpolicy row for this environment."
