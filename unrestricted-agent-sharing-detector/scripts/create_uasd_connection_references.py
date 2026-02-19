@@ -63,7 +63,7 @@ def create_connection_references(client: DataverseClient, dry_run: bool = False)
             if not dry_run and not client.dry_run:
                 existing = client.query(
                     "connectionreferences",
-                    filter_expr=f"connectionreferencelogicalname eq '{logical_name}'"
+                    filter_expr=f"connectionreferencelogicalname eq '{logical_name.replace(chr(39), chr(39)*2)}'"
                 )
                 if existing:
                     print(f"  {logical_name}: already exists, skipping")

@@ -44,6 +44,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 Write-Host "`n[UASD Approved Security Groups Import]" -ForegroundColor Cyan
 Write-Host "  Target: $DataverseUrl"
@@ -90,9 +91,9 @@ foreach ($col in $requiredColumns) {
 
 # --- Map zone values to Dataverse option set ---
 $zoneMap = @{
-    "1" = 1  # Zone 1 (Personal)
-    "2" = 2  # Zone 2 (Team)
-    "3" = 3  # Zone 3 (Enterprise)
+    "1" = 100000001  # Zone 1 (Personal)
+    "2" = 100000002  # Zone 2 (Team)
+    "3" = 100000003  # Zone 3 (Enterprise)
 }
 
 # --- Upsert Groups ---
@@ -121,7 +122,7 @@ foreach ($group in $groups) {
     $zoneValue = $zoneMap[$zone]
     if (-not $zoneValue) {
         Write-Host "  Warning: Invalid zone '$zone' for $groupName, defaulting to Zone 2" -ForegroundColor Yellow
-        $zoneValue = 2
+        $zoneValue = 100000002
     }
 
     $payload = @{

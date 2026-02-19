@@ -123,7 +123,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
             if not dry_run and not client.dry_run:
                 existing = client.query(
                     "environmentvariabledefinitions",
-                    filter_expr=f"schemaname eq '{schemaname}'",
+                    filter_expr=f"schemaname eq '{schemaname.replace(chr(39), chr(39)*2)}'",
                 )
                 if existing:
                     print(f"  {schemaname}: already exists, skipping")

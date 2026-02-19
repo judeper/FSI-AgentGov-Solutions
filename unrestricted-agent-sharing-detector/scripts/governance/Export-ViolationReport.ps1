@@ -67,6 +67,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 Write-Host "`n[UASD Violation Report Export]" -ForegroundColor Cyan
 Write-Host "  Source: $DataverseUrl"

@@ -44,11 +44,11 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "ORG_WIDE_SHARING", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "PUBLIC_INTERNET_LINK", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "UNAPPROVED_GROUP", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "EXCESSIVE_INDIVIDUAL", "LanguageCode": 1033}]}},
-            {"Value": 4, "Label": {"LocalizedLabels": [{"Label": "CROSS_TENANT_ACCESS", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "ORG_WIDE_SHARING", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "PUBLIC_INTERNET_LINK", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "UNAPPROVED_GROUP", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "EXCESSIVE_INDIVIDUAL", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "CROSS_TENANT_ACCESS", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_violationstatus": {
@@ -58,10 +58,13 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Open", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Remediated", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Exception Approved", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "False Positive", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Open", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Remediated", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Exception Approved", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "False Positive", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Excluded", "LanguageCode": 1033}]}},
+            {"Value": 100000005, "Label": {"LocalizedLabels": [{"Label": "Skipped", "LanguageCode": 1033}]}},
+            {"Value": 100000006, "Label": {"LocalizedLabels": [{"Label": "Dry Run", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_severity": {
@@ -71,10 +74,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Critical", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "High", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Medium", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Low", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Critical", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "High", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Medium", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Low", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_exceptionstatus": {
@@ -84,10 +87,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Pending", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Expired", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Pending", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Expired", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_dataclassification": {
@@ -97,10 +100,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Public", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Internal", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Confidential", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Restricted", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Public", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Internal", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Confidential", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Restricted", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_zoneclassification": {
@@ -110,9 +113,9 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Zone 1 (Personal)", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Zone 2 (Team)", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Zone 3 (Enterprise)", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1 (Personal)", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2 (Team)", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3 (Enterprise)", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -775,6 +778,18 @@ COLUMNS = {
     ],
 }
 
+# Alternate keys for upsert support (required by Flow 1 "Create or update" actions)
+ALTERNATE_KEYS = {
+    "fsi_agentsharingsetting": [
+        {
+            "SchemaName": "fsi_AgentSharingSetting_AgentId",
+            "DisplayName": {"LocalizedLabels": [{"Label": "Agent ID Key", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Alternate key on Agent ID for upsert matching", "LanguageCode": 1033}]},
+            "KeyAttributes": ["fsi_agentid"],
+        },
+    ],
+}
+
 RELATIONSHIPS = [
     {
         "@odata.type": "#Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
@@ -973,6 +988,19 @@ def generate_schema_docs() -> str:
         lines.append(f"| {sn} | {ref_entity} | {refing_entity} | {lookup_sn} |")
     lines.append("")
 
+    # ── Alternate Keys ──────────────────────────────────────────────────
+    lines.append("## Alternate Keys")
+    lines.append("")
+    lines.append("| Table | SchemaName | Key Attributes | Purpose |")
+    lines.append("|---|---|---|---|")
+    for table_name, keys in ALTERNATE_KEYS.items():
+        for key in keys:
+            sn = key.get("SchemaName", "")
+            attrs = ", ".join(key.get("KeyAttributes", []))
+            desc = _label(key.get("Description", {}))
+            lines.append(f"| {table_name} | {sn} | {attrs} | {desc} |")
+    lines.append("")
+
     return "\n".join(lines)
 
 
@@ -1057,18 +1085,68 @@ def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
     return {"created": created, "skipped": skipped}
 
 
+def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
+    """Create alternate keys for upsert support."""
+    print("\n=== Creating Alternate Keys ===")
+    created = 0
+    skipped = 0
+    for table_logical_name, keys in ALTERNATE_KEYS.items():
+        print(f"\n{table_logical_name}:")
+        for key_metadata in keys:
+            schema_name = key_metadata["SchemaName"]
+            key_logical_name = schema_name.lower()
+            # Check if key already exists via metadata API
+            env_url = getattr(client, "environment_url", None) or getattr(client, "base_url", None)
+            session = getattr(client, "session", None) or getattr(client, "_session", None)
+            if env_url and session:
+                check_url = (
+                    f"{env_url.rstrip('/')}/api/data/v9.2/"
+                    f"EntityDefinitions(LogicalName='{table_logical_name}')/Keys"
+                    f"?$filter=SchemaName eq '{schema_name}'"
+                )
+                try:
+                    resp = session.get(check_url)
+                    if resp.ok and resp.json().get("value"):
+                        print(f"  {schema_name}: Already exists")
+                        skipped += 1
+                        continue
+                except Exception:
+                    pass  # proceed to create
+
+                print(f"  {schema_name}: Creating")
+                if not dry_run:
+                    create_url = (
+                        f"{env_url.rstrip('/')}/api/data/v9.2/"
+                        f"EntityDefinitions(LogicalName='{table_logical_name}')/Keys"
+                    )
+                    resp = session.post(create_url, json=key_metadata)
+                    resp.raise_for_status()
+                created += 1
+            else:
+                msg = (
+                    f"Cannot create alternate key {schema_name} - "
+                    f"DataverseClient session not accessible. "
+                    f"Create this key manually in Dataverse maker portal or "
+                    f"Flow 1 Step 9 upsert operations on fsi_AgentSharingSetting will fail."
+                )
+                raise RuntimeError(msg)
+    return {"created": created, "skipped": skipped}
+
+
 def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
     relationship_results = create_relationships(client, dry_run)
+    alternate_key_results = create_alternate_keys(client, dry_run)
     print("\n=== Schema Creation Complete ===")
     return {
         "errors": 0,
         "option_sets": option_set_results,
         "tables": table_results,
         "relationships": relationship_results,
+        "alternate_keys": alternate_key_results,
     }
 
 

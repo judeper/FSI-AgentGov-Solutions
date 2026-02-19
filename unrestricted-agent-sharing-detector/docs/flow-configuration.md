@@ -59,14 +59,21 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - **EXCESSIVE_INDIVIDUAL:** Individual share count exceeds threshold
    - **CROSS_TENANT_ACCESS:** Allowed tenants include non-home tenant
 
-7. **Create Violation Records**
+7. **Create Violation Records** (with deduplication)
+   - **Before creating**, check for an existing open violation for the same agent and violation type:
+     - Action: "List records" (Dataverse)
+     - Table: `fsi_SharingViolation`
+     - Filter: `fsi_agentid eq <agent GUID> and fsi_violationtype eq <violation type code> and (fsi_violationstatus eq 100000000 or fsi_violationstatus eq 100000003 or fsi_violationstatus eq 100000004 or fsi_violationstatus eq 100000005 or fsi_violationstatus eq 100000006)`
+     - **Condition:** If a matching record exists in any non-resolved state (Open, False Positive, Excluded, Skipped, or Dry Run), skip creation for this violation. This prevents duplicate violation records from accumulating across scan cycles for agents in break-glass exclusion, admin-triaged false positive, dry-run, or skipped remediation states. Only Remediated (100000001) and Exception Approved (100000002) violations allow a new record to be created on re-detection.
    - Action: "Create a new record" (Dataverse)
    - Table: `fsi_SharingViolation`
    - Fields:
+     - `fsi_name`: Expression `take(concat(fsi_agentname, ' - ', items('Apply_to_each')?['violation_type']), 100)` (e.g., "Sales Bot - ORG_WIDE_SHARING"). The `take()` function truncates the result to 100 characters to stay within the `fsi_Name` MaxLength constraint. Do not use `substring()` as an alternative — it throws a runtime error when the string is shorter than the specified length.
      - `fsi_agentid`: Agent GUID
      - `fsi_agentname`: Agent display name
      - `fsi_environmentid`: Environment GUID
-     - `fsi_violationtype`: Violation type code (0-4)
+     - `fsi_violationtype`: Violation type code (100000000–100000004)
+     - `fsi_violationstatus`: `100000000` (Open) — must be set explicitly; ApplicationRequired is only enforced at form level, not API level
      - `fsi_severity`: Critical/High/Medium
      - `fsi_description`: Violation details
      - `fsi_evidencejson`: Full sharing config JSON
@@ -108,8 +115,9 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Entity: `fsi_SharingViolation`
    - Message: 1 (Create) and 2 (Update)
    - Scope: 4 (Organization)
+   - Filtering attributes: `fsi_violationstatus,fsi_remediatedat` — restricts Update triggers to only fire when these columns change, preventing infinite loops from updates to `fsi_remediationresult` alone
    - Trigger filters:
-     - `fsi_violationstatus eq 0` (Open violations only)
+     - `fsi_violationstatus eq 100000000` (Open violations only)
      - `fsi_remediatedat eq null` (Not yet remediated)
 
 3. **Initialize Dry-Run Mode**
@@ -126,20 +134,22 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Record ID: Trigger output `fsi_sharingviolationid`
 
 4a. **Check Break-Glass Exclusion**
-   - Action: "Get a record" (Dataverse)
+   - Action: "List records" (Dataverse)
    - Table: `fsi_AgentSharingSetting`
    - Filter: `fsi_agentid eq <violation's fsi_agentid>`
    - **Condition:** If `fsi_breakglassexclude = true`:
-     - Update violation record `fsi_remediationresult` to `"Skipped: break-glass exclusion active"`
+     - Update violation record:
+       - `fsi_remediationresult`: `"Skipped: break-glass exclusion active"`
+       - `fsi_violationstatus`: 100000004 (Excluded) — prevents re-triggering; distinguishes break-glass exclusions from actual false positives
      - Send Teams notification indicating manual review required
      - Terminate flow (do not proceed to remediation)
 
 4b. **Check for Active Exception**
    - Action: "List records" (Dataverse)
    - Table: `fsi_SharingException`
-   - Filter: `fsi_agentid eq <violation's fsi_agentid> and fsi_exceptionstatus eq 1 and fsi_expiresat gt utcNow()`
+   - Filter: `fsi_agentid eq <violation's fsi_agentid> and fsi_violationtype eq <violation's fsi_violationtype> and fsi_exceptionstatus eq 100000001 and fsi_expiresat gt utcNow()`
    - **Condition:** If an active approved exception exists:
-     - Update violation `fsi_violationstatus` to 2 (Exception Approved)
+     - Update violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Update `fsi_remediationresult` to `"Skipped: active exception approved until <fsi_expiresat>"`
      - Terminate flow (do not proceed to remediation)
 
@@ -147,29 +157,41 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Action: "List records" (Dataverse)
    - Table: `fsi_ApprovedSecurityGroup`
    - Filter: `fsi_zoneclassification eq <environment-zone> and fsi_isactive eq true`
+   - **Zone resolution:** The environment's zone classification must be determined before this step. Zone is not auto-detected; it must be mapped manually. Populate the `fsi_ApprovedSecurityGroup` table with the correct `fsi_zoneclassification` for each environment during Step 5 of deployment (see SOLUTION-DOCUMENTATION.md). The `fsi_SharingPolicy` table is reserved for future per-zone policy enforcement and is not currently used by this flow.
+
+5a. **Guard: Verify Approved Groups Exist**
+   - **Condition:** Check `length(body('List_Approved_Groups')?['value'])` is greater than 0
+   - **If empty (no approved groups for zone):**
+     - Update violation record:
+       - `fsi_remediationresult`: `"Skipped: no approved security groups configured for zone <zone>"`
+       - `fsi_violationstatus`: 100000005 (Skipped)
+     - Send Teams warning: "Remediation skipped — no approved security groups are configured for zone <zone>. Configure approved groups before remediation can proceed."
+     - Terminate flow (do not proceed to Step 6)
+   - **If groups exist:** Continue to Step 6
+   - **Rationale:** Without this guard, ORG_WIDE_SHARING and UNAPPROVED_GROUP remediation would remove existing sharing and add zero groups — effectively revoking all agent access and causing denial of service for legitimate users.
 
 6. **Remediate by Violation Type**
    - Use Switch statement on `fsi_violationtype`:
 
-   **Case 0: ORG_WIDE_SHARING**
+   **Case 100000000: ORG_WIDE_SHARING**
    - Remove organization-wide sharing
    - Add all approved security groups for zone
 
-   **Case 1: PUBLIC_INTERNET_LINK**
-   - **Condition:** If `equals(variables('autoRemediatePublicLink'), 'false')`, skip remediation actions — update `fsi_remediationresult` to `"Skipped: autoRemediatePublicLink is disabled"` and go to step 8
+   **Case 100000001: PUBLIC_INTERNET_LINK**
+   - **Condition:** If `equals(variables('autoRemediatePublicLink'), 'false')`, skip remediation actions — update `fsi_remediationresult` to `"Skipped: autoRemediatePublicLink is disabled"` and `fsi_violationstatus` to `100000005` (Skipped) to prevent re-triggering, then go to step 8
    - Disable public internet link
    - Require Entra ID authentication
 
-   **Case 2: UNAPPROVED_GROUP**
+   **Case 100000002: UNAPPROVED_GROUP**
    - Remove unapproved security groups
    - Add approved groups (matching zone)
 
-   **Case 3: EXCESSIVE_INDIVIDUAL**
+   **Case 100000003: EXCESSIVE_INDIVIDUAL**
    - Remove individual user shares
    - Create/update security group
    - Add group to approved registry
 
-   **Case 4: CROSS_TENANT_ACCESS**
+   **Case 100000004: CROSS_TENANT_ACCESS**
    - Remove external tenant access
    - Restrict to home tenant only
 
@@ -186,12 +208,13 @@ This guide provides step-by-step instructions for manually building the Unrestri
      - Table: `fsi_SharingViolation`
      - Fields:
        - `fsi_remediationresult`: `"Dry-run: no changes applied"` (include planned remediation actions for review)
-     - Do **not** set `fsi_violationstatus` to Remediated or `fsi_remediatedat`
+       - `fsi_violationstatus`: 100000006 (Dry Run) — prevents re-triggering; distinguishes dry-run reviews from actual false positives
+     - Do **not** set `fsi_remediatedat` (preserve null to indicate no actual remediation occurred)
    - **If `equals(variables('isDryRun'), 'false')`:**
      - Action: "Update a record" (Dataverse)
      - Table: `fsi_SharingViolation`
      - Fields:
-       - `fsi_violationstatus`: 1 (Remediated)
+       - `fsi_violationstatus`: 100000001 (Remediated)
        - `fsi_remediatedat`: Current timestamp
        - `fsi_remediationresult`: Success/error message
      - Include operation result
@@ -205,10 +228,15 @@ This guide provides step-by-step instructions for manually building the Unrestri
 **Trigger Configuration:**
 ```
 Entity: fsi_SharingViolation
+Filtering attributes: fsi_violationstatus,fsi_remediatedat
 Trigger filters:
-  - fsi_violationstatus eq 0
+  - fsi_violationstatus eq 100000000
   - fsi_remediatedat eq null
 ```
+
+**Concurrency Control:**
+- In the flow designer, open trigger settings: **Settings → Concurrency Control → On → Degree of Parallelism: 1**
+- This ensures serial execution — if the Detector scan creates multiple violations for the same agent simultaneously, remediation runs sequentially to prevent parallel PATCH calls from overwriting each other's sharing API changes.
 
 ---
 
@@ -245,24 +273,25 @@ Trigger filters:
    - Approval type: Approve/Reject
    - Title: `Exception Request: [Agent Name]`
    - Details: Include justification, requested date, data classification
+   - **Timeout:** Configure a 14-day timeout on the approval action (ISO 8601: `P14D`). If the approver does not respond within 14 days, the action times out. Add a **Run after → Has timed out** branch to update `fsi_exceptionstatus` to Rejected with result `"Timed out: no approver response within 14 days"` and notify the requester. This prevents flows from silently failing at the 30-day Power Automate runtime limit.
    - **If security approver rejects:** Skip remaining approvals, go directly to step 7 rejection path
    - **If security approver approves:** Continue to step 6 for data-classification-based routing
 
 6. **Check Data Classification** (only if security approver approved)
    - `fsi_dataclassification` value
 
-   **If Confidential (2):**
+   **If Confidential (100000002):**
    - Require data owner approval
    - Get environment variable: `fsi_UASD_DataOwnerApproverEmail`
    - Send approval request
 
-   **If Restricted (3):**
+   **If Restricted (100000003):**
    - Require data owner AND compliance approval
    - Get: `fsi_UASD_DataOwnerApproverEmail`
    - Get: `fsi_UASD_ComplianceApproverEmail`
    - Sequential approvals
 
-   **If Public/Internal (0-1):**
+   **If Public/Internal (100000000–100000001):**
    - Security approval only
 
 7. **Process Approval Response**
@@ -270,8 +299,10 @@ Trigger filters:
      - Update exception status to "Approved"
      - Calculate expiration: `fsi_requestedat + fsi_requestedduration` (in days). **Note:** If `fsi_requestedat` is null (e.g., records created via API), use `utcNow()` as fallback to prevent the `addDays` expression from failing.
      - Set `fsi_expiresat` field to calculated expiration date
-     - Update related violation `fsi_violationstatus` to 2 (Exception Approved)
+     - Update related violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Notify requester (approval granted)
+
+   > **Note — Duration enforcement:** The flow uses the user-submitted `fsi_requestedduration` as-is; it does not enforce classification-based maximum durations (Public/Internal: 90 days, Confidential: 60 days, Restricted: 30 days). Duration limits from the Approval Requirements table are **guidance for approvers**, not system-enforced caps. The `fsi_UASD_DefaultExceptionDays` environment variable is defined but not currently referenced by this flow or the Canvas App — it is reserved for future use as a pre-populated default or enforced cap. Approvers are responsible for rejecting requests that exceed recommended durations for the data classification.
 
    - If rejected:
      - Update exception status to "Rejected"
@@ -285,9 +316,11 @@ Trigger filters:
 **Trigger Configuration:**
 ```
 Entity: fsi_SharingException
-Trigger filters: fsi_exceptionstatus eq 0 (Pending only)
+Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 ```
-> **Note:** Since the trigger is Create-only and new records default to Pending (0), this filter is functionally equivalent to no filter but is included for consistency with SOLUTION-DOCUMENTATION.md and for clarity of intent.
+> **Note:** Since the trigger is Create-only and new records default to Pending (100000000), this filter is functionally equivalent to no filter but is included for consistency with SOLUTION-DOCUMENTATION.md and for clarity of intent.
+
+> **Known Limitation — Exception Expiration Monitoring:** No scheduled flow currently checks for approaching or expired exceptions. Expired exceptions are detected passively: on the next Detector scan, a violation previously covered by an expired exception will no longer match an active exception (the `fsi_expiresat gt utcNow()` filter in Flow 2 Step 4b will exclude it), and a new violation record will be created. To implement active expiration handling, create a fourth scheduled flow (`UASD-Exception-Expiration-Monitor`). See SOLUTION-DOCUMENTATION.md [Expiration Handling](#expiration-handling) for implementation guidance.
 
 ---
 
@@ -342,6 +375,7 @@ Trigger filters: fsi_exceptionstatus eq 0 (Pending only)
      - Set `fsi_requestedby` to current user
      - Set `fsi_requestedat` to now
      - Set `fsi_requestedduration` to user input
+     - Set `fsi_name` to `Concatenate("EXC-", Left(agentName, 60), "-", Text(Now(), "yyyyMMdd"))` — this provides a human-readable primary name (truncated to ≤100 chars) so exception records are identifiable in Dataverse views and audit queries
      - Show confirmation message
      - Navigate to tracking screen
 

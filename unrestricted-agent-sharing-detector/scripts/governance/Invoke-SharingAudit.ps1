@@ -3,11 +3,17 @@
 
 <#
 .SYNOPSIS
-    Performs an on-demand sharing audit of all Copilot Studio agents.
+    Performs an on-demand sharing audit of Power Platform apps (proxy for Copilot Studio agents).
 
 .DESCRIPTION
-    Scans all Power Platform environments and their Copilot Studio agents
-    for sharing configurations that violate organizational policy.
+    Scans all Power Platform environments and their apps for sharing configurations
+    that violate organizational policy.
+
+    NOTE: This script uses Get-AdminPowerApp and Get-AdminPowerAppRoleAssignment
+    cmdlets which enumerate Power Apps, not Copilot Studio agents directly.
+    These cmdlets may not return Copilot Studio agent-specific sharing
+    configurations. For comprehensive agent scanning, use the Detection Flow
+    (UASD-Detector-Scan-Agents) which queries the Dataverse Web API directly.
     
     Detects five violation types:
     - ORG_WIDE_SHARING: Agent shared with Everyone or All Users
@@ -73,13 +79,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
 
 # --- Authentication ---
 Write-Host "`n[UASD On-Demand Sharing Audit]" -ForegroundColor Cyan
 
 if (-not (Get-AzContext)) {
     Write-Host "  Authenticating..." -ForegroundColor Yellow
-    Connect-AzAccount | Out-Null
+    if ($HomeTenantId) { Connect-AzAccount -TenantId $HomeTenantId | Out-Null }
+    else { Connect-AzAccount | Out-Null }
 }
 
 $context = Get-AzContext
@@ -120,8 +128,16 @@ try {
         Write-Host "  Scanning: $envDisplayName ($envId)" -ForegroundColor Gray
 
         try {
-            # Get all apps (agents) in this environment
+            # NOTE: Get-AdminPowerApp enumerates Power Apps, not Copilot Studio agents directly.
+            # Use the Detection Flow for comprehensive agent-specific scanning.
+            $preErrorCount = $Error.Count
             $apps = Get-AdminPowerApp -EnvironmentName $envId -ErrorAction SilentlyContinue
+            if (-not $apps -and $Error.Count -gt $preErrorCount) {
+                $lastErr = $Error[0]
+                if ($lastErr.ToString() -match 'Forbidden|Unauthorized|Access') {
+                    Write-Warning "  Permissions error scanning environment $envDisplayName - audit results may be incomplete: $($lastErr.ToString())"
+                }
+            }
 
             foreach ($app in $apps) {
                 $agentCount++
@@ -130,7 +146,6 @@ try {
 
                 # Extract sharing configuration
                 $sharingScope = "unknown"
-                $principals = @()
                 $publicLinkEnabled = $false
                 $crossTenantEnabled = $false
                 $securityGroups = @()
@@ -153,6 +168,12 @@ try {
                                 GroupId = $principalId
                                 DisplayName = $principalDisplayName
                             }
+
+                            # Check for cross-tenant (null-safe for strict mode)
+                            $permTenantId = if ($perm.PSObject.Properties['PrincipalTenantId']) { $perm.PrincipalTenantId } else { $null }
+                            if ($permTenantId -and $permTenantId -ne $HomeTenantId) {
+                                $crossTenantEnabled = $true
+                            }
                         }
                         elseif ($principalType -eq "User") {
                             $individualShares += @{
@@ -160,17 +181,24 @@ try {
                                 DisplayName = $principalDisplayName
                             }
 
-                            # Check for cross-tenant
-                            if ($perm.PrincipalTenantId -and $perm.PrincipalTenantId -ne $HomeTenantId) {
+                            # Check for cross-tenant (null-safe for strict mode)
+                            $permTenantId = if ($perm.PSObject.Properties['PrincipalTenantId']) { $perm.PrincipalTenantId } else { $null }
+                            if ($permTenantId -and $permTenantId -ne $HomeTenantId) {
                                 $crossTenantEnabled = $true
                             }
                         }
                     }
 
-                    # Check for public/anonymous link access
-                    if ($app.Internal -and $app.Internal.properties -and
-                        $app.Internal.properties.sharingConfiguration -and
-                        $app.Internal.properties.sharingConfiguration.publicLinkEnabled -eq $true) {
+                    # Deduplicate: collapse multiple role assignments (e.g., CanView + CanEdit) per principal.
+                    # If future enhancements need per-role granularity, revise to group rather than deduplicate.
+                    $securityGroups = @($securityGroups | Sort-Object -Property GroupId -Unique)
+                    $individualShares = @($individualShares | Sort-Object -Property UserId -Unique)
+
+                    # Check for public/anonymous link access (null-safe for strict mode)
+                    $hasPublicLink = try {
+                        $app.Internal.properties.sharingConfiguration.publicLinkEnabled -eq $true
+                    } catch { $false }
+                    if ($hasPublicLink) {
                         $publicLinkEnabled = $true
                     }
                 } catch {
@@ -197,7 +225,7 @@ try {
                         detected_at      = $scanTimestamp
                     }
                     if ($IncludeEvidence) {
-                        $evidenceJson = ($permissions | ConvertTo-Json -Depth 5 -Compress)
+                        $evidenceJson = (ConvertTo-Json -InputObject @($permissions) -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -220,6 +248,14 @@ try {
                         description      = "Agent has public internet-facing link enabled"
                         detected_at      = $scanTimestamp
                     }
+                    if ($IncludeEvidence) {
+                        $evidenceJson = (@{ publicLinkEnabled = $true; agentId = $agentId } | ConvertTo-Json -Depth 5 -Compress)
+                        $violation["evidence_json"] = $evidenceJson
+                        $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
+                            [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
+                        )
+                        $violation["evidence_hash"] = [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+                    }
                     [void]$violations.Add($violation)
                 }
 
@@ -237,6 +273,14 @@ try {
                                 description      = "Agent shared with unapproved group: $($group.DisplayName) ($($group.GroupId))"
                                 detected_at      = $scanTimestamp
                             }
+                            if ($IncludeEvidence) {
+                                $evidenceJson = ($group | ConvertTo-Json -Depth 5 -Compress)
+                                $violation["evidence_json"] = $evidenceJson
+                                $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
+                                    [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
+                                )
+                                $violation["evidence_hash"] = [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+                            }
                             [void]$violations.Add($violation)
                     }
                 }
@@ -253,6 +297,14 @@ try {
                         severity         = "Medium"
                         description      = "Agent shared with $($individualShares.Count) individuals (threshold: $MaxIndividualShares)"
                         detected_at      = $scanTimestamp
+                    }
+                    if ($IncludeEvidence) {
+                        $evidenceJson = (ConvertTo-Json -InputObject @($individualShares) -Depth 5 -Compress)
+                        $violation["evidence_json"] = $evidenceJson
+                        $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
+                            [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
+                        )
+                        $violation["evidence_hash"] = [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
                     }
                     [void]$violations.Add($violation)
                 }
@@ -272,9 +324,10 @@ try {
                     }
                     if ($IncludeEvidence) {
                         $crossTenantPrincipals = $permissions | Where-Object {
-                            $_.PrincipalTenantId -and $_.PrincipalTenantId -ne $HomeTenantId
+                            $tid = if ($_.PSObject.Properties['PrincipalTenantId']) { $_.PrincipalTenantId } else { $null }
+                            $tid -and $tid -ne $HomeTenantId
                         }
-                        $evidenceJson = ($crossTenantPrincipals | ConvertTo-Json -Depth 5 -Compress)
+                        $evidenceJson = (ConvertTo-Json -InputObject @($crossTenantPrincipals) -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -300,9 +353,9 @@ Write-Host "  Agents scanned: $agentCount"
 Write-Host "  Violations found: $($violations.Count)"
 
 if ($violations.Count -gt 0) {
-    $critical = ($violations | Where-Object { $_.severity -eq "Critical" }).Count
-    $high = ($violations | Where-Object { $_.severity -eq "High" }).Count
-    $medium = ($violations | Where-Object { $_.severity -eq "Medium" }).Count
+    $critical = @($violations | Where-Object { $_.severity -eq "Critical" }).Count
+    $high = @($violations | Where-Object { $_.severity -eq "High" }).Count
+    $medium = @($violations | Where-Object { $_.severity -eq "Medium" }).Count
     Write-Host "    Critical: $critical" -ForegroundColor Red
     Write-Host "    High: $high" -ForegroundColor Yellow
     Write-Host "    Medium: $medium" -ForegroundColor White

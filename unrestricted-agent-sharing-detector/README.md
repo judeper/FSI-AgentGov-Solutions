@@ -47,6 +47,7 @@ Power Automate flows and Canvas apps are built manually using the instructions i
 - Power Platform environment with Dataverse
 - Power Automate Premium license (for cloud flows)
 - Power Platform Admin or Entra Global Admin permissions
+- The Python setup scripts (`scripts/create_uasd_*.py`) depend on a shared `DataverseClient` module located at `../scripts/shared/dataverse_client.py` (relative to the repository root containing this solution). Ensure the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions) repository structure is intact, or install the `dataverse_client` module on `PYTHONPATH`.
 
 ## Deployment
 
