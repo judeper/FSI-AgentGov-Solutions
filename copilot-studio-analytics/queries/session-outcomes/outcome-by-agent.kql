@@ -1,0 +1,55 @@
+// outcome-by-agent.kql
+// Purpose: Per-agent outcome breakdown supporting both conversational and autonomous agent types
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {AgentType} - Agent type filter (default: "All") - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   AgentType (string) - Conversational or Autonomous
+//   EngagedSessions (long) - Total engaged sessions
+//   ResolutionRate (real) - Percentage resolved (conversational) or success rate (autonomous)
+//   AvgCSAT (real) - Average CSAT score (null for autonomous agents)
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - Per-agent supervision effectiveness
+//   OCC 2011-12 - Individual agent risk assessment
+//
+// Sample Output:
+// | AgentId | AgentType | EngagedSessions | ResolutionRate | AvgCSAT |
+// | agent-prod-001 | Conversational | 987 | 79.9 | 4.2 |
+// | agent-prod-002 | Autonomous | 756 | 87.4 | |
+// | agent-prod-003 | Conversational | 432 | 65.3 | 3.1 |
+//
+// Notes:
+//   - For conversational agents: ResolutionRate = Resolved / EngagedSessions
+//   - For autonomous agents: ResolutionRate = Success / EngagedSessions (Resolved maps to Success)
+//   - AvgCSAT is null for autonomous agents (no CSAT survey)
+//   - Use this query for the Top Agents detail page in the workbook
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend AgentType = tostring(customDimensions["agentMode"])
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| extend CSATScore = todouble(customDimensions["csatScore"])
+| summarize
+    EngagedSessions = count(),
+    ResolvedSessions = countif(Outcome == "Resolved"),
+    AvgCSAT = round(avgif(CSATScore, AgentType == "Conversational" and isnotnull(CSATScore) and tostring(CSATScore) != ""), 1)
+    by AgentId, AgentType
+| extend ResolutionRate = round(todouble(ResolvedSessions) / EngagedSessions * 100, 1)
+| project AgentId, AgentType, EngagedSessions, ResolutionRate, AvgCSAT
+| order by EngagedSessions desc

@@ -1,0 +1,48 @@
+// conversational-outcome-distribution.kql
+// Purpose: Resolved/Abandoned/Escalated split for conversational agents
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//
+// Output Schema:
+//   Outcome (string) - Session outcome (Resolved, Abandoned, Escalated)
+//   OutcomeReason (string) - Detailed reason for the outcome
+//   SessionCount (long) - Number of sessions with this outcome
+//   Percentage (real) - Percentage of total engaged sessions
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - Resolution effectiveness for supervised agent interactions
+//   OCC 2011-12 - Operational risk assessment of agent performance
+//
+// Sample Output:
+// | Outcome | OutcomeReason | SessionCount | Percentage |
+// | Resolved | CustomerConfirmed | 523 | 52.8 |
+// | Escalated | AgentTransfer | 287 | 29.0 |
+// | Abandoned | UserLeftChat | 181 | 18.3 |
+//
+// Notes:
+//   - Filters to agentMode == "Conversational" AND isEngaged == true only
+//   - Unengaged sessions are excluded as they do not represent meaningful interactions
+//   - High escalation rates may indicate knowledge gaps requiring remediation
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Conversational"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| extend OutcomeReason = tostring(customDimensions["sessionOutcomeReason"])
+| summarize SessionCount = count() by Outcome, OutcomeReason
+| as T
+| extend TotalSessions = toscalar(T | summarize sum(SessionCount))
+| extend Percentage = round(todouble(SessionCount) / TotalSessions * 100, 1)
+| project Outcome, OutcomeReason, SessionCount, Percentage
+| order by SessionCount desc

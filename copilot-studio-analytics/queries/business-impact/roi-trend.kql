@@ -1,0 +1,92 @@
+// roi-trend.kql
+// Purpose: Weekly ROI trend with week-over-week deltas for business impact tracking
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {HourlyRate} - Hourly cost rate in USD (default: 72) - workbook parameter syntax
+//   {TimeSavingsMinutes} - Conversational time saving per session (default: 6) - workbook parameter syntax
+//   {InfoRetrievalMinutes} - Autonomous KS time saving (default: 6) - workbook parameter syntax
+//   {GenericActionMinutes} - Autonomous action time saving (default: 3) - workbook parameter syntax
+//   {GenericTimeSavingMinutes} - Autonomous generic time saving (default: 5) - workbook parameter syntax
+//
+// Output Schema:
+//   WeekStart (datetime) - Start of the week (Monday)
+//   TotalHours (real) - Total Agent Assisted Hours for the week
+//   TotalCost (real) - Total cost savings for the week (USD)
+//   WoWHoursChange (real) - Week-over-week change in hours (percentage)
+//   WoWCostChange (real) - Week-over-week change in cost (percentage)
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   SOX 404 - Ongoing operational efficiency monitoring
+//   OCC 2011-12 - Trend analysis for AI agent ROI justification
+//
+// Sample Output:
+// | WeekStart | TotalHours | TotalCost | WoWHoursChange | WoWCostChange |
+// | 2026-02-17 | 245.6 | 17683.2 | 12.3 | 12.3 |
+// | 2026-02-10 | 218.7 | 15746.4 | -3.5 | -3.5 |
+// | 2026-02-03 | 226.5 | 16308.0 | 8.1 | 8.1 |
+//
+// Notes:
+//   - Aggregates both conversational and autonomous AAH by week
+//   - WoW change is null for the earliest week (no prior week to compare)
+//   - Negative WoW values indicate declining impact (may warrant investigation)
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+let HourlyRate = {HourlyRate:72};
+let TimeSavingsMinutes = {TimeSavingsMinutes:6};
+let InfoRetrievalMinutes = {InfoRetrievalMinutes:6};
+let GenericActionMinutes = {GenericActionMinutes:3};
+let GenericTimeSavingMinutes = {GenericTimeSavingMinutes:5};
+
+let SessionData =
+    customEvents
+    | where timestamp > ago(TimeRange)
+    | where name == "CopilotSessionOutcome"
+    | where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+    | where tobool(customDimensions["isEngaged"]) == true
+    | extend AgentType = tostring(customDimensions["agentMode"])
+    | extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
+    | extend Outcome = tostring(customDimensions["sessionOutcome"])
+    | extend WeekStart = startofweek(timestamp);
+
+let ConversationalWeekly =
+    SessionData
+    | where AgentType == "Conversational"
+    | summarize
+        KSRef = countif(HasKS == true),
+        ResolvedNoKS = countif(HasKS != true and Outcome == "Resolved"),
+        EscAbnNoKS = countif(HasKS != true and Outcome in ("Escalated", "Abandoned"))
+        by WeekStart
+    | extend WeightedTotal = todouble(KSRef) + todouble(ResolvedNoKS) * 1.0 + todouble(EscAbnNoKS) * 0.7
+    | extend Hours = WeightedTotal * TimeSavingsMinutes / 60.0
+    | project WeekStart, ConvHours = Hours;
+
+let AutonomousWeekly =
+    SessionData
+    | where AgentType == "Autonomous"
+    | summarize
+        KSRef = countif(HasKS == true),
+        Successful = countif(Outcome == "Success"),
+        SuccessNoAction = countif(Outcome == "Success" and HasKS != true)
+        by WeekStart
+    | extend Hours = (todouble(KSRef) * InfoRetrievalMinutes
+        + todouble(Successful) * GenericActionMinutes
+        + todouble(SuccessNoAction) * GenericTimeSavingMinutes) / 60.0
+    | project WeekStart, AutoHours = Hours;
+
+ConversationalWeekly
+| join kind=fullouter AutonomousWeekly on WeekStart
+| extend WeekStart = coalesce(WeekStart, WeekStart1)
+| extend TotalHours = round(coalesce(ConvHours, 0.0) + coalesce(AutoHours, 0.0), 1)
+| extend TotalCost = round(TotalHours * HourlyRate, 1)
+| order by WeekStart asc
+| extend PrevHours = prev(TotalHours)
+| extend WoWHoursChange = iff(isnull(PrevHours), real(null), round((TotalHours - PrevHours) / PrevHours * 100, 1))
+| extend WoWCostChange = WoWHoursChange
+| project WeekStart, TotalHours, TotalCost, WoWHoursChange, WoWCostChange
+| order by WeekStart desc

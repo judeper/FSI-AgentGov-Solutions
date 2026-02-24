@@ -1,0 +1,66 @@
+// resolution-satisfaction-matrix.kql
+// Purpose: 2x2 quadrant analysis (resolution rate x satisfaction) for conversational agents
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {ResolutionThreshold} - Resolution rate threshold percentage (default: 70) - workbook parameter syntax
+//   {CSATThreshold} - CSAT score threshold (default: 3.5) - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   EngagedSessions (long) - Total engaged sessions
+//   ResolvedSessions (long) - Sessions with Resolved outcome
+//   ResolutionRate (real) - Percentage of resolved sessions
+//   AvgCSAT (real) - Average CSAT score (null if no CSAT data)
+//   CSATResponses (long) - Number of CSAT survey responses
+//   Quadrant (string) - Classification quadrant
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   OCC 2011-12 - Agent quality assessment and ongoing monitoring
+//   FINRA 3110 - Supervision prioritization based on performance quadrants
+//
+// Sample Output:
+// | AgentId | EngagedSessions | ResolvedSessions | ResolutionRate | AvgCSAT | CSATResponses | Quadrant |
+// | agent-prod-001 | 987 | 789 | 79.9 | 4.2 | 320 | High Resolution, High CSAT |
+// | agent-prod-002 | 654 | 392 | 59.9 | 4.1 | 180 | Low Resolution, High CSAT |
+// | agent-prod-003 | 432 | 345 | 79.9 | 2.8 | 95 | High Resolution, Low CSAT |
+//
+// Notes:
+//   - Filters to agentMode == "Conversational" and engaged sessions only
+//   - Default thresholds: ResolutionRate >= 70%, AvgCSAT >= 3.5
+//   - Agents in "Low Resolution, Low CSAT" quadrant require immediate investigation
+//   - Agents without CSAT data are classified as "No CSAT Data"
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+let ResolutionThreshold = {ResolutionThreshold:70};
+let CSATThreshold = {CSATThreshold:3.5};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Conversational"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| extend CSATScore = todouble(customDimensions["csatScore"])
+| summarize
+    EngagedSessions = count(),
+    ResolvedSessions = countif(Outcome == "Resolved"),
+    AvgCSAT = round(avgif(CSATScore, isnotnull(CSATScore) and tostring(CSATScore) != ""), 1),
+    CSATResponses = countif(isnotnull(CSATScore) and tostring(CSATScore) != "")
+    by AgentId
+| extend ResolutionRate = round(todouble(ResolvedSessions) / EngagedSessions * 100, 1)
+| extend Quadrant = case(
+    CSATResponses == 0, "No CSAT Data",
+    ResolutionRate >= ResolutionThreshold and AvgCSAT >= CSATThreshold, "High Resolution, High CSAT",
+    ResolutionRate >= ResolutionThreshold and AvgCSAT < CSATThreshold, "High Resolution, Low CSAT",
+    ResolutionRate < ResolutionThreshold and AvgCSAT >= CSATThreshold, "Low Resolution, High CSAT",
+    "Low Resolution, Low CSAT")
+| project AgentId, EngagedSessions, ResolvedSessions, ResolutionRate, AvgCSAT, CSATResponses, Quadrant
+| order by EngagedSessions desc

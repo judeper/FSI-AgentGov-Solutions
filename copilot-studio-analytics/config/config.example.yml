@@ -1,0 +1,97 @@
+# Copilot Studio Analytics - Configuration
+# ==========================================
+#
+# This file provides a complete example configuration for the
+# Copilot Studio Analytics (CSA) Dataverse-to-App Insights sync pipeline.
+#
+# Usage:
+#   cp config.example.yml config.yml
+#   # Edit config.yml with your values
+#   python scripts/sync_dataverse_sessions.py --config config/config.yml
+#
+# Schema validation: config/config.schema.json
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Azure Subscription and Resource Group
+# -----------------------------------------------------------------------------
+
+# Azure subscription where Application Insights is deployed
+subscription_id: ""
+
+# Resource group containing Application Insights (same as AOF deployment)
+resource_group: ""
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Application Insights (same workspace as AOF)
+# -----------------------------------------------------------------------------
+
+application_insights:
+  # Resource name (e.g., ai-aof-observability)
+  name: ""
+  # Log Analytics workspace resource ID
+  # Format: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.OperationalInsights/workspaces/{name}
+  workspace_id: ""
+
+# -----------------------------------------------------------------------------
+# REQUIRED: Dataverse Connection for Session Sync
+# -----------------------------------------------------------------------------
+
+dataverse:
+  # Entra ID tenant ID
+  tenant_id: ""
+  # Dataverse environment URL (e.g., https://org.crm.dynamics.com)
+  environment_url: ""
+  # App registration client ID
+  client_id: ""
+  # Client secret via DATAVERSE_CLIENT_SECRET env var (never in config file)
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Sync Configuration
+# -----------------------------------------------------------------------------
+
+sync:
+  # Safety buffer for late-arriving sessions (hours)
+  lookback_buffer_hours: 2
+  # Sync tier: 1 = msdyn_botsession only, 2 = adds transcript parsing
+  tier: 1
+  # Records per App Insights batch
+  batch_size: 500
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Business Impact Calculation Defaults
+# -----------------------------------------------------------------------------
+
+business_impact:
+  # Conversational agents
+  conversational:
+    # Minutes saved per knowledge source reference or weighted session
+    time_savings_minutes: 6
+    # Weight for resolved sessions without knowledge source
+    resolved_no_ks_weight: 1.0
+    # Weight for escalated/abandoned sessions without knowledge source
+    escalated_abandoned_no_ks_weight: 0.7
+
+  # Autonomous agents
+  autonomous:
+    # Minutes saved per knowledge source reference
+    info_retrieval_time_saving_minutes: 6
+    # Default minutes per action invocation
+    generic_action_multiplier_minutes: 3
+    # Minutes per successful session without independent actions
+    generic_time_saving_minutes: 5
+    # Tier 2: per-action-type multipliers (override generic)
+    action_multipliers: {}
+      # example_action_name: 10
+
+  # USD hourly rate for Agent Assisted Cost calculation
+  hourly_rate: 72
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: Governance Zone Mapping
+# -----------------------------------------------------------------------------
+
+# Map environment URL prefixes to governance zones
+zone_mapping:
+  # "prod-": "Zone 3 - Enterprise Managed"
+  # "team-": "Zone 2 - Team Collaboration"
+  # default: "Zone 1 - Personal Productivity"

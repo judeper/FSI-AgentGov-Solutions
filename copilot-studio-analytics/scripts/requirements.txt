@@ -1,0 +1,19 @@
+# Copilot Studio Analytics - Python Dependencies
+# Python 3.9+ required
+
+# Authentication
+msal>=1.24.0                        # MSAL for Dataverse service principal auth
+azure-identity>=1.14.0              # DefaultAzureCredential for Azure SDK
+
+# Dataverse session sync
+requests>=2.31.0                    # HTTP client for Dataverse Web API
+
+# Azure Monitor (telemetry destination)
+azure-monitor-query>=1.3.0          # LogsQueryClient for KQL validation queries
+azure-mgmt-applicationinsights>=4.0.0  # Application Insights management
+
+# App Insights telemetry ingestion
+applicationinsights>=0.11.10        # TelemetryClient for writing custom events
+
+# Configuration
+pyyaml>=6.0                         # YAML config file parsing

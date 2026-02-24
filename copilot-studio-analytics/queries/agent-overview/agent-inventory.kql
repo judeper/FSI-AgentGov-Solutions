@@ -1,0 +1,49 @@
+// agent-inventory.kql
+// Purpose: Total agents with conversational vs autonomous split and engagement rates
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {AgentType} - Agent type filter (default: "All") - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier (recipientId from customDimensions)
+//   AgentType (string) - Conversational or Autonomous (agentMode from customDimensions)
+//   TotalSessions (long) - Total session count for the agent
+//   EngagedSessions (long) - Sessions where isEngaged == true
+//   EngagementRate (real) - Percentage of engaged sessions
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - Agent inventory for supervision scope
+//   SOX 404 - Operational asset inventory evidence
+//
+// Sample Output:
+// | AgentId | AgentType | TotalSessions | EngagedSessions | EngagementRate |
+// | agent-prod-001 | Conversational | 1245 | 987 | 79.3 |
+// | agent-prod-002 | Autonomous | 890 | 756 | 84.9 |
+// | agent-prod-003 | Conversational | 432 | 298 | 69.0 |
+//
+// Notes:
+//   - Queries CopilotSessionOutcome events (synced from Copilot Studio analytics)
+//   - EngagementRate helps identify underperforming agents needing investigation
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend AgentType = tostring(customDimensions["agentMode"])
+| extend IsEngaged = tobool(customDimensions["isEngaged"])
+| summarize
+    TotalSessions = count(),
+    EngagedSessions = countif(IsEngaged == true)
+    by AgentId, AgentType
+| extend EngagementRate = round(todouble(EngagedSessions) / TotalSessions * 100, 1)
+| order by TotalSessions desc

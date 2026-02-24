@@ -1,0 +1,92 @@
+// agent-assisted-cost.kql
+// Purpose: Cost savings calculation from Agent Assisted Hours across all agent types
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {HourlyRate} - Hourly cost rate in USD (default: 72) - workbook parameter syntax
+//   {TimeSavingsMinutes} - Conversational time saving per session (default: 6) - workbook parameter syntax
+//   {InfoRetrievalMinutes} - Autonomous KS time saving (default: 6) - workbook parameter syntax
+//   {GenericActionMinutes} - Autonomous action time saving (default: 3) - workbook parameter syntax
+//   {GenericTimeSavingMinutes} - Autonomous generic time saving (default: 5) - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   AgentType (string) - Conversational or Autonomous
+//   AgentAssistedHours (real) - Calculated AAH for the agent
+//   CostSavings (real) - AAH * HourlyRate in USD
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   SOX 404 - Operational efficiency and control value evidence
+//   OCC 2011-12 - Cost-benefit analysis for AI agent deployments
+//
+// Sample Output:
+// | AgentId | AgentType | AgentAssistedHours | CostSavings |
+// | agent-prod-001 | Conversational | 83.5 | 6012.0 |
+// | agent-auto-001 | Autonomous | 36.3 | 2613.6 |
+// | agent-prod-002 | Conversational | 48.5 | 3492.0 |
+//
+// Notes:
+//   - Combines conversational and autonomous AAH calculations into a unified view
+//   - Default hourly rate: $72 (adjust per organization's cost model)
+//   - Conversational AAH uses weighted session formula
+//   - Autonomous AAH uses 3-component formula
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+let HourlyRate = {HourlyRate:72};
+let TimeSavingsMinutes = {TimeSavingsMinutes:6};
+let InfoRetrievalMinutes = {InfoRetrievalMinutes:6};
+let GenericActionMinutes = {GenericActionMinutes:3};
+let GenericTimeSavingMinutes = {GenericTimeSavingMinutes:5};
+
+let ConversationalAAH =
+    customEvents
+    | where timestamp > ago(TimeRange)
+    | where name == "CopilotSessionOutcome"
+    | where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+    | where tostring(customDimensions['agentMode']) == "Conversational"
+    | where tobool(customDimensions["isEngaged"]) == true
+    | extend AgentId = tostring(customDimensions["recipientId"])
+    | extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
+    | extend Outcome = tostring(customDimensions["sessionOutcome"])
+    | summarize
+        KSReferences = countif(HasKS == true),
+        ResolvedNoKS = countif(HasKS != true and Outcome == "Resolved"),
+        EscalatedAbandonedNoKS = countif(HasKS != true and Outcome in ("Escalated", "Abandoned"))
+        by AgentId
+    | extend WeightedNonKS = todouble(ResolvedNoKS) * 1.0 + todouble(EscalatedAbandonedNoKS) * 0.7
+    | extend TotalWeighted = todouble(KSReferences) + WeightedNonKS
+    | extend AgentAssistedHours = round(TotalWeighted * TimeSavingsMinutes / 60.0, 1)
+    | extend AgentType = "Conversational"
+    | project AgentId, AgentType, AgentAssistedHours;
+
+let AutonomousAAH =
+    customEvents
+    | where timestamp > ago(TimeRange)
+    | where name == "CopilotSessionOutcome"
+    | where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+    | where tostring(customDimensions['agentMode']) == "Autonomous"
+    | where tobool(customDimensions["isEngaged"]) == true
+    | extend AgentId = tostring(customDimensions["recipientId"])
+    | extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
+    | extend Outcome = tostring(customDimensions["sessionOutcome"])
+    | summarize
+        KSReferences = countif(HasKS == true),
+        SuccessfulSessions = countif(Outcome == "Success"),
+        SuccessfulWithoutActions = countif(Outcome == "Success" and HasKS != true)
+        by AgentId
+    | extend KSSavings = todouble(KSReferences) * InfoRetrievalMinutes / 60.0
+    | extend ActionSavings = todouble(SuccessfulSessions) * GenericActionMinutes / 60.0
+    | extend GenericSavings = todouble(SuccessfulWithoutActions) * GenericTimeSavingMinutes / 60.0
+    | extend AgentAssistedHours = round(KSSavings + ActionSavings + GenericSavings, 1)
+    | extend AgentType = "Autonomous"
+    | project AgentId, AgentType, AgentAssistedHours;
+
+union ConversationalAAH, AutonomousAAH
+| extend CostSavings = round(AgentAssistedHours * HourlyRate, 1)
+| project AgentId, AgentType, AgentAssistedHours, CostSavings
+| order by CostSavings desc

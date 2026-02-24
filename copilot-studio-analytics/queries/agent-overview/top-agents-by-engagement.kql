@@ -1,0 +1,51 @@
+// top-agents-by-engagement.kql
+// Purpose: Top N agents ranked by engaged sessions for performance review
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {AgentType} - Agent type filter (default: "All") - workbook parameter syntax
+//   {TopN} - Number of agents to return (default: 20) - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier (recipientId from customDimensions)
+//   AgentType (string) - Conversational or Autonomous
+//   EngagedSessions (long) - Sessions where isEngaged == true
+//   TotalSessions (long) - Total session count
+//   EngagementRate (real) - Percentage of engaged sessions
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - High-activity agent identification for supervisory focus
+//   SOX 404 - Key operational process monitoring
+//
+// Sample Output:
+// | AgentId | AgentType | EngagedSessions | TotalSessions | EngagementRate |
+// | agent-prod-001 | Conversational | 987 | 1245 | 79.3 |
+// | agent-prod-002 | Autonomous | 756 | 890 | 84.9 |
+// | agent-prod-003 | Conversational | 654 | 780 | 83.8 |
+//
+// Notes:
+//   - Returns top 20 agents by default; adjust {TopN} parameter for different counts
+//   - High-engagement agents may require additional supervision resources
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+let TopN = {TopN:20};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend AgentType = tostring(customDimensions["agentMode"])
+| extend IsEngaged = tobool(customDimensions["isEngaged"])
+| summarize
+    TotalSessions = count(),
+    EngagedSessions = countif(IsEngaged == true)
+    by AgentId, AgentType
+| extend EngagementRate = round(todouble(EngagedSessions) / TotalSessions * 100, 1)
+| top TopN by EngagedSessions desc

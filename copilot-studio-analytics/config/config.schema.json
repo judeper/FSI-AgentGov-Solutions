@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/judeper/FSI-AgentGov-Solutions/copilot-studio-analytics/config/config.schema.json",
+  "title": "Copilot Studio Analytics Configuration",
+  "description": "Configuration schema for Copilot Studio Analytics Dataverse-to-App Insights sync pipeline",
+  "type": "object",
+  "required": ["subscription_id", "resource_group", "application_insights", "dataverse"],
+  "properties": {
+    "subscription_id": {
+      "type": "string",
+      "description": "Azure subscription ID where Application Insights is deployed",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "examples": ["00000000-0000-0000-0000-000000000000"]
+    },
+    "resource_group": {
+      "type": "string",
+      "description": "Azure resource group containing Application Insights",
+      "minLength": 1,
+      "maxLength": 90,
+      "examples": ["rg-agent-observability-prod"]
+    },
+    "application_insights": {
+      "type": "object",
+      "description": "Application Insights configuration (same workspace as AOF)",
+      "required": ["name", "workspace_id"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Application Insights resource name",
+          "minLength": 1,
+          "examples": ["ai-aof-observability"]
+        },
+        "workspace_id": {
+          "type": "string",
+          "description": "Log Analytics workspace resource ID (ARM format)",
+          "pattern": "^/subscriptions/[0-9a-fA-F-]+/resourceGroups/.+/providers/Microsoft\\.OperationalInsights/workspaces/.+$",
+          "examples": ["/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-aof/providers/Microsoft.OperationalInsights/workspaces/law-aof"]
+        }
+      }
+    },
+    "dataverse": {
+      "type": "object",
+      "description": "Dataverse connection settings for reading session data",
+      "required": ["tenant_id", "environment_url", "client_id"],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "description": "Entra ID tenant ID",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "examples": ["00000000-0000-0000-0000-000000000000"]
+        },
+        "environment_url": {
+          "type": "string",
+          "description": "Dataverse environment URL",
+          "format": "uri",
+          "pattern": "^https://.+\\.dynamics\\.com$",
+          "examples": ["https://org.crm.dynamics.com"]
+        },
+        "client_id": {
+          "type": "string",
+          "description": "App registration client ID for Dataverse access",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "examples": ["00000000-0000-0000-0000-000000000000"]
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "description": "Sync pipeline configuration",
+      "properties": {
+        "lookback_buffer_hours": {
+          "type": "integer",
+          "description": "Safety buffer in hours for late-arriving sessions",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 48,
+          "examples": [2, 4]
+        },
+        "tier": {
+          "type": "integer",
+          "description": "Sync tier: 1 = msdyn_botsession only, 2 = adds transcript parsing",
+          "default": 1,
+          "enum": [1, 2]
+        },
+        "batch_size": {
+          "type": "integer",
+          "description": "Number of records per App Insights batch",
+          "default": 500,
+          "minimum": 1,
+          "maximum": 10000,
+          "examples": [500, 1000]
+        }
+      }
+    },
+    "business_impact": {
+      "type": "object",
+      "description": "Business impact calculation defaults for cost/time savings",
+      "properties": {
+        "conversational": {
+          "type": "object",
+          "description": "Settings for conversational agent impact calculation",
+          "properties": {
+            "time_savings_minutes": {
+              "type": "number",
+              "description": "Minutes saved per knowledge source reference or weighted session",
+              "default": 6,
+              "minimum": 0,
+              "examples": [6, 10]
+            },
+            "resolved_no_ks_weight": {
+              "type": "number",
+              "description": "Weight multiplier for resolved sessions without knowledge source",
+              "default": 1.0,
+              "minimum": 0,
+              "maximum": 2.0
+            },
+            "escalated_abandoned_no_ks_weight": {
+              "type": "number",
+              "description": "Weight multiplier for escalated/abandoned sessions without knowledge source",
+              "default": 0.7,
+              "minimum": 0,
+              "maximum": 2.0
+            }
+          }
+        },
+        "autonomous": {
+          "type": "object",
+          "description": "Settings for autonomous agent impact calculation",
+          "properties": {
+            "info_retrieval_time_saving_minutes": {
+              "type": "number",
+              "description": "Minutes saved per knowledge source reference",
+              "default": 6,
+              "minimum": 0
+            },
+            "generic_action_multiplier_minutes": {
+              "type": "number",
+              "description": "Default minutes per action invocation",
+              "default": 3,
+              "minimum": 0
+            },
+            "generic_time_saving_minutes": {
+              "type": "number",
+              "description": "Minutes per successful session without independent actions",
+              "default": 5,
+              "minimum": 0
+            },
+            "action_multipliers": {
+              "type": "object",
+              "description": "Tier 2: per-action-type multipliers (action name to minutes)",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              },
+              "default": {},
+              "examples": [{"example_action_name": 10}]
+            }
+          }
+        },
+        "hourly_rate": {
+          "type": "number",
+          "description": "USD hourly rate for Agent Assisted Cost calculation",
+          "default": 72,
+          "minimum": 0,
+          "examples": [72, 85, 100]
+        }
+      }
+    },
+    "zone_mapping": {
+      "type": "object",
+      "description": "Governance zone mapping from environment URL prefix to zone name",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "examples": [
+        {
+          "prod-": "Zone 3 - Enterprise Managed",
+          "team-": "Zone 2 - Team Collaboration",
+          "default": "Zone 1 - Personal Productivity"
+        }
+      ]
+    }
+  }
+}

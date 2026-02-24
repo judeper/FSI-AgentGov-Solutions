@@ -1,0 +1,46 @@
+// autonomous-outcome-distribution.kql
+// Purpose: Success/Failure split for autonomous agents
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//
+// Output Schema:
+//   Outcome (string) - Session outcome (Success or Failure)
+//   SessionCount (long) - Number of sessions with this outcome
+//   SuccessRate (real) - Percentage of successful sessions
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   OCC 2011-12 - Autonomous process reliability monitoring
+//   SOX 404 - Automated control effectiveness evidence
+//
+// Sample Output:
+// | Outcome | SessionCount | SuccessRate |
+// | Success | 678 | 87.4 |
+// | Failure | 98 | 12.6 |
+//
+// Notes:
+//   - Filters to agentMode == "Autonomous" AND isEngaged == true only
+//   - Autonomous outcomes map: Resolved -> Success, Abandoned/Escalated -> Failure
+//   - This mapping is applied during the sync pipeline (CopilotSessionOutcome events)
+//   - Low success rates may indicate action connector failures or trigger misconfigurations
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Autonomous"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| summarize SessionCount = count() by Outcome
+| as T
+| extend TotalSessions = toscalar(T | summarize sum(SessionCount))
+| extend SuccessRate = round(todouble(SessionCount) / TotalSessions * 100, 1)
+| project Outcome, SessionCount, SuccessRate
+| order by SessionCount desc

@@ -1,0 +1,48 @@
+// active-agents-trend.kql
+// Purpose: Daily active agent count by type for trend analysis
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {AgentType} - Agent type filter (default: "All") - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Day of the aggregation period
+//   ActiveAgents (long) - Total distinct agents with sessions that day
+//   ConversationalCount (long) - Distinct conversational agents active
+//   AutonomousCount (long) - Distinct autonomous agents active
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - Agent population monitoring for supervision coverage
+//   OCC 2011-12 - Operational risk tracking of AI deployment growth
+//
+// Sample Output:
+// | Timestamp | ActiveAgents | ConversationalCount | AutonomousCount |
+// | 2026-02-24 | 18 | 12 | 6 |
+// | 2026-02-23 | 17 | 11 | 6 |
+// | 2026-02-22 | 15 | 10 | 5 |
+//
+// Notes:
+//   - Tracks agent deployment growth over time
+//   - Sudden drops may indicate outages; sudden spikes may indicate uncontrolled proliferation
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend AgentType = tostring(customDimensions["agentMode"])
+| summarize
+    ActiveAgents = dcount(AgentId),
+    ConversationalCount = dcountif(AgentId, AgentType == "Conversational"),
+    AutonomousCount = dcountif(AgentId, AgentType == "Autonomous")
+    by bin(timestamp, 1d)
+| project Timestamp = timestamp, ActiveAgents, ConversationalCount, AutonomousCount
+| order by Timestamp desc

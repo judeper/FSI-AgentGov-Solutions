@@ -184,7 +184,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ### Power BI and Viva Insights
 
-**Artifacts:** PBI-01 (Executive Dashboard), PBI-02 (Compliance Report), VIVA-01 (Adoption Metrics), VIVA-02 (Productivity Correlation)
+**Artifacts:** PBI-01 (Executive Dashboard), PBI-02 (Compliance Report)
 
 **Will provide evidence for:**
 
@@ -192,6 +192,8 @@ The governance mapping uses an **artifact-first approach**: each observability c
 |---------|---------------|
 | [3.1 - Agent Inventory and Metadata Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Executive-level inventory visualization |
 | [3.2 - Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Cross-agent usage comparison and business correlation |
+
+> **VIVA-01 and VIVA-02 replaced by Copilot Studio Analytics:** The previously planned Viva Insights adoption metrics (VIVA-01) and productivity correlation (VIVA-02) artifacts are now provided by the [Copilot Studio Analytics](../copilot-studio-analytics/) solution. CSA delivers Viva Insights-equivalent business impact analytics (session outcomes, CSAT, Agent Assisted Hours, ROI) for organizations without Viva Insights licenses. See the [CSA parity matrix](../copilot-studio-analytics/docs/viva-insights-parity-matrix.md) for detailed feature comparison.
 
 ---
 

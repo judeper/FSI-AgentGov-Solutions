@@ -1,0 +1,49 @@
+// csat-score-trend.kql
+// Purpose: Average CSAT score trend over time for conversational agents
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//
+// Output Schema:
+//   Timestamp (datetime) - Day of the aggregation period
+//   AgentId (string) - Agent identifier
+//   AvgCSAT (real) - Average CSAT score for the day (1-5 scale)
+//   ResponseCount (long) - Number of CSAT responses received
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   FINRA 3110 - Customer satisfaction monitoring for supervised interactions
+//   OCC 2011-12 - Ongoing monitoring of agent quality
+//
+// Sample Output:
+// | Timestamp | AgentId | AvgCSAT | ResponseCount |
+// | 2026-02-24 | agent-prod-001 | 4.2 | 87 |
+// | 2026-02-23 | agent-prod-001 | 3.9 | 92 |
+// | 2026-02-22 | agent-prod-002 | 4.5 | 45 |
+//
+// Notes:
+//   - CSAT data is available for conversational agents only
+//   - Filters to sessions where csatScore is not null (user provided feedback)
+//   - CSAT scale: 1 (very dissatisfied) to 5 (very satisfied)
+//   - Low response counts may indicate survey fatigue or delivery issues
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Conversational"
+| where isnotnull(customDimensions["csatScore"]) and tostring(customDimensions["csatScore"]) != ""
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend CSATScore = todouble(customDimensions["csatScore"])
+| summarize
+    AvgCSAT = round(avg(CSATScore), 1),
+    ResponseCount = count()
+    by bin(timestamp, 1d), AgentId
+| project Timestamp = timestamp, AgentId, AvgCSAT, ResponseCount
+| order by Timestamp desc, AgentId asc

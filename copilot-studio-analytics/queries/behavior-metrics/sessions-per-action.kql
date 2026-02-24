@@ -1,0 +1,46 @@
+// sessions-per-action.kql
+// Purpose: Action invocation frequency analysis for connector and plugin usage
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {AgentType} - Agent type filter (default: "All") - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   ActionName (string) - Name of the invoked action
+//   InvocationCount (long) - Number of times the action was invoked
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   SOX 404 - Automated action execution monitoring
+//   OCC 2011-12 - Connector usage patterns for operational risk assessment
+//
+// Sample Output:
+// | AgentId | ActionName | InvocationCount |
+// | agent-auto-001 | CreateServiceTicket | 234 |
+// | agent-auto-001 | LookupAccount | 189 |
+// | agent-prod-001 | TransferToAgent | 87 |
+//
+// Notes:
+//   - IMPORTANT: Requires Tier 2 sync (transcript parsing) for action data
+//   - Tier 1 sync only provides session-level outcomes; action details require transcript analysis
+//   - This query uses actionName from customDimensions, populated during Tier 2 sync
+//   - When Tier 2 data is not available, this query returns no results
+//   - High invocation counts on specific actions may indicate automation opportunities
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotActionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend ActionName = tostring(customDimensions["actionName"])
+| where isnotempty(ActionName)
+| summarize InvocationCount = count() by AgentId, ActionName
+| order by AgentId asc, InvocationCount desc

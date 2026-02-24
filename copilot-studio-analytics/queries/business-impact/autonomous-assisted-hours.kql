@@ -1,0 +1,63 @@
+// autonomous-assisted-hours.kql
+// Purpose: Agent Assisted Hours (AAH) calculation for autonomous agents using 3-component formula
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {InfoRetrievalMinutes} - Minutes saved per KS reference (default: 6) - workbook parameter syntax
+//   {GenericActionMinutes} - Minutes saved per successful action session (default: 3) - workbook parameter syntax
+//   {GenericTimeSavingMinutes} - Minutes saved per success without actions (default: 5) - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   KSSavings (real) - Hours saved from knowledge source references
+//   ActionSavings (real) - Hours saved from successful action sessions
+//   GenericSavings (real) - Hours saved from successful sessions without actions
+//   AgentAssistedHours (real) - Total Agent Assisted Hours
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   SOX 404 - Automated process efficiency evidence
+//   OCC 2011-12 - Autonomous agent value quantification
+//
+// Sample Output:
+// | AgentId | KSSavings | ActionSavings | GenericSavings | AgentAssistedHours |
+// | agent-auto-001 | 12.4 | 8.7 | 15.2 | 36.3 |
+// | agent-auto-002 | 8.1 | 22.3 | 5.6 | 36.0 |
+// | agent-auto-003 | 3.2 | 4.1 | 9.8 | 17.1 |
+//
+// Notes:
+//   - Formula: AAH = (KS * InfoRetrievalMin + Actions * GenericActionMin + Generic * GenericTimeSavingMin) / 60
+//   - Component 1: Knowledge source references * InfoRetrievalMinutes
+//   - Component 2: Successful sessions (simplified Tier 1 action proxy) * GenericActionMinutes
+//   - Component 3: Successful sessions without actions * GenericTimeSavingMinutes
+//   - Full Tier 2 action data improves accuracy when available
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+let InfoRetrievalMinutes = {InfoRetrievalMinutes:6};
+let GenericActionMinutes = {GenericActionMinutes:3};
+let GenericTimeSavingMinutes = {GenericTimeSavingMinutes:5};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Autonomous"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| summarize
+    KSReferences = countif(HasKS == true),
+    SuccessfulSessions = countif(Outcome == "Success"),
+    SuccessfulWithoutActions = countif(Outcome == "Success" and HasKS != true)
+    by AgentId
+| extend KSSavings = round(todouble(KSReferences) * InfoRetrievalMinutes / 60.0, 1)
+| extend ActionSavings = round(todouble(SuccessfulSessions) * GenericActionMinutes / 60.0, 1)
+| extend GenericSavings = round(todouble(SuccessfulWithoutActions) * GenericTimeSavingMinutes / 60.0, 1)
+| extend AgentAssistedHours = round(KSSavings + ActionSavings + GenericSavings, 1)
+| project AgentId, KSSavings, ActionSavings, GenericSavings, AgentAssistedHours
+| order by AgentAssistedHours desc

@@ -1,0 +1,52 @@
+// sessions-per-trigger.kql
+// Purpose: Autonomous trigger distribution and completion time analysis
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   TriggerType (string) - Type of trigger that initiated the session
+//   SessionCount (long) - Total sessions for this trigger type
+//   AvgCompletionSeconds (real) - Average session duration in seconds
+//   P50CompletionSeconds (real) - Median session duration in seconds
+//   P95CompletionSeconds (real) - 95th percentile session duration in seconds
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   OCC 2011-12 - Autonomous process performance monitoring
+//   SOX 404 - Automated control execution timing evidence
+//
+// Sample Output:
+// | AgentId | TriggerType | SessionCount | AvgCompletionSeconds | P50CompletionSeconds | P95CompletionSeconds |
+// | agent-auto-001 | Scheduled | 456 | 23.4 | 18.0 | 67.0 |
+// | agent-auto-001 | EventDriven | 234 | 45.2 | 32.0 | 120.0 |
+// | agent-auto-002 | Manual | 87 | 12.8 | 10.0 | 35.0 |
+//
+// Notes:
+//   - Filters to agentMode == "Autonomous" only
+//   - Uses sessionDurationSeconds from customDimensions for completion time
+//   - P95 completion times above SLA thresholds may indicate performance issues
+//   - Null or empty trigger types are grouped as "Unknown"
+//   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
+
+let TimeRange = {TimeRange:7d};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Autonomous"
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend TriggerType = coalesce(tostring(customDimensions["triggerType"]), "Unknown")
+| extend DurationSeconds = todouble(customDimensions["sessionDurationSeconds"])
+| summarize
+    SessionCount = count(),
+    AvgCompletionSeconds = round(avg(DurationSeconds), 1),
+    P50CompletionSeconds = round(percentile(DurationSeconds, 50), 1),
+    P95CompletionSeconds = round(percentile(DurationSeconds, 95), 1)
+    by AgentId, TriggerType
+| order by AgentId asc, SessionCount desc

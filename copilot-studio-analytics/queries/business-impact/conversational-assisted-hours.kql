@@ -1,0 +1,58 @@
+// conversational-assisted-hours.kql
+// Purpose: Agent Assisted Hours (AAH) calculation for conversational agents
+//
+// Parameters:
+//   {TimeRange} - Time window (default: 30d) - workbook parameter syntax
+//   {Zone} - Zone filter (default: "all") - workbook parameter syntax
+//   {TimeSavingsMinutes} - Minutes saved per weighted session (default: 6) - workbook parameter syntax
+//
+// Output Schema:
+//   AgentId (string) - Agent identifier
+//   KSReferences (long) - Sessions with knowledge source references
+//   WeightedNonKS (real) - Weighted sessions without knowledge source
+//   TotalWeighted (real) - Total weighted sessions (KSReferences + WeightedNonKS)
+//   AgentAssistedHours (real) - Calculated Agent Assisted Hours
+//
+// Supports:
+//   Control 3.2 (Primary) - Usage Analytics and Activity Monitoring
+//
+// Regulatory Alignment:
+//   SOX 404 - Operational efficiency evidence for automated controls
+//   OCC 2011-12 - Agent value quantification for risk-benefit analysis
+//
+// Sample Output:
+// | AgentId | KSReferences | WeightedNonKS | TotalWeighted | AgentAssistedHours |
+// | agent-prod-001 | 523 | 312.4 | 835.4 | 83.5 |
+// | agent-prod-002 | 287 | 198.1 | 485.1 | 48.5 |
+// | agent-prod-003 | 156 | 89.6 | 245.6 | 24.6 |
+//
+// Notes:
+//   - Formula: AAH = (KSReferences + WeightedNonKS) * TimeSavingsMinutes / 60
+//   - KSReferences: engaged sessions where hasKnowledgeSource == true
+//   - WeightedNonKS: Resolved (no KS) * 1.0 + Escalated/Abandoned (no KS) * 0.7
+//   - Unengaged sessions are excluded from the calculation
+//   - Default time saving: 6 minutes per weighted session
+//   - For Log Analytics testing, replace {TimeRange:30d} with literal 30d
+
+let TimeRange = {TimeRange:30d};
+let TimeSavingsMinutes = {TimeSavingsMinutes:6};
+
+customEvents
+| where timestamp > ago(TimeRange)
+| where name == "CopilotSessionOutcome"
+| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
+| where tostring(customDimensions['agentMode']) == "Conversational"
+| where tobool(customDimensions["isEngaged"]) == true
+| extend AgentId = tostring(customDimensions["recipientId"])
+| extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
+| extend Outcome = tostring(customDimensions["sessionOutcome"])
+| summarize
+    KSReferences = countif(HasKS == true),
+    ResolvedNoKS = countif(HasKS != true and Outcome == "Resolved"),
+    EscalatedAbandonedNoKS = countif(HasKS != true and Outcome in ("Escalated", "Abandoned"))
+    by AgentId
+| extend WeightedNonKS = round(todouble(ResolvedNoKS) * 1.0 + todouble(EscalatedAbandonedNoKS) * 0.7, 1)
+| extend TotalWeighted = round(todouble(KSReferences) + WeightedNonKS, 1)
+| extend AgentAssistedHours = round(TotalWeighted * TimeSavingsMinutes / 60.0, 1)
+| project AgentId, KSReferences, WeightedNonKS, TotalWeighted, AgentAssistedHours
+| order by AgentAssistedHours desc
