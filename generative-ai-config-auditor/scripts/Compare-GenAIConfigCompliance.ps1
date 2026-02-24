@@ -1,0 +1,300 @@
+<#
+.SYNOPSIS
+    Compares agent generative AI configuration against zone-specific policies.
+
+.DESCRIPTION
+    Takes agent GenAI settings (from Get-AgentGenAISettings) and evaluates each
+    agent's configuration against the expected policy for its zone. Returns
+    compliance results with severity classification, violation type, and
+    regulatory context.
+
+    Checks include: AOAI enabled vs policy, orchestration mode vs policy,
+    generative answers node usage vs policy, and AOAI connection whitelist
+    validation when a Dataverse URL is provided.
+
+.NOTES
+    File: Compare-GenAIConfigCompliance.ps1
+    Version: 1.0.0
+    Solution: Generative AI Config Auditor (GAC)
+    Control: 2.24 (Agent Feature Enablement Governance)
+#>
+
+#Requires -Version 7.0
+
+function Compare-GenAIConfigCompliance {
+    <#
+    .SYNOPSIS
+        Compares agent generative AI configuration against zone-specific policies.
+
+    .DESCRIPTION
+        Takes agent GenAI settings (from Get-AgentGenAISettings) and evaluates each
+        agent's configuration against the expected policy for its zone. Returns
+        compliance results with severity classification, violation type, and
+        regulatory context.
+
+        By default, only non-compliant agents are returned. Use -IncludeCompliant
+        to include all agents in the output.
+
+    .PARAMETER InputObject
+        Pipeline input: PSCustomObject[] from Get-AgentGenAISettings.
+        Each object must include AgentId, AgentName, AzureOpenAIEnabled,
+        OrchestrationMode, GenerativeAnswersNodeCount, AoaiConnectionId,
+        EnvironmentDisplayName, Zone, and AgentStatus properties.
+
+    .PARAMETER IncludeCompliant
+        Include compliant agents in output. By default, only violations are returned.
+
+    .PARAMETER DataverseUrl
+        Optional Dataverse URL for querying approved connection whitelist from
+        fsi_gacapprovedconnections table. When provided, AOAI connection IDs
+        are validated against the approved list.
+
+    .PARAMETER DataverseToken
+        Pre-obtained access token for Dataverse authentication.
+
+    .EXAMPLE
+        . ./Get-AgentGenAISettings.ps1
+        . ./Compare-GenAIConfigCompliance.ps1
+        Get-AgentGenAISettings | Compare-GenAIConfigCompliance
+
+        Retrieves all agents and returns only non-compliant agents with severity.
+
+    .EXAMPLE
+        . ./Get-AgentGenAISettings.ps1
+        . ./Compare-GenAIConfigCompliance.ps1
+        Get-AgentGenAISettings -ExcludeSandbox | Compare-GenAIConfigCompliance -IncludeCompliant
+
+        Returns compliance status for all agents including compliant ones.
+
+    .EXAMPLE
+        . ./Get-AgentGenAISettings.ps1
+        . ./Compare-GenAIConfigCompliance.ps1
+        $results = Get-AgentGenAISettings | Compare-GenAIConfigCompliance
+        $results | Where-Object { $_.Severity -eq 'Critical' }
+
+        Filters compliance results for critical violations only.
+
+    .OUTPUTS
+        PSCustomObject[] -- One object per agent with properties:
+        AgentId, AgentName, EnvironmentId, EnvironmentDisplayName, Zone,
+        AzureOpenAIEnabled, OrchestrationMode, GenerativeAnswersNodeCount,
+        AoaiConnectionId, IsCompliant, Severity, ViolationType,
+        RegulatoryContext, AgentStatus
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [PSCustomObject[]]$InputObject,
+
+        [Parameter()]
+        [switch]$IncludeCompliant,
+
+        [Parameter()]
+        [string]$DataverseUrl,
+
+        [Parameter()]
+        [string]$DataverseToken
+    )
+
+    begin {
+        #region Load Zone Policy
+
+        $privateRoot = Join-Path $PSScriptRoot 'private'
+
+        # Approved connections whitelist (loaded once if DataverseUrl provided)
+        $approvedConnections = $null
+
+        if ($DataverseUrl -and $DataverseToken) {
+            try {
+                Write-Verbose "Querying approved connections whitelist from Dataverse..."
+                $baseUrl = $DataverseUrl.TrimEnd('/')
+                $uri = "$baseUrl/api/data/v9.2/fsi_gacapprovedconnections?" +
+                    "`$filter=statecode eq 0&" +
+                    "`$select=fsi_connectionid,fsi_connectionname,fsi_zone"
+
+                $headers = @{
+                    'Authorization'    = "Bearer $DataverseToken"
+                    'Accept'           = 'application/json'
+                    'OData-MaxVersion' = '4.0'
+                    'OData-Version'    = '4.0'
+                }
+
+                $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
+                $approvedConnections = @{}
+
+                foreach ($conn in $response.value) {
+                    if ($conn.fsi_connectionid) {
+                        $approvedConnections[$conn.fsi_connectionid] = $conn
+                    }
+                }
+
+                Write-Verbose "Loaded $($approvedConnections.Count) approved connection(s)"
+            } catch {
+                Write-Warning "Failed to query approved connections: $($_.Exception.Message). Connection whitelist validation will be skipped."
+                $approvedConnections = $null
+            }
+        }
+
+        #endregion
+
+        #region Initialize Counters
+
+        $totalCount = 0
+        $compliantCount = 0
+        $violationCount = 0
+        $severityCounts = @{
+            Critical = 0
+            High     = 0
+            Medium   = 0
+            Warning  = 0
+        }
+
+        #endregion
+    }
+
+    process {
+        foreach ($agent in $InputObject) {
+            $totalCount++
+
+            # Normalize inputs defensively
+            $agentZone = if ([string]::IsNullOrWhiteSpace($agent.Zone)) { 'Unknown' } else { $agent.Zone }
+
+            # Get expected GenAI policy for this zone
+            try {
+                $policy = & (Join-Path $privateRoot 'Get-ExpectedGenAIPolicy.ps1') -Zone $agentZone
+            } catch {
+                Write-Warning "Failed to get GenAI policy for zone '$agentZone': $($_.Exception.Message)"
+                $policy = [PSCustomObject]@{
+                    Zone                       = $agentZone
+                    AoaiAllowed                = $false
+                    AllowedOrchestrationModes  = @('Classic')
+                    GenerativeAnswersAllowed   = $false
+                    RegulatoryContext          = 'Policy evaluation failed'
+                }
+            }
+
+            # Evaluate compliance rules
+            $violations = @()
+
+            # Rule 1: Azure OpenAI enablement vs policy
+            if ($agent.AzureOpenAIEnabled -eq 'Yes' -and -not $policy.AoaiAllowed) {
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'AoaiNotAllowed'
+                    Description      = "Azure OpenAI is enabled but not permitted in $agentZone"
+                    Severity         = if ($agentZone -match '3') { 'Critical' } else { 'High' }
+                    RegulatoryContext = "FINRA 3110 - supervisory controls for AI model usage; $($policy.RegulatoryContext)"
+                }
+            }
+
+            # Rule 2: Orchestration mode vs policy
+            if ($agent.OrchestrationMode -ne 'Unable to Determine') {
+                $modeAllowed = $policy.AllowedOrchestrationModes -contains $agent.OrchestrationMode
+                if (-not $modeAllowed) {
+                    $violations += [PSCustomObject]@{
+                        ViolationType    = 'OrchestrationModeNotAllowed'
+                        Description      = "Orchestration mode '$($agent.OrchestrationMode)' is not permitted in $agentZone (allowed: $($policy.AllowedOrchestrationModes -join ', '))"
+                        Severity         = 'High'
+                        RegulatoryContext = "GLBA 501(b) - safeguard controls for generative orchestration; $($policy.RegulatoryContext)"
+                    }
+                }
+            }
+
+            # Rule 3: Generative answers nodes vs policy
+            if ($agent.GenerativeAnswersNodeCount -gt 0 -and -not $policy.GenerativeAnswersAllowed) {
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'GenerativeAnswersNotAllowed'
+                    Description      = "Agent has $($agent.GenerativeAnswersNodeCount) generative answers node(s) but generative answers are not permitted in $agentZone"
+                    Severity         = if ($agentZone -match '3') { 'Critical' } else { 'High' }
+                    RegulatoryContext = "SOX 404 - internal control over generative content; $($policy.RegulatoryContext)"
+                }
+            }
+
+            # Rule 4: AOAI connection whitelist validation
+            if ($agent.AoaiConnectionId -and $null -ne $approvedConnections) {
+                if (-not $approvedConnections.ContainsKey($agent.AoaiConnectionId)) {
+                    $violations += [PSCustomObject]@{
+                        ViolationType    = 'UnapprovedAoaiConnection'
+                        Description      = "AOAI connection '$($agent.AoaiConnectionId)' is not in the approved connections whitelist"
+                        Severity         = 'High'
+                        RegulatoryContext = "FINRA 3110 - approved vendor controls; $($policy.RegulatoryContext)"
+                    }
+                }
+            }
+
+            # Determine overall compliance for this agent
+            $isCompliant = $violations.Count -eq 0
+
+            # Pick highest severity across all violations
+            $worstSeverity = $null
+            $worstViolationType = $null
+            $combinedRegulatoryContext = $null
+
+            if (-not $isCompliant) {
+                $severityOrder = @('Critical', 'High', 'Medium', 'Warning')
+                foreach ($sev in $severityOrder) {
+                    $match = $violations | Where-Object { $_.Severity -eq $sev } | Select-Object -First 1
+                    if ($match) {
+                        $worstSeverity = $sev
+                        $worstViolationType = $match.ViolationType
+                        break
+                    }
+                }
+                $combinedRegulatoryContext = ($violations | ForEach-Object { $_.Description }) -join '; '
+            }
+
+            # Build compliance result object
+            $complianceResult = [PSCustomObject]@{
+                AgentId                    = $agent.AgentId
+                AgentName                  = $agent.AgentName
+                EnvironmentId              = $agent.EnvironmentId
+                EnvironmentDisplayName     = $agent.EnvironmentDisplayName
+                Zone                       = $agentZone
+                AzureOpenAIEnabled         = $agent.AzureOpenAIEnabled
+                OrchestrationMode          = $agent.OrchestrationMode
+                GenerativeAnswersNodeCount = $agent.GenerativeAnswersNodeCount
+                AoaiConnectionId           = $agent.AoaiConnectionId
+                IsCompliant                = $isCompliant
+                Severity                   = if ($isCompliant) { $null } else { $worstSeverity }
+                ViolationType              = if ($isCompliant) { $null } else { $worstViolationType }
+                RegulatoryContext          = if ($isCompliant) { $null } else { $combinedRegulatoryContext }
+                AgentStatus                = $agent.AgentStatus
+                ViolationDetails           = if ($isCompliant) { @() } else { $violations }
+            }
+
+            # Update counters
+            if ($isCompliant) {
+                $compliantCount++
+            } else {
+                $violationCount++
+                if ($worstSeverity -and $severityCounts.ContainsKey($worstSeverity)) {
+                    $severityCounts[$worstSeverity]++
+                }
+            }
+
+            # Emit to pipeline if violation or IncludeCompliant
+            if (-not $isCompliant -or $IncludeCompliant) {
+                $complianceResult
+            }
+        }
+    }
+
+    end {
+        #region Summary Statistics
+
+        Write-Verbose "Compliance check complete:"
+        Write-Verbose "  Total agents scanned: $totalCount"
+        Write-Verbose "  Compliant: $compliantCount"
+        Write-Verbose "  Violations: $violationCount"
+
+        if ($violationCount -gt 0) {
+            Write-Verbose "  Violations by severity:"
+            foreach ($sev in @('Critical', 'High', 'Medium', 'Warning')) {
+                if ($severityCounts[$sev] -gt 0) {
+                    Write-Verbose "    $($sev): $($severityCounts[$sev])"
+                }
+            }
+        }
+
+        #endregion
+    }
+}
