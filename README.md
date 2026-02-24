@@ -4,11 +4,13 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-## Available Solutions (24)
+## Available Solutions (27)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
+| [Action Confirmation Auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations per zone policy | v1.0.0 | 1.23 |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.0 | 3.8 |
+| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
 | [Agent Observability Foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.0 | — |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.0 | 1.18, 2.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.0 | 1.7 |
@@ -22,6 +24,7 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated environment provisioning with zone-based governance classification | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 |
 | [File Upload Security Configurator](./file-upload-security/) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.0 | 1.14, 1.8, 1.4 |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.0.0 | 2.24 |
 | [Hallucination Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.0.0 | 3.10, 2.9, 2.12 |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.0 | 2.22, 1.23, 3.7, 3.8 |
 | [Message Center Monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes affecting AI agents | v2.1.1 | 2.3, 2.10 |

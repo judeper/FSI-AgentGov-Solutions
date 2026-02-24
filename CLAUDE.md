@@ -39,6 +39,9 @@ git rev-parse --show-toplevel
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.0.0 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.7 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
+| [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.0.0 |
+| [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.0 |
+| [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.0 |
 
 ## Control Implementations
 
@@ -48,6 +51,9 @@ git rev-parse --show-toplevel
 | message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
 | pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
 | deny-event-correlation-report | 1.5, 1.7, 3.4 | Deny event correlation across Purview and App Insights |
+| generative-ai-config-auditor | 2.24 | GenAI feature enablement governance per zone |
+| action-confirmation-auditor | 1.23 | Step-up confirmation for agent operations |
+| agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
 
 When updating solution READMEs, ensure Related Controls sections match these mappings.
 
