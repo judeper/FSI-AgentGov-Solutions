@@ -4,7 +4,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-## Available Solutions (27)
+## Available Solutions (28)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
@@ -18,6 +18,7 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls with zone-based filtering | v1.0.0 | 3.3, 3.1, 3.2 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.0 | 1.11, 1.23, 1.18 |
 | [Content Moderation Governance Monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.0 | 1.8, 1.14 |
+| [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | v1.0.0 | 3.2 |
 | [Cross-Solution Integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v2.0.0 | 1.5, 1.7, 1.8, 3.4 |
 | [DR Testing Framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | v1.0.0 | 2.4, 2.1, 1.9 |

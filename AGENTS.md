@@ -6,7 +6,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **16 solutions** covering 28+ controls across all 4 pillars
+- **28 solutions** covering 40+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
@@ -29,6 +29,10 @@ This file provides guidance for autonomous AI agents working on this repository.
 | coi-testing | v1.0.0 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
 | hallucination-tracker | v1.0.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | dr-testing-framework | v1.0.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
+| copilot-studio-analytics | v1.0.0 | 3.2 | Business impact analytics for Copilot Studio agents |
+| generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |
+| action-confirmation-auditor | v1.0.0 | 1.23 | Step-up confirmation validation for agent actions |
+| agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
 
 ## Directory Structure
 
