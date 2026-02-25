@@ -140,17 +140,18 @@ The flow implements five violation detection rules:
 
 **Process Flow:**
 1. Receive violation record from Dataverse webhook
-2. Check for active exception (skip remediation if approved)
-3. Retrieve agent sharing configuration via Power Platform API
-4. Query approved security groups for environment tier
-5. Apply remediation based on violation type
-6. Update violation record with remediation status and timestamp
-7. Send Teams notification with remediation result
-8. Log remediation action in audit table
+2. Check break-glass exclusion (skip remediation if `fsi_breakglassexclude=true`, set violation to Excluded status 100000004)
+3. Check for active exception (skip remediation if approved)
+4. Retrieve agent sharing configuration via Power Platform API
+5. Query approved security groups for environment tier
+6. Apply remediation based on violation type
+7. Update violation record with remediation status and timestamp
+8. Send Teams notification with remediation result
+9. Log remediation action in audit table
 
 **Safety Controls:**
 - **Dry-run mode:** Environment variable `fsi_UASD_RemediationDryRun` (true/false, default: true for safe deployment)
-- **Break-glass exclusion:** Agents with `fsi_breakglassexclude=true` are detected but never remediated — violations remain open for manual review
+- **Break-glass exclusion:** Agents with `fsi_breakglassexclude=true` are detected but never remediated — violations are set to Excluded status (100000004) for manual review
 - **Change validation:** Post-remediation verification via API query
 - **Rollback support:** Original sharing configuration stored in `fsi_evidencejson` field
 
@@ -797,6 +798,8 @@ Evidence files should include:
 1. **Exception Expiration Monitoring Not Implemented:** No proactive 7-day warning alerts or automated `Expired` status transitions exist. Expired exceptions are only detected passively on the next Detector scan. See [Expiration Handling](#expiration-handling) for implementation guidance on the planned `UASD-Exception-Expiration-Monitor` flow.
 
 2. **`fsi_UASD_DefaultExceptionDays` Not Referenced:** The environment variable is provisioned but not currently consumed by any flow or Canvas App. Reserved for future use as a pre-populated default or enforced duration cap.
+
+3. **`fsi_SharingPolicy` Table Reserved for Future Use:** The `fsi_SharingPolicy` table is defined in the Dataverse schema and provisioned by the setup scripts, but is not currently referenced by any flow, Canvas app, or governance script. It is intended for future per-zone policy enforcement. The table can be safely ignored until policy-driven remediation is implemented.
 
 ## Support and Maintenance
 

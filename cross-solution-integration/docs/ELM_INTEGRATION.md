@@ -83,7 +83,7 @@ For environments where Power Automate is not available, use `Register-Provisione
     -EnvironmentName "TRADING-AgentOps-PROD" `
     -EnvironmentUrl "https://trading-agentops.crm.dynamics.com" `
     -Zone 3 `
-    -EnvironmentType 2 `
+    -EnvironmentType 1 `
     -Interactive
 ```
 

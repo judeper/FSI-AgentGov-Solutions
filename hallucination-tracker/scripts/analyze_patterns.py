@@ -93,7 +93,7 @@ class PatternAnalyzer:
         max_retries = 3
 
         start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
-        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$filter=createdon ge {start_date}"
+        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select=fsi_category,fsi_severity,fsi_agentid&$filter=createdon ge {start_date}"
 
         try:
             results = []
@@ -109,7 +109,7 @@ class PatternAnalyzer:
 
                 response = None
                 for attempt in range(max_retries):
-                    response = requests.get(url, headers=headers)
+                    response = requests.get(url, headers=headers, timeout=(10, 120))
                     if response.status_code == 429 or response.status_code >= 500:
                         raw_retry = response.headers.get("Retry-After")
                         try:
@@ -138,7 +138,7 @@ class PatternAnalyzer:
         """Analyze feedback distribution by category."""
         categories = Counter()
         for item in feedback:
-            cat = item.get("fsi_category", 0)
+            cat = item.get("fsi_category") or 0
             categories[CATEGORIES.get(cat, "unknown")] += 1
         return dict(categories)
 
@@ -146,7 +146,7 @@ class PatternAnalyzer:
         """Analyze feedback distribution by agent."""
         agents = Counter()
         for item in feedback:
-            agent_id = item.get("fsi_agentid", "unknown")
+            agent_id = item.get("fsi_agentid") or "unknown"
             agents[agent_id] += 1
         return dict(agents)
 
@@ -154,7 +154,7 @@ class PatternAnalyzer:
         """Analyze severity distribution."""
         severity = Counter()
         for item in feedback:
-            sev = item.get("fsi_severity", 100000000)
+            sev = item.get("fsi_severity") or 100000000
             severity[sev] += 1
         return dict(severity)
 
@@ -171,8 +171,8 @@ class PatternAnalyzer:
         agent_data = {}
 
         for item in feedback:
-            agent_id = item.get("fsi_agentid", "unknown")
-            severity = item.get("fsi_severity", 100000000)
+            agent_id = item.get("fsi_agentid") or "unknown"
+            severity = item.get("fsi_severity") or 100000000
 
             if agent_id not in agent_data:
                 agent_data[agent_id] = {"total": 0, "weighted_issues": 0}

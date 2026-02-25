@@ -346,14 +346,18 @@ Select the Power Automate flow that creates the EnvironmentRequest record.
 > as an Entra ID GUID. The bridging Power Automate flow must resolve the name to a
 > GUID before writing to the EnvironmentRequest table:
 >
-> 1. **Action:** HTTP with Microsoft Entra ID (preauthorized)
+> 1. **Sanitize input:** Before constructing the OData filter, validate that the
+>    `securityGroupName` value contains no single quotes or OData operators. Use
+>    `replace(triggerBody()?['securityGroupName'], '''', '')` to strip single quotes,
+>    or reject names containing them with an error message back to the agent.
+> 2. **Action:** HTTP with Microsoft Entra ID (preauthorized)
 >    - Method: `GET`
 >    - Base Resource URL: `https://graph.microsoft.com`
->    - URI: `/v1.0/groups?$filter=displayName eq '@{triggerBody()?['securityGroupName']}'&$select=id,displayName,securityEnabled`
-> 2. **Validate:** Confirm exactly one result is returned and `securityEnabled` is `true`
-> 3. **Extract:** `first(body('Resolve_Security_Group')?['value'])?['id']`
-> 4. **Set** `fsi_securitygroupid` to the extracted GUID when creating the EnvironmentRequest row
-> 5. **Error:** If no group is found or multiple groups match, return an error to the
+>    - URI: `/v1.0/groups?$filter=displayName eq '@{variables('sanitizedGroupName')}'&$select=id,displayName,securityEnabled`
+> 3. **Validate:** Confirm exactly one result is returned and `securityEnabled` is `true`
+> 4. **Extract:** `first(body('Resolve_Security_Group')?['value'])?['id']`
+> 5. **Set** `fsi_securitygroupid` to the extracted GUID when creating the EnvironmentRequest row
+> 6. **Error:** If no group is found or multiple groups match, return an error to the
 >    agent so the user can correct the group name
 
 #### Confirmation Message

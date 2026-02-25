@@ -224,7 +224,7 @@
             "Create_Automation_Job": ["Succeeded"]
           },
           "type": "Until",
-          "expression": "@or(equals(body('Get_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Get_Job_Status')?['properties']?['status'], 'Suspended'))",
+          "expression": "@or(equals(body('Get_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Get_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Get_Job_Status')?['properties']?['status'], 'Suspended'), equals(body('Get_Job_Status')?['properties']?['status'], 'Cancelled'))",
           "limit": {
             "count": 240,
             "timeout": "PT2H"
@@ -290,6 +290,12 @@
                   "@body('Get_Job_Status')?['properties']?['status']",
                   "Suspended"
                 ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "Cancelled"
+                ]
               }
             ]
           },
@@ -307,8 +313,8 @@
                 "path": "/v2/Mail",
                 "body": {
                   "To": "@variables('ComplianceDistributionList')",
-                  "Subject": "[CRITICAL] File Upload Validation Job Failed",
-                  "Body": "<p><strong>Azure Automation job failed</strong></p><p>Runbook: Start-FileUploadValidationRunbook<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
+                  "Subject": "[CRITICAL] File Upload Validation Job @{body('Get_Job_Status')?['properties']?['status']}",
+                  "Body": "<p><strong>Azure Automation job @{body('Get_Job_Status')?['properties']?['status']}</strong></p><p>Runbook: Start-FileUploadValidationRunbook<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
                   "Importance": "High"
                 }
               },
@@ -325,12 +331,12 @@
               "inputs": {
                 "runStatus": "Failed",
                 "runError": {
-                  "message": "Azure Automation job failed: @{body('Get_Job_Status')?['properties']?['status']}"
+                  "message": "Azure Automation job ended with status: @{body('Get_Job_Status')?['properties']?['status']}"
                 }
               }
             }
           },
-          "description": "Handle job failure - send alert and terminate"
+          "description": "Handle job failure/cancellation - send alert and terminate"
         },
         "Get_Job_Output": {
           "runAfter": {
@@ -456,45 +462,9 @@
           },
           "description": "Parse JSON output from runbook. Schema matches FUS runbook output with file upload fields."
         },
-        "Write_Validation_History": {
-          "runAfter": {
-            "Parse_Results": ["Succeeded"]
-          },
-          "type": "ApiConnection",
-          "inputs": {
-            "host": {
-              "connection": {
-                "name": "@parameters('$connections')['dataverse']['connectionId']"
-              }
-            },
-            "method": "post",
-            "path": "/api/data/v9.2/fsi_fileupload_validationhistorys",
-            "headers": {
-              "Content-Type": "application/json",
-              "OData-MaxVersion": "4.0",
-              "OData-Version": "4.0"
-            },
-            "body": {
-              "fsi_name": "FileUploadScan-@{body('Parse_Results')?['Timestamp']}",
-              "fsi_run_id": "@{body('Parse_Results')?['RunId']}",
-              "fsi_violation_count": "@{length(body('Parse_Results')?['Violations'])}",
-              "fsi_total_agents": "@{body('Parse_Results')?['TotalAgents']}",
-              "fsi_file_upload_enabled_count": "@{body('Parse_Results')?['FileUploadEnabledCount']}",
-              "fsi_environments_scanned": "@{int(body('Parse_Results')?['TotalEnvironments'])}",
-              "fsi_run_timestamp": "@{body('Parse_Results')?['Timestamp']}",
-              "fsi_compliant_count": "@{sub(body('Parse_Results')?['TotalAgents'], length(body('Parse_Results')?['Violations']))}",
-              "fsi_compliance_rate": "@{body('Parse_Results')?['ComplianceRate']}",
-              "fsi_scan_duration_seconds": "@{body('Parse_Results')?['ScanDurationSeconds']}"
-            }
-          },
-          "description": "Write validation results to Dataverse immutable audit trail. Runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_fileuploadsecurity",
-          "runtimeConfiguration": {
-            "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
-          }
-        },
         "Check_Alert_Required": {
           "runAfter": {
-            "Write_Validation_History": ["Succeeded", "Failed"]
+            "Parse_Results": ["Succeeded"]
           },
           "type": "If",
           "expression": {
@@ -554,7 +524,7 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone Summary\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Zone 1 (Personal)\",\"value\":\"${Z1Compliant}/${Z1Total} compliant\"},{\"title\":\"Zone 2 (Team)\",\"value\":\"${Z2Compliant}/${Z2Total} compliant\"},{\"title\":\"Zone 3 (Enterprise)\",\"value\":\"${Z3Compliant}/${Z3Total} compliant\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone Summary\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Zone 1 (Personal)\",\"value\":\"${Z1Compliant}/${Z1Total} compliant\"},{\"title\":\"Zone 2 (Team)\",\"value\":\"${Z2Compliant}/${Z2Total} compliant\"},{\"title\":\"Zone 3 (Enterprise)\",\"value\":\"${Z3Compliant}/${Z3Total} compliant\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', replace(replace(replace(replace(body('Parse_Results')?['Reason'], '\', '\\'), '"', '\"'), decodeUriComponent('%0A'), ' '), decodeUriComponent('%0D'), '')), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
                           }
                         ]
                       }
@@ -573,7 +543,7 @@
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed"]
               },
               "type": "ApiConnection",
               "inputs": {
@@ -625,7 +595,7 @@
             "body": {
               "To": "@variables('ComplianceDistributionList')",
               "Subject": "[CRITICAL] FUS Flow Execution Failed",
-              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: FUS - File Upload Validation (Daily)<br>Timestamp: @{utcNow()}</p><p>Review flow run history in Power Automate for details.</p>",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: FUS - File Upload Validation (Daily)<br>Timestamp: @{utcNow()}<br>Job Status: @{coalesce(body('Get_Job_Status')?['properties']?['status'], 'Unknown')}</p><p>Review flow run history in Power Automate for details.</p>",
               "Importance": "High"
             }
           },
@@ -633,6 +603,19 @@
           "runtimeConfiguration": {
             "retryPolicy": { "count": 3, "interval": "PT30S", "type": "exponential", "minimumInterval": "PT10S", "maximumInterval": "PT5M" }
           }
+        },
+        "Terminate_Flow_Failed": {
+          "runAfter": {
+            "Send_Critical_Error_Email": ["Succeeded", "Failed"]
+          },
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Failed",
+            "runError": {
+              "message": "FUS flow execution failed. Scope_Try encountered an error. Review flow run history for details."
+            }
+          },
+          "description": "Terminate with Failed status so flow run history correctly reflects the failure"
         }
       },
       "runAfter": {

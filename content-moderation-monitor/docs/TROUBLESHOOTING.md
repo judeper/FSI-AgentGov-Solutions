@@ -79,13 +79,17 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 
 ---
 
+## Deployment Placeholders
+
+The Power Automate flow template contains placeholder URLs that must be replaced before import. If adaptive card buttons (e.g., "Run Manual Check" or "View Documentation") are non-functional after deployment, see [FLOW_SETUP.md](FLOW_SETUP.md) for required placeholder replacements including `${ManualCheckUrl}` and the `your-org.github.io` documentation URL.
+
 ## Related Documentation
 
 - [PREREQUISITES.md](PREREQUISITES.md) — Module and permission requirements
 - [SCHEMA.md](SCHEMA.md) — Dataverse schema reference
 - [EVIDENCE_EXPORT.md](EVIDENCE_EXPORT.md) — Evidence export guide
-- [FLOW_SETUP.md](FLOW_SETUP.md) — Power Automate flow deployment
+- [FLOW_SETUP.md](FLOW_SETUP.md) — Power Automate flow deployment and placeholder configuration
 
 ---
 
-*Content Moderation Governance Monitor — Troubleshooting Guide v1.0.0*
+*Content Moderation Governance Monitor — Troubleshooting Guide v1.0.1*

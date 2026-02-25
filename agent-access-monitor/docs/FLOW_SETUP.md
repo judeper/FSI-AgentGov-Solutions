@@ -104,11 +104,10 @@ Update these variables in the flow designer (Initialize Variable actions):
 
 ## Step 3: Bind Connection References
 
-The flow uses three connection references deployed during Phase 2:
+The flow uses **three** connection references deployed during Phase 2 (Dataverse operations are handled by the runbook via `-PersistResults`, not by the flow directly):
 
 | Connection Reference | Service | Purpose |
 |---------------------|---------|---------|
-| `fsi_cr_dataverse_accessmonitor` | Dataverse | Write validation history records |
 | `fsi_cr_azureautomation_accessmonitor` | Azure Automation | Trigger and monitor validation runbook jobs |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Post adaptive card alerts |
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Send email alerts |

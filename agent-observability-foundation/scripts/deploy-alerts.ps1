@@ -41,18 +41,22 @@
 .EXAMPLE
     .\deploy-alerts.ps1 -ResourceGroup "rg-agent-observability-dev" `
                         -ApplicationInsightsId "/subscriptions/.../components/appi-agent-dev" `
+                        -TeamsTeamId "00000000-0000-0000-0000-000000000000" `
+                        -TeamsChannelId "19:channel-id@thread.tacv2" `
                         -Environment "dev"
 
 .EXAMPLE
     .\deploy-alerts.ps1 -ResourceGroup "rg-agent-observability-dev" `
                         -ApplicationInsightsId "/subscriptions/.../components/appi-agent-dev" `
+                        -TeamsTeamId "00000000-0000-0000-0000-000000000000" `
+                        -TeamsChannelId "19:channel-id@thread.tacv2" `
                         -Environment "dev" `
                         -DryRun
 
 .NOTES
     Version: 1.0.0
     Prerequisites:
-    - Azure CLI 2.60.0 or later
+    - Azure CLI 2.50.0 or later
     - Authenticated Azure session (az login)
     - Contributor or Owner role on target resource group
     - Application Insights instance already deployed
@@ -136,7 +140,7 @@ function Test-Prerequisites {
         Validate prerequisites before deployment.
     .DESCRIPTION
         Checks:
-        - Azure CLI version (2.60.0+)
+        - Azure CLI version (2.50.0+)
         - Azure authentication status
         - Resource group existence
         - Application Insights resource existence
@@ -155,6 +159,14 @@ function Test-Prerequisites {
             Write-Host " FAILED" -ForegroundColor Red
             Write-Host "    Azure CLI is not installed or not in PATH" -ForegroundColor Red
             Write-Host "    Install from: https://aka.ms/InstallAzureCLI" -ForegroundColor Yellow
+            return $false
+        }
+        $versionParts = $azVersion -split '\.'
+        $majorVer = [int]$versionParts[0]
+        $minorVer = [int]$versionParts[1]
+        if ($majorVer -lt 2 -or ($majorVer -eq 2 -and $minorVer -lt 50)) {
+            Write-Host " $azVersion (< 2.50.0)" -ForegroundColor Red
+            Write-Host "    Update Azure CLI: az upgrade" -ForegroundColor Yellow
             return $false
         }
         Write-Host " $azVersion" -ForegroundColor Green
@@ -291,7 +303,7 @@ function Deploy-LogicApp {
     Write-Host "[Phase 1/3: Logic App Deployment]" -ForegroundColor Cyan
     Write-Host ""
 
-    $logicAppName = "fsi-agent-alert-teams-$Environment"
+    $logicAppName = "fsi-agent-alert-teams-notification-$Environment"
     $templatePath = Join-Path $AlertsDir "action-groups" "logic-app-teams-notification.json"
 
     if ($IsDryRun) {
@@ -581,7 +593,7 @@ function Show-DeploymentSummary {
         Write-Host "  Resources Deployed:" -ForegroundColor White
         Write-Host ""
         Write-Host "    Logic App:" -ForegroundColor Cyan
-        Write-Host "      - fsi-agent-alert-teams-$Environment" -ForegroundColor Gray
+        Write-Host "      - fsi-agent-alert-teams-notification-$Environment" -ForegroundColor Gray
         Write-Host ""
         Write-Host "    Action Groups:" -ForegroundColor Cyan
         Write-Host "      - ag-agent-zone1-general-$Environment (Personal Productivity)" -ForegroundColor Gray
@@ -606,16 +618,19 @@ function Show-DeploymentSummary {
 
     Write-Host "  Next Steps:" -ForegroundColor White
     Write-Host ""
-    Write-Host "    1. Configure Teams channel IDs in Logic App workflow" -ForegroundColor Gray
+    Write-Host "    1. Authorize Teams API connection in Azure Portal" -ForegroundColor Gray
+    Write-Host "       (Portal → API Connections → teams-connection → Edit → Authorize → Save)" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "    2. Configure Teams channel IDs in Logic App workflow" -ForegroundColor Gray
     Write-Host "       (Edit Logic App in Azure Portal → Designer → Post to Teams action)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    2. Wait 10-14 days for dynamic threshold baseline learning" -ForegroundColor Gray
+    Write-Host "    3. Wait 10-14 days for dynamic threshold baseline learning" -ForegroundColor Gray
     Write-Host "       (Alerts show 'Learning' state during this period)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    3. Test alert notifications with intentional error spike" -ForegroundColor Gray
+    Write-Host "    4. Test alert notifications with intentional error spike" -ForegroundColor Gray
     Write-Host "       (After baseline period completes)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    4. Review alert firing history in Azure Monitor" -ForegroundColor Gray
+    Write-Host "    5. Review alert firing history in Azure Monitor" -ForegroundColor Gray
     Write-Host "       (Monitor → Alerts → Alert Rules)" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "=" -NoNewline -ForegroundColor Cyan

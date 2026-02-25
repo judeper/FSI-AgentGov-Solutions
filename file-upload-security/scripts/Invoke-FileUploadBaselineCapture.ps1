@@ -181,7 +181,13 @@ if ($AgentFilter -ne '*') {
 
 # Enrich with zone and file upload status
 $enriched = foreach ($agent in $agents) {
-    $agentZone = Get-ZoneClassification -EnvironmentId $envId -EnvironmentDisplayName $envName
+    $zoneParams = @{
+        EnvironmentId          = $envId
+        EnvironmentDisplayName = $envName
+    }
+    if ($accessToken) { $zoneParams['AccessToken'] = $accessToken }
+    if ($DataverseUrl) { $zoneParams['DataverseUrl'] = $DataverseUrl }
+    $agentZone = Get-ZoneClassification @zoneParams
     $fileUploadEnabled = Get-BotFileUploadEnabled -Bot $agent
     $moderationLevel = Get-BotModerationLevel -Bot $agent
 
@@ -297,13 +303,13 @@ Write-Host $summaryBanner -ForegroundColor Cyan
 
 switch ($OutputFormat) {
     'Table' {
-        $results | Format-Table -AutoSize
+        $results | Format-Table -AutoSize | Out-Host
     }
     'JSON' {
-        $results | ConvertTo-Json -Depth 5
+        $results | ConvertTo-Json -Depth 5 | Out-Host
     }
     'CSV' {
-        $results | ConvertTo-Csv -NoTypeInformation
+        $results | ConvertTo-Csv -NoTypeInformation | Out-Host
     }
 }
 

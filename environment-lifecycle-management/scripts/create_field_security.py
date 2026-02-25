@@ -51,6 +51,10 @@ def validate_fields_exist(
     """
     Validate that all specified fields exist on the entity.
 
+    Makes one API call per field (N+1 pattern). Acceptable here because this
+    runs only during one-time deployment setup with a fixed field count (~21),
+    and individual calls give clearer error messages than a batch alternative.
+
     Args:
         client: Authenticated ELMClient
         entity_logical_name: Entity logical name
@@ -141,6 +145,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
 
     # Create field permissions
     print(f"\n[Creating Field Permissions]")
+    success = True
 
     for field_name, permissions in APPROVER_FIELD_PERMISSIONS.items():
         can_update = permissions["canupdate"] > 0
@@ -167,6 +172,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
                     print(f"  {field_name}: already configured")
                 else:
                     print(f"  {field_name}: ERROR - {e}")
+                    success = False
 
     print("\n" + "=" * 60)
     if dry_run:
@@ -180,7 +186,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
     print("  - Test with an approver user to verify field restrictions work")
     print("  - Approvers should only be able to modify: State, Approver, Approved On, Approval Comments")
 
-    return True
+    return success
 
 
 def main():

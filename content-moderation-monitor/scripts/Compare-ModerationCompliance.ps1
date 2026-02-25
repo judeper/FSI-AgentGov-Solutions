@@ -10,7 +10,7 @@
 
 .NOTES
     File: Compare-ModerationCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Content Moderation Monitor (v7)
 #>
 

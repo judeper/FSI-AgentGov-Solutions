@@ -1,7 +1,7 @@
 # Monitoring AI Agent Content Moderation Compliance
 ## Content Moderation Monitor
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Solution Type:** Automated Per-Agent Validation + Drift Detection
 **Platform:** PowerShell + Power Automate + Dataverse
 
@@ -104,7 +104,8 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 | Zone 2 | Low | **High** | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | **Medium** | Best practice uplift recommended for team agents |
 | Zone 1 | Low | **High** | Governance gap — Below minimum content moderation threshold |
-| Unknown | Any non-compliant | **Warning** | Governance gap — Environment not assigned to zone |
+| Unknown | Low | **High** | Governance gap — Unclassified environment with minimal content moderation |
+| Unknown | Medium | **Warning** | Governance gap — Environment not assigned to zone |
 
 ### Solution Components
 
@@ -310,7 +311,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   },
   "metadata": {
     "framework": "FSI Agent Governance",
-    "solution": "Content Moderation Monitor v1.0.0",
+    "solution": "Content Moderation Monitor v1.0.1",
     "controlReference": "1.27"
   }
 }
@@ -585,7 +586,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.1
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -596,6 +597,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 - Coordinate moderation policy updates with business stakeholders
 
 **Version History:**
+- **v1.0.1 (February 2026):** Control reference correction, FSI language compliance
 - **v1.0.0 (February 2026):** Initial release with per-agent validation, drift detection, and evidence export
 
 ---

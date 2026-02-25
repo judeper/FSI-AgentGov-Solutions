@@ -288,7 +288,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "@not(or(equals(actions('Post_Teams_Adaptive_Card')?['status'], 'Succeeded'), equals(actions('Send_Email_Notification')?['status'], 'Succeeded')))"
+      "inputs": "@not(or(equals(coalesce(actions('Post_Teams_Adaptive_Card')?['status'], 'Skipped'), 'Succeeded'), equals(actions('Send_Email_Notification')?['status'], 'Succeeded')))"
     },
     "Update_Violation_Status": {
       "runAfter": {
@@ -312,6 +312,13 @@
           }
         },
         "authentication": "@parameters('$authentication')"
+      },
+      "retryPolicy": {
+        "type": "exponential",
+        "count": 3,
+        "interval": "PT10S",
+        "minimumInterval": "PT10S",
+        "maximumInterval": "PT1H"
       }
     }
   },

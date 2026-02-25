@@ -51,7 +51,7 @@ Organization-owned immutable scan summary records. Each record represents one co
 | `fsi_total_agents` | Integer | Yes | Total agents scanned |
 | `fsi_compliant_count` | Integer | Yes | Agents passing moderation checks |
 | `fsi_violation_count` | Integer | Yes | Agents with moderation violations |
-| `fsi_overall_status` | String (50) | Yes | Passed, Failed, Warning, or Critical |
+| `fsi_overall_status` | String (50) | Yes | Passed, Critical, Failed, Review, or Error |
 | `fsi_environments_scanned` | String (2000) | No | Comma-separated environment list |
 | `fsi_summary_json` | Memo (100000) | No | Full JSON summary blob |
 
@@ -176,4 +176,4 @@ Power Automate connection references for the CMM flow.
 
 ---
 
-*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.0*
+*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.1*

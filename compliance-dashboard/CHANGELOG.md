@@ -58,7 +58,7 @@ All notable changes to the Compliance Dashboard solution.
 - **Power Automate Flows:**
   - CD-ScoreCalculator - Daily compliance score calculation
   - CD-ExceptionMonitor - Hourly SLA status monitoring
-  - CD-EvidenceCollector - Scheduled evidence collection (planned — not included in this release)
+  - CD-EvidenceCollector - Scheduled evidence collection (planned for v1.1.0 — not included in this release)
 - **Power BI Dashboard:**
   - Executive Summary page
   - Pillar Overview page

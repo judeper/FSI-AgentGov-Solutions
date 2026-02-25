@@ -164,6 +164,13 @@ try {
 
     $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
 
+    # Az.Accounts 3.0+ returns Token as SecureString
+    $tokenValue = if ($tokenResult.Token -is [System.Security.SecureString]) {
+        $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+    } else {
+        $tokenResult.Token
+    }
+
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime
     } else {
@@ -171,12 +178,12 @@ try {
     }
 
     $script:TokenCache[$normalizedUrl] = @{
-        Token     = $tokenResult.Token
+        Token     = $tokenValue
         ExpiresOn = $expiresOn
     }
 
     Write-Verbose "Interactive token acquired for $normalizedUrl (expires: $expiresOn)"
-    return $tokenResult.Token
+    return $tokenValue
 } catch {
     if ($_.Exception.Message -match 'No Azure context found') {
         throw $_

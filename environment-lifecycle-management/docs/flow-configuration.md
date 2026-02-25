@@ -82,11 +82,13 @@ Zone 1 requests have minimal governance and should be auto-approved without manu
 
 | Setting | Value |
 |---------|-------|
-| Type | Dataverse - When a row is modified |
+| Type | Dataverse - When a row is added, modified or deleted |
 | Table | EnvironmentRequest |
 | Scope | Organization |
+| Change type | Add, Modify |
 | Filter rows | `fsi_state eq 2 and fsi_zone eq 1` (Submitted + Zone 1) |
 | Select columns | `fsi_state,fsi_zone` |
+| Concurrency | `{ "concurrency": { "runs": 5 } }` |
 
 ### Step 1: Update State to Approved
 
@@ -172,7 +174,7 @@ Wrap the auto-approval steps in an error-handling scope:
 > PendingApproval (3) → Approved (4). Without this flow, Zone 2/3 requests will
 > remain in Submitted state and never reach provisioning. Implementation should use:
 >
-> - **Trigger:** Dataverse – When a row is modified, filter `fsi_state eq 2 and fsi_zone ne 1`
+> - **Trigger:** Dataverse – When a row is added, modified or deleted (Add, Modify), filter `fsi_state eq 2 and fsi_zone ne 1`
 > - **Step 1:** Set `fsi_state` to PendingApproval (3), log action `3` (PendingApproval) to ProvisioningLog
 > - **Step 2 (Zone 2):** Start approval via the Approvals connector — single approval routed to requester's manager. Resolve manager via Graph API: `GET /v1.0/users/{requester-upn}/manager`
 > - **Step 2 (Zone 3):** Start sequential approval — first to requester's manager, then to compliance officer (configured via environment variable or Dataverse lookup)
@@ -396,6 +398,8 @@ Log action `8` (ManagedEnabled) to ProvisioningLog with Name (Log ID) `concat('L
 | Parameter | Value |
 |-----------|-------|
 | Method | `GET` |
+| Base Resource URL | `https://api.bap.microsoft.com` |
+| Azure AD Resource URI | `https://api.bap.microsoft.com` |
 | URI | `/providers/Microsoft.BusinessAppPlatform/environmentGroups?api-version=2021-04-01` |
 
 **Retry Policy:**
@@ -471,6 +475,18 @@ Log action `9` (GroupAssigned) to ProvisioningLog with Name (Log ID) `concat('LO
 | environmentUrl | `outputs('Create_Environment')?['body']?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']` |
 | zone | `triggerBody()?['fsi_zone']` |
 | requestId | `triggerBody()?['fsi_environmentrequestid']` |
+| requestNumber | `triggerBody()?['fsi_requestnumber']` |
+| logSequence | `variables('logSequence')` |
+
+**Post-Action:** Update `logSequence` from child flow's return value:
+
+```
+Set variable: logSequence = outputs('Call_Baseline_Configuration')?['body']?['finalLogSequence']
+```
+
+> **Why:** Flow 3 creates its own ProvisioningLog entries, incrementing from the
+> `logSequence` value passed in. The parent flow must adopt the child's final sequence
+> so that Steps 12 and 14 continue the numbering without gaps or collisions.
 
 ### Step 12: Bind Security Group (Zone 2/3)
 
@@ -500,9 +516,9 @@ If 404, log error and skip binding.
 
 | Parameter | Value |
 |-----------|-------|
-| Name (Log ID) | `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(<next sequence>))` |
+| Name (Log ID) | `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(add(variables('logSequence'), 1)))` |
 | Environment Request | `triggerBody()?['fsi_environmentrequestid']` |
-| Sequence | Next sequence |
+| Sequence | `add(variables('logSequence'), 1)` |
 | Action | `10` (SecurityGroupBound) |
 | Actor | `<Service-Principal-AppId>` |
 | Actor Type | `2` (ServicePrincipal) |
@@ -522,7 +538,7 @@ If 404, log error and skip binding.
 
 ### Step 14: Log Provisioning Completed
 
-Log action `13` (ProvisioningCompleted) to ProvisioningLog with Name (Log ID) `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(<final sequence>))`.
+Log action `13` (ProvisioningCompleted) to ProvisioningLog. Compute the final sequence as `add(variables('logSequence'), if(equals(triggerBody()?['fsi_zone'], 1), 1, 2))` — incrementing by 1 for Zone 1 (no security group step), or by 2 for Zone 2/3 (after Step 12's increment). Name (Log ID): `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(<computed final sequence>))`.
 
 ### Step 15: Resolve Requester Email
 
@@ -635,6 +651,20 @@ Wrap the main flow in error-handling scopes:
 
 ### Step 2: Force Sync Service Principal User
 
+**Step 2a: Check if SP user already exists**
+
+**Action:** HTTP with Microsoft Entra ID (preauthorized)
+
+| Parameter | Value |
+|-----------|-------|
+| Method | `GET` |
+| Base Resource URL | Environment URL from request |
+| URI | `/api/data/v9.2/systemusers?$filter=applicationid eq '<service-principal-app-id>'&$select=systemuserid` |
+
+**Condition:** `empty(body('Check_SP_User_Exists')?['value'])` — only proceed to Step 2b if no existing user was found.
+
+**Step 2b: Create SP user (if not exists)**
+
 **Action:** HTTP with Microsoft Entra ID (preauthorized)
 
 | Parameter | Value |
@@ -690,7 +720,7 @@ Wrap the main flow in error-handling scopes:
 
 ### Step 4: Log Security Group Bound
 
-Log action `10` (SecurityGroupBound) to ProvisioningLog with Name (Log ID) `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(<next sequence>))`.
+Log action `10` (SecurityGroupBound) to ProvisioningLog. Query the current max `fsi_sequence` for the request (as in Flow 1 Step 1b) and use `add(maxSequence, 1)` for the sequence and Name (Log ID): `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(add(maxSequence, 1)))`.
 
 ---
 
@@ -704,6 +734,8 @@ Log action `10` (SecurityGroupBound) to ProvisioningLog with Name (Log ID) `conc
 | environmentUrl | String | Yes |
 | zone | Integer | Yes |
 | requestId | GUID | Yes |
+| requestNumber | String | Yes |
+| logSequence | Integer | Yes |
 
 ### Step 1: Get Organization ID
 
@@ -771,7 +803,9 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 | Parameter | Value |
 |-----------|-------|
 | Method | `PATCH` |
-| URI | `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments/@{triggerBody()?['environmentId']}/governanceConfiguration?api-version=2021-04-01` |
+| Base Resource URL | `https://api.bap.microsoft.com` |
+| Azure AD Resource URI | `https://api.bap.microsoft.com` |
+| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{triggerBody()?['environmentId']}/governanceConfiguration?api-version=2021-04-01` |
 | Body | See below |
 
 ```json
@@ -787,7 +821,7 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 
 ### Step 5: Log Baseline Applied
 
-Log action `11` (BaselineConfigApplied) to ProvisioningLog with Name (Log ID) `concat('LOG-', triggerBody()?['fsi_requestnumber'], '-', string(<next sequence>))`.
+Log action `11` (BaselineConfigApplied) to ProvisioningLog with Name (Log ID) `concat('LOG-', triggerBody()?['requestNumber'], '-', string(add(triggerBody()?['logSequence'], 5)))`.
 
 Include in the Action Details which configuration steps succeeded or failed:
 
@@ -805,7 +839,14 @@ Include in the Action Details which configuration steps succeeded or failed:
 
 ### Return Value
 
-Return success/failure status to parent flow.
+| Output | Type | Description |
+|--------|------|-------------|
+| success | Boolean | Whether all configuration steps succeeded |
+| finalLogSequence | Integer | The last `fsi_sequence` value written by this flow |
+
+Return success/failure status and the final log sequence number to the parent flow.
+The parent flow must update its `logSequence` variable with `finalLogSequence` before
+creating subsequent log entries (Steps 12 and 14).
 
 ---
 

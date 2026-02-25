@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -262,7 +262,7 @@ function Test-EnvironmentRetention {
         if ($null -eq $org.auditretentionperiodv2) {
             # Retention period not available programmatically
             $result.OverallStatus = "Warning"
-            $result.Confidence = "Low"
+            $result.Confidence = "Medium"
             $result.Reason = "Unable to determine audit retention period programmatically. The auditretentionperiodv2 field is not available or returns null."
             $result.RawValue = "RetentionDays=Unknown,RequiredDays=$threshold"
             $result.RemediationHint = "Verify audit retention manually in Power Platform admin center > Environments > $displayName > Settings > Auditing. Ensure retention is set to $threshold days or greater for $Zone compliance."

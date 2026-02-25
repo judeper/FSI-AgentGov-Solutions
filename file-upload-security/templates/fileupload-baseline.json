@@ -9,8 +9,8 @@
         "Zone 1": {
             "fileUploadAllowed": true,
             "requiresApproval": false,
-            "minimumModerationLevel": "Medium",
-            "description": "Personal Productivity — file upload at maker discretion"
+            "minimumModerationLevel": "Low",
+            "description": "Personal Productivity — file upload at maker discretion; moderation recommended but only enforced when absent"
         },
         "Zone 2": {
             "fileUploadAllowed": true,

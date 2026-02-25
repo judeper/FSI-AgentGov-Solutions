@@ -274,7 +274,7 @@
   "_metadata": {
     "templateName": "zone-access-policy-alert",
     "templateVersion": "1.0.0",
-    "solution": "Zone Agent Access Validator",
+    "solution": "Agent Access Governance Monitor",
     "description": "Teams adaptive card for zone agent access policy validation alerts with drift detection and per-finding details",
     "severityColorMapping": {
       "Critical": "Attention",

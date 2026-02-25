@@ -270,16 +270,6 @@ namespace FsiAgentGovernance.Plugins
             // ─── Step 5: OpenXML deep inspection ───────────────────────────
             if (IsOpenXmlType(declaredMimeType))
             {
-                if (!ValidateOpenXmlStructure(fileBytes, tracingService, fileName))
-                {
-                    HandleViolation(tracingService,
-                        $"File '{fileName}' declares OpenXML MIME type '{declaredMimeType}' " +
-                        "but does not contain a valid Office Open XML structure " +
-                        "(missing [Content_Types].xml). The file may be corrupted or mislabeled.",
-                        correlationId);
-                    return;
-                }
-
                 if (ContainsMacroContent(fileBytes, tracingService, fileName))
                 {
                     HandleViolation(tracingService,
@@ -287,6 +277,16 @@ namespace FsiAgentGovernance.Plugins
                         "but contains macro-enabled content (e.g., VBA project). " +
                         "Macro-enabled content is not permitted under the declared content type. " +
                         "Use the appropriate macro-enabled MIME type or remove macro content.",
+                        correlationId);
+                    return;
+                }
+
+                if (!ValidateOpenXmlStructure(fileBytes, tracingService, fileName))
+                {
+                    HandleViolation(tracingService,
+                        $"File '{fileName}' declares OpenXML MIME type '{declaredMimeType}' " +
+                        "but does not contain a valid Office Open XML structure " +
+                        "(missing [Content_Types].xml). The file may be corrupted or mislabeled.",
                         correlationId);
                     return;
                 }
@@ -341,7 +341,16 @@ namespace FsiAgentGovernance.Plugins
                 {
                     try
                     {
-                        allowed.GetMagicByteArrays();
+                        var signatures = allowed.GetMagicByteArrays();
+                        if (allowed.MagicBytes != null &&
+                            allowed.MagicBytes.Value.ValueKind != JsonValueKind.Null &&
+                            signatures.Count == 0)
+                        {
+                            throw new InvalidPluginExecutionException(
+                                $"AllowedTypes entry '{allowed.MimeType}' has a magicBytes value that is " +
+                                "present but empty. Use JSON null for content-inspected types or provide " +
+                                "a valid hex string.");
+                        }
                     }
                     catch (FormatException ex)
                     {

@@ -14,10 +14,10 @@
       "schemaName": "fsi_CD_TeamsWebhook",
       "displayName": "Teams Webhook URL",
       "description": "Microsoft Teams incoming webhook URL for posting alerts",
-      "type": "String",
+      "type": "Secret",
       "defaultValue": "",
       "isRequired": false,
-      "hint": "Example: https://contoso.webhook.office.com/webhookb2/..."
+      "hint": "Webhook URL is stored as Secret to prevent unauthorized access"
     },
     {
       "schemaName": "fsi_CD_DataverseEnvironment",
@@ -27,6 +27,15 @@
       "defaultValue": "",
       "isRequired": false,
       "hint": "Example: https://org.crm.dynamics.com"
+    },
+    {
+      "schemaName": "fsi_CD_DailySummaryHourUTC",
+      "displayName": "Daily Summary Hour (UTC)",
+      "description": "Hour (00-23) in UTC when the daily breach summary email is sent by CD-ExceptionMonitor. Default is 09 (9 AM UTC).",
+      "type": "String",
+      "defaultValue": "09",
+      "isRequired": false,
+      "hint": "Example: 14 for 2 PM UTC"
     },
     {
       "schemaName": "fsi_CD_SLAMultiplier",

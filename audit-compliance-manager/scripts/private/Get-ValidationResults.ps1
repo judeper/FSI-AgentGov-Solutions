@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -7,7 +7,8 @@
 .DESCRIPTION
     Retrieves validation result records from the fsi_auditvalidationhistories table
     via Dataverse Web API with OData filtering. Handles pagination automatically to
-    ensure complete result sets for evidence export.
+    ensure complete result sets for evidence export. Uses Invoke-WithRetry for
+    transient error handling (429/503/504) on Dataverse OData GET requests.
 
     Used by Export-AuditValidationEvidence to retrieve historical validation data
     for compliance evidence packages.
@@ -91,6 +92,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Import AuditComplianceHelpers for Invoke-WithRetry
+$scriptRoot = Split-Path -Parent $PSScriptRoot
+Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
+
 function Get-ValidationResults {
     [CmdletBinding()]
     param(
@@ -167,11 +172,13 @@ function Get-ValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = Invoke-RestMethod `
-                -Uri $nextLink `
-                -Method Get `
-                -Headers $headers `
-                -ErrorAction Stop
+            $response = Invoke-WithRetry -ScriptBlock {
+                Invoke-RestMethod `
+                    -Uri $nextLink `
+                    -Method Get `
+                    -Headers $headers `
+                    -ErrorAction Stop
+            } -OperationName "Get-ValidationResults"
 
             # Add results from this page
             if ($response.value) {

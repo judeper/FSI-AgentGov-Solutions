@@ -138,10 +138,10 @@ function Get-KeyVaultSecrets {
     return $secrets
 }
 
-function Upload-ToBlobStorage {
+function Send-ToBlobStorage {
     <#
     .SYNOPSIS
-        Uploads files to Azure Blob Storage.
+        Sends files to Azure Blob Storage.
     #>
     param(
         [string]$StorageAccount,
@@ -374,7 +374,7 @@ try {
         $filesToUpload = $uploadCandidates | Where-Object { Test-Path $_ }
 
         if ($filesToUpload.Count -gt 0) {
-            Upload-ToBlobStorage `
+            Send-ToBlobStorage `
                 -StorageAccount $StorageAccountName `
                 -Container $StorageContainerName `
                 -FilePaths $filesToUpload `

@@ -276,16 +276,13 @@ Describe "Write-DataverseComplianceRecord" {
     }
 
     Context "Upsert logic — create new record" {
-        It "Creates a new record when no existing record found" {
+        It "Upserts via alternate key PATCH (atomic create-or-update)" {
             $script:apiCalls = @()
 
             Mock Invoke-RestMethod {
                 $script:apiCalls += @{ Uri = $Uri; Method = $Method; Body = $Body }
 
-                if ($Method -eq "GET") {
-                    return @{ value = @() }
-                }
-                if ($Method -eq "POST") {
+                if ($Method -eq "PATCH") {
                     return @{ fsi_auditenvironmentcomplianceid = "new-guid-123" }
                 }
             } -ModuleName AuditComplianceHelpers
@@ -299,28 +296,21 @@ Describe "Write-DataverseComplianceRecord" {
                 -DataverseAuditEnabled $false `
                 -ComplianceStatus "Non-Compliant"
 
-            # Should make GET (query) then POST (create)
-            $getCalls = $script:apiCalls | Where-Object { $_.Method -eq "GET" }
-            $postCalls = $script:apiCalls | Where-Object { $_.Method -eq "POST" }
-            $getCalls.Count | Should -BeGreaterOrEqual 1
-            $postCalls.Count | Should -BeGreaterOrEqual 1
+            # Should use a single PATCH with alternate key (no GET query)
+            $patchCalls = $script:apiCalls | Where-Object { $_.Method -eq "PATCH" }
+            $patchCalls.Count | Should -Be 1
+            $patchUri = ($patchCalls | Select-Object -First 1).Uri
+            $patchUri | Should -BeLike "*fsi_environmentid='env-001'*"
         }
     }
 
     Context "Upsert logic — update existing record" {
-        It "Updates existing record when record found by environment ID" {
+        It "Uses alternate key PATCH for updates (same mechanism as create)" {
             $script:apiCalls = @()
 
             Mock Invoke-RestMethod {
                 $script:apiCalls += @{ Uri = $Uri; Method = $Method; Body = $Body }
 
-                if ($Method -eq "GET") {
-                    return @{
-                        value = @(
-                            @{ fsi_auditenvironmentcomplianceid = "existing-guid-456" }
-                        )
-                    }
-                }
                 if ($Method -eq "PATCH") {
                     return @{ fsi_auditenvironmentcomplianceid = "existing-guid-456" }
                 }
@@ -335,15 +325,11 @@ Describe "Write-DataverseComplianceRecord" {
                 -DataverseAuditEnabled $true `
                 -ComplianceStatus "Compliant"
 
-            # Should make GET (query) then PATCH (update)
-            $getCalls = $script:apiCalls | Where-Object { $_.Method -eq "GET" }
+            # Should use a single PATCH with alternate key (no GET query)
             $patchCalls = $script:apiCalls | Where-Object { $_.Method -eq "PATCH" }
-            $getCalls.Count | Should -BeGreaterOrEqual 1
-            $patchCalls.Count | Should -BeGreaterOrEqual 1
-
-            # Verify PATCH URL contains the existing record ID
+            $patchCalls.Count | Should -Be 1
             $patchUri = ($patchCalls | Select-Object -First 1).Uri
-            $patchUri | Should -BeLike "*existing-guid-456*"
+            $patchUri | Should -BeLike "*fsi_environmentid='env-002'*"
         }
     }
 }

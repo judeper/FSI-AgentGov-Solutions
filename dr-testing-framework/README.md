@@ -12,11 +12,11 @@ The DR Testing Framework validates that AI agents and supporting infrastructure 
 
 | Feature | Description |
 |---------|-------------|
-| **Automated Testing** | Scheduled and on-demand DR test execution |
+| **Automated Testing** | On-demand DR test execution (scheduling planned) |
 | **RTO/RPO Measurement** | Track actual recovery times vs. targets (RPO measurement not yet implemented — see [Known Limitations](#known-limitations)) |
 | **Validation Checks** | Verify agent functionality post-recovery |
-| **Evidence Collection** | Generate compliance artifacts |
-| **Gap Tracking** | Identify and monitor recovery gaps |
+| **Evidence Collection** | Generate compliance artifacts (not yet implemented) |
+| **Gap Tracking** | Identify and monitor recovery gaps (not yet implemented) |
 
 ## Architecture
 
@@ -24,7 +24,8 @@ The DR Testing Framework validates that AI agents and supporting infrastructure 
 ┌─────────────────────────────────────────────────────────────────┐
 │                    DR Testing Framework                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  Scheduler  │  Test Runner  │  Validator  │  Evidence Generator │
+│  Scheduler  │  Test Runner  │  Validator  │  Evidence Generator  │
+│  (planned)  │               │             │  (planned)           │
 └─────────────┴───────────────┴─────────────┴─────────────────────┘
                               ▲
                               │ Test Execution
@@ -163,7 +164,7 @@ Detailed documentation is planned for a future release. See inline comments in `
 ## Test Execution Workflow
 
 ```
-1. Schedule Test
+1. Schedule Test (planned)
    └─→ Define scenario, target, schedule
 
 2. Pre-Test Baseline
@@ -178,7 +179,7 @@ Detailed documentation is planned for a future release. See inline comments in `
 5. Document Results
    └─→ Record metrics, gaps, observations
 
-6. Generate Evidence
+6. Generate Evidence (planned)
    └─→ Export compliance artifacts
 ```
 

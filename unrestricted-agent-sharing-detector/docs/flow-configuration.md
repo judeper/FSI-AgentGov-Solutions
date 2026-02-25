@@ -375,6 +375,7 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
      - Set `fsi_requestedby` to current user
      - Set `fsi_requestedat` to now
      - Set `fsi_requestedduration` to user input
+     - Set `fsi_exceptionstatus` to 100000000 (Pending)
      - Set `fsi_name` to `Concatenate("EXC-", Left(agentName, 60), "-", Text(Now(), "yyyyMMdd"))` — this provides a human-readable primary name (truncated to ≤100 chars) so exception records are identifiable in Dataverse views and audit queries
      - Show confirmation message
      - Navigate to tracking screen
@@ -382,7 +383,7 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 5. **My Requests Screen**
    - Gallery showing user's exception requests
    - Columns: Agent, Status, Submitted Date, Expires
-   - Filter: `fsi_requestedby = CurrentUser.Email`
+   - Filter: `fsi_requestedby = User().Email`
    - Sorting: By date descending
    - Detail view on tap
 

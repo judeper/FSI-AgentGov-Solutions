@@ -65,7 +65,7 @@ Recurrence (Daily 06:00 UTC)
   ├─ Scope_Try
   │   ├─ Create Automation Job
   │   ├─ Wait For Job (30s poll, 2h timeout)
-  │   ├─ Check Job Failed → Send Failure Email + Terminate
+  │   ├─ Check Job Failed/Cancelled → Send Failure Email + Terminate
   │   ├─ Get Job Output
   │   ├─ Parse Results (JSON → typed properties)
   │   ├─ Write Validation History (audit-first)
@@ -74,7 +74,7 @@ Recurrence (Daily 06:00 UTC)
   │       └─ Warning → Email Only
   │
   └─ Scope_Catch
-      └─ Send Critical Error Email
+      └─ Send Critical Error Email (includes job status)
 ```
 
 ## Alert Routing

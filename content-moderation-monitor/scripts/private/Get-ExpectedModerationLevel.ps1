@@ -91,11 +91,7 @@ $severity = $null
 $regulatoryContext = $null
 
 if (-not $isCompliant) {
-    # Check for Unknown zone with special handling
-    if ($Zone -eq 'Unknown') {
-        $severity = $zoneConfig.violations.unclassified.severity
-        $regulatoryContext = $zoneConfig.violations.unclassified.regulatory
-    } elseif ($ActualLevel -eq 'Unknown') {
+    if ($ActualLevel -eq 'Unknown') {
         # Unknown actual level in a known zone - treat as worst case
         $severity = 'Warning'
         $regulatoryContext = 'Governance gap - Unable to determine content moderation level'

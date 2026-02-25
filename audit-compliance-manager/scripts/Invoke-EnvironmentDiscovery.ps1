@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
 
 <#
@@ -233,14 +233,14 @@ function Invoke-EnvironmentDiscovery {
         foreach ($env in $discoveredEnvironments) {
             $envId = $env.EnvironmentName
             $envType = $env.EnvironmentType
-            $envTypeInt = if ($envTypeMap.ContainsKey($envType)) { $envTypeMap[$envType] } else { 2 } # Default to Sandbox if unknown
+            $envTypeInt = if ($envTypeMap.ContainsKey($envType)) { $envTypeMap[$envType] } else { 100000001 } # Default to Sandbox if unknown
 
             $discoveredEnvLookup[$envId] = @{
                 EnvironmentId   = $envId
                 DisplayName     = $env.DisplayName
                 EnvironmentType = $envType
                 EnvironmentTypeInt = $envTypeInt
-                EnvironmentUrl  = $env.LinkedEnvironmentMetadata.InstanceUrl
+                EnvironmentUrl  = $env.Internal.Properties.LinkedEnvironmentMetadata.instanceUrl
             }
         }
 

@@ -65,7 +65,6 @@ class ACVClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
-        self._session.mount("http://", adapter)
 
         if interactive:
             # Public client for interactive auth
@@ -174,6 +173,13 @@ class ACVClient:
         if select:
             params["$select"] = ",".join(select)
         if filter_expr:
+            # Basic OData injection guard: reject expressions containing
+            # statement terminators or comment markers that could alter query intent.
+            _forbidden = [";", "--", "/*", "*/"]
+            if any(token in filter_expr for token in _forbidden):
+                raise ValueError(
+                    f"filter_expr contains forbidden characters: {filter_expr!r}"
+                )
             params["$filter"] = filter_expr
         if orderby:
             params["$orderby"] = orderby
@@ -490,11 +496,8 @@ def main():
         default=os.environ.get("ACV_CLIENT_ID"),
         help="Application (client) ID - required for all auth modes (or set ACV_CLIENT_ID env var)",
     )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("ACV_CLIENT_SECRET"),
-        help="Client secret (or set ACV_CLIENT_SECRET env var)",
-    )
+    # Client secret is read from ACV_CLIENT_SECRET env var or prompted via getpass.
+    # CLI argument removed to avoid credential exposure in shell history.
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ACV_ENVIRONMENT_URL"),
@@ -530,7 +533,7 @@ def main():
         parser.error("--client-id is required (or set ACV_CLIENT_ID env var)")
 
     # For non-interactive mode, need client secret
-    client_secret = args.client_secret
+    client_secret = os.environ.get("ACV_CLIENT_SECRET")
     if not args.interactive:
         if not client_secret:
             import getpass

@@ -126,7 +126,7 @@
         "log_categories": {
           "type": "array",
           "description": "Log categories to export from Application Insights",
-          "default": ["AppTraces", "AppEvents"],
+          "default": ["AppTraces", "AppEvents", "AppRequests", "AppExceptions"],
           "items": {
             "type": "string",
             "enum": [

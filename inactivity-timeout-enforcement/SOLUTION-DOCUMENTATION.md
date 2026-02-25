@@ -282,7 +282,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 **Compliance Status Mapping:**
 - **0 (Compliant):** Timeout enabled and duration ≤ required max
 - **1 (Non-Compliant):** Timeout disabled OR duration > required max OR timeout enabled but duration null
-- **2 (Unknown):** Missing policy OR BAP API error
+- **2 (Unknown):** Missing policy OR BAP API error OR policy exists but fsi_requiredmaxduration is null
 
 **3. fsi_inactivitytimeouterrorlogs (Error Logs)**
 

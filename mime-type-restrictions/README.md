@@ -1,6 +1,6 @@
 # MIME Type Restrictions for File Uploads
 
-> **Version:** v1.0.1
+> **Version:** 1.0.1
 > **Status:** Completed
 
 Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.

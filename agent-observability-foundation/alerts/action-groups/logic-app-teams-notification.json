@@ -168,7 +168,7 @@
                 "body": {
                   "body": {
                     "contentType": "html",
-                    "content": "@{outputs('Format_Teams_Message')}"
+                    "content": "@{outputs('Format_Teams_Message')?['content']}"
                   }
                 }
               },
@@ -208,10 +208,10 @@
       }
     },
     "logicAppCallbackUrl": {
-      "type": "string",
+      "type": "securestring",
       "value": "[listCallbackURL(concat(resourceId('Microsoft.Logic/workflows', parameters('logicAppName')), '/triggers/manual'), '2019-05-01').value]",
       "metadata": {
-        "description": "HTTP callback URL for the Logic App trigger (use in Action Group configuration)"
+        "description": "HTTP callback URL for the Logic App trigger (use in Action Group configuration). Contains SAS token — typed as securestring to prevent exposure in deployment history."
       }
     }
   }

@@ -11,9 +11,9 @@ except ImportError:
 
 
 def get_access_token(tenant_id: str, client_id: str = None, client_secret: str = None,
-                     interactive: bool = False, environment_url: str = None) -> str:
+                     interactive: bool = False, environment_url: str = "") -> str:
     """Acquire access token for Dataverse."""
-    scope = [f"{environment_url}/.default"]
+    scope = [f"{environment_url.rstrip('/')}/.default"]
 
     if interactive:
         app = PublicClientApplication(

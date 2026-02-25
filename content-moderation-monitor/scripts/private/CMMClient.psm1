@@ -8,7 +8,7 @@
 
 .NOTES
     Module: CMMClient.psm1
-    Version: 1.0.0
+    Version: 1.0.1
     Author: FSI Agent Governance Team
 #>
 

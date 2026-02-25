@@ -32,14 +32,14 @@
       "minValue": 0,
       "maxValue": 365000,
       "metadata": {
-        "description": "Retention period in days for exported logs. 2555 days (7 years) recommended for SEC 17a-4. Set to 0 for unlimited retention (managed by storage account lifecycle policy)."
+        "description": "DEPRECATED: Azure no longer enforces retention via diagnostic settings (Sep 2023). Use storage account lifecycle management policies to enforce SEC 17a-4(a) 7-year retention. This parameter is retained for documentation purposes only."
       }
     }
   },
   "resources": [
     {
       "type": "Microsoft.Insights/components/providers/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
+      "apiVersion": "2021-05-01",
       "name": "[concat(parameters('appInsightsName'), '/Microsoft.Insights/', parameters('settingName'))]",
       "properties": {
         "storageAccountId": "[parameters('storageAccountId')]",
@@ -47,38 +47,22 @@
           {
             "category": "AppTraces",
             "categoryGroup": null,
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
-            }
+            "enabled": true
           },
           {
             "category": "AppEvents",
             "categoryGroup": null,
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
-            }
+            "enabled": true
           },
           {
             "category": "AppRequests",
             "categoryGroup": null,
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
-            }
+            "enabled": true
           },
           {
             "category": "AppExceptions",
             "categoryGroup": null,
-            "enabled": true,
-            "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
-            }
+            "enabled": true
           }
         ]
       }

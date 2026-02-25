@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 try:
     import requests
-    from msal import PublicClientApplication, ConfidentialClientApplication
+    from msal import PublicClientApplication  # noqa: F401 — validated at import time
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
@@ -156,7 +156,16 @@ class DataverseClient:
         url = f"{self.base_url}/{endpoint}"
         max_retries = 3
         for attempt in range(max_retries + 1):
-            response = requests.request(method, url, headers=self.headers, json=data)
+            try:
+                response = requests.request(method, url, headers=self.headers, json=data)
+            except requests.exceptions.RequestException as exc:
+                if attempt < max_retries:
+                    wait = 2 ** attempt
+                    print(f"  Network error ({exc}), retrying in {wait}s...")
+                    time.sleep(wait)
+                    continue
+                print(f"Error: Network request failed after {max_retries} retries: {exc}")
+                return None
 
             if response.status_code in (429, 502, 503, 504) and attempt < max_retries:
                 retry_after = int(response.headers.get("Retry-After", 2 ** attempt))
@@ -423,6 +432,15 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> No
             print(f"    Zone: {config['zone']}, Tier: {config['tier']}")
             print(f"    SLA: {config['sla_hours']}h, Escalation: {config['escalation_hours']}h")
             print(f"    Review %: {config['review_percent']}")
+            continue
+
+        # Check for existing config to ensure idempotency
+        existing = client._request(
+            "GET",
+            f"fsi_supervisionconfigs?$filter=fsi_name eq '{config['name']}'&$select=fsi_name"
+        )
+        if existing and existing.get("value"):
+            print(f"  Config {config['name']} already exists, skipping creation")
             continue
 
         record = {

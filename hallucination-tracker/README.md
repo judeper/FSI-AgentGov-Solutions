@@ -3,7 +3,7 @@
 > **Status:** Work In Progress
 >
 > **Known Gaps:**
-> - Power Platform solution artifacts (solution.xml, customizations.xml, workflow definitions, canvas app files, Dataverse table definitions) are not yet included — tables must be created manually
+> - Power Platform solution artifacts (solution.xml, customizations.xml, workflow definitions, canvas app files, Dataverse table definitions) are not yet included — create tables manually using the [Dataverse Schema](#dataverse-schema) section
 > - Solution package and Power BI template files are planned for a future release
 >
 > **FSI Governance Gaps:**
@@ -120,11 +120,58 @@ Programmatic verification where possible.
 |----------|---------|---------|
 | FINRA Supervision Workflow | v1.0.0+ | Supervisor feedback source |
 
+## Dataverse Schema
+
+The following tables must be created manually in your Dataverse environment. All tables use the `fsi_` publisher prefix.
+
+### Hallucination Report (`fsi_hallucinationreport`)
+
+| Column Logical Name | Display Name | Data Type | Description |
+|---------------------|--------------|-----------|-------------|
+| `fsi_hallucinationreportid` | Hallucination Report | Unique Identifier (PK) | Auto-generated primary key |
+| `fsi_category` | Category | Choice (Option Set) | Hallucination type — see values below |
+| `fsi_severity` | Severity | Choice (Option Set) | Issue severity — see values below |
+| `fsi_agentid` | Agent ID | Single Line of Text | Identifier of the AI agent that produced the hallucination |
+| `createdon` | Created On | Date and Time | System-managed record creation timestamp |
+
+**`fsi_category` option set values:**
+
+| Value | Label |
+|-------|-------|
+| 100000000 | Factual Error |
+| 100000001 | Fabricated Data |
+| 100000002 | Citation Missing |
+| 100000003 | Outdated Info |
+| 100000004 | Confidence Overstatement |
+
+**`fsi_severity` option set values:**
+
+| Value | Label | Weight |
+|-------|-------|--------|
+| 100000000 | Low | 1 |
+| 100000001 | Medium | 2 |
+| 100000002 | High | 3 |
+| 100000003 | Critical | 4 |
+
+### Feedback Source (`fsi_feedbacksource`)
+
+Stores metadata about where feedback originated (user thumbs-down, supervisor rejection, automated check).
+
+### Pattern Analysis (`fsi_patternanalysis`)
+
+Stores the output of pattern detection runs for historical tracking.
+
+### Agent Score (`fsi_agentscore`)
+
+Stores calculated accuracy scores per agent over time.
+
+> **Note:** Feedback Source, Pattern Analysis, and Agent Score tables are used by planned Power Automate flows and Power BI dashboards not yet included in this release. Only the Hallucination Report table is required for the `analyze_patterns.py` script.
+
 ## Quick Start
 
 ### 1. Deploy Dataverse Schema
 
-> **Note:** Solution package (`HallucinationTracker_1_0_0.zip`) is not yet available. Dataverse tables must be created manually — see the schema in the Architecture section above.
+> **Note:** Solution package (`HallucinationTracker_1_0_0.zip`) is not yet available. Create the Dataverse tables manually using the schema defined in the [Dataverse Schema](#dataverse-schema) section above.
 
 ### 2. Configure Feedback Sources
 

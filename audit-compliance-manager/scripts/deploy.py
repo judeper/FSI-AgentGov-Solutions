@@ -164,11 +164,11 @@ def main():
 Examples:
   # Full deployment with interactive auth (recommended for first run)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --interactive
+      --tenant-id <tenant-id> --client-id <app-id> --interactive
 
   # Dry run to preview changes
   python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --interactive --dry-run
+      --tenant-id <tenant-id> --client-id <app-id> --interactive --dry-run
 
   # With Service Principal (for CI/CD — set ACV_CLIENT_SECRET env var)
   ACV_CLIENT_SECRET=<secret> python deploy.py --environment-url https://org.crm.dynamics.com \\
@@ -234,6 +234,11 @@ Examples:
         parser.error(
             "Either --interactive or --client-id is required.\n"
             "Use --interactive for manual runs or provide Service Principal credentials."
+        )
+    if args.interactive and not args.client_id:
+        parser.error(
+            "--client-id is required for interactive authentication.\n"
+            "Register an app in Entra ID and provide --client-id."
         )
 
     # Validate mutually exclusive flags

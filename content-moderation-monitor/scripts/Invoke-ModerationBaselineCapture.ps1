@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+#Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
 .SYNOPSIS
@@ -110,7 +111,7 @@
     - Agents: Array of captured agent summaries
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
 
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module
@@ -183,10 +184,14 @@ try {
 
     # Default CapturedBy to current user UPN
     if (-not $CapturedBy) {
-        try {
-            $CapturedBy = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-        } catch {
-            $CapturedBy = "Operator"
+        if ($IsWindows -or (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue))) {
+            try {
+                $CapturedBy = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            } catch {
+                $CapturedBy = $env:USERNAME ?? "Operator"
+            }
+        } else {
+            $CapturedBy = $env:USER ?? "Operator"
         }
     }
 

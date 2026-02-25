@@ -1,11 +1,11 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
     Compares current validation severity against last known good baseline from Dataverse history.
 
 .DESCRIPTION
-    Queries the fsi_auditvalidationhistory table for the most recent Passed (severity=1)
+    Queries the fsi_auditvalidationhistory table for the most recent Passed (severity=100000000)
     validation result matching the specified scope and type. Compares the current validation
     severity against the baseline to determine if drift (regression) has occurred.
 
@@ -17,12 +17,12 @@
     This function supports automated alerting by providing a boolean DriftDetected flag
     that downstream systems (Power Automate) can use to route alert notifications.
 
-    Severity values (higher = worse):
-    - Passed = 1
-    - Warning = 2
-    - GracePeriod = 3
-    - Failed = 4
-    - Error = 5
+    Severity values (Dataverse option set, higher = worse):
+    - Passed = 100000000
+    - Warning = 100000001
+    - GracePeriod = 100000002
+    - Failed = 100000003
+    - Error = 100000004
 
 .PARAMETER DataverseUrl
     Dataverse organization URL where validation history is stored.
@@ -247,11 +247,11 @@ function Compare-ValidationBaseline {
 
             # Map baseline severity back to status string
             $reverseSeverityMap = @{
-                1 = "Passed"
-                2 = "Warning"
-                3 = "GracePeriod"
-                4 = "Failed"
-                5 = "Error"
+                100000000 = "Passed"
+                100000001 = "Warning"
+                100000002 = "GracePeriod"
+                100000003 = "Failed"
+                100000004 = "Error"
             }
             $baselineStatus = $reverseSeverityMap[$baselineSeverity]
 

@@ -334,7 +334,7 @@
             },
             "Terminate_Failed": {
               "runAfter": {
-                "Send_Job_Failure_Email": ["Succeeded"]
+                "Send_Job_Failure_Email": ["Succeeded", "Failed", "Skipped", "TimedOut"]
               },
               "type": "Terminate",
               "inputs": {
@@ -364,7 +364,10 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "runtimeConfiguration": {
+            "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT10S", "minimumInterval": "PT5S", "maximumInterval": "PT1M" }
+          }
         },
         "Parse_Results": {
           "runAfter": {

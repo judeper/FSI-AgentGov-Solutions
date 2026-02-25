@@ -25,7 +25,7 @@ Before creating the flows, ensure you have:
 - [ ] **Azure subscription** with Automation Account containing:
   - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
   - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
-  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.0.0, Microsoft.PowerApps.Administration.PowerShell 2.0.0)
+  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.7.0, Microsoft.PowerApps.Administration.PowerShell 2.0.0)
   - Certificate uploaded for service principal authentication
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
@@ -82,7 +82,7 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 | Module | Version | Purpose |
 |--------|---------|---------|
 | MSAL.PS | 4.37.0 | Dataverse Web API token acquisition |
-| ExchangeOnlineManagement | 3.0.0 | Tenant-level audit configuration checks |
+| ExchangeOnlineManagement | 3.7.0 | Tenant-level audit configuration checks |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.0 | Environment discovery and validation |
 
 **Important:** Wait for each module to finish importing before starting the next one (status = "Available").
@@ -96,6 +96,25 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
    - Name: `Start-TenantValidationRunbook`
 3. Click **Import**, then **Publish**
 4. Repeat for **Start-EnvironmentValidationRunbook.ps1**
+
+**Important:** The runbook entry points depend on additional scripts that must also be uploaded to the same Azure Automation Account. Upload all of the following scripts maintaining the directory structure:
+
+| Script | Directory | Purpose |
+|--------|-----------|---------|
+| `Invoke-TenantAuditValidation.ps1` | scripts/ | Tenant validation orchestrator |
+| `Invoke-EnvironmentAuditValidation.ps1` | scripts/ | Environment validation orchestrator |
+| `Invoke-EnvironmentDiscovery.ps1` | scripts/ | Environment discovery |
+| `Test-UnifiedAuditLog.ps1` | scripts/ | UAL validator |
+| `Test-MailboxAudit.ps1` | scripts/ | Mailbox audit validator |
+| `Test-PurviewRetention.ps1` | scripts/ | Purview retention validator |
+| `Test-EnvironmentAudit.ps1` | scripts/ | Environment audit validator |
+| `Test-EnvironmentRetention.ps1` | scripts/ | Environment retention validator |
+| `AuditComplianceHelpers.psm1` | scripts/ | Shared helper module (Invoke-WithRetry, etc.) |
+| `AuditComplianceHelpers.psd1` | scripts/ | Module manifest |
+| `Connect-PowerPlatform.ps1` | scripts/private/ | Authentication helper |
+| `Write-ValidationResult.ps1` | scripts/private/ | Dataverse write helper |
+| `Compare-ValidationBaseline.ps1` | scripts/private/ | Drift detection helper |
+| `Get-ValidationResults.ps1` | scripts/private/ | Evidence query helper |
 
 ### 1.4 Configure Runbook Permissions
 
@@ -506,7 +525,7 @@ This table defines the alert behavior based on validation status:
 1. Navigate to **Automation Account** > **Modules**
 2. Check module versions match requirements:
    - MSAL.PS: 4.37.0
-   - ExchangeOnlineManagement: 3.0.0
+   - ExchangeOnlineManagement: 3.7.0
    - Microsoft.PowerApps.Administration.PowerShell: 2.0.0
 3. Update modules if needed (may require reimporting)
 

@@ -1,5 +1,5 @@
 # Zone Classification — standalone implementation
-# This script is invoked by Get-EnvironmentAccessSettings.ps1 with parameters:
+# Standalone zone classification helper (not currently called by main scripts).
 #   -EnvironmentId, -EnvironmentDisplayName, -DataverseUrl, -AccessToken
 
 [CmdletBinding()]
@@ -20,6 +20,10 @@ param(
 # Attempt ELM Dataverse lookup if URL is provided
 if ($DataverseUrl -and $AccessToken) {
     try {
+        # Validate GUID format to prevent OData injection
+        if ($EnvironmentId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+            throw "Invalid GUID format for EnvironmentId: '$EnvironmentId'"
+        }
         $headers = @{
             'Authorization'    = "Bearer $AccessToken"
             'Accept'           = 'application/json'

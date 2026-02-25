@@ -188,7 +188,22 @@ Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md)
 4. Assign default supervisory principals
 5. Configure escalation paths
 
-### Step 7: Test End-to-End
+### Step 7: Configure Data Retention
+
+Configure Dataverse data lifecycle policies to enforce the 7-year retention requirement (FINRA 4511 / SEC 17a-4):
+
+1. Open the [Power Platform admin center](https://admin.powerplatform.microsoft.com)
+2. Navigate to **Environments** > select your environment > **Settings** > **Data management** > **Bulk record deletion**
+3. Ensure no automated deletion policies target the `fsi_supervisionqueue` or `fsi_supervisionlog` tables within the 7-year window
+4. Configure long-term retention:
+   - Navigate to **Settings** > **Data management** > **Long-term data retention**
+   - Add the `fsi_supervisionqueue` and `fsi_supervisionlog` tables
+   - Set retention period to **7 years** (minimum per FINRA 4511)
+5. For environments using Dataverse for Teams or limited storage, consider archiving records older than 2 years to Azure Data Lake via Synapse Link while retaining them for the full 7-year period
+
+> **Note:** Dataverse does not enforce retention periods automatically. Without explicit configuration, records may be deleted during storage management or environment cleanup, violating FINRA 4511 and SEC 17a-4 preservation requirements.
+
+### Step 8: Test End-to-End
 
 1. Trigger a Communication Compliance alert (test message with flagged terms)
 2. Verify item appears in SupervisionQueue
@@ -222,13 +237,16 @@ Random Sample   |
         Supervisor Reviews
             |       \
             v        v
-        Approved   Rejected/Escalated
+        Approved   Rejected
             |           |
             v           v
-        Closed    Escalation Flow
+        Closed      Closed
             |           |
             v           v
-    SupervisionLog  Notify Senior Principal
+    SupervisionLog  SupervisionLog
+
+        (Separately, Escalation Flow runs hourly
+         to escalate Pending/In Review items past SLA)
 ```
 
 ## Supervision Rules by Zone
@@ -248,6 +266,8 @@ Random Sample   |
 ```bash
 python scripts/export_supervision_evidence.py \
     --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --interactive \
     --output-path ./exports \
     --start-date 2026-01-20 \
     --end-date 2026-01-26

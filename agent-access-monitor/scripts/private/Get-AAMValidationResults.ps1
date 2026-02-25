@@ -142,6 +142,7 @@ function Get-AAMValidationResults {
 
         # Optional RunId filter
         if ($RunId) {
+            Assert-GuidFormat -Value $RunId -ParameterName 'RunId'
             $historyFilters += "fsi_run_id eq '$RunId'"
         }
 

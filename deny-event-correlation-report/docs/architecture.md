@@ -2,40 +2,40 @@
 
 ## Solution Overview
 
-The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from three Microsoft data sources, stores them in a centralized location, and provides Power BI visualization for daily operational reporting.
+The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from four Microsoft data sources, stores them in a centralized location, and supports visualization for daily operational reporting (Power BI template planned; use KQL queries in the interim).
 
 ## Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        DATA SOURCES                                     │
-├─────────────────┬─────────────────┬─────────────────────────────────────┤
-│                 │                 │                                     │
-│  Purview Audit  │   Purview DLP   │      Application Insights           │
-│ (CopilotInter-  │  (DlpRuleMatch) │     (ContentFiltered)               │
-│   action)       │                 │                                     │
-│                 │                 │                                     │
-└────────┬────────┴────────┬────────┴──────────────┬──────────────────────┘
-         │                 │                       │
-         │ Search-         │ Search-               │ REST API
-         │ UnifiedAuditLog │ UnifiedAuditLog       │ (KQL)
-         │                 │                       │
-         ▼                 ▼                       ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     EXTRACTION LAYER                                    │
-│                                                                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
-│  │ Export-Copilot  │  │ Export-Dlp      │  │ Export-Rai      │         │
-│  │ DenyEvents.ps1  │  │ CopilotEvents   │  │ Telemetry.ps1   │         │
-│  │                 │  │ .ps1            │  │                 │         │
-│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘         │
-│           │                    │                    │                   │
-│           └────────────────────┼────────────────────┘                   │
-│                                │                                        │
-│                    Invoke-DailyDenyReport.ps1                           │
-│                       (Orchestration)                                   │
-│                                │                                        │
-└────────────────────────────────┼────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                                   DATA SOURCES                                       │
+├──────────────────┬──────────────────┬──────────────────┬────────────────────────────-─┤
+│                  │                  │                  │                              │
+│  Purview Audit   │   Purview DLP    │ Application      │  Defender                    │
+│ (CopilotInter-   │  (DlpRuleMatch)  │ Insights         │  CloudAppEvents              │
+│   action)        │                  │ (ContentFiltered)│  (XPIA/Jailbreak)            │
+│                  │                  │                  │                              │
+└────────┬─────────┴────────┬─────────┴────────┬─────────┴──────────────┬───────────────┘
+         │                  │                  │                        │
+         │ Search-          │ Search-          │ REST API               │ Graph API
+         │ UnifiedAuditLog  │ UnifiedAuditLog  │ (KQL)                  │ (Adv. Hunting)
+         │                  │                  │                        │
+         ▼                  ▼                  ▼                        ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                              EXTRACTION LAYER                                        │
+│                                                                                      │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐    │
+│  │ Export-Copilot  │ │ Export-Dlp      │ │ Export-Rai      │ │ Export-Defender  │    │
+│  │ DenyEvents.ps1  │ │ CopilotEvents   │ │ Telemetry.ps1   │ │ CopilotEvents   │    │
+│  │                 │ │ .ps1            │ │                 │ │ .ps1            │    │
+│  └────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘    │
+│           │                   │                   │                   │              │
+│           └───────────────────┼───────────────────┼───────────────────┘              │
+│                               │                   │                                  │
+│                    Invoke-DailyDenyReport.ps1                                        │
+│                       (Orchestration)                                                │
+│                               │                                                      │
+└───────────────────────────────┼──────────────────────────────────────────────────────┘
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -169,7 +169,7 @@ Task Scheduler
 ├── Task: Daily Deny Report
 ├── Trigger: Daily at 6:00 AM
 ├── Action: PowerShell.exe -File Invoke-DailyDenyReport.ps1
-└── Credentials: Service account with Audit Reader role
+└── Credentials: Service account with View-Only Audit Logs role
 ```
 
 ### Option C: Power Automate (Low-Code Alternative)

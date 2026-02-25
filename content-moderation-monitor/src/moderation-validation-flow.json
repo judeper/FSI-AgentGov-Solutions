@@ -18,7 +18,12 @@
         },
         "timeZone": "UTC"
       },
-      "type": "Recurrence"
+      "type": "Recurrence",
+      "runtimeConfiguration": {
+        "concurrency": {
+          "runs": 1
+        }
+      }
     }
   },
   "actions": {
@@ -209,7 +214,14 @@
               }
             }
           },
-          "description": "Start Azure Automation runbook for content moderation compliance validation"
+          "description": "Start Azure Automation runbook for content moderation compliance validation",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT1H"
+          }
         },
         "Wait_For_Job": {
           "runAfter": {
@@ -250,7 +262,14 @@
                   "x-ms-api-version": "2015-10-31"
                 }
               },
-              "description": "Check runbook job status"
+              "description": "Check runbook job status",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "minimumInterval": "PT10S",
+                "maximumInterval": "PT1H"
+              }
             }
           },
           "description": "Wait until runbook job completes or fails (max 2 hours)"
@@ -335,7 +354,14 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT1H"
+          }
         },
         "Parse_Results": {
           "runAfter": {
@@ -375,6 +401,14 @@
                       }
                     },
                     "Zone3": {
+                      "type": "object",
+                      "properties": {
+                        "Total": { "type": "integer" },
+                        "Compliant": { "type": "integer" },
+                        "Violations": { "type": "integer" }
+                      }
+                    },
+                    "Unknown": {
                       "type": "object",
                       "properties": {
                         "Total": { "type": "integer" },
@@ -453,7 +487,7 @@
               "OData-Version": "4.0"
             },
             "body": {
-              "fsi_name": "ModerationScan-@{body('Parse_Results')?['Timestamp']}",
+              "fsi_name": "@{body('Parse_Results')?['OverallStatus']}-@{body('Parse_Results')?['Timestamp']}",
               "fsi_run_id": "@{body('Parse_Results')?['RunId']}",
               "fsi_overall_status": "@{body('Parse_Results')?['OverallStatus']}",
               "fsi_violation_count": "@{length(body('Parse_Results')?['Violations'])}",
@@ -534,7 +568,7 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Content Moderation Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone Summary\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone\",\"weight\":\"Bolder\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Compliant\",\"weight\":\"Bolder\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Total\",\"weight\":\"Bolder\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 1\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z1Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z1Total}\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 2\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z2Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z2Total}\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 3\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z3Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z3Total}\",\"size\":\"Small\"}]}]}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Content Moderation Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone Summary\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone\",\"weight\":\"Bolder\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Compliant\",\"weight\":\"Bolder\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Total\",\"weight\":\"Bolder\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 1\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z1Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z1Total}\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 2\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z2Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z2Total}\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Zone 3\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z3Compliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${Z3Total}\",\"size\":\"Small\"}]}]},{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Unknown\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${UnkCompliant}\",\"size\":\"Small\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${UnkTotal}\",\"size\":\"Small\"}]}]}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"Run Manual Check\",\"url\":\"${ManualCheckUrl}\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant'])), '${UnkTotal}', string(body('Parse_Results')?['ZoneSummary']?['Unknown']?['Total'])), '${UnkCompliant}', string(body('Parse_Results')?['ZoneSummary']?['Unknown']?['Compliant']))"
                           }
                         ]
                       }
@@ -564,8 +598,8 @@
                 "body": {
                   "To": "@variables('ComplianceDistributionList')",
                   "Subject": "[ALERT] Content Moderation Governance - @{body('Parse_Results')?['OverallStatus']} - @{body('Parse_Results')?['AlertSeverity']}",
-                  "Body": "<h3>Content Moderation Governance Monitor Alert</h3><table><tr><td><strong>Status:</strong></td><td>@{body('Parse_Results')?['OverallStatus']}</td></tr><tr><td><strong>Severity:</strong></td><td>@{body('Parse_Results')?['AlertSeverity']}</td></tr><tr><td><strong>Total Agents:</strong></td><td>@{body('Parse_Results')?['TotalAgents']}</td></tr><tr><td><strong>Total Environments:</strong></td><td>@{body('Parse_Results')?['TotalEnvironments']}</td></tr><tr><td><strong>Violations:</strong></td><td>@{length(body('Parse_Results')?['Violations'])}</td></tr><tr><td><strong>Reason:</strong></td><td>@{body('Parse_Results')?['Reason']}</td></tr><tr><td><strong>Timestamp:</strong></td><td>@{body('Parse_Results')?['Timestamp']}</td></tr></table><h4>Zone Summary</h4><ul><li><strong>Zone 1:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total']} agents compliant</li><li><strong>Zone 2:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total']} agents compliant</li><li><strong>Zone 3:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']} agents compliant</li></ul><h4>Drift Detection</h4><p>Drifted Agents: @{body('Parse_Results')?['Drift']?['DriftedAgents']}</p><p><a href=\"https://admin.powerplatform.microsoft.com/environments\">View in Power Platform Admin Center</a></p>",
-                  "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
+                  "Body": "<h3>Content Moderation Governance Monitor Alert</h3><table><tr><td><strong>Status:</strong></td><td>@{body('Parse_Results')?['OverallStatus']}</td></tr><tr><td><strong>Severity:</strong></td><td>@{body('Parse_Results')?['AlertSeverity']}</td></tr><tr><td><strong>Total Agents:</strong></td><td>@{body('Parse_Results')?['TotalAgents']}</td></tr><tr><td><strong>Total Environments:</strong></td><td>@{body('Parse_Results')?['TotalEnvironments']}</td></tr><tr><td><strong>Violations:</strong></td><td>@{length(body('Parse_Results')?['Violations'])}</td></tr><tr><td><strong>Reason:</strong></td><td>@{body('Parse_Results')?['Reason']}</td></tr><tr><td><strong>Timestamp:</strong></td><td>@{body('Parse_Results')?['Timestamp']}</td></tr></table><h4>Zone Summary</h4><ul><li><strong>Zone 1:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total']} agents compliant</li><li><strong>Zone 2:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total']} agents compliant</li><li><strong>Zone 3:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']} agents compliant</li><li><strong>Unknown:</strong> @{body('Parse_Results')?['ZoneSummary']?['Unknown']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Unknown']?['Total']} agents compliant</li></ul><h4>Drift Detection</h4><p>Drifted Agents: @{body('Parse_Results')?['Drift']?['DriftedAgents']}</p><p><a href=\"https://admin.powerplatform.microsoft.com/environments\">View in Power Platform Admin Center</a></p>",
+                  "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['AlertSeverity'], 'High'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
               "description": "Send email alert to compliance distribution list for all alert-required results. Connection: fsi_cr_office365_moderationmonitor"

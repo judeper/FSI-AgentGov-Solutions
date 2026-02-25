@@ -17,6 +17,7 @@ Common issues and solutions for the Segregation of Duties Detector.
    - `RoleManagement.Read.Directory`
    - `User.Read.All`
    - `Directory.Read.All`
+   - `Application.Read.All`
 
 ### "Invalid client secret"
 
@@ -74,7 +75,6 @@ Common issues and solutions for the Segregation of Duties Detector.
 
 **Solution:**
 1. Create tables manually per [schema documentation](dataverse-schema.md)
-2. Or create tables manually per schema documentation
 
 ### Cannot create violation records
 

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -100,7 +100,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $true)]
     [string]$ClientId,
 
     [Parameter(Mandatory = $false)]
@@ -173,7 +173,10 @@ try {
 
     if ($CertificateThumbprint) {
         # Certificate authentication
-        $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
+        $cert = Get-ChildItem Cert: -Recurse | Where-Object Thumbprint -eq $CertificateThumbprint | Select-Object -First 1
+        if (-not $cert) {
+            throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
+        }
         Write-Verbose "Certificate found: $($cert.Subject)"
 
         $tokenResult = Get-MsalToken `

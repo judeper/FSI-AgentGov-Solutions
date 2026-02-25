@@ -31,7 +31,7 @@
 .NOTES
     Author: FSI Agent Governance Framework
     Version: 2.0.0
-    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
+    Requires: ExchangeOnlineManagement module, View-Only Audit Logs role
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -57,28 +57,7 @@ param(
 
 #region Functions
 
-function Connect-ToExchangeOnline {
-    <#
-    .SYNOPSIS
-        Connects to Exchange Online if not already connected.
-    #>
-    # Check for an active EXO session (not just module presence)
-    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
-        Where-Object { $_.State -eq 'Connected' }
-    if (-not $exoSession) {
-        Write-Verbose "Connecting to Exchange Online..."
-        try {
-            Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
-            Write-Verbose "Connected to Exchange Online."
-        }
-        catch {
-            throw "Failed to connect to Exchange Online: $_"
-        }
-    }
-    else {
-        Write-Verbose "Already connected to Exchange Online."
-    }
-}
+. "$PSScriptRoot\Connect-ExchangeOnlineHelper.ps1"
 
 function Get-CopilotAuditEvents {
     <#
@@ -263,7 +242,7 @@ try {
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Error "Script execution failed: $_"
+    Write-Warning "Script execution failed: $_"
     exit 1
 }
 finally {

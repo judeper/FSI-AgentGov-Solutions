@@ -24,8 +24,8 @@ All notable changes to the RAG Source Validator.
   - *(Planned: SharePoint Lists, Dataverse Tables, Azure Blob Storage)*
 - **Validation Types:**
   - SHA-256 hash validation
-  - Schema drift detection
-  - Freshness monitoring
+  - Schema drift detection *(planned)*
+  - Freshness monitoring *(planned)*
 - **Documentation:**
   - Prerequisites and licensing
   - Dataverse schema definitions

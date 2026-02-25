@@ -65,9 +65,9 @@ Roles that should never be held by the same person.
 
 | Role A | Role B | Risk |
 |--------|--------|------|
-| Environment Admin | Agent Publisher | Admin promotes own work |
-| Security Admin | Agent Developer | Security role separation |
-| Compliance Admin | Agent Developer | Compliance role separation |
+| System Administrator | Agent Publisher | Admin promotes own work |
+| Security Administrator | Agent Developer | Security role separation |
+| Compliance Administrator | Agent Developer | Compliance role separation |
 | Environment Creator | Environment Approver | Environment lifecycle separation |
 | Data Steward | Data Consumer (sensitive) | Data access separation |
 
@@ -77,10 +77,10 @@ High-privilege roles that require additional controls.
 
 | Privileged Role | Incompatible With | Risk |
 |-----------------|-------------------|------|
-| Global Admin | Any maker role | God mode abuse |
-| Power Platform Admin | End user in same env | Admin as user |
-| Privileged Role Admin | Application Admin | Privilege escalation prevention |
-| Break-Glass Account | Any Non-Emergency Use | Emergency access only |
+| Global Administrator | Agent Developer | God mode abuse |
+| Power Platform Administrator | Basic User (any env) | Admin as user |
+| Privileged Role Administrator | Application Administrator | Privilege escalation prevention |
+| Break-Glass Account | Any Non-Emergency Use | Emergency access only (template — disabled by default) |
 
 ## Prerequisites
 
@@ -143,7 +143,7 @@ Flow configuration documentation is planned for a future release.
 
 ### 5. Review Results
 
-Open the SoD Detector dashboard in Power Apps to review detected conflicts.
+Open the SoD Detector results in Dataverse (query `fsi_sodviolations`) or review the script console output to examine detected conflicts.
 
 ## Documentation
 
@@ -160,8 +160,8 @@ Open the SoD Detector dashboard in Power Apps to review detected conflicts.
 
 ### Scheduled Scan (Daily)
 
-1. Query all user role assignments from Entra ID
-2. Query Power Platform environment roles
+1. Query all user role assignments from Entra ID (including group-inherited roles via transitive member resolution)
+2. Query Power Platform environment roles (user-type principals only)
 3. Compare against conflict rules matrix
 4. Generate violations for new conflicts
 5. Send summary report
@@ -173,8 +173,12 @@ Open the SoD Detector dashboard in Power Apps to review detected conflicts.
 
 | Limitation | Impact | Status |
 |------------|--------|--------|
+| **Custom Entra ID roles** | Custom roles created via unified RBAC are queried separately; requires `RoleManagement.Read.Directory` permission on the service principal | Implemented |
+| **Entra ID group-based role assignments** | Roles assigned via Entra ID security groups are resolved by enumerating transitive group members (`Directory.Read.All`, already listed in prerequisites, is sufficient for this) | Implemented |
+| **Power Platform group/SP filtering** | Power Platform role assignments for groups and service principals are excluded from scanning; only user-type principals are evaluated | By design |
 | **Dataverse Security Role scanning (context=4)** | 11 of 14 default rules reference Dataverse Security Roles; these rules will not match until context=4 scanning is implemented | Planned |
 | **Audit log persistence** | Scan events and violation detections are logged to console only, not written to `fsi_sodauditlog` in Dataverse | Planned |
+| **Concurrent scan protection** | Running two scans simultaneously against the same environment may create duplicate violation records; ensure only one scan runs per environment at a time | By design |
 | **Stale violation auto-resolution** | When a conflicting role is removed, the corresponding violation record remains open indefinitely; manual resolution required | Planned |
 | **Power Automate flows** | Real-time detection (Graph API webhooks), scheduled scan automation, and pipeline-gate integration require flows not yet included | Planned |
 
@@ -318,7 +322,7 @@ For supervision queue assignments:
 | Authentication failure | Expired token or wrong service principal permissions | Re-authenticate; verify Global Reader and Power Platform Administrator roles |
 | No conflict rules found | Rules not imported or all disabled | Run `Import-ConflictRules.ps1`; verify `fsi_enabled` is `true` in Dataverse |
 | Empty scan results | No role assignments returned from Graph API | Check service principal has `Directory.Read.All` permission |
-| Violation creation fails | Dataverse schema missing or permission denied | Import solution package; verify System Administrator role on Dataverse |
+| Violation creation fails | Dataverse schema missing or permission denied | Create tables manually per docs/dataverse-schema.md; verify System Administrator role on Dataverse |
 
 ### Logs
 

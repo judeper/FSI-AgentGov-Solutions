@@ -63,7 +63,6 @@ class ALCAClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
-        self._session.mount("http://", adapter)
 
         if interactive:
             if not client_id:

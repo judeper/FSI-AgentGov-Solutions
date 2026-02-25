@@ -53,6 +53,10 @@ param(
 
 #region Main Execution
 
+# Track whether Graph was already connected at entry so we don't disconnect a
+# session the caller (orchestrator) may still need.
+$graphAlreadyConnected = $null -ne (Get-MgContext -ErrorAction SilentlyContinue)
+
 try {
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host " Defender CloudAppEvents Extraction" -ForegroundColor Cyan
@@ -186,15 +190,17 @@ CloudAppEvents
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Error "Script execution failed: $_"
+    Write-Warning "Script execution failed: $_"
     exit 1
 }
 finally {
-    # Disconnect Graph session if connected
-    try {
-        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+    # Only disconnect if this script initiated the Graph session, not the caller
+    if (-not $graphAlreadyConnected) {
+        try {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch { }
     }
-    catch { }
 }
 
 #endregion Main Execution

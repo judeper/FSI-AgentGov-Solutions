@@ -27,7 +27,7 @@ All files located in the `src/` directory:
 **Option A: Create ZIP Archive**
 ```bash
 # From the mime-type-restrictions directory:
-zip -r MIME-Type-Restrictions-v1.0.1.zip \
+zip -r MIME-Type-Restrictions-1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
   src/ValidateMimeTypePlugin.cs \
   src/MimeConfig.json \
@@ -40,7 +40,7 @@ zip -r MIME-Type-Restrictions-v1.0.1.zip \
 
 **Option B: Create Structured Folder**
 ```
-MIME-Type-Restrictions-v1.0.1/
+MIME-Type-Restrictions-1.0.1/
 ├── SOLUTION-DOCUMENTATION.md
 ├── Dataverse-Plugin/
 │   ├── ValidateMimeTypePlugin.cs
@@ -56,7 +56,7 @@ MIME-Type-Restrictions-v1.0.1/
 
 ### 4. Email Template
 
-**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.1
+**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery 1.0.1
 
 **Body:**
 
@@ -164,7 +164,7 @@ Before sending to customer, verify:
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)
-- [ ] Version numbers are consistent (v1.0.1) across all files
+- [ ] Version numbers are consistent (1.0.1) across all files
 
 ### 6. Files NOT to Include
 
@@ -309,6 +309,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.1
+**Package Version:** 1.0.1
 **Release Date:** February 2026
 **Solution:** MIME Type Restrictions for File Uploads

@@ -44,7 +44,11 @@
       "description": "Unclassified environment",
       "minimumModerationLevel": "High",
       "violations": {
-        "unclassified": {
+        "Low": {
+          "severity": "High",
+          "regulatory": "Governance gap — Unclassified environment with minimal content moderation"
+        },
+        "Medium": {
           "severity": "Warning",
           "regulatory": "Governance gap — Environment not assigned to zone"
         }

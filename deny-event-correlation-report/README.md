@@ -36,6 +36,7 @@ deny-event-correlation-report/
 │   ├── Export-DlpCopilotEvents.ps1    # Purview DLP extraction
 │   ├── Export-RaiTelemetry.ps1        # Application Insights extraction
 │   ├── Export-DefenderCopilotEvents.ps1 # Defender CloudAppEvents extraction (XPIA/Jailbreak)
+│   ├── Connect-ExchangeOnlineHelper.ps1  # Shared EXO connection helper
 │   └── Invoke-DailyDenyReport.ps1     # Orchestration script
 ├── kql-queries/
 │   ├── copilot-deny-events.kql        # Log Analytics queries

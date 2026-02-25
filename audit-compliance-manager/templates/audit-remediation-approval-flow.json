@@ -35,7 +35,7 @@
         "schedule": {
           "weekDays": ["Monday"],
           "hours": ["7"],
-          "minutes": ["0"]
+          "minutes": [0]
         },
         "timeZone": "Eastern Standard Time"
       },
@@ -206,14 +206,14 @@
         ]
       }
     },
-    "Step_1_-_Query_Non-Compliant_Environments": {
+    "Scope_Try": {
+      "actions": {
+        "Step_1_-_Query_Non-Compliant_Environments": {
       "type": "Http",
-      "runAfter": {
-        "Initialize_Variable_-_EnvironmentList": ["Succeeded"]
-      },
+      "runAfter": {},
       "inputs": {
         "method": "GET",
-        "uri": "@{variables('DataverseEnvironmentUrl')}/api/data/v9.2/fsi_auditenvironmentcompliances?$filter=fsi_compliancestatus eq 100000001&$select=fsi_environmentid,fsi_environmentname,fsi_lastchecked,fsi_auditenabled,fsi_dataverseauditenabled,fsi_errormessage&$orderby=fsi_environmentname asc&$top=5000",
+        "uri": "@{variables('DataverseEnvironmentUrl')}/api/data/v9.2/fsi_auditenvironmentcompliances?$filter=fsi_compliancestatus eq 100000001&$select=fsi_environmentid,fsi_environmentname,fsi_lastchecked,fsi_auditenabled,fsi_dataverseauditenabled,fsi_errormessage&$orderby=fsi_environmentname asc",
         "headers": {
           "OData-MaxVersion": "4.0",
           "OData-Version": "4.0",
@@ -227,7 +227,7 @@
       },
       "metadata": {
         "operationMetadataId": "step1-query-dataverse",
-        "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication. Pagination is enabled to handle >5000 records via @odata.nextLink."
+        "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication. Pagination is enabled to handle large result sets via @odata.nextLink (minimumItemCount=10000)."
       },
       "runtimeConfiguration": {
         "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT30S", "minimumInterval": "PT15S", "maximumInterval": "PT5M" },
@@ -485,12 +485,20 @@
           }
         }
       }
+      }
+      },
+      "runAfter": {
+        "Initialize_Variable_-_EnvironmentList": ["Succeeded"]
+      },
+      "type": "Scope",
+      "description": "Main approval and remediation execution scope with error handling"
     },
-    "Error_Handling_-_Runbook_Failure": {
+    "Scope_Catch": {
       "type": "Scope",
       "runAfter": {
-        "Step_2_-_Check_Non-Compliant_Count": ["Failed", "Skipped", "TimedOut"]
+        "Scope_Try": ["Failed", "Skipped", "TimedOut"]
       },
+      "description": "Error handling scope - send notification on failure",
       "actions": {
         "Send_Error_Notification": {
           "type": "OpenApiConnection",

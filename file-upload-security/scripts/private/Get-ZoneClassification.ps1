@@ -67,7 +67,7 @@ function Get-ZoneClassification {
                     1 { 'Zone 1' }
                     2 { 'Zone 2' }
                     3 { 'Zone 3' }
-                    default { 'Zone 1' }
+                    default { 'Zone 3' }
                 }
             }
         } catch {
@@ -83,7 +83,11 @@ function Get-ZoneClassification {
     if ($name -match '(?i)(team|collab|department|zone.?2)') {
         return 'Zone 2'
     }
-    return 'Zone 1'
+    if ($name -match '(?i)(personal|individual|maker|sandbox|dev|developer|zone.?1)') {
+        return 'Zone 1'
+    }
+    # Fail-safe: unclassifiable environments default to most restrictive zone
+    return 'Zone 3'
 }
 
 # When called as a script (via & operator), invoke the function with bound parameters

@@ -54,13 +54,18 @@ Polls Communication Compliance API for new flagged items and creates Supervision
        3.3.1 HTTP - Get Agent Details
              URI: https://api.powerplatform.com/...
 
-       3.3.2 Get SupervisionConfig
+       3.3.2 Duplicate Detection
+              - Query: fsi_supervisionqueues?$filter=fsi_sourceid eq '@{alert.id}'
+              - If record exists, skip to next alert (prevents duplicates
+                when polling windows overlap)
+
+       3.3.3 Get SupervisionConfig
              Filter: Zone eq @{agent.zone} and Tier eq @{agent.tier}
 
-       3.3.3 Condition: Random sampling (Zone 1-2)
+       3.3.4 Condition: Random sampling (Zone 1-2)
              - If Zone 3 OR random() < reviewPercent/100
 
-       3.3.4 Create SupervisionQueue row
+       3.3.5 Create SupervisionQueue row
              - Queue Number: Auto
              - Source Type: Communication Compliance
              - Source ID: @{alert.id}
@@ -87,7 +92,7 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 
 ### Error Handling
 
-- On HTTP failure: Log to SupervisionLog with action "IngestError"
+- On HTTP failure: Log to SupervisionLog with action "Closed" and Details "IngestError: {error message}"
 - On Dataverse failure: Retry 3 times, then alert Queue Manager
 - All errors: Continue processing remaining alerts
 
@@ -179,7 +184,6 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
 
 2. List SupervisionQueue - SLA Breached
    Filter: State in (Pending, In Review)
-           and State ne Escalated
            and SLA Due lt @{utcNow()}
 
    2.1 Apply to each: Check escalation threshold
@@ -199,7 +203,7 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
 
              If No:
                - Send urgent reminder to Assigned Principal
-               - Create SupervisionLog: Action = SLABreached
+               - Create SupervisionLog: Action = Reassigned, Details = "SLA breached - urgent reminder sent"
 
 3. Generate daily SLA report
    - Count items by state
@@ -249,7 +253,9 @@ Triggered when a supervisor completes a review (State changes to Approved or Rej
 ```
 1. Create SupervisionLog
    - Queue Item: @{triggerBody().id}
-   - Action: @{triggerBody().reviewOutcome} (mapped to action choice)
+   - Action: Map reviewOutcome to action choice value:
+       Approved (100000000) → Approved (100000004)
+       Rejected (100000001) → Rejected (100000005)
    - Actor: @{triggerBody().reviewedBy.fullname}
    - Timestamp: @{utcNow()}
    - Details: @{triggerBody().reviewNotes}

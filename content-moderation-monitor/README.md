@@ -10,7 +10,7 @@ The Content Moderation Monitor detects when Copilot Studio agents have insuffici
 
 It supports Control 1.27 (Content Moderation Enforcement) and related controls by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 ## Quick Start
 
@@ -58,7 +58,8 @@ Each governance zone has a minimum required content moderation level:
 | Zone 2 | Low | High | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | Medium | Best practice uplift recommended for team agents |
 | Zone 1 | Low | High | Governance gap — Below minimum content moderation threshold |
-| Unknown | Any non-compliant | Warning | Governance gap — Environment not assigned to zone |
+| Unknown | Low | High | Governance gap — Unclassified environment with minimal content moderation |
+| Unknown | Medium | Warning | Governance gap — Environment not assigned to zone |
 
 ## Features
 
@@ -143,8 +144,15 @@ The following placeholder values in solution files must be replaced with your or
 | `aa-content-moderation-monitor` | Your Azure Automation account name | `src/moderation-validation-flow.json` |
 | `your-teams-group-id-here` | Your Microsoft Teams group (team) ID | `src/moderation-validation-flow.json` |
 | `your-teams-channel-id-here` | Your Microsoft Teams channel ID | `src/moderation-validation-flow.json` |
-| `${ManualCheckUrl}` | URL for manual compliance check (e.g., runbook trigger or portal page) | `src/adaptive-card-moderation-alert.json` |
+| `${ManualCheckUrl}` | URL for manual compliance check (e.g., runbook trigger or portal page) | `src/adaptive-card-moderation-alert.json`, `src/moderation-validation-flow.json` |
 | `${DocumentationUrl}` | URL for control documentation (e.g., GitHub Pages site for Control 1.27) | `src/adaptive-card-moderation-alert.json` |
+
+> **Note:** The standalone adaptive card template (`src/adaptive-card-moderation-alert.json`) includes
+> detailed Violations and Drift Detection sections with additional placeholders (`${ViolationSummary}`,
+> `${AgentName}`, `${Zone}`, `${DriftAgentName}`, `${BaselineLevel}`, `${CurrentLevel}`, etc.) that are
+> not present in the flow's inline card. The flow's inline card provides a summary view (Run Summary and
+> Zone Summary) while the standalone template serves as a comprehensive reference for custom integrations
+> that can populate all violation and drift detail fields.
 
 ## Documentation
 

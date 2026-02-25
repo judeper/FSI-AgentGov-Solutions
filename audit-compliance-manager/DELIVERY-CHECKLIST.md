@@ -33,6 +33,8 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 - [ ] **scripts/private/New-CanaryEvent.ps1** — Canary event creation (ACV)
 - [ ] **scripts/private/Write-ValidationResult.ps1** — Validation result writer (ACV)
 - [ ] **AuditComplianceHelpers.Tests.ps1** — Pester unit tests (optional, for validation)
+- [ ] **Validators.Tests.ps1** — Pester tests for validator scripts (optional, for validation)
+- [ ] **Configure-SecurityRoles.ps1** — Security role configuration script
 
 **Python Components:**
 - [ ] **create_audit_compliance_schema.py** — ALCA Dataverse schema creation script
@@ -72,6 +74,7 @@ zip -r ACM-Solution-v1.0.0.zip \
   scripts/AuditComplianceHelpers.Tests.ps1 \
   scripts/Check-AuditLoggingCompliance.ps1 \
   scripts/Enable-AuditLogging.ps1 \
+  scripts/Configure-SecurityRoles.ps1 \
   scripts/Invoke-TenantAuditValidation.ps1 \
   scripts/Invoke-EnvironmentAuditValidation.ps1 \
   scripts/Invoke-EnvironmentDiscovery.ps1 \
@@ -120,6 +123,7 @@ ACM-Solution-v1.0.0/
 │   ├── AuditComplianceHelpers.psm1
 │   ├── AuditComplianceHelpers.psd1
 │   ├── Check-AuditLoggingCompliance.ps1
+│   ├── Configure-SecurityRoles.ps1
 │   └── Enable-AuditLogging.ps1
 ├── Python-Components/
 │   ├── create_audit_compliance_schema.py
@@ -240,7 +244,7 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 43 files are included (23 PowerShell, 8 Python, 5 JSON templates, 7 docs)
+- [ ] All 45 files are included (25 PowerShell, 8 Python, 5 JSON templates, 7 docs)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `contoso.onmicrosoft.com`)
@@ -345,7 +349,7 @@ Dataverse Application User:
 
 PowerShell Modules:
 □ Microsoft.PowerApps.Administration.PowerShell (2.0+) imported
-□ ExchangeOnlineManagement (3.0+) imported
+□ ExchangeOnlineManagement (3.7.0+) imported
 □ AuditComplianceHelpers (1.0.0) custom module uploaded
 
 Dataverse Schema:

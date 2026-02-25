@@ -26,6 +26,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
+    [ValidatePattern('^https://', ErrorMessage = "Environment URL must use HTTPS to protect bearer tokens in transit.")]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -48,6 +49,24 @@ param(
 #Requires -Version 7.0
 
 $ErrorActionPreference = "Stop"
+
+# Normalize Environment URL: strip trailing slashes to prevent malformed API URIs
+$Environment = $Environment.TrimEnd('/')
+
+# TODO: Invoke-RestMethodWithRetry and Get-AccessToken are duplicated in Invoke-SoDScan.ps1.
+# Extract to a shared module to prevent implementation drift (see GAP-0000-01).
+
+# Structured audit logging for import operations
+function Write-AuditLog {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO",
+        [string]$CorrelationId = $script:CorrelationId
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+}
+$script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
 function Invoke-RestMethodWithRetry {
     param(
@@ -101,6 +120,7 @@ $DefaultRules = @{
             fsi_roleb = "Pipeline Approver"
             fsi_rolebcontext = 4
             fsi_severity = 1
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Prevents self-approval of agent changes in deployment pipelines"
@@ -113,6 +133,7 @@ $DefaultRules = @{
             fsi_roleb = "Solution Promoter"
             fsi_rolebcontext = 4
             fsi_severity = 1
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Requires independent review for solution promotions"
@@ -125,6 +146,7 @@ $DefaultRules = @{
             fsi_roleb = "Flow Approver"
             fsi_rolebcontext = 4
             fsi_severity = 2
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Enforces flow change review process"
@@ -137,6 +159,7 @@ $DefaultRules = @{
             fsi_roleb = "Connection Approver"
             fsi_rolebcontext = 4
             fsi_severity = 2
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Ensures connection review process"
@@ -149,6 +172,7 @@ $DefaultRules = @{
             fsi_roleb = "DLP Policy Approver"
             fsi_rolebcontext = 3
             fsi_severity = 1
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Prevents self-exemption from DLP policies"
@@ -164,6 +188,7 @@ $DefaultRules = @{
             fsi_roleb = "Agent Publisher"
             fsi_rolebcontext = 4
             fsi_severity = 1
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin should not publish their own work"
@@ -176,6 +201,7 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 2
+            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Security role separation from development"
@@ -188,6 +214,7 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 2
+            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Compliance role separation from development"
@@ -200,6 +227,7 @@ $DefaultRules = @{
             fsi_roleb = "Environment Approver"
             fsi_rolebcontext = 3
             fsi_severity = 2
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Environment lifecycle separation"
@@ -212,6 +240,7 @@ $DefaultRules = @{
             fsi_roleb = "Data Consumer"
             fsi_rolebcontext = 4
             fsi_severity = 3
+            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Data access separation for sensitive data"
@@ -227,6 +256,7 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 1
+            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Global admin should not be an agent developer"
@@ -239,6 +269,7 @@ $DefaultRules = @{
             fsi_roleb = "Basic User"
             fsi_rolebcontext = 4
             fsi_severity = 2
+            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin/user role separation"
@@ -251,6 +282,7 @@ $DefaultRules = @{
             fsi_roleb = "Application Administrator"
             fsi_rolebcontext = 1
             fsi_severity = 1
+            fsi_scope = 1  # Tenant
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Prevents privilege escalation paths"
@@ -263,9 +295,10 @@ $DefaultRules = @{
             fsi_roleb = "Any Non-Emergency Use"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_enabled = $true
+            fsi_scope = 4  # Any Environment
+            fsi_enabled = $false
             fsi_allowexception = $false
-            fsi_description = "Emergency access accounts restricted to emergency use only"
+            fsi_description = "Template rule — disabled by default. Role names must be customized to match your Entra ID break-glass account naming convention and Dataverse security roles before enabling."
         }
     )
 }
@@ -359,10 +392,13 @@ if ($RuleFile) {
 
 Write-Host "  Found $($rulesToImport.Count) rules to import"
 Write-Host ""
+Write-AuditLog "Import started for environment $Environment ($($rulesToImport.Count) rules)"
 
 # Get token
 Write-Host "Authenticating..." -ForegroundColor Gray
 $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+$tokenAcquiredAt = Get-Date
+$tokenRefreshInterval = [TimeSpan]::FromMinutes(45)
 Write-Host "  Authenticated successfully" -ForegroundColor Green
 Write-Host ""
 
@@ -373,6 +409,12 @@ $skipped = 0
 $failed = 0
 
 foreach ($rule in $rulesToImport) {
+    # Refresh token if approaching expiry (Azure AD tokens have 60-90 min lifetime)
+    if ((Get-Date) - $tokenAcquiredAt -gt $tokenRefreshInterval) {
+        $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+        $tokenAcquiredAt = Get-Date
+        Write-Verbose "Token refreshed"
+    }
     if ($PSCmdlet.ShouldProcess("Rule: $($rule.fsi_name)", "Import to $Environment")) {
         $result = Import-Rule -Environment $Environment -Token $token -Rule $rule
 
@@ -397,3 +439,10 @@ Write-Host ""
 Write-Host "Imported: $imported"
 Write-Host "Skipped:  $skipped"
 Write-Host "Failed:   $failed"
+Write-AuditLog "Import complete. Imported=$imported Skipped=$skipped Failed=$failed"
+
+# Exit with meaningful code for CI/CD pipeline integration
+if ($failed -gt 0) {
+    exit 1  # Some rules failed to import
+}
+exit 0
