@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -259,6 +259,11 @@ function Disconnect-AuditServices {
         # Silently ignore errors during disconnect
         Write-Host "Warning: Error during disconnect (safely ignored): $($_.Exception.Message)" -ForegroundColor Yellow
     }
+}
+
+# Execute if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    Connect-AuditServices @PSBoundParameters
 }
 
 # Export function if this script is dot-sourced (no-op outside a module)

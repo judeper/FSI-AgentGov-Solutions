@@ -47,6 +47,7 @@ Defines incompatible role combinations.
 | `fsi_description` | Text | No | Rule description |
 | `fsi_enabled` | Boolean | Yes | Rule is active |
 | `fsi_allowexception` | Boolean | Yes | Exceptions permitted |
+| `fsi_scope` | Choice | No | Scope for conflict evaluation |
 | `createdon` | DateTime | Auto | Record creation timestamp |
 
 ### Choice: fsi_category
@@ -75,6 +76,16 @@ Defines incompatible role combinations.
 | 2 | High | Yes |
 | 3 | Medium | No |
 | 4 | Low | No |
+
+### Choice: fsi_scope
+
+| Value | Label | Description |
+|-------|-------|-------------|
+| 1 | Tenant | Roles apply tenant-wide |
+| 2 | Environment | Roles in a specific environment |
+| 3 | Same Environment | Both roles must be in the same environment |
+| 4 | Any Environment | Roles in any environment trigger conflict |
+| 5 | Application | Roles in the same application/agent |
 
 ### Sample Data
 
@@ -281,9 +292,14 @@ Full administrative access including rule management.
 
 ### Option 1: Solution Import
 
+> **Note:** The deployable solution package is planned for a future release.
+> For now, create tables manually using Option 2 below.
+
+<!--
 ```powershell
 pac solution import --path ./templates/SegregationDetector_1_0_0.zip
 ```
+-->
 
 ### Option 2: Manual Creation
 

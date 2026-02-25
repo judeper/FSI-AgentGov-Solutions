@@ -85,6 +85,8 @@ Update these variables in the flow designer (Initialize Variable actions):
 | `TeamsChannelId` | String | `your-channel-id-here` | Teams channel ID for moderation alerts (get from channel link) |
 | `ComplianceDistributionList` | String | `alerts@your-org.com` | Email distribution list for all alerts |
 
+> **⚠️ Important:** The `Post_Teams_Card` action's inline adaptive card contains a `${ManualCheckUrl}` placeholder in the "Run Manual Check" button URL. This placeholder is **not** replaced by the flow's `@replace()` expression chain and must be manually edited before import. Open `src/moderation-validation-flow.json`, search for `${ManualCheckUrl}`, and replace it with your organization's manual check URL (e.g., your Power Platform Admin Center URL or a custom validation page). If left unchanged, the button will link to the literal string `${ManualCheckUrl}`.
+
 **How to get Teams Channel ID:**
 
 1. In Microsoft Teams, right-click the channel > **Get link to channel**

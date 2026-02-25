@@ -22,6 +22,29 @@ $script:TokenExpiry = $null
 
 #endregion
 
+#region Input Validation
+
+function Assert-GuidFormat {
+    <#
+    .SYNOPSIS
+        Validates that a string is a well-formed GUID to prevent OData injection.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Value,
+
+        [Parameter(Mandatory)]
+        [string]$ParameterName
+    )
+
+    if ($Value -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+        throw "Invalid GUID format for parameter '$ParameterName': '$Value'"
+    }
+}
+
+#endregion
+
 #region Connection Functions
 
 function Connect-AAMDataverse {
@@ -225,6 +248,7 @@ function Get-AAMActiveBaseline {
     try {
         $filter = "fsi_is_active eq true"
         if ($EnvironmentId) {
+            Assert-GuidFormat -Value $EnvironmentId -ParameterName 'EnvironmentId'
             $filter += " and fsi_environment_guid eq '$EnvironmentId'"
         }
         
@@ -268,6 +292,8 @@ function Write-AAMValidationHistory {
         [string]$RunId
     )
     
+    Assert-GuidFormat -Value $RunId -ParameterName 'RunId'
+
     if (-not $script:DataverseUrl) {
         Write-Warning "Dataverse not connected, skipping validation history write"
         return $null
@@ -434,6 +460,7 @@ function Save-AAMBaseline {
         }
 
         # Deactivate existing active baselinefor this environment
+        Assert-GuidFormat -Value $EnvironmentGuid -ParameterName 'EnvironmentGuid'
         $filter = "fsi_is_active eq true and fsi_environment_guid eq '$EnvironmentGuid'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?`$filter=$filter&`$select=fsi_accessbaselineid"
 
@@ -475,6 +502,21 @@ function Save-AAMBaseline {
             return $response
         }
     } catch {
+        # Recovery: re-activate previously deactivated baselines to avoid leaving environment with no active baseline
+        if ($existing.value) {
+            Write-Warning "Baseline creation failed — attempting to re-activate previous baseline(s) for '$EnvironmentName'"
+            foreach ($baseline in $existing.value) {
+                try {
+                    $baselineId = $baseline.fsi_accessbaselineid
+                    $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines($baselineId)"
+                    $patchBody = @{ fsi_is_active = $true } | ConvertTo-Json
+                    Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
+                    Write-Warning "Re-activated previous baseline: $baselineId"
+                } catch {
+                    Write-Error "CRITICAL: Failed to re-activate baseline $baselineId during recovery: $($_.Exception.Message)"
+                }
+            }
+        }
         Write-Error "CRITICAL: Failed to save baseline for '$EnvironmentName': $($_.Exception.Message)"
         throw
     }
@@ -541,6 +583,7 @@ function Get-AAMLastValidation {
 
 # Export functions
 Export-ModuleMember -Function @(
+    'Assert-GuidFormat',
     'Connect-AAMDataverse',
     'Get-AAMConnection',
     'Get-ValidToken',

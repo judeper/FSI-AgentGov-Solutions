@@ -259,7 +259,7 @@ Organizations should customize the template based on business requirements:
 **Deployment:**
 
 ```powershell
-# Import DLP policy template
+# PSEUDOCODE — replace with your organization's DLP deployment method (e.g., New-AdminDlpPolicy)
 Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -EnvironmentName "all"
 ```
 
@@ -291,6 +291,11 @@ Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -
 | `image/gif` | `.gif` | `47 49 46 38` | Graphics Interchange Format |
 | `text/plain` | `.txt` | `null` | Plain text (validated by absence of binary content) |
 | `text/csv` | `.csv` | `null` | Comma-separated values |
+
+> **Note:** Text-type validation (`text/plain`, `text/csv`) assumes UTF-8 or ASCII encoding. UTF-16 encoded files contain NUL bytes (0x00) that are detected as binary content and will be rejected. Organizations handling UTF-16 content (e.g., East Asian legacy systems) should be aware of this limitation and may need to add a pre-processing step to convert files to UTF-8 before upload.
+
+> **Note:** The `extensions` field in MimeConfig.json is reserved for future use and informational purposes. The plugin does **not** currently validate the uploaded file's extension against this list — validation is performed solely on MIME type and magic bytes. A file with a mismatched extension (e.g., `payload.exe` declared as `text/plain`) will pass plugin validation if its content matches the declared MIME type. Extension-based blocking is handled separately by the DLP policy layer (Layer 1).
+
 | `application/vnd...sheet` | `.xlsx` | `50 4B 03 04` | Excel spreadsheet (OpenXML ZIP) |
 | `application/vnd...document` | `.docx` | `50 4B 03 04` | Word document (OpenXML ZIP) |
 | `image/tiff` | `.tif`, `.tiff` | `49 49 2A 00` / `4D 4D 00 2A` | Tagged Image File Format (LE/BE) |
@@ -531,11 +536,12 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 2. Import via PowerShell:
    ```powershell
    Connect-MgGraph -Scopes "Policy.ReadWrite.All"
+   # PSEUDOCODE — replace with your organization's DLP deployment method (e.g., New-AdminDlpPolicy)
    Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -EnvironmentName "all"
    ```
 3. Verify policy:
    ```powershell
-   Get-PowerPlatformDlpPolicy | Where-Object { $_.DisplayName -like "*MIME*" }
+   Get-AdminDlpPolicy | Where-Object { $_.DisplayName -like "*MIME*" }
    ```
 
 **Step 4: Deploy Sentinel Queries**

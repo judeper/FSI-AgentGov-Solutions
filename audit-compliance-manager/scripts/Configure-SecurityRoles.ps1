@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -100,7 +100,7 @@ Write-Host "  Entity ObjectTypeCode: $objectTypeCode" -ForegroundColor Green
 
 # Step 3: Check if role already exists
 Write-Host "Checking for existing security role '$RoleName'..." -ForegroundColor Gray
-$roleFilterName = [Uri]::EscapeDataString($RoleName)
+$roleFilterName = $RoleName -replace "'", "''"
 $roleUrl = "$DataverseUrl/api/data/v9.2/roles?`$filter=name eq '$roleFilterName' and _businessunitid_value eq $BusinessUnitId&`$select=roleid,name"
 $roleResponse = Invoke-RestMethod -Uri $roleUrl -Method Get -Headers $headers -ErrorAction Stop
 
@@ -136,7 +136,7 @@ else {
     }
 }
 
-if (-not $roleId -and -not $WhatIf) {
+if (-not $roleId -and -not $WhatIfPreference) {
     throw "Failed to resolve security role ID."
 }
 

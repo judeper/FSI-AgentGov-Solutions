@@ -120,6 +120,8 @@ Deploy alert infrastructure in dependency order: Logic App → Action Groups →
 pwsh scripts/deploy-alerts.ps1 `
   -ResourceGroup "rg-agent-observability-dev" `
   -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -TeamsTeamId "{teams-team-id}" `
+  -TeamsChannelId "{teams-channel-id}" `
   -Environment dev `
   -DryRun
 
@@ -127,12 +129,16 @@ pwsh scripts/deploy-alerts.ps1 `
 pwsh scripts/deploy-alerts.ps1 `
   -ResourceGroup "rg-agent-observability-dev" `
   -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -TeamsTeamId "{teams-team-id}" `
+  -TeamsChannelId "{teams-channel-id}" `
   -Environment dev
 
 # Deploy alerts to production environment (skip confirmation)
 pwsh scripts/deploy-alerts.ps1 `
   -ResourceGroup "rg-agent-observability-prod" `
   -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -TeamsTeamId "{teams-team-id}" `
+  -TeamsChannelId "{teams-channel-id}" `
   -Environment prod `
   -Force
 ```
@@ -181,7 +187,15 @@ agent-observability-foundation/
 │   └── requirements.txt               # Python dependencies
 ├── queries/
 │   ├── README.md                      # KQL query library overview
-│   ├── performance/                   # Core operational queries (6 queries)
+│   ├── performance/                   # Latency and performance queries (2 queries)
+│   │   ├── latency-distribution.kql
+│   │   └── slow-query-detection.kql
+│   ├── error-categorization/          # Error classification queries (2 queries)
+│   │   ├── error-categorization-by-type.kql
+│   │   └── error-trend-analysis.kql
+│   ├── usage-analytics/               # Usage and engagement queries (2 queries)
+│   │   ├── agent-usage-analytics.kql
+│   │   └── user-engagement-metrics.kql
 │   ├── compliance/                    # Regulatory audit queries (5 queries)
 │   ├── sr11-7-model-risk/             # SR 11-7 model governance (3 queries)
 │   └── governance-queries.md          # Query-to-control mapping

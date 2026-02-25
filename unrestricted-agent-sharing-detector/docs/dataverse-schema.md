@@ -8,8 +8,8 @@
 |---|---|---|---|
 | fsi_SharingViolation | fsi_sharingviolation | Detected unrestricted agent sharing violations | fsi_name |
 | fsi_SharingException | fsi_sharingexception | Approved exceptions to sharing policy violations | fsi_name |
-| fsi_AgentSharingSetting | fsi_agentsharingsetting | Current sharing configuration for each agent | fsi_agentid |
-| fsi_ApprovedSecurityGroup | fsi_approvedsecuritygroup | Pre-approved Entra ID security groups for agent sharing | fsi_entraidgroupid |
+| fsi_AgentSharingSetting | fsi_agentsharingsetting | Current sharing configuration for each agent | fsi_agentdisplayname |
+| fsi_ApprovedSecurityGroup | fsi_approvedsecuritygroup | Pre-approved Entra ID security groups for agent sharing | fsi_displayname |
 | fsi_SharingPolicy | fsi_sharingpolicy | Zone-specific agent sharing policy definitions | fsi_name |
 
 ## Columns

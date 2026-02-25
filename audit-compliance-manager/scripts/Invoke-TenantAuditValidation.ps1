@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -42,7 +42,7 @@
 
 .PARAMETER SkipCanaryValidation
     Skip the canary event validation step in Unified Audit Log testing.
-    Returns result with Confidence="MEDIUM" based only on cmdlet status checks.
+    Returns result with Confidence="Medium" based only on cmdlet status checks.
     Use when mailbox modifications are not permitted or for faster validation
     when audit is known to be working.
 
@@ -122,6 +122,13 @@
     - Full validation (with canary) takes 5-10 minutes
     - Use -SkipCanaryValidation for faster checks (~1-2 minutes)
     - Each validator runs sequentially but with independent error handling
+
+    Azure Automation context:
+    - This script uses Write-Host for console formatting. When invoked from
+      Start-TenantValidationRunbook.ps1 in Azure Automation, Write-Host output
+      is NOT captured by Get-AzAutomationJobOutput. The runbook relies solely
+      on the structured JSON pipeline output from the results object — all
+      diagnostic information is available via Write-Verbose in the runbook.
 #>
 
 [CmdletBinding()]
@@ -141,6 +148,9 @@ param(
 
     [Parameter(Mandatory = $false)]
     [int]$CanaryWaitSeconds = 300,
+
+    [Parameter(Mandatory = $false)]
+    [string]$DataverseUrl,
 
     [Parameter(Mandatory = $false)]
     [switch]$Interactive,
@@ -172,6 +182,9 @@ Write-Host ""
 # Dot-source all validator scripts
 $scriptRoot = $PSScriptRoot
 try {
+    Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
+    . "$scriptRoot\private\Connect-PowerPlatform.ps1"
+    . "$scriptRoot\private\Write-ValidationResult.ps1"
     . "$scriptRoot\Test-UnifiedAuditLog.ps1"
     . "$scriptRoot\Test-MailboxAudit.ps1"
     . "$scriptRoot\Test-PurviewRetention.ps1"
@@ -179,6 +192,27 @@ try {
 catch {
     Write-Error "Failed to load validator scripts: $($_.Exception.Message)"
     throw
+}
+
+# Generate RunId for correlated validation records
+$runId = [Guid]::NewGuid()
+
+# Acquire Dataverse token if DataverseUrl is provided (for writing validation results)
+$centralDataverseToken = $null
+if ($DataverseUrl) {
+    try {
+        $dvAuthParams = @{ TenantId = $TenantId; DataverseUrl = $DataverseUrl }
+        if ($Interactive) { $dvAuthParams.Interactive = $true }
+        if ($ClientId) { $dvAuthParams.ClientId = $ClientId }
+        if ($CertificateThumbprint) { $dvAuthParams.CertificateThumbprint = $CertificateThumbprint }
+        $dvAuth = Connect-PowerPlatform @dvAuthParams
+        $centralDataverseToken = $dvAuth.DataverseAccessToken
+        Write-Host "✓ Dataverse connection established for validation history" -ForegroundColor Green
+    }
+    catch {
+        Write-Warning "Failed to connect to Dataverse for validation history: $($_.Exception.Message)"
+        Write-Warning "Validation will continue but results will NOT be persisted to Dataverse."
+    }
 }
 
 # Build common authentication parameter hashtable
@@ -243,6 +277,25 @@ try {
     }
     Write-Host "`nResult: $status ($confidence confidence)" -ForegroundColor $color
     Write-Host "Reason: $($results.Validators.UnifiedAuditLog.Reason)" -ForegroundColor $color
+
+    # Write to Dataverse validation history if DataverseUrl is provided
+    if ($DataverseUrl -and $centralDataverseToken) {
+        try {
+            Write-ValidationResult `
+                -DataverseUrl $DataverseUrl `
+                -AccessToken $centralDataverseToken `
+                -RunId $runId `
+                -Scope "Tenant" `
+                -Severity $status `
+                -ValidationType "UnifiedAuditLog" `
+                -RawValue ($results.Validators.UnifiedAuditLog.RawValue ?? "N/A") `
+                -Reason ($results.Validators.UnifiedAuditLog.Reason ?? "N/A") `
+                -Zone $Zone
+        }
+        catch {
+            Write-Warning "Failed to write UAL validation result to Dataverse: $($_.Exception.Message)"
+        }
+    }
 }
 catch {
     $results.Validators.UnifiedAuditLog = @{
@@ -280,6 +333,25 @@ try {
     }
     Write-Host "`nResult: $status ($confidence confidence)" -ForegroundColor $color
     Write-Host "Reason: $($results.Validators.MailboxAudit.Reason)" -ForegroundColor $color
+
+    # Write to Dataverse validation history if DataverseUrl is provided
+    if ($DataverseUrl -and $centralDataverseToken) {
+        try {
+            Write-ValidationResult `
+                -DataverseUrl $DataverseUrl `
+                -AccessToken $centralDataverseToken `
+                -RunId $runId `
+                -Scope "Tenant" `
+                -Severity $status `
+                -ValidationType "MailboxAudit" `
+                -RawValue ($results.Validators.MailboxAudit.RawValue ?? "N/A") `
+                -Reason ($results.Validators.MailboxAudit.Reason ?? "N/A") `
+                -Zone $Zone
+        }
+        catch {
+            Write-Warning "Failed to write MailboxAudit validation result to Dataverse: $($_.Exception.Message)"
+        }
+    }
 }
 catch {
     $results.Validators.MailboxAudit = @{
@@ -328,6 +400,25 @@ try {
     if ($gapCount -gt 0) {
         Write-Host "Coverage gaps: $gapCount record type(s)" -ForegroundColor Yellow
     }
+
+    # Write to Dataverse validation history if DataverseUrl is provided
+    if ($DataverseUrl -and $centralDataverseToken) {
+        try {
+            Write-ValidationResult `
+                -DataverseUrl $DataverseUrl `
+                -AccessToken $centralDataverseToken `
+                -RunId $runId `
+                -Scope "Tenant" `
+                -Severity $status `
+                -ValidationType "PurviewRetention" `
+                -RawValue ($results.Validators.PurviewRetention.RawValue ?? "N/A") `
+                -Reason ($results.Validators.PurviewRetention.Reason ?? "N/A") `
+                -Zone $Zone
+        }
+        catch {
+            Write-Warning "Failed to write PurviewRetention validation result to Dataverse: $($_.Exception.Message)"
+        }
+    }
 }
 catch {
     $results.Validators.PurviewRetention = @{
@@ -375,6 +466,26 @@ elseif (($statuses | Where-Object { $_ -eq "Passed" }).Count -eq $statuses.Count
 else {
     $results.OverallStatus = "Unknown"
     $results.Reason = "Unable to determine overall status. Check validator execution."
+}
+
+# Write orchestrator record to Dataverse validation history
+if ($DataverseUrl -and $centralDataverseToken) {
+    try {
+        Write-ValidationResult `
+            -DataverseUrl $DataverseUrl `
+            -AccessToken $centralDataverseToken `
+            -RunId $runId `
+            -Scope "Tenant" `
+            -Severity $results.OverallStatus `
+            -ValidationType "Orchestrator" `
+            -RawValue "UAL=$($results.Validators.UnifiedAuditLog.OverallStatus),Mailbox=$($results.Validators.MailboxAudit.OverallStatus),Purview=$($results.Validators.PurviewRetention.OverallStatus)" `
+            -Reason $results.Reason `
+            -Zone $Zone `
+            -CheckCount 3
+    }
+    catch {
+        Write-Warning "Failed to write orchestrator record to Dataverse: $($_.Exception.Message)"
+    }
 }
 
 #endregion

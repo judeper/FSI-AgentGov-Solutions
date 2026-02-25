@@ -259,10 +259,11 @@ Authorization: Bearer {token}
 | `fsi_CD_TeamsWebhook` | Teams webhook URL for alerts | (none) |
 | `fsi_CD_DataverseEnvironment` | *Not used by current flows* — reserved for future use | (current) |
 | `fsi_CD_SLAMultiplier` | *Not used by current flows* — reserved for future use | 1.0 |
+| `fsi_CD_DailySummaryHourUTC` | UTC hour (00–23) when CD-ExceptionMonitor sends the daily breach summary email. Use two-digit format (e.g., `"09"`) for clarity, though single digits are accepted. | 09 |
 
 > **Note:** `fsi_CD_DataverseEnvironment` and `fsi_CD_SLAMultiplier` are defined in the solution but **not referenced by any current flow**. You can safely skip these during import. SLA periods are hardcoded in the CD-ExceptionMonitor flow as Critical=7, High=14, Medium=30, Low=90 days. To adjust SLA periods, edit the `Initialize_SLA_Days` action in CD-ExceptionMonitor directly until a future release wires the multiplier variable.
 
-> **Important:** The daily summary email hour check uses UTC (`formatDateTime(utcNow(), 'HH')` compared to `"09"`). Organizations outside UTC should edit the `Condition_Send_Daily_Summary` action in CD-ExceptionMonitor and change `"09"` to the desired hour in UTC (e.g., `"14"` for 9 AM EST).
+> **Important:** The daily summary email is sent at the UTC hour configured in `fsi_CD_DailySummaryHourUTC` (default `"09"`). The flow zero-pads the value automatically, so both `"9"` and `"09"` are valid. To change the hour, update the environment variable value — no flow editing is required.
 
 ---
 

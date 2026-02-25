@@ -91,14 +91,20 @@ Import-Module ./scripts/private/FUSClient.psm1
 | `Get-AgentFileUploadSettings.ps1` | Enumerate agents and retrieve file upload enabled status |
 | `Compare-FileUploadCompliance.ps1` | Evaluate settings against zone baselines with severity |
 | `Export-FileUploadEvidence.ps1` | SHA-256 integrity-hashed evidence export |
+| `Test-EvidenceIntegrity.ps1` | SHA-256 evidence verification for tamper detection |
 | `Invoke-FileUploadBaselineCapture.ps1` | Capture current settings as compliance baseline |
 | `Start-FileUploadValidationRunbook.ps1` | Azure Automation wrapper for unattended execution |
+| `deploy.py` | Python deployment toolchain entry point |
+| `create_dataverse_schema.py` | Create Dataverse tables for FUS solution |
+| `create_environment_variables.py` | Provision Dataverse environment variables |
+| `create_connection_references.py` | Set up connection references for flows |
+| `fus_client.py` | Python client for FUS Dataverse operations |
 
 ## Zone Policy Model
 
 | Zone | File Upload | Approval | Min Moderation | Violation Severity |
 |------|------------|----------|----------------|-------------------|
-| Zone 1 (Personal) | Allowed | Not required | Medium | Warning if no moderation |
+| Zone 1 (Personal) | Allowed | Not required | Low | Warning if no moderation |
 | Zone 2 (Team) | Restricted | Required | High | High if enabled without approval/moderation |
 | Zone 3 (Enterprise) | Disabled | Required | Highest | Critical if enabled |
 

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
 
 <#
@@ -199,26 +199,15 @@ function Connect-PowerPlatform {
                 throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
             }
 
-            # Convert SecureString to plain text for MSAL
-            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
-            $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+            $tokenResult = Get-MsalToken `
+                -ClientId $ClientId `
+                -ClientSecret $ClientSecret `
+                -TenantId $TenantId `
+                -Scopes $dataverseScope `
+                -ErrorAction Stop
 
-            try {
-                $tokenResult = Get-MsalToken `
-                    -ClientId $ClientId `
-                    -ClientSecret (ConvertTo-SecureString $plainSecret -AsPlainText -Force) `
-                    -TenantId $TenantId `
-                    -Scopes $dataverseScope `
-                    -ErrorAction Stop
-
-                $result.DataverseAccessToken = $tokenResult.AccessToken
-                Write-Host "Acquired Dataverse Web API token (service principal)." -ForegroundColor Green
-            }
-            finally {
-                # Clear plain text secret from memory
-                $plainSecret = $null
-            }
+            $result.DataverseAccessToken = $tokenResult.AccessToken
+            Write-Host "Acquired Dataverse Web API token (service principal)." -ForegroundColor Green
         }
         elseif ($authMethod -eq "ServicePrincipal-Certificate") {
             # Use MSAL.PS for token acquisition with certificate
@@ -230,7 +219,7 @@ function Connect-PowerPlatform {
             }
 
             # Get certificate from store
-            $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction SilentlyContinue
+            $cert = Get-ChildItem Cert: -Recurse | Where-Object Thumbprint -eq $CertificateThumbprint | Select-Object -First 1
             if (-not $cert) {
                 throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
             }

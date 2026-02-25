@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -24,7 +24,7 @@
     UnifiedAuditLogIngestionEnabled, which would cause false negatives.
 
 .PARAMETER SkipCanaryValidation
-    Skip the canary event validation step. Returns result with Confidence="MEDIUM"
+    Skip the canary event validation step. Returns result with Confidence="Medium"
     based only on cmdlet status checks. Use only for read-only assessments where
     mailbox modifications are not permitted.
 
@@ -74,7 +74,7 @@
     - ValidationType: "UnifiedAuditLog"
     - Checks: Array of check results
     - OverallStatus: Passed | Failed | Warning | GracePeriod
-    - Confidence: HIGH | MEDIUM
+    - Confidence: High | Medium
     - Reason: Summary explanation
 
 .NOTES
@@ -165,7 +165,7 @@ function Test-UnifiedAuditLog {
 
     $checks = @()
     $overallStatus = "Unknown"
-    $confidence = "HIGH"
+    $confidence = "High"
     $reason = ""
 
     try {
@@ -212,7 +212,7 @@ function Test-UnifiedAuditLog {
             Write-Host "Audit log ingestion is disabled. Enable via M365 Compliance Center.`n" -ForegroundColor Red
 
             $overallStatus = "Failed"
-            $confidence = "HIGH"
+            $confidence = "High"
             $reason = "UnifiedAuditLogIngestionEnabled is False. Audit log ingestion is disabled."
 
             return [PSCustomObject]@{
@@ -222,6 +222,7 @@ function Test-UnifiedAuditLog {
                 OverallStatus = $overallStatus
                 Confidence = $confidence
                 Reason = $reason
+                RawValue = "UnifiedAuditLogIngestionEnabled=$unifiedAuditEnabled"
             }
         }
 
@@ -267,7 +268,7 @@ function Test-UnifiedAuditLog {
             }
 
             $overallStatus = "Passed"
-            $confidence = "MEDIUM"
+            $confidence = "Medium"
             $reason = "Cmdlet reports enabled (UnifiedAuditLogIngestionEnabled=True). Canary validation skipped."
         }
         else {
@@ -289,7 +290,7 @@ function Test-UnifiedAuditLog {
                 }
 
                 $overallStatus = "Warning"
-                $confidence = "MEDIUM"
+                $confidence = "Medium"
                 $reason = "Cmdlet reports enabled but canary generation failed. Manual verification recommended."
             }
             else {
@@ -326,7 +327,7 @@ function Test-UnifiedAuditLog {
                     }
 
                     $overallStatus = "Passed"
-                    $confidence = "HIGH"
+                    $confidence = "High"
                     $reason = "Cmdlet enabled AND canary event retrieved. Audit log ingestion confirmed working."
                 }
                 else {
@@ -357,7 +358,7 @@ function Test-UnifiedAuditLog {
                         }
 
                         $overallStatus = "GracePeriod"
-                        $confidence = "MEDIUM"
+                        $confidence = "Medium"
                         $reason = "Cmdlet reports enabled but no audit events in past $GracePeriodHours hours. Audit ingestion lag expected for newly-enabled tenants."
                     }
                     else {
@@ -374,7 +375,7 @@ function Test-UnifiedAuditLog {
                         }
 
                         $overallStatus = "Warning"
-                        $confidence = "MEDIUM"
+                        $confidence = "Medium"
                         $reason = "Cmdlet reports enabled and audit events exist, but canary event not found. May indicate ingestion delay or search indexing lag."
                     }
                 }
@@ -394,6 +395,7 @@ function Test-UnifiedAuditLog {
             OverallStatus = "Error"
             Confidence = "N/A"
             Reason = "Validation error: $($_.Exception.Message)"
+            RawValue = "ValidationError"
         }
     }
     finally {
@@ -409,6 +411,7 @@ function Test-UnifiedAuditLog {
         OverallStatus = $overallStatus
         Confidence = $confidence
         Reason = $reason
+        RawValue = "UnifiedAuditLogIngestionEnabled=$unifiedAuditEnabled,AdminAuditLogEnabled=$adminAuditEnabled"
     }
 }
 

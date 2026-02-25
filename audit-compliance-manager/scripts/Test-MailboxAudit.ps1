@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -51,7 +51,7 @@
     - ValidationType: "MailboxAudit"
     - Checks: Array of check results
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: HIGH
+    - Confidence: High
     - Reason: Summary explanation
 
 .NOTES
@@ -121,6 +121,7 @@ function Test-MailboxAudit {
     $checks = @()
     $overallStatus = "Unknown"
     $reason = ""
+    $auditDisabled = "Unknown"
 
     try {
         Write-Host "========================================" -ForegroundColor Cyan
@@ -262,15 +263,8 @@ function Test-MailboxAudit {
         }
     }
     finally {
-        # Disconnect from Exchange Online
-        try {
-            Write-Host "Disconnecting from Exchange Online..." -ForegroundColor Yellow
-            Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
-            Write-Host "Disconnected." -ForegroundColor Green
-        }
-        catch {
-            Write-Host "Warning: Error during disconnect: $($_.Exception.Message)" -ForegroundColor Yellow
-        }
+        # Disconnect using shared helper (consistent with Test-UnifiedAuditLog)
+        Disconnect-AuditServices
     }
 
     # Return structured result
@@ -279,8 +273,9 @@ function Test-MailboxAudit {
         ValidationType = "MailboxAudit"
         Checks         = $checks
         OverallStatus  = $overallStatus
-        Confidence     = "HIGH"
+        Confidence     = "High"
         Reason         = $reason
+        RawValue       = "AuditDisabled=$auditDisabled"
     }
 }
 

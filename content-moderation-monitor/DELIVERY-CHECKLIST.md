@@ -56,7 +56,7 @@
 **Option A: Create ZIP Archive**
 ```bash
 # From the content-moderation-monitor directory:
-zip -r Content-Moderation-Monitor-v1.0.0.zip \
+zip -r Content-Moderation-Monitor-v1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/*.ps1 \
   scripts/private/*.ps1 \
@@ -75,14 +75,14 @@ zip -r Content-Moderation-Monitor-v1.0.0.zip \
 
 ### 4. Email Template
 
-**Subject:** Content Moderation Monitor - Solution Delivery v1.0.0
+**Subject:** Content Moderation Monitor - Solution Delivery v1.0.1
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Content Moderation Monitor solution package, version 1.0.0.
+Please find attached the Content Moderation Monitor solution package, version 1.0.1.
 
 This solution provides automated per-agent validation of content moderation levels across
 all Copilot Studio agents with zone-based compliance requirements, drift detection, and
@@ -152,7 +152,7 @@ CRITICAL CONFIGURATION REQUIREMENTS:
 
 3. **Severity Matrix:**
    - Critical = Zone 3 customer-facing agent with Low moderation → IMMEDIATE ACTION REQUIRED
-   - High = Zone 2/3 agent with Low moderation OR Zone 3 with Medium → Fix within 2 days
+   - High = Zone 2 agent with Low moderation OR Zone 3 with Medium → Fix within 2 days
    - Medium = Zone 2 agent with Medium moderation → Best practice uplift
    - Warning = Unclassified environment → Assign zone within 30 days
 
@@ -179,7 +179,7 @@ Best regards,
 - [ ] PowerShell scripts have no syntax errors (use PSScriptAnalyzer)
 - [ ] moderation-baseline.json is valid JSON
 - [ ] No sensitive data in files (tenant IDs, emails = placeholders)
-- [ ] Version numbers consistent (v1.0.0)
+- [ ] Version numbers consistent (v1.0.1)
 
 ### 6. Files NOT to Include
 
@@ -261,6 +261,6 @@ Evidence Export:
 
 ---
 
-**Package Version:** v1.0.0
+**Package Version:** v1.0.1
 **Release Date:** February 2026
 **Solution:** Content Moderation Monitor

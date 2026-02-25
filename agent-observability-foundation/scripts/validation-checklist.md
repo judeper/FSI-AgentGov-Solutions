@@ -202,6 +202,8 @@ Deploy the Teams notification Logic App:
 pwsh scripts/deploy-alerts.ps1 `
   -ResourceGroup "{rg-name}" `
   -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -TeamsTeamId "{teams-team-id}" `
+  -TeamsChannelId "{teams-channel-id}" `
   -Environment dev `
   -DryRun
 
@@ -209,6 +211,8 @@ pwsh scripts/deploy-alerts.ps1 `
 pwsh scripts/deploy-alerts.ps1 `
   -ResourceGroup "{rg-name}" `
   -ApplicationInsightsId "/subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{ai-name}" `
+  -TeamsTeamId "{teams-team-id}" `
+  -TeamsChannelId "{teams-channel-id}" `
   -Environment dev
 ```
 

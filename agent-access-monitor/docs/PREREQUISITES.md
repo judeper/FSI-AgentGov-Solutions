@@ -56,7 +56,7 @@ For Dataverse persistence features:
 ## Environment Lifecycle Management (ELM) Integration
 
 For zone classification via ELM, the ELM solution must be deployed with:
-- `fsi_environment` table containing zone classifications
+- `fsi_accessbaselines` table containing zone classifications
 - Environment records linked to Power Platform environment GUIDs
 
 Without ELM, zone classification falls back to naming convention matching.

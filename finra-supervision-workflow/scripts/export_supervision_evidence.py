@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 
 try:
     import requests
-    from msal import PublicClientApplication, ConfidentialClientApplication
+    from msal import PublicClientApplication  # noqa: F401 — validated at import time
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
@@ -61,12 +61,25 @@ def fetch_records(environment_url: str, access_token: str, entity_set: str,
         max_retries = 3
         response = None
         for attempt in range(max_retries + 1):
-            response = requests.get(url, headers=headers)
+            try:
+                response = requests.get(url, headers=headers)
+            except requests.exceptions.RequestException as exc:
+                if attempt < max_retries:
+                    wait = 2 ** attempt
+                    print(f"  Network error ({exc}), retrying in {wait}s...")
+                    time.sleep(wait)
+                    continue
+                print(f"Error: Network request failed after {max_retries} retries: {exc}")
+                incomplete = True
+                break
             if response.status_code in (429, 502, 503, 504) and attempt < max_retries:
                 retry_after = int(response.headers.get("Retry-After", 2 ** attempt))
                 print(f"  Transient error {response.status_code}, retrying in {retry_after}s...")
                 time.sleep(retry_after)
                 continue
+            break
+
+        if incomplete or response is None:
             break
 
         if response.status_code != 200:
@@ -192,6 +205,10 @@ def main():
         except ValueError:
             print(f"Error: {date_name} must be in YYYY-MM-DD format, got '{date_arg}'")
             sys.exit(1)
+
+    if args.start_date > args.end_date:
+        print(f"Error: --start-date ({args.start_date}) must not be after --end-date ({args.end_date})")
+        sys.exit(1)
 
     print("=" * 60)
     print("FINRA Supervision Workflow - Evidence Export")

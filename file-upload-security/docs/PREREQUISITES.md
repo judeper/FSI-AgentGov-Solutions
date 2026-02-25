@@ -75,11 +75,14 @@ Set these for CLI-based deployment:
 
 ## External Dependencies
 
-### Shared Zone Classification Script
+### Zone Classification
 
-The zone classification logic (`scripts/private/Get-ZoneClassification.ps1`) delegates to a shared module at `scripts/shared/Get-ZoneClassification.ps1` in the parent repository. This shared script provides canonical environment-to-zone mapping used across all FSI Agent Governance solutions (ACV, SSC, AAM, CMM, FUS).
+The zone classification logic (`scripts/private/Get-ZoneClassification.ps1`) is self-contained within this solution. It uses a two-tier approach:
 
-Ensure the shared scripts directory is available at the expected relative path, or provide zone classification via the ELM Dataverse lookup (pass `-DataverseUrl` to `Get-AgentFileUploadSettings`).
+1. **ELM Dataverse lookup** (preferred) — queries the `fsi_acv_environmentregistrations` table when `-DataverseUrl` and `-AccessToken` are provided
+2. **Naming convention fallback** — pattern-matches the environment display name when ELM data is unavailable
+
+Unclassifiable environments default to Zone 3 (most restrictive) for fail-safe governance. To ensure accurate zone classification, pass `-DataverseUrl` to `Get-AgentFileUploadSettings`.
 
 ## Network Requirements
 

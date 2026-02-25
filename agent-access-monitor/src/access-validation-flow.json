@@ -263,7 +263,14 @@
                   "x-ms-api-version": "2015-10-31"
                 }
               },
-              "description": "Check runbook job status"
+              "description": "Check runbook job status",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M",
+                "minimumInterval": "PT5S"
+              }
             }
           },
           "description": "Wait until runbook job completes or fails (max 2 hours)"
@@ -298,16 +305,11 @@
           "actions": {
             "Terminate_Failed": {
               "runAfter": {},
-              "type": "Terminate",
-              "inputs": {
-                "runStatus": "Failed",
-                "runError": {
-                  "message": "Azure Automation job failed: @{body('Get_Job_Status')?['properties']?['status']}"
-                }
-              }
+              "type": "Compose",
+              "inputs": "@{int('FAIL')}"
             }
           },
-          "description": "Handle job failure - terminate flow (Scope_Catch sends notification)"
+          "description": "Handle job failure - expression error fails the scope so Scope_Catch sends notification"
         },
         "Get_Job_Output": {
           "runAfter": {
@@ -497,7 +499,7 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Agent Access Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"},{\"title\":\"Zone 1 (Compliant/Total)\",\"value\":\"${Z1Compliant}/${Z1Total}\"},{\"title\":\"Zone 2 (Compliant/Total)\",\"value\":\"${Z2Compliant}/${Z2Total}\"},{\"title\":\"Zone 3 (Compliant/Total)\",\"value\":\"${Z3Compliant}/${Z3Total}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-agent-access-governance-monitor/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', body('Parse_Results')?['Reason']), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Agent Access Governance Monitor\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Environments\",\"value\":\"${TotalEnvironments}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"},{\"title\":\"Zone 1 (Compliant/Total)\",\"value\":\"${Z1Compliant}/${Z1Total}\"},{\"title\":\"Zone 2 (Compliant/Total)\",\"value\":\"${Z2Compliant}/${Z2Total}\"},{\"title\":\"Zone 3 (Compliant/Total)\",\"value\":\"${Z3Compliant}/${Z3Total}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-agent-access-governance-monitor/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalEnvironments}', string(body('Parse_Results')?['TotalEnvironments'])), '${Reason}', replace(replace(body('Parse_Results')?['Reason'], '\\', '\\\\'), '\"', '\\\"')), '${Z1Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total'])), '${Z1Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant'])), '${Z2Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total'])), '${Z2Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant'])), '${Z3Total}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total'])), '${Z3Compliant}', string(body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']))"
                           }
                         ]
                       }
@@ -569,7 +571,7 @@
             "body": {
               "To": "@variables('ComplianceDistributionList')",
               "Subject": "[CRITICAL] AAM Flow Execution Failed",
-              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: AAM - Agent Access Validation (Daily)<br>Timestamp: @{utcNow()}</p><p>Review flow run history in Power Automate for details.</p>",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: AAM - Agent Access Validation (Daily)<br>Timestamp: @{utcNow()}</p><h4>Error Details</h4><pre>@{result('Scope_Try')}</pre><p>Review flow run history in Power Automate for additional context.</p>",
               "Importance": "High"
             }
           },
@@ -581,6 +583,20 @@
             "maximumInterval": "PT1M",
             "minimumInterval": "PT5S"
           }
+        },
+        "Terminate_Flow_Failed": {
+          "runAfter": {
+            "Send_Critical_Error_Email": ["Succeeded", "Failed"]
+          },
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Failed",
+            "runError": {
+              "code": "AAM_FlowError",
+              "message": "Agent Access Governance Monitor flow execution failed. See error email for details."
+            }
+          },
+          "description": "Terminate with Failed status so flow run history accurately reflects the failure for FINRA 4511 compliance"
         }
       },
       "runAfter": {

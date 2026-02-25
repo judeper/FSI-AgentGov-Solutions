@@ -2,6 +2,16 @@
 
 All notable changes to the Unrestricted Agent Sharing Detector are documented here.
 
+## [1.0.2] — February 2026
+
+### Added
+- Flow 4 (`UASD-Exception-Expiration-Monitor`) build instructions in `docs/flow-configuration.md`
+  - Daily scheduled flow for proactive exception expiration handling
+  - Automated status transition from Approved to Expired
+  - Teams adaptive card warnings for exceptions expiring within configurable threshold
+  - New environment variable: `fsi_UASD_ExpirationWarningDays` (default: 7)
+- Resolved Known Limitation #1 (exception expiration monitoring)
+
 ## [1.0.1] — February 2026
 
 ### Changed

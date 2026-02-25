@@ -332,11 +332,12 @@ def create_log_analytics_workspace(
 
     # Build workspace parameters
     # CRITICAL: Set BOTH retention_in_days (interactive/hot) AND total_retention_in_days
-    # to avoid the pitfall where only 90 days are queryable
+    # to avoid the pitfall where only 90 days are queryable on workspace updates
     workspace_params = Workspace(
         location=location,
         sku=WorkspaceSku(name=sku),
         retention_in_days=retention_days,
+        total_retention_in_days=retention_days,
         tags=tags,
     )
 
@@ -349,9 +350,6 @@ def create_log_analytics_workspace(
 
     # Wait for completion
     workspace = poller.result()
-
-    # Note: total_retention_in_days must be set via separate API call if needed
-    # For 730-day retention where interactive=total, retention_in_days is sufficient
 
     print(f"  Log Analytics workspace {workspace_name}: created ✓")
     print(f"    - Workspace ID: {workspace.customer_id}")
@@ -537,7 +535,7 @@ def create_diagnostic_settings(
 
     ds_config = config["diagnostic_settings"]
     ds_name = ds_config.get("name", "export-to-storage")
-    log_categories = ds_config.get("log_categories", ["AppTraces", "AppEvents"])
+    log_categories = ds_config.get("log_categories", ["AppTraces", "AppEvents", "AppRequests", "AppExceptions"])
 
     monitor_client = MonitorManagementClient(credential, subscription_id)
 
@@ -552,15 +550,14 @@ def create_diagnostic_settings(
 
     # Build log settings for each category
     logs = []
+    # NOTE: Azure deprecated diagnostic settings retention policies (Sep 2023).
+    # RetentionPolicy is silently ignored. Use storage account lifecycle management
+    # policies to enforce SEC 17a-4(a) 7-year retention on exported logs.
     for category in log_categories:
         logs.append(
             LogSettings(
                 category=category,
                 enabled=True,
-                retention_policy=RetentionPolicy(
-                    enabled=True,
-                    days=2555,  # ~7 years for SEC 17a-4(a)
-                ),
             )
         )
 

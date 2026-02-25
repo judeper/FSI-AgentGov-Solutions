@@ -6,6 +6,7 @@ Creates SharingViolation, SharingException, AgentSharingSetting, ApprovedSecurit
 and SharingPolicy tables with all columns, choice fields, and supporting option sets.
 Reuses shared ACV option set (fsi_acv_zone) when present.
 """
+from __future__ import annotations
 
 import argparse
 import os
@@ -13,8 +14,8 @@ import sys
 from typing import Optional
 
 import requests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
-from dataverse_client import DataverseClient
 
 PUBLISHER_PREFIX = "fsi"
 
@@ -187,9 +188,18 @@ TABLES = {
                 "Description": {"LocalizedLabels": [{"Label": "Unique agent identifier", "LanguageCode": 1033}]},
                 "MaxLength": 50,
                 "FormatName": {"Value": "Text"},
+            },
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                "SchemaName": f"{PUBLISHER_PREFIX}_AgentDisplayName",
+                "RequiredLevel": {"Value": "None"},
+                "DisplayName": {"LocalizedLabels": [{"Label": "Agent Display Name", "LanguageCode": 1033}]},
+                "Description": {"LocalizedLabels": [{"Label": "Display name of the agent", "LanguageCode": 1033}]},
+                "MaxLength": 200,
+                "FormatName": {"Value": "Text"},
             }
         ],
-        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_agentid",
+        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_agentdisplayname",
     },
     "fsi_ApprovedSecurityGroup": {
         "SchemaName": "fsi_ApprovedSecurityGroup",
@@ -210,9 +220,18 @@ TABLES = {
                 "Description": {"LocalizedLabels": [{"Label": "Entra ID object ID of the security group", "LanguageCode": 1033}]},
                 "MaxLength": 50,
                 "FormatName": {"Value": "Text"},
+            },
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                "SchemaName": f"{PUBLISHER_PREFIX}_DisplayName",
+                "RequiredLevel": {"Value": "ApplicationRequired"},
+                "DisplayName": {"LocalizedLabels": [{"Label": "Display Name", "LanguageCode": 1033}]},
+                "Description": {"LocalizedLabels": [{"Label": "Display name of the security group", "LanguageCode": 1033}]},
+                "MaxLength": 200,
+                "FormatName": {"Value": "Text"},
             }
         ],
-        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_entraidgroupid",
+        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_displayname",
     },
     "fsi_SharingPolicy": {
         "SchemaName": "fsi_SharingPolicy",
@@ -513,15 +532,6 @@ COLUMNS = {
     "fsi_agentsharingsetting": [
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_AgentDisplayName",
-            "RequiredLevel": {"Value": "None"},
-            "DisplayName": {"LocalizedLabels": [{"Label": "Agent Display Name", "LanguageCode": 1033}]},
-            "Description": {"LocalizedLabels": [{"Label": "Display name of the agent", "LanguageCode": 1033}]},
-            "MaxLength": 200,
-            "FormatName": {"Value": "Text"},
-        },
-        {
-            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_EnvironmentId",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Environment ID", "LanguageCode": 1033}]},
@@ -612,15 +622,6 @@ COLUMNS = {
         },
     ],
     "fsi_approvedsecuritygroup": [
-        {
-            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_DisplayName",
-            "RequiredLevel": {"Value": "ApplicationRequired"},
-            "DisplayName": {"LocalizedLabels": [{"Label": "Display Name", "LanguageCode": 1033}]},
-            "Description": {"LocalizedLabels": [{"Label": "Display name of the security group", "LanguageCode": 1033}]},
-            "MaxLength": 200,
-            "FormatName": {"Value": "Text"},
-        },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_Description",
@@ -1018,7 +1019,10 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {name}: Creating")
-            client.create_option_set(metadata)
+            if not dry_run:
+                client.create_option_set(metadata)
+            else:
+                print(f"  [DRY RUN] Would create option set: {name}")
             created += 1
 
     # Create UASD-specific option sets
@@ -1029,7 +1033,10 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {name}: Creating")
-            client.create_option_set(metadata)
+            if not dry_run:
+                client.create_option_set(metadata)
+            else:
+                print(f"  [DRY RUN] Would create option set: {name}")
             created += 1
 
     return {"created": created, "skipped": skipped}
@@ -1047,7 +1054,10 @@ def create_tables(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {table_name}: Creating")
-            client.create_table(metadata)
+            if not dry_run:
+                client.create_table(metadata)
+            else:
+                print(f"  [DRY RUN] Would create table: {table_name}")
             created += 1
     return {"created": created, "skipped": skipped}
 
@@ -1064,7 +1074,10 @@ def create_columns(client: DataverseClient, dry_run: bool) -> None:
                 print(f"  {schema_name}: Already exists")
             else:
                 print(f"  {schema_name}: Creating")
-                client.create_column(table_logical_name, column_metadata)
+                if not dry_run:
+                    client.create_column(table_logical_name, column_metadata)
+                else:
+                    print(f"  [DRY RUN] Would create column: {schema_name}")
 
 
 def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
@@ -1189,6 +1202,8 @@ def main():
             client_secret = getpass.getpass("Client secret: ")
 
     try:
+        from dataverse_client import DataverseClient
+
         client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,

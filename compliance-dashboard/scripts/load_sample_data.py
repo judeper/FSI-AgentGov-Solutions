@@ -348,7 +348,7 @@ def generate_sample_scores(days: int = 90) -> list:
         total_controls = 62
         compliant_count = int(total_controls * overall / 100)
         remaining = total_controls - compliant_count
-        noncompliant_count = random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4)))
+        noncompliant_count = min(random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4))), remaining)
         partial_count = total_controls - compliant_count - noncompliant_count
 
         score = {

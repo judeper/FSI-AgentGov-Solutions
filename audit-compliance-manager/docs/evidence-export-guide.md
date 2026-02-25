@@ -83,20 +83,20 @@ Each export produces two files:
 **JSON Evidence File** - Contains metadata, summary statistics, and all validation records:
 
 ```
-tenant-validation-20260206-143500.json
-environment-12345678-20260206-143500.json
+Tenant-validation-20260206-143500.json
+Environment-12345678-20260206-143500.json
 ```
 
 **SHA-256 Hash File** - Companion file with standard two-space delimiter format:
 
 ```
-tenant-validation-20260206-143500.json.sha256
-environment-12345678-20260206-143500.json.sha256
+Tenant-validation-20260206-143500.json.sha256
+Environment-12345678-20260206-143500.json.sha256
 ```
 
 Example hash file content:
 ```
-a3f5d8e2... tenant-validation-20260206-143500.json
+a3f5d8e2... Tenant-validation-20260206-143500.json
 ```
 
 ## Verify Evidence Integrity
@@ -105,12 +105,12 @@ a3f5d8e2... tenant-validation-20260206-143500.json
 
 ```powershell
 # Verify a single evidence file
-.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\tenant-validation-20260206-143500.json
+.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\Tenant-validation-20260206-143500.json
 ```
 
 Output:
 ```
-PASS: tenant-validation-20260206-143500.json
+PASS: Tenant-validation-20260206-143500.json
 ```
 
 ### Batch Verification
@@ -120,7 +120,7 @@ PASS: tenant-validation-20260206-143500.json
 Get-ChildItem .\exports\*.json | .\scripts\Test-EvidenceIntegrity.ps1
 
 # Quiet mode for automation (exit code 0=pass, 1=fail)
-.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\tenant-validation-20260206-143500.json -Quiet
+.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\Tenant-validation-20260206-143500.json -Quiet
 ```
 
 ### Cross-Platform Verification
@@ -129,7 +129,7 @@ The SHA-256 hash files use standard two-space delimiter format compatible with L
 
 ```bash
 # Linux/macOS verification
-sha256sum -c tenant-validation-20260206-143500.json.sha256
+sha256sum -c Tenant-validation-20260206-143500.json.sha256
 ```
 
 ## Evidence Schema

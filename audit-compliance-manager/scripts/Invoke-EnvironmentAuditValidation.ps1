@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
 
 <#
@@ -187,6 +187,7 @@ Write-Host ""
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
 try {
+    Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
     . "$scriptRoot\private\Connect-PowerPlatform.ps1"
     . "$scriptRoot\private\Write-ValidationResult.ps1"
     . "$scriptRoot\Invoke-EnvironmentDiscovery.ps1"
@@ -493,11 +494,11 @@ foreach ($env in $validationSet) {
     elseif ($statuses -contains "Warning" -or $statuses -contains "GracePeriod") {
         $envResult.OverallStatus = "Warning"
     }
-    elseif ($statuses -match "Passed") {
-        $envResult.OverallStatus = "Passed"
+    elseif ($statuses | Where-Object { $_ -ne "Passed" }) {
+        $envResult.OverallStatus = "Unknown"
     }
     else {
-        $envResult.OverallStatus = "Unknown"
+        $envResult.OverallStatus = "Passed"
     }
 
     # Write per-environment orchestrator record
@@ -584,7 +585,7 @@ if ($allStatuses -contains "Error" -or $allStatuses -contains "Failed") {
 elseif ($allStatuses -contains "Warning" -or $allStatuses -contains "GracePeriod") {
     $results.OverallStatus = "Warning"
 }
-elseif ($allStatuses -match "Passed" -and $allStatuses.Count -eq $results.TotalEnvironments) {
+elseif ($allStatuses -contains "Passed" -and $allStatuses.Count -eq $results.TotalEnvironments) {
     $results.OverallStatus = "Passed"
 }
 else {

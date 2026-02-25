@@ -560,5 +560,5 @@ try {
         AlertSeverity     = "Error"
     }
 
-    $errorOutput | ConvertTo-Json -Depth 5
+    $errorOutput | ConvertTo-Json -Depth 10
 }

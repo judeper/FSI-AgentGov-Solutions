@@ -73,19 +73,21 @@
 .OUTPUTS
     JSON object with properties:
     - RunType: "ModerationValidation"
+    - RunId: GUID string for run correlation
     - Timestamp: ISO 8601 UTC timestamp
     - TotalAgents: Count of scanned agents
     - TotalEnvironments: Count of scanned environments
+    - EnvironmentNames: Comma-separated string of scanned environment display names
     - OverallStatus: Passed | Critical | Failed | Review | Error
     - Reason: Summary explanation
-    - ZoneSummary: Hashtable with Zone1/Zone2/Zone3 sub-objects { Total, Compliant, Violations }
+    - ZoneSummary: Hashtable with Zone1/Zone2/Zone3/Unknown sub-objects { Total, Compliant, Violations }
     - Violations: Array of violation details
     - Drift: Object with HasDrift, IsFirstRun, DriftedAgents, Details
     - AlertRequired: Boolean flag for flow routing
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -528,9 +530,11 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "ModerationValidation"
+        RunId             = [guid]::NewGuid().ToString()
         Timestamp         = (Get-Date -AsUTC -Format "o")
         TotalAgents       = 0
         TotalEnvironments = 0
+        EnvironmentNames  = ""
         OverallStatus     = "Error"
         Reason            = $_.Exception.Message
         ZoneSummary       = [PSCustomObject]@{}

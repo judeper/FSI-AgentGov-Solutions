@@ -32,7 +32,7 @@
 .NOTES
     Author: FSI Agent Governance Framework
     Version: 2.0.0
-    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
+    Requires: ExchangeOnlineManagement module, View-Only Audit Logs role
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -61,28 +61,7 @@ param(
 
 #region Functions
 
-function Connect-ToExchangeOnline {
-    <#
-    .SYNOPSIS
-        Connects to Exchange Online if not already connected.
-    #>
-    # Check for an active EXO session (not just module presence)
-    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
-        Where-Object { $_.State -eq 'Connected' }
-    if (-not $exoSession) {
-        Write-Verbose "Connecting to Exchange Online..."
-        try {
-            Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
-            Write-Verbose "Connected to Exchange Online."
-        }
-        catch {
-            throw "Failed to connect to Exchange Online: $_"
-        }
-    }
-    else {
-        Write-Verbose "Already connected to Exchange Online."
-    }
-}
+. "$PSScriptRoot\Connect-ExchangeOnlineHelper.ps1"
 
 function Get-DlpAuditEvents {
     <#
@@ -157,54 +136,52 @@ function ConvertTo-CopilotDlpEvent {
                 return
             }
 
-            if ($true) {
-                # Apply PolicyNameFilter: skip events that don't match when a filter is specified
-                if ($PolicyFilter -and $PolicyFilter -ne "*") {
-                    $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
-                    if (-not $matchesFilter) {
-                        return
-                    }
+            # Apply PolicyNameFilter: skip events that don't match when a filter is specified
+            if ($PolicyFilter -and $PolicyFilter -ne "*") {
+                $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
+                if (-not $matchesFilter) {
+                    return
                 }
+            }
 
-                # Extract policy details
-                $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
-                $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "
-                $actions = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Actions } | Select-Object -Unique) -join "; "
-                $severities = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Severity } | Select-Object -Unique) -join "; "
+            # Extract policy details
+            $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
+            $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "
+            $actions = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Actions } | Select-Object -Unique) -join "; "
+            $severities = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Severity } | Select-Object -Unique) -join "; "
 
-                # Extract sensitive information types
-                $sitMatches = ($auditData.SensitiveInfoTypeData | ForEach-Object {
-                    "$($_.SensitiveInfoTypeName) (Count: $($_.Count), Confidence: $($_.Confidence)%)"
-                }) -join "; "
+            # Extract sensitive information types
+            $sitMatches = ($auditData.SensitiveInfoTypeData | ForEach-Object {
+                "$($_.SensitiveInfoTypeName) (Count: $($_.Count), Confidence: $($_.Confidence)%)"
+            }) -join "; "
 
-                $sitNames = ($auditData.SensitiveInfoTypeData | ForEach-Object { $_.SensitiveInfoTypeName }) -join "; "
+            $sitNames = ($auditData.SensitiveInfoTypeData | ForEach-Object { $_.SensitiveInfoTypeName }) -join "; "
 
-                # Determine if user overrode
-                $hasOverride = $null -ne $auditData.ExceptionInfo -and $auditData.ExceptionInfo -ne ""
+            # Determine if user overrode
+            $hasOverride = $null -ne $auditData.ExceptionInfo -and $auditData.ExceptionInfo -ne ""
 
-                # Determine highest severity
-                $severityOrder = @{ "Low" = 1; "Medium" = 2; "High" = 3 }
-                $highestSeverity = ($auditData.PolicyDetails.Rules |
-                    ForEach-Object { $_.Severity } |
-                    Sort-Object { $severityOrder[$_] } -Descending |
-                    Select-Object -First 1)
+            # Determine highest severity
+            $severityOrder = @{ "Low" = 1; "Medium" = 2; "High" = 3 }
+            $highestSeverity = ($auditData.PolicyDetails.Rules |
+                ForEach-Object { $_.Severity } |
+                Sort-Object { $severityOrder[$_] } -Descending |
+                Select-Object -First 1)
 
-                [PSCustomObject]@{
-                    Timestamp           = $AuditRecord.CreationDate
-                    UserId              = $auditData.UserId
-                    Workload            = $auditData.Workload
-                    Operation           = $auditData.Operation
-                    PolicyNames         = $policyNames
-                    RuleNames           = $ruleNames
-                    Actions             = $actions
-                    Severity            = $highestSeverity
-                    SensitiveInfoTypes  = $sitNames
-                    SitMatchDetails     = $sitMatches
-                    HasOverride         = $hasOverride
-                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo | ConvertTo-Json -Compress -Depth 5 } else { "" }
-                    RecordType          = $auditData.RecordType
-                    RawAuditData        = $AuditRecord.AuditData
-                }
+            [PSCustomObject]@{
+                Timestamp           = $AuditRecord.CreationDate
+                UserId              = $auditData.UserId
+                Workload            = $auditData.Workload
+                Operation           = $auditData.Operation
+                PolicyNames         = $policyNames
+                RuleNames           = $ruleNames
+                Actions             = $actions
+                Severity            = $highestSeverity
+                SensitiveInfoTypes  = $sitNames
+                SitMatchDetails     = $sitMatches
+                HasOverride         = $hasOverride
+                OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo | ConvertTo-Json -Compress -Depth 5 } else { "" }
+                RecordType          = $auditData.RecordType
+                RawAuditData        = $AuditRecord.AuditData
             }
         }
         catch {
@@ -275,7 +252,7 @@ try {
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Error "Script execution failed: $_"
+    Write-Warning "Script execution failed: $_"
     exit 1
 }
 

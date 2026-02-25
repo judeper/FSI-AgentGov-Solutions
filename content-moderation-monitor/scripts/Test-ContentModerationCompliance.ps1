@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-ContentModerationCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Content Moderation Monitor (v7)
     Controls: 1.27 (AI Agent Content Moderation Enforcement), 1.8 (Runtime Protection)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -188,7 +188,7 @@ function Test-ContentModerationCompliance {
     $scriptRoot = $PSScriptRoot
 
     Write-Verbose "========================================="
-    Write-Verbose "Content Moderation Governance Monitor v1.0.0"
+    Write-Verbose "Content Moderation Governance Monitor v1.0.1"
     Write-Verbose "========================================="
 
     #endregion

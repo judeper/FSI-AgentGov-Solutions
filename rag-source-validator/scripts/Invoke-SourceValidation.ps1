@@ -12,6 +12,11 @@
 .PARAMETER SourceId
     Specific source ID to validate (optional - validates all if not specified).
 
+.OUTPUTS
+    Exit code 0: All sources passed validation.
+    Exit code 1: Validation failures or Dataverse write failures occurred.
+    Exit code 2: Integrity changes detected (hash mismatches).
+
 .EXAMPLE
     .\Invoke-SourceValidation.ps1 -Environment "https://contoso.crm.dynamics.com"
 #>
@@ -19,6 +24,12 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
+    [ValidateScript({
+        if ($_ -notmatch '^https://[a-zA-Z0-9\-]+\.((crm|crm[2-9]|crm1[0-9]|crm2[0-1])\.dynamics\.com|crm\.dynamics\.cn|crm\.microsoftdynamics\.us|crm\.appsplatform\.us)/?$') {
+            throw "Environment URL must be a valid HTTPS Dataverse endpoint (e.g., https://contoso.crm.dynamics.com). Got: '$_'"
+        }
+        $true
+    })]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -30,12 +41,15 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
+    # SECURITY: Prefer setting AZURE_CLIENT_SECRET env var over -ClientSecret parameter
+    # to avoid exposing the secret in process listings and shell history.
     [Parameter(Mandatory = $false)]
     [string]$ClientSecret = $env:AZURE_CLIENT_SECRET
 )
 
 #Requires -Version 7.0
 
+$Environment = $Environment.TrimEnd('/')
 $ErrorActionPreference = "Stop"
 
 function Invoke-RestMethodWithRetry {
@@ -58,7 +72,7 @@ function Invoke-RestMethodWithRetry {
             return Invoke-RestMethod @splat
         } catch {
             $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
-            if ($attempt -eq $MaxRetries -or $statusCode -notin @(429, 503, 504)) {
+            if ($attempt -eq $MaxRetries -or ($statusCode -ne 0 -and $statusCode -notin @(429, 503, 504))) {
                 throw
             }
             $delay = [Math]::Pow(2, $attempt)
@@ -83,13 +97,56 @@ function Get-AccessToken {
     return $response.access_token
 }
 
+$script:tokenCache = @{}
+$script:tokenMaxAge = [TimeSpan]::FromMinutes(45)
+
+function Get-CachedAccessToken {
+    param([string]$TenantId, [string]$ClientId, [string]$ClientSecret, [string]$Scope)
+
+    $now = Get-Date
+    if ($script:tokenCache.ContainsKey($Scope)) {
+        $entry = $script:tokenCache[$Scope]
+        if (($now - $entry.AcquiredAt) -lt $script:tokenMaxAge) {
+            return $entry.Token
+        }
+    }
+
+    $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope $Scope
+    $script:tokenCache[$Scope] = @{ Token = $token; AcquiredAt = $now }
+    return $token
+}
+
 function Get-ContentHash {
-    param([string]$Content)
+    param([byte[]]$ContentBytes)
 
     $sha256 = [System.Security.Cryptography.SHA256]::Create()
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Content)
-    $hashBytes = $sha256.ComputeHash($bytes)
-    return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    try {
+        $hashBytes = $sha256.ComputeHash($ContentBytes)
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
+function Invoke-WithRetry {
+    param(
+        [Parameter(Mandatory)][scriptblock]$ScriptBlock,
+        [int]$MaxRetries = 3
+    )
+
+    for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+        try {
+            return & $ScriptBlock
+        } catch {
+            $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
+            if ($attempt -eq $MaxRetries -or ($statusCode -ne 0 -and $statusCode -notin @(429, 503, 504))) {
+                throw
+            }
+            $delay = [Math]::Pow(2, $attempt)
+            Write-Warning "HTTP $statusCode on attempt $attempt/$MaxRetries. Retrying in ${delay}s..."
+            Start-Sleep -Seconds $delay
+        }
+    }
 }
 
 function Get-SharePointContent {
@@ -97,12 +154,19 @@ function Get-SharePointContent {
 
     $headers = @{
         "Authorization" = "Bearer $Token"
-        "Accept" = "application/json"
     }
 
     try {
-        $response = Invoke-RestMethodWithRetry -Uri $Uri -Headers $headers -Method Get
-        return $response | ConvertTo-Json -Depth 10
+        # Fetch raw file bytes to hash actual document content, not API metadata
+        $splat = @{
+            Uri     = $Uri
+            Method  = "Get"
+            Headers = $headers
+        }
+        $response = Invoke-WithRetry -ScriptBlock {
+            Invoke-WebRequest @splat -ErrorAction Stop
+        }
+        return ,$response.RawContentStream.ToArray()
     } catch {
         throw "Failed to access SharePoint: $($_.Exception.Message)"
     }
@@ -120,17 +184,17 @@ function Get-KnowledgeSources {
 
     $filter = "fsi_status eq 1"  # Active sources
     if ($SourceId) {
-        if ($SourceId -notmatch '^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+        if ($SourceId -notmatch '(?i)^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
             throw "Invalid SourceId format: '$SourceId'. Expected GUID."
         }
-        $filter = "fsi_knowledgesourceid eq '$SourceId' and fsi_status eq 1"
+        $filter = "fsi_knowledgesourceid eq $SourceId and fsi_status eq 1"
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
     while ($nextLink) {
         $response = Invoke-RestMethodWithRetry -Uri $nextLink -Headers $headers -Method Get
-        $results += $response.value
+        if ($response.value) { $results.AddRange([object[]]$response.value) }
         $nextLink = $response.'@odata.nextLink'
     }
     return $results
@@ -220,17 +284,23 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
-    Write-Error "Missing credentials. Set environment variables."
-    exit 1
+    throw "Missing credentials. Set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables (or pass -TenantId, -ClientId, -ClientSecret parameters)."
+}
+
+if ($TenantId -and $TenantId -notmatch '(?i)^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+    throw "TenantId must be a valid GUID. Got: '$TenantId'"
+}
+if ($ClientId -and $ClientId -notmatch '(?i)^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$') {
+    throw "ClientId must be a valid GUID. Got: '$ClientId'"
 }
 
 Write-Host "Environment: $Environment"
 Write-Host ""
 
-# Get tokens
+# Get tokens (cached with automatic refresh for long-running validations)
 Write-Host "Authenticating..." -ForegroundColor Gray
-$graphToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://graph.microsoft.com/.default"
-$dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+$graphToken = Get-CachedAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://graph.microsoft.com/.default"
+$dataverseToken = Get-CachedAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
 Write-Host "  Authenticated" -ForegroundColor Green
 
 # Get sources
@@ -247,6 +317,10 @@ $skipped = 0
 $writeFailures = 0
 
 foreach ($source in $sources) {
+    # Refresh tokens if near expiry (prevents mid-run 401 errors)
+    $graphToken = Get-CachedAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://graph.microsoft.com/.default"
+    $dataverseToken = Get-CachedAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+
     Write-Host ""
     Write-Host "Validating: $($source.fsi_name)" -ForegroundColor White
 
@@ -260,10 +334,18 @@ foreach ($source in $sources) {
 
     try {
         # Get content based on source type
-        $content = ""
+        $contentBytes = $null
         switch ($source.fsi_sourcetype) {
             1 { # SharePoint Document Library
-                $content = Get-SharePointContent -Token $graphToken -Uri $source.fsi_sourceuri
+                # Use Graph token for Graph API URIs, acquire SharePoint token for REST API URIs
+                $sourceUri = $source.fsi_sourceuri
+                if ($sourceUri -match '^https://[^/]+\.sharepoint\.com') {
+                    $spHost = ([System.Uri]$sourceUri).GetLeftPart([System.UriPartial]::Authority)
+                    $spToken = Get-CachedAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$spHost/.default"
+                    $contentBytes = Get-SharePointContent -Token $spToken -Uri $sourceUri
+                } else {
+                    $contentBytes = Get-SharePointContent -Token $graphToken -Uri $sourceUri
+                }
             }
             4 { # Dataverse Table
                 Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Skipping."
@@ -298,8 +380,8 @@ foreach ($source in $sources) {
         }
 
         # Compute hash and compare (only for supported source types)
-        if ($null -ne $content) {
-            $currentHash = Get-ContentHash -Content $content
+        if ($null -ne $contentBytes) {
+            $currentHash = Get-ContentHash -ContentBytes $contentBytes
             $result.fsi_currenthash = $currentHash
 
             # Compare to baseline
@@ -312,6 +394,7 @@ foreach ($source in $sources) {
                 } else {
                     $result.fsi_result = 2  # Failed - Hash Mismatch
                     $result.fsi_hashchanged = $true
+                    $result.fsi_changedetails = "Hash mismatch for source '$($source.fsi_name)' (URI: $($source.fsi_sourceuri)). Previous: $($source.fsi_baselinehash), Current: $currentHash"
                     Write-Host "  CHANGED - Hash mismatch detected" -ForegroundColor Yellow
                     $changed++
                     try {
@@ -320,6 +403,7 @@ foreach ($source in $sources) {
                             -PreviousValue $source.fsi_baselinehash -NewValue $currentHash
                     } catch {
                         Write-Warning "Failed to record source change: $($_.Exception.Message)"
+                        $writeFailures++
                     }
                 }
             } else {
@@ -335,7 +419,12 @@ foreach ($source in $sources) {
             if (-not $source.fsi_baselinehash) {
                 $baselineParam.BaselineHash = $currentHash
             }
-            Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
+            try {
+                Update-SourceHash -Environment $Environment -Token $dataverseToken -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
+            } catch {
+                Write-Warning "Failed to update source hash for $($source.fsi_name): $($_.Exception.Message)"
+                $writeFailures++
+            }
         }
 
     } catch {
@@ -378,3 +467,4 @@ if ($changed -gt 0) {
     Write-Warning "Integrity changes detected ($changed source(s)). Exit code 2."
     exit 2
 }
+exit 0

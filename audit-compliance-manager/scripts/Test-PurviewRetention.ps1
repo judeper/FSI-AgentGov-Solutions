@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -64,7 +64,7 @@
     - Checks: Array of check results
     - Gaps: Array of record type coverage gaps
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: HIGH
+    - Confidence: High
     - Reason: Summary explanation
 
 .NOTES
@@ -502,15 +502,8 @@ function Test-PurviewRetention {
         }
     }
     finally {
-        # Disconnect from Security & Compliance PowerShell
-        try {
-            Write-Host "Disconnecting from Security & Compliance PowerShell..." -ForegroundColor Yellow
-            Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
-            Write-Host "Disconnected." -ForegroundColor Green
-        }
-        catch {
-            Write-Host "Warning: Error during disconnect: $($_.Exception.Message)" -ForegroundColor Yellow
-        }
+        # Disconnect using shared helper (consistent with Test-UnifiedAuditLog)
+        Disconnect-AuditServices
     }
 
     # Return structured result
@@ -522,8 +515,9 @@ function Test-PurviewRetention {
         Checks              = $checks
         Gaps                = $gaps
         OverallStatus       = $overallStatus
-        Confidence          = "HIGH"
+        Confidence          = "High"
         Reason              = $reason
+        RawValue            = "PolicyCount=$(if ($null -ne $policies) { $policies.Count } else { 0 }),RequiredDays=$minimumRequiredDays"
     }
 }
 

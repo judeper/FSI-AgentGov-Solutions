@@ -95,6 +95,7 @@
       <RootComponent type="380" schemaName="fsi_CD_TeamsWebhook" />
       <RootComponent type="380" schemaName="fsi_CD_DataverseEnvironment" />
       <RootComponent type="380" schemaName="fsi_CD_SLAMultiplier" />
+      <RootComponent type="380" schemaName="fsi_CD_DailySummaryHourUTC" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

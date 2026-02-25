@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
 .SYNOPSIS
@@ -105,7 +106,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -386,7 +387,7 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
 
 # Compute summary statistics
 $totalScans = $validationsReadable.Count
-$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Compliant' }).Count
+$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Passed' }).Count
 $scansWithViolations = ($validationsReadable | Where-Object { $_.violationCount -gt 0 }).Count
 $totalViolations = $violationsReadable.Count
 
@@ -409,11 +410,11 @@ $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStat
 if ($statusValues -contains "Critical") {
     $overallStatus = "Critical"
 }
-elseif ($statusValues -contains "NonCompliant") {
+elseif ($statusValues -contains "Failed") {
     $overallStatus = "NonCompliant"
 }
-elseif ($statusValues -contains "Warning") {
-    $overallStatus = "Warning"
+elseif ($statusValues -contains "Review" -or $statusValues -contains "Error") {
+    $overallStatus = "Review"
 }
 elseif ($totalScans -eq 0) {
     $overallStatus = "NoData"
@@ -425,7 +426,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Content Moderation Governance Monitor"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.0.1"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }

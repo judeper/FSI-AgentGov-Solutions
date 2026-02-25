@@ -297,7 +297,7 @@ customEvents
             FilterSeverity  = $_.filterSeverity
             UserId          = $_.userId
             IsHighSeverity  = $_.filterSeverity -eq "High"
-            CustomDimensions = $_.customDimensions | ConvertTo-Json -Compress
+            CustomDimensions = $_.customDimensions | ConvertTo-Json -Compress -Depth 5
         }
     }
 
@@ -327,7 +327,7 @@ customEvents
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Error "Script execution failed: $_"
+    Write-Warning "Script execution failed: $_"
     exit 1
 }
 

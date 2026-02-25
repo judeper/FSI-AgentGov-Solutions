@@ -115,7 +115,7 @@ For production environments, use the [manual setup process](#quick-start) for fu
 |------------|--------|-------------------|
 | Create Dataverse tables | **Automated** | `deploy.py` or `create_dataverse_schema.py` |
 | Create security roles | **Automated** | `deploy.py` or `create_security_roles.py` |
-| Create business rules | **Automated** | `deploy.py` or `create_business_rules.py` |
+| Create business rules | **Partial** | `create_business_rules.py` (manual fallback) |
 | Create views | **Automated** | `deploy.py` or `create_views.py` |
 | Create field security | **Automated** | `deploy.py` or `create_field_security.py` |
 | Create Environment Groups | **Manual** | Create via admin.powerplatform.com |

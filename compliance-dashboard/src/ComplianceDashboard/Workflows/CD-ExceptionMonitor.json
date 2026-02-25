@@ -20,10 +20,18 @@
     },
     "fsi_CD_TeamsWebhook": {
       "defaultValue": "",
-      "type": "String",
+      "type": "SecureString",
       "metadata": {
         "schemaName": "fsi_CD_TeamsWebhook",
         "description": "Teams incoming webhook URL for posting alerts"
+      }
+    },
+    "fsi_CD_DailySummaryHourUTC": {
+      "defaultValue": "09",
+      "type": "String",
+      "metadata": {
+        "schemaName": "fsi_CD_DailySummaryHourUTC",
+        "description": "Hour (00-23) in UTC when daily breach summary email is sent"
       }
     }
   },
@@ -91,9 +99,36 @@
         ]
       }
     },
-    "List_Open_Exceptions": {
+    "Initialize_ItemErrorCount": {
       "runAfter": {
         "Initialize_Summary_Table_Rows": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ItemErrorCount",
+            "type": "integer",
+            "value": 0
+          }
+        ]
+      }
+    },
+    "Validate_DailySummaryHour": {
+      "runAfter": {
+        "Initialize_ItemErrorCount": [
+          "Succeeded"
+        ]
+      },
+      "type": "Compose",
+      "inputs": "@if(greaterOrEquals(indexOf('|00|01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|', concat('|', padLeft(coalesce(parameters('fsi_CD_DailySummaryHourUTC'), '09'), 2, '0'), '|')), 0), padLeft(coalesce(parameters('fsi_CD_DailySummaryHourUTC'), '09'), 2, '0'), '09')",
+      "description": "Validate DailySummaryHourUTC is 00-23; default to 09 if invalid or non-numeric"
+    },
+    "List_Open_Exceptions": {
+      "runAfter": {
+        "Validate_DailySummaryHour": [
           "Succeeded"
         ]
       },
@@ -215,9 +250,9 @@
                 "name": "BreachedExceptions",
                 "value": {
                   "name": "@items('Apply_to_each_Exception')?['fsi_name']",
-                  "control": "@items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']",
-                  "owner": "@items('Apply_to_each_Exception')?['fsi_owner']?['fullname']",
-                  "ownerEmail": "@items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress']",
+                  "control": "@coalesce(items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name'], 'N/A')",
+                  "owner": "@coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['fullname'], 'Unknown')",
+                  "ownerEmail": "@coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress'], '')",
                   "daysOpen": "@outputs('Calculate_Days_Open')",
                   "sla": "@outputs('Get_SLA_Days')",
                   "targetDate": "@items('Apply_to_each_Exception')?['fsi_targetdate']"
@@ -233,7 +268,7 @@
               "type": "AppendToStringVariable",
               "inputs": {
                 "name": "SummaryTableHtml",
-                "value": "<tr><td>@{items('Apply_to_each_Exception')?['fsi_name']}</td><td>@{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</td><td>@{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}</td><td>@{int(outputs('Calculate_Days_Open'))}</td><td>@{outputs('Get_SLA_Days')}</td><td>@{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</td></tr>"
+                "value": "<tr><td>@{items('Apply_to_each_Exception')?['fsi_name']}</td><td>@{coalesce(items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name'], 'N/A')}</td><td>@{coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['fullname'], 'Unknown')}</td><td>@{int(outputs('Calculate_Days_Open'))}</td><td>@{outputs('Get_SLA_Days')}</td><td>@{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</td></tr>"
               }
             }
           },
@@ -339,33 +374,52 @@
                       "Content-Type": "application/json"
                     },
                     "body": {
-                      "@type": "MessageCard",
-                      "@context": "http://schema.org/extensions",
-                      "themeColor": "FF0000",
-                      "summary": "SLA Breach: @{items('Apply_to_each_Exception')?['fsi_name']}",
-                      "sections": [
+                      "type": "message",
+                      "attachments": [
                         {
-                          "activityTitle": "🚨 SLA BREACHED",
-                          "activitySubtitle": "@{items('Apply_to_each_Exception')?['fsi_name']}",
-                          "facts": [
-                            {
-                              "name": "Control",
-                              "value": "@{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}"
-                            },
-                            {
-                              "name": "Owner",
-                              "value": "@{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}"
-                            },
-                            {
-                              "name": "Days Open",
-                              "value": "@{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)"
-                            },
-                            {
-                              "name": "Days Overdue",
-                              "value": "@{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}"
-                            }
-                          ],
-                          "markdown": true
+                          "contentType": "application/vnd.microsoft.card.adaptive",
+                          "contentUrl": null,
+                          "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.4",
+                            "body": [
+                              {
+                                "type": "TextBlock",
+                                "text": "🚨 SLA BREACHED",
+                                "weight": "Bolder",
+                                "size": "Large",
+                                "color": "Attention"
+                              },
+                              {
+                                "type": "TextBlock",
+                                "text": "@{items('Apply_to_each_Exception')?['fsi_name']}",
+                                "weight": "Bolder",
+                                "wrap": true
+                              },
+                              {
+                                "type": "FactSet",
+                                "facts": [
+                                  {
+                                    "title": "Control",
+                                    "value": "@{coalesce(items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name'], 'N/A')}"
+                                  },
+                                  {
+                                    "title": "Owner",
+                                    "value": "@{coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['fullname'], 'Unknown')}"
+                                  },
+                                  {
+                                    "title": "Days Open",
+                                    "value": "@{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)"
+                                  },
+                                  {
+                                    "title": "Days Overdue",
+                                    "value": "@{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
                         }
                       ]
                     }
@@ -384,8 +438,7 @@
           },
           "runAfter": {
             "Condition_Currently_Breached": [
-              "Succeeded",
-              "Skipped"
+              "Succeeded"
             ]
           },
           "expression": {
@@ -469,8 +522,7 @@
           },
           "runAfter": {
             "Condition_Status_Changed_to_Breached": [
-              "Succeeded",
-              "Skipped"
+              "Succeeded"
             ]
           },
           "expression": {
@@ -494,20 +546,19 @@
         }
           }
         },
-        "Log_Exception_Processing_Error": {
+        "Increment_ItemErrorCount": {
           "runAfter": {
             "Scope_Process_Exception": [
               "Failed",
               "TimedOut"
             ]
           },
-          "type": "Compose",
+          "type": "IncrementVariable",
           "inputs": {
-            "error": "Failed to process exception",
-            "exceptionId": "@items('Apply_to_each_Exception')?['fsi_complianceexceptionid']",
-            "exceptionName": "@items('Apply_to_each_Exception')?['fsi_name']"
+            "name": "ItemErrorCount",
+            "value": 1
           },
-          "description": "Log error details and continue to next exception"
+          "description": "Track per-item processing errors for post-loop notification"
         }
       },
       "runAfter": {
@@ -521,6 +572,63 @@
           "repetitions": 1
         }
       }
+    },
+    "Condition_Item_Processing_Errors": {
+      "runAfter": {
+        "Apply_to_each_Exception": [
+          "Succeeded"
+        ]
+      },
+      "expression": {
+        "and": [
+          {
+            "greater": [
+              "@variables('ItemErrorCount')",
+              0
+            ]
+          },
+          {
+            "not": {
+              "equals": [
+                "@parameters('fsi_CD_NotificationEmail')",
+                ""
+              ]
+            }
+          }
+        ]
+      },
+      "type": "If",
+      "actions": {
+        "Send_Item_Error_Notification": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_outlook",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage": {
+                "To": "@{parameters('fsi_CD_NotificationEmail')}",
+                "Subject": "WARNING: Exception Monitor - @{variables('ItemErrorCount')} items failed processing",
+                "Body": "<p><strong style='color:orange;'>Per-item processing errors detected.</strong></p><p><strong>Failed Items:</strong> @{variables('ItemErrorCount')}</p><p>One or more exception records could not be processed (possible causes: deleted owner records, null navigation properties, or transient Dataverse errors). Review flow run history for details.</p><p><strong>Timestamp:</strong> @{utcNow()}</p>",
+                "Importance": "High"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "count": 3,
+              "type": "exponential",
+              "interval": "PT10S",
+              "maximumInterval": "PT1H"
+            }
+          }
+        }
+      },
+      "description": "Notify when individual exceptions failed processing during the loop"
     },
     "Condition_Send_Daily_Summary": {
       "actions": {
@@ -554,8 +662,9 @@
         }
       },
       "runAfter": {
-        "Apply_to_each_Exception": [
-          "Succeeded"
+        "Condition_Item_Processing_Errors": [
+          "Succeeded",
+          "Skipped"
         ]
       },
       "expression": {
@@ -569,7 +678,7 @@
           {
             "equals": [
               "@formatDateTime(utcNow(), 'HH')",
-              "09"
+              "@outputs('Validate_DailySummaryHour')"
             ]
           },
           {
@@ -583,7 +692,7 @@
         ]
       },
       "type": "If",
-      "description": "Send daily summary at 9 AM UTC if any exceptions are currently breached and notification email is configured. Adjust the hour value if your organization is not in UTC."
+      "description": "Send daily summary at the configured hour (fsi_CD_DailySummaryHourUTC, default 09 UTC) if any exceptions are currently breached and notification email is configured."
     },
     "Condition_Notify_Failure": {
       "runAfter": {

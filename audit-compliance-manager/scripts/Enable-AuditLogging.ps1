@@ -1,6 +1,6 @@
 #Requires -Version 7.2
 #Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0.0' }
-#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0' }
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.7.0' }
 
 <#
 .SYNOPSIS
@@ -35,8 +35,11 @@
     Dataverse for all environments with fsi_compliancestatus = Non-Compliant (100000001).
 
 .PARAMETER EnableTenantUnifiedAudit
-    Switch. If set, enables tenant-wide Purview unified audit via Set-AdminConfig.
-    Default: $true. This is a tenant-wide change — use with caution.
+    Bool. Default: $true. Enables tenant-wide Purview unified audit via Set-AdminConfig
+    unless explicitly set to $false. This is a tenant-wide change — use with caution.
+    WARNING: Automated callers (e.g., the ALCA remediation approval flow) should
+    explicitly pass -EnableTenantUnifiedAudit $false unless tenant-wide enablement
+    is intended, since the default $true will always attempt this change.
 
 .PARAMETER WhatIf
     Switch. If set, simulates remediation without making changes.
@@ -459,6 +462,8 @@ try {
             # -----------------------------------------------------------------
             Write-Output "    [4a] Org-level Dataverse audit..."
 
+            $changesMade = $false
+
             if (-not $isWhatIf) {
                 $orgInfo = Get-EnvironmentOrgId -EnvUrl $envUrl -Token $envToken
                 if (-not $orgInfo) {
@@ -467,7 +472,6 @@ try {
 
                 $orgId = $orgInfo.organizationid
                 $alreadyEnabled = [bool]$orgInfo.isauditenabled
-                $changesMade = $false
 
                 if ($alreadyEnabled) {
                     Write-Output "      Org-level audit: Already enabled"

@@ -187,7 +187,7 @@ No business rules - append-only via automation.
 | My Queue | Assigned Principal = Current User, State = Pending/In Review | Queue Number, Agent Name, Flagged Reason, SLA Due |
 | Pending Review | State = Pending | Queue Number, Agent Name, Zone, Tier, Queued Date |
 | Overdue Items | SLA Due < Now, State in (Pending, In Review) | Queue Number, Agent Name, Assigned Principal, SLA Due |
-| Escalated Items | State = Escalated | Queue Number, Agent Name, Reviewed By, Escalation Reason |
+| Escalated Items | State = Escalated | Queue Number, Agent Name, Reviewed By, Flagged Reason |
 | Completed This Week | Reviewed Date >= Week Start | Queue Number, Agent Name, Review Outcome, Reviewed By |
 | All Items | None | All columns |
 

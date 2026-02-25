@@ -159,16 +159,15 @@ When creating/updating `fsi_controlassessment` records:
   "fsi_assessmentdate": "2026-02-10T06:00:00Z",
   "fsi_status": 1,
   "fsi_score": 100,
-  "fsi_notes": "Automated assessment via ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
-  "fsi_nextreviewdate": "2026-02-11T06:00:00Z",
-  "fsi_evidencecount": 1
+  "fsi_notes": "Automated: ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
+  "fsi_nextreviewdate": "2026-02-11T06:00:00Z"
 }
 
 ```
 
 **Key behaviors:**
-- **Upsert logic:** Match on `fsi_controlmasterid` + `fsi_zone` + date. Create new if no same-day record exists; update if exists.
-- **Zone handling:** If a solution validates across all zones, create one assessment per zone.
+- **Upsert logic:** Match on `fsi_controlmasterid` + date. Create new if no same-day record exists; update if exists. **Note:** Zone-based segmentation is not yet implemented — the current flow and `Sync-SolutionAssessments.ps1` do not filter by `fsi_zone` when querying existing assessments. Per-zone assessment records are a future enhancement.
+- **Zone handling (planned):** If a solution validates across all zones, create one assessment per zone. This requires adding `fsi_zone` to the upsert filter and iterating per zone. Not yet implemented in the flow template or PowerShell sync script.
 - **Notes field:** Include solution name, version, run ID, and raw status for audit trail.
 - **Next review date:** Set to tomorrow (daily feed cadence).
 

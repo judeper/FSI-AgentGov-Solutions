@@ -299,7 +299,7 @@ function Sync-SolutionToAssessment {
             continue
         }
 
-        $notes = "Automated assessment via $($tableConfig.SolutionName) $($tableConfig.SolutionVersion). " +
+        $notes = "Automated: $($tableConfig.SolutionName) $($tableConfig.SolutionVersion). " +
                  "Run ID: $runId. Status: $($dashStatus.StatusLabel). " +
                  "Source: $($tableConfig.EntitySet), Timestamp: $timestamp."
 
@@ -313,13 +313,14 @@ function Sync-SolutionToAssessment {
         }
 
         $result = [PSCustomObject]@{
-            Solution     = $Solution
-            ControlId    = $controlId
-            Status       = $dashStatus.StatusLabel
-            Score        = $dashStatus.Score
-            RunId        = $runId
-            Timestamp    = $timestamp
-            Action       = 'Pending'
+            Solution       = $Solution
+            ControlId      = $controlId
+            Status         = $dashStatus.StatusLabel
+            Score          = $dashStatus.Score
+            RunId          = $runId
+            Timestamp      = $timestamp
+            Action         = 'Pending'
+            AssessmentGuid = $null
         }
 
         if ($DryRun) {
@@ -342,6 +343,7 @@ function Sync-SolutionToAssessment {
                         -RecordId $recordId `
                         -Record $assessmentRecord
                     $result.Action = 'Updated'
+                    $result.AssessmentGuid = $recordId
                     Write-Host "  [Updated] $Solution → Control $controlId : $($dashStatus.StatusLabel)" -ForegroundColor Green
                 } else {
                     # Create new
@@ -349,6 +351,7 @@ function Sync-SolutionToAssessment {
                         -EntitySet $cdConfig.Assessment.EntitySet `
                         -Record $assessmentRecord
                     $result.Action = 'Created'
+                    $result.AssessmentGuid = $newRecord.fsi_controlassessmentid
                     Write-Host "  [Created] $Solution → Control $controlId : $($dashStatus.StatusLabel)" -ForegroundColor Green
                 }
             } catch {
@@ -503,7 +506,7 @@ foreach ($solution in $Solutions) {
         foreach ($result in $results) {
             if ($result.Action -in @('Created', 'Updated', 'DryRun — would create assessment')) {
                 Register-SolutionEvidence -Connection $connection -Solution $solution `
-                    -EvidenceDirectory $EvidenceDirectory -DryRun:$DryRun
+                    -EvidenceDirectory $EvidenceDirectory -AssessmentGuid $result.AssessmentGuid -DryRun:$DryRun
             }
         }
     }

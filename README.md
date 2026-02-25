@@ -35,7 +35,7 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 | [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | v1.1.0 | 1.14, 1.4, 1.5 |
 | [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.0.0 | 2.8, 2.1, 2.3 |
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.0.0 | 1.23, 1.11 |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.0 | 1.1, 3.8 |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |
 
 ## How to Use
 
@@ -48,6 +48,8 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 ## Documentation
 
 Each solution folder contains a README with prerequisites, components, and deployment instructions.
+
+**[Deployment Guide](./DEPLOYMENT-GUIDE.md)** — Maps customer questions to solutions, documents deployment layers, and provides sequencing guidance for Compliance Dashboard integration.
 
 For the complete solutions catalog with regulatory alignment, framework playbooks, and detailed descriptions, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) on the FSI-AgentGov documentation site.
 

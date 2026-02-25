@@ -306,17 +306,17 @@
                         },
                         "Evaluate_Compliance": {
                           "type": "Compose",
-                          "inputs": "@if(or(equals(outputs('Set_TimeoutEnabled'), null), equals(outputs('Set_TimeoutEnabled'), false)), 'Non-Compliant', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Non-Compliant', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant')))",
+                          "inputs": "@if(or(equals(outputs('Set_TimeoutEnabled'), null), equals(outputs('Set_TimeoutEnabled'), false)), 'Non-Compliant', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Non-Compliant', if(equals(outputs('Set_RequiredMaxDuration'), null), 'Unknown', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant'))))",
                           "runAfter": {
                             "Parse_Duration_Minutes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Determine compliance status: disabled → Non-Compliant; enabled but no duration configured → Non-Compliant; duration exceeds required maximum → Non-Compliant; otherwise → Compliant."
+                          "description": "Evaluate compliance: disabled → Non-Compliant; enabled but no duration configured → Non-Compliant; duration exceeds required maximum → Non-Compliant; required max duration not defined in policy → Unknown; otherwise → Compliant."
                         },
                         "Set_Compliance_Notes": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout state unknown (null from API)', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Inactivity timeout enabled but no duration configured', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum')))))",
+                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout state unknown (null from API)', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Inactivity timeout enabled but no duration configured', if(equals(outputs('Set_RequiredMaxDuration'), null), 'Policy exists but fsi_requiredmaxduration is not configured', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum'))))))",
                           "runAfter": {
                             "Evaluate_Compliance": [
                               "Succeeded"
@@ -326,13 +326,13 @@
                         },
                         "Map_Compliance_Status_Value": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, 0)",
+                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, if(equals(outputs('Evaluate_Compliance'), 'Unknown'), 2, 0))",
                           "runAfter": {
                             "Set_Compliance_Notes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant."
+                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant, 2 = Unknown."
                         },
                         "Create_Compliance_Record": {
                           "type": "OpenApiConnection",
@@ -737,10 +737,23 @@
                 }
               },
               "else": {
-                "actions": {}
+                "actions": {
+                  "Terminate_No_Recipients": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "code": "MissingNotificationRecipients",
+                        "message": "Flow error handler fired but fsi_ITE_NotificationRecipients environment variable is not configured. No error notification could be sent. Check flow run history for details."
+                      }
+                    },
+                    "runAfter": {},
+                    "description": "Terminate with Failed status when error email cannot be sent due to missing notification recipients. Ensures the failure is visible in Power Automate run history."
+                  }
+                }
               },
               "runAfter": {},
-              "description": "Guard: only send error email when NotificationRecipients is configured. Prevents SendEmailV2 failure on empty To field."
+              "description": "Guard: only send error email when NotificationRecipients is configured. If recipients are missing, terminates with Failed status to ensure visibility in run history."
             }
           },
           "runAfter": {

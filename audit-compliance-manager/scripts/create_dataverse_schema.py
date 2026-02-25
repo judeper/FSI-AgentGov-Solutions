@@ -425,12 +425,11 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
             print(f"    {col_name}: created")
 
 
-def create_schema(client: ACVClient, dry_run: bool = False) -> dict:
+def create_schema(client: ACVClient, dry_run: bool = False) -> None:
     """
     Create complete Dataverse schema for ACV.
 
-    Returns:
-        Results dict with success/failure counts
+    Prints deployment progress to stdout.
     """
     print("=" * 60)
     print("ACV Dataverse Schema Deployment")
@@ -473,11 +472,7 @@ def main():
         default=os.environ.get("ACV_CLIENT_ID"),
         help="Application (client) ID",
     )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("ACV_CLIENT_SECRET"),
-        help="Client secret",
-    )
+    # Client secret read from ACV_CLIENT_SECRET env var (not CLI arg to avoid shell history exposure)
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ACV_ENVIRONMENT_URL"),
@@ -500,12 +495,23 @@ def main():
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Get client secret if needed
-    client_secret = args.client_secret
-    if not args.interactive and not client_secret:
-        if args.client_id:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    # Validate auth mode
+    if not args.interactive and not args.client_id:
+        parser.error(
+            "Either --interactive or --client-id is required.\n"
+            "Use --interactive for manual runs or provide Service Principal credentials."
+        )
+    if args.interactive and not args.client_id:
+        parser.error(
+            "--client-id is required for interactive authentication.\n"
+            "Register an app in Entra ID and provide --client-id."
+        )
+
+    # Get client secret from env var or prompt (never via CLI arg to avoid shell history exposure)
+    client_secret = os.environ.get("ACV_CLIENT_SECRET")
+    if not args.interactive and args.client_id and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
 
     try:
         client = ACVClient(

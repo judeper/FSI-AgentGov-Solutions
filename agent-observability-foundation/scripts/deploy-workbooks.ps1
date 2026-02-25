@@ -288,19 +288,22 @@ function Deploy-SingleWorkbook {
 
     # Resolve paths relative to script location
     $scriptDir = Split-Path -Parent $PSCommandPath
-    $templateFullPath = Join-Path $scriptDir $TemplatePath | Resolve-Path -ErrorAction Stop
-    $parametersFullPath = Join-Path $scriptDir $ParametersPath | Resolve-Path -ErrorAction Stop
+    $templateRawPath = Join-Path $scriptDir $TemplatePath
+    $parametersRawPath = Join-Path $scriptDir $ParametersPath
 
     # Verify files exist
-    if (-not (Test-Path $templateFullPath)) {
-        Write-Host "    ${COLOR_RED}✗ Template file not found: $templateFullPath${COLOR_RESET}"
+    if (-not (Test-Path $templateRawPath)) {
+        Write-Host "    ${COLOR_RED}✗ Template file not found: $templateRawPath${COLOR_RESET}"
         return $false
     }
 
-    if (-not (Test-Path $parametersFullPath)) {
-        Write-Host "    ${COLOR_RED}✗ Parameters file not found: $parametersFullPath${COLOR_RESET}"
+    if (-not (Test-Path $parametersRawPath)) {
+        Write-Host "    ${COLOR_RED}✗ Parameters file not found: $parametersRawPath${COLOR_RESET}"
         return $false
     }
+
+    $templateFullPath = Resolve-Path $templateRawPath
+    $parametersFullPath = Resolve-Path $parametersRawPath
 
     # DryRun mode: show what would be deployed
     if ($DryRun) {

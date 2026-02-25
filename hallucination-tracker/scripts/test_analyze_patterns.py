@@ -108,5 +108,43 @@ class TestDetectPatterns(unittest.TestCase):
         self.assertEqual(patterns, [])
 
 
+class TestNullFieldValues(unittest.TestCase):
+    """Test handling of null/None field values from Dataverse."""
+
+    def setUp(self):
+        self.analyzer = PatternAnalyzer("https://example.crm.dynamics.com", "t", "c", "s")
+
+    def test_null_agentid_analyze_by_agent(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": None}]
+        result = self.analyzer.analyze_by_agent(feedback)
+        self.assertEqual(result["unknown"], 1)
+
+    def test_null_category_analyze_by_category(self):
+        feedback = [{"fsi_category": None, "fsi_severity": 100000000, "fsi_agentid": "a"}]
+        result = self.analyzer.analyze_by_category(feedback)
+        self.assertIn("unknown", result)  # None coalesces to 0, not in CATEGORIES -> "unknown"
+
+    def test_null_severity_analyze_severity(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": None, "fsi_agentid": "a"}]
+        result = self.analyzer.analyze_severity(feedback)
+        self.assertIn(100000000, result)  # defaults to Low
+
+    def test_null_agentid_calculate_scores(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": None}]
+        scores = self.analyzer.calculate_agent_scores(feedback)
+        self.assertIn("unknown", scores)
+
+    def test_null_agentid_generate_report(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": None}]
+        report = self.analyzer.generate_report(feedback)
+        self.assertIn("unknown", report)
+
+    def test_all_null_fields(self):
+        feedback = [{"fsi_category": None, "fsi_severity": None, "fsi_agentid": None}]
+        report = self.analyzer.generate_report(feedback)
+        self.assertIn("unknown", report)
+        self.assertIn("Total Reports: 1", report)
+
+
 if __name__ == "__main__":
     unittest.main()

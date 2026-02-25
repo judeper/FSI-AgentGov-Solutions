@@ -283,16 +283,14 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
 
 ```json
 {
+  "fsi_name": "LOG-REQ-00001-7",
+  "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(a1b2c3d4-e5f6-7890-abcd-ef1234567890)",
   "fsi_sequence": 7,
   "fsi_action": 7,
-  "fsi_actiondetails": {
-    "environmentId": "87654321-4321-4321-4321-210987654321",
-    "environmentUrl": "https://fin-quarterly-prod.crm.dynamics.com",
-    "environmentType": "Production",
-    "region": "unitedstates"
-  },
+  "fsi_actiondetails": "{\"environmentId\": \"87654321-4321-4321-4321-210987654321\", \"environmentUrl\": \"https://fin-quarterly-prod.crm.dynamics.com\", \"environmentType\": \"Production\", \"region\": \"unitedstates\"}",
   "fsi_actor": "ELM-Provisioning-ServicePrincipal",
   "fsi_actortype": 2,
+  "fsi_timestamp": "2026-01-15T10:30:00Z",
   "fsi_success": true,
   "fsi_correlationid": "08585929-1234-5678-abcd-ef1234567890"
 }

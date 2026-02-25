@@ -559,13 +559,14 @@ def main():
         epilog="""
 Examples:
   # Dry run (preview changes without deploying)
-  python create_audit_compliance_schema.py --tenant-id <id> --environment-url <url> --dry-run
+  python create_audit_compliance_schema.py --tenant-id <id> --client-id <id> --environment-url <url> --interactive --dry-run
 
   # Interactive browser authentication
   python create_audit_compliance_schema.py --tenant-id <id> --client-id <id> --environment-url <url> --interactive
 
-  # Service principal authentication
-  python create_audit_compliance_schema.py --tenant-id <id> --client-id <id> --client-secret <secret> --environment-url <url>
+  # Service principal authentication (set ALCA_CLIENT_SECRET env var)
+  export ALCA_CLIENT_SECRET=<secret>
+  python create_audit_compliance_schema.py --tenant-id <id> --client-id <id> --environment-url <url>
 
 Environment variables:
   ALCA_TENANT_ID         Entra ID tenant ID
@@ -585,11 +586,7 @@ Environment variables:
         default=os.environ.get("ALCA_CLIENT_ID"),
         help="Application (client) ID",
     )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("ALCA_CLIENT_SECRET"),
-        help="Client secret",
-    )
+    # Client secret read from ALCA_CLIENT_SECRET env var (not CLI arg to avoid shell history exposure)
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ALCA_ENVIRONMENT_URL"),
@@ -612,12 +609,23 @@ Environment variables:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Get client secret if needed
-    client_secret = args.client_secret
-    if not args.interactive and not client_secret:
-        if args.client_id:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    # Validate auth mode
+    if not args.interactive and not args.client_id:
+        parser.error(
+            "Either --interactive or --client-id is required.\n"
+            "Use --interactive for manual runs or provide Service Principal credentials."
+        )
+    if args.interactive and not args.client_id:
+        parser.error(
+            "--client-id is required for interactive authentication.\n"
+            "Register an app in Entra ID and provide --client-id."
+        )
+
+    # Get client secret from env var or prompt (never via CLI arg to avoid shell history exposure)
+    client_secret = os.environ.get("ALCA_CLIENT_SECRET")
+    if not args.interactive and args.client_id and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
 
     try:
         client = ALCAClient(

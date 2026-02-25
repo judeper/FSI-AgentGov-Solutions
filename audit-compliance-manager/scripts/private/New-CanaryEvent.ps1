@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -158,6 +158,12 @@ function New-CanaryEvent {
             ErrorMessage = $_.Exception.Message
         }
     }
+}
+
+# Execute if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    $result = New-CanaryEvent @PSBoundParameters
+    return $result
 }
 
 # Export function if this script is dot-sourced (no-op outside a module)

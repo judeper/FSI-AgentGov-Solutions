@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -148,6 +148,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Import AuditComplianceHelpers for Invoke-WithRetry
+$scriptRoot = Split-Path -Parent $PSScriptRoot
+Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
+
 function Write-ValidationResult {
     [CmdletBinding()]
     param(
@@ -274,6 +278,7 @@ function Write-ValidationResult {
             "Content-Type"     = "application/json"
             "OData-MaxVersion" = "4.0"
             "OData-Version"    = "4.0"
+            "Prefer"           = "return=representation"
         }
 
         # POST request to create record (with retry for transient 429/503/504 errors)

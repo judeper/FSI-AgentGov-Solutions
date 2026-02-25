@@ -1,5 +1,6 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+#Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 <#
 .SYNOPSIS
@@ -149,6 +150,8 @@ function Get-FileUploadDriftDirection {
 
 #endregion
 
+$alertRequired = $false
+
 try {
     Write-Verbose "Starting file upload validation runbook"
     Write-Verbose "TenantId: $TenantId"
@@ -227,7 +230,7 @@ try {
     if ($ExcludeTrial)   { $scanParams['ExcludeTrial'] = $true }
     if ($includeDrafts)  { $scanParams['IncludeDrafts'] = $true }
 
-    $scanResultJson = & $complianceScript @scanParams
+    $scanResultJson = & $complianceScript @scanParams 6>$null
     $scanResult = $scanResultJson | ConvertFrom-Json
     # Extract results array from JSON output structure
     if ($scanResult.results) {
@@ -296,7 +299,7 @@ try {
         Write-Warning "Baseline query failed — treating as potential drift for safety"
         Write-Verbose "Baseline query error: $($_.Exception.Message)"
         $baselineQueryFailed = $true
-        $AlertRequired = $true
+        $alertRequired = $true
     }
 
     #endregion
@@ -411,6 +414,20 @@ try {
     }
 
     Write-Verbose "Wrote $($violationResults.Count) violation(s) to Dataverse"
+
+    # Persist overall run summary for historical compliance trend data
+    $validationHistoryRecord = @{
+        OverallStatus          = $overallStatus
+        TotalAgents            = $totalAgents
+        CompliantCount         = $compliantResults.Count
+        ViolationCount         = $violationCount
+        FileUploadEnabledCount = $fileUploadEnabledCount
+        ComplianceRate         = $complianceRate
+        EnvironmentsScanned    = $uniqueEnvs
+        ScanDurationSeconds    = $scanDurationSeconds
+    }
+    Write-FileUploadValidationHistory -ValidationResult $validationHistoryRecord -RunId $runId
+    Write-Verbose "Wrote validation history record to Dataverse"
 
     #endregion
 
@@ -529,15 +546,17 @@ try {
 } catch {
     Write-Verbose "Error occurred: $($_.Exception.Message)"
 
+    $errorRunId = [Guid]::NewGuid().ToString()
     $errorOutput = [PSCustomObject]@{
         RunType                = "FileUploadValidation"
+        RunId                  = $errorRunId
         Timestamp              = (Get-Date -AsUTC -Format "o")
         TotalAgents            = 0
         TotalEnvironments      = 0
         FileUploadEnabledCount = 0
         OverallStatus          = "Error"
         Reason                 = $_.Exception.Message
-        ZoneSummary            = [PSCustomObject]@{}
+        ZoneSummary            = [PSCustomObject]@{ Zone1 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }; Zone2 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }; Zone3 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 } }
         Violations             = @()
         Drift                  = [PSCustomObject]@{
             HasDrift      = $false

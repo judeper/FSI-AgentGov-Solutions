@@ -450,7 +450,9 @@ def main():
             interactive=args.interactive,
         )
 
-        create_views(client, dry_run=args.dry_run)
+        success = create_views(client, dry_run=args.dry_run)
+        if not success and not args.dry_run:
+            sys.exit(1)
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

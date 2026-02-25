@@ -119,8 +119,11 @@
                         "entityName": "fsi_environmentregistrys",
                         "recordId": "@first(body('Check_ACV_Exists')?['value'])?['fsi_environmentregistryid']",
                         "item": {
+                          "fsi_name": "@outputs('Extract_Provisioning_Data')?['environmentName']",
                           "fsi_zone": "@outputs('Extract_Provisioning_Data')?['zone']",
                           "fsi_status": 1,
+                          "fsi_environmenttype": "@outputs('Extract_Provisioning_Data')?['environmentType']",
+                          "fsi_environmenturl": "@outputs('Extract_Provisioning_Data')?['environmentUrl']",
                           "fsi_notes": "Updated via ELM re-provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
                         }
                       }
@@ -158,7 +161,7 @@
                 "fsi_name": "INT-Init-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
                 "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
                 "fsi_action": 11,
-                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":@{equals(actions('Register_In_ACV')?['status'], 'Succeeded')},\"zone\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['zone'], '')}\",\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
+                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":@{if(equals(actions('Register_In_ACV')?['status'], 'Succeeded'), 'true', 'false')},\"zone\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['zone'], '')}\",\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
                 "fsi_actor": "CrossSolutionIntegration",
                 "fsi_actortype": 3,
                 "fsi_success": "@equals(actions('Register_In_ACV')?['status'], 'Succeeded')"
@@ -233,6 +236,11 @@
               "subscriptionRequest/entityname": "fsi_provisioninglog",
               "subscriptionRequest/scope": 4,
               "subscriptionRequest/filterexpression": "fsi_action eq 13 and fsi_success eq true"
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
             }
           }
         }

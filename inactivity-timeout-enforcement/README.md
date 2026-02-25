@@ -37,9 +37,9 @@ inactivity-timeout-enforcement/
 
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment
+1. Import the JSON file as a cloud flow into your Power Platform environment
 2. Configure connection references (see prerequisites)
-3. Activate cloud flows
+3. Activate the cloud flow
 4. Verify deployment using the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
 
 ## License

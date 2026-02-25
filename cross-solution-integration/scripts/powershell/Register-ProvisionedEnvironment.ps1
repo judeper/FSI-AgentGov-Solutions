@@ -43,7 +43,7 @@
 .EXAMPLE
     .\Register-ProvisionedEnvironment.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "guid" -EnvironmentId "env-guid" -EnvironmentName "TRADING-Ops-PROD" `
-        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 2 -Interactive
+        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
 
 .NOTES
     Version: 1.0.0

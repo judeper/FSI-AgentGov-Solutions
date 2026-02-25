@@ -27,7 +27,8 @@
         "startTime": "2026-01-01T06:00:00Z",
         "timeZone": "UTC"
       },
-      "type": "Recurrence"
+      "type": "Recurrence",
+      "operationOptions": "SingleInstance"
     }
   },
   "actions": {
@@ -157,15 +158,32 @@
         "variables": [
           {
             "name": "ProcessedControls",
-            "type": "array",
-            "value": []
+            "type": "object",
+            "value": {}
+          }
+        ]
+      }
+    },
+    "Initialize_ItemErrorCount": {
+      "runAfter": {
+        "Initialize_ProcessedControls": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "ItemErrorCount",
+            "type": "integer",
+            "value": 0
           }
         ]
       }
     },
     "List_Control_Assessments": {
       "runAfter": {
-        "Initialize_ProcessedControls": [
+        "Initialize_ItemErrorCount": [
           "Succeeded"
         ]
       },
@@ -211,7 +229,7 @@
             "Get_Control_Weight": {
               "runAfter": {},
               "type": "Compose",
-              "inputs": "@items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_weight']"
+              "inputs": "@coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_weight'], 0)"
             },
             "Get_Zone_Multiplier": {
               "runAfter": {
@@ -274,7 +292,7 @@
                 ]
               },
               "type": "Compose",
-              "inputs": "@string(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_pillar'])"
+              "inputs": "@string(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_pillar'], 0))"
             },
             "Update_PillarScores": {
               "runAfter": {
@@ -325,47 +343,44 @@
           },
           "type": "If"
             },
-            "Append_Processed_Control": {
+            "Mark_Control_Processed": {
               "runAfter": {
                 "Condition_Status_Not_NA": [
                   "Succeeded",
                   "Skipped"
                 ]
               },
-              "type": "AppendToArrayVariable",
+              "type": "SetVariable",
               "inputs": {
                 "name": "ProcessedControls",
-                "value": "@concat(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], '_', string(items('Apply_to_each_Assessment')?['fsi_zone']))"
+                "value": "@setProperty(variables('ProcessedControls'), concat(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], 'null'), '_', string(coalesce(items('Apply_to_each_Assessment')?['fsi_zone'], 0))), true)"
               }
             }
           },
           "runAfter": {},
           "expression": {
-            "not": {
-              "contains": [
-                "@variables('ProcessedControls')",
-                "@concat(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], '_', string(items('Apply_to_each_Assessment')?['fsi_zone']))"
-              ]
-            }
+            "equals": [
+              "@coalesce(variables('ProcessedControls')?[concat(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], 'null'), '_', string(coalesce(items('Apply_to_each_Assessment')?['fsi_zone'], 0)))], false)",
+              false
+            ]
           },
           "type": "If"
         }
           }
         },
-        "Log_Assessment_Processing_Error": {
+        "Increment_ItemErrorCount": {
           "runAfter": {
             "Scope_Process_Assessment": [
               "Failed",
               "TimedOut"
             ]
           },
-          "type": "Compose",
+          "type": "IncrementVariable",
           "inputs": {
-            "error": "Failed to process assessment",
-            "assessmentId": "@items('Apply_to_each_Assessment')?['fsi_controlassessmentid']",
-            "controlId": "@items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlid']"
+            "name": "ItemErrorCount",
+            "value": 1
           },
-          "description": "Log error details and continue to next assessment"
+          "description": "Track per-item processing errors for post-loop notification"
         }
       },
       "runAfter": {
@@ -380,10 +395,68 @@
         }
       }
     },
-    "Calculate_Overall_Score": {
+    "Condition_Item_Processing_Errors": {
       "runAfter": {
         "Apply_to_each_Assessment": [
           "Succeeded"
+        ]
+      },
+      "expression": {
+        "and": [
+          {
+            "greater": [
+              "@variables('ItemErrorCount')",
+              0
+            ]
+          },
+          {
+            "not": {
+              "equals": [
+                "@parameters('fsi_CD_NotificationEmail')",
+                ""
+              ]
+            }
+          }
+        ]
+      },
+      "type": "If",
+      "actions": {
+        "Send_Item_Error_Notification": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_outlook",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage": {
+                "To": "@{parameters('fsi_CD_NotificationEmail')}",
+                "Subject": "WARNING: Score Calculator - @{variables('ItemErrorCount')} assessments failed processing",
+                "Body": "<p><strong style='color:orange;'>Per-item processing errors detected.</strong></p><p><strong>Failed Items:</strong> @{variables('ItemErrorCount')}</p><p>One or more control assessments could not be processed (possible causes: deleted control master records, null navigation properties, or transient Dataverse errors). The overall compliance score may be incomplete. Review flow run history for details.</p><p><strong>Timestamp:</strong> @{utcNow()}</p>",
+                "Importance": "High"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "count": 3,
+              "type": "exponential",
+              "interval": "PT10S",
+              "maximumInterval": "PT1H"
+            }
+          }
+        }
+      },
+      "description": "Notify when individual assessments failed processing during the loop"
+    },
+    "Calculate_Overall_Score": {
+      "runAfter": {
+        "Condition_Item_Processing_Errors": [
+          "Succeeded",
+          "Skipped"
         ]
       },
       "type": "Compose",

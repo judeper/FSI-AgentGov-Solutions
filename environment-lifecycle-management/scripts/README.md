@@ -537,6 +537,10 @@ Scripts return exit codes:
 | 3 | Validation failure |
 | 4 | Configuration error |
 
+> **Note:** `validate_immutability.py` uses script-specific exit codes (changed in v1.1.1):
+> code 2 = integrity issues (missing fields, orphaned records), code 3 = immutability
+> violations (unauthorized updates or deletes detected).
+
 ## Logging
 
 Scripts log to stderr. Redirect to file:

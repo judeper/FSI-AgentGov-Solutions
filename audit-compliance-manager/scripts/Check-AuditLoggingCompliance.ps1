@@ -1,6 +1,6 @@
 #Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
 .SYNOPSIS
@@ -209,7 +209,7 @@ try {
             $dataverseAuditEnabled = $false
             if ($hasDataverse) {
                 try {
-                    $orgUrl = $env.Internal.Properties.LinkedEnvironmentMetadata.InstanceApiUrl
+                    $orgUrl = $env.Internal.Properties.LinkedEnvironmentMetadata.instanceUrl
                     if ($orgUrl) {
                         $orgUrl = $orgUrl.TrimEnd('/')
                         $dvEnvToken = Get-ManagedIdentityToken -Resource $orgUrl

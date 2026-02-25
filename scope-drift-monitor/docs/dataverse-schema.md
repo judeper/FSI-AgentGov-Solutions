@@ -12,12 +12,11 @@ Table definitions for the Scope Drift Monitor.
 │  (scope definitions)│     │  (drift detections) │
 └─────────────────────┘     └─────────────────────┘
          │                            │
-         │                            ▼
-         │                  ┌─────────────────────┐
-         │                  │ fsi_expansionrequest│
+         ├────────────────┐           ▼
+         │                │ ┌─────────────────────┐
+         │                └>│ fsi_expansionrequest│
          │                  │ (scope changes)     │
          │                  └─────────────────────┘
-         │
          ▼
 ┌─────────────────────┐     ┌─────────────────────┐
 │  fsi_scopeitem      │     │  fsi_detectionrun   │
@@ -99,6 +98,7 @@ Individual scope items with detailed configuration.
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_scopeitemid` | Uniqueidentifier | Yes | Primary key |
+| `fsi_name` | String (200) | Yes | Scope item display name |
 | `fsi_agentscopeid` | Lookup | Yes | Parent scope |
 | `fsi_itemtype` | Choice | Yes | Type of resource |
 | `fsi_resourcename` | String (200) | Yes | Resource identifier |
@@ -155,6 +155,7 @@ Detected scope drift violations.
 | `fsi_resolvedon` | DateTime | No | Resolution timestamp |
 | `fsi_resolutiontype` | Choice | No | How resolved |
 | `fsi_expansionrequestid` | Lookup | No | Related expansion request |
+| `fsi_notificationfailed` | Boolean | No | Notification delivery failed |
 | `createdon` | DateTime | Auto | Record creation |
 
 ### Choice: fsi_violationtype
@@ -215,6 +216,7 @@ Requests to expand agent scope.
 | `fsi_requesttype` | Choice | Yes | Type of expansion |
 | `fsi_resourcename` | String (200) | Yes | Resource to add |
 | `fsi_resourceurl` | String (500) | No | Resource URL |
+| `fsi_requestedaccesslevel` | Choice | No | Requested access level (uses fsi_accesslevel values) |
 | `fsi_justification` | Text | Yes | Business justification |
 | `fsi_requestedby` | Lookup (User) | Yes | Requestor |
 | `fsi_requestedon` | DateTime | Yes | Request timestamp |

@@ -207,7 +207,7 @@ Import these modules from the PowerShell Gallery:
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0.0 | Environment enumeration, admin config |
-| `ExchangeOnlineManagement` | 3.0.0 | Exchange Online MI auth, audit log search |
+| `ExchangeOnlineManagement` | 3.7.0 | Exchange Online MI auth, audit log search |
 
 **For each module:**
 
@@ -287,10 +287,10 @@ See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedure
 
 ---
 
-## Security Role Lockdown
+## Security Role Lockdown (ACV Subsystem)
 
-After deployment, enforce immutability on the `fsi_auditvalidationhistory` table by
-running the security role configuration script:
+After deployment, enforce immutability on the `fsi_auditvalidationhistory` table (part of the
+Audit Compliance Validation subsystem) by running the security role configuration script:
 
 ```powershell
 # Acquire a Dataverse access token (e.g., via Managed Identity or interactive auth)

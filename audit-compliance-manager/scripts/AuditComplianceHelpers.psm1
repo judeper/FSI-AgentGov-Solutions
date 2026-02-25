@@ -46,7 +46,8 @@ function Invoke-WithRetry {
         Executes a script block with exponential backoff and jitter for transient errors.
 
     .DESCRIPTION
-        Retries on HTTP 429 (throttled), 503 (service unavailable), and 504 (gateway timeout).
+        Retries on HTTP 429 (throttled), 500 (internal server error), 502 (bad gateway),
+        503 (service unavailable), and 504 (gateway timeout).
         Uses exponential backoff with random jitter to avoid thundering herd.
         Non-retryable errors (4xx except 429) are thrown immediately.
 
@@ -89,7 +90,7 @@ function Invoke-WithRetry {
         [string]$OperationName = "Operation"
     )
 
-    $retryableStatusCodes = @(429, 503, 504)
+    $retryableStatusCodes = @(429, 500, 502, 503, 504)
     $attempt = 0
 
     while ($true) {
@@ -430,28 +431,13 @@ function Write-DataverseComplianceRecord {
         $record.fsi_lasteventcaptured = $LastEventCaptured.ToUniversalTime().ToString("o")
     }
 
-    # Sanitize input for OData filter (escape single quotes)
+    # Use Dataverse alternate key upsert (atomic create-or-update, no race condition)
     $safeEnvironmentId = $EnvironmentId -replace "'", "''"
-
-    # Query for existing record by environment ID (upsert key)
-    $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$safeEnvironmentId'&`$select=fsi_auditenvironmentcomplianceid"
+    $upsertUri = "/api/data/v9.2/fsi_auditenvironmentcompliances(fsi_environmentid='$safeEnvironmentId')"
 
     try {
-        $existing = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $filterUri -Token $Token -Method GET
-
-        if ($existing.value -and $existing.value.Count -gt 0) {
-            # Update existing record
-            $recordId = $existing.value[0].fsi_auditenvironmentcomplianceid
-            $patchUri = "/api/data/v9.2/fsi_auditenvironmentcompliances($recordId)"
-            Write-Verbose "Updating existing compliance record for environment $EnvironmentId (record: $recordId)"
-            $result = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $patchUri -Token $Token -Method PATCH -Body $record
-        }
-        else {
-            # Create new record
-            $postUri = "/api/data/v9.2/fsi_auditenvironmentcompliances"
-            Write-Verbose "Creating new compliance record for environment $EnvironmentId"
-            $result = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $postUri -Token $Token -Method POST -Body $record
-        }
+        Write-Verbose "Upserting compliance record for environment $EnvironmentId via alternate key"
+        $result = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $upsertUri -Token $Token -Method PATCH -Body $record
 
         return $result
     }

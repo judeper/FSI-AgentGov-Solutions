@@ -115,6 +115,9 @@ if ($Interactive) {
         -Interactive `
         -ErrorAction Stop
 } else {
+    if (-not $ClientId) {
+        throw 'ClientId required for non-interactive auth. Provide via -ClientId parameter or use -Interactive for browser auth.'
+    }
     if (-not $CertificateThumbprint) {
         throw 'CertificateThumbprint required for non-interactive auth. Use -Interactive for browser auth.'
     }
@@ -244,7 +247,7 @@ $evidencePackage = [ordered]@{
     metadata = [ordered]@{
         evidenceId     = $evidenceId
         generatedAt    = $timestamp
-        generatedBy    = $env:USERNAME
+        generatedBy    = $env:USERNAME ?? $env:USER ?? 'Unknown'
         solution       = 'File Upload Security Configurator'
         solutionVersion = '1.0.0'
         control        = '1.14 - Data Minimization and Agent Scope Control'

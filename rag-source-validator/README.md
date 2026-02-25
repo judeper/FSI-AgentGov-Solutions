@@ -1,6 +1,6 @@
 # RAG Source Validator
 
-> **Status:** Work In Progress
+> **Status:** Work In Progress — Script-only validation tool. Power Platform solution package (solution.xml, customizations.xml) is not yet available; this solution cannot be imported into a Power Platform environment. See [Quick Start](#quick-start) for current capabilities.
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -46,13 +46,14 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ## Supported Source Types
 
-| Type | Content | Hash Method |
-|------|---------|-------------|
-| **SharePoint** | Documents, lists, pages | File content hash |
-| **Dataverse** | Tables, rows | Row checksum |
-| **Azure Blob** | Files, containers | Blob content hash |
-| **Web API** | JSON responses | Response body hash |
-| **Database** | Queries, tables | Query result hash |
+| Type | Content | Hash Method | Status |
+|------|---------|-------------|--------|
+| **SharePoint Document Library** | Documents (type 1) | File content hash | ✅ Implemented |
+| **SharePoint List / Page** | Lists (type 2), Pages (type 3) | Content hash | ⏳ Planned |
+| **Dataverse** | Tables, rows | Row checksum | ⏳ Planned |
+| **Azure Blob** | Files, containers | Blob content hash | ⏳ Planned |
+| **Web API** | JSON responses | Response body hash | ⏳ Planned |
+| **Database** | Queries, tables | Query result hash | ⏳ Planned |
 
 ## Prerequisites
 
@@ -78,6 +79,8 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 ### 1. Deploy Dataverse Schema
 
 > **Coming Soon** — The solution template (`templates/RAGSourceValidator_1_0_0.zip`) is not yet available.
+>
+> **Manual setup:** Until the solution package is available, create the Dataverse tables (`fsi_knowledgesource`, `fsi_validationresult`, `fsi_sourcechange`), choice columns, and security roles manually using the definitions in [docs/dataverse-schema.md](docs/dataverse-schema.md).
 
 ### 2. Register Knowledge Sources
 
@@ -89,17 +92,33 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ### 4. Run Validation
 
+Set credentials via environment variables (or pass as parameters):
+
+```powershell
+$env:AZURE_TENANT_ID = "your-tenant-id"
+$env:AZURE_CLIENT_ID = "your-client-id"
+$env:AZURE_CLIENT_SECRET = "your-client-secret"
+```
+
+Then run:
+
 ```powershell
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
+# Sovereign clouds also supported:
+#   GCC High: https://your-org.crm.microsoftdynamics.us
+#   DoD:      https://your-org.crm.appsplatform.us
+#   China:    https://your-org.crm.dynamics.cn
 ```
+
+**Exit codes:** 0 = all sources passed, 1 = validation failures or Dataverse write errors, 2 = integrity changes detected (hash mismatches).
 
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment
+1. Import the solution ZIP into your Power Platform environment *(coming soon)*
 2. Configure connection references (see prerequisites)
 3. Register knowledge sources *(coming soon: `Register-KnowledgeSource.ps1`)*
 4. Capture initial baseline *(coming soon: `New-SourceBaseline.ps1`)*
-5. Activate cloud flows for scheduled validation
+5. Activate cloud flows for scheduled validation *(coming soon)*
 
 ## Documentation
 
@@ -121,7 +140,7 @@ Computes SHA-256 hash of source content and compares to stored baseline.
 Source Content → SHA-256 Hash → Compare to Baseline → Pass/Fail
 ```
 
-### Schema Validation
+### Schema Validation *(coming soon)*
 
 For structured data sources, validates schema hasn't changed.
 
@@ -132,7 +151,7 @@ For structured data sources, validates schema hasn't changed.
 | Data types | Column types consistent |
 | Constraints | Keys and relationships intact |
 
-### Freshness Validation
+### Freshness Validation *(coming soon)*
 
 Ensures content is current and not stale.
 
@@ -142,7 +161,7 @@ Ensures content is current and not stale.
 | 7-30 days | Warning |
 | > 30 days | Stale |
 
-### Link Validation
+### Link Validation *(coming soon)*
 
 For documents with references, validates all links are accessible.
 
@@ -209,13 +228,13 @@ For documents with references, validates all links are accessible.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Authentication failure | Expired token or insufficient SharePoint/Dataverse permissions | Re-authenticate; verify SharePoint Reader and Dataverse Reader roles |
-| Hash mismatch on first run | No baseline captured for the source | Run `New-SourceBaseline.ps1` to establish initial hashes |
-| Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register with `Register-KnowledgeSource.ps1` |
+| Hash mismatch on first run | No baseline captured for the source | Run `New-SourceBaseline.ps1` *(coming soon)* to establish initial hashes |
+| Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register with `Register-KnowledgeSource.ps1` *(coming soon)* |
 | Stale content alerts | Source not updated within freshness threshold | Review source update schedule; adjust threshold if appropriate |
 
 ### Logs
 
-Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+Review script output for `[ERROR]` entries.
 
 ## Support
 
