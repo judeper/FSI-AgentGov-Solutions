@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **UASD v1.0.2** — Flow 4 (`UASD-Exception-Expiration-Monitor`) build instructions: proactive exception expiration handling with configurable warning threshold and Teams alerts
+- **Deployment Guide v0.1** — Use-case mapping, solution layers, and Compliance Dashboard integration sequencing
+
 - **DR Testing Framework v1.0.0** - Automated disaster recovery testing for AI agents
   - 4 test scenarios: Agent Restore, Environment Failover, Data Recovery, Full DR
   - RTO/RPO measurement and comparison

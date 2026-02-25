@@ -8,7 +8,8 @@ This guide provides step-by-step instructions for manually building the Unrestri
 1. UASD-Detector-Scan-Agents (Scheduled Cloud Flow)
 2. UASD-Remediation-Apply-Sharing-Policy (Automated Cloud Flow)
 3. UASD-Exception-Approval-Workflow (Automated Cloud Flow)
-4. UASD-Exception-Manager (Canvas App)
+4. UASD-Exception-Expiration-Monitor (Scheduled Cloud Flow)
+5. UASD-Exception-Manager (Canvas App)
 
 **Prerequisites:**
 - Power Automate premium license
@@ -320,7 +321,140 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 ```
 > **Note:** Since the trigger is Create-only and new records default to Pending (100000000), this filter is functionally equivalent to no filter but is included for consistency with SOLUTION-DOCUMENTATION.md and for clarity of intent.
 
-> **Known Limitation — Exception Expiration Monitoring:** No scheduled flow currently checks for approaching or expired exceptions. Expired exceptions are detected passively: on the next Detector scan, a violation previously covered by an expired exception will no longer match an active exception (the `fsi_expiresat gt utcNow()` filter in Flow 2 Step 4b will exclude it), and a new violation record will be created. To implement active expiration handling, create a fourth scheduled flow (`UASD-Exception-Expiration-Monitor`). See SOLUTION-DOCUMENTATION.md [Expiration Handling](#expiration-handling) for implementation guidance.
+---
+
+## Flow 4: UASD-Exception-Expiration-Monitor
+
+**Type:** Scheduled Cloud Flow
+**Trigger:** Recurrence (Daily at 07:00 UTC)
+**Purpose:** Proactively detect expired and expiring-soon exceptions, update statuses, and send Teams warning alerts
+
+> **Note:** This flow does **not** check `fsi_UASD_RemediationDryRun`. Expiration status updates are metadata transitions (Approved → Expired), not remediation actions that modify agent sharing configurations. The flow always executes in full.
+
+### Build Steps
+
+1. **Create New Flow**
+   - Power Automate → Cloud Flows → Scheduled Cloud Flow
+   - Flow name: `UASD-Exception-Expiration-Monitor`
+   - Recurrence: Daily at 07:00 UTC (runs after Detector scan at 06:00 to avoid overlap)
+
+2. **Initialize Variables**
+   - `timestamp`: Expression `utcNow()`
+   - `warningDays`: Environment variable `fsi_UASD_ExpirationWarningDays` (default: 7)
+   - `warningThreshold`: Expression `addDays(utcNow(), variables('warningDays'))`
+   - `expiredCount`: Integer, initial value `0`
+   - `warningCount`: Integer, initial value `0`
+   - `teamsGroupId`: Environment variable `fsi_UASD_TeamsGroupId`
+   - `teamsChannelId`: Environment variable `fsi_UASD_TeamsChannelId`
+
+3. **Scope: Main Logic** (try block — see [Error Handling](#scope-based-trycatch-pattern))
+
+4. **Query Expired Exceptions**
+   - Action: "List records" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Filter: `fsi_exceptionstatus eq 100000001 and fsi_expiresat lt @{variables('timestamp')}`
+   - This returns all Approved exceptions whose expiration date has passed
+
+5. **For Each Expired Exception → Update to Expired Status**
+   - Loop through results from Step 4
+   - Action: "Update a record" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Record ID: Current item `fsi_sharingexceptionid`
+   - Fields:
+     - `fsi_exceptionstatus`: `100000003` (Expired)
+   - Increment `expiredCount` variable
+
+6. **Query Expiring-Soon Exceptions**
+   - Action: "List records" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Filter: `fsi_exceptionstatus eq 100000001 and fsi_expiresat gt @{variables('timestamp')} and fsi_expiresat lt @{variables('warningThreshold')}`
+   - This returns Approved exceptions expiring within the warning window (default: 7 days) that have not yet expired
+
+7. **For Each Expiring-Soon Exception → Send Warning**
+   - Loop through results from Step 6
+   - Increment `warningCount` variable
+   - Action: "Post an Adaptive Card to a Teams Channel" (Teams)
+   - Channel: Use `teamsGroupId` and `teamsChannelId`
+   - Card body (inline JSON):
+
+```json
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "⚠️",
+              "size": "Large"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Exception Expiring Soon",
+              "weight": "Bolder",
+              "size": "Medium",
+              "color": "Warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent", "value": "@{items('Apply_to_each')?['fsi_agentname']}" },
+        { "title": "Exception", "value": "@{items('Apply_to_each')?['fsi_name']}" },
+        { "title": "Expires", "value": "@{formatDateTime(items('Apply_to_each')?['fsi_expiresat'], 'yyyy-MM-dd HH:mm UTC')}" },
+        { "title": "Days Remaining", "value": "@{div(sub(ticks(items('Apply_to_each')?['fsi_expiresat']), ticks(utcNow())), 864000000000)}" },
+        { "title": "Requested By", "value": "@{items('Apply_to_each')?['fsi_requestedby']}" },
+        { "title": "Business Justification", "value": "@{items('Apply_to_each')?['fsi_businessjustification']}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "This exception will expire soon. The requester should submit a renewal via the Exception Manager app if continued access is needed. After expiration, the next Detector scan will create a new violation.",
+      "wrap": true,
+      "size": "Small"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open Exception Manager",
+      "url": "https://apps.powerapps.com/"
+    }
+  ]
+}
+```
+
+8. **Send Summary Notification** (if any expirations or warnings found)
+   - **Condition:** `or(greater(variables('expiredCount'), 0), greater(variables('warningCount'), 0))`
+   - Action: "Post message in chat or channel" (Teams)
+   - Channel: Use `teamsGroupId` and `teamsChannelId`
+   - Message: `"UASD Exception Expiration Monitor: @{variables('expiredCount')} exception(s) expired, @{variables('warningCount')} exception(s) expiring within @{variables('warningDays')} days."`
+
+9. **Scope: Catch** (error handling — configure **Run after** Main Logic: Failed, Timed out, Cancelled)
+   - Send Teams alert with failure context (flow name, error message, run ID)
+   - See [Error Handling](#scope-based-trycatch-pattern) for the standard pattern
+
+**Trigger Configuration:**
+- Frequency: Day
+- Interval: 1
+- Time zone: UTC
+- Start time: 07:00 (after Detector scan completes)
 
 ---
 
@@ -421,7 +555,7 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 
 ## Error Handling
 
-All three flows make API calls (Power Platform, Dataverse, Teams) that can fail transiently. Apply these patterns to each flow:
+All four flows make API calls (Power Platform, Dataverse, Teams) that can fail transiently. Apply these patterns to each flow:
 
 ### Scope-Based Try/Catch Pattern
 

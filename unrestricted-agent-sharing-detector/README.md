@@ -1,6 +1,6 @@
 # Unrestricted Agent Sharing Detector
 
-> **Version:** v1.0.1
+> **Version:** v1.0.2
 > **Status:** Completed
 
 Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
