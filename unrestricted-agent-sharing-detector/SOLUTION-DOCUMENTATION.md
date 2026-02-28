@@ -190,7 +190,7 @@ The flow implements five violation detection rules:
    - Leave violation in `Open` status for remediation
    - Send Teams notification with rejection reason
 
-**Expiration Handling:**
+### Expiration Handling
 
 The fourth flow, **UASD-Exception-Expiration-Monitor**, runs daily and handles two expiration scenarios:
 

@@ -36,7 +36,7 @@ CONNECTION_REFS = [
     {
         "logical_name": "fsi_cr_powerplatformadmin_sharingdetector",
         "display_name": "Power Platform for Admins - UASD",
-        "connector": "shared_powerappsforadmins",
+        "connector": "shared_powerplatformforadmins",
         "description": "Power Platform for Admins connector for environment and agent discovery",
     },
 ]

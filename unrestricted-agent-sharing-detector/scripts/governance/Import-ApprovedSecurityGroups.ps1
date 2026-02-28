@@ -121,8 +121,9 @@ foreach ($group in $groups) {
 
     $zoneValue = $zoneMap[$zone]
     if (-not $zoneValue) {
-        Write-Host "  Warning: Invalid zone '$zone' for $groupName, defaulting to Zone 2" -ForegroundColor Yellow
-        $zoneValue = 100000002
+        Write-Host "  ERROR: Invalid zone '$zone' for $groupName — must be 1, 2, or 3. Skipping row." -ForegroundColor Red
+        $errors++
+        continue
     }
 
     $payload = @{
