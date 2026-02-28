@@ -35,27 +35,67 @@ git rev-parse --show-toplevel
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
-| [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.0.1 |
-| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.0.0 |
-| [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.7 |
-| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v1.0.0 |
-| [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.0.0 |
-| [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.0.0 |
 | [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.0 |
+| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.0 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.0 |
+| [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.1.0 |
+| [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.0 |
+| [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.0 |
+| [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.0 |
+| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls | Docs/Dataverse | v1.0.0 |
+| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.1.0 |
+| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.0 |
+| [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.0.0 |
+| [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v1.0.0 |
+| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.0 |
+| [dr-testing-framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | PowerShell/Python | v1.0.0 |
+| [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.1.2 |
+| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.0.0 |
+| [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.0.0 |
+| [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.0.0 |
+| [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.0.0 |
+| [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.0.0 |
+| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.1.1 |
+| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.0.0 |
+| [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.8 |
+| [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.0.0 |
+| [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.1.0 |
+| [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.0.0 |
+| [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.0.0 |
+| [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v1.0.2 |
 
 ## Control Implementations
 
 | Solution | Primary Controls | Description |
 |----------|-----------------|-------------|
-| environment-lifecycle-management | 2.1, 2.2, 2.3, 2.8, 1.7 | Environment provisioning with zone-based governance |
-| message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
-| pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
-| deny-event-correlation-report | 1.5, 1.7, 3.4 | Deny event correlation across Purview and App Insights |
-| copilot-studio-analytics | 3.2 | Business impact analytics and session outcome monitoring |
-| generative-ai-config-auditor | 2.24 | GenAI feature enablement governance per zone |
 | action-confirmation-auditor | 1.23 | Step-up confirmation for agent operations |
+| agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
+| agent-observability-foundation | — | Foundational observability infrastructure |
+| agent-sharing-access-restriction-detector | 1.18, 2.8 | Zone-based sharing policy enforcement |
+| audit-compliance-manager | 1.7 | Audit configuration validation and gap remediation |
+| coi-testing | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
+| compliance-dashboard | 3.3, 3.1, 3.2 | Aggregated compliance reporting |
+| conditional-access-automation | 1.11, 1.23, 1.18 | CA policy deployment and drift detection |
+| content-moderation-monitor | 1.8, 1.14 | Content moderation validation against zone requirements |
+| copilot-studio-analytics | 3.2 | Business impact analytics and session outcome monitoring |
+| cross-solution-integration | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Compliance Dashboard integration and evidence export |
+| deny-event-correlation-report | 1.5, 1.7, 1.8, 3.4 | Deny event correlation across Purview and App Insights |
+| dr-testing-framework | 2.4, 2.1, 1.9 | Automated disaster recovery testing |
+| environment-lifecycle-management | 2.1, 2.2, 2.3, 2.8, 1.7 | Environment provisioning with zone-based governance |
+| file-upload-security | 1.14, 1.8, 1.4 | File upload validation against zone governance policies |
+| finra-supervision-workflow | 2.12, 1.10, 1.7 | Supervision queue for AI agent outputs (FINRA 3110) |
+| generative-ai-config-auditor | 2.24 | GenAI feature enablement governance per zone |
+| hallucination-tracker | 3.10, 2.9, 2.12 | Hallucination pattern analysis and feedback aggregation |
+| inactivity-timeout-enforcement | 2.22, 1.23, 3.7, 3.8 | Inactivity timeout validation with zone-based durations |
+| message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
+| mime-type-restrictions | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | MIME type configuration with server-side validation |
+| pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
+| rag-source-validator | 2.16, 1.7, 2.13 | RAG knowledge source integrity validation |
+| scope-drift-monitor | 1.14, 1.4, 1.5 | Agent data access scope drift detection |
+| segregation-detector | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
+| session-security-configurator | 1.23, 1.11 | Session security validation with drift detection |
+| unrestricted-agent-sharing-detector | 1.1, 3.8 | Overly permissive agent sharing detection and remediation |
 
 When updating solution READMEs, ensure Related Controls sections match these mappings.
 
