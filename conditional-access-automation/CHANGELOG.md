@@ -12,7 +12,7 @@ All notable changes to the Conditional Access Automation solution are documented
 - Teams adaptive card alert template (adaptive-card-caa-alert.json)
 - Dataverse schema: 3 tables (Baseline, ValidationHistory, Violation)
 - 7 environment variables with fsi_CAA_* prefix
-- 4 connection references with fsi_cr_* naming
+- 3 connection references with fsi_cr_* naming (Graph connector planned)
 - Multi-dimensional drift detection (state, conditions, grants, sessions, additions/removals)
 - SHA-256 evidence export (Export-CAAComplianceEvidence.ps1)
 - Evidence integrity verification (Test-EvidenceIntegrity.ps1)

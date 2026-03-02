@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.1.2] - March 2026
+
+### Correctness Fixes
+
+**Pagination Array Bug (CRITICAL):**
+- Replaced `Append to array` with `Set variable` + `union()` in pagination pattern (FLOW_SETUP.md)
+- `Append to array` creates nested arrays `[[page1], [page2]]` instead of a flat message list
+- Added warning callout explaining why `Append to array` must not be used here
+
+**Missing Critical Severity in Notification Conditions (HIGH):**
+- Added `critical` severity check to all three notification condition variants
+- Previously only `high` was checked; `critical` posts would silently skip notification
+- Added `critical` case to severity Switch mapping
+
+**Flow Diagram Contradicted Error Handling Guidance (MEDIUM):**
+- Moved `Apply to each` inside the Try scope in the Complete Flow Structure diagram
+- Updated mini pagination diagram to use `Set` instead of `Append`
+
+**Missing recordId Placeholder Documentation (MEDIUM):**
+- Added `{recordId}` to the placeholder replacement table in Step 7
+
+**SETUP_CHECKLIST.md Terminology (LOW):**
+- Updated Step 1 from Azure AD to Microsoft Entra ID
+- Fixed broken anchor link to README.md
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| FLOW_SETUP.md | Pagination fix, critical severity, diagram fix, recordId placeholder |
+| SETUP_CHECKLIST.md | Entra ID terminology, fixed anchor link |
+| CHANGELOG.md | Added v2.1.2 entry |
+
+---
+
 ## [2.1.1] - January 2026
 
 ### Technical Accuracy Updates
@@ -38,7 +73,6 @@ This release addresses terminology and deprecation updates identified during tec
 | FLOW_SETUP.md | Entra ID terminology, Teams action update, max page size note |
 | TEAMS_INTEGRATION.md | Teams action name update, Adaptive Card version compatibility |
 | SECRETS_MANAGEMENT.md | Entra ID terminology (all Azure AD references) |
-| SETUP_CHECKLIST.md | Entra ID terminology (Azure AD references) |
 
 ---
 
@@ -55,7 +89,7 @@ This release addresses 12 issues identified during technical review of the docum
 - Added "Critical" severity option to match Microsoft Graph API values (README.md, SETUP_CHECKLIST.md)
 
 **Notification Logic:**
-- Updated notification conditions to include both `high` and `critical` severity levels (FLOW_SETUP.md, TEAMS_INTEGRATION.md)
+- Updated notification condition to include both `high` and `critical` severity levels (FLOW_SETUP.md)
 
 **Implementation Guidance:**
 - Added step-by-step alternate key creation instructions for Dataverse upsert (FLOW_SETUP.md)

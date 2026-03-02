@@ -61,8 +61,6 @@
                 "Zone": {
                   "title": "Zone",
                   "type": "number",
-                  "minimum": 1,
-                  "maximum": 3,
                   "x-ms-dynamically-added": true,
                   "description": "Governance zone classification (1 = Personal Productivity, 2 = Team Collaboration, 3 = Enterprise Managed).",
                   "x-ms-content-hint": "NUMBER"
@@ -493,13 +491,6 @@
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
-                    },
-                    "retryPolicy": {
-                      "type": "exponential",
-                      "count": 3,
-                      "interval": "PT10S",
-                      "minimumInterval": "PT5S",
-                      "maximumInterval": "PT1M"
                     }
                   },
                   "runAfter": {},
@@ -814,12 +805,7 @@
                               "item/fsi_warning_count": "@body('Parse_Results')?['WarningCount']",
                               "item/fsi_drift_count": "@body('Parse_Results')?['DriftCount']",
                               "item/fsi_overall_severity": "@body('Parse_Results')?['OverallSeverity']",
-                              "item/fsi_overall_status": "@body('Parse_Results')?['OverallStatus']",
-                              "item/fsi_compliance_rate": "@body('Parse_Results')?['ComplianceRate']",
-                              "item/fsi_alert_severity": "@body('Parse_Results')?['AlertSeverity']",
-                              "item/fsi_results_json": "@{string(body('Parse_Results'))}",
-                              "item/fsi_source": "ProvisioningHookFallback",
-                              "item/fsi_scan_scope": "Targeted"
+                              "item/fsi_results_json": "@{string(body('Parse_Results'))}"
                             },
                             "host": {
                               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -868,18 +854,13 @@
                               "entityName": "fsi_capolicyviolations",
                               "item/fsi_name": "Provisioning Violation - @{items('Apply_to_Each_Violation')?['PolicyName']} - @{items('Apply_to_Each_Violation')?['ViolationType']}",
                               "item/fsi_policy_id": "@items('Apply_to_Each_Violation')?['PolicyId']",
-                              "item/fsi_policy_name": "@items('Apply_to_Each_Violation')?['PolicyName']",
+                              "item/fsi_policy_display_name": "@items('Apply_to_Each_Violation')?['PolicyName']",
                               "item/fsi_violation_type": "@items('Apply_to_Each_Violation')?['ViolationType']",
                               "item/fsi_zone": "@items('Apply_to_Each_Violation')?['Zone']",
                               "item/fsi_expected_value": "@items('Apply_to_Each_Violation')?['ExpectedValue']",
                               "item/fsi_actual_value": "@items('Apply_to_Each_Violation')?['ActualValue']",
                               "item/fsi_severity": "@items('Apply_to_Each_Violation')?['Severity']",
-                              "item/fsi_severity_label": "@items('Apply_to_Each_Violation')?['SeverityLabel']",
-                              "item/fsi_regulatory_context": "@items('Apply_to_Each_Violation')?['RegulatoryContext']",
-                              "item/fsi_detected_at": "@body('Parse_Results')?['CheckedAt']",
-                              "item/fsi_scan_trigger": "Provisioning",
-                              "item/fsi_environment_id": "@triggerBody()?['EnvironmentId']",
-                              "item/fsi_environment_name": "@triggerBody()?['EnvironmentName']"
+                              "item/fsi_description": "@items('Apply_to_Each_Violation')?['RegulatoryContext']"
                             },
                             "host": {
                               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -1076,7 +1057,7 @@
                             "type": "Container",
                             "id": "violationsSection",
                             "separator": true,
-                            "isVisible": "@{greater(length(body('Parse_Results')?['Violations']), 0)}",
+                            "$when": "@{greater(length(body('Parse_Results')?['Violations']), 0)}",
                             "items": [
                               {
                                 "type": "TextBlock",
@@ -1332,8 +1313,7 @@
           "runAfter": {
             "Scope_Try": [
               "Failed",
-              "TimedOut",
-              "Skipped"
+              "TimedOut"
             ]
           },
           "description": "Error handling scope: catches unexpected failures in Scope_Try and sends CRITICAL notification."
@@ -1385,16 +1365,11 @@
           },
           "runAfter": {
             "Scope_Try": [
-              "Succeeded",
-              "Failed",
-              "Skipped",
-              "TimedOut"
+              "Succeeded"
             ],
             "Scope_Catch": [
               "Succeeded",
-              "Skipped",
-              "Failed",
-              "TimedOut"
+              "Skipped"
             ]
           },
           "description": "Return verification results to the parent ELM flow: VerificationStatus, GapsFound, AlertSent, Severity."

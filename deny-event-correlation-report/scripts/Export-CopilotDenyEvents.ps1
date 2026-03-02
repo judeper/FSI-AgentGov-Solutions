@@ -4,9 +4,14 @@
 
 .DESCRIPTION
     Extracts CopilotInteraction audit events where access was denied, including:
-    - Response-level blocks (ResponseOutcome = "Blocked")
     - Resource access failures (Status = "failure")
     - DLP/sensitivity policy blocks (PolicyDetails present)
+
+    Note: XPIA (Cross-Prompt Injection) and Jailbreak detections are NOT part
+    of the CopilotInteraction audit schema. These fields are logged to Defender
+    CloudAppEvents (requires Defender for Cloud Apps license). The extraction
+    logic includes placeholder checks for forward compatibility, but they will
+    not match on CopilotInteraction records. See architecture.md for details.
 
 .PARAMETER StartDate
     Start of the time window for audit log search. Defaults to yesterday.
@@ -30,8 +35,8 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 2.0.0
-    Requires: ExchangeOnlineManagement module, View-Only Audit Logs role
+    Version: 1.0
+    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -46,7 +51,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\CopilotDenyEvents-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv",
+    [string]$OutputPath = ".\CopilotDenyEvents-$(Get-Date -Format 'yyyy-MM-dd').csv",
 
     [Parameter()]
     [int]$MaxResults = 50000
@@ -57,7 +62,31 @@ param(
 
 #region Functions
 
-. "$PSScriptRoot\Connect-ExchangeOnlineHelper.ps1"
+function Connect-ToExchangeOnline {
+    <#
+    .SYNOPSIS
+        Connects to Exchange Online if not already connected.
+    #>
+    # Check for an active EXO session (not just module presence)
+    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
+        Where-Object { $_.State -eq 'Connected' }
+    if (-not $exoSession) {
+        Write-Verbose "Connecting to Exchange Online..."
+        try {
+            # Interactive auth is used here for manual/dev runs. For Azure Automation
+            # (unattended), pass -CertificateThumbprint, -AppId, and -Organization
+            # parameters instead. See docs/troubleshooting.md for certificate auth setup.
+            Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
+            Write-Verbose "Connected to Exchange Online."
+        }
+        catch {
+            throw "Failed to connect to Exchange Online: $_"
+        }
+    }
+    else {
+        Write-Verbose "Already connected to Exchange Online."
+    }
+}
 
 function Get-CopilotAuditEvents {
     <#
@@ -86,10 +115,10 @@ function Get-CopilotAuditEvents {
             ResultSize     = 5000
         }
 
-        $results = Search-UnifiedAuditLog @params
+        $results = Search-UnifiedAuditLog @params -ErrorAction Stop
 
         if ($results) {
-            $allEvents.AddRange(@($results))
+            $allEvents.AddRange($results)
             $retrievedCount = $allEvents.Count
             Write-Host "  Retrieved $retrievedCount events..." -ForegroundColor Gray
 
@@ -98,7 +127,7 @@ function Get-CopilotAuditEvents {
                 break
             }
         }
-    } while ($results.Count -eq 5000)
+    } while ($results -and $results.Count -gt 0)
 
     Write-Host "Total events retrieved: $retrievedCount" -ForegroundColor Green
     return $allEvents
@@ -122,13 +151,6 @@ function ConvertTo-DenyEvent {
             $denyReasons = [System.Collections.Generic.List[string]]::new()
             $policyNames = [System.Collections.Generic.List[string]]::new()
             $resourceIds = [System.Collections.Generic.List[string]]::new()
-            $responseOutcome = $auditData.ResponseOutcome
-
-            # Check top-level ResponseOutcome for blocked responses
-            if ($responseOutcome -eq "Blocked") {
-                $isDeny = $true
-                $denyReasons.Add("ResponseBlocked")
-            }
 
             # Check AccessedResources for deny indicators
             foreach ($resource in $auditData.AccessedResources) {
@@ -152,11 +174,25 @@ function ConvertTo-DenyEvent {
                         $denyReasons.Add("PolicyBlock")
                     }
                 }
+
+                # NOTE: XPIADetected is NOT part of the CopilotInteraction schema.
+                # XPIA events come from Defender CloudAppEvents. This check is
+                # retained for forward compatibility if the schema is extended.
+                if ($resource.XPIADetected -eq $true) {
+                    $isDeny = $true
+                    $denyReasons.Add("XPIA")
+                }
             }
 
-            # NOTE: XPIADetected and JailbreakDetected are NOT part of the CopilotInteraction
-            # audit schema. These detections are logged to Defender CloudAppEvents.
-            # See architecture.md for CloudAppEvents integration details.
+            # NOTE: JailbreakDetected is NOT part of the CopilotInteraction schema.
+            # Jailbreak events come from Defender CloudAppEvents. This check is
+            # retained for forward compatibility if the schema is extended.
+            foreach ($message in $auditData.Messages) {
+                if ($message.JailbreakDetected -eq $true) {
+                    $isDeny = $true
+                    $denyReasons.Add("Jailbreak")
+                }
+            }
 
             if ($isDeny) {
                 [PSCustomObject]@{
@@ -168,13 +204,13 @@ function ConvertTo-DenyEvent {
                     AgentVersion    = $auditData.AgentVersion
                     AppHost         = $auditData.AppHost
                     AppIdentity     = $auditData.AppIdentity
-                    ResponseOutcome = $responseOutcome
                     DenyReason      = ($denyReasons | Select-Object -Unique) -join "; "
                     PolicyNames     = ($policyNames | Select-Object -Unique) -join "; "
                     ResourceCount   = $resourceIds.Count
                     ResourceIds     = $resourceIds -join "; "
+                    HasXPIA         = $denyReasons -contains "XPIA"
+                    HasJailbreak    = $denyReasons -contains "Jailbreak"
                     HasPolicyBlock  = ($denyReasons | Where-Object { $_ -like "PolicyBlock*" }).Count -gt 0
-                    RawAuditData    = $AuditRecord.AuditData
                 }
             }
         }
@@ -207,7 +243,7 @@ try {
 
     if (-not $auditEvents -or $auditEvents.Count -eq 0) {
         Write-Host "No CopilotInteraction events found for the specified date range." -ForegroundColor Yellow
-        exit 0
+        return
     }
 
     # Filter for deny events
@@ -216,7 +252,7 @@ try {
 
     if (-not $denyEvents -or @($denyEvents).Count -eq 0) {
         Write-Host "No deny events found in the retrieved audit records." -ForegroundColor Yellow
-        exit 0
+        return
     }
 
     $denyCount = @($denyEvents).Count
@@ -226,6 +262,8 @@ try {
     Write-Host "`n--- Summary ---" -ForegroundColor Cyan
     $summary = @{
         "Total Deny Events"  = $denyCount
+        "XPIA Detections"    = @($denyEvents | Where-Object { $_.HasXPIA }).Count
+        "Jailbreak Attempts" = @($denyEvents | Where-Object { $_.HasJailbreak }).Count
         "Policy Blocks"      = @($denyEvents | Where-Object { $_.HasPolicyBlock }).Count
         "Unique Users"       = @($denyEvents | Select-Object -ExpandProperty UserId -Unique).Count
         "Unique Agents"      = @($denyEvents | Where-Object { $_.AgentId } | Select-Object -ExpandProperty AgentId -Unique).Count
@@ -242,7 +280,7 @@ try {
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Warning "Script execution failed: $_"
+    Write-Error "Script execution failed: $_"
     exit 1
 }
 finally {

@@ -32,11 +32,10 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | Script | Purpose |
 |--------|---------|
 | `IntegrationConfig.psm1` | Shared constants, mappings, and translation functions |
-| `IntegrationConfig.psd1` | Module manifest for IntegrationConfig |
 | `Sync-SolutionAssessments.ps1` | Pull Tier 2 results → CD assessments |
 | `Export-UnifiedComplianceEvidence.ps1` | Aggregate per-solution evidence into master package |
+| `Register-ProvisionedEnvironment.ps1` | Register newly provisioned environment in ACV registry |
 | `Test-UnifiedEvidenceIntegrity.ps1` | Verify SHA-256 chain integrity of master evidence package |
-| `Register-ProvisionedEnvironment.ps1` | Register a newly provisioned environment in ACV (PowerShell alternative to ELM flow) |
 
 ### Power Automate Flows
 
@@ -52,10 +51,10 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | `SCHEMA_CONTRACT.md` | Canonical option set values and cross-solution data contract |
 | `STATUS_MAPPING.md` | Per-solution status → CD assessment translation logic |
 | `CONFIGURATION.md` | Setup and configuration guide |
-| `TROUBLESHOOTING.md` | Common issues and resolution |
 | `ELM_INTEGRATION.md` | ELM provisioning hook integration guide |
-| `EVIDENCE_EXPORT.md` | Unified evidence export pipeline documentation |
-| `SCORE_CALCULATOR_UPDATE.md` | CD score calculator update for automated assessments |
+| `EVIDENCE_EXPORT.md` | Evidence export and regulatory packaging guide |
+| `SCORE_CALCULATOR_UPDATE.md` | Score calculation update procedures |
+| `TROUBLESHOOTING.md` | Common issues and resolution |
 
 ## Quick Start
 

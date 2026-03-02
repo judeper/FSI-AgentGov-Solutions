@@ -69,7 +69,6 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --client-id <your-client-id> \
     --interactive \
     --dry-run
 
@@ -77,14 +76,13 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --client-id <your-client-id> \
     --interactive
 ```
 
 The deployment script creates:
 - Option sets (State, Zone, Region, etc.)
 - EnvironmentRequest table (22 columns, user-owned)
-- ProvisioningLog table (12 columns, org-owned, immutable)
+- ProvisioningLog table (11 columns, org-owned, immutable)
 - Security roles (Requester, Approver, Admin, Auditor)
 - Business rules (conditional required fields)
 - Model-driven app views
@@ -115,7 +113,7 @@ For production environments, use the [manual setup process](#quick-start) for fu
 |------------|--------|-------------------|
 | Create Dataverse tables | **Automated** | `deploy.py` or `create_dataverse_schema.py` |
 | Create security roles | **Automated** | `deploy.py` or `create_security_roles.py` |
-| Create business rules | **Partial** | `create_business_rules.py` (manual fallback) |
+| Create business rules | **Automated** | `deploy.py` or `create_business_rules.py` |
 | Create views | **Automated** | `deploy.py` or `create_views.py` |
 | Create field security | **Automated** | `deploy.py` or `create_field_security.py` |
 | Create Environment Groups | **Manual** | Create via admin.powerplatform.com |
@@ -127,6 +125,8 @@ For production environments, use the [manual setup process](#quick-start) for fu
 | Verify role privileges | **Automated** | `verify_role_privileges.py` |
 | Validate immutability | **Automated** | `validate_immutability.py` |
 | Async environment polling | **Flow handles** | Do-Until loop with 30s delay |
+| Dataverse solution container | **Not implemented** | Components are created directly in the environment without a managed solution wrapper. This prevents managed solution transport between dev/test/prod and breaks ALM dependency tracking. Acceptable for lab/dev; wrap in a Dataverse solution for production deployments. |
+| GUID validation for security group | **Partial** | `fsi_securitygroupid` is a plain text column (max 100 chars). The Copilot agent validates GUID format at intake (Question 10b), but no server-side validation exists in business rules or flows. An invalid GUID will cause a runtime Graph API error. For production, add a Regex Match business rule or flow-level validation before the Graph API call. |
 
 See [docs/troubleshooting.md](./docs/troubleshooting.md) for workarounds and error recovery.
 
@@ -156,7 +156,7 @@ Primary request table with 22 columns including zone classification, approval wo
 
 ### ProvisioningLog Table
 
-Immutable audit trail with 12 columns. Organization-owned with no Update/Delete privileges.
+Immutable audit trail with 11 columns. Organization-owned with no Update/Delete privileges.
 
 | Key Column | Type | Purpose |
 |------------|------|---------|
@@ -199,15 +199,13 @@ python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault-name> \
-  --expiry-days 90 \
   --dry-run
 
 # Execute registration
 python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
-  --key-vault-name <vault-name> \
-  --expiry-days 90
+  --key-vault-name <vault-name>
 ```
 
 ### Step 4: Create Environment Groups (Manual)
@@ -226,17 +224,11 @@ python scripts/register_service_principal.py \
 
 ### Step 6: Create Power Automate Flows (Manual)
 
-Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
+Create three flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
-0. **Zone 1 Auto-Approval Flow** - Auto-approves Zone 1 requests
 1. **Main Provisioning Flow** - Triggered on approval
 2. **Security Group Binding Flow** - Post-creation binding
 3. **Baseline Configuration Flow** - Child flow for settings
-
-> **Note:** Zone 2/3 Approval Routing is not yet implemented. Zone 2/3 requests
-> must be manually advanced by an ELM Admin until this flow is built. See
-> [docs/flow-configuration.md](./docs/flow-configuration.md) for the workaround
-> and segregation-of-duties caveats.
 
 ### Step 7: Validate Setup
 

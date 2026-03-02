@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 1.0.0
+    Version: 0.1.0
     Author: FSI Agent Governance Team
 #>
 
@@ -19,29 +19,6 @@ $script:AccessToken = $null
 $script:ClientId = $null
 $script:TenantId = $null
 $script:TokenExpiry = $null
-
-#endregion
-
-#region Input Validation
-
-function Assert-GuidFormat {
-    <#
-    .SYNOPSIS
-        Validates that a string is a well-formed GUID to prevent OData injection.
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [string]$Value,
-
-        [Parameter(Mandatory)]
-        [string]$ParameterName
-    )
-
-    if ($Value -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-        throw "Invalid GUID format for parameter '$ParameterName': '$Value'"
-    }
-}
 
 #endregion
 
@@ -248,8 +225,7 @@ function Get-AAMActiveBaseline {
     try {
         $filter = "fsi_is_active eq true"
         if ($EnvironmentId) {
-            Assert-GuidFormat -Value $EnvironmentId -ParameterName 'EnvironmentId'
-            $filter += " and fsi_environment_guid eq '$EnvironmentId'"
+            $filter += " and fsi_environment_guid eq '$($EnvironmentId -replace "'", "''")'"
         }
         
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?" +
@@ -292,8 +268,6 @@ function Write-AAMValidationHistory {
         [string]$RunId
     )
     
-    Assert-GuidFormat -Value $RunId -ParameterName 'RunId'
-
     if (-not $script:DataverseUrl) {
         Write-Warning "Dataverse not connected, skipping validation history write"
         return $null
@@ -365,13 +339,16 @@ function Write-AAMViolation {
         }
         $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { $Violation.Zone }
 
+        # Map severity strings to fsi_acv_severity picklist integers
+        # Note: Critical and High both map to 4 (Failed) per the shared fsi_acv_severity
+        # option set. Use fsi_severity_label column to distinguish Critical from High.
         $severityMap = @{
-            'Critical' = 1
-            'High'     = 2
-            'Warning'  = 3
-            'Info'     = 4
+            "Critical" = 4  # Failed (use fsi_severity_label to distinguish from High)
+            "High"     = 4  # Failed (use fsi_severity_label to distinguish from Critical)
+            "Warning"  = 2  # Warning
+            "Info"     = 1  # Passed
         }
-        $severityValue = if ($severityMap.ContainsKey($Violation.Severity)) { $severityMap[$Violation.Severity] } else { $Violation.Severity }
+        $severityValue = if ($severityMap.ContainsKey($Violation.Severity)) { $severityMap[$Violation.Severity] } else { 5 }
 
         $record = @{
             fsi_name              = "$($Violation.Zone)-$($Violation.ViolationType)-$(Get-Date -Format 'yyyy-MM-dd')"
@@ -382,6 +359,7 @@ function Write-AAMViolation {
             fsi_expected_value    = $Violation.Expected
             fsi_actual_value      = $Violation.Actual
             fsi_severity          = $severityValue
+            fsi_severity_label    = $Violation.Severity
             fsi_regulatory_context = $Violation.RegulatoryContext
             fsi_detected_at       = (Get-Date).ToUniversalTime().ToString('o')
         }
@@ -460,8 +438,7 @@ function Save-AAMBaseline {
         }
 
         # Deactivate existing active baselinefor this environment
-        Assert-GuidFormat -Value $EnvironmentGuid -ParameterName 'EnvironmentGuid'
-        $filter = "fsi_is_active eq true and fsi_environment_guid eq '$EnvironmentGuid'"
+        $filter = "fsi_is_active eq true and fsi_environment_guid eq '$($EnvironmentGuid -replace "'", "''")'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?`$filter=$filter&`$select=fsi_accessbaselineid"
 
         $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers
@@ -488,7 +465,7 @@ function Save-AAMBaseline {
             fsi_zone                             = $Zone
             fsi_bot_limit_sharing_mode           = $BotLimitSharingMode
             fsi_bot_authoring_sharing_disabled   = $BotAuthoringSharingDisabled
-            fsi_bot_published_limit_sharing_mode = $BotPublishedBotLimitSharingMode
+            fsi_bot_published_bot_limit_sharing_mode = $BotPublishedBotLimitSharingMode
             fsi_captured_by                      = $capturedByValue
             fsi_captured_at                      = $timestamp
             fsi_is_active                        = $true
@@ -502,21 +479,6 @@ function Save-AAMBaseline {
             return $response
         }
     } catch {
-        # Recovery: re-activate previously deactivated baselines to avoid leaving environment with no active baseline
-        if ($existing.value) {
-            Write-Warning "Baseline creation failed — attempting to re-activate previous baseline(s) for '$EnvironmentName'"
-            foreach ($baseline in $existing.value) {
-                try {
-                    $baselineId = $baseline.fsi_accessbaselineid
-                    $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines($baselineId)"
-                    $patchBody = @{ fsi_is_active = $true } | ConvertTo-Json
-                    Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
-                    Write-Warning "Re-activated previous baseline: $baselineId"
-                } catch {
-                    Write-Error "CRITICAL: Failed to re-activate baseline $baselineId during recovery: $($_.Exception.Message)"
-                }
-            }
-        }
         Write-Error "CRITICAL: Failed to save baseline for '$EnvironmentName': $($_.Exception.Message)"
         throw
     }
@@ -583,11 +545,9 @@ function Get-AAMLastValidation {
 
 # Export functions
 Export-ModuleMember -Function @(
-    'Assert-GuidFormat',
     'Connect-AAMDataverse',
     'Get-AAMConnection',
     'Get-ValidToken',
-    'Invoke-DataverseRequest',
     'Get-AAMEnvironmentVariable',
     'Get-AAMActiveBaseline',
     'Write-AAMValidationHistory',

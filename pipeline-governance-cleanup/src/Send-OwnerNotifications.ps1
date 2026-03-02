@@ -94,10 +94,13 @@ function Build-NotificationEmail {
 
     $formattedDate = $EnforcementDate.ToString("MMMM d, yyyy")
 
-    # HTML-encode CSV-sourced values to prevent markup injection
+    # HTML-encode interpolated values to prevent malformed HTML
     $safeOwnerName = [System.Net.WebUtility]::HtmlEncode($OwnerName)
     $safeEnvironmentName = [System.Net.WebUtility]::HtmlEncode($EnvironmentName)
     $safeEnvironmentId = [System.Net.WebUtility]::HtmlEncode($EnvironmentId)
+    $safeSupportEmail = [System.Net.WebUtility]::HtmlEncode($SupportEmail)
+    $safeMigrationUrl = [System.Net.WebUtility]::HtmlEncode($MigrationUrl)
+    $safeExemptionUrl = [System.Net.WebUtility]::HtmlEncode($ExemptionUrl)
 
     $body = @"
 <html>
@@ -132,14 +135,14 @@ function Build-NotificationEmail {
         <li>Contact the Platform Ops team to migrate your pipelines</li>
         <li>Your deployed solutions will remain in place</li>
         <li>Pipeline definitions must be recreated in the central host</li>
-        <li>Request via: <a href="$MigrationUrl">Migration Request Form</a></li>
+        <li>Request via: <a href="$safeMigrationUrl">Migration Request Form</a></li>
     </ul>
 </li>
 <li><strong>Request Exemption</strong>
     <ul>
         <li>If you have a business justification, submit an exemption request</li>
         <li>Exemptions require approval from the Agent Governance Committee</li>
-        <li>Request via: <a href="$ExemptionUrl">Exemption Request Form</a></li>
+        <li>Request via: <a href="$safeExemptionUrl">Exemption Request Form</a></li>
     </ul>
 </li>
 <li><strong>No Action Needed</strong>
@@ -151,7 +154,7 @@ function Build-NotificationEmail {
 </ol>
 
 <p><strong>Questions?</strong></p>
-<p>Contact the Platform Operations team at <a href="mailto:$SupportEmail">$SupportEmail</a>.</p>
+<p>Contact the Platform Operations team at <a href="mailto:$safeSupportEmail">$safeSupportEmail</a>.</p>
 
 <p>Thank you for your cooperation in maintaining our governance standards.</p>
 
@@ -200,13 +203,25 @@ function Send-GraphEmail {
     # Determine UserId: use explicit sender for application permissions, "me" for delegated
     $userId = if ([string]::IsNullOrEmpty($Sender)) { "me" } else { $Sender }
 
-    try {
-        Send-MgUserMail -UserId $userId -BodyParameter $message -ErrorAction Stop
-        return $true
-    }
-    catch {
-        Write-Error "Failed to send email to $To : $_"
-        return $false
+    $maxRetries = 3
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            Send-MgUserMail -UserId $userId -BodyParameter $message -ErrorAction Stop
+            return $true
+        }
+        catch {
+            $isTransient = $_.Exception.Message -match '429|503|504|timeout' -or
+                           $_.Exception.GetType().Name -match 'HttpRequestException|TaskCanceledException'
+            if ($isTransient -and $attempt -lt $maxRetries) {
+                $backoffSeconds = [Math]::Pow(2, $attempt)
+                Write-Warning "Transient error sending to $To (attempt $attempt/$maxRetries). Retrying in ${backoffSeconds}s..."
+                Start-Sleep -Seconds $backoffSeconds
+            }
+            else {
+                Write-Error "Failed to send email to $To : $_"
+                return $false
+            }
+        }
     }
 }
 
@@ -256,7 +271,7 @@ You may need to manually add owner information to your inventory before sending 
     # Filter to records with valid email addresses
     $validRecords = $records | Where-Object {
         -not [string]::IsNullOrWhiteSpace($_.OwnerEmail) -and
-        $_.OwnerEmail -match "@"
+        $_.OwnerEmail -match '^[^@\s]+@[^@\s]+\.[^@\s]+$'
     }
 
     if ($validRecords.Count -eq 0) {
@@ -275,7 +290,7 @@ You may need to manually add owner information to your inventory before sending 
             Write-Host "Using application permissions with sender: $SenderEmail" -ForegroundColor Yellow
             Write-Host "Note: Ensure you have connected with application credentials before running this script." -ForegroundColor Yellow
         }
-        else {
+        if ([string]::IsNullOrEmpty($SenderEmail)) {
             try {
                 Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop
                 Write-Host "Connected to Microsoft Graph" -ForegroundColor Green
@@ -285,6 +300,9 @@ You may need to manually add owner information to your inventory before sending 
                 Write-Host "Run with -TestMode to preview emails without sending."
                 exit 1
             }
+        }
+        else {
+            Write-Host "Skipping Connect-MgGraph: using pre-existing application credentials connection." -ForegroundColor Green
         }
     }
     else {

@@ -34,7 +34,10 @@ Requirements for deploying the Scope Drift Monitor.
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `ActivityFeed.Read` | Application | Unified Audit Log access via Office 365 Management API |
+| `ActivityFeed.Read` | Application | Office 365 Management API audit log access |
+| `Directory.Read.All` | Application | User and app details |
+
+> **Note:** The solution authenticates against `https://manage.office.com` (Office 365 Management API), not Microsoft Graph. Ensure the app registration has `ActivityFeed.Read` permission with admin consent.
 
 ---
 
@@ -44,6 +47,8 @@ Requirements for deploying the Scope Drift Monitor.
 2. Grant required API permissions
 3. Create client secret
 4. Store credentials securely
+
+> **Security Note:** The `fsi_SDM_ClientSecret` environment variable uses the `Secret` type, but for production deployments it should be backed by an Azure Key Vault secret reference. Without Key Vault backing, the value is accessible to Dataverse System Administrators. See [Environment variable types](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/environmentvariables#environment-variable-types) for configuration guidance.
 
 ---
 

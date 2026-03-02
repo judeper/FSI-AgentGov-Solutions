@@ -9,6 +9,11 @@
     Supports SEC 17a-4(f) compliance by providing tamper-evident evidence packages
     with cryptographic integrity verification.
 
+    IMPORTANT: The SHA-256 hash file provides integrity detection but not tamper-proof
+    guarantees. An actor with filesystem access can modify the evidence and regenerate
+    the hash. For full SEC 17a-4(f) compliance, store evidence files on immutable/WORM
+    storage or apply a detached CMS/PKCS#7 digital signature.
+
 .PARAMETER TenantId
     Azure AD tenant ID.
 
@@ -66,7 +71,7 @@ param(
     [Parameter()]
     [string]$CertificateThumbprint,
 
-    [Parameter()]
+    [Parameter(Mandatory)]
     [string]$DataverseUrl,
 
     [Parameter()]
@@ -101,27 +106,23 @@ Import-Module (Join-Path $scriptRoot 'private' 'FUSClient.psm1') -Force
 # ── Authenticate ──────────────────────────────────────────────────
 Write-Host 'Authenticating to Dataverse...' -ForegroundColor Cyan
 
-if (-not $DataverseUrl) {
-    throw 'DataverseUrl is required. Provide via -DataverseUrl parameter.'
-}
-
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
 if ($Interactive) {
+    if (-not $ClientId) {
+        throw 'ClientId is required for interactive authentication. Provide via -ClientId parameter.'
+    }
     $tokenResult = Get-MsalToken `
-        -ClientId ($ClientId ?? '51f81489-12ee-4a9e-aaae-a2591f45987d') `
+        -ClientId $ClientId `
         -TenantId $TenantId `
         -Scopes $dataverseScope `
         -Interactive `
         -ErrorAction Stop
 } else {
-    if (-not $ClientId) {
-        throw 'ClientId required for non-interactive auth. Provide via -ClientId parameter or use -Interactive for browser auth.'
-    }
     if (-not $CertificateThumbprint) {
         throw 'CertificateThumbprint required for non-interactive auth. Use -Interactive for browser auth.'
     }
-    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
+    $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
     $tokenResult = Get-MsalToken `
         -ClientId $ClientId `
         -ClientCertificate $cert `
@@ -138,17 +139,14 @@ Write-Host '  Connected.' -ForegroundColor Green
 $filters = @()
 
 if ($StartDate) {
-    $filters += "fsi_run_timestamp ge $($StartDate.ToUniversalTime().ToString('o'))"
+    $filters += "fsi_validation_time ge $($StartDate.ToUniversalTime().ToString('o'))"
 }
 if ($EndDate) {
-    $filters += "fsi_run_timestamp le $($EndDate.ToUniversalTime().ToString('o'))"
+    $filters += "fsi_validation_time le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
-    # Sanitize RunId to prevent OData filter injection
-    if ($RunId -notmatch '^[0-9a-fA-F\-]{1,64}$') {
-        throw "Invalid RunId format. Expected a GUID or alphanumeric identifier."
-    }
-    $filters += "fsi_run_id eq '$RunId'"
+    $safeRunId = $RunId -replace "'", "''"
+    $filters += "fsi_run_id eq '$safeRunId'"
 }
 
 $filterString = if ($filters.Count -gt 0) { $filters -join ' and ' } else { '' }
@@ -172,13 +170,8 @@ if ($filterString) {
     $historyUrl += "?`$filter=$filterString"
 }
 
-$validations = @()
-$nextLink = $historyUrl
-while ($nextLink) {
-    $historyResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
-    $validations += $historyResponse.value
-    $nextLink = $historyResponse.'@odata.nextLink'
-}
+$historyResponse = Invoke-RestMethod -Uri $historyUrl -Headers $headers -Method Get
+$validations = $historyResponse.value
 Write-Host "  Found $($validations.Count) validation record(s)." -ForegroundColor Green
 
 # ── Query Violations ─────────────────────────────────────────────
@@ -192,8 +185,8 @@ if ($EndDate) {
     $violationFilters += "fsi_detected_on le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
-    # RunId already validated above
-    $violationFilters += "fsi_run_id eq '$RunId'"
+    $safeRunId = $RunId -replace "'", "''"
+    $violationFilters += "fsi_run_id eq '$safeRunId'"
 }
 
 $violationFilterString = if ($violationFilters.Count -gt 0) { $violationFilters -join ' and ' } else { '' }
@@ -203,13 +196,8 @@ if ($violationFilterString) {
     $violationUrl += "?`$filter=$violationFilterString"
 }
 
-$violations = @()
-$nextLink = $violationUrl
-while ($nextLink) {
-    $violationResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
-    $violations += $violationResponse.value
-    $nextLink = $violationResponse.'@odata.nextLink'
-}
+$violationResponse = Invoke-RestMethod -Uri $violationUrl -Headers $headers -Method Get
+$violations = $violationResponse.value
 Write-Host "  Found $($violations.Count) violation(s)." -ForegroundColor Green
 
 # ── Query Baselines (Optional) ───────────────────────────────────
@@ -217,13 +205,8 @@ $baselines = @()
 if ($IncludeBaselines) {
     Write-Host 'Querying baselines...' -ForegroundColor Cyan
     $baselineUrl = "$baseUrl/fsi_fileupload_baselines"
-    $baselines = @()
-    $nextLink = $baselineUrl
-    while ($nextLink) {
-        $baselineResponse = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get
-        $baselines += $baselineResponse.value
-        $nextLink = $baselineResponse.'@odata.nextLink'
-    }
+    $baselineResponse = Invoke-RestMethod -Uri $baselineUrl -Headers $headers -Method Get
+    $baselines = $baselineResponse.value
     Write-Host "  Found $($baselines.Count) baseline(s)." -ForegroundColor Green
 }
 
@@ -247,7 +230,7 @@ $evidencePackage = [ordered]@{
     metadata = [ordered]@{
         evidenceId     = $evidenceId
         generatedAt    = $timestamp
-        generatedBy    = $env:USERNAME ?? $env:USER ?? 'Unknown'
+        generatedBy    = $env:USERNAME
         solution       = 'File Upload Security Configurator'
         solutionVersion = '1.0.0'
         control        = '1.14 - Data Minimization and Agent Scope Control'
@@ -266,8 +249,8 @@ $evidencePackage = [ordered]@{
         violationCount   = $violations.Count
         baselineCount    = $baselines.Count
         dateRange        = [ordered]@{
-            earliest = ($validations | Sort-Object fsi_run_timestamp | Select-Object -First 1).fsi_run_timestamp
-            latest   = ($validations | Sort-Object fsi_run_timestamp -Descending | Select-Object -First 1).fsi_run_timestamp
+            earliest = ($validations | Sort-Object fsi_validation_time | Select-Object -First 1).fsi_validation_time
+            latest   = ($validations | Sort-Object fsi_validation_time -Descending | Select-Object -First 1).fsi_validation_time
         }
     }
     validations = $validations

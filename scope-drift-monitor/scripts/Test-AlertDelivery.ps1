@@ -143,6 +143,24 @@ function Send-TeamsNotification {
         [string]$WebhookUrl
     )
 
+    # Validate webhook URL is a Microsoft Teams endpoint
+    $uri = [System.Uri]::new($WebhookUrl)
+    $allowedHosts = @('outlook.office.com', 'outlook.office365.com', '*.webhook.office.com')
+    $hostAllowed = $false
+    foreach ($pattern in $allowedHosts) {
+        if ($pattern.StartsWith('*')) {
+            if ($uri.Host.EndsWith($pattern.Substring(1))) { $hostAllowed = $true; break }
+        } elseif ($uri.Host -eq $pattern) {
+            $hostAllowed = $true; break
+        }
+    }
+    if (-not $hostAllowed) {
+        return @{
+            Success = $false
+            Message = "Webhook URL host '$($uri.Host)' is not a recognized Microsoft Teams endpoint"
+        }
+    }
+
     $card = Get-TestAdaptiveCard
     $body = $card | ConvertTo-Json -Depth 20
 

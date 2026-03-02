@@ -45,7 +45,6 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
   --environment-url https://<org>.crm.dynamics.com \
   --tenant-id <tenant-id> \
-  --client-id <app-id> \
   --interactive \
   --dry-run
 
@@ -53,7 +52,6 @@ python scripts/deploy.py \
 python scripts/deploy.py \
   --environment-url https://<org>.crm.dynamics.com \
   --tenant-id <tenant-id> \
-  --client-id <app-id> \
   --interactive
 ```
 
@@ -77,7 +75,7 @@ python scripts/deploy.py \
   - [ ] Set ownership to Organization (enforces immutability)
   - [ ] Enable auditing
   - [ ] Configure relationship to EnvironmentRequest (Restrict Delete)
-  - [ ] Add all 12 columns per [docs/dataverse-schema.md](./docs/dataverse-schema.md)
+  - [ ] Add all 11 columns per [docs/dataverse-schema.md](./docs/dataverse-schema.md)
 - [ ] Create business rules:
   - [ ] Zone Rationale Required (when Zone = 2 or 3)
   - [ ] Security Group Required (when Zone = 2 or 3)
@@ -88,7 +86,7 @@ python scripts/deploy.py \
 - [ ] Open Power Platform admin center
 - [ ] Navigate to environment > Security roles
 - [ ] Create `ELM Requester` role:
-  - [ ] EnvironmentRequest: Create (User), Read (User), Write (User), Append (User), AppendTo (User)
+  - [ ] EnvironmentRequest: Create (User), Read (User), Write (User)
   - [ ] ProvisioningLog: Read (User)
 - [ ] Create `ELM Approver` role:
   - [ ] EnvironmentRequest: Read (BU), Write (BU) - approval fields only
@@ -96,7 +94,7 @@ python scripts/deploy.py \
   - [ ] Configure field-level security for approval fields
 - [ ] Create `ELM Admin` role:
   - [ ] EnvironmentRequest: Create (Org), Read (Org), Write (Org), Append (Org), AppendTo (Org)
-  - [ ] ProvisioningLog: Create (Org), Read (Org), Append (Org) **ONLY** - NO Write, NO Delete
+  - [ ] ProvisioningLog: Create (Org), Read (Org) **ONLY** - NO Write, NO Delete
 - [ ] Create `ELM Auditor` role:
   - [ ] EnvironmentRequest: Read (Org)
   - [ ] ProvisioningLog: Read (Org)
@@ -127,15 +125,13 @@ python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
   --key-vault-name <vault-name> \
-  --expiry-days 90 \
   --dry-run
 
 # Execute registration
 python scripts/register_service_principal.py \
   --tenant-id <tenant-id> \
   --app-name ELM-Provisioning-ServicePrincipal \
-  --key-vault-name <vault-name> \
-  --expiry-days 90
+  --key-vault-name <vault-name>
 ```
 
 - [ ] Run script with `--dry-run` to validate
@@ -239,19 +235,6 @@ Create topics per [docs/copilot-agent-setup.md](./docs/copilot-agent-setup.md):
 - [ ] Enter Tenant ID, Client ID
 - [ ] Configure Key Vault reference for Client Secret
 
-### Create Zone 1 Auto-Approval Flow **[MANUAL]**
-
-Per [docs/flow-configuration.md](./docs/flow-configuration.md) (Flow 0):
-
-- [ ] Create flow with Dataverse trigger:
-  - [ ] Table: EnvironmentRequest
-  - [ ] Filter: `fsi_state eq 2 and fsi_zone eq 1` (Submitted + Zone 1)
-  - [ ] Select columns: `fsi_state,fsi_zone`
-- [ ] Add Update row action to set state to Approved (4)
-- [ ] Set Approver to `System`, Approved On to `utcNow()`
-- [ ] Add ProvisioningLog entry for auto-approval (Action = 4, Actor = System)
-- [ ] Configure error handling
-
 ### Create Main Provisioning Flow **[MANUAL]**
 
 Per [docs/flow-configuration.md](./docs/flow-configuration.md):
@@ -275,7 +258,7 @@ Per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
 - [ ] Create flow with Dataverse trigger:
   - [ ] Table: EnvironmentRequest
-  - [ ] Filter: `fsi_state eq 7 and fsi_securitygroupid ne null`
+  - [ ] Filter: `fsi_state eq 7 and fsi_environmentid ne null and fsi_securitygroupid ne null`
 - [ ] Add Graph API call to validate security group
 - [ ] Add Force Sync User action for Service Principal
 - [ ] Add Security Group binding via Power Platform connector

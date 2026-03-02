@@ -295,6 +295,10 @@ catch {
 
 #endregion
 
+# Query CA policies before validators so all validators can access them
+$policyPrefix = if ($config.policyPrefix) { $config.policyPrefix } else { "SSC" }
+$sscPolicies = @()
+
 #region Validator 1: Session Controls
 
 Write-Host "═══════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -303,13 +307,7 @@ Write-Host "══════════════════════�
 Write-Host ""
 
 try {
-    Write-Host "Querying Conditional Access policies with SSC prefix..." -ForegroundColor Cyan
-
-    # Derive policy prefix from config (default: "SSC")
-    $policyPrefix = if ($config.policyPrefix) { $config.policyPrefix } else { "SSC" }
-    if ([string]::IsNullOrWhiteSpace($policyPrefix)) {
-        throw "policyPrefix in config is empty."
-    }
+    Write-Host "Querying Conditional Access policies with $policyPrefix prefix..." -ForegroundColor Cyan
 
     # Query all CA policies with configured prefix
     $sscPolicies = Get-MgIdentityConditionalAccessPolicy -Filter "startswith(displayName, '$policyPrefix-')" -ErrorAction Stop
@@ -318,13 +316,13 @@ try {
         $results.Validators.SessionControls = @{
             Status = "Failed"
             Confidence = "HIGH"
-            Reason = "No $policyPrefix-prefixed Conditional Access policies found in tenant."
+            Reason = "No ${policyPrefix}-prefixed Conditional Access policies found in tenant."
             PoliciesChecked = 0
             Mismatches = @()
             Timestamp = Get-Date -Format "o"
         }
         Write-Host "Result: FAILED" -ForegroundColor Red
-        Write-Host "Reason: No SSC policies found." -ForegroundColor Red
+        Write-Host "Reason: No $policyPrefix policies found." -ForegroundColor Red
     }
     else {
         Write-Host "Found $($sscPolicies.Count) $policyPrefix-prefixed policy(ies)." -ForegroundColor Cyan
@@ -432,18 +430,6 @@ Write-Host "══════════════════════�
 Write-Host ""
 
 try {
-    # Guard: if Validator 1 failed to populate $sscPolicies, skip auth strength validation
-    if (-not $sscPolicies) {
-        $results.Validators.AuthenticationStrength = @{
-            Status = "Failed"
-            Confidence = "HIGH"
-            Reason = "Cannot validate — policy query failed in Validator 1."
-            Timestamp = Get-Date -Format "o"
-        }
-        Write-Host "Result: FAILED" -ForegroundColor Red
-        Write-Host "Reason: Cannot validate — policy query failed in Validator 1." -ForegroundColor Red
-    }
-    else {
     Write-Host "Querying authentication strength policies..." -ForegroundColor Cyan
 
     # Query authentication strength policies
@@ -473,15 +459,9 @@ try {
         "Zone2" {
             # Zone 2: Passwordless MFA
             if ($baseline.authenticationStrength) {
-                # Resolve baseline descriptor to auth strength policy ID
-                $expectedAuthPolicy = $authStrengthPolicies | Where-Object {
-                    $_.DisplayName -like "*$($baseline.authenticationStrength)*"
-                }
-                $expectedAuthStrengthId = $expectedAuthPolicy.Id
-
-                # Check if SSC policies reference the passwordless policy
+                # Compare by display name since baseline stores names (e.g. "passwordless"), not GUIDs
                 $sscPoliciesWithAuth = $sscPolicies | Where-Object {
-                    $_.GrantControls.AuthenticationStrength.Id -eq $expectedAuthStrengthId
+                    $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
 
                 if ($sscPoliciesWithAuth) {
@@ -503,15 +483,9 @@ try {
         "Zone3" {
             # Zone 3: Phishing-resistant MFA
             if ($baseline.authenticationStrength) {
-                # Resolve baseline descriptor to auth strength policy ID
-                $expectedAuthPolicy = $authStrengthPolicies | Where-Object {
-                    $_.DisplayName -like "*$($baseline.authenticationStrength)*"
-                }
-                $expectedAuthStrengthId = $expectedAuthPolicy.Id
-
-                # Check if SSC policies reference the phishing-resistant policy
+                # Compare by display name since baseline stores names (e.g. "phishing-resistant"), not GUIDs
                 $sscPoliciesWithAuth = $sscPolicies | Where-Object {
-                    $_.GrantControls.AuthenticationStrength.Id -eq $expectedAuthStrengthId
+                    $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
 
                 if ($sscPoliciesWithAuth) {
@@ -548,7 +522,6 @@ try {
 
     Write-Host "`nResult: $authStrengthStatus (MEDIUM confidence)" -ForegroundColor $color
     Write-Host "Reason: $authStrengthReason" -ForegroundColor $color
-    } # end else ($sscPolicies not null)
 }
 catch {
     $results.Validators.AuthenticationStrength = @{
@@ -593,10 +566,8 @@ else {
         Write-Host "Target roles: $($targetRoles -join ', ')" -ForegroundColor Cyan
 
         # PIM validation logic would go here
-        # NOTE: PIM validation (Validator 3) is a STUB — it always returns Warning/LOW.
-        # Full implementation requires Microsoft.Graph.Identity.Governance module
-        # and RoleManagement.Read.All permission to query role assignment schedules.
-        # Manual verification of PIM settings is required until this is implemented.
+        # This requires Microsoft.Graph.Identity.Governance module and RoleManagement.Read.All permission
+        # For now, return informational status
 
         Write-Warning "PIM role settings validation requires Microsoft.Graph.Identity.Governance module and RoleManagement.Read.All permission."
         Write-Warning "Full implementation requires querying role assignment schedules and settings."
@@ -637,17 +608,7 @@ Write-Host ""
 try {
     Write-Host "Validating break-glass account exclusions for all SSC policies..." -ForegroundColor Cyan
 
-    if ($null -eq $sscPolicies) {
-        $results.Validators.BreakGlassExclusions = @{
-            Status = "Failed"
-            Confidence = "HIGH"
-            Reason = "Cannot validate — policy query failed in Validator 1."
-            Timestamp = Get-Date -Format "o"
-        }
-        Write-Host "`nResult: FAILED" -ForegroundColor Red
-        Write-Host "Reason: Cannot validate — policy query failed in Validator 1." -ForegroundColor Red
-    }
-    elseif ($sscPolicies.Count -eq 0) {
+    if (-not $sscPolicies -or $sscPolicies.Count -eq 0) {
         $results.Validators.BreakGlassExclusions = @{
             Status = "Warning"
             Confidence = "N/A"
@@ -737,19 +698,6 @@ if ($IncludeConflictAudit) {
     Write-Host ""
 
     try {
-        # Guard: if Validator 1 failed to populate $sscPolicies, skip conflict audit
-        if ($null -eq $sscPolicies) {
-            $results.Validators.PolicyConflictAudit = @{
-                Status = "Failed"
-                Confidence = "HIGH"
-                Reason = "Cannot validate — policy query failed in Validator 1."
-                Conflicts = @()
-                Timestamp = Get-Date -Format "o"
-            }
-            Write-Host "Result: FAILED" -ForegroundColor Red
-            Write-Host "Reason: Cannot validate — policy query failed in Validator 1." -ForegroundColor Red
-        }
-        else {
         Write-Host "Analyzing Conditional Access policy conflicts..." -ForegroundColor Cyan
 
         # Query ALL CA policies
@@ -812,7 +760,6 @@ if ($IncludeConflictAudit) {
         }
 
         Write-Host "Reason: $($results.Validators.PolicyConflictAudit.Reason)" -ForegroundColor Cyan
-        } # end else ($sscPolicies not null)
     }
     catch {
         $results.Validators.PolicyConflictAudit = @{

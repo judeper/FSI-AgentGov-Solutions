@@ -31,8 +31,8 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 2.0.0
-    Requires: ExchangeOnlineManagement module, View-Only Audit Logs role
+    Version: 1.0
+    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -47,7 +47,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\DlpCopilotEvents-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv",
+    [string]$OutputPath = ".\DlpCopilotEvents-$(Get-Date -Format 'yyyy-MM-dd').csv",
 
     [Parameter()]
     [int]$MaxResults = 50000,
@@ -61,7 +61,31 @@ param(
 
 #region Functions
 
-. "$PSScriptRoot\Connect-ExchangeOnlineHelper.ps1"
+function Connect-ToExchangeOnline {
+    <#
+    .SYNOPSIS
+        Connects to Exchange Online if not already connected.
+    #>
+    # Check for an active EXO session (not just module presence)
+    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
+        Where-Object { $_.State -eq 'Connected' }
+    if (-not $exoSession) {
+        Write-Verbose "Connecting to Exchange Online..."
+        try {
+            # Interactive auth is used here for manual/dev runs. For Azure Automation
+            # (unattended), pass -CertificateThumbprint, -AppId, and -Organization
+            # parameters instead. See docs/troubleshooting.md for certificate auth setup.
+            Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
+            Write-Verbose "Connected to Exchange Online."
+        }
+        catch {
+            throw "Failed to connect to Exchange Online: $_"
+        }
+    }
+    else {
+        Write-Verbose "Already connected to Exchange Online."
+    }
+}
 
 function Get-DlpAuditEvents {
     <#
@@ -90,10 +114,10 @@ function Get-DlpAuditEvents {
             ResultSize     = 5000
         }
 
-        $results = Search-UnifiedAuditLog @params
+        $results = Search-UnifiedAuditLog @params -ErrorAction Stop
 
         if ($results) {
-            $allEvents.AddRange(@($results))
+            $allEvents.AddRange($results)
             $retrievedCount = $allEvents.Count
             Write-Host "  Retrieved $retrievedCount events..." -ForegroundColor Gray
 
@@ -102,7 +126,7 @@ function Get-DlpAuditEvents {
                 break
             }
         }
-    } while ($results.Count -eq 5000)
+    } while ($results -and $results.Count -gt 0)
 
     Write-Host "Total DLP events retrieved: $retrievedCount" -ForegroundColor Green
     return $allEvents
@@ -128,60 +152,63 @@ function ConvertTo-CopilotDlpEvent {
             $isCopilotRelated = (
                 $auditData.Workload -eq "MicrosoftCopilot" -or
                 $auditData.Workload -match "Copilot" -or
-                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" })
+                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" }) -or
+                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter -and $PolicyFilter -ne "*" })
             )
 
-            if (-not $isCopilotRelated) {
-                # Not a Copilot-related event, skip regardless of filter
+            if (-not $isCopilotRelated -and $PolicyFilter -eq "*") {
+                # If no filter specified and not obviously Copilot-related, skip
+                # Unless Workload contains Copilot indicators
                 return
             }
 
-            # Apply PolicyNameFilter: skip events that don't match when a filter is specified
-            if ($PolicyFilter -and $PolicyFilter -ne "*") {
-                $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
-                if (-not $matchesFilter) {
-                    return
+            if ($isCopilotRelated -or $PolicyFilter -ne "*") {
+                # Apply PolicyNameFilter: skip events that don't match when a filter is specified
+                if ($PolicyFilter -and $PolicyFilter -ne "*") {
+                    $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
+                    if (-not $matchesFilter) {
+                        return
+                    }
                 }
-            }
 
-            # Extract policy details
-            $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
-            $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "
-            $actions = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Actions } | Select-Object -Unique) -join "; "
-            $severities = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Severity } | Select-Object -Unique) -join "; "
+                # Extract policy details
+                $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
+                $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "
+                $actions = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Actions } | Select-Object -Unique) -join "; "
+                $severities = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Severity } | Select-Object -Unique) -join "; "
 
-            # Extract sensitive information types
-            $sitMatches = ($auditData.SensitiveInfoTypeData | ForEach-Object {
-                "$($_.SensitiveInfoTypeName) (Count: $($_.Count), Confidence: $($_.Confidence)%)"
-            }) -join "; "
+                # Extract sensitive information types
+                $sitMatches = ($auditData.SensitiveInfoTypeData | ForEach-Object {
+                    "$($_.SensitiveInfoTypeName) (Count: $($_.Count), Confidence: $($_.Confidence)%)"
+                }) -join "; "
 
-            $sitNames = ($auditData.SensitiveInfoTypeData | ForEach-Object { $_.SensitiveInfoTypeName }) -join "; "
+                $sitNames = ($auditData.SensitiveInfoTypeData | ForEach-Object { $_.SensitiveInfoTypeName }) -join "; "
 
-            # Determine if user overrode
-            $hasOverride = $null -ne $auditData.ExceptionInfo -and $auditData.ExceptionInfo -ne ""
+                # Determine if user overrode
+                $hasOverride = $null -ne $auditData.ExceptionInfo -and $auditData.ExceptionInfo -ne ""
 
-            # Determine highest severity
-            $severityOrder = @{ "Low" = 1; "Medium" = 2; "High" = 3 }
-            $highestSeverity = ($auditData.PolicyDetails.Rules |
-                ForEach-Object { $_.Severity } |
-                Sort-Object { $severityOrder[$_] } -Descending |
-                Select-Object -First 1)
+                # Determine highest severity
+                $severityOrder = @{ "Low" = 1; "Medium" = 2; "High" = 3 }
+                $highestSeverity = ($auditData.PolicyDetails.Rules |
+                    ForEach-Object { $_.Severity } |
+                    Sort-Object { $severityOrder[$_] } -Descending |
+                    Select-Object -First 1)
 
-            [PSCustomObject]@{
-                Timestamp           = $AuditRecord.CreationDate
-                UserId              = $auditData.UserId
-                Workload            = $auditData.Workload
-                Operation           = $auditData.Operation
-                PolicyNames         = $policyNames
-                RuleNames           = $ruleNames
-                Actions             = $actions
-                Severity            = $highestSeverity
-                SensitiveInfoTypes  = $sitNames
-                SitMatchDetails     = $sitMatches
-                HasOverride         = $hasOverride
-                OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo | ConvertTo-Json -Compress -Depth 5 } else { "" }
-                RecordType          = $auditData.RecordType
-                RawAuditData        = $AuditRecord.AuditData
+                [PSCustomObject]@{
+                    Timestamp           = $AuditRecord.CreationDate
+                    UserId              = $auditData.UserId
+                    Workload            = $auditData.Workload
+                    Operation           = $auditData.Operation
+                    PolicyNames         = $policyNames
+                    RuleNames           = $ruleNames
+                    Actions             = $actions
+                    Severity            = $highestSeverity
+                    SensitiveInfoTypes  = $sitNames
+                    SitMatchDetails     = $sitMatches
+                    HasOverride         = $hasOverride
+                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo } else { "" }
+                    RecordType          = $auditData.RecordType
+                }
             }
         }
         catch {
@@ -213,7 +240,7 @@ try {
 
     if (-not $dlpEvents -or $dlpEvents.Count -eq 0) {
         Write-Host "No DlpRuleMatch events found for the specified date range." -ForegroundColor Yellow
-        exit 0
+        return
     }
 
     # Filter for Copilot-related events
@@ -223,7 +250,7 @@ try {
     if (-not $copilotDlpEvents -or @($copilotDlpEvents).Count -eq 0) {
         Write-Host "No Copilot-related DLP events found." -ForegroundColor Yellow
         Write-Host "Note: Events are identified by Workload='MicrosoftCopilot' or policy names containing 'Copilot'." -ForegroundColor Gray
-        exit 0
+        return
     }
 
     $eventCount = @($copilotDlpEvents).Count
@@ -252,7 +279,7 @@ try {
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Warning "Script execution failed: $_"
+    Write-Error "Script execution failed: $_"
     exit 1
 }
 

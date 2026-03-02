@@ -6,11 +6,9 @@
 // Purpose: Cross-source correlation queries for deny event analysis
 //
 // Note: These queries assume data has been exported to a common Log Analytics
-// workspace or Azure Data Explorer database. All four data sources
-// (CopilotDenyEvents_CL, DlpCopilotEvents_CL, RaiTelemetry_CL,
-// DefenderCopilotEvents_CL) are included in cross-source correlation.
-// Power BI template is planned but not yet included — use these KQL queries
-// for cross-source analysis.
+// workspace or Azure Data Explorer database. For Power BI correlation,
+// build a report in Power BI Desktop using the CSV exports or connect
+// directly to your Log Analytics workspace.
 // ============================================================================
 
 // -----------------------------------------------------------------------------
@@ -20,26 +18,24 @@
 // - CopilotDenyEvents_CL
 // - DlpCopilotEvents_CL
 // - RaiTelemetry_CL
-// - DefenderCopilotEvents_CL
 //
 // To create custom tables, use Log Analytics Data Collection Rules or
 // the Log Analytics API for custom log ingestion.
 
+// NOTE: HasXPIA_b and HasJailbreak_b columns in CopilotDenyEvents_CL will
+// always be false — XPIA and Jailbreak detections come from Defender
+// CloudAppEvents, not CopilotInteraction audit records. These fields are
+// retained for forward compatibility. For actual XPIA/Jailbreak data,
+// integrate CloudAppEvents as described in architecture.md.
+
 union
     (CopilotDenyEvents_CL
      | extend Source = "CopilotInteraction",
-              Severity = iff(HasPolicyBlock_b, "Medium", "Low"),
-              UserId = UserId_s),
+              Severity = iff(HasXPIA_b or HasJailbreak_b, "High", iff(HasPolicyBlock_b, "Medium", "Low"))),
     (DlpCopilotEvents_CL
-     | extend Source = "DLP",
-              UserId = UserId_s),
+     | extend Source = "DLP"),
     (RaiTelemetry_CL
-     | extend Source = "RAI", Severity = filterSeverity_s,
-              UserId = userId_s),
-    (DefenderCopilotEvents_CL
-     | extend Source = "Defender",
-              Severity = "High",
-              UserId = UserId_s)
+     | extend Source = "RAI", Severity = filterSeverity_s)
 | summarize
     TotalEvents = count(),
     HighSeverity = countif(Severity == "High"),
@@ -67,12 +63,7 @@ let raiEvents = RaiTelemetry_CL
 | project CorrelationWindow, UserId_s = userId_s, Source = "RAI",
           Category = filterCategory_s, AgentId = agentId_s;
 
-let defenderEvents = DefenderCopilotEvents_CL
-| extend CorrelationWindow = bin(Timestamp_t, 5m)
-| project CorrelationWindow, UserId_s = UserId_s, Source = "Defender",
-          Category = ThreatCategory_s, AgentId = AgentId_s;
-
-union copilotEvents, dlpEvents, raiEvents, defenderEvents
+union copilotEvents, dlpEvents, raiEvents
 | summarize
     Sources = make_set(Source),
     Categories = make_set(Category),
@@ -120,6 +111,10 @@ let copilotSummary = CopilotDenyEvents_CL
 | where Timestamp_t between (reportDate .. endDate)
 | summarize
     CopilotTotal = count(),
+    // NOTE: CopilotXPIA and CopilotJailbreak will be 0 — these detections
+    // come from Defender CloudAppEvents, not CopilotInteraction records.
+    CopilotXPIA = countif(HasXPIA_b),
+    CopilotJailbreak = countif(HasJailbreak_b),
     CopilotPolicyBlock = countif(HasPolicyBlock_b),
     CopilotUsers = dcount(UserId_s),
     CopilotAgents = dcount(AgentId_s);
@@ -141,59 +136,42 @@ let raiSummary = RaiTelemetry_CL
     RaiAgents = dcount(agentId_s),
     RaiSessions = dcount(sessionId_s);
 
-let defenderSummary = DefenderCopilotEvents_CL
-| where Timestamp_t between (reportDate .. endDate)
-| summarize
-    DefenderTotal = count(),
-    DefenderXPIA = countif(IsXPIA_b),
-    DefenderJailbreak = countif(IsJailbreak_b),
-    DefenderUsers = dcount(UserId_s);
-
-copilotSummary | join kind=cross (dlpSummary)
-| join kind=cross (raiSummary)
-| join kind=cross (defenderSummary)
+copilotSummary | join kind=cross (dlpSummary) on 1==1
+| join kind=cross (raiSummary) on 1==1
 | extend
-    TotalDenyEvents = CopilotTotal + DlpTotal + RaiTotal + DefenderTotal,
-    TotalHighSeverity = DlpHighSeverity + RaiHighSeverity + DefenderTotal
+    TotalDenyEvents = CopilotTotal + DlpTotal + RaiTotal,
+    TotalHighSeverity = CopilotXPIA + CopilotJailbreak + DlpHighSeverity + RaiHighSeverity
 | project
     ReportDate = format_datetime(reportDate, 'yyyy-MM-dd'),
     TotalDenyEvents,
     TotalHighSeverity,
     CopilotTotal,
+    CopilotXPIA,
+    CopilotJailbreak,
     CopilotPolicyBlock,
     DlpTotal,
     DlpBlocks,
     DlpOverrides,
     RaiTotal,
-    RaiHighSeverity,
-    DefenderTotal,
-    DefenderXPIA,
-    DefenderJailbreak
+    RaiHighSeverity
 
 // -----------------------------------------------------------------------------
-// Query 5: Anomaly Detection - Baseline Deviation (All Sources)
+// Query 5: Anomaly Detection - Baseline Deviation
 // -----------------------------------------------------------------------------
-// Detect days with significantly higher deny events than baseline across
-// CopilotDenyEvents_CL, DlpCopilotEvents_CL, RaiTelemetry_CL, and
-// DefenderCopilotEvents_CL.
+// Detect days with significantly higher deny events than baseline
 
-let allEvents = union
-    (CopilotDenyEvents_CL | project Timestamp_t, Source = "CopilotDeny"),
-    (DlpCopilotEvents_CL | project Timestamp_t, Source = "DLP"),
-    (RaiTelemetry_CL | extend Timestamp_t = timestamp | project Timestamp_t, Source = "RAI"),
-    (DefenderCopilotEvents_CL | project Timestamp_t, Source = "Defender");
 let baseline =
-    allEvents
+    CopilotDenyEvents_CL
     | where Timestamp_t > ago(30d) and Timestamp_t < ago(1d)
     | summarize DailyCount = count() by bin(Timestamp_t, 1d)
     | summarize AvgDaily = avg(DailyCount), StdDev = stdev(DailyCount);
 
 let today =
-    allEvents
+    CopilotDenyEvents_CL
     | where Timestamp_t > ago(1d)
     | summarize TodayCount = count();
 
-baseline | join kind=cross (today)
+baseline | join kind=cross (today) on 1==1
 | extend
     Threshold = AvgDaily + (2 * StdDev),
     IsAnomaly = TodayCount > AvgDaily + (2 * StdDev),
@@ -210,39 +188,24 @@ baseline | join kind=cross (today)
 // -----------------------------------------------------------------------------
 // Identify potential security incidents requiring investigation
 
-// NOTE: Includes XPIA and Jailbreak detections from Defender CloudAppEvents.
+// NOTE: HasXPIA_b and HasJailbreak_b in CopilotDenyEvents_CL are always
+// false — XPIA/Jailbreak detections require Defender CloudAppEvents.
+// This query is included for future CloudAppEvents integration.
 union
+    (CopilotDenyEvents_CL
+     | where HasXPIA_b or HasJailbreak_b
+     | extend IncidentType = iff(HasXPIA_b, "XPIA Detection", "Jailbreak Attempt"),
+              Severity = "High",
+              Source = "CopilotInteraction"),
     (RaiTelemetry_CL
      | where filterSeverity_s == "High"
      | extend IncidentType = strcat("RAI Filter: ", filterCategory_s),
               Severity = "High",
-              Source = "RAI"
-     | project Timestamp = timestamp, UserId = userId_s, AgentId = agentId_s,
-               IncidentType, Severity, Source),
-    (CopilotDenyEvents_CL
-     | where ResponseOutcome_s == "Blocked"
-     | extend IncidentType = "Copilot Deny: Blocked Response",
-              Severity = "High",
-              Source = "CopilotDeny"
-     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = AgentId_s,
-               IncidentType, Severity, Source),
-    (DlpCopilotEvents_CL
-     | where Actions_s has "Block"
-     | extend IncidentType = strcat("DLP Block: ", PolicyNames_s),
-              Severity = "High",
-              Source = "DLP"
-     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = "",
-               IncidentType, Severity, Source),
-    (DefenderCopilotEvents_CL
-     | extend IncidentType = strcat("Defender: ", ThreatCategory_s),
-              Severity = "High",
-              Source = "Defender"
-     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = AgentId_s,
-               IncidentType, Severity, Source)
+              Source = "RAI")
 | project
-    Timestamp,
-    UserId,
-    AgentId,
+    Timestamp = coalesce(Timestamp_t, timestamp),
+    UserId = coalesce(UserId_s, userId_s),
+    AgentId = coalesce(AgentId_s, agentId_s),
     IncidentType,
     Severity,
     Source
@@ -258,7 +221,7 @@ union
      | extend
         EventSource = "CopilotInteraction",
         EventCategory = DenyReason_s,
-        EventSeverity = iff(HasPolicyBlock_b, "Medium", "Low")
+        EventSeverity = iff(HasXPIA_b or HasJailbreak_b, "High", "Medium")
      | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = AgentId_s,
                EventSource, EventCategory, EventSeverity),
     (DlpCopilotEvents_CL
@@ -274,12 +237,5 @@ union
         EventCategory = strcat("RAI: ", filterCategory_s),
         EventSeverity = filterSeverity_s
      | project Timestamp = timestamp, UserId = userId_s, AgentId = agentId_s,
-               EventSource, EventCategory, EventSeverity),
-    (DefenderCopilotEvents_CL
-     | extend
-        EventSource = "Defender",
-        EventCategory = strcat("Defender: ", ThreatCategory_s),
-        EventSeverity = "High"
-     | project Timestamp = Timestamp_t, UserId = UserId_s, AgentId = AgentId_s,
                EventSource, EventCategory, EventSeverity)
 | order by Timestamp desc

@@ -1,7 +1,7 @@
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
-  "version": "1.5",
+  "version": "1.4",
   "body": [
     {
       "type": "Container",
@@ -218,6 +218,8 @@
       "UnapprovedGroup": "🟡 Unapproved security group",
       "ExcessiveIndividual": "🟡 Excessive individual sharing",
       "CrossTenant": "🔴 Cross-tenant access"
-    }
+    },
+    "renderingPipeline": "string-replacement",
+    "renderingNotes": "This card uses {{variable}} placeholders rendered via Power Automate string replace() functions. Do not mix with ${variable} Adaptive Cards Templating SDK syntax."
   }
 }

@@ -143,7 +143,6 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
     [string]$DataverseUrl,
 
     [Parameter(Mandatory = $true)]
@@ -209,7 +208,6 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$DataverseUrl = $DataverseUrl.TrimEnd('/')
 $accessToken = $null
 
 if ($Interactive) {
@@ -220,6 +218,7 @@ if ($Interactive) {
             Import-Module MSAL.PS -ErrorAction Stop
 
             $msalParams = @{
+                ClientId    = $ClientId
                 TenantId    = $TenantId
                 Scopes      = @("$DataverseUrl/.default")
                 Interactive = $true
@@ -230,8 +229,16 @@ if ($Interactive) {
             Write-Host "Interactive authentication successful." -ForegroundColor Green
         }
         else {
-            # MSAL.PS not available — cannot acquire a Dataverse-scoped token interactively
-            throw "MSAL.PS module is required for interactive Dataverse authentication. Install it with: Install-Module MSAL.PS -Scope CurrentUser"
+            # Fallback: Attempt to use existing Graph context
+            Write-Warning "MSAL.PS module not found. Attempting to use existing authentication context."
+            $context = Get-MgContext -ErrorAction SilentlyContinue
+            if ($context -and $context.AccessToken) {
+                $accessToken = $context.AccessToken
+                Write-Host "Using existing authentication context." -ForegroundColor Green
+            }
+            else {
+                throw "No authentication context available. Install MSAL.PS module: Install-Module MSAL.PS -Scope CurrentUser"
+            }
         }
     }
     catch {
@@ -348,17 +355,17 @@ $validationTypeMap = @{
 # Convert option set values to readable strings
 $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
-        name                    = $_.fsi_name
-        runId                   = $_.fsi_runid
-        zone                    = if ($_.fsi_zone -ne $null -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
-        severity                = if ($_.fsi_severity -ne $null -and $severityMap.ContainsKey($_.fsi_severity)) { $severityMap[$_.fsi_severity] } else { $_.fsi_severity }
-        validationType          = if ($_.fsi_validationtype -ne $null -and $validationTypeMap.ContainsKey($_.fsi_validationtype)) { $validationTypeMap[$_.fsi_validationtype] } else { $_.fsi_validationtype }
-        rawValue                = $_.fsi_rawvalue
-        checkCount              = $_.fsi_checkcount
-        baselineId              = $_.fsi_baselineid
-        remediationHint         = $_.fsi_remediationhint
-        reason                  = $_.fsi_reason
-        timestamp               = $_.fsi_timestamp
+        name              = $_.fsi_name
+        runId             = $_.fsi_runid
+        zone              = if ($_.fsi_zone -ne $null -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
+        severity          = if ($_.fsi_severity -ne $null -and $severityMap.ContainsKey($_.fsi_severity)) { $severityMap[$_.fsi_severity] } else { $_.fsi_severity }
+        validationType    = if ($_.fsi_validationtype -ne $null -and $validationTypeMap.ContainsKey($_.fsi_validationtype)) { $validationTypeMap[$_.fsi_validationtype] } else { $_.fsi_validationtype }
+        rawValue          = $_.fsi_rawvalue
+        reason            = $_.fsi_reason
+        remediationHint   = $_.fsi_remediationhint
+        timestamp         = $_.fsi_timestamp
+        checkCount        = $_.fsi_checkcount
+        baselineId        = $_.fsi_baselineid
     }
 }
 

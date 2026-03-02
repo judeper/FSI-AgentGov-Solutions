@@ -50,11 +50,6 @@ Immutable audit trail of compliance scan results. Organization-owned to prevent 
 | Failed Count | `fsi_failed_count` | Integer | Yes | Policies that failed validation checks |
 | Drift Count | `fsi_drift_count` | Integer | Yes | Policies that drifted from baseline |
 | Overall Severity | `fsi_overall_severity` | Picklist (`fsi_acv_severity`) | Yes | Worst severity across all evaluated policies |
-| Overall Status | `fsi_overall_status` | String (50) | No | Human-readable compliance status (Passed, Failed, Warning, etc.) |
-| Compliance Rate | `fsi_compliance_rate` | Decimal | No | Percentage of policies passing validation |
-| Alert Severity | `fsi_alert_severity` | String (50) | No | Severity level for alert routing |
-| Source | `fsi_source` | String (100) | No | Origin of the validation record (e.g., FlowFallback, ProvisioningHookFallback) |
-| Scan Scope | `fsi_scan_scope` | String (50) | No | Scope of the scan (e.g., Full, Targeted) |
 | Results JSON | `fsi_results_json` | Memo | Yes | Full scan results array with per-policy detail |
 | Validated By | `fsi_validated_by` | String (256) | Yes | Identity that executed the scan |
 | Tenant ID | `fsi_tenant_id` | String (50) | Yes | Entra ID tenant GUID |
@@ -79,13 +74,7 @@ Individual policy-level violation records created when a CA policy fails validat
 | Is Resolved | `fsi_is_resolved` | Boolean | Yes | Whether the violation has been addressed (default: No) |
 | Resolved At | `fsi_resolved_at` | DateTime | No | UTC timestamp when the violation was resolved |
 | Resolved By | `fsi_resolved_by` | String (256) | No | Identity that resolved the violation |
-| Detected At | `fsi_detected_at` | DateTime | No | UTC timestamp when the violation was detected |
-| Scan Trigger | `fsi_scan_trigger` | String (50) | No | What triggered the scan (e.g., Provisioning, Scheduled) |
-| Environment ID | `fsi_environment_id` | String (100) | No | Power Platform environment GUID |
-| Environment Name | `fsi_environment_name` | String (256) | No | Display name of the affected environment |
-| Policy Name | `fsi_policy_name` | String (256) | No | Display name of the violating CA policy |
-| Severity Label | `fsi_severity_label` | String (50) | No | Human-readable severity label |
-| Regulatory Context | `fsi_regulatory_context` | String (500) | No | Applicable regulatory frameworks (e.g., FINRA 4511, SOX 404) |
+| Detected At | `fsi_detected_at` | DateTime | Yes | UTC timestamp when the violation was detected |
 | Tenant ID | `fsi_tenant_id` | String (50) | Yes | Entra ID tenant GUID |
 
 ---
@@ -98,19 +87,20 @@ Two global option sets are reused across all three tables:
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 100000000 | Zone 1 | Personal Productivity — risk-based MFA, standard controls |
-| 100000001 | Zone 2 | Team Collaboration — always-on MFA, enhanced controls |
-| 100000002 | Zone 3 | Enterprise Managed — MFA + compliant device, strictest controls |
+| 0 | Unclassified | Policy not yet assigned to a governance zone |
+| 1 | Zone 1 | Personal Productivity — risk-based MFA, standard controls |
+| 2 | Zone 2 | Team Collaboration — always-on MFA, enhanced controls |
+| 3 | Zone 3 | Enterprise Managed — MFA + compliant device, strictest controls |
 
 ### fsi_acv_severity — Validation Severity
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 100000000 | Passed | Policy meets all requirements |
-| 100000001 | Warning | Non-critical finding — review recommended |
-| 100000002 | GracePeriod | Policy recently deployed — within grace window (default 48 hours) |
-| 100000003 | Failed | Policy does not meet zone requirements |
-| 100000004 | Error | Scan could not evaluate the policy (connectivity, permissions, etc.) |
+| 1 | Passed | Policy meets all requirements |
+| 2 | Warning | Non-critical finding — review recommended |
+| 3 | GracePeriod | Policy recently deployed — within grace window (default 48 hours) |
+| 4 | Failed | Policy does not meet zone requirements |
+| 5 | Error | Scan could not evaluate the policy (connectivity, permissions, etc.) |
 
 ---
 
@@ -132,14 +122,15 @@ Seven environment variables control runtime behavior. All use the `fsi_CAA_*` pr
 
 ## Connection References
 
-Four connection references enable Power Automate flows to interact with platform services. All use the `fsi_cr_*` naming convention.
+Three connection references enable Power Automate flows to interact with platform services. All use the `fsi_cr_*` naming convention.
 
 | Logical Name | Display Name | Connector | Purpose |
 |-------------|-------------|-----------|---------|
 | `fsi_cr_dataverse_conditionalaccessautomation` | Dataverse - Conditional Access Automation | `shared_commondataserviceforapps` | Table CRUD for baselines, history, violations |
 | `fsi_cr_office365_conditionalaccessautomation` | Office 365 - Conditional Access Automation | `shared_office365` | Email notification delivery |
 | `fsi_cr_teams_conditionalaccessautomation` | Teams - Conditional Access Automation | `shared_teams` | Adaptive card alert delivery |
-| `fsi_cr_graph_conditionalaccessautomation` | Microsoft Graph - Conditional Access Automation | `shared_microsoftgraphconnector` | CA policy reads (reserved for future use; not referenced in current flows) |
+
+> **Note:** A Microsoft Graph connection reference (`fsi_cr_graph_conditionalaccessautomation`) is planned for future phases to enable direct CA policy reads from Power Automate flows. Current flows authenticate via HTTP actions with Managed Service Identity.
 
 ---
 
@@ -190,9 +181,14 @@ The `fsi_run_id` column on `fsi_CAPolicyViolation` logically references the vali
 
 ## Deployment
 
-Deploy the schema using Power Platform solution import or manual Dataverse table creation. Refer to the [deployment guide](../docs/deployment-guide.md) for step-by-step instructions.
+Deploy the schema using the Dataverse Web API or Power Platform admin center. The deployment scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are planned but not yet implemented.
 
-The schema, environment variables, and connection references defined above should be created through the Power Platform maker portal or solution packaging. All definitions are idempotent — re-importing into an environment with existing schema is safe.
+Manual deployment steps:
+
+1. Create the three tables (`fsi_CAPolicyBaseline`, `fsi_CAPolicyValidationHistory`, `fsi_CAPolicyViolation`) with the columns defined above
+2. Create the two shared option sets (`fsi_acv_zone`, `fsi_acv_severity`)
+3. Create the seven environment variables with `fsi_CAA_*` prefix
+4. Create the three connection references with `fsi_cr_*` naming
 
 ---
 

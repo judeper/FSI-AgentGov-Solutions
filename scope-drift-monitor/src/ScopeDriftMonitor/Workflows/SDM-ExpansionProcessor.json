@@ -16,16 +16,21 @@
       "type": "OpenApiConnectionWebhook",
       "inputs": {
         "host": {
-          "connectionName": "shared_commondataserviceforapps",
+          "connectionName": "fsi_cr_dataverse",
           "operationId": "SubscribeWebhookTrigger",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
         "parameters": {
           "subscriptionRequest/message": 1,
           "subscriptionRequest/entityname": "fsi_expansionrequest",
-          "subscriptionRequest/scope": 4
+          "subscriptionRequest/scope": 2
         },
         "authentication": "@parameters('$authentication')"
+      },
+      "runtimeConfiguration": {
+        "concurrency": {
+          "runs": 1
+        }
       }
     }
   },
@@ -35,38 +40,21 @@
       "type": "OpenApiConnection",
       "inputs": {
         "host": {
-          "connectionName": "shared_commondataserviceforapps",
+          "connectionName": "fsi_cr_dataverse",
           "operationId": "GetItem",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
         "parameters": {
           "entityName": "fsi_expansionrequests",
           "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-          "$expand": "fsi_agentscopeid($select=fsi_name,fsi_agentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis),fsi_requestedby($select=internalemailaddress,fullname),fsi_scopeviolationid($select=fsi_name,fsi_scopeviolationid)",
-          "$select": "fsi_expansionrequestid,fsi_name,fsi_requesttype,fsi_resourcename,fsi_resourceurl,fsi_justification,fsi_requestedon,fsi_requestedaccesslevel"
+          "$expand": "fsi_agentscopeid($select=fsi_name,fsi_agentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis),fsi_requestedby($select=internalemailaddress,fullname),fsi_scopeviolationid($select=fsi_name,fsi_scopeviolationid)"
         },
-        "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      }
-    },
-    "Terminate_On_Read_Failure": {
-      "runAfter": {
-        "Get_Request_Details": [
-          "Failed"
-        ]
-      },
-      "type": "Terminate",
-      "inputs": {
-        "runStatus": "Cancelled",
-        "runError": {
-          "code": "RecordNotFound",
-          "message": "Failed to retrieve expansion request details. The record may have been deleted between trigger and execution."
+        "authentication": "@parameters('$authentication')",
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "maximumInterval": "PT1M"
         }
       }
     },
@@ -77,7 +65,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 1), 'Add Connector', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 2), 'Add SharePoint Site', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 3), 'Add Dataverse Table', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 4), 'Add External API', 'Increase Access Level'))))"
+      "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10001), 'Add Connector', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10002), 'Add SharePoint Site', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10003), 'Add Dataverse Table', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10004), 'Add External API', 'Increase Access Level'))))"
     },
     "Get_Zone_Label": {
       "runAfter": {
@@ -86,7 +74,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_zone'], 1), 'Zone 1 - Personal', if(equals(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_zone'], 2), 'Zone 2 - Team', 'Zone 3 - Enterprise'))"
+      "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_zone'], 10001), 'Zone 1 - Personal', if(equals(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_zone'], 10002), 'Zone 2 - Team', if(equals(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_zone'], 10003), 'Zone 3 - Enterprise', 'Unknown Zone')))"
     },
     "Build_Approval_Details": {
       "runAfter": {
@@ -95,106 +83,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "## Scope Expansion Request\n\n**Agent:** @{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}\n**Zone:** @{outputs('Get_Zone_Label')}\n**Request Type:** @{outputs('Get_Request_Type_Label')}\n\n---\n\n**Resource to Add:** @{outputs('Get_Request_Details')?['body/fsi_resourcename']}\n**Resource URL:** @{coalesce(outputs('Get_Request_Details')?['body/fsi_resourceurl'], 'N/A')}\n\n**Justification:**\n@{outputs('Get_Request_Details')?['body/fsi_justification']}\n\n---\n\n**Requested By:** @{outputs('Get_Request_Details')?['body/fsi_requestedby/fullname']}\n**Requested On:** @{formatDateTime(outputs('Get_Request_Details')?['body/fsi_requestedon'], 'yyyy-MM-dd HH:mm')} UTC\n\n---\n\nPlease review and approve or reject this scope expansion request."
-    },
-    "Update_Request_Under_Review": {
-      "runAfter": {
-        "Build_Approval_Details": [
-          "Succeeded"
-        ]
-      },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "shared_commondataserviceforapps",
-          "operationId": "UpdateRecord",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-        },
-        "parameters": {
-          "entityName": "fsi_expansionrequests",
-          "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-          "item": {
-            "fsi_status": 3
-          }
-        },
-        "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      }
-    },
-    "Handle_Status_Update_Failure": {
-      "runAfter": {
-        "Update_Request_Under_Review": [
-          "Failed"
-        ]
-      },
-      "type": "Scope",
-      "actions": {
-        "Update_Request_Failed_On_Status_Update": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_commondataserviceforapps",
-              "operationId": "UpdateRecord",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-            },
-            "parameters": {
-              "entityName": "fsi_expansionrequests",
-              "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-              "item": {
-                "fsi_status": 7,
-                "fsi_completedon": "@{utcNow()}"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
-        },
-        "Send_Status_Update_Failure_Notification": {
-          "runAfter": {
-            "Update_Request_Failed_On_Status_Update": [
-              "Succeeded",
-              "Failed"
-            ]
-          },
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_office365",
-              "operationId": "SendEmailV2",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-            },
-            "parameters": {
-              "emailMessage": {
-                "To": "@{concat(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], ';', parameters('fsi_SDM_SecurityTeamEmail'))}",
-                "Subject": "[Scope Expansion] FAILED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
-                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Failed</div><p>Your scope expansion request could not be processed due to an internal error while updating the request status.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_resourcename']}</td></tr></table><p>Please submit a new request or contact the security team for assistance.</p></body></html>",
-                "Importance": "High"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
-        }
-      }
+      "inputs": "## Scope Expansion Request\n\n**Agent:** @{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}\n**Zone:** @{outputs('Get_Zone_Label')}\n**Request Type:** @{outputs('Get_Request_Type_Label')}\n\n---\n\n**Resource to Add:** @{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}\n**Resource URL:** @{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourceurl'], 'N/A'), '<', '&lt;'), '>', '&gt;')}\n\n**Justification:**\n@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_justification'], ''), '<', '&lt;'), '>', '&gt;')}\n\n---\n\n**Requested By:** @{outputs('Get_Request_Details')?['body/fsi_requestedby/fullname']}\n**Requested On:** @{formatDateTime(outputs('Get_Request_Details')?['body/fsi_requestedon'], 'yyyy-MM-dd HH:mm')} UTC\n\n---\n\nPlease review and approve or reject this scope expansion request."
     },
     "Start_Approval": {
       "runAfter": {
@@ -205,7 +94,7 @@
       "type": "OpenApiConnectionWebhook",
       "inputs": {
         "host": {
-          "connectionName": "shared_approvals",
+          "connectionName": "fsi_cr_approvals",
           "operationId": "StartAndWaitForAnApproval",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
         },
@@ -221,6 +110,29 @@
         "limit": {
           "timeout": "P7D"
         }
+      }
+    },
+    "Update_Request_Under_Review": {
+      "runAfter": {
+        "Build_Approval_Details": [
+          "Succeeded"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "fsi_cr_dataverse",
+          "operationId": "UpdateRecord",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+        },
+        "parameters": {
+          "entityName": "fsi_expansionrequests",
+          "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
+          "item": {
+            "fsi_status": 10003
+          }
+        },
+        "authentication": "@parameters('$authentication')"
       }
     },
     "Condition_Check_Approval_Outcome": {
@@ -240,9 +152,9 @@
         "Determine_Scope_Field_To_Update": {
           "runAfter": {},
           "type": "Compose",
-          "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 1), 'fsi_allowedconnectors', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 2), 'fsi_allowedsites', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 3), 'fsi_allowedtables', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 4), 'fsi_allowedapis', 'fsi_accesslevel'))))"
+          "inputs": "@if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10001), 'fsi_allowedconnectors', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10002), 'fsi_allowedsites', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10003), 'fsi_allowedtables', if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10004), 'fsi_allowedapis', 'fsi_accesslevel'))))"
         },
-        "Condition_Is_Access_Level_Change": {
+        "Condition_Is_List_Update": {
           "runAfter": {
             "Determine_Scope_Field_To_Update": [
               "Succeeded"
@@ -250,296 +162,104 @@
           },
           "type": "If",
           "expression": {
-            "equals": [
-              "@outputs('Get_Request_Details')?['body/fsi_requesttype']",
-              5
-            ]
+            "not": {
+              "equals": [
+                "@outputs('Get_Request_Details')?['body/fsi_requesttype']",
+                10005
+              ]
+            }
           },
           "actions": {
-            "Find_Scope_Item_By_Resource": {
+            "Get_Current_Allowed_List": {
+              "runAfter": {
+                "Re_Read_Scope_After_Approval": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedconnectors'), coalesce(outputs('Re_Read_Scope_After_Approval')?['body/fsi_allowedconnectors'], '[]'), if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedsites'), coalesce(outputs('Re_Read_Scope_After_Approval')?['body/fsi_allowedsites'], '[]'), if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedtables'), coalesce(outputs('Re_Read_Scope_After_Approval')?['body/fsi_allowedtables'], '[]'), coalesce(outputs('Re_Read_Scope_After_Approval')?['body/fsi_allowedapis'], '[]'))))"
+            },
+            "Re_Read_Scope_After_Approval": {
               "runAfter": {},
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {
-                  "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "ListRecords",
+                  "connectionName": "fsi_cr_dataverse",
+                  "operationId": "GetItem",
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                 },
                 "parameters": {
-                  "entityName": "fsi_scopeitems",
-                  "$filter": "_fsi_agentscopeid_value eq '@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_agentscopeid']}' and fsi_resourcename eq '@{replace(outputs('Get_Request_Details')?['body/fsi_resourcename'], '''', '''''')}'",
-                  "$select": "fsi_scopeitemid,fsi_accesslevel",
-                  "$top": 1
+                  "entityName": "fsi_agentscopes",
+                  "recordId": "@outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_agentscopeid']",
+                  "$select": "fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis"
                 },
                 "authentication": "@parameters('$authentication')"
-              },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1H"
               }
             },
-            "Condition_Scope_Item_Found": {
+            "Parse_Current_List": {
               "runAfter": {
-                "Find_Scope_Item_By_Resource": [
+                "Get_Current_Allowed_List": [
                   "Succeeded"
                 ]
               },
-              "type": "If",
-              "expression": {
-                "greater": [
-                  "@length(outputs('Find_Scope_Item_By_Resource')?['body/value'])",
-                  0
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@outputs('Get_Current_Allowed_List')",
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "Append_New_Resource": {
+              "runAfter": {
+                "Parse_Current_List": [
+                  "Succeeded"
                 ]
               },
-              "actions": {
-                "Update_Scope_Item_Access_Level": {
-                  "runAfter": {},
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "UpdateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                    },
-                    "parameters": {
-                      "entityName": "fsi_scopeitems",
-                      "recordId": "@first(outputs('Find_Scope_Item_By_Resource')?['body/value'])?['fsi_scopeitemid']",
-                      "item": {
-                        "fsi_accesslevel": "@outputs('Get_Request_Details')?['body/fsi_requestedaccesslevel']"
-                      }
-                    },
-                    "authentication": "@parameters('$authentication')"
-                  },
-                  "retryPolicy": {
-                    "type": "exponential",
-                    "count": 3,
-                    "interval": "PT10S",
-                    "minimumInterval": "PT10S",
-                    "maximumInterval": "PT1H"
-                  }
-                },
-                "Handle_Access_Level_Update_Failure": {
-                  "runAfter": {
-                    "Update_Scope_Item_Access_Level": [
-                      "Failed"
-                    ]
-                  },
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "UpdateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                    },
-                    "parameters": {
-                      "entityName": "fsi_expansionrequests",
-                      "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-                      "item": {
-                        "fsi_status": 7,
-                        "fsi_completedon": "@{utcNow()}"
-                      }
-                    },
-                    "authentication": "@parameters('$authentication')"
-                  },
-                  "retryPolicy": {
-                    "type": "exponential",
-                    "count": 3,
-                    "interval": "PT10S",
-                    "minimumInterval": "PT10S",
-                    "maximumInterval": "PT1H"
-                  }
-                },
-                "Terminate_On_Access_Level_Update_Failure": {
-                  "runAfter": {
-                    "Handle_Access_Level_Update_Failure": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "Terminate",
-                  "inputs": {
-                    "runStatus": "Failed",
-                    "runError": {
-                      "code": "AccessLevelUpdateFailed",
-                      "message": "Failed to update scope item access level after approval. The expansion request has been marked as failed (status 7)."
-                    }
-                  }
-                }
+              "type": "Compose",
+              "inputs": "@union(body('Parse_Current_List'), createArray(coalesce(outputs('Get_Request_Details')?['body/fsi_resourceurl'], outputs('Get_Request_Details')?['body/fsi_resourcename'])))"
+            },
+            "Update_Agent_Scope_Connectors": {
+              "runAfter": {
+                "Append_New_Resource": [
+                  "Succeeded"
+                ]
               },
-              "else": {
-                "actions": {
-                  "Update_Request_Failed_No_Scope_Item": {
-                    "runAfter": {},
-                    "type": "OpenApiConnection",
-                    "inputs": {
-                      "host": {
-                        "connectionName": "shared_commondataserviceforapps",
-                        "operationId": "UpdateRecord",
-                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                      },
-                      "parameters": {
-                        "entityName": "fsi_expansionrequests",
-                        "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-                        "item": {
-                          "fsi_status": 7,
-                          "fsi_completedon": "@{utcNow()}"
-                        }
-                      },
-                      "authentication": "@parameters('$authentication')"
-                    },
-                    "retryPolicy": {
-                      "type": "exponential",
-                      "count": 3,
-                      "interval": "PT10S",
-                      "minimumInterval": "PT10S",
-                      "maximumInterval": "PT1H"
-                    }
-                  },
-                  "Terminate_No_Scope_Item": {
-                    "runAfter": {
-                      "Update_Request_Failed_No_Scope_Item": [
-                        "Succeeded",
-                        "Failed"
-                      ]
-                    },
-                    "type": "Terminate",
-                    "inputs": {
-                      "runStatus": "Failed",
-                      "runError": {
-                        "code": "ScopeItemNotFound",
-                        "message": "No scope item found matching the requested resource. The expansion request has been marked as failed."
-                      }
-                    }
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "fsi_cr_dataverse",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_agentscopes",
+                  "recordId": "@outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_agentscopeid']",
+                  "item": {
+                    "@{outputs('Determine_Scope_Field_To_Update')}": "@{string(outputs('Append_New_Resource'))}"
                   }
-                }
+                },
+                "authentication": "@parameters('$authentication')"
               }
             }
           },
           "else": {
-            "actions": {
-              "Get_Current_Allowed_List": {
-                "runAfter": {},
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedconnectors'), if(equals(coalesce(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedconnectors'], ''), ''), '[]', outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedconnectors']), if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedsites'), if(equals(coalesce(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedsites'], ''), ''), '[]', outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedsites']), if(equals(outputs('Determine_Scope_Field_To_Update'), 'fsi_allowedtables'), if(equals(coalesce(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedtables'], ''), ''), '[]', outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedtables']), if(equals(coalesce(outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedapis'], ''), ''), '[]', outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_allowedapis']))))"
-              },
-              "Parse_Current_List": {
-                "runAfter": {
-                  "Get_Current_Allowed_List": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "ParseJson",
-                "inputs": {
-                  "content": "@outputs('Get_Current_Allowed_List')",
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                }
-              },
-              "Append_New_Resource": {
-                "runAfter": {
-                  "Parse_Current_List": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "Compose",
-                "inputs": "@union(body('Parse_Current_List'), createArray(coalesce(outputs('Get_Request_Details')?['body/fsi_resourceurl'], outputs('Get_Request_Details')?['body/fsi_resourcename'])))"
-              },
-              "Update_Agent_Scope_Connectors": {
-                "runAfter": {
-                  "Append_New_Resource": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "OpenApiConnection",
-                "inputs": {
-                  "host": {
-                    "connectionName": "shared_commondataserviceforapps",
-                    "operationId": "UpdateRecord",
-                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                  },
-                  "parameters": {
-                    "entityName": "fsi_agentscopes",
-                    "recordId": "@outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_agentscopeid']",
-                    "item": {
-                      "@{outputs('Determine_Scope_Field_To_Update')}": "@{string(outputs('Append_New_Resource'))}"
-                    }
-                  },
-                  "authentication": "@parameters('$authentication')"
-                },
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "Handle_Scope_Update_Failure": {
-                "runAfter": {
-                  "Update_Agent_Scope_Connectors": [
-                    "Failed",
-                    "Skipped"
-                  ]
-                },
-                "type": "OpenApiConnection",
-                "inputs": {
-                  "host": {
-                    "connectionName": "shared_commondataserviceforapps",
-                    "operationId": "UpdateRecord",
-                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                  },
-                  "parameters": {
-                    "entityName": "fsi_expansionrequests",
-                    "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-                    "item": {
-                      "fsi_status": 7,
-                      "fsi_completedon": "@{utcNow()}"
-                    }
-                  },
-                  "authentication": "@parameters('$authentication')"
-                },
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "Terminate_On_Scope_Update_Failure": {
-                "runAfter": {
-                  "Handle_Scope_Update_Failure": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "Terminate",
-                "inputs": {
-                  "runStatus": "Failed",
-                  "runError": {
-                    "code": "ScopeUpdateFailed",
-                    "message": "Failed to update agent scope after approval. The expansion request has been marked as failed (status 7)."
-                  }
-                }
-              }
-            }
+            "actions": {}
           }
         },
         "Update_Request_Approved": {
           "runAfter": {
-            "Condition_Is_Access_Level_Change": [
+            "Condition_Is_List_Update": [
               "Succeeded"
             ]
           },
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "shared_commondataserviceforapps",
+              "connectionName": "fsi_cr_dataverse",
               "operationId": "UpdateRecord",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
             },
@@ -547,19 +267,13 @@
               "entityName": "fsi_expansionrequests",
               "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
               "item": {
-                "fsi_status": 4,
-                "fsi_securityapproval": 2,
+                "fsi_status": 10004,
+                "fsi_securityapproval": 10002,
+                "fsi_securityapprovedby@odata.bind": "/systemusers(@{first(outputs('Start_Approval')?['body/responses'])?['responder/id']})",
                 "fsi_completedon": "@{utcNow()}"
               }
             },
             "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
           }
         },
         "Condition_Has_Related_Violation": {
@@ -583,7 +297,7 @@
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {
-                  "connectionName": "shared_commondataserviceforapps",
+                  "connectionName": "fsi_cr_dataverse",
                   "operationId": "UpdateRecord",
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                 },
@@ -591,19 +305,12 @@
                   "entityName": "fsi_scopeviolations",
                   "recordId": "@outputs('Get_Request_Details')?['body/fsi_scopeviolationid/fsi_scopeviolationid']",
                   "item": {
-                    "fsi_status": 4,
-                    "fsi_resolutiontype": 1,
+                    "fsi_status": 10004,
+                    "fsi_resolutiontype": 10001,
                     "fsi_resolvedon": "@{utcNow()}"
                   }
                 },
                 "authentication": "@parameters('$authentication')"
-              },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1H"
               }
             }
           },
@@ -620,7 +327,7 @@
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "shared_office365",
+              "connectionName": "fsi_cr_outlook",
               "operationId": "SendEmailV2",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
@@ -628,18 +335,11 @@
               "emailMessage": {
                 "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
                 "Subject": "[Scope Expansion] APPROVED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
-                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#107c10;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Approved</div><p>Your scope expansion request has been approved.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_resourcename']}</td></tr><tr><td><strong>Approved By:</strong></td><td>@{coalesce(first(outputs('Start_Approval')?['body/responses'])?['responder/displayName'], 'Unknown')}</td></tr><tr><td><strong>Approved On:</strong></td><td>@{formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm')} UTC</td></tr></table><p>The agent scope has been automatically updated. No further action is required.</p></body></html>",
+                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#107c10;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Approved</div><p>Your scope expansion request has been approved.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td><strong>Approved By:</strong></td><td>@{first(outputs('Start_Approval')?['body/responses'])?['responder/displayName']}</td></tr><tr><td><strong>Approved On:</strong></td><td>@{formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm')} UTC</td></tr></table><p>@{if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10005), 'Access level changes require manual configuration by an administrator. Please contact the security team.', 'The agent scope has been automatically updated. No further action is required.')}</p></body></html>",
                 "Importance": "Normal"
               }
             },
             "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
           }
         }
       },
@@ -650,7 +350,7 @@
             "type": "OpenApiConnection",
             "inputs": {
               "host": {
-                "connectionName": "shared_commondataserviceforapps",
+                "connectionName": "fsi_cr_dataverse",
                 "operationId": "UpdateRecord",
                 "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
               },
@@ -658,19 +358,13 @@
                 "entityName": "fsi_expansionrequests",
                 "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
                 "item": {
-                  "fsi_status": 5,
-                  "fsi_securityapproval": 3,
+                  "fsi_status": 10005,
+                  "fsi_securityapproval": 10003,
+                  "fsi_securityapprovedby@odata.bind": "/systemusers(@{first(outputs('Start_Approval')?['body/responses'])?['responder/id']})",
                   "fsi_completedon": "@{utcNow()}"
                 }
               },
               "authentication": "@parameters('$authentication')"
-            },
-            "retryPolicy": {
-              "type": "exponential",
-              "count": 3,
-              "interval": "PT10S",
-              "minimumInterval": "PT10S",
-              "maximumInterval": "PT1H"
             }
           },
           "Send_Denial_Notification": {
@@ -682,7 +376,7 @@
             "type": "OpenApiConnection",
             "inputs": {
               "host": {
-                "connectionName": "shared_office365",
+                "connectionName": "fsi_cr_outlook",
                 "operationId": "SendEmailV2",
                 "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
               },
@@ -690,92 +384,17 @@
                 "emailMessage": {
                   "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
                   "Subject": "[Scope Expansion] DENIED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
-                  "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Denied</div><p>Your scope expansion request has been denied.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_resourcename']}</td></tr><tr><td><strong>Denied By:</strong></td><td>@{coalesce(first(outputs('Start_Approval')?['body/responses'])?['responder/displayName'], 'Unknown')}</td></tr></table><p><strong>Comments:</strong></p><p>@{coalesce(first(outputs('Start_Approval')?['body/responses'])?['comments'], 'No comments provided.')}</p><p>If you believe this decision was made in error, please contact the security team or submit a new request with additional justification.</p></body></html>",
+                  "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Denied</div><p>Your scope expansion request has been denied.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td><strong>Denied By:</strong></td><td>@{first(outputs('Start_Approval')?['body/responses'])?['responder/displayName']}</td></tr></table><p><strong>Comments:</strong></p><p>@{replace(replace(coalesce(first(outputs('Start_Approval')?['body/responses'])?['comments'], 'No comments provided.'), '<', '&lt;'), '>', '&gt;')}</p><p>If you believe this decision was made in error, please contact the security team or submit a new request with additional justification.</p></body></html>",
                   "Importance": "Normal"
                 }
               },
               "authentication": "@parameters('$authentication')"
-            },
-            "retryPolicy": {
-              "type": "exponential",
-              "count": 3,
-              "interval": "PT10S",
-              "minimumInterval": "PT10S",
-              "maximumInterval": "PT1H"
             }
           }
         }
       }
     },
-    "Handle_Approval_Failure": {
-      "runAfter": {
-        "Start_Approval": [
-          "Failed"
-        ]
-      },
-      "type": "Scope",
-      "actions": {
-        "Update_Request_Failed": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_commondataserviceforapps",
-              "operationId": "UpdateRecord",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-            },
-            "parameters": {
-              "entityName": "fsi_expansionrequests",
-              "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
-              "item": {
-                "fsi_status": 7,
-                "fsi_completedon": "@{utcNow()}"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
-        },
-        "Send_Failure_Notification": {
-          "runAfter": {
-            "Update_Request_Failed": [
-              "Succeeded"
-            ]
-          },
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_office365",
-              "operationId": "SendEmailV2",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-            },
-            "parameters": {
-              "emailMessage": {
-                "To": "@{concat(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], ';', parameters('fsi_SDM_SecurityTeamEmail'))}",
-                "Subject": "[Scope Expansion] FAILED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
-                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Failed</div><p>The approval process for your scope expansion request encountered an error and could not be completed.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_resourcename']}</td></tr></table><p>Please submit a new request or contact the security team for assistance.</p></body></html>",
-                "Importance": "High"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
-        }
-      }
-    },
-    "Handle_Approval_Timeout": {
+    "Approval_Timeout_Handler": {
       "runAfter": {
         "Start_Approval": [
           "TimedOut"
@@ -788,7 +407,7 @@
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "shared_commondataserviceforapps",
+              "connectionName": "fsi_cr_dataverse",
               "operationId": "UpdateRecord",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
             },
@@ -796,18 +415,11 @@
               "entityName": "fsi_expansionrequests",
               "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
               "item": {
-                "fsi_status": 6,
+                "fsi_status": 10006,
                 "fsi_completedon": "@{utcNow()}"
               }
             },
             "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
           }
         },
         "Send_Timeout_Notification": {
@@ -819,7 +431,7 @@
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "shared_office365",
+              "connectionName": "fsi_cr_outlook",
               "operationId": "SendEmailV2",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
@@ -827,20 +439,90 @@
               "emailMessage": {
                 "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
                 "Subject": "[Scope Expansion] EXPIRED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
-                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#ff8c00;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Expired</div><p>Your scope expansion request has expired after 7 days without a response from the approver.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_resourcename']}</td></tr></table><p>Please submit a new request if the scope expansion is still needed.</p></body></html>",
+                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#ff8c00;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Expired</div><p>Your scope expansion request has expired after 7 days without a decision.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p>Please resubmit the request if the scope expansion is still needed.</p></body></html>",
                 "Importance": "Normal"
               }
             },
             "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
           }
         }
+      }
+    },
+    "Approval_Error_Handler": {
+      "runAfter": {
+        "Start_Approval": [
+          "Failed"
+        ]
+      },
+      "type": "Scope",
+      "actions": {
+        "Update_Request_Error": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_dataverse",
+              "operationId": "UpdateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "fsi_expansionrequests",
+              "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
+              "item": {
+                "fsi_status": 10001
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Send_Error_Notification": {
+          "runAfter": {
+            "Update_Request_Error": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_outlook",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage": {
+                "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
+                "Subject": "[Scope Expansion] ERROR: @{outputs('Get_Request_Details')?['body/fsi_name']}",
+                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Error</div><p>Your scope expansion request could not be processed due to an error with the approval service.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p>The request has been reset to Pending status. Please try again or contact the security team for assistance.</p></body></html>",
+                "Importance": "High"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "Handle_Request_Details_Failure": {
+      "runAfter": {
+        "Get_Request_Details": [
+          "Failed"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "fsi_cr_outlook",
+          "operationId": "SendEmailV2",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "emailMessage": {
+            "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
+            "Subject": "[Scope Expansion] ERROR: Failed to read request @{triggerOutputs()?['body/fsi_expansionrequestid']}",
+            "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Expansion Request Processing Error</div><p>Failed to read expansion request details from Dataverse. The request remains in Pending status and requires manual review.</p><p><strong>Request ID:</strong> @{triggerOutputs()?['body/fsi_expansionrequestid']}</p></body></html>",
+            "Importance": "High"
+          }
+        },
+        "authentication": "@parameters('$authentication')"
       }
     }
   },

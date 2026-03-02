@@ -8,8 +8,8 @@
 |---|---|---|---|
 | fsi_SharingViolation | fsi_sharingviolation | Detected unrestricted agent sharing violations | fsi_name |
 | fsi_SharingException | fsi_sharingexception | Approved exceptions to sharing policy violations | fsi_name |
-| fsi_AgentSharingSetting | fsi_agentsharingsetting | Current sharing configuration for each agent | fsi_agentdisplayname |
-| fsi_ApprovedSecurityGroup | fsi_approvedsecuritygroup | Pre-approved Entra ID security groups for agent sharing | fsi_displayname |
+| fsi_AgentSharingSetting | fsi_agentsharingsetting | Current sharing configuration for each agent | fsi_agentid |
+| fsi_ApprovedSecurityGroup | fsi_approvedsecuritygroup | Pre-approved Entra ID security groups for agent sharing | fsi_entraidgroupid |
 | fsi_SharingPolicy | fsi_sharingpolicy | Zone-specific agent sharing policy definitions | fsi_name |
 
 ## Columns
@@ -24,7 +24,7 @@
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
 | fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |
 | fsi_ViolationType | fsi_violationtype | Picklist | Yes | Type of sharing violation detected | **fsi_UASD_violationtype**: `100000000` = ORG_WIDE_SHARING, `100000001` = PUBLIC_INTERNET_LINK, `100000002` = UNAPPROVED_GROUP, `100000003` = EXCESSIVE_INDIVIDUAL, `100000004` = CROSS_TENANT_ACCESS |
-| fsi_ViolationStatus | fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive, `100000004` = Excluded, `100000005` = Skipped, `100000006` = Dry Run |
+| fsi_ViolationStatus | fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive |
 | fsi_Severity | fsi_severity | Picklist | Yes | Severity level of the violation | **fsi_UASD_severity**: `100000000` = Critical, `100000001` = High, `100000002` = Medium, `100000003` = Low |
 | fsi_Description | fsi_description | Memo | No | Detailed description of the violation |  |
 | fsi_PrincipalDetails | fsi_principaldetails | Memo | No | Details of principals involved in the violation |  |
@@ -71,7 +71,7 @@
 | fsi_PublicLinkEnabled | fsi_publiclinkenabled | Boolean | No | Whether a public internet link is enabled for this agent | `1` = Yes, `0` = No |
 | fsi_CrossTenantEnabled | fsi_crosstenantenabled | Boolean | No | Whether cross-tenant access is enabled for this agent | `1` = Yes, `0` = No |
 | fsi_LastScannedAt | fsi_lastscannedat | DateTime | No | When this agent was last scanned |  |
-| fsi_BreakGlassExclude | fsi_breakglassexclude | Boolean | No | Whether this agent is excluded from scanning via break-glass | `1` = Yes, `0` = No |
+| fsi_BreakGlassExclude | fsi_breakglassexclude | Boolean | No | Whether this agent is excluded from scanning via break-glass (column-level auditing enabled) | `1` = Yes, `0` = No |
 
 ### fsi_ApprovedSecurityGroup (`fsi_approvedsecuritygroup`)
 
@@ -80,7 +80,7 @@
 | fsi_EntraIdGroupId | fsi_entraidgroupid | String | Yes | Entra ID object ID of the security group |  |
 | fsi_DisplayName | fsi_displayname | String | Yes | Display name of the security group |  |
 | fsi_Description | fsi_description | Memo | No | Description of the security group purpose |  |
-| fsi_ZoneClassification | fsi_zoneclassification | Picklist | No | Governance zone classification for this group | **fsi_UASD_zoneclassification**: `100000001` = Zone 1 (Personal), `100000002` = Zone 2 (Team), `100000003` = Zone 3 (Enterprise) |
+| fsi_ZoneClassification | fsi_zoneclassification | Picklist | No | Governance zone classification for this group | **fsi_UASD_zoneclassification**: `100000000` = Zone 1 (Personal), `100000001` = Zone 2 (Team), `100000002` = Zone 3 (Enterprise) |
 | fsi_IsActive | fsi_isactive | Boolean | Yes | Whether this group approval is currently active | `1` = Yes, `0` = No |
 | fsi_ApprovedBy | fsi_approvedby | String | No | UPN of the person who approved this group |  |
 | fsi_ApprovedAt | fsi_approvedat | DateTime | No | When this group was approved |  |
@@ -90,7 +90,7 @@
 | SchemaName | Logical Name | Type | Required | Description | Option Set |
 |---|---|---|---|---|---|
 | fsi_Name | fsi_name | String | Yes | Sharing policy name |  |
-| fsi_ZoneClassification | fsi_zoneclassification | Picklist | Yes | Governance zone this policy applies to | **fsi_UASD_zoneclassification**: `100000001` = Zone 1 (Personal), `100000002` = Zone 2 (Team), `100000003` = Zone 3 (Enterprise) |
+| fsi_ZoneClassification | fsi_zoneclassification | Picklist | Yes | Governance zone this policy applies to | **fsi_UASD_zoneclassification**: `100000000` = Zone 1 (Personal), `100000001` = Zone 2 (Team), `100000002` = Zone 3 (Enterprise) |
 | fsi_MaxIndividualShares | fsi_maxindividualshares | Integer | No | Maximum number of individual user shares allowed |  |
 | fsi_AllowOrgWidesharing | fsi_alloworgwidesharing | Boolean | No | Whether organization-wide sharing is allowed | `1` = Yes, `0` = No |
 | fsi_AllowPublicLink | fsi_allowpubliclink | Boolean | No | Whether public internet links are allowed | `1` = Yes, `0` = No |
@@ -140,9 +140,6 @@ Current status of a sharing violation
 | 100000001 | Remediated |
 | 100000002 | Exception Approved |
 | 100000003 | False Positive |
-| 100000004 | Excluded |
-| 100000005 | Skipped |
-| 100000006 | Dry Run |
 
 #### fsi_UASD_severity
 
@@ -183,18 +180,12 @@ Governance zone classification for sharing policies
 
 | Value | Label |
 |---|---|
-| 100000001 | Zone 1 (Personal) |
-| 100000002 | Zone 2 (Team) |
-| 100000003 | Zone 3 (Enterprise) |
+| 100000000 | Zone 1 (Personal) |
+| 100000001 | Zone 2 (Team) |
+| 100000002 | Zone 3 (Enterprise) |
 
 ## Relationships
 
 | SchemaName | Referenced Entity | Referencing Entity | Lookup Column |
 |---|---|---|---|
 | fsi_SharingViolation_SharingException | fsi_sharingviolation | fsi_sharingexception | fsi_RelatedViolationId |
-
-## Alternate Keys
-
-| Table | SchemaName | Key Attributes | Purpose |
-|---|---|---|---|
-| fsi_agentsharingsetting | fsi_AgentSharingSetting_AgentId | fsi_agentid | Alternate key on Agent ID for upsert matching |

@@ -12,7 +12,6 @@ All files located in the `src/` directory:
 **Server-Side Validation:**
 - [ ] **ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
 - [ ] **MimeConfig.json** — MIME type allowlist/blocklist configuration
-- [ ] **BUILD-INSTRUCTIONS.md** — Step-by-step plugin build guide (ILRepack, strong-name verification)
 
 **DLP Policy:**
 - [ ] **dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
@@ -27,11 +26,10 @@ All files located in the `src/` directory:
 **Option A: Create ZIP Archive**
 ```bash
 # From the mime-type-restrictions directory:
-zip -r MIME-Type-Restrictions-1.0.1.zip \
+zip -r MIME-Type-Restrictions-v1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
   src/ValidateMimeTypePlugin.cs \
   src/MimeConfig.json \
-  src/BUILD-INSTRUCTIONS.md \
   src/dlp-policy-template.json \
   src/query-mime-blocks.kql \
   src/high-volume-blocks.json \
@@ -40,12 +38,11 @@ zip -r MIME-Type-Restrictions-1.0.1.zip \
 
 **Option B: Create Structured Folder**
 ```
-MIME-Type-Restrictions-1.0.1/
+MIME-Type-Restrictions-v1.0.1/
 ├── SOLUTION-DOCUMENTATION.md
 ├── Dataverse-Plugin/
 │   ├── ValidateMimeTypePlugin.cs
-│   ├── MimeConfig.json
-│   └── BUILD-INSTRUCTIONS.md
+│   └── MimeConfig.json
 ├── DLP-Policy/
 │   └── dlp-policy-template.json
 └── Sentinel-Monitoring/
@@ -56,7 +53,7 @@ MIME-Type-Restrictions-1.0.1/
 
 ### 4. Email Template
 
-**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery 1.0.1
+**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.1
 
 **Body:**
 
@@ -77,12 +74,11 @@ Package Contents:
   • Operational guidance and troubleshooting
   • Magic byte reference and regulatory alignment
 
-- 7 Solution Component Files:
+- 6 Solution Component Files:
   • Dataverse pre-validation plugin (C# source)
   • MIME type configuration (JSON allowlist/blocklist)
-  • Plugin build guide (ILRepack, strong-name verification)
   • DLP policy template (Power Platform connector restrictions)
-  • 2 Sentinel KQL queries and 1 Sentinel alert rule (monitoring, exception tracking, high-volume alerting)
+  • 3 Sentinel KQL queries (monitoring, alerting, exception tracking)
 
 Key Capabilities:
 ✓ Server-side magic byte inspection (defense against disguised executables)
@@ -139,9 +135,9 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Add custom signatures if organization-specific threats identified
 
 4. **DLP Policy Mode:**
-   - Start with "TestWithNotifications" mode to assess impact (log violations, allow uploads)
+   - Start with "Audit" mode to assess impact (log violations, allow uploads)
    - Review audit logs for 2-4 weeks
-   - Switch to "Block" mode after validation (block disallowed uploads)
+   - Switch to "Enforce" mode after validation (block disallowed uploads)
 
 5. **Sentinel Workspace:**
    - Requires Dataverse audit logs flowing to Log Analytics workspace
@@ -159,12 +155,12 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
+- [ ] All 7 files are included (1 doc, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)
-- [ ] Version numbers are consistent (1.0.1) across all files
+- [ ] Version numbers are consistent (v1.0.1) across all files
 
 ### 6. Files NOT to Include
 
@@ -219,13 +215,13 @@ Offer these follow-up services:
 1. **Build Plugin DLL:**
    - Customer MUST build the plugin from C# source code
    - Visual Studio project type: Class Library (.NET Framework 4.6.2)
-   - Required NuGet packages: `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+), `System.Text.Json` (6.0.0+)
-   - Add `<LangVersion>8.0</LangVersion>` to `.csproj` `<PropertyGroup>` for `using var` syntax
+   - Required NuGet packages: `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+), `System.Text.Json` (8.0.0+ — must be ILMerged for sandbox deployment)
+   - Required assembly reference: `System.IO.Compression`
    - Output: `FsiAgentGovernance.Plugins.dll`
 
 2. **Plugin Registration:**
    - Use Plugin Registration Tool (download from Microsoft NuGet)
-   - Register on `annotation` entity, `Create` message, Pre-Validation stage (10)
+   - Register on `annotation` entity, `Create` and `Update` messages, Pre-Validation stage (10)
    - **CRITICAL:** Paste entire `MimeConfig.json` content into plugin step configuration
    - Without configuration, plugin will throw error on first upload
 
@@ -236,10 +232,10 @@ Offer these follow-up services:
    - Test magic byte validation with sample files before deploying
 
 4. **DLP Policy Testing:**
-   - Start in "TestWithNotifications" mode for 2-4 weeks
+   - Start in "Audit" mode for 2-4 weeks
    - Review audit logs to identify impact on legitimate users
    - Create exceptions for business-justified use cases
-   - Switch to "Block" mode only after validation complete
+   - Switch to "Enforce" mode only after validation complete
 
 5. **Sentinel Alert Tuning:**
    - Default threshold: 10 blocked uploads per user per hour
@@ -255,13 +251,14 @@ Provide this checklist to customer for post-deployment validation:
 Plugin Build and Registration:
 □ Visual Studio project created (Class Library .NET Framework 4.6.2)
 □ NuGet packages installed: Microsoft.CrmSdk.CoreAssemblies, System.Text.Json
+□ Assembly reference added: System.IO.Compression
 □ ValidateMimeTypePlugin.cs compiled successfully
 □ DLL output generated: FsiAgentGovernance.Plugins.dll
 
 Plugin Registration:
 □ Plugin Registration Tool connected to Dataverse environment
 □ Assembly registered (Isolation: Sandbox, Location: Database)
-□ Plugin step registered on annotation.Create, Pre-Validation (10)
+□ Plugin steps registered on annotation.Create and annotation.Update, Pre-Validation (10)
 □ MimeConfig.json pasted into plugin step configuration (unsecure or secure)
 □ Plugin step status: Active
 
@@ -309,6 +306,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** 1.0.1
+**Package Version:** v1.0.1
 **Release Date:** February 2026
 **Solution:** MIME Type Restrictions for File Uploads

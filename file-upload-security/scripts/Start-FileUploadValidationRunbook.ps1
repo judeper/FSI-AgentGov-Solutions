@@ -1,6 +1,5 @@
-#Requires -Version 7.1
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
-#Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 <#
 .SYNOPSIS
@@ -48,7 +47,7 @@
 
 .PARAMETER GracePeriodHours
     Hours to exclude newly created environments from violation reporting.
-    Valid range: 0-168. Default: 24 hours.
+    Valid range: 0-168. Default: 48 hours.
 
 .EXAMPLE
     Start-FileUploadValidationRunbook `
@@ -112,7 +111,7 @@ param(
     [switch]$ExcludeTrial,
 
     [ValidateRange(0, 168)]
-    [int]$GracePeriodHours = 24
+    [int]$GracePeriodHours = 48
 )
 
 $ErrorActionPreference = "Stop"
@@ -149,8 +148,6 @@ function Get-FileUploadDriftDirection {
 }
 
 #endregion
-
-$alertRequired = $false
 
 try {
     Write-Verbose "Starting file upload validation runbook"
@@ -198,6 +195,9 @@ try {
     if ($dvIncludeSandbox -eq "true" -and $ExcludeSandbox) {
         Write-Verbose "Dataverse override: IncludeSandbox=true, overriding -ExcludeSandbox switch"
         $ExcludeSandbox = [switch]::new($false)
+    } elseif ($dvIncludeSandbox -eq "false" -and -not $ExcludeSandbox) {
+        Write-Verbose "Dataverse override: IncludeSandbox=false, enabling -ExcludeSandbox"
+        $ExcludeSandbox = [switch]::new($true)
     }
 
     $dvIncludeDrafts = Get-FUSEnvironmentVariable -Name "IncludeDrafts" -DefaultValue "false"
@@ -210,31 +210,26 @@ try {
 
     #region Run compliance scan
 
-    Write-Verbose "Invoking Test-FileUploadCompliance"
+    Write-Verbose "Invoking compliance pipeline (Get-AgentFileUploadSettings + Compare-FileUploadCompliance)"
 
-    $scanStartTime = Get-Date
+    # Dot-source the sub-scripts that define the pipeline functions
+    . (Join-Path $scriptRoot 'Get-AgentFileUploadSettings.ps1')
+    . (Join-Path $scriptRoot 'Compare-FileUploadCompliance.ps1')
 
-    $complianceScript = Join-Path $scriptRoot 'Test-FileUploadCompliance.ps1'
-    if (-not (Test-Path $complianceScript)) {
-        throw "Required script not found: $complianceScript"
-    }
-
-    $scanParams = @{
+    $getParams = @{
         DataverseUrl     = $DataverseUrl
-        OutputFormat     = 'JSON'
         GracePeriodHours = $GracePeriodHours
-        IncludeCompliant = $true
     }
 
-    if ($ExcludeSandbox) { $scanParams['ExcludeSandbox'] = $true }
-    if ($ExcludeTrial)   { $scanParams['ExcludeTrial'] = $true }
-    if ($includeDrafts)  { $scanParams['IncludeDrafts'] = $true }
+    if ($ExcludeSandbox) { $getParams['ExcludeSandbox'] = $true }
+    if ($ExcludeTrial)   { $getParams['ExcludeTrial'] = $true }
+    if ($includeDrafts)  { $getParams['IncludeDrafts'] = $true }
 
-    $scanResultJson = & $complianceScript @scanParams 6>$null
-    $scanResult = $scanResultJson | ConvertFrom-Json
-    # Extract results array from JSON output structure
-    if ($scanResult.results) {
-        $scanResult = $scanResult.results
+    $agentSettings = Get-AgentFileUploadSettings @getParams
+    $scanResult = if ($agentSettings) {
+        Compare-FileUploadCompliance -AgentSettings $agentSettings -IncludeCompliant
+    } else {
+        @()
     }
 
     # Wrap single result in array
@@ -264,13 +259,6 @@ try {
         $overallStatus = 'Warning'
     }
 
-    # Precompute compliance rate with decimal precision (avoids WDL integer division)
-    $complianceRate = if ($totalAgents -gt 0) {
-        [math]::Round(($totalAgents - $violationCount) / $totalAgents * 100, 2)
-    } else { 0 }
-
-    $scanDurationSeconds = [int][math]::Round(((Get-Date) - $scanStartTime).TotalSeconds)
-
     Write-Verbose "Scan complete. Overall status: $overallStatus"
     Write-Verbose "Total agents: $totalAgents, Environments: $uniqueEnvs, Violations: $violationCount, File Upload Enabled: $fileUploadEnabledCount"
 
@@ -299,7 +287,7 @@ try {
         Write-Warning "Baseline query failed — treating as potential drift for safety"
         Write-Verbose "Baseline query error: $($_.Exception.Message)"
         $baselineQueryFailed = $true
-        $alertRequired = $true
+        $AlertRequired = $true
     }
 
     #endregion
@@ -377,13 +365,13 @@ try {
             AgentId                = $v.AgentId
             AgentName              = $v.AgentName
             EnvironmentId          = $v.EnvironmentId
-            EnvironmentName        = $v.EnvironmentDisplayName
+            EnvironmentDisplayName = $v.EnvironmentDisplayName
             Zone                   = $v.Zone
             ViolationType          = $v.ViolationType
-            FileUploadExpected     = $v.ExpectedFileUpload
-            FileUploadActual       = $v.FileUploadEnabled
-            ContentModerationLevel = $v.ContentModerationLevel
-            ModerationMinimum      = $v.ExpectedModerationLevel
+            ExpectedFileUpload     = $v.ExpectedFileUpload
+            ActualFileUpload       = if ($null -eq $v.FileUploadEnabled) { 'Indeterminate' } elseif ($v.FileUploadEnabled) { 'Enabled' } else { 'Disabled' }
+            ExpectedModeration     = $v.ExpectedModerationLevel
+            ActualModeration       = $v.ContentModerationLevel
             Severity               = $v.Severity
             RegulatoryContext      = $v.RegulatoryContext
         }
@@ -391,54 +379,13 @@ try {
 
     #endregion
 
-    #region Write violations to Dataverse
-
-    $runId = [Guid]::NewGuid().ToString()
-
-    foreach ($v in $violationResults) {
-        $violationRecord = @{
-            AgentId              = $v.AgentId
-            AgentName            = $v.AgentName
-            EnvironmentId        = $v.EnvironmentId
-            EnvironmentDisplayName = $v.EnvironmentDisplayName
-            Zone                 = $v.Zone
-            ExpectedFileUpload   = $v.ExpectedFileUpload
-            ActualFileUpload     = $v.FileUploadEnabled
-            ExpectedModeration   = $v.ExpectedModerationLevel
-            ActualModeration     = $v.ContentModerationLevel
-            Severity             = $v.Severity
-            ViolationType        = $v.ViolationType
-            RegulatoryContext    = $v.RegulatoryContext
-        }
-        Write-FileUploadViolation -Violation $violationRecord -RunId $runId
-    }
-
-    Write-Verbose "Wrote $($violationResults.Count) violation(s) to Dataverse"
-
-    # Persist overall run summary for historical compliance trend data
-    $validationHistoryRecord = @{
-        OverallStatus          = $overallStatus
-        TotalAgents            = $totalAgents
-        CompliantCount         = $compliantResults.Count
-        ViolationCount         = $violationCount
-        FileUploadEnabledCount = $fileUploadEnabledCount
-        ComplianceRate         = $complianceRate
-        EnvironmentsScanned    = $uniqueEnvs
-        ScanDurationSeconds    = $scanDurationSeconds
-    }
-    Write-FileUploadValidationHistory -ValidationResult $validationHistoryRecord -RunId $runId
-    Write-Verbose "Wrote validation history record to Dataverse"
-
-    #endregion
-
     #region Determine alert flags
 
     $hasViolations = $violations.Count -gt 0
     $hasWeakenedDrift = @($driftedAgents | Where-Object { $_.Direction -eq 'Weakened' }).Count -gt 0
-    # Preserve $alertRequired if already set (e.g., baseline query failure)
-    $alertRequired = $alertRequired -or $hasViolations -or $hasWeakenedDrift
+    $alertRequired = $hasViolations -or $hasWeakenedDrift -or $baselineQueryFailed
 
-    $severityOrder = @('Critical', 'High', 'Medium', 'Low', 'Warning', 'Info')
+    $severityOrder = @('Critical', 'High', 'Medium', 'Warning', 'Info')
     $alertSeverity = $overallStatus
 
     if ($hasViolations) {
@@ -472,38 +419,36 @@ try {
 
     #region Build enriched ZoneSummary
 
-    $zoneTotals = @{ 'Zone 1' = 0; 'Zone 2' = 0; 'Zone 3' = 0 }
-    $zoneViolations = @{ 'Zone 1' = 0; 'Zone 2' = 0; 'Zone 3' = 0 }
+    $zoneTotals = @{ 'Zone1' = 0; 'Zone2' = 0; 'Zone3' = 0 }
+    $zoneViolations = @{ 'Zone1' = 0; 'Zone2' = 0; 'Zone3' = 0 }
 
     foreach ($agent in $scanResult) {
-        $zoneKey = $agent.Zone
+        $zoneKey = $agent.Zone -replace '\s', ''
         if ($zoneKey -and $zoneTotals.ContainsKey($zoneKey)) {
             $zoneTotals[$zoneKey]++
         }
     }
 
     foreach ($v in $violationResults) {
-        $zoneKey = $v.Zone
+        $zoneKey = $v.Zone -replace '\s', ''
         if ($zoneKey -and $zoneViolations.ContainsKey($zoneKey)) {
             $zoneViolations[$zoneKey]++
         }
     }
 
-    # Build zone summary with keys matching flow schema (Zone1/Zone2/Zone3)
     $enrichedZoneSummary = [ordered]@{}
-    foreach ($z in @('Zone 1', 'Zone 2', 'Zone 3')) {
+    foreach ($z in @('Zone1', 'Zone2', 'Zone3')) {
         $total = [int]$zoneTotals[$z]
         $violCount = [int]$zoneViolations[$z]
 
-        $outputKey = $z -replace ' ', ''
-        $enrichedZoneSummary[$outputKey] = [PSCustomObject]@{
+        $enrichedZoneSummary[$z] = [PSCustomObject]@{
             Total      = $total
             Compliant  = $total - $violCount
             Violations = $violCount
         }
     }
 
-    Write-Verbose "Zone summary: Z1=$($enrichedZoneSummary.Zone1.Total)/$($enrichedZoneSummary.Zone1.Compliant), Z2=$($enrichedZoneSummary.Zone2.Total)/$($enrichedZoneSummary.Zone2.Compliant), Z3=$($enrichedZoneSummary.Zone3.Total)/$($enrichedZoneSummary.Zone3.Compliant)"
+    Write-Verbose "Zone summary: Z1=$($enrichedZoneSummary.'Zone1'.Total)/$($enrichedZoneSummary.'Zone1'.Compliant), Z2=$($enrichedZoneSummary.'Zone2'.Total)/$($enrichedZoneSummary.'Zone2'.Compliant), Z3=$($enrichedZoneSummary.'Zone3'.Total)/$($enrichedZoneSummary.'Zone3'.Compliant)"
 
     #endregion
 
@@ -511,7 +456,6 @@ try {
 
     $output = [PSCustomObject]@{
         RunType                = "FileUploadValidation"
-        RunId                  = $runId
         Timestamp              = (Get-Date -AsUTC -Format "o")
         TotalAgents            = $totalAgents
         TotalEnvironments      = $uniqueEnvs
@@ -526,8 +470,6 @@ try {
             DriftedAgents = $driftedAgents.Count
             Details       = $driftDetails
         }
-        ComplianceRate     = $complianceRate
-        ScanDurationSeconds = $scanDurationSeconds
         AlertRequired     = $alertRequired
         AlertSeverity     = $alertSeverity
     }
@@ -546,17 +488,15 @@ try {
 } catch {
     Write-Verbose "Error occurred: $($_.Exception.Message)"
 
-    $errorRunId = [Guid]::NewGuid().ToString()
     $errorOutput = [PSCustomObject]@{
         RunType                = "FileUploadValidation"
-        RunId                  = $errorRunId
         Timestamp              = (Get-Date -AsUTC -Format "o")
         TotalAgents            = 0
         TotalEnvironments      = 0
         FileUploadEnabledCount = 0
         OverallStatus          = "Error"
         Reason                 = $_.Exception.Message
-        ZoneSummary            = [PSCustomObject]@{ Zone1 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }; Zone2 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 }; Zone3 = [PSCustomObject]@{ Total = 0; Compliant = 0; Violations = 0 } }
+        ZoneSummary            = [PSCustomObject]@{}
         Violations             = @()
         Drift                  = [PSCustomObject]@{
             HasDrift      = $false
@@ -564,8 +504,6 @@ try {
             DriftedAgents = 0
             Details       = @()
         }
-        ComplianceRate    = 0
-        ScanDurationSeconds = 0
         AlertRequired     = $true
         AlertSeverity     = "Error"
     }

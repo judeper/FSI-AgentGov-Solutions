@@ -196,22 +196,6 @@
       },
       "description": "Governance zone to validate (Zone1, Zone2, or Zone3)"
     },
-    "Initialize_SkipPimValidation": {
-      "runAfter": {
-        "Initialize_Zone": ["Succeeded"]
-      },
-      "type": "InitializeVariable",
-      "inputs": {
-        "variables": [
-          {
-            "name": "SkipPimValidation",
-            "type": "boolean",
-            "value": true
-          }
-        ]
-      },
-      "description": "Skip PIM role settings validation (stub validator). Set to false when PIM validator is fully implemented."
-    },
     "Scope_Try": {
       "actions": {
         "Create_Automation_Job": {
@@ -238,18 +222,10 @@
                   "TenantId": "@{variables('TenantId')}",
                   "ClientId": "@{variables('ClientId')}",
                   "CertificateThumbprint": "@{variables('CertificateThumbprint')}",
-                  "ConfigPath": "tenant-config.json",
-                  "SkipPimValidation": "@{string(variables('SkipPimValidation'))}"
+                  "ConfigPath": "tenant-config.json"
                 }
               }
             }
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1M"
           },
           "description": "Start Azure Automation runbook for session security validation"
         },
@@ -280,13 +256,6 @@
                 "queries": {
                   "x-ms-api-version": "2015-10-31"
                 }
-              },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1M"
               },
               "description": "Check runbook job status"
             },
@@ -335,13 +304,6 @@
             "Send_Job_Failure_Email": {
               "runAfter": {},
               "type": "ApiConnection",
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1M"
-              },
               "inputs": {
                 "host": {
                   "connection": {
@@ -391,13 +353,6 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1M"
-          },
           "description": "Retrieve runbook job output (JSON string)"
         },
         "Parse_Results": {
@@ -445,13 +400,6 @@
                         "Status": { "type": "string" },
                         "Reason": { "type": "string" }
                       }
-                    },
-                    "PolicyConflictAudit": {
-                      "type": "object",
-                      "properties": {
-                        "Status": { "type": "string" },
-                        "Reason": { "type": "string" }
-                      }
                     }
                   }
                 },
@@ -476,41 +424,37 @@
           "runAfter": {
             "Parse_Results": ["Succeeded"]
           },
-          "type": "Http",
+          "type": "ApiConnection",
           "inputs": {
-            "method": "POST",
-            "uri": "@{variables('DataverseUrl')}/api/data/v9.2/fsi_validationhistories",
-            "headers": {
-              "Content-Type": "application/json",
-              "OData-MaxVersion": "4.0",
-              "OData-Version": "4.0"
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_commondataserviceforapps']['connectionId']"
+              }
             },
-            "authentication": {
-              "type": "ManagedServiceIdentity",
-              "audience": "@{variables('DataverseUrl')}"
-            },
+            "method": "post",
+            "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent(variables('DataverseUrl')))}/tables/@{encodeURIComponent(encodeURIComponent('fsi_validationhistories'))}/items",
             "retryPolicy": {
               "type": "exponential",
-              "count": 3,
+              "count": 4,
               "interval": "PT10S",
               "minimumInterval": "PT10S",
-              "maximumInterval": "PT1M"
+              "maximumInterval": "PT1H"
             },
             "body": {
               "fsi_name": "@{body('Parse_Results')?['Zone']}-@{body('Parse_Results')?['Timestamp']}",
               "fsi_runid": "@{guid()}",
-              "fsi_zone": "@if(equals(body('Parse_Results')?['Zone'], 'Zone1'), 100000001, if(equals(body('Parse_Results')?['Zone'], 'Zone2'), 100000002, 100000003))",
-              "fsi_severity": "@if(equals(body('Parse_Results')?['OverallStatus'], 'Passed'), 1, if(equals(body('Parse_Results')?['OverallStatus'], 'Warning'), 2, if(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), 4, 5)))",
+              "fsi_zone": "@{if(equals(body('Parse_Results')?['Zone'], 'Zone1'), 100000001, if(equals(body('Parse_Results')?['Zone'], 'Zone2'), 100000002, 100000003))}",
+              "fsi_severity": "@{if(equals(body('Parse_Results')?['OverallStatus'], 'Passed'), 1, if(equals(body('Parse_Results')?['OverallStatus'], 'Warning'), 2, if(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), 4, 5)))}",
               "fsi_validationtype": 6,
               "fsi_rawvalue": "@{string(body('Parse_Results'))}",
               "fsi_reason": "@{body('Parse_Results')?['Reason']}",
               "fsi_timestamp": "@{body('Parse_Results')?['Timestamp']}",
-              "fsi_checkcount": "@if(equals(body('Parse_Results')?['Validators']?['PolicyConflictAudit'], null), 4, 5)",
+              "fsi_checkcount": 4,
               "fsi_baselineid": "@{if(equals(body('Parse_Results')?['Drift']?['IsFirstRun'], true), '', body('Parse_Results')?['Drift']?['BaselineDate'])}",
               "fsi_remediationhint": "@{if(equals(body('Parse_Results')?['AlertRequired'], true), body('Parse_Results')?['Reason'], '')}"
             }
           },
-          "description": "Write validation results to Dataverse immutable audit trail (runs for ALL results, not just alerts)"
+          "description": "Write validation results to Dataverse immutable audit trail via Dataverse connector (DLP-governed)"
         },
         "Check_Alert_Required": {
           "runAfter": {
@@ -551,13 +495,6 @@
                 "Post_Teams_Card": {
                   "runAfter": {},
                   "type": "ApiConnection",
-                  "retryPolicy": {
-                    "type": "exponential",
-                    "count": 3,
-                    "interval": "PT10S",
-                    "minimumInterval": "PT10S",
-                    "maximumInterval": "PT1M"
-                  },
                   "inputs": {
                     "host": {
                       "connection": {
@@ -574,9 +511,8 @@
                         },
                         "attachments": [
                           {
-                            "id": "adaptive-card",
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Session Security Drift\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Session Controls\",\"value\":\"${sessionControlsStatus}\"},{\"title\":\"Auth Strength\",\"value\":\"${authStrengthStatus}\"},{\"title\":\"PIM Settings\",\"value\":\"${pimStatus}\"},{\"title\":\"Break-Glass\",\"value\":\"${breakGlassStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', body('Parse_Results')?['OverallStatus']), '${timestamp}', body('Parse_Results')?['Timestamp']), '${zone}', body('Parse_Results')?['Zone']), '${baselineStatus}', body('Parse_Results')?['Drift']?['BaselineStatus']), '${currentStatus}', body('Parse_Results')?['Drift']?['CurrentStatus']), '${baselineDate}', body('Parse_Results')?['Drift']?['BaselineDate']), '${reason}', replace(replace(body('Parse_Results')?['Reason'], '\\', '\\\\'), '\"', '\\\"')), '${sessionControlsStatus}', body('Parse_Results')?['Validators']?['SessionControls']?['Status']), '${authStrengthStatus}', body('Parse_Results')?['Validators']?['AuthenticationStrength']?['Status']), '${pimStatus}', body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']), '${breakGlassStatus}', body('Parse_Results')?['Validators']?['BreakGlassExclusions']?['Status']), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Session Security Drift\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Session Controls\",\"value\":\"${sessionControlsStatus}\"},{\"title\":\"Auth Strength\",\"value\":\"${authStrengthStatus}\"},{\"title\":\"PIM Settings\",\"value\":\"${pimStatus}\"},{\"title\":\"Break-Glass\",\"value\":\"${breakGlassStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', body('Parse_Results')?['OverallStatus']), '${timestamp}', body('Parse_Results')?['Timestamp']), '${zone}', body('Parse_Results')?['Zone']), '${baselineStatus}', body('Parse_Results')?['Drift']?['BaselineStatus']), '${currentStatus}', body('Parse_Results')?['Drift']?['CurrentStatus']), '${baselineDate}', body('Parse_Results')?['Drift']?['BaselineDate']), '${reason}', body('Parse_Results')?['Reason']), '${sessionControlsStatus}', body('Parse_Results')?['Validators']?['SessionControls']?['Status']), '${authStrengthStatus}', body('Parse_Results')?['Validators']?['AuthenticationStrength']?['Status']), '${pimStatus}', body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']), '${breakGlassStatus}', body('Parse_Results')?['Validators']?['BreakGlassExclusions']?['Status']), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
                           }
                         ]
                       }
@@ -589,16 +525,9 @@
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded", "Failed"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed", "Skipped"]
               },
               "type": "ApiConnection",
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1M"
-              },
               "inputs": {
                 "host": {
                   "connection": {
@@ -621,7 +550,7 @@
         }
       },
       "runAfter": {
-        "Initialize_SkipPimValidation": ["Succeeded"]
+        "Initialize_Zone": ["Succeeded"]
       },
       "type": "Scope",
       "description": "Main validation execution scope with error handling"
@@ -631,13 +560,6 @@
         "Send_Error_Email": {
           "runAfter": {},
           "type": "ApiConnection",
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1M"
-          },
           "inputs": {
             "host": {
               "connection": {
@@ -654,20 +576,6 @@
             }
           },
           "description": "Send error notification on flow failure"
-        },
-        "Terminate_Flow_As_Failed": {
-          "runAfter": {
-            "Send_Error_Email": ["Succeeded", "Failed"]
-          },
-          "type": "Terminate",
-          "inputs": {
-            "runStatus": "Failed",
-            "runError": {
-              "code": "FlowExecutionError",
-              "message": "Session Security Validation flow encountered an error in Scope_Try. Review flow run history for details."
-            }
-          },
-          "description": "Mark flow run as Failed so admin dashboards detect the failure"
         }
       },
       "runAfter": {

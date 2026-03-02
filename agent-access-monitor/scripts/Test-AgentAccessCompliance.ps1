@@ -75,7 +75,7 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 1.0.0
+    Version: 0.1.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
@@ -127,7 +127,7 @@ $scriptRoot = $PSScriptRoot
 
 # Banner
 Write-Verbose "========================================="
-Write-Verbose "Agent Access Governance Monitor v1.0.0"
+Write-Verbose "Agent Access Governance Monitor v0.1.0"
 Write-Verbose "========================================="
 
 #endregion
@@ -199,6 +199,10 @@ if ($ExcludeDefault) {
 
 if ($DataverseUrl) {
     $getSettingsParams['DataverseUrl'] = $DataverseUrl
+}
+
+if ($DataverseToken) {
+    $getSettingsParams['AccessToken'] = $DataverseToken
 }
 
 #endregion
@@ -356,11 +360,10 @@ $zoneSummary = [PSCustomObject]@{
 }
 
 $result = [PSCustomObject]@{
-    Summary              = $summary
-    ZoneSummary          = $zoneSummary
-    Environments         = if ($IncludeCompliant) { $complianceResults } else { $nonCompliantEnvs }
-    OverallStatus        = $overallStatus
-    EnvironmentSettings  = $environmentSettings
+    Summary       = $summary
+    ZoneSummary   = $zoneSummary
+    Environments  = if ($IncludeCompliant) { $complianceResults } else { $nonCompliantEnvs }
+    OverallStatus = $overallStatus
 }
 
 #endregion

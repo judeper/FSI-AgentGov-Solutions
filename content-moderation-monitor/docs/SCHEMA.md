@@ -20,7 +20,7 @@ Per-agent moderation level snapshots used for drift detection comparison. Each r
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationbaselineid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (200) | Yes | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
+| `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
 | `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
 | `fsi_environment_name` | String (500) | Yes | Environment display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Yes | Zone classification |
@@ -45,13 +45,13 @@ Organization-owned immutable scan summary records. Each record represents one co
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationvalidationhistoryid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (200) | Yes | Record name (`{Status}-{Timestamp}`) |
+| `fsi_name` | String (500) | Yes | Record name (`{Status}-{Timestamp}`) |
 | `fsi_run_id` | String (36) | Yes | GUID correlating all records from one scan |
 | `fsi_validation_time` | DateTime | Yes | When scan executed (UTC) |
 | `fsi_total_agents` | Integer | Yes | Total agents scanned |
 | `fsi_compliant_count` | Integer | Yes | Agents passing moderation checks |
 | `fsi_violation_count` | Integer | Yes | Agents with moderation violations |
-| `fsi_overall_status` | String (50) | Yes | Passed, Critical, Failed, Review, or Error |
+| `fsi_overall_status` | String (50) | Yes | Passed, Failed, Warning, or Critical |
 | `fsi_environments_scanned` | String (2000) | No | Comma-separated environment list |
 | `fsi_summary_json` | Memo (100000) | No | Full JSON summary blob |
 
@@ -65,7 +65,7 @@ Per-agent violation records with severity classification and regulatory context.
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_moderationviolationid` | Uniqueidentifier | Auto | Primary key |
-| `fsi_name` | String (200) | Yes | Record name (`{AgentName}-{Zone}-{Date}`) |
+| `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Date}`) |
 | `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
 | `fsi_environment_name` | String (500) | Yes | Environment display name |
 | `fsi_agent_id` | String (100) | Yes | Violating agent's bot GUID |
@@ -176,4 +176,4 @@ Power Automate connection references for the CMM flow.
 
 ---
 
-*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.1*
+*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.0*

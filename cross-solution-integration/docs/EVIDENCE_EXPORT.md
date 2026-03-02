@@ -21,7 +21,8 @@ Financial services organizations require consolidated evidence packages for regu
 evidence-export-YYYY-MM-DD-HHmmss/
 ├── manifest.json
 ├── acv/
-│   └── validations.csv
+│   ├── validations.csv
+│   └── violations.csv
 ├── ssc/
 │   ├── validations.csv
 │   └── violations.csv
@@ -35,7 +36,8 @@ evidence-export-YYYY-MM-DD-HHmmss/
 │   ├── validations.csv
 │   └── violations.csv
 └── caa/
-    └── validations.csv
+    ├── validations.csv
+    └── violations.csv
 ```
 
 ---
@@ -53,19 +55,13 @@ evidence-export-YYYY-MM-DD-HHmmss/
     "solutions": {
         "acv": {
             "validationCount": 150,
-            "violationCount": 0,
-            "exportedAt": "ISO 8601 timestamp"
-        },
-        "ssc": {
-            "validationCount": 200,
-            "violationCount": 5,
+            "violationCount": 3,
             "exportedAt": "ISO 8601 timestamp"
         }
     },
     "fileHashes": {
         "acv/validations.csv": "SHA-256 hex",
-        "ssc/validations.csv": "SHA-256 hex",
-        "ssc/violations.csv": "SHA-256 hex"
+        "acv/violations.csv": "SHA-256 hex"
     },
     "masterHash": "SHA-256 hex"
 }
@@ -106,12 +102,12 @@ This approach is consistent with the per-solution evidence export pattern used b
 
 | Solution | Validation Table | Violation Table | Date Field | Key Fields |
 |----------|-----------------|-----------------|------------|------------|
-| ACV | `fsi_auditvalidationhistories` | — | `fsi_scannedon` | settingName, expectedValue, actualValue, severity, zone |
+| ACV | `fsi_auditvalidationhistories` | `fsi_auditvalidationviolations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity, zone |
 | SSC | `fsi_validationhistories` | `fsi_driftviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
 | AAM | `fsi_accessvalidationhistories` | `fsi_accessviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, permissionType, expectedAccess, actualAccess |
 | CMM | `fsi_moderationvalidationhistories` | `fsi_moderationviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, moderationPolicy, expectedConfig, actualConfig |
 | FUS | `fsi_fileupload_validationhistories` | `fsi_fileupload_violations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
-| CAA | `fsi_capolicyvalidationhistories` | — | `fsi_scannedon` | policyName, severity, environmentName, zone |
+| CAA | `fsi_capolicyvalidationhistories` | `fsi_capolicyviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
 
 ---
 

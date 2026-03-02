@@ -98,18 +98,18 @@ RETURN
 ```dax
 Score Change 30D =
 VAR CurrentScore = [Overall Score]
-VAR PriorDate = MAX(ComplianceScore[fsi_scoredate]) - 30
 VAR PriorScore =
     CALCULATE(
         AVERAGE(ComplianceScore[fsi_overallscore]),
-        ComplianceScore[fsi_scoredate] =
-            CALCULATE(
-                MAX(ComplianceScore[fsi_scoredate]),
-                ComplianceScore[fsi_scoredate] <= PriorDate
-            )
+        DATESINPERIOD(
+            DateTable[Date],
+            MAX(ComplianceScore[fsi_scoredate]) - 30,
+            1,
+            DAY
+        )
     )
 RETURN
-    IF(ISBLANK(PriorScore), BLANK(), CurrentScore - PriorScore)
+    CurrentScore - PriorScore
 ```
 
 ### Score Change Direction
@@ -177,20 +177,17 @@ Total Controls = COUNTROWS(ControlMaster)
 ```dax
 Compliant Controls =
 VAR LatestAssessments =
-    SUMMARIZE(
-        ControlAssessment,
-        ControlAssessment[fsi_controlmasterid],
-        ControlAssessment[fsi_zone],
-        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    FILTER(
+        ADDCOLUMNS(
+            ControlAssessment,
+            "IsLatest", ControlAssessment[fsi_assessmentdate] =
+                CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+        ),
+        [IsLatest] = TRUE()
     )
 RETURN
-COUNTROWS(
-    FILTER(
-        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
-        ControlAssessment[fsi_assessmentdate] = [LatestDate]
-            && ControlAssessment[fsi_status] = 1
-    )
-)
+COUNTROWS(FILTER(LatestAssessments, [fsi_status] = 1))
 ```
 
 ### Partial Count
@@ -198,20 +195,17 @@ COUNTROWS(
 ```dax
 Partial Controls =
 VAR LatestAssessments =
-    SUMMARIZE(
-        ControlAssessment,
-        ControlAssessment[fsi_controlmasterid],
-        ControlAssessment[fsi_zone],
-        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    FILTER(
+        ADDCOLUMNS(
+            ControlAssessment,
+            "IsLatest", ControlAssessment[fsi_assessmentdate] =
+                CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+        ),
+        [IsLatest] = TRUE()
     )
 RETURN
-COUNTROWS(
-    FILTER(
-        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
-        ControlAssessment[fsi_assessmentdate] = [LatestDate]
-            && ControlAssessment[fsi_status] = 2
-    )
-)
+COUNTROWS(FILTER(LatestAssessments, [fsi_status] = 2))
 ```
 
 ### Non-Compliant Count
@@ -219,67 +213,40 @@ COUNTROWS(
 ```dax
 Non-Compliant Controls =
 VAR LatestAssessments =
-    SUMMARIZE(
-        ControlAssessment,
-        ControlAssessment[fsi_controlmasterid],
-        ControlAssessment[fsi_zone],
-        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
+    FILTER(
+        ADDCOLUMNS(
+            ControlAssessment,
+            "IsLatest", ControlAssessment[fsi_assessmentdate] =
+                CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+        ),
+        [IsLatest] = TRUE()
     )
 RETURN
-COUNTROWS(
-    FILTER(
-        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
-        ControlAssessment[fsi_assessmentdate] = [LatestDate]
-            && ControlAssessment[fsi_status] = 3
-    )
-)
-```
-
-### Not Applicable Controls
-
-```dax
-Not Applicable Controls =
-VAR LatestAssessments =
-    SUMMARIZE(
-        ControlAssessment,
-        ControlAssessment[fsi_controlmasterid],
-        ControlAssessment[fsi_zone],
-        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
-    )
-RETURN
-COUNTROWS(
-    FILTER(
-        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
-        ControlAssessment[fsi_assessmentdate] = [LatestDate]
-            && ControlAssessment[fsi_status] = 4
-    )
-)
+COUNTROWS(FILTER(LatestAssessments, [fsi_status] = 3))
 ```
 
 ### Compliance Rate
 
 ```dax
-Compliance Rate =
+Not Applicable Controls =
 VAR LatestAssessments =
-    SUMMARIZE(
-        ControlAssessment,
-        ControlAssessment[fsi_controlmasterid],
-        ControlAssessment[fsi_zone],
-        "LatestDate", MAX(ControlAssessment[fsi_assessmentdate])
-    )
-VAR LatestRows =
     FILTER(
-        NATURALLEFTOUTERJOIN(ControlAssessment, LatestAssessments),
-        ControlAssessment[fsi_assessmentdate] = [LatestDate]
+        ADDCOLUMNS(
+            ControlAssessment,
+            "IsLatest", ControlAssessment[fsi_assessmentdate] =
+                CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+        ),
+        [IsLatest] = TRUE()
     )
-VAR TotalActive =
-    COUNTROWS(FILTER(LatestRows, ControlAssessment[fsi_status] <> 4))
-VAR CompliantCount =
-    COUNTROWS(FILTER(LatestRows, ControlAssessment[fsi_status] = 1))
 RETURN
+COUNTROWS(FILTER(LatestAssessments, [fsi_status] = 4))
+
+Compliance Rate =
 DIVIDE(
-    CompliantCount,
-    TotalActive,
+    [Compliant Controls],
+    [Total Controls] - [Not Applicable Controls],
     0
 )
 ```

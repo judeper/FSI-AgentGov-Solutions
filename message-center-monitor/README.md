@@ -8,7 +8,7 @@ Monitor Microsoft 365 Message Center for platform changes that could impact AI a
 
 - Polls Microsoft Message Center daily for new announcements
 - Stores posts in Dataverse for tracking and assessment
-- Alerts your team via Teams when high/critical severity or action-required posts appear
+- Alerts your team via Teams when high-severity or action-required posts appear
 - Lets you assess and document which changes impact your agents
 
 **This is operational monitoring** - it helps your platform team stay informed about Microsoft updates. It is not a compliance or audit system.
@@ -97,7 +97,7 @@ See [FLOW_SETUP.md](./FLOW_SETUP.md) for complete flow creation instructions.
 2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
 4. For each message: Upsert to Dataverse using messagecenterId
-5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
+5. Condition: If severity = high OR actionRequiredByDateTime is set
 6. Teams notification: Post adaptive card to your channel
 
 ### Step 3: Set Up Teams Notifications
@@ -108,7 +108,7 @@ See [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) for Teams setup.
 
 1. Create a Teams channel for platform alerts
 2. Use the provided adaptive card template
-3. Configure the flow to post high/critical severity alerts
+3. Configure the flow to post high-severity alerts
 
 > **Note on Office 365 Connectors Deprecation:** Microsoft is retiring Office 365 incoming webhook connectors on **March 31, 2026**. This solution uses the native **Power Automate "Post to Teams" connector**, which is unaffected by this deprecation. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
 
@@ -116,7 +116,7 @@ See [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) for Teams setup.
 
 1. Run the flow manually
 2. Check Dataverse for imported posts
-3. Verify Teams notifications appear for high or critical severity items
+3. Verify Teams notifications appear for high-severity items
 
 ## Workflow
 
@@ -130,7 +130,7 @@ Daily Polling (9 AM)
 Dataverse MessageCenterLog Table
         │
         ▼
-Alert if severity=high/critical OR action-required
+Alert if severity=high OR action-required
         │
         ▼
 Agent Platform Team Review
@@ -153,7 +153,7 @@ MessageCenterLog
 ├── messagecenterId (PK, MC######)
 ├── title
 ├── category (Feature/Admin/Security)
-├── severity (high/normal/critical)
+├── severity (High/Normal/Critical)
 ├── services (comma-separated)
 ├── startDateTime
 ├── actionRequiredByDateTime
@@ -229,7 +229,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.1.1 - January 2026
+2.1.2 - March 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

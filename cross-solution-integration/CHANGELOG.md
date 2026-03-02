@@ -18,6 +18,6 @@ All notable changes to this solution will be documented in this file.
 
 ### Integration Points
 
-- 6 Tier 2 solutions feeding 9 controls into Compliance Dashboard
+- 6 Tier 2 solutions feeding 7 controls into Compliance Dashboard
 - ELM provisioning completion cascading to ACV environment registration
 - Unified evidence export with per-solution SHA-256 hash chain

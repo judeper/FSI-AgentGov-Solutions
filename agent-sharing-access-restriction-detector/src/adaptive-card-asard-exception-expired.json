@@ -1,7 +1,7 @@
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
-  "version": "1.5",
+  "version": "1.4",
   "body": [
     {
       "type": "Container",
@@ -126,7 +126,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "**What happened:**\n\nThe exception review workflow detected that these agent sharing exceptions reached their expiration date. The workflow automatically updated the Dataverse records:\n\n- Set `fsi_compliance_status` from `Exception` (914430002) to `NonCompliant` (914430001)\n- Cleared all `fsi_exception_*` fields (expires_at, justification, approved_by, approved_at, review_date)\n\n**What's next:**\n\nDuring the next scheduled detection scan, these agents will be evaluated against zone-based sharing rules. If they are still non-compliant, they will be flagged as violations. If remediation workflows are enabled, the agents may be automatically remediated according to zone policies.\n\n**To re-grant an exception:**\n\nIf an agent legitimately requires broader sharing, manually update the Dataverse record with new exception fields (expires_at, justification, approved_by) and set compliance_status back to `Exception` (914430002).",
+          "text": "**What happened:**\n\nThe exception review workflow detected that these agent sharing exceptions reached their expiration date. The workflow automatically updated the Dataverse records:\n\n- Set `fsi_compliance_status` from `Exception` (2) to `NonCompliant` (1)\n- Cleared `fsi_exception_expires_at` and `fsi_exception_review_date` (justification, approved_by, approved_at preserved for audit trail)\n\n**What's next:**\n\nDuring the next scheduled detection scan, these agents will be evaluated against zone-based sharing rules. If they are still non-compliant, they will be flagged as violations. If remediation workflows are enabled, the agents may be automatically remediated according to zone policies.\n\n**To re-grant an exception:**\n\nIf an agent legitimately requires broader sharing, manually update the Dataverse record with new exception fields (expires_at, justification, approved_by) and set compliance_status back to `Exception` (2).",
           "wrap": true,
           "spacing": "Small"
         }
@@ -184,7 +184,8 @@
     ],
     "exceptionListFormat": "Agent: {agent_name} | Environment: {environment_name} | Expired: {expired_date} | Previous Justification: {justification_preview}",
     "cardStyle": "attention",
-    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
-    "icon": "🔴"
+    "icon": "🔴",
+    "renderingPipeline": "string-replacement",
+    "renderingNotes": "This card uses {{variable}} placeholders rendered via Power Automate string replace() functions. Do not mix with ${variable} Adaptive Cards Templating SDK syntax."
   }
 }

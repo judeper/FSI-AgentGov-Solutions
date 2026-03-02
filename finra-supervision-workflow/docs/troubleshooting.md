@@ -48,7 +48,7 @@ Error: User does not have Dataverse System Administrator role
 
 **Resolution:**
 1. Manually create global option sets in Power Apps maker portal
-2. Re-run deploy script with `--tables-only` flag to skip other components
+2. Re-run deploy script with `--tables-only` flag to skip option set creation
 3. Or assign Solution.Add permissions to deployment account
 
 ---
@@ -64,16 +64,16 @@ Error: User does not have Dataverse System Administrator role
 **Resolution Checklist:**
 1. Verify flow is turned on
 2. Check flow run history for errors
-3. Verify Graph API permissions (`User.Read.All`) and Purview Compliance Administrator role
+3. Verify Graph API permissions (`SecurityEvents.Read.All`)
 4. Check `lastRunTime` in Key Vault isn't in the future
 5. Verify alert `alertType` matches filter condition
 
 **Quick Fix:**
 ```powershell
 # Reset lastRunTime to 1 hour ago
-az keyvault secret set `
-    --vault-name fsw-credentials-kv `
-    --name FSW-LastRunTime `
+az keyvault secret set \
+    --vault-name fsw-credentials-kv \
+    --name FSW-LastRunTime \
     --value (Get-Date).AddHours(-1).ToString("o")
 ```
 
@@ -152,8 +152,8 @@ $items = Get-CrmRecords -EntityLogicalName fsi_supervisionqueue -FilterAttribute
 
 foreach ($item in $items) {
     Set-CrmRecord -EntityLogicalName fsi_supervisionqueue -Id $item.Id -Fields @{
-        fsi_zone = 100000001
-        fsi_tier = 100000001
+        fsi_zone = 2
+        fsi_tier = 2
     }
 }
 ```
@@ -300,7 +300,7 @@ Error: Interactive authentication required
 **Cause:** Running in non-interactive context without proper credentials.
 
 **Resolution:**
-1. Use `--client-id <id> --client-secret <secret>` flags for non-interactive authentication
+1. Use `--client-id` and `--client-secret` flags for service principal authentication
 2. Or run interactively first to cache token
 3. Verify token cache location is writable
 
@@ -346,14 +346,9 @@ $items = Get-CrmRecords -EntityLogicalName fsi_supervisionqueue
 foreach ($item in $items) {
     Remove-CrmRecord -EntityLogicalName fsi_supervisionqueue -Id $item.Id
 }
-
-# Also clear logs
-$logs = Get-CrmRecords -EntityLogicalName fsi_supervisionlog
-
-foreach ($log in $logs) {
-    Remove-CrmRecord -EntityLogicalName fsi_supervisionlog -Id $log.Id
-}
 ```
+
+> **Important:** SupervisionLog records must NOT be deleted. The SupervisionLog table is an immutable audit trail required for SEC 17a-3/4 compliance. Deleting log records would violate recordkeeping requirements and undermine regulatory evidence integrity. If log cleanup is needed in a test environment, delete and recreate the entire test environment instead.
 
 ### Reprocess Failed Items
 

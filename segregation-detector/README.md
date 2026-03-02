@@ -32,8 +32,8 @@ The Segregation of Duties (SoD) Detector identifies and prevents conflicts where
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Dataverse (SoD Hub)                           │
 ├───────────────┬───────────────┬───────────────┬─────────────────┤
-│ Conflict      │ User Role     │ Exception     │ Audit           │
-│ Rules         │ Assignments   │ Requests      │ Log             │
+│ Conflict      │ SoD           │ Exception     │ Audit           │
+│ Rules         │ Violations    │ Requests      │ Log             │
 └───────────────┴───────────────┴───────────────┴─────────────────┘
                               ▲
                               │ Data Sources
@@ -56,8 +56,8 @@ Same user cannot both create and approve in the same workflow.
 | Agent Developer | Pipeline Approver | Self-approval of changes |
 | Solution Developer | Solution Promoter | Unreviewed deployments |
 | Flow Creator | Flow Approver | Bypass change management |
-| Connection Creator | Connection Approver | Unapproved connections |
-| DLP Policy Author | DLP Policy Approver | Self-exemption |
+| DLP Policy Author | DLP Policy Approver | Self-exemption from DLP policies |
+| Connection Creator | Connection Approver | Unreviewed connection approval |
 
 ### Category 2: Segregation Conflicts
 
@@ -65,11 +65,11 @@ Roles that should never be held by the same person.
 
 | Role A | Role B | Risk |
 |--------|--------|------|
-| System Administrator | Agent Publisher | Admin promotes own work |
-| Security Administrator | Agent Developer | Security role separation |
-| Compliance Administrator | Agent Developer | Compliance role separation |
-| Environment Creator | Environment Approver | Environment lifecycle separation |
-| Data Steward | Data Consumer (sensitive) | Data access separation |
+| Environment Admin | Agent Publisher | Admin promotes own work |
+| Security Administrator | Agent Developer | Security/development overlap |
+| Compliance Administrator | Agent Developer | Compliance/development overlap |
+| Environment Creator | Environment Approver | Environment lifecycle overlap |
+| Data Steward | Data Consumer | Data access separation |
 
 ### Category 3: Privileged Access Conflicts
 
@@ -78,9 +78,9 @@ High-privilege roles that require additional controls.
 | Privileged Role | Incompatible With | Risk |
 |-----------------|-------------------|------|
 | Global Administrator | Agent Developer | God mode abuse |
-| Power Platform Administrator | Basic User (any env) | Admin as user |
-| Privileged Role Administrator | Application Administrator | Privilege escalation prevention |
-| Break-Glass Account | Any Non-Emergency Use | Emergency access only (template — disabled by default) |
+| Power Platform Administrator | Basic User | Admin as user |
+| Privileged Role Administrator | Application Administrator | Privilege escalation |
+| Break-Glass Account | Basic User | Emergency access misuse |
 
 ## Prerequisites
 
@@ -110,17 +110,7 @@ High-privilege roles that require additional controls.
 
 ### 1. Deploy Dataverse Schema
 
-> **Note:** This release includes PowerShell scripts for scanning and rule import only.
-> A deployable Power Platform solution package (solution.xml, customizations.xml, security
-> role definitions, and detection flows) is planned for a future release. For now, create
-> the Dataverse tables manually using the schema documentation below.
-
-```powershell
-# Create tables manually using docs/dataverse-schema.md
-# Solution package import will be available in a future release.
-```
-
-Or create tables manually using [docs/dataverse-schema.md](docs/dataverse-schema.md).
+Create tables manually using [docs/dataverse-schema.md](docs/dataverse-schema.md).
 
 ### 2. Configure Conflict Rules
 
@@ -136,14 +126,9 @@ Load the default conflict rule set:
 .\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -Verbose
 ```
 
-### 4. Deploy Power Automate Flows
+### 4. Review Results
 
-Flow configuration documentation is planned for a future release.
-<!-- See [docs/flow-configuration.md](docs/flow-configuration.md) for flow setup. -->
-
-### 5. Review Results
-
-Open the SoD Detector results in Dataverse (query `fsi_sodviolations`) or review the script console output to examine detected conflicts.
+Review scan output for detected conflicts. A Power Apps dashboard for visual review is planned for a future release.
 
 ## Documentation
 
@@ -152,37 +137,21 @@ Open the SoD Detector results in Dataverse (query `fsi_sodviolations`) or review
 | [Prerequisites](docs/prerequisites.md) | Licensing and permission requirements |
 | [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
 | [Conflict Rules](docs/conflict-rules.md) | Rule configuration guide |
-| Flow Configuration | Power Automate setup (planned) |
-| Exception Workflow | Managing justified exceptions (planned) |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 
 ## Detection Process
 
 ### Scheduled Scan (Daily)
 
-1. Query all user role assignments from Entra ID (including group-inherited roles via transitive member resolution)
-2. Query Power Platform environment roles (user-type principals only)
-3. Compare against conflict rules matrix
-4. Generate violations for new conflicts
-5. Send summary report
+1. Query all user role assignments from Entra ID
+2. Query Power Platform environment roles
+3. Query Dataverse security roles
+4. Compare against conflict rules matrix
+5. Generate violations for new conflicts
+6. Update status for resolved conflicts (planned)
+7. Send summary report (planned)
 
-> **Note:** Dataverse security role scanning (step 3 in architecture) and automatic resolution of stale violations are planned for a future release.
-> Audit log writing to `fsi_sodauditlog` is not yet implemented — `Write-AuditLog` currently outputs to console only.
-
-### Known Limitations
-
-| Limitation | Impact | Status |
-|------------|--------|--------|
-| **Custom Entra ID roles** | Custom roles created via unified RBAC are queried separately; requires `RoleManagement.Read.Directory` permission on the service principal | Implemented |
-| **Entra ID group-based role assignments** | Roles assigned via Entra ID security groups are resolved by enumerating transitive group members (`Directory.Read.All`, already listed in prerequisites, is sufficient for this) | Implemented |
-| **Power Platform group/SP filtering** | Power Platform role assignments for groups and service principals are excluded from scanning; only user-type principals are evaluated | By design |
-| **Dataverse Security Role scanning (context=4)** | 11 of 14 default rules reference Dataverse Security Roles; these rules will not match until context=4 scanning is implemented | Planned |
-| **Audit log persistence** | Scan events and violation detections are logged to console only, not written to `fsi_sodauditlog` in Dataverse | Planned |
-| **Concurrent scan protection** | Running two scans simultaneously against the same environment may create duplicate violation records; ensure only one scan runs per environment at a time | By design |
-| **Stale violation auto-resolution** | When a conflicting role is removed, the corresponding violation record remains open indefinitely; manual resolution required | Planned |
-| **Power Automate flows** | Real-time detection (Graph API webhooks), scheduled scan automation, and pipeline-gate integration require flows not yet included | Planned |
-
-### Real-Time Detection
+### Real-Time Detection (Planned)
 
 1. Monitor role assignment changes via Graph API webhooks
 2. Evaluate change against conflict rules
@@ -191,7 +160,7 @@ Open the SoD Detector results in Dataverse (query `fsi_sodviolations`) or review
    - Send immediate alert
    - Optionally block assignment (if integrated)
 
-### Pipeline Gate (On Promotion)
+### Pipeline Gate (Planned — On Promotion)
 
 1. Before agent promotion, query user roles
 2. Check if promoter has maker role for same agent
@@ -307,6 +276,14 @@ For supervision queue assignments:
 | [2.3 - Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md) | Pipeline integration |
 | [1.18 - Application-Level RBAC](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.18-application-level-role-based-access-control.md) | Role definitions |
 
+## Known Limitations
+
+| Limitation | Description |
+|------------|-------------|
+| **No solution package** | No managed/unmanaged ZIP or `solution.xml` is included. Dataverse tables must be created manually per [dataverse-schema.md](docs/dataverse-schema.md). |
+| **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` and `-WhatIf` before production use. |
+| **Unsupported role contexts** | Entra ID App Role assignments (context 2) and Custom Application Roles (context 5) are not queried. Rules targeting these contexts will not match. |
+
 ## Version History
 
 | Version | Date | Changes |
@@ -322,11 +299,11 @@ For supervision queue assignments:
 | Authentication failure | Expired token or wrong service principal permissions | Re-authenticate; verify Global Reader and Power Platform Administrator roles |
 | No conflict rules found | Rules not imported or all disabled | Run `Import-ConflictRules.ps1`; verify `fsi_enabled` is `true` in Dataverse |
 | Empty scan results | No role assignments returned from Graph API | Check service principal has `Directory.Read.All` permission |
-| Violation creation fails | Dataverse schema missing or permission denied | Create tables manually per docs/dataverse-schema.md; verify System Administrator role on Dataverse |
+| Violation creation fails | Dataverse schema missing or permission denied | Create tables manually per [dataverse-schema.md](docs/dataverse-schema.md); verify System Administrator role on Dataverse |
 
 ### Logs
 
-Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+Review script output for `[WARN]` audit log entries and red-highlighted error messages. Enable verbose output with `-Verbose` flag.
 
 ## Support
 

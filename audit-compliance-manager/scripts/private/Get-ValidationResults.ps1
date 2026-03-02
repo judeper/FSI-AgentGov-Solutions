@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -7,8 +7,7 @@
 .DESCRIPTION
     Retrieves validation result records from the fsi_auditvalidationhistories table
     via Dataverse Web API with OData filtering. Handles pagination automatically to
-    ensure complete result sets for evidence export. Uses Invoke-WithRetry for
-    transient error handling (429/503/504) on Dataverse OData GET requests.
+    ensure complete result sets for evidence export.
 
     Used by Export-AuditValidationEvidence to retrieve historical validation data
     for compliance evidence packages.
@@ -61,8 +60,8 @@
 
     Option set mappings (must match Dataverse schema):
     - fsi_acv_scope: Tenant=100000000, Environment=100000001
-    - fsi_acv_severity: Passed=100000000, Warning=100000001, GracePeriod=100000002, Failed=100000003, Error=100000004
-    - fsi_acv_zone: Unclassified=100000000, Zone1=100000001, Zone2=100000002, Zone3=100000003
+    - fsi_acv_severity: Passed=1, Warning=2, GracePeriod=3, Failed=4, Error=5
+    - fsi_acv_zone: Unclassified=0, Zone1=1, Zone2=2, Zone3=3
 
     Query automatically handles pagination via @odata.nextLink to retrieve complete
     result sets (Dataverse default page size is 5000 records).
@@ -91,10 +90,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-# Import AuditComplianceHelpers for Invoke-WithRetry
-$scriptRoot = Split-Path -Parent $PSScriptRoot
-Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
 
 function Get-ValidationResults {
     [CmdletBinding()]
@@ -144,8 +139,7 @@ function Get-ValidationResults {
 
         # Optional RunId filter
         if ($RunId) {
-            $safeRunId = $RunId -replace "'", "''"
-            $filters += "fsi_runid eq '$safeRunId'"
+            $filters += "fsi_runid eq '$RunId'"
         }
 
         # Combine filters with 'and'
@@ -172,13 +166,11 @@ function Get-ValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = Invoke-WithRetry -ScriptBlock {
-                Invoke-RestMethod `
-                    -Uri $nextLink `
-                    -Method Get `
-                    -Headers $headers `
-                    -ErrorAction Stop
-            } -OperationName "Get-ValidationResults"
+            $response = Invoke-RestMethod `
+                -Uri $nextLink `
+                -Method Get `
+                -Headers $headers `
+                -ErrorAction Stop
 
             # Add results from this page
             if ($response.value) {
@@ -220,7 +212,4 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $results
 }
 
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Get-ValidationResults
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

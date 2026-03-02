@@ -23,12 +23,6 @@
     Full resource ID of the Application Insights instance to monitor.
     Format: /subscriptions/{sub-id}/resourceGroups/{rg}/providers/Microsoft.Insights/components/{name}
 
-.PARAMETER TeamsTeamId
-    Microsoft Teams Team ID for alert notifications. Required for Logic App deployment.
-
-.PARAMETER TeamsChannelId
-    Microsoft Teams Channel ID for alert notifications. Required for Logic App deployment.
-
 .PARAMETER Environment
     Environment name (dev or prod). Used for resource naming and parameter file selection.
 
@@ -41,22 +35,18 @@
 .EXAMPLE
     .\deploy-alerts.ps1 -ResourceGroup "rg-agent-observability-dev" `
                         -ApplicationInsightsId "/subscriptions/.../components/appi-agent-dev" `
-                        -TeamsTeamId "00000000-0000-0000-0000-000000000000" `
-                        -TeamsChannelId "19:channel-id@thread.tacv2" `
                         -Environment "dev"
 
 .EXAMPLE
     .\deploy-alerts.ps1 -ResourceGroup "rg-agent-observability-dev" `
                         -ApplicationInsightsId "/subscriptions/.../components/appi-agent-dev" `
-                        -TeamsTeamId "00000000-0000-0000-0000-000000000000" `
-                        -TeamsChannelId "19:channel-id@thread.tacv2" `
                         -Environment "dev" `
                         -DryRun
 
 .NOTES
     Version: 1.0.0
     Prerequisites:
-    - Azure CLI 2.50.0 or later
+    - Azure CLI 2.60.0 or later
     - Authenticated Azure session (az login)
     - Contributor or Owner role on target resource group
     - Application Insights instance already deployed
@@ -73,12 +63,6 @@ param(
 
     [Parameter(Mandatory=$true)]
     [string]$ApplicationInsightsId,
-
-    [Parameter(Mandatory=$true)]
-    [string]$TeamsTeamId,
-
-    [Parameter(Mandatory=$true)]
-    [string]$TeamsChannelId,
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("dev","prod")]
@@ -140,7 +124,7 @@ function Test-Prerequisites {
         Validate prerequisites before deployment.
     .DESCRIPTION
         Checks:
-        - Azure CLI version (2.50.0+)
+        - Azure CLI version (2.60.0+)
         - Azure authentication status
         - Resource group existence
         - Application Insights resource existence
@@ -159,14 +143,6 @@ function Test-Prerequisites {
             Write-Host " FAILED" -ForegroundColor Red
             Write-Host "    Azure CLI is not installed or not in PATH" -ForegroundColor Red
             Write-Host "    Install from: https://aka.ms/InstallAzureCLI" -ForegroundColor Yellow
-            return $false
-        }
-        $versionParts = $azVersion -split '\.'
-        $majorVer = [int]$versionParts[0]
-        $minorVer = [int]$versionParts[1]
-        if ($majorVer -lt 2 -or ($majorVer -eq 2 -and $minorVer -lt 50)) {
-            Write-Host " $azVersion (< 2.50.0)" -ForegroundColor Red
-            Write-Host "    Update Azure CLI: az upgrade" -ForegroundColor Yellow
             return $false
         }
         Write-Host " $azVersion" -ForegroundColor Green
@@ -220,10 +196,14 @@ function Test-Prerequisites {
     Write-Host "  Checking Application Insights..." -NoNewline
     try {
         $appInsightsName = ($ApplicationInsightsId -split '/')[-1]
-        $appInsightsResourceGroup = ($ApplicationInsightsId -split '/')[4]
+        # Parse resource group from the Application Insights resource ID
+        $appInsightsRg = $ResourceGroup
+        if ($ApplicationInsightsId -match '/subscriptions/[^/]+/resourceGroups/([^/]+)/') {
+            $appInsightsRg = $Matches[1]
+        }
         $appInsightsCheck = az monitor app-insights component show `
             --app $appInsightsName `
-            --resource-group $appInsightsResourceGroup `
+            --resource-group $appInsightsRg `
             --query "name" -o tsv 2>$null
         if ($LASTEXITCODE -ne 0) {
             Write-Host " NOT FOUND" -ForegroundColor Red
@@ -309,7 +289,7 @@ function Deploy-LogicApp {
     if ($IsDryRun) {
         Write-Host "  Logic App: $logicAppName (DRY RUN - would be deployed)" -ForegroundColor Yellow
         Write-Host "    Template: $templatePath" -ForegroundColor Gray
-        return @{ LogicAppCallbackUrl = "https://dryrun.example.com/callback" }
+        return @{ LogicAppCallbackUrl = "https://dryrun.example.com/callback"; LogicAppId = "/subscriptions/dry-run/resourceGroups/$ResourceGroup/providers/Microsoft.Logic/workflows/$logicAppName" }
     }
 
     Write-Host "  Deploying Logic App: $logicAppName..." -NoNewline
@@ -322,8 +302,6 @@ function Deploy-LogicApp {
             --name $deploymentName `
             --template-file $templatePath `
             --parameters logicAppName=$logicAppName `
-            --parameters teamsTeamId=$TeamsTeamId `
-            --parameters teamsChannelId=$TeamsChannelId `
             --query "properties.outputs" `
             --output json | Out-Null
 
@@ -356,10 +334,10 @@ function Deploy-LogicApp {
         }
 
         Write-Host " RETRIEVED" -ForegroundColor Green
-        Write-Host "    URL: $($callbackUrl.Substring(0, 50))..." -ForegroundColor Gray
+        Write-Host "    URL: [REDACTED - contains SAS signature]" -ForegroundColor Gray
         Write-Host ""
 
-        return @{ LogicAppCallbackUrl = $callbackUrl }
+        return @{ LogicAppCallbackUrl = $callbackUrl; LogicAppId = $outputs.logicAppId.value }
     }
     catch {
         Write-Host ""
@@ -383,12 +361,17 @@ function Deploy-ActionGroups {
         Deploys Action Groups for Zone 1, 2, and 3 with Logic App callback URL.
     .PARAMETER LogicAppCallbackUrl
         Callback URL from Phase 1 Logic App deployment
+    .PARAMETER LogicAppId
+        Resource ID of the Logic App from Phase 1 deployment output
     .OUTPUTS
         Hashtable with Zone1Id, Zone2Id, Zone3Id properties
     #>
     param(
         [Parameter(Mandatory=$true)]
         [string]$LogicAppCallbackUrl,
+
+        [Parameter(Mandatory=$true)]
+        [string]$LogicAppId,
 
         [bool]$IsDryRun = $false
     )
@@ -423,13 +406,14 @@ function Deploy-ActionGroups {
         Write-Host "  Deploying Action Group: Zone $(($zone -replace 'zone','')) ($($zoneLabels[$zone]))..." -NoNewline
 
         try {
-            # Deploy with shared parameters + Logic App callback URL override
+            # Deploy with shared parameters + Logic App callback URL and ID overrides
             az deployment group create `
                 --resource-group $ResourceGroup `
                 --name $deploymentName `
                 --template-file $templatePath `
                 --parameters "@$SharedParametersPath" `
                 --parameters teamsLogicAppCallbackUrl=$LogicAppCallbackUrl `
+                --parameters teamsLogicAppId=$LogicAppId `
                 --query "properties.outputs" `
                 --output json | Out-Null
 
@@ -618,19 +602,16 @@ function Show-DeploymentSummary {
 
     Write-Host "  Next Steps:" -ForegroundColor White
     Write-Host ""
-    Write-Host "    1. Authorize Teams API connection in Azure Portal" -ForegroundColor Gray
-    Write-Host "       (Portal → API Connections → teams-connection → Edit → Authorize → Save)" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "    2. Configure Teams channel IDs in Logic App workflow" -ForegroundColor Gray
+    Write-Host "    1. Configure Teams channel IDs in Logic App workflow" -ForegroundColor Gray
     Write-Host "       (Edit Logic App in Azure Portal → Designer → Post to Teams action)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    3. Wait 10-14 days for dynamic threshold baseline learning" -ForegroundColor Gray
+    Write-Host "    2. Wait 10-14 days for dynamic threshold baseline learning" -ForegroundColor Gray
     Write-Host "       (Alerts show 'Learning' state during this period)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    4. Test alert notifications with intentional error spike" -ForegroundColor Gray
+    Write-Host "    3. Test alert notifications with intentional error spike" -ForegroundColor Gray
     Write-Host "       (After baseline period completes)" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "    5. Review alert firing history in Azure Monitor" -ForegroundColor Gray
+    Write-Host "    4. Review alert firing history in Azure Monitor" -ForegroundColor Gray
     Write-Host "       (Monitor → Alerts → Alert Rules)" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "=" -NoNewline -ForegroundColor Cyan
@@ -685,7 +666,7 @@ try {
     $logicAppCallbackUrl = $logicAppResult.LogicAppCallbackUrl
 
     # Phase 2: Deploy Action Groups
-    $actionGroupIds = Deploy-ActionGroups -LogicAppCallbackUrl $logicAppCallbackUrl -IsDryRun $DryRun
+    $actionGroupIds = Deploy-ActionGroups -LogicAppCallbackUrl $logicAppCallbackUrl -LogicAppId $logicAppResult.LogicAppId -IsDryRun $DryRun
 
     # Phase 3: Deploy Alert Rules
     Deploy-AlertRules -ActionGroupIds $actionGroupIds -IsDryRun $DryRun

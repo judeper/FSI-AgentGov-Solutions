@@ -83,7 +83,6 @@ class ELMClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
 
     def _get_token(self) -> str:
         """Acquire access token with caching."""
@@ -193,20 +192,12 @@ class ELMClient:
         Returns:
             List of records
         """
-        from urllib.parse import unquote
-        from xml.sax.saxutils import quoteattr
-
         all_records = []
         page = 1
-        paging_cookie = ""
+        paged_xml = fetchxml
         while True:
             if page > 1:
-                cookie_attr = f' paging-cookie={quoteattr(paging_cookie)}' if paging_cookie else ""
-                paged_xml = fetchxml.replace(
-                    '<fetch', f'<fetch page="{page}" count="5000"{cookie_attr}', 1
-                )
-            else:
-                paged_xml = fetchxml
+                paged_xml = fetchxml.replace('<fetch', f'<fetch page="{page}" count="5000"', 1)
             response = self.session.get(
                 urljoin(self.api_url, entity_set),
                 headers=self._get_headers(),
@@ -217,9 +208,6 @@ class ELMClient:
             all_records.extend(data.get("value", []))
             if "@Microsoft.Dynamics.CRM.fetchxmlpagingcookie" not in data:
                 break
-            paging_cookie = unquote(
-                data["@Microsoft.Dynamics.CRM.fetchxmlpagingcookie"]
-            )
             page += 1
         return all_records
 
@@ -515,7 +503,7 @@ class ELMClient:
         Args:
             role_id: Role GUID
             privilege_id: Privilege GUID
-            depth: Privilege depth enum (0=User, 1=BU, 2=Parent:Child, 3=Org)
+            depth: Privilege depth (1=User, 2=BU, 4=Parent:Child, 8=Org)
         """
         response = self.session.post(
             urljoin(self.api_url, "AddPrivilegesRole"),
@@ -692,7 +680,7 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret (or set ELM_CLIENT_SECRET env var)",
+        help="Client secret — prefer ELM_CLIENT_SECRET env var to avoid exposure in process listings",
     )
     parser.add_argument(
         "--environment-url",
@@ -725,6 +713,12 @@ def main():
 
     # For non-interactive mode, need client secret
     client_secret = args.client_secret
+    if client_secret and not os.environ.get("ELM_CLIENT_SECRET"):
+        print(
+            "WARNING: Client secret passed via command line. This is visible in "
+            "process listings. Prefer the ELM_CLIENT_SECRET environment variable.",
+            file=sys.stderr,
+        )
     if not args.interactive:
         if not client_secret:
             import getpass

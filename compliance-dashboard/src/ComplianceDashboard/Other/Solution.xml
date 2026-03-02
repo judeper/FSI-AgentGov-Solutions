@@ -82,20 +82,16 @@
       </Addresses>
     </Publisher>
     <RootComponents>
-      <RootComponent type="1" schemaName="fsi_controlmaster" behavior="0" />
-      <RootComponent type="1" schemaName="fsi_controlassessment" behavior="0" />
-      <RootComponent type="1" schemaName="fsi_compliancescore" behavior="0" />
-      <RootComponent type="1" schemaName="fsi_complianceexception" behavior="0" />
-      <RootComponent type="1" schemaName="fsi_complianceevidence" behavior="0" />
-      <RootComponent type="29" id="{a1b2c3d4-0001-0000-0000-000000000001}" />
-      <RootComponent type="29" id="{a1b2c3d4-0002-0000-0000-000000000002}" />
-      <RootComponent type="10016" schemaName="fsi_cr_dataverse" />
-      <RootComponent type="10016" schemaName="fsi_cr_outlook" />
-      <RootComponent type="380" schemaName="fsi_CD_NotificationEmail" />
-      <RootComponent type="380" schemaName="fsi_CD_TeamsWebhook" />
-      <RootComponent type="380" schemaName="fsi_CD_DataverseEnvironment" />
-      <RootComponent type="380" schemaName="fsi_CD_SLAMultiplier" />
-      <RootComponent type="380" schemaName="fsi_CD_DailySummaryHourUTC" />
+      <RootComponent type="1" schemaName="fsi_controlmaster" />
+      <RootComponent type="1" schemaName="fsi_controlassessment" />
+      <RootComponent type="1" schemaName="fsi_compliancescore" />
+      <RootComponent type="1" schemaName="fsi_complianceexception" />
+      <RootComponent type="1" schemaName="fsi_complianceevidence" />
+      <RootComponent type="29" schemaName="CD-ScoreCalculator" />
+      <RootComponent type="29" schemaName="CD-ExceptionMonitor" />
+      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Viewer" />
+      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Assessor" />
+      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Admin" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

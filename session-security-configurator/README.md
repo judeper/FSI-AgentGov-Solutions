@@ -57,7 +57,6 @@ Install-Module Microsoft.Graph.Authentication, `
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --client-id <your-client-id> \
     --interactive \
     --dry-run
 
@@ -65,7 +64,6 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --client-id <your-client-id> \
     --interactive
 ```
 
@@ -78,11 +76,10 @@ python scripts/deploy.py \
 ### Step 3: Deploy Step-Up Policies
 
 ```powershell
-# Copy and edit the sample config (see templates/tenant-config.example.json)
 # Deploy Zone 3 step-up policy (most restrictive, preview mode)
 .\scripts\Deploy-StepUpPolicies.ps1 `
     -TenantId <your-tenant-id> `
-    -ConfigPath .\config\tenant-config.json `
+    -ConfigPath .\tenant-config.json `
     -Zone Zone3 `
     -DryRun `
     -Verbose
@@ -94,7 +91,8 @@ python scripts/deploy.py \
 # Validate Zone 3 session configuration
 .\scripts\Test-SessionCompliance.ps1 `
     -Zone Zone3 `
-    -ConfigPath .\config\tenant-config.json `
+    -ConfigPath .\tenant-config.json `
+    -Interactive `
     -Verbose
 
 # Capture baseline for future drift detection
@@ -185,10 +183,6 @@ SSC validates six session security dimensions:
 | Script | Purpose |
 |--------|---------|
 | deploy.py | Deploy Dataverse schema (tables, option sets, environment variables) |
-| create_dataverse_schema.py | Create Dataverse tables and option sets (called by deploy.py) |
-| create_environment_variables.py | Create zone threshold environment variables (called by deploy.py) |
-| create_connection_references.py | Create Dataverse connection references (called by deploy.py) |
-| ssc_client.py | Dataverse Web API client with MSAL authentication and retry logic |
 | Deploy-AuthContexts.ps1 | Create authentication contexts c1-c5 |
 | Deploy-StepUpPolicies.ps1 | Create zone-specific CA policies |
 
@@ -214,8 +208,14 @@ SSC validates six session security dimensions:
 | Connect-GraphSession.ps1 | Graph authentication wrapper |
 | Test-BreakGlassExclusion.ps1 | Break-glass exclusion verification |
 | Compare-SessionBaseline.ps1 | Baseline drift comparison |
-| Get-DataverseThreshold.ps1 | Dataverse zone threshold override lookup |
+| Get-DataverseThreshold.ps1 | Dataverse environment variable threshold query |
 | Get-SSCValidationResults.ps1 | Dataverse query helper |
+
+### Python Utilities
+
+| Script | Purpose |
+|--------|---------|
+| ssc_client.py | Dataverse Web API client used by deployment scripts |
 
 ## Documentation
 
@@ -233,18 +233,14 @@ The following placeholder values in solution files must be replaced with your or
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/session-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/session-validation-flow.json` |
-| `https://governance.crm.dynamics.com` | Your Dataverse environment URL | `src/session-validation-flow.json` |
-| `your-client-id-here` | App registration client ID | `src/session-validation-flow.json` |
-| `your-certificate-thumbprint-here` | Certificate thumbprint | `src/session-validation-flow.json` |
-| `your-subscription-id-here` | Azure subscription ID | `src/session-validation-flow.json` |
-| `your-teams-team-id-here` | Teams team (group) ID | `src/session-validation-flow.json` |
-| `your-teams-channel-id-here` | Teams channel ID | `src/session-validation-flow.json` |
-
-## Known Limitations
-
-| Area | Limitation | Workaround |
-|------|-----------|------------|
-| PIM Validation | Validator 3 (PIMSettings) is a stub — always returns Warning/LOW. Full implementation requires `Microsoft.Graph.Identity.Governance` module and `RoleManagement.Read.All` permission. | Manual verification of PIM role settings is required. Use `-SkipPimValidation` to suppress the warning. |
+| `governance.crm.dynamics.com` | Your Dataverse environment URL | `src/session-validation-flow.json` |
+| `your-client-id-here` | Your app registration client ID | `src/session-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Your certificate thumbprint | `src/session-validation-flow.json` |
+| `your-subscription-id-here` | Your Azure subscription ID | `src/session-validation-flow.json` |
+| `your-teams-team-id-here` | Your Teams team (group) ID | `src/session-validation-flow.json` |
+| `your-teams-channel-id-here` | Your Teams channel ID | `src/session-validation-flow.json` |
+| `rg-session-validation` | Your Azure resource group name | `src/session-validation-flow.json` |
+| `aa-session-validator` | Your Azure Automation Account name | `src/session-validation-flow.json` |
 
 ## FSI-AgentGov Integration
 

@@ -1,6 +1,6 @@
 # RAG Source Validator
 
-> **Status:** Work In Progress — Script-only validation tool. Power Platform solution package (solution.xml, customizations.xml) is not yet available; this solution cannot be imported into a Power Platform environment. See [Quick Start](#quick-start) for current capabilities.
+> **Status:** Work In Progress
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -13,10 +13,10 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 | Feature | Description |
 |---------|-------------|
 | **Hash Validation** | SHA-256 content hash verification |
-| **Change Detection** | Hash-based modification detection with `fsi_sourcechange` recording *(scheduled monitoring coming soon)* |
+| **Change Detection** | Real-time and scheduled modification tracking |
 | **Source Registry** | Centralized inventory of all knowledge sources |
-| **Freshness Monitoring** | *Coming Soon* — Alert on stale or outdated content |
-| **Audit Trail** | Validation results and source change records in Dataverse |
+| **Freshness Monitoring** | Alert on stale or outdated content |
+| **Audit Trail** | Complete history of source changes |
 
 ## Architecture
 
@@ -31,10 +31,10 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
                               │
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Dataverse (Source Registry)                   │
-├────────────────────┬─────────────────────┬──────────────────────┤
-│ Knowledge          │ Validation          │ Source               │
-│ Source             │ Result              │ Change               │
-└────────────────────┴─────────────────────┴──────────────────────┘
+├────────────────────┬────────────────────┬───────────────────────┤
+│ Knowledge          │ Validation         │ Source                │
+│ Source             │ Result             │ Change                │
+└────────────────────┴────────────────────┴───────────────────────┘
                               ▲
                               │ Source Types
                               │
@@ -46,14 +46,13 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ## Supported Source Types
 
-| Type | Content | Hash Method | Status |
-|------|---------|-------------|--------|
-| **SharePoint Document Library** | Documents (type 1) | File content hash | ✅ Implemented |
-| **SharePoint List / Page** | Lists (type 2), Pages (type 3) | Content hash | ⏳ Planned |
-| **Dataverse** | Tables, rows | Row checksum | ⏳ Planned |
-| **Azure Blob** | Files, containers | Blob content hash | ⏳ Planned |
-| **Web API** | JSON responses | Response body hash | ⏳ Planned |
-| **Database** | Queries, tables | Query result hash | ⏳ Planned |
+| Type | Content | Hash Method |
+|------|---------|-------------|
+| **SharePoint** | Documents, lists, pages | File content hash |
+| **Dataverse** | Tables, rows | Row checksum |
+| **Azure Blob** | Files, containers | Blob content hash |
+| **Web API** | JSON responses | Response body hash |
+| **Database** | Queries, tables | Query result hash |
 
 ## Prerequisites
 
@@ -78,57 +77,35 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ### 1. Deploy Dataverse Schema
 
-> **Coming Soon** — The solution template (`templates/RAGSourceValidator_1_0_0.zip`) is not yet available.
->
-> **Manual setup:** Until the solution package is available, create the Dataverse tables (`fsi_knowledgesource`, `fsi_validationresult`, `fsi_sourcechange`), choice columns, and security roles manually using the definitions in [docs/dataverse-schema.md](docs/dataverse-schema.md).
+Import the Dataverse solution into your Power Platform environment using the Power Platform admin center or `pac` CLI.
+
+> **Note:** The deployable solution package (solution.xml, managed/unmanaged .zip) is not yet available. The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md) and must be created manually or via `pac` CLI until the packaged solution is published.
 
 ### 2. Register Knowledge Sources
 
-> **Coming Soon** — `Register-KnowledgeSource.ps1` is not yet available. Register sources directly in Dataverse.
+Register sources directly in the `fsi_knowledgesource` Dataverse table via the model-driven app or Dataverse API.
 
-### 3. Capture Initial Baseline
-
-> **Coming Soon** — `New-SourceBaseline.ps1` is not yet available. Run `Invoke-SourceValidation.ps1` to capture baselines automatically on first run.
-
-### 4. Run Validation
-
-Set credentials via environment variables (or pass as parameters):
-
-```powershell
-$env:AZURE_TENANT_ID = "your-tenant-id"
-$env:AZURE_CLIENT_ID = "your-client-id"
-$env:AZURE_CLIENT_SECRET = "your-client-secret"
-```
-
-Then run:
+### 3. Run Validation
 
 ```powershell
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
-# Sovereign clouds also supported:
-#   GCC High: https://your-org.crm.microsoftdynamics.us
-#   DoD:      https://your-org.crm.appsplatform.us
-#   China:    https://your-org.crm.dynamics.cn
 ```
 
-**Exit codes:** 0 = all sources passed, 1 = validation failures or Dataverse write errors, 2 = integrity changes detected (hash mismatches).
+The script automatically captures baselines on first run for sources without an existing hash.
 
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment *(coming soon)*
-2. Configure connection references (see prerequisites)
-3. Register knowledge sources *(coming soon: `Register-KnowledgeSource.ps1`)*
-4. Capture initial baseline *(coming soon: `New-SourceBaseline.ps1`)*
-5. Activate cloud flows for scheduled validation *(coming soon)*
+1. Import the Dataverse solution into your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema) for current status)
+2. Set environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` (or configure certificate-based authentication) for service principal access
+3. Register knowledge sources via the model-driven app or Dataverse API
+4. Run `Invoke-SourceValidation.ps1` to capture baselines and validate
+5. Configure scheduled execution via Task Scheduler, cron, or Azure Automation to run `Invoke-SourceValidation.ps1` on a recurring basis
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| Prerequisites *(coming soon)* | Licensing and permission requirements |
-| [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
-| Source Registration *(coming soon)* | Adding knowledge sources |
-| Validation Process *(coming soon)* | How validation works |
-| Troubleshooting *(coming soon)* | Common issues |
+| [Dataverse Schema](docs/dataverse-schema.md) | Table definitions and choice values |
 
 ## Validation Types
 
@@ -140,7 +117,7 @@ Computes SHA-256 hash of source content and compares to stored baseline.
 Source Content → SHA-256 Hash → Compare to Baseline → Pass/Fail
 ```
 
-### Schema Validation *(coming soon)*
+### Schema Validation
 
 For structured data sources, validates schema hasn't changed.
 
@@ -151,23 +128,20 @@ For structured data sources, validates schema hasn't changed.
 | Data types | Column types consistent |
 | Constraints | Keys and relationships intact |
 
-### Freshness Validation *(coming soon)*
+### Freshness Validation
 
-Ensures content is current and not stale.
+Ensures content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
 
-| Age | Status |
-|-----|--------|
-| < 7 days | Fresh |
-| 7-30 days | Warning |
-| > 30 days | Stale |
+| Condition | Status |
+|-----------|--------|
+| Within threshold | Fresh |
+| Exceeds threshold | Stale (result = 4) |
 
-### Link Validation *(coming soon)*
+### Link Validation
 
 For documents with references, validates all links are accessible.
 
 ## Alert Configuration
-
-> **Coming Soon** — Alert functionality is not yet implemented. The tables and channels described below represent planned capabilities.
 
 ### Alert Types
 
@@ -194,6 +168,8 @@ For documents with references, validates all links are accessible.
 
 **Coverage:** Hash validation ensures records haven't been altered.
 
+> **Limitation:** Validation results are currently stored in standard mutable Dataverse records, which do not satisfy WORM (Write Once Read Many) requirements. Production deployments requiring full SEC 17a-4 compliance should integrate an immutable audit trail (e.g., Azure Immutable Blob Storage, or a third-party WORM-compliant archive) to store validation results alongside Dataverse records.
+
 ### FINRA 4511
 
 > Books and records must be accurate and complete.
@@ -215,6 +191,8 @@ For documents with references, validates all links are accessible.
 | [2.16 - RAG Source Integrity Validation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.16-rag-source-integrity-validation.md) | Primary control for source validation |
 | [4.3 - Site and Document Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-site-and-document-retention-management.md) | Source access control |
 
+> **Note:** The current implementation logs validation results to Dataverse and stdout. It does not yet integrate DLP enforcement, sharing restrictions, or centralized audit logging beyond the validation result records. These governance controls are planned for a future release.
+
 ## Version History
 
 | Version | Date | Changes |
@@ -228,13 +206,13 @@ For documents with references, validates all links are accessible.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Authentication failure | Expired token or insufficient SharePoint/Dataverse permissions | Re-authenticate; verify SharePoint Reader and Dataverse Reader roles |
-| Hash mismatch on first run | No baseline captured for the source | Run `New-SourceBaseline.ps1` *(coming soon)* to establish initial hashes |
-| Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register with `Register-KnowledgeSource.ps1` *(coming soon)* |
+| Hash mismatch on first run | No baseline captured for the source | Run `Invoke-SourceValidation.ps1` — baselines are captured automatically on first run |
+| Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register via the model-driven app or Dataverse API |
 | Stale content alerts | Source not updated within freshness threshold | Review source update schedule; adjust threshold if appropriate |
 
 ### Logs
 
-Review script output for `[ERROR]` entries.
+Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
 
 ## Support
 

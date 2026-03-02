@@ -67,16 +67,25 @@
 ### 1. Create Dedicated Service Account
 
 ```powershell
-# Microsoft 365 Admin Center or PowerShell
-New-MsolUser `
+# Microsoft Graph PowerShell (recommended — MSOnline module is deprecated)
+# NOTE: Use a managed identity or certificate-based authentication in production.
+# Avoid PasswordNeverExpires; use conditional access policies and key rotation instead.
+$PasswordProfile = @{
+    Password                      = "<strong-temporary-password>"
+    ForceChangePasswordNextSignIn = $true
+}
+New-MgUser `
     -UserPrincipalName "svc-deny-report@contoso.com" `
     -DisplayName "Deny Report Service Account" `
     -UsageLocation "US" `
-    -PasswordNeverExpires $true
+    -PasswordProfile $PasswordProfile `
+    -AccountEnabled:$true `
+    -MailNickname "svc-deny-report"
 
 # Assign minimum required license (E5 Compliance)
-Set-MsolUserLicense -UserPrincipalName "svc-deny-report@contoso.com" `
-    -AddLicenses "contoso:SPE_E5"
+Set-MgUserLicense -UserId "svc-deny-report@contoso.com" `
+    -AddLicenses @(@{SkuId = "<E5-Compliance-SkuId>"}) `
+    -RemoveLicenses @()
 ```
 
 ### 2. Assign Purview Roles
@@ -133,10 +142,8 @@ az keyvault secret set `
     --name "ExoServiceAccount" `
     --value "svc-deny-report@contoso.com"
 
-az keyvault secret set `
-    --vault-name "kv-deny-report" `
-    --name "AppInsightsAppId" `
-    --value "your-app-insights-app-id"
+# NOTE: AppInsightsApiKey no longer needed after Entra ID migration.
+# Store service principal credentials instead — see Authentication Migration section below.
 ```
 
 ## Network Requirements
@@ -243,12 +250,9 @@ customEvents
    # Old (deprecated)
    $headers = @{ "x-api-key" = $ApiKey }
 
-   # New (Entra ID) — compatible with Az.Accounts 2.x and 3.x
+   # New (Entra ID)
    Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
-   $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
-   $token = if ($tokenResult.Token -is [System.Security.SecureString]) {
-       $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
-   } else { $tokenResult.Token }
+   $token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
    $headers = @{ "Authorization" = "Bearer $token" }
    ```
 
@@ -263,4 +267,4 @@ customEvents
 
 ---
 
-*FSI Agent Governance Framework v2.0.0 - February 2026*
+*FSI Agent Governance Framework v1.2 - January 2026*

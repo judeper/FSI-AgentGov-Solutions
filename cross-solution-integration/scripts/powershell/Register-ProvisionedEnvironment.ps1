@@ -43,7 +43,7 @@
 .EXAMPLE
     .\Register-ProvisionedEnvironment.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "guid" -EnvironmentId "env-guid" -EnvironmentName "TRADING-Ops-PROD" `
-        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
+        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 2 -Interactive
 
 .NOTES
     Version: 1.0.0
@@ -62,6 +62,7 @@ param(
     [string]$TenantId,
 
     [Parameter(Mandatory)]
+    [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
     [string]$EnvironmentId,
 
     [Parameter(Mandatory)]
@@ -99,32 +100,7 @@ $ErrorActionPreference = 'Stop'
 $modulePath = Join-Path $PSScriptRoot 'IntegrationConfig.psm1'
 Import-Module $modulePath -Force
 
-#region Authentication
-
-function Connect-DataverseApi {
-    param([string]$Url, [string]$TenantId, [string]$ClientId, [SecureString]$ClientSecret, [switch]$Interactive)
-
-    $scope = "$($Url.TrimEnd('/'))/.default"
-
-    if ($Interactive) {
-        $token = Get-MsalToken -TenantId $TenantId -ClientId '51f81489-12ee-4a9e-aaae-a2591f45987d' -Scopes $scope -Interactive
-    } else {
-        $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
-        $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -ClientCredential $credential -Scopes $scope
-    }
-
-    return @{
-        BaseUrl = "$($Url.TrimEnd('/'))/api/data/v9.2"
-        Headers = @{
-            'Authorization'    = "Bearer $($token.AccessToken)"
-            'OData-MaxVersion' = '4.0'
-            'OData-Version'    = '4.0'
-            'Accept'           = 'application/json'
-            'Content-Type'     = 'application/json'
-            'Prefer'           = 'return=representation'
-        }
-    }
-}
+#region Authentication (provided by IntegrationConfig.psm1)
 
 #endregion
 

@@ -5,7 +5,6 @@ Provisions four connection references for the FUS solution:
   - Dataverse (for baseline/violation storage)
   - Office 365 (for owner resolution and email notifications)
   - Teams (for adaptive card violation alerts)
-  - Azure Automation (for scheduled runbook execution)
 
 All operations are idempotent — existing references are skipped.
 
@@ -56,7 +55,7 @@ CONNECTION_REFERENCES = [
         "connectorid": "/providers/Microsoft.PowerApps/apis/shared_azureautomation",
         "description": (
             "Azure Automation connection for File Upload Security Configurator. "
-            "Used to trigger the file upload validation runbook on a scheduled basis."
+            "Used to trigger and monitor the validation runbook from Power Automate flows."
         ),
     },
 ]

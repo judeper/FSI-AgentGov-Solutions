@@ -84,7 +84,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 ### Choice Field Definitions
 
-#### fsi_er_state (Workflow State)
+#### er_state (Workflow State)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -96,9 +96,9 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Provisioning | 6 | Flow executing |
 | Completed | 7 | Environment ready |
 | Failed | 8 | Provisioning error |
-| Cancelled | 9 | Request cancelled by user |
+| Cancelled | 9 | User cancelled request |
 
-#### fsi_er_zone (Governance Zone)
+#### er_zone (Governance Zone)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -106,7 +106,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Zone 2 | 2 | Team collaboration |
 | Zone 3 | 3 | Enterprise managed |
 
-#### fsi_er_environmenttype (Environment Type)
+#### er_environmenttype (Environment Type)
 
 | Label | Value |
 |-------|-------|
@@ -114,7 +114,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Production | 2 |
 | Developer | 3 |
 
-#### fsi_er_region (Geographic Region)
+#### er_region (Geographic Region)
 
 | Label | Value | API Code |
 |-------|-------|----------|
@@ -123,7 +123,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | United Kingdom | 3 | unitedkingdom |
 | Australia | 4 | australia |
 
-#### fsi_er_datasensitivity (Data Sensitivity)
+#### er_datasensitivity (Data Sensitivity)
 
 | Label | Value |
 |-------|-------|
@@ -132,7 +132,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Confidential | 3 |
 | Restricted | 4 |
 
-#### fsi_er_expectedusers (Expected User Count)
+#### er_expectedusers (Expected User Count)
 
 | Label | Value |
 |-------|-------|
@@ -198,21 +198,20 @@ Action: Set fsi_approvalcomments to Business Required
 | Display Name | Logical Name | Type | Required | Description |
 |--------------|--------------|------|----------|-------------|
 | Log ID | `fsi_provisioninglogid` | GUID | Auto | Primary key |
-| Name | `fsi_name` | Text (100) | Auto | Primary name column (auto-generated, required by Dataverse) |
 | Environment Request | `fsi_environmentrequest` | Lookup | Yes | Parent request |
 | Sequence | `fsi_sequence` | Whole Number | Yes | Action sequence (1, 2, 3...) |
 | Action | `fsi_action` | Choice | Yes | Action type |
 | Action Details | `fsi_actiondetails` | Multiline | No | JSON payload |
 | Actor | `fsi_actor` | Text (200) | Yes | UPN or Service Principal ID |
 | Actor Type | `fsi_actortype` | Choice | Yes | User/ServicePrincipal/System |
-| Timestamp | `fsi_timestamp` | DateTime | Yes | Set to `utcNow()` by flow |
+| Timestamp | `fsi_timestamp` | DateTime | Auto | Auto-set to Now() |
 | Success | `fsi_success` | Boolean | Yes | Action succeeded |
 | Error Message | `fsi_errormessage` | Multiline | No | Error details if failed |
 | Correlation ID | `fsi_correlationid` | Text (100) | Yes | Power Automate run ID |
 
 ### Choice Field Definitions
 
-#### fsi_pl_action (Action Type)
+#### pl_action (Action Type)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -233,7 +232,7 @@ Action: Set fsi_approvalcomments to Business Required
 | RollbackInitiated | 15 | Rollback started |
 | RollbackCompleted | 16 | Rollback finished |
 
-#### fsi_pl_actortype (Actor Type)
+#### pl_actortype (Actor Type)
 
 | Label | Value |
 |-------|-------|
@@ -283,14 +282,16 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
 
 ```json
 {
-  "fsi_name": "LOG-REQ-00001-7",
-  "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(a1b2c3d4-e5f6-7890-abcd-ef1234567890)",
   "fsi_sequence": 7,
   "fsi_action": 7,
-  "fsi_actiondetails": "{\"environmentId\": \"87654321-4321-4321-4321-210987654321\", \"environmentUrl\": \"https://fin-quarterly-prod.crm.dynamics.com\", \"environmentType\": \"Production\", \"region\": \"unitedstates\"}",
+  "fsi_actiondetails": {
+    "environmentId": "87654321-4321-4321-4321-210987654321",
+    "environmentUrl": "https://fin-quarterly-prod.crm.dynamics.com",
+    "environmentType": "Production",
+    "region": "unitedstates"
+  },
   "fsi_actor": "ELM-Provisioning-ServicePrincipal",
   "fsi_actortype": 2,
-  "fsi_timestamp": "2026-01-15T10:30:00Z",
   "fsi_success": true,
   "fsi_correlationid": "08585929-1234-5678-abcd-ef1234567890"
 }

@@ -387,13 +387,6 @@
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
-                    },
-                    "retryPolicy": {
-                      "type": "exponential",
-                      "count": 3,
-                      "interval": "PT10S",
-                      "minimumInterval": "PT5S",
-                      "maximumInterval": "PT1M"
                     }
                   },
                   "runAfter": {},
@@ -594,36 +587,6 @@
                       "Succeeded"
                     ]
                   }
-                },
-                "Extract_Zone1": {
-                  "type": "Compose",
-                  "inputs": "@coalesce(if(equals(body('Parse_Results')?['ZoneSummary']?[0]?['Zone'],1),body('Parse_Results')?['ZoneSummary']?[0],null),if(equals(body('Parse_Results')?['ZoneSummary']?[1]?['Zone'],1),body('Parse_Results')?['ZoneSummary']?[1],null),if(equals(body('Parse_Results')?['ZoneSummary']?[2]?['Zone'],1),body('Parse_Results')?['ZoneSummary']?[2],null),json('{\"Passed\":0,\"Total\":0,\"Severity\":\"N/A\",\"Zone\":1}'))",
-                  "runAfter": {
-                    "Parse_Results": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "Extract Zone 1 data by Zone field value, not array index."
-                },
-                "Extract_Zone2": {
-                  "type": "Compose",
-                  "inputs": "@coalesce(if(equals(body('Parse_Results')?['ZoneSummary']?[0]?['Zone'],2),body('Parse_Results')?['ZoneSummary']?[0],null),if(equals(body('Parse_Results')?['ZoneSummary']?[1]?['Zone'],2),body('Parse_Results')?['ZoneSummary']?[1],null),if(equals(body('Parse_Results')?['ZoneSummary']?[2]?['Zone'],2),body('Parse_Results')?['ZoneSummary']?[2],null),json('{\"Passed\":0,\"Total\":0,\"Severity\":\"N/A\",\"Zone\":2}'))",
-                  "runAfter": {
-                    "Parse_Results": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "Extract Zone 2 data by Zone field value, not array index."
-                },
-                "Extract_Zone3": {
-                  "type": "Compose",
-                  "inputs": "@coalesce(if(equals(body('Parse_Results')?['ZoneSummary']?[0]?['Zone'],3),body('Parse_Results')?['ZoneSummary']?[0],null),if(equals(body('Parse_Results')?['ZoneSummary']?[1]?['Zone'],3),body('Parse_Results')?['ZoneSummary']?[1],null),if(equals(body('Parse_Results')?['ZoneSummary']?[2]?['Zone'],3),body('Parse_Results')?['ZoneSummary']?[2],null),json('{\"Passed\":0,\"Total\":0,\"Severity\":\"N/A\",\"Zone\":3}'))",
-                  "runAfter": {
-                    "Parse_Results": [
-                      "Succeeded"
-                    ]
-                  },
-                  "description": "Extract Zone 3 data by Zone field value, not array index."
                 },
                 "Compute_Severity_Color": {
                   "type": "Compose",
@@ -891,11 +854,7 @@
                               "item/fsi_warning_count": "@body('Parse_Results')?['WarningCount']",
                               "item/fsi_drift_count": "@body('Parse_Results')?['DriftCount']",
                               "item/fsi_overall_severity": "@body('Parse_Results')?['OverallSeverity']",
-                              "item/fsi_overall_status": "@body('Parse_Results')?['OverallStatus']",
-                              "item/fsi_compliance_rate": "@body('Parse_Results')?['ComplianceRate']",
-                              "item/fsi_alert_severity": "@body('Parse_Results')?['AlertSeverity']",
-                              "item/fsi_results_json": "@{string(body('Parse_Results'))}",
-                              "item/fsi_source": "FlowFallback"
+                              "item/fsi_results_json": "@{string(body('Parse_Results'))}"
                             },
                             "host": {
                               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -933,6 +892,33 @@
                     ]
                   },
                   "actions": {
+                    "Filter_Zone_1": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Parse_Results')?['ZoneSummary']",
+                        "where": "@equals(item()?['Zone'], 1)"
+                      },
+                      "runAfter": {},
+                      "description": "Filter ZoneSummary to Zone 1 entry for position-independent lookup."
+                    },
+                    "Filter_Zone_2": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Parse_Results')?['ZoneSummary']",
+                        "where": "@equals(item()?['Zone'], 2)"
+                      },
+                      "runAfter": {},
+                      "description": "Filter ZoneSummary to Zone 2 entry for position-independent lookup."
+                    },
+                    "Filter_Zone_3": {
+                      "type": "Query",
+                      "inputs": {
+                        "from": "@body('Parse_Results')?['ZoneSummary']",
+                        "where": "@equals(item()?['Zone'], 3)"
+                      },
+                      "runAfter": {},
+                      "description": "Filter ZoneSummary to Zone 3 entry for position-independent lookup."
+                    },
                     "Compose_Adaptive_Card": {
                       "type": "Compose",
                       "inputs": {
@@ -1087,7 +1073,7 @@
                                       },
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{coalesce(outputs('Extract_Zone1')?['Passed'], 0)} / @{coalesce(outputs('Extract_Zone1')?['Total'], 0)}",
+                                        "text": "@{coalesce(first(body('Filter_Zone_1'))?['Passed'], 0)} / @{coalesce(first(body('Filter_Zone_1'))?['Total'], 0)}",
                                         "spacing": "None"
                                       }
                                     ]
@@ -1099,8 +1085,8 @@
                                     "items": [
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{toUpper(coalesce(outputs('Extract_Zone1')?['Severity'], 'N/A'))}",
-                                        "color": "@{if(equals(coalesce(outputs('Extract_Zone1')?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(outputs('Extract_Zone1')?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
+                                        "text": "@{toUpper(coalesce(first(body('Filter_Zone_1'))?['Severity'], 'N/A'))}",
+                                        "color": "@{if(equals(coalesce(first(body('Filter_Zone_1'))?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(first(body('Filter_Zone_1'))?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
                                         "weight": "Bolder",
                                         "horizontalAlignment": "Right"
                                       }
@@ -1123,7 +1109,7 @@
                                       },
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{coalesce(outputs('Extract_Zone2')?['Passed'], 0)} / @{coalesce(outputs('Extract_Zone2')?['Total'], 0)}",
+                                        "text": "@{coalesce(first(body('Filter_Zone_2'))?['Passed'], 0)} / @{coalesce(first(body('Filter_Zone_2'))?['Total'], 0)}",
                                         "spacing": "None"
                                       }
                                     ]
@@ -1135,8 +1121,8 @@
                                     "items": [
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{toUpper(coalesce(outputs('Extract_Zone2')?['Severity'], 'N/A'))}",
-                                        "color": "@{if(equals(coalesce(outputs('Extract_Zone2')?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(outputs('Extract_Zone2')?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
+                                        "text": "@{toUpper(coalesce(first(body('Filter_Zone_2'))?['Severity'], 'N/A'))}",
+                                        "color": "@{if(equals(coalesce(first(body('Filter_Zone_2'))?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(first(body('Filter_Zone_2'))?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
                                         "weight": "Bolder",
                                         "horizontalAlignment": "Right"
                                       }
@@ -1159,7 +1145,7 @@
                                       },
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{coalesce(outputs('Extract_Zone3')?['Passed'], 0)} / @{coalesce(outputs('Extract_Zone3')?['Total'], 0)}",
+                                        "text": "@{coalesce(first(body('Filter_Zone_3'))?['Passed'], 0)} / @{coalesce(first(body('Filter_Zone_3'))?['Total'], 0)}",
                                         "spacing": "None"
                                       }
                                     ]
@@ -1171,8 +1157,8 @@
                                     "items": [
                                       {
                                         "type": "TextBlock",
-                                        "text": "@{toUpper(coalesce(outputs('Extract_Zone3')?['Severity'], 'N/A'))}",
-                                        "color": "@{if(equals(coalesce(outputs('Extract_Zone3')?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(outputs('Extract_Zone3')?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
+                                        "text": "@{toUpper(coalesce(first(body('Filter_Zone_3'))?['Severity'], 'N/A'))}",
+                                        "color": "@{if(equals(coalesce(first(body('Filter_Zone_3'))?['Severity'], ''), 'Passed'), 'Good', if(equals(coalesce(first(body('Filter_Zone_3'))?['Severity'], ''), 'Warning'), 'Accent', 'Attention'))}",
                                         "weight": "Bolder",
                                         "horizontalAlignment": "Right"
                                       }
@@ -1186,14 +1172,12 @@
                             "type": "Container",
                             "id": "violationsSection",
                             "separator": true,
-                            "isVisible": "@{greater(length(variables('ViolationCards')), 0)}",
                             "items": "@variables('ViolationCards')"
                           },
                           {
                             "type": "Container",
                             "id": "driftSection",
                             "separator": true,
-                            "isVisible": "@{greater(length(variables('DriftCards')), 0)}",
                             "items": "@variables('DriftCards')"
                           }
                         ],
@@ -1218,7 +1202,11 @@
                           "width": "Full"
                         }
                       },
-                      "runAfter": {},
+                      "runAfter": {
+                        "Filter_Zone_1": ["Succeeded"],
+                        "Filter_Zone_2": ["Succeeded"],
+                        "Filter_Zone_3": ["Succeeded"]
+                      },
                       "description": "Compose the adaptive card with all severity, zone, violation, and drift data from parsed results."
                     },
                     "Post_Teams_Alert": {
@@ -1250,7 +1238,7 @@
                         "parameters": {
                           "emailMessage/To": "@variables('ComplianceDistributionList')",
                           "emailMessage/Subject": "[@{body('Parse_Results')?['AlertSeverity']}] CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}",
-                          "emailMessage/Body": "<html><body><h2>CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}</h2><p><strong>Severity:</strong> @{body('Parse_Results')?['AlertSeverity']}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Warnings</strong></td><td>@{body('Parse_Results')?['WarningCount']}</td></tr><tr><td><strong>Drift Count</strong></td><td>@{body('Parse_Results')?['DriftCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr></table><h3>Zone Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><th>Zone</th><th>Passed</th><th>Total</th><th>Severity</th></tr><tr><td>Zone 1 — Personal Productivity</td><td>@{coalesce(outputs('Extract_Zone1')?['Passed'], 0)}</td><td>@{coalesce(outputs('Extract_Zone1')?['Total'], 0)}</td><td>@{coalesce(outputs('Extract_Zone1')?['Severity'], 'N/A')}</td></tr><tr><td>Zone 2 — Team Collaboration</td><td>@{coalesce(outputs('Extract_Zone2')?['Passed'], 0)}</td><td>@{coalesce(outputs('Extract_Zone2')?['Total'], 0)}</td><td>@{coalesce(outputs('Extract_Zone2')?['Severity'], 'N/A')}</td></tr><tr><td>Zone 3 — Enterprise Managed</td><td>@{coalesce(outputs('Extract_Zone3')?['Passed'], 0)}</td><td>@{coalesce(outputs('Extract_Zone3')?['Total'], 0)}</td><td>@{coalesce(outputs('Extract_Zone3')?['Severity'], 'N/A')}</td></tr></table><br/><p>Review detailed results in the <a href='https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
+                          "emailMessage/Body": "<html><body><h2>CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}</h2><p><strong>Severity:</strong> @{body('Parse_Results')?['AlertSeverity']}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Warnings</strong></td><td>@{body('Parse_Results')?['WarningCount']}</td></tr><tr><td><strong>Drift Count</strong></td><td>@{body('Parse_Results')?['DriftCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr></table><h3>Zone Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><th>Zone</th><th>Passed</th><th>Total</th><th>Severity</th></tr><tr><td>Zone 1 — Personal Productivity</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 2 — Team Collaboration</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 3 — Enterprise Managed</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Severity'], 'N/A')}</td></tr></table><br/><p>Review detailed results in the <a href='https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
                           "emailMessage/Importance": "High"
                         },
                         "host": {
@@ -1284,15 +1272,6 @@
                       "Succeeded"
                     ],
                     "Compute_Severity_Style": [
-                      "Succeeded"
-                    ],
-                    "Extract_Zone1": [
-                      "Succeeded"
-                    ],
-                    "Extract_Zone2": [
-                      "Succeeded"
-                    ],
-                    "Extract_Zone3": [
                       "Succeeded"
                     ]
                   },
@@ -1378,8 +1357,7 @@
           "runAfter": {
             "Scope_Try": [
               "Failed",
-              "TimedOut",
-              "Skipped"
+              "TimedOut"
             ]
           },
           "description": "Error handling scope: catches unexpected failures in Scope_Try and sends CRITICAL notification."

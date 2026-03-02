@@ -42,7 +42,11 @@ The dashboard provides:
 
 ## Step 2: Configure Dataverse Connection
 
-### Connect to Dataverse
+### Option A: Using Template
+
+> **Note:** The `templates/SupervisionDashboard.pbit` template is not yet included in this release. Use Option B (Manual Connection) below to build the dashboard.
+
+### Option B: Manual Connection (Recommended)
 
 1. Open Power BI Desktop
 2. **Get Data** > **Dataverse**
@@ -59,26 +63,28 @@ The dashboard provides:
 
 ### Relationships
 
-Create these relationships when building manually:
+The template includes these relationships (create if building manually):
 
 | From | To | Cardinality | Cross Filter |
 |------|-----|-------------|--------------|
 | SupervisionLog.fsi_queueitem | SupervisionQueue.fsi_supervisionqueueid | Many-to-One | Single |
+| SupervisionQueue.ZoneTierKey | SupervisionConfig.ZoneTierKey | Many-to-One | Single |
 
-> **Important:** Do NOT create a direct relationship between SupervisionQueue and
-> SupervisionConfig on `fsi_zone` alone. SupervisionConfig has multiple rows per zone
-> (one per tier), so `fsi_zone` is not unique and cannot serve as the "one" side of a
-> Many-to-One relationship. Instead, use `LOOKUPVALUE` DAX to retrieve config values
-> by matching **both** zone and tier:
->
-> ```dax
-> Config SLA Hours =
-> LOOKUPVALUE(
->     SupervisionConfig[fsi_slahours],
->     SupervisionConfig[fsi_zone], [fsi_zone],
->     SupervisionConfig[fsi_tier], [fsi_tier]
-> )
-> ```
+> **Important:** The `fsi_zone` column alone is non-unique in SupervisionConfig (3 rows per zone). Create a composite key calculated column in both tables to establish an unambiguous relationship:
+
+**SupervisionQueue Table:**
+
+```dax
+ZoneTierKey = [fsi_zone] & "-" & [fsi_tier]
+```
+
+**SupervisionConfig Table:**
+
+```dax
+ZoneTierKey = [fsi_zone] & "-" & [fsi_tier]
+```
+
+Create the relationship on `ZoneTierKey` (Many-to-One from SupervisionQueue to SupervisionConfig).
 
 ### Calculated Columns
 
@@ -95,7 +101,7 @@ IF(
 SLA Status =
 SWITCH(
     TRUE(),
-    [fsi_state] IN {100000002, 100000004}, "Completed",
+    [fsi_state] IN {3, 5}, "Completed",
     [fsi_sladue] < NOW(), "Breached",
     [fsi_sladue] < NOW() + 2/24, "At Risk",
     "On Track"
@@ -104,9 +110,9 @@ SWITCH(
 Zone Label =
 SWITCH(
     [fsi_zone],
-    100000000, "Zone 1 - Personal",
-    100000001, "Zone 2 - Team",
-    100000002, "Zone 3 - Enterprise",
+    1, "Zone 1 - Personal",
+    2, "Zone 2 - Team",
+    3, "Zone 3 - Enterprise",
     "Unknown"
 )
 ```
@@ -120,7 +126,7 @@ Total Queue Items = COUNTROWS(SupervisionQueue)
 Pending Items =
 CALCULATE(
     COUNTROWS(SupervisionQueue),
-    SupervisionQueue[fsi_state] = 100000000
+    SupervisionQueue[fsi_state] = 1
 )
 
 SLA Breach Rate =
@@ -142,7 +148,7 @@ CALCULATE(
 
 Approval Rate =
 DIVIDE(
-    CALCULATE(COUNTROWS(SupervisionQueue), SupervisionQueue[fsi_reviewoutcome] = 100000000),
+    CALCULATE(COUNTROWS(SupervisionQueue), SupervisionQueue[fsi_reviewoutcome] = 1),
     CALCULATE(COUNTROWS(SupervisionQueue), NOT(ISBLANK(SupervisionQueue[fsi_reviewoutcome]))),
     0
 )
@@ -277,18 +283,9 @@ For regulatory examinations, export compliance evidence:
 
 ---
 
-## Dashboard Reference
+## Dashboard Template
 
-The dashboard setup above includes:
-
-- All pages configured
-- Calculated columns and measures
-- Relationships defined
-- Conditional formatting guidance
-- Default filters
-
-> **Note:** No `.pbix` template file is included. Build the dashboard manually
-> following the steps above. A pre-built template is planned for a future release.
+> **Note:** The `templates/SupervisionDashboard.pbit` template is planned for a future release. Build the dashboard manually using the steps above (Option B) and the calculated columns, measures, and page layouts documented in Steps 3-4.
 
 ---
 

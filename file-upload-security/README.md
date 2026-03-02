@@ -43,8 +43,8 @@ Import-Module ./scripts/private/FUSClient.psm1
 # Dry run (no Dataverse queries)
 ./scripts/Test-FileUploadCompliance.ps1 -DryRun
 
-# Target specific environment
-./scripts/Test-FileUploadCompliance.ps1 -IncludeEnvironments "prod-*" -OutputFormat JSON
+# Target specific environments
+./scripts/Test-FileUploadCompliance.ps1 -IncludeEnvironments "prod-env-1","prod-env-2" -OutputFormat JSON
 
 # Include compliant agents in output
 ./scripts/Test-FileUploadCompliance.ps1 -IncludeCompliant -OutputFormat CSV
@@ -59,7 +59,7 @@ Import-Module ./scripts/private/FUSClient.psm1
 ### Export Evidence
 
 ```powershell
-./scripts/Export-FileUploadEvidence.ps1 -TenantId $tid -DataverseUrl $url -OutputPath ./evidence -Interactive
+./scripts/Export-FileUploadEvidence.ps1 -OutputPath ./evidence
 ```
 
 ## Architecture
@@ -91,20 +91,19 @@ Import-Module ./scripts/private/FUSClient.psm1
 | `Get-AgentFileUploadSettings.ps1` | Enumerate agents and retrieve file upload enabled status |
 | `Compare-FileUploadCompliance.ps1` | Evaluate settings against zone baselines with severity |
 | `Export-FileUploadEvidence.ps1` | SHA-256 integrity-hashed evidence export |
-| `Test-EvidenceIntegrity.ps1` | SHA-256 evidence verification for tamper detection |
 | `Invoke-FileUploadBaselineCapture.ps1` | Capture current settings as compliance baseline |
 | `Start-FileUploadValidationRunbook.ps1` | Azure Automation wrapper for unattended execution |
-| `deploy.py` | Python deployment toolchain entry point |
-| `create_dataverse_schema.py` | Create Dataverse tables for FUS solution |
-| `create_environment_variables.py` | Provision Dataverse environment variables |
-| `create_connection_references.py` | Set up connection references for flows |
-| `fus_client.py` | Python client for FUS Dataverse operations |
+| `deploy.py` | Dataverse infrastructure deployment orchestrator |
+| `fus_client.py` | Python Dataverse REST API client |
+| `create_dataverse_schema.py` | Create Dataverse tables and columns |
+| `create_environment_variables.py` | Create Dataverse environment variables |
+| `create_connection_references.py` | Create Dataverse connection references |
 
 ## Zone Policy Model
 
 | Zone | File Upload | Approval | Min Moderation | Violation Severity |
 |------|------------|----------|----------------|-------------------|
-| Zone 1 (Personal) | Allowed | Not required | Low | Warning if no moderation |
+| Zone 1 (Personal) | Allowed | Not required | Medium | Warning if no moderation |
 | Zone 2 (Team) | Restricted | Required | High | High if enabled without approval/moderation |
 | Zone 3 (Enterprise) | Disabled | Required | Highest | Critical if enabled |
 
@@ -124,14 +123,12 @@ The following placeholder values in solution files must be replaced with your or
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/fileupload-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/fileupload-validation-flow.json` |
-| `your-client-id-here` | Service principal app (client) ID | `src/fileupload-validation-flow.json` |
-| `your-certificate-thumbprint-here` | Certificate thumbprint for Automation Account | `src/fileupload-validation-flow.json` |
+| `your-client-id-here` | Azure AD application (client) ID | `src/fileupload-validation-flow.json` |
+| `your-certificate-thumbprint-here` | Certificate thumbprint for service principal auth | `src/fileupload-validation-flow.json` |
 | `your-subscription-id-here` | Azure subscription ID | `src/fileupload-validation-flow.json` |
-| `your-teams-group-id-here` | Target Teams group (team) ID | `src/fileupload-validation-flow.json` |
-| `your-teams-channel-id-here` | Target Teams channel ID | `src/fileupload-validation-flow.json` |
+| `your-teams-group-id-here` | Teams group (team) ID for alerts | `src/fileupload-validation-flow.json` |
+| `your-teams-channel-id-here` | Teams channel ID for alerts | `src/fileupload-validation-flow.json` |
 | `https://governance.crm.dynamics.com` | Your Dataverse org URL | `src/fileupload-validation-flow.json` |
-
-See [FLOW_SETUP.md](docs/FLOW_SETUP.md) for the complete list of flow variables and deployment steps.
 
 ## Related Controls
 

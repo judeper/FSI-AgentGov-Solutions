@@ -297,14 +297,10 @@ VAR PriorDate = MAX(ComplianceScore[fsi_scoredate]) - 30
 VAR PriorScore =
     CALCULATE(
         AVERAGE(ComplianceScore[fsi_overallscore]),
-        ComplianceScore[fsi_scoredate] =
-            CALCULATE(
-                MAX(ComplianceScore[fsi_scoredate]),
-                ComplianceScore[fsi_scoredate] <= PriorDate
-            )
+        ComplianceScore[fsi_scoredate] = PriorDate
     )
 RETURN
-    IF(ISBLANK(PriorScore), BLANK(), CurrentScore - PriorScore)
+    CurrentScore - PriorScore
 
 Score Trend Direction =
 VAR Change = [Score Change 30D]
@@ -595,7 +591,7 @@ Switch to **Report** view (icon on left sidebar).
 3. Fields:
    - `ComplianceException[fsi_name]`
    - `ComplianceException[fsi_severity]`
-   - `ComplianceException[fsi_exceptionstatus]`
+   - `ComplianceException[fsi_status]`
    - `ComplianceException[fsi_owner]`
    - `ComplianceException[fsi_daysopen]`
    - `ComplianceException[fsi_targetdate]`

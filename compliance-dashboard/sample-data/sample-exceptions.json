@@ -7,7 +7,7 @@
   "exceptions": [
     {
       "fsi_name": "Incomplete supervision documentation",
-      "fsi_controlassessmentid": "2.12",
+      "fsi_controlid": "2.12",
       "fsi_severity": 2,
       "fsi_exceptionstatus": 3,
       "fsi_description": "Sample exception for 2.12: Incomplete supervision documentation",
@@ -19,7 +19,7 @@
     },
     {
       "fsi_name": "MFA not enforced for Zone 3 agents",
-      "fsi_controlassessmentid": "1.11",
+      "fsi_controlid": "1.11",
       "fsi_severity": 1,
       "fsi_exceptionstatus": 3,
       "fsi_description": "Sample exception for 1.11: MFA not enforced for Zone 3 agents",
@@ -31,7 +31,7 @@
     },
     {
       "fsi_name": "Segregation of duties violation",
-      "fsi_controlassessmentid": "2.8",
+      "fsi_controlid": "2.8",
       "fsi_severity": 2,
       "fsi_exceptionstatus": 1,
       "fsi_description": "Sample exception for 2.8: Segregation of duties violation",
@@ -43,7 +43,7 @@
     },
     {
       "fsi_name": "DLP policy bypass detected",
-      "fsi_controlassessmentid": "1.5",
+      "fsi_controlid": "1.5",
       "fsi_severity": 1,
       "fsi_exceptionstatus": 2,
       "fsi_description": "Sample exception for 1.5: DLP policy bypass detected",
@@ -55,7 +55,7 @@
     },
     {
       "fsi_name": "Information barriers not enforced",
-      "fsi_controlassessmentid": "1.22",
+      "fsi_controlid": "1.22",
       "fsi_severity": 1,
       "fsi_exceptionstatus": 1,
       "fsi_description": "Sample exception for 1.22: Information barriers not enforced",
@@ -67,7 +67,7 @@
     },
     {
       "fsi_name": "Missing retention policy configuration",
-      "fsi_controlassessmentid": "1.9",
+      "fsi_controlid": "1.9",
       "fsi_severity": 2,
       "fsi_exceptionstatus": 2,
       "fsi_description": "Sample exception for 1.9: Missing retention policy configuration",
@@ -79,7 +79,7 @@
     },
     {
       "fsi_name": "Outdated RAG knowledge source",
-      "fsi_controlassessmentid": "2.16",
+      "fsi_controlid": "2.16",
       "fsi_severity": 3,
       "fsi_exceptionstatus": 3,
       "fsi_description": "Sample exception for 2.16: Outdated RAG knowledge source",
@@ -91,7 +91,7 @@
     },
     {
       "fsi_name": "External sharing policy violation",
-      "fsi_controlassessmentid": "4.5",
+      "fsi_controlid": "4.5",
       "fsi_severity": 2,
       "fsi_exceptionstatus": 1,
       "fsi_description": "Sample exception for 4.5: External sharing policy violation",
@@ -103,7 +103,7 @@
     },
     {
       "fsi_name": "Agent change not documented",
-      "fsi_controlassessmentid": "2.3",
+      "fsi_controlid": "2.3",
       "fsi_severity": 3,
       "fsi_exceptionstatus": 2,
       "fsi_description": "Sample exception for 2.3: Agent change not documented",
@@ -115,7 +115,7 @@
     },
     {
       "fsi_name": "Agent accessing unauthorized connector",
-      "fsi_controlassessmentid": "1.4",
+      "fsi_controlid": "1.4",
       "fsi_severity": 1,
       "fsi_exceptionstatus": 1,
       "fsi_description": "Sample exception for 1.4: Agent accessing unauthorized connector",
@@ -127,7 +127,7 @@
     },
     {
       "fsi_name": "Missing bias testing documentation",
-      "fsi_controlassessmentid": "2.11",
+      "fsi_controlid": "2.11",
       "fsi_severity": 3,
       "fsi_exceptionstatus": 1,
       "fsi_description": "Sample exception for 2.11: Missing bias testing documentation",
@@ -139,7 +139,7 @@
     },
     {
       "fsi_name": "Adversarial input logging disabled",
-      "fsi_controlassessmentid": "1.21",
+      "fsi_controlid": "1.21",
       "fsi_severity": 3,
       "fsi_exceptionstatus": 2,
       "fsi_description": "Sample exception for 1.21: Adversarial input logging disabled",
@@ -151,7 +151,7 @@
     },
     {
       "fsi_name": "Endpoint DLP not configured",
-      "fsi_controlassessmentid": "1.17",
+      "fsi_controlid": "1.17",
       "fsi_severity": 2,
       "fsi_exceptionstatus": 2,
       "fsi_description": "Sample exception for 1.17: Endpoint DLP not configured",

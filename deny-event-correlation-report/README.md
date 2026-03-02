@@ -4,16 +4,18 @@
 
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 
+> ✅ **Authentication Migration Complete**: `Export-RaiTelemetry.ps1` was migrated to Entra ID authentication on February 4, 2026. No API key is required. See [prerequisites.md](docs/prerequisites.md#authentication-migration) for details.
+
 ## Overview
 
 This solution provides automated extraction, correlation, and visualization of deny events from three Microsoft data sources:
 
 | Source | Event Types | Purpose |
 |--------|-------------|---------|
-| **Microsoft Purview Audit** | CopilotInteraction deny events | Agent-level access blocks |
+| **Microsoft Purview Audit** | CopilotInteraction deny (resource failure, policy block) | Agent-level access blocks |
 | **Microsoft Purview DLP** | DlpRuleMatch for Copilot location | Sensitivity-based blocks |
 | **Application Insights** | ContentFiltered RAI events | Model-layer content filtering |
-| **Defender CloudAppEvents** (optional) | UPIA/XPIA detections, Jailbreak | Prompt injection detection (advanced) |
+| **Defender CloudAppEvents** (optional) | UPIA/XPIA, Jailbreak detections | Prompt injection & jailbreak detection (advanced) |
 
 ## Regulatory Alignment
 
@@ -35,12 +37,11 @@ deny-event-correlation-report/
 │   ├── Export-CopilotDenyEvents.ps1   # Purview CopilotInteraction extraction
 │   ├── Export-DlpCopilotEvents.ps1    # Purview DLP extraction
 │   ├── Export-RaiTelemetry.ps1        # Application Insights extraction
-│   ├── Export-DefenderCopilotEvents.ps1 # Defender CloudAppEvents extraction (XPIA/Jailbreak)
-│   ├── Connect-ExchangeOnlineHelper.ps1  # Shared EXO connection helper
 │   └── Invoke-DailyDenyReport.ps1     # Orchestration script
 ├── kql-queries/
 │   ├── copilot-deny-events.kql        # Log Analytics queries
 │   ├── dlp-copilot-matches.kql        # DLP correlation queries
+│   ├── cloud-app-events.kql            # Defender XPIA/Jailbreak queries
 │   ├── content-filtered-events.kql    # App Insights RAI queries
 │   └── correlation-analysis.kql       # Cross-source correlation
 └── docs/
@@ -57,7 +58,7 @@ deny-event-correlation-report/
 - Power BI Pro or Premium
 - Azure subscription (for storage and automation)
 - Required permissions:
-  - View-Only Audit Logs
+  - Purview Audit Reader
   - Application Insights Reader
   - Storage Blob Data Contributor (optional, for blob upload)
 
@@ -66,8 +67,8 @@ deny-event-correlation-report/
 ```powershell
 # Install required modules
 Install-Module ExchangeOnlineManagement -Force
-# Optional: Install-Module Az.Storage -Force  (for blob upload)
-# Optional: Install-Module Az.KeyVault -Force  (for Key Vault credentials)
+Install-Module Az.Storage -Force
+Install-Module Az.KeyVault -Force
 
 # Connect to Exchange Online
 Connect-ExchangeOnline
@@ -138,4 +139,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*FSI Agent Governance Framework v2.0.0 - February 2026*
+*FSI Agent Governance Framework v1.2 - January 2026*

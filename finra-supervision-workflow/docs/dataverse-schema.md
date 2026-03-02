@@ -32,7 +32,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 | Tier | `fsi_tier` | Choice | Yes | Tier 1, Tier 2, Tier 3 |
 | Content Preview | `fsi_contentpreview` | Multiline Text | No | First 500 characters |
 | Flagged Reason | `fsi_flaggedreason` | Text (500) | Yes | Policy or rule that flagged item |
-| State | `fsi_state` | Choice | Yes | Pending, In Review, Approved, Escalated, Rejected |
+| State | `fsi_state` | Choice | Yes | Pending, InReview, Approved, Escalated, Rejected |
 | Assigned Principal | `fsi_assignedprincipal` | Lookup (User) | No | Supervisory principal |
 | Queued Date | `fsi_queueddate` | DateTime | Yes | When item entered queue |
 | SLA Due | `fsi_sladue` | DateTime | Yes | SLA deadline |
@@ -46,39 +46,39 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 **Source Type (`fsi_sourcetype`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Communication Compliance |
-| 100000001 | Audit Log |
-| 100000002 | Manual Entry |
+| 1 | Communication Compliance |
+| 2 | Audit Log |
+| 3 | Manual Entry |
 
 **Zone (`fsi_zone`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Zone 1 - Personal Productivity |
-| 100000001 | Zone 2 - Team Collaboration |
-| 100000002 | Zone 3 - Enterprise Managed |
+| 1 | Zone 1 - Personal Productivity |
+| 2 | Zone 2 - Team Collaboration |
+| 3 | Zone 3 - Enterprise Managed |
 
 **Tier (`fsi_tier`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Tier 1 - Critical |
-| 100000001 | Tier 2 - Standard |
-| 100000002 | Tier 3 - Low Risk |
+| 1 | Tier 1 - Critical |
+| 2 | Tier 2 - Standard |
+| 3 | Tier 3 - Low Risk |
 
 **State (`fsi_state`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Pending |
-| 100000001 | In Review |
-| 100000002 | Approved |
-| 100000003 | Escalated |
-| 100000004 | Rejected |
+| 1 | Pending |
+| 2 | In Review |
+| 3 | Approved |
+| 4 | Escalated |
+| 5 | Rejected |
 
 **Review Outcome (`fsi_reviewoutcome`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Approved |
-| 100000001 | Rejected |
-| 100000002 | Escalated |
+| 1 | Approved |
+| 2 | Rejected |
+| 3 | Escalated |
 
 ---
 
@@ -98,7 +98,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 | Log Number | `fsi_lognumber` | Auto Number | Yes | LOG-{SEQNUM:6} format |
 | Queue Item | `fsi_queueitem` | Lookup (SupervisionQueue) | Yes | Related queue item |
 | Action | `fsi_action` | Choice | Yes | Action taken |
-| Actor | `fsi_actor` | Text (200) | Yes | UPN of person |
+| Actor | `fsi_actor` | Lookup (User) | Yes | Person taking action |
 | Timestamp | `fsi_timestamp` | DateTime | Yes | Action timestamp |
 | Details | `fsi_details` | Multiline Text | No | Additional details |
 
@@ -107,15 +107,15 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 **Action (`fsi_action`):**
 | Value | Label |
 |-------|-------|
-| 100000000 | Queued |
-| 100000001 | Assigned |
-| 100000002 | Claimed |
-| 100000003 | Reviewed |
-| 100000004 | Approved |
-| 100000005 | Rejected |
-| 100000006 | Escalated |
-| 100000007 | Reassigned |
-| 100000008 | Closed |
+| 1 | Queued |
+| 2 | Assigned |
+| 3 | Claimed |
+| 4 | Reviewed |
+| 5 | Approved |
+| 6 | Rejected |
+| 7 | Escalated |
+| 8 | Reassigned |
+| 9 | Closed |
 
 ---
 
@@ -184,10 +184,10 @@ No business rules - append-only via automation.
 
 | View | Filter | Columns |
 |------|--------|---------|
-| My Queue | Assigned Principal = Current User, State = Pending/In Review | Queue Number, Agent Name, Flagged Reason, SLA Due |
+| My Queue | Assigned Principal = Current User, State = Pending/InReview | Queue Number, Agent Name, Flagged Reason, SLA Due |
 | Pending Review | State = Pending | Queue Number, Agent Name, Zone, Tier, Queued Date |
-| Overdue Items | SLA Due < Now, State in (Pending, In Review) | Queue Number, Agent Name, Assigned Principal, SLA Due |
-| Escalated Items | State = Escalated | Queue Number, Agent Name, Reviewed By, Flagged Reason |
+| Overdue Items | SLA Due < Now, State in (Pending, InReview) | Queue Number, Agent Name, Assigned Principal, SLA Due |
+| Escalated Items | State = Escalated | Queue Number, Agent Name, Reviewed By, Escalation Reason |
 | Completed This Week | Reviewed Date >= Week Start | Queue Number, Agent Name, Review Outcome, Reviewed By |
 | All Items | None | All columns |
 
@@ -202,7 +202,7 @@ No business rules - append-only via automation.
 
 ## Deployment Script
 
-The `deploy.py` script creates tables, columns, and choice option sets. Business rules and views must be configured manually in the Power Apps maker portal.
+The `deploy.py` script creates tables and seeds default configuration. Column creation within tables and security role provisioning require manual setup or solution import (see [security-roles.md](./security-roles.md)).
 
 ```bash
 python scripts/deploy.py \

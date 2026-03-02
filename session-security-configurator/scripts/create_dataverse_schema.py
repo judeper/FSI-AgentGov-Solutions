@@ -12,7 +12,6 @@ import os
 import sys
 from typing import Optional
 
-import requests
 from ssc_client import SSCClient
 
 PUBLISHER_PREFIX = "fsi"

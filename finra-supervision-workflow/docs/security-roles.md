@@ -32,7 +32,7 @@ Supervisory principals who review flagged AI agent outputs.
 
 | Privilege | Access Level |
 |-----------|--------------|
-| Create | Organization (via automation) |
+| Create | None (log entries created by FSW Admin service account via automation) |
 | Read | User (related to assigned items) |
 | Write | None |
 | Delete | None |
@@ -93,10 +93,12 @@ Full access for platform administrators and automation accounts.
 | Create | Organization |
 | Read | Organization |
 | Write | Organization |
-| Delete | Organization |
+| Delete | None |
 | Append | Organization |
 | Append To | Organization |
 | Assign | Organization |
+
+> **Important:** Even Admin role should NOT have Delete on SupervisionQueue. Queue items represent records of items flagged for supervisory review; allowing deletion risks destruction of regulatory evidence required under FINRA 3110.
 
 ### SupervisionLog Privileges
 
@@ -183,9 +185,21 @@ No field-level security - entire table is read-only except Create.
 
 ---
 
-## Verification
+## Verification Steps
 
-Verify role privileges match expected configuration by reviewing each role in the Power Platform admin center under **Settings > Security Roles**. Compare the privilege matrix above against the assigned access levels for each custom table.
+Verify role privileges match expected configuration using the Power Platform admin center:
+
+1. Open [Power Platform admin center](https://admin.powerplatform.microsoft.com)
+2. Navigate to **Environments** > select your environment > **Settings** > **Users + permissions** > **Security roles**
+3. Select the role to verify (e.g., "FSW Admin")
+4. Open the **Custom Entities** tab
+5. Confirm the privilege matrix matches the tables above:
+   - **FSW Admin**: SupervisionQueue Create/Read/Write/Assign (no Delete), SupervisionLog Create+Read only, SupervisionConfig full access
+   - **FSW Supervisor**: SupervisionQueue User-level Read/Write, SupervisionLog Read only
+   - **FSW Queue Manager**: SupervisionQueue Organization-level CRUD (no Delete), SupervisionConfig Organization-level Create/Read/Write
+   - **FSW Auditor**: Read-only Organization-level on all tables
+
+> **Note:** An automated `verify_role_privileges.py` script is planned for a future release.
 
 ---
 
@@ -196,6 +210,5 @@ Verify role privileges match expected configuration by reviewing each role in th
 | Review items | FSW Supervisor | - |
 | Assign items | FSW Queue Manager | FSW Supervisor (for same items) |
 | Configure rules | FSW Queue Manager | - |
-| Delete queue items | FSW Admin | FSW Supervisor (recommended) |
 
 For Zone 3 / Tier 1 agents, implement dual-supervisor review by requiring two FSW Supervisors to approve.

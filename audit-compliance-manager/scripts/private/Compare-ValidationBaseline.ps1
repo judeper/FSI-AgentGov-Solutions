@@ -1,11 +1,11 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
     Compares current validation severity against last known good baseline from Dataverse history.
 
 .DESCRIPTION
-    Queries the fsi_auditvalidationhistory table for the most recent Passed (severity=100000000)
+    Queries the fsi_auditvalidationhistory table for the most recent Passed (severity=1)
     validation result matching the specified scope and type. Compares the current validation
     severity against the baseline to determine if drift (regression) has occurred.
 
@@ -17,12 +17,12 @@
     This function supports automated alerting by providing a boolean DriftDetected flag
     that downstream systems (Power Automate) can use to route alert notifications.
 
-    Severity values (Dataverse option set, higher = worse):
-    - Passed = 100000000
-    - Warning = 100000001
-    - GracePeriod = 100000002
-    - Failed = 100000003
-    - Error = 100000004
+    Severity values (higher = worse):
+    - Passed = 1
+    - Warning = 2
+    - GracePeriod = 3
+    - Failed = 4
+    - Error = 5
 
 .PARAMETER DataverseUrl
     Dataverse organization URL where validation history is stored.
@@ -146,11 +146,11 @@ function Compare-ValidationBaseline {
 
         # Map status strings to severity values (higher = worse)
         $severityMap = @{
-            "Passed"      = 100000000
-            "Warning"     = 100000001
-            "GracePeriod" = 100000002
-            "Failed"      = 100000003
-            "Error"       = 100000004
+            "Passed"      = 1
+            "Warning"     = 2
+            "GracePeriod" = 3
+            "Failed"      = 4
+            "Error"       = 5
         }
 
         $scopeMap = @{
@@ -162,21 +162,19 @@ function Compare-ValidationBaseline {
         $scopeValue = $scopeMap[$Scope]
 
         # Build OData filter for baseline query
-        # Find most recent Passed (severity=100000000) validation for this scope
-        $filter = "fsi_scope eq $scopeValue and fsi_severity eq 100000000"
+        # Find most recent Passed (severity=1) validation for this scope
+        $filter = "fsi_scope eq $scopeValue and fsi_severity eq 1"
 
         if ($Scope -eq "Environment") {
             if (-not $EnvironmentId) {
                 throw "EnvironmentId is required when Scope is 'Environment'."
             }
-            $safeEnvironmentId = $EnvironmentId -replace "'", "''"
-            $filter += " and fsi_environmentid eq '$safeEnvironmentId'"
+            $filter += " and fsi_environmentid eq '$EnvironmentId'"
 
             # For environment scope, typically we want Orchestrator type for overall status
             # Or we can filter by specific ValidationType if provided
             if ($ValidationType) {
-                $safeValidationType = $ValidationType -replace "'", "''"
-                $filter += " and fsi_validationtype eq '$safeValidationType'"
+                $filter += " and fsi_validationtype eq '$ValidationType'"
             }
             else {
                 # Default to Orchestrator for environment-level drift detection
@@ -185,8 +183,7 @@ function Compare-ValidationBaseline {
         }
         elseif ($ValidationType) {
             # For tenant scope, filter by ValidationType if provided
-            $safeValidationType = $ValidationType -replace "'", "''"
-            $filter += " and fsi_validationtype eq '$safeValidationType'"
+            $filter += " and fsi_validationtype eq '$ValidationType'"
         }
 
         # Construct API URL with OData query
@@ -215,7 +212,7 @@ function Compare-ValidationBaseline {
 
         # Parse baseline result
         $baseline = $response.value | Select-Object -First 1
-        $isFirstRun = $null -eq $baseline
+        $isFirstRun = $baseline -eq $null
 
         if ($isFirstRun) {
             # No baseline exists - this is first run
@@ -247,11 +244,11 @@ function Compare-ValidationBaseline {
 
             # Map baseline severity back to status string
             $reverseSeverityMap = @{
-                100000000 = "Passed"
-                100000001 = "Warning"
-                100000002 = "GracePeriod"
-                100000003 = "Failed"
-                100000004 = "Error"
+                1 = "Passed"
+                2 = "Warning"
+                3 = "GracePeriod"
+                4 = "Failed"
+                5 = "Error"
             }
             $baselineStatus = $reverseSeverityMap[$baselineSeverity]
 
@@ -297,7 +294,4 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $result
 }
 
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Compare-ValidationBaseline
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

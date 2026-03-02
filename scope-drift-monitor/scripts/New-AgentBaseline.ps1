@@ -15,8 +15,17 @@
 .PARAMETER Environment
     The Dataverse environment URL.
 
+.PARAMETER EnvironmentId
+    The Power Platform environment ID (GUID) for the agent.
+
+.PARAMETER OwnerId
+    The Dataverse systemuser ID (GUID) of the agent owner.
+
 .PARAMETER Days
-    Number of days of audit history to analyze (default: 30).
+    Number of days of audit history to analyze (default: 7, max: 7).
+    The Office 365 Management API requires startTime within 7 days of current
+    time and limits each request to a 24-hour window. The script automatically
+    breaks the requested range into 24-hour windows.
 
 .PARAMETER TenantId
     Azure AD tenant ID. Defaults to AZURE_TENANT_ID environment variable.
@@ -28,10 +37,10 @@
     Azure AD application client secret. Defaults to AZURE_CLIENT_SECRET environment variable.
 
 .EXAMPLE
-    .\New-AgentBaseline.ps1 -AgentId "12345678-..." -Environment "https://contoso.crm.dynamics.com"
+    .\New-AgentBaseline.ps1 -AgentId "12345678-..." -Environment "https://contoso.crm.dynamics.com" -EnvironmentId "env-guid" -OwnerId "user-guid"
 
 .EXAMPLE
-    .\New-AgentBaseline.ps1 -AgentId "12345678-..." -Environment "https://contoso.crm.dynamics.com" -Days 60
+    .\New-AgentBaseline.ps1 -AgentId "12345678-..." -Environment "https://contoso.crm.dynamics.com" -EnvironmentId "env-guid" -OwnerId "user-guid" -Days 5
 
 .NOTES
     Requires:
@@ -48,8 +57,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Environment,
 
+    [Parameter(Mandatory = $true)]
+    [string]$EnvironmentId,
+
+    [Parameter(Mandatory = $true)]
+    [string]$OwnerId,
+
     [Parameter(Mandatory = $false)]
-    [int]$Days = 30,
+    [ValidateRange(1, 7)]
+    [int]$Days = 7,
 
     [Parameter(Mandatory = $false)]
     [string]$TenantId = $env:AZURE_TENANT_ID,
@@ -58,16 +74,15 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET,
-
-    [Parameter(Mandatory = $false)]
-    [string]$EnvironmentId,
-
-    [Parameter(Mandatory = $false)]
-    [string]$Owner
+    [securestring]$ClientSecret
 )
 
 $ErrorActionPreference = "Stop"
+
+# Convert environment variable to SecureString if parameter not provided
+if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
+    $ClientSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
+}
 
 #region Helper Functions
 
@@ -80,7 +95,7 @@ function Get-AccessToken {
         [string]$ClientId,
 
         [Parameter(Mandatory = $true)]
-        [string]$ClientSecret,
+        [securestring]$ClientSecret,
 
         [Parameter(Mandatory = $true)]
         [string]$Scope
@@ -89,7 +104,7 @@ function Get-AccessToken {
     $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
     $body = @{
         client_id     = $ClientId
-        client_secret = $ClientSecret
+        client_secret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
         scope         = $Scope
         grant_type    = "client_credentials"
     }
@@ -123,8 +138,8 @@ function Get-CopilotAuditEvents {
     )
 
     $events = @()
-    $startDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss")
-    $endDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss")
+    $rangeStart = (Get-Date).AddDays(-$Days).ToUniversalTime()
+    $rangeEnd = (Get-Date).ToUniversalTime()
 
     $headers = @{
         "Authorization" = "Bearer $Token"
@@ -143,57 +158,81 @@ function Get-CopilotAuditEvents {
         }
     }
 
-    # Get content blobs for the time period
-    $contentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startDate&endTime=$endDate"
+    # Break the requested range into 24-hour windows (API constraint)
+    $windowStart = $rangeStart
+    while ($windowStart -lt $rangeEnd) {
+        $windowEnd = $windowStart.AddHours(24)
+        if ($windowEnd -gt $rangeEnd) { $windowEnd = $rangeEnd }
 
-    try {
-        $contentBlobs = @()
-        $nextPageUri = $contentUri
+        $startDate = $windowStart.ToString("yyyy-MM-ddTHH:mm:ss")
+        $endDate = $windowEnd.ToString("yyyy-MM-ddTHH:mm:ss")
 
-        # Handle pagination via NextPageUri header
-        while ($nextPageUri) {
-            $response = Invoke-WebRequest -Uri $nextPageUri -Headers $headers -Method Get
-            $blobs = $response.Content | ConvertFrom-Json
-            if ($blobs) {
-                $contentBlobs += $blobs
-            }
+        Write-Host "  Querying window: $startDate to $endDate" -ForegroundColor Gray
 
-            # Check for next page
-            $nextPageUri = $null
-            if ($response.Headers["NextPageUri"]) {
-                $nextPageUri = $response.Headers["NextPageUri"]
-            }
-        }
+        # Get content blobs for this 24-hour window
+        $contentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startDate&endTime=$endDate"
 
-        Write-Host "  Found $($contentBlobs.Count) content blobs to process"
+        try {
+            $contentBlobs = @()
+            $nextPageUri = $contentUri
 
-        # Fetch each content blob and filter for CopilotInteraction (RecordType 261)
-        foreach ($blob in $contentBlobs) {
-            try {
-                $blobEvents = Invoke-RestMethod -Uri $blob.contentUri -Headers $headers -Method Get
-
-                # Filter for CopilotInteraction events (RecordType 261)
-                # and optionally filter by agent ID if event contains it
-                $copilotEvents = $blobEvents | Where-Object {
-                    $_.RecordType -eq 261 -and
-                    $_.EventData.AgentId -eq $AgentId
+            # Handle pagination via NextPageUri header
+            while ($nextPageUri) {
+                # Validate pagination URL host
+                if ($nextPageUri -notmatch '^https://manage\.office\.com/') {
+                    Write-Warning "Skipping untrusted pagination URL: $nextPageUri"
+                    break
+                }
+                $response = Invoke-WebRequest -Uri $nextPageUri -Headers $headers -Method Get
+                $blobs = $response.Content | ConvertFrom-Json
+                if ($blobs) {
+                    $contentBlobs += $blobs
                 }
 
-                $events += $copilotEvents
+                # Check for next page
+                $nextPageUri = $null
+                if ($response.Headers["NextPageUri"]) {
+                    $nextPageUri = $response.Headers["NextPageUri"]
+                }
             }
-            catch {
-                Write-Warning "Could not fetch content blob: $($_.Exception.Message)"
+
+            Write-Host "  Found $($contentBlobs.Count) content blobs in window"
+
+            # Fetch each content blob and filter for CopilotInteraction (RecordType 261)
+            foreach ($blob in $contentBlobs) {
+                try {
+                    # Validate content blob URI host
+                    if ($blob.contentUri -notmatch '^https://manage\.office\.com/') {
+                        Write-Warning "Skipping untrusted content URI: $($blob.contentUri)"
+                        continue
+                    }
+                    $blobEvents = Invoke-RestMethod -Uri $blob.contentUri -Headers $headers -Method Get
+
+                    # Filter for CopilotInteraction events (RecordType 261)
+                    # and optionally filter by agent ID if event contains it
+                    $copilotEvents = $blobEvents | Where-Object {
+                        $_.RecordType -eq 261 -and
+                        $_.EventData.AgentId -eq $AgentId
+                    }
+
+                    $events += $copilotEvents
+                }
+                catch {
+                    Write-Warning "Could not fetch content blob: $($_.Exception.Message)"
+                }
             }
         }
-    }
-    catch {
-        if ($_.Exception.Response.StatusCode -eq 403) {
-            Write-Warning "Access denied to Office 365 Management API. Ensure E5/E5 Compliance license is assigned and ActivityFeed.Read permission is granted."
+        catch {
+            if ($_.Exception.Response.StatusCode -eq 403) {
+                Write-Warning "Access denied to Office 365 Management API. Ensure E5/E5 Compliance license is assigned and ActivityFeed.Read permission is granted."
+            }
+            else {
+                Write-Warning "Could not query audit content for window $startDate to ${endDate}: $($_.Exception.Message)"
+            }
         }
-        else {
-            Write-Warning "Could not query audit content: $($_.Exception.Message)"
-        }
-    }
+
+        $windowStart = $windowEnd
+    }  # end while (24-hour window loop)
 
     return $events
 }
@@ -222,7 +261,7 @@ function Analyze-AccessedResources {
         if ($eventData.AISystemPlugin) {
             foreach ($plugin in $eventData.AISystemPlugin) {
                 if ($plugin.Name -and $plugin.Enabled -eq $true) {
-                    $connectorName = $plugin.Name -replace "Connector$", ""
+                    $connectorName = $plugin.Name
                     if ($connectorName -notin $resources.Connectors) {
                         $resources.Connectors += $connectorName
                     }
@@ -262,8 +301,8 @@ function Analyze-AccessedResources {
 
                 # Identify external APIs from resource URL patterns
                 if ($resource.Type -eq "ExternalAPI" -or
-                    ($resource.Id -match "^https?://" -and $resource.Id -notmatch "(sharepoint|microsoft|office)\.com")) {
-                    $apiUrl = $resource.Id
+                    ($resource.Url -match "^https?://" -and $resource.Url -notmatch "(sharepoint|microsoft|office)\.com")) {
+                    $apiUrl = $resource.Url
                     if ($apiUrl -notin $resources.APIs) {
                         $resources.APIs += $apiUrl
                     }
@@ -285,26 +324,28 @@ function Build-ScopeFromHistory {
         [hashtable]$Resources,
 
         [Parameter(Mandatory = $true)]
-        [string]$AgentId
+        [string]$AgentId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$EnvironmentId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$OwnerId
     )
 
     $scope = @{
-        fsi_name              = "Agent $AgentId Baseline"
-        fsi_agentid           = $AgentId
-        fsi_environmentid     = $script:ResolvedEnvironmentId
-        fsi_zone              = 2  # Default to Zone 2
-        fsi_status            = 2  # Active (auto-generated baseline goes active immediately per CONTEXT.md)
-        fsi_purpose           = "Auto-generated baseline from $Days-day audit history analysis"
-        fsi_allowedconnectors = ($Resources.Connectors | ConvertTo-Json -Compress)
-        fsi_allowedsites      = ($Resources.Sites | ConvertTo-Json -Compress)
-        fsi_allowedtables     = ($Resources.Tables | ConvertTo-Json -Compress)
-        fsi_allowedapis       = ($Resources.APIs | ConvertTo-Json -Compress)
+        fsi_name                    = "Agent $AgentId Baseline"
+        fsi_agentid                 = $AgentId
+        fsi_environmentid           = $EnvironmentId
+        "fsi_owner@odata.bind"      = "/systemusers($OwnerId)"
+        fsi_zone                    = 10002  # Default to Zone 2
+        fsi_status                  = 10002  # Active (auto-generated baseline goes active immediately per CONTEXT.md)
+        fsi_purpose                 = "Auto-generated baseline from $Days-day audit history analysis"
+        fsi_allowedconnectors = (ConvertTo-Json -InputObject @($Resources.Connectors) -Compress)
+        fsi_allowedsites      = (ConvertTo-Json -InputObject @($Resources.Sites) -Compress)
+        fsi_allowedtables     = (ConvertTo-Json -InputObject @($Resources.Tables) -Compress)
+        fsi_allowedapis       = (ConvertTo-Json -InputObject @($Resources.APIs) -Compress)
         fsi_lastvalidated     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    }
-
-    # Set owner lookup if available
-    if ($script:ResolvedOwner) {
-        $scope["fsi_owner@odata.bind"] = "/systemusers($($script:ResolvedOwner))"
     }
 
     # Handle empty arrays (ensure valid JSON)
@@ -362,12 +403,6 @@ Write-Host "Environment: $Environment"
 Write-Host "Analysis Period: $Days days"
 Write-Host ""
 
-# Validate AgentId format
-if ($AgentId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
-    Write-Error "AgentId must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789012)"
-    exit 1
-}
-
 # Validate credentials
 if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
     Write-Error "Missing credentials. Set environment variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET"
@@ -398,27 +433,6 @@ catch {
 # Get CopilotInteraction audit events
 Write-Host ""
 Write-Host "Querying Office 365 Management API for CopilotInteraction events..." -ForegroundColor Gray
-
-# Resolve environment ID and owner via Dataverse WhoAmI
-$whoAmIHeaders = @{
-    "Authorization"    = "Bearer $dataverseToken"
-    "Content-Type"     = "application/json"
-    "OData-MaxVersion" = "4.0"
-    "OData-Version"    = "4.0"
-}
-
-try {
-    $whoAmI = Invoke-RestMethod -Uri "$Environment/api/data/v9.2/WhoAmI" -Headers $whoAmIHeaders -Method Get
-    $script:ResolvedEnvironmentId = if ($EnvironmentId) { $EnvironmentId } else { $whoAmI.OrganizationId }
-    $script:ResolvedOwner = if ($Owner) { $Owner } else { $whoAmI.UserId }
-    Write-Host "  Environment ID: $($script:ResolvedEnvironmentId)" -ForegroundColor Gray
-}
-catch {
-    Write-Warning "Could not call WhoAmI: $($_.Exception.Message)"
-    $script:ResolvedEnvironmentId = if ($EnvironmentId) { $EnvironmentId } else { "" }
-    $script:ResolvedOwner = $Owner
-}
-
 $events = Get-CopilotAuditEvents -Token $managementToken -TenantId $TenantId -AgentId $AgentId -Days $Days
 Write-Host "  Found $($events.Count) CopilotInteraction events (RecordType 261)"
 
@@ -435,7 +449,7 @@ Write-Host "  External APIs: $($resources.APIs.Count) unique"
 # Build scope definition
 Write-Host ""
 Write-Host "Building scope definition..." -ForegroundColor Gray
-$scopeDefinition = Build-ScopeFromHistory -Resources $resources -AgentId $AgentId
+$scopeDefinition = Build-ScopeFromHistory -Resources $resources -AgentId $AgentId -EnvironmentId $EnvironmentId -OwnerId $OwnerId
 
 if ($events.Count -eq 0) {
     Write-Host "  No audit events found - creating empty baseline" -ForegroundColor Yellow

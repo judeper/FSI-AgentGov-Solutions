@@ -62,6 +62,22 @@ Assign these Entra ID roles to the Managed Identity:
 | **Power Platform Administrator** | Environment enumeration, audit config access | Entra ID → Roles and administrators |
 | **Exchange Online Admin** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
 
+> **Least-Privilege Consideration:** The roles above are tenant-wide administrative roles,
+> which is broader than needed for audit compliance scanning (read-only operations).
+> For production deployments, consider these alternatives:
+>
+> - **Compliance Administrator** instead of Exchange Online Admin — provides read access
+>   to audit logs and compliance data without full Exchange administration rights.
+> - **Power Platform Administrator** can be scoped using Entra ID Administrative Units
+>   if your organization has segmented governance.
+> - For environments that only need detection (not remediation), the Managed Identity
+>   does not require System Administrator in target Dataverse environments —
+>   **Compliance Reader** or a custom security role with read access to organization
+>   settings is sufficient.
+>
+> Evaluate your organization's security requirements and apply the narrowest role
+> assignments that satisfy the solution's operational needs.
+
 **Steps:**
 
 1. Navigate to **Microsoft Entra ID** → **Roles and administrators**
@@ -207,7 +223,7 @@ Import these modules from the PowerShell Gallery:
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0.0 | Environment enumeration, admin config |
-| `ExchangeOnlineManagement` | 3.7.0 | Exchange Online MI auth, audit log search |
+| `ExchangeOnlineManagement` | 3.0.0 | Exchange Online MI auth, audit log search |
 
 **For each module:**
 
@@ -242,7 +258,7 @@ Import these modules from the PowerShell Gallery:
    - **Runtime version:** 7.2
    - **Description:** Scans all Power Platform environments for Purview unified audit and Dataverse audit compliance
 3. Click **Create**
-4. In the editor, paste the contents of `scripts/Check-AuditLoggingCompliance.ps1`
+4. In the editor, paste the contents of `src/Check-AuditLoggingCompliance.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.2 Create Remediation Runbook
@@ -254,7 +270,7 @@ Import these modules from the PowerShell Gallery:
    - **Runtime version:** 7.2
    - **Description:** Enables org-level and entity-level Dataverse auditing on non-compliant environments
 3. Click **Create**
-4. In the editor, paste the contents of `scripts/Enable-AuditLogging.ps1`
+4. In the editor, paste the contents of `src/Enable-AuditLogging.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.3 Verify Runbook Status
@@ -284,36 +300,6 @@ After completing all 5 phases, run the detection runbook in Test mode:
    - ✅ Compliance summary shows correct counts
 
 See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedures.
-
----
-
-## Security Role Lockdown (ACV Subsystem)
-
-After deployment, enforce immutability on the `fsi_auditvalidationhistory` table (part of the
-Audit Compliance Validation subsystem) by running the security role configuration script:
-
-```powershell
-# Acquire a Dataverse access token (e.g., via Managed Identity or interactive auth)
-$token = "<your-access-token>"
-
-# Preview changes (WhatIf)
-./scripts/Configure-SecurityRoles.ps1 `
-    -DataverseUrl "https://your-org.crm.dynamics.com" `
-    -AccessToken $token `
-    -WhatIf
-
-# Apply changes
-./scripts/Configure-SecurityRoles.ps1 `
-    -DataverseUrl "https://your-org.crm.dynamics.com" `
-    -AccessToken $token
-```
-
-This creates a security role named **ACV Automation - Append Only** that:
-- **Grants:** Create (append-only) and Read on `fsi_auditvalidationhistory`
-- **Denies:** Write and Delete (enforces immutability)
-
-After running the script, assign this role to the automation Managed Identity and
-**remove** the System Administrator role for production environments.
 
 ---
 

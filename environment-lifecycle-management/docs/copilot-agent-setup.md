@@ -97,7 +97,7 @@ Add these trigger phrases:
     |-- Yes --> [Question 10] Security group
     |
     v
-[Condition] Zone >= 2?
+[Condition] Zone = 3?
     |-- Yes --> [Question 11] Zone rationale
     |
     v
@@ -238,23 +238,16 @@ Variable: `Topic.zoneAutoFlags`
 Type: Text
 
 ```
-Concatenate(
-    If(Topic.dataSensitivity = "Restricted", "RESTRICTED_DATA,", ""),
-    If(Topic.hasCustomerData, "CUSTOMER_PII,", ""),
-    If(Topic.hasFinancialData, "FINANCIAL_TRANSACTIONS,", ""),
-    If(Topic.hasExternalAccess, "EXTERNAL_ACCESS,", ""),
-    If(Topic.dataSensitivity = "Confidential", "CONFIDENTIAL_DATA,", ""),
-    If(Topic.environmentType = "Production", "PRODUCTION_WORKLOAD,", ""),
-    If(Topic.expectedUsers <> "Just me (1)", "TEAM_WORKLOAD,", "")
+TrimEnd(
+  If(Topic.dataSensitivity = "Restricted", "RESTRICTED_DATA,", "") &
+  If(Topic.hasCustomerData, "CUSTOMER_PII,", "") &
+  If(Topic.hasFinancialData, "FINANCIAL_TRANSACTIONS,", "") &
+  If(Topic.hasExternalAccess, "EXTERNAL_ACCESS,", "") &
+  If(Topic.dataSensitivity = "Confidential", "CONFIDENTIAL_DATA,", "") &
+  If(Topic.environmentType = "Production", "PRODUCTION_WORKLOAD,", "") &
+  If(Topic.expectedUsers <> "Just me (1)", "TEAM_WORKLOAD,", ""),
+  ","
 )
-```
-
-**Remove trailing comma** — add a follow-up Set Variable node:
-
-Variable: `Topic.zoneAutoFlags`
-
-```
-If(EndsWith(Topic.zoneAutoFlags, ","), Left(Topic.zoneAutoFlags, Len(Topic.zoneAutoFlags) - 1), Topic.zoneAutoFlags)
 ```
 
 #### Display Classification
@@ -283,13 +276,31 @@ Based on your responses, this environment has been classified as **Zone {Topic.z
 | Entity | User's entire response |
 | Variable | `Topic.securityGroupName` |
 
-##### Question 11: Zone Rationale (Zone 2/3)
+##### Question 10b: Security Group ID (Zone 2/3 Only)
 
 **Condition:** `Topic.zone >= 2`
 
 | Setting | Value |
 |---------|-------|
-| Question | Please provide a brief rationale explaining why this environment requires Zone 2 or Zone 3 classification. |
+| Question | What is the Entra security group GUID? (e.g., 12345678-1234-1234-1234-123456789012) |
+| Entity | User's entire response |
+| Variable | `Topic.securityGroupId` |
+
+**Validation (Condition Node):**
+
+```
+Power Fx: IsMatch(Topic.securityGroupId, "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+If false: "Please enter a valid GUID in the format: 12345678-1234-1234-1234-123456789012"
+```
+
+##### Question 11: Zone Rationale (Zone 2 and 3)
+
+**Condition:** `Topic.zone >= 2`
+
+| Setting | Value |
+|---------|-------|
+| Question | Please provide a brief rationale explaining why this environment requires Zone {Topic.zone} classification. |
 | Entity | User's entire response |
 | Variable | `Topic.zoneRationale` |
 
@@ -340,25 +351,6 @@ Select the Power Automate flow that creates the EnvironmentRequest record.
 | expectedUsers | `Topic.expectedUsers` |
 | securityGroupName | `Topic.securityGroupName` |
 | zoneRationale | `Topic.zoneRationale` |
-
-> **Security Group Name → GUID Resolution:** The Copilot agent collects the security
-> group display name (`securityGroupName`), but Dataverse stores `fsi_securitygroupid`
-> as an Entra ID GUID. The bridging Power Automate flow must resolve the name to a
-> GUID before writing to the EnvironmentRequest table:
->
-> 1. **Sanitize input:** Before constructing the OData filter, validate that the
->    `securityGroupName` value contains no single quotes or OData operators. Use
->    `replace(triggerBody()?['securityGroupName'], '''', '')` to strip single quotes,
->    or reject names containing them with an error message back to the agent.
-> 2. **Action:** HTTP with Microsoft Entra ID (preauthorized)
->    - Method: `GET`
->    - Base Resource URL: `https://graph.microsoft.com`
->    - URI: `/v1.0/groups?$filter=displayName eq '@{variables('sanitizedGroupName')}'&$select=id,displayName,securityEnabled`
-> 3. **Validate:** Confirm exactly one result is returned and `securityEnabled` is `true`
-> 4. **Extract:** `first(body('Resolve_Security_Group')?['value'])?['id']`
-> 5. **Set** `fsi_securitygroupid` to the extracted GUID when creating the EnvironmentRequest row
-> 6. **Error:** If no group is found or multiple groups match, return an error to the
->    agent so the user can correct the group name
 
 #### Confirmation Message
 

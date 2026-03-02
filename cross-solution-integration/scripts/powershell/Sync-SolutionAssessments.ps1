@@ -98,40 +98,7 @@ Import-Module $modulePath -Force
 
 #endregion
 
-#region Authentication
-
-function Connect-DataverseApi {
-    param(
-        [string]$Url,
-        [string]$TenantId,
-        [string]$ClientId,
-        [SecureString]$ClientSecret,
-        [switch]$Interactive
-    )
-
-    $scope = "$($Url.TrimEnd('/'))/.default"
-
-    if ($Interactive) {
-        Write-Verbose "Authenticating interactively to $Url"
-        $token = Get-MsalToken -TenantId $TenantId -ClientId '51f81489-12ee-4a9e-aaae-a2591f45987d' -Scopes $scope -Interactive
-    } else {
-        Write-Verbose "Authenticating with service principal to $Url"
-        $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
-        $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -ClientCredential $credential -Scopes $scope
-    }
-
-    return @{
-        BaseUrl = "$($Url.TrimEnd('/'))/api/data/v9.2"
-        Headers = @{
-            'Authorization' = "Bearer $($token.AccessToken)"
-            'OData-MaxVersion' = '4.0'
-            'OData-Version' = '4.0'
-            'Accept' = 'application/json'
-            'Content-Type' = 'application/json'
-            'Prefer' = 'return=representation'
-        }
-    }
-}
+#region Authentication (provided by IntegrationConfig.psm1)
 
 #endregion
 
@@ -148,18 +115,31 @@ function Invoke-DataverseQuery {
     $url = "$($Connection.BaseUrl)/$EntitySet$separator$Query"
     Write-Verbose "GET $url"
 
-    try {
-        $allRecords = @()
-        while ($url) {
-            $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
-            $allRecords += $response.value
-            $url = $response.'@odata.nextLink'
+    $allRecords = @()
+    $maxRetries = 3
+    while ($url) {
+        $retryCount = 0
+        $success = $false
+        while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+                $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Get
+                $allRecords += $response.value
+                $url = $response.'@odata.nextLink'
+                $success = $true
+            } catch {
+                $retryCount++
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+                    $delay = [math]::Pow(2, $retryCount) * 5
+                    Write-Warning "Transient error ($statusCode) querying $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+                    Start-Sleep -Seconds $delay
+                } else {
+                    throw
+                }
+            }
         }
-        return $allRecords
-    } catch {
-        Write-Warning "Failed to query $EntitySet : $($_.Exception.Message)"
-        return @()
     }
+    return $allRecords
 }
 
 function New-DataverseRecord {
@@ -290,6 +270,9 @@ function Sync-SolutionToAssessment {
 
     $timestamp = $ValidationRecord.($tableConfig.TimestampField)
     $runId = $ValidationRecord.($tableConfig.RunIdField)
+    $zone = if ($ValidationRecord.PSObject.Properties['fsi_zone']) {
+        Get-CanonicalZoneValue -ZoneValue $ValidationRecord.fsi_zone
+    } else { $null }
     $results = @()
 
     foreach ($controlId in $controlIds) {
@@ -311,6 +294,9 @@ function Sync-SolutionToAssessment {
             'fsi_notes'                      = $notes
             'fsi_nextreviewdate'             = (Get-Date).AddDays(1).ToString('yyyy-MM-ddTHH:mm:ssZ')
         }
+        if ($null -ne $zone) {
+            $assessmentRecord['fsi_zone'] = $zone
+        }
 
         $result = [PSCustomObject]@{
             Solution       = $Solution
@@ -330,7 +316,8 @@ function Sync-SolutionToAssessment {
             try {
                 # Check for existing same-day assessment
                 $today = (Get-Date).ToString('yyyy-MM-dd')
-                $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')&`$top=1"
+                $zoneFilter = if ($null -ne $zone) { " and fsi_zone eq $zone" } else { '' }
+                $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')$zoneFilter&`$top=1"
                 $existing = Invoke-DataverseQuery -Connection $Connection `
                     -EntitySet $cdConfig.Assessment.EntitySet `
                     -Query $existingQuery
@@ -506,7 +493,8 @@ foreach ($solution in $Solutions) {
         foreach ($result in $results) {
             if ($result.Action -in @('Created', 'Updated', 'DryRun — would create assessment')) {
                 Register-SolutionEvidence -Connection $connection -Solution $solution `
-                    -EvidenceDirectory $EvidenceDirectory -AssessmentGuid $result.AssessmentGuid -DryRun:$DryRun
+                    -EvidenceDirectory $EvidenceDirectory `
+                    -AssessmentGuid $result.AssessmentGuid -DryRun:$DryRun
             }
         }
     }
@@ -514,15 +502,13 @@ foreach ($solution in $Solutions) {
     Write-Host ""
 }
 
-#region Worst-of-Two Resolution for Dual-Feed Controls
+#region Worst-of-Two Resolution for Dual-Fed Controls (1.11 and 1.23)
 
-# Controls fed by both SSC and CAA require worst-of-two resolution
-$dualFeedControls = @('1.11', '1.23')
-
+# SSC and CAA both feed Controls 1.11 and 1.23; apply worst-of-two logic for each
 if (('SSC' -in $Solutions) -and ('CAA' -in $Solutions)) {
-    foreach ($dualControlId in $dualFeedControls) {
-        $sscResult = $allResults | Where-Object { $_.Solution -eq 'SSC' -and $_.ControlId -eq $dualControlId -and $_.Status -ne 'No Data' } | Select-Object -First 1
-        $caaResult = $allResults | Where-Object { $_.Solution -eq 'CAA' -and $_.ControlId -eq $dualControlId -and $_.Status -ne 'No Data' } | Select-Object -First 1
+    foreach ($dualFedControl in @('1.11', '1.23')) {
+        $sscResult = $allResults | Where-Object { $_.Solution -eq 'SSC' -and $_.ControlId -eq $dualFedControl -and $_.Status -ne 'No Data' } | Select-Object -First 1
+        $caaResult = $allResults | Where-Object { $_.Solution -eq 'CAA' -and $_.ControlId -eq $dualFedControl -and $_.Status -ne 'No Data' } | Select-Object -First 1
 
         if ($sscResult -and $caaResult) {
             # Map status labels to numeric values for comparison
@@ -534,40 +520,43 @@ if (('SSC' -in $Solutions) -and ('CAA' -in $Solutions)) {
             $worstScore = switch ($worstValue) { 1 { 100 } 2 { 50 } 3 { 0 } }
 
             if ($sscValue -ne $caaValue) {
-                Write-Host "[Control $dualControlId] Dual-feed resolution: SSC=$($sscResult.Status), CAA=$($caaResult.Status) => Worst-of-two: $worstLabel" -ForegroundColor Magenta
+                Write-Host "[Control $dualFedControl] Dual-feed resolution: SSC=$($sscResult.Status), CAA=$($caaResult.Status) => Worst-of-two: $worstLabel" -ForegroundColor Magenta
 
                 if (-not $DryRun) {
                     try {
-                        $controlGuid = $controlGuids[$dualControlId]
+                        $controlGuid = $controlGuids[$dualFedControl]
                         if ($controlGuid) {
                             $cdConfig = Get-DashboardTableConfig
                             $today = (Get-Date).ToString('yyyy-MM-dd')
-                            $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')&`$top=1"
-                            $existing = Invoke-DataverseQuery -Connection $connection `
+                            # Query all same-day assessments for this control (across all zones)
+                            $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')"
+                            $existingRecords = Invoke-DataverseQuery -Connection $connection `
                                 -EntitySet $cdConfig.Assessment.EntitySet `
                                 -Query $existingQuery
 
-                            if ($existing.Count -gt 0) {
+                            foreach ($existingRecord in $existingRecords) {
                                 $worstNotes = "Automated assessment — worst-of-two resolution. SSC: $($sscResult.Status), CAA: $($caaResult.Status). Final: $worstLabel."
                                 Update-DataverseRecord -Connection $connection `
                                     -EntitySet $cdConfig.Assessment.EntitySet `
-                                    -RecordId $existing[0].fsi_controlassessmentid `
+                                    -RecordId $existingRecord.fsi_controlassessmentid `
                                     -Record @{
                                         'fsi_status' = $worstValue
                                         'fsi_score'  = $worstScore
                                         'fsi_notes'  = $worstNotes
                                     }
-                                Write-Host "  [Updated] Control $dualControlId assessment with worst-of-two result" -ForegroundColor Green
+                            }
+                            if ($existingRecords.Count -gt 0) {
+                                Write-Host "  [Updated] Control $dualFedControl — $($existingRecords.Count) assessment(s) with worst-of-two result" -ForegroundColor Green
                             }
                         }
                     } catch {
-                        Write-Warning "  [Error] Worst-of-two update for Control $dualControlId`: $($_.Exception.Message)"
+                        Write-Warning "  [Error] Worst-of-two update for Control $dualFedControl : $($_.Exception.Message)"
                     }
                 } else {
-                    Write-Host "  [DryRun] Would update Control $dualControlId assessment to $worstLabel (Score: $worstScore)" -ForegroundColor Yellow
+                    Write-Host "  [DryRun] Would update Control $dualFedControl assessment to $worstLabel (Score: $worstScore)" -ForegroundColor Yellow
                 }
             } else {
-                Write-Host "[Control $dualControlId] Dual-feed aligned: SSC and CAA both report $($sscResult.Status)" -ForegroundColor Green
+                Write-Host "[Control $dualFedControl] Dual-feed aligned: SSC and CAA both report $($sscResult.Status)" -ForegroundColor Green
             }
         }
     }

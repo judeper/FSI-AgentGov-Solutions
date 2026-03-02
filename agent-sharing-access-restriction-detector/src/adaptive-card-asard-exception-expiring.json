@@ -1,7 +1,7 @@
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
-  "version": "1.5",
+  "version": "1.4",
   "body": [
     {
       "type": "Container",
@@ -184,7 +184,8 @@
     ],
     "exceptionListFormat": "Agent: {agent_name} | Environment: {environment_name} | Expires: {expires_at} | Days Remaining: {days_remaining} | Approved By: {approved_by} | Justification: {justification_preview}",
     "cardStyle": "warning",
-    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK)",
-    "icon": "⚠️"
+    "icon": "⚠️",
+    "renderingPipeline": "string-replacement",
+    "renderingNotes": "This card uses {{variable}} placeholders rendered via Power Automate string replace() functions. Do not mix with ${variable} Adaptive Cards Templating SDK syntax."
   }
 }

@@ -64,7 +64,7 @@
     examination readiness.
 #>
 
-#Requires -Version 5.1
+#Requires -Version 7.0
 
 function Get-CAAValidationResults {
     [CmdletBinding()]
@@ -92,6 +92,7 @@ function Get-CAAValidationResults {
         [datetime]$ToDate,
 
         [Parameter()]
+        [ValidatePattern('^[a-zA-Z0-9\-]+$')]
         [string]$RunId
     )
 
@@ -127,9 +128,7 @@ function Get-CAAValidationResults {
     }
 
     if ($RunId -and $Table -eq 'fsi_capolicyvalidationhistories') {
-        # Sanitize RunId to prevent OData injection
-        $sanitizedRunId = $RunId -replace "'", "''"
-        [void]$filters.Add("fsi_runid eq '$sanitizedRunId'")
+        [void]$filters.Add("fsi_run_id eq '$RunId'")
     }
 
     # For baselines, only retrieve active records by default

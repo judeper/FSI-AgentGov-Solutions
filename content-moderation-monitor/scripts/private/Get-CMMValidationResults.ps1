@@ -1,5 +1,8 @@
 #Requires -Version 7.0
 
+# Import CMMClient module for Invoke-DataverseRequest (retry/backoff on 429/5xx)
+Import-Module (Join-Path $PSScriptRoot 'CMMClient.psm1') -Force
+
 <#
 .SYNOPSIS
     Queries Dataverse content moderation validation history and violations for evidence export.
@@ -74,7 +77,7 @@
     - Violations: Array of violation records (empty if -IncludeViolations not specified)
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.0.0
     This is a private helper function for internal use by Export-ContentModerationEvidence.
 
     Dataverse tables queried:
@@ -105,6 +108,7 @@ function Get-CMMValidationResults {
         [datetime]$ToDate = (Get-Date),
 
         [Parameter(Mandatory = $false)]
+        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
         [string]$RunId,
 
         [Parameter(Mandatory = $false)]
@@ -136,12 +140,10 @@ function Get-CMMValidationResults {
         $historyFilters += "fsi_validation_time ge $fromDateUtc"
         $historyFilters += "fsi_validation_time le $toDateUtc"
 
-        # Optional RunId filter (with GUID format validation)
+        # Optional RunId filter
         if ($RunId) {
-            if ($RunId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-                throw "RunId '$RunId' is not a valid GUID format."
-            }
-            $historyFilters += "fsi_run_id eq '$RunId'"
+            $safeRunId = $RunId -replace "'", "''"
+            $historyFilters += "fsi_run_id eq '$safeRunId'"
         }
 
         # Combine filters
@@ -163,28 +165,10 @@ function Get-CMMValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = $null
-            $maxRetries = 3
-            for ($retryCount = 0; $retryCount -lt $maxRetries; $retryCount++) {
-                try {
-                    $response = Invoke-RestMethod `
-                        -Uri $nextLink `
-                        -Method Get `
-                        -Headers $headers `
-                        -ErrorAction Stop
-                    break
-                }
-                catch {
-                    $statusCode = $_.Exception.Response.StatusCode.value__
-                    if ($statusCode -in @(429, 500, 502, 503, 504) -and $retryCount -lt ($maxRetries - 1)) {
-                        $delay = [math]::Pow(2, $retryCount)
-                        Write-Warning "Transient error querying validation history ($statusCode), retrying in ${delay}s: $($_.Exception.Message)"
-                        Start-Sleep -Seconds $delay
-                        continue
-                    }
-                    throw
-                }
-            }
+            $response = Invoke-DataverseRequest `
+                -Uri $nextLink `
+                -Method Get `
+                -Headers $headers
 
             if ($response.value) {
                 $allValidations += $response.value
@@ -211,12 +195,14 @@ function Get-CMMValidationResults {
             $violationFilters += "fsi_detected_at ge $fromDateUtc"
             $violationFilters += "fsi_detected_at le $toDateUtc"
 
-            # Optional RunId filter (already validated above)
+            # Optional RunId filter
             if ($RunId) {
-                $violationFilters += "fsi_run_id eq '$RunId'"
+                $safeRunId = $RunId -replace "'", "''"
+                $violationFilters += "fsi_run_id eq '$safeRunId'"
             }
 
             # Optional zone filter (not applied when 'All')
+            # fsi_zone is a Dataverse picklist (integer) column — do not quote the value
             if ($Zone -ne 'All') {
                 $violationFilters += "fsi_zone eq $Zone"
             }
@@ -237,28 +223,10 @@ function Get-CMMValidationResults {
             while ($nextLink) {
                 Write-Verbose "Fetching violations page: $nextLink"
 
-                $response = $null
-                $maxRetries = 3
-                for ($retryCount = 0; $retryCount -lt $maxRetries; $retryCount++) {
-                    try {
-                        $response = Invoke-RestMethod `
-                            -Uri $nextLink `
-                            -Method Get `
-                            -Headers $headers `
-                            -ErrorAction Stop
-                        break
-                    }
-                    catch {
-                        $statusCode = $_.Exception.Response.StatusCode.value__
-                        if ($statusCode -in @(429, 500, 502, 503, 504) -and $retryCount -lt ($maxRetries - 1)) {
-                            $delay = [math]::Pow(2, $retryCount)
-                            Write-Warning "Transient error querying violations ($statusCode), retrying in ${delay}s: $($_.Exception.Message)"
-                            Start-Sleep -Seconds $delay
-                            continue
-                        }
-                        throw
-                    }
-                }
+                $response = Invoke-DataverseRequest `
+                    -Uri $nextLink `
+                    -Method Get `
+                    -Headers $headers
 
                 if ($response.value) {
                     $allViolations += $response.value

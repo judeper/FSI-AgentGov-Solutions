@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -93,9 +93,9 @@
     This function only creates records (append-only). No update or delete operations are supported.
 
     Option set mappings (MUST match Dataverse schema):
-    - fsi_acv_severity: Passed=100000000, Warning=100000001, GracePeriod=100000002, Failed=100000003, Error=100000004
+    - fsi_acv_severity: Passed=1, Warning=2, GracePeriod=3, Failed=4, Error=5
     - fsi_acv_scope: Tenant=100000000, Environment=100000001
-    - fsi_acv_zone: Unclassified=100000000, Zone1=100000001, Zone2=100000002, Zone3=100000003
+    - fsi_acv_zone: Unclassified=0, Zone1=1, Zone2=2, Zone3=3
 
 .OUTPUTS
     String (GUID) - The created record ID on success. Throws on failure.
@@ -147,10 +147,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-# Import AuditComplianceHelpers for Invoke-WithRetry
-$scriptRoot = Split-Path -Parent $PSScriptRoot
-Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
 
 function Write-ValidationResult {
     [CmdletBinding()]
@@ -204,11 +200,11 @@ function Write-ValidationResult {
 
         # Map string parameters to option set integer values
         $severityMap = @{
-            "Passed"      = 100000000
-            "Warning"     = 100000001
-            "GracePeriod" = 100000002
-            "Failed"      = 100000003
-            "Error"       = 100000004
+            "Passed"      = 1
+            "Warning"     = 2
+            "GracePeriod" = 3
+            "Failed"      = 4
+            "Error"       = 5
         }
 
         $scopeMap = @{
@@ -217,10 +213,10 @@ function Write-ValidationResult {
         }
 
         $zoneMap = @{
-            "Unclassified" = 100000000
-            "Zone1"        = 100000001
-            "Zone2"        = 100000002
-            "Zone3"        = 100000003
+            "Unclassified" = 0
+            "Zone1"        = 1
+            "Zone2"        = 2
+            "Zone3"        = 3
         }
 
         # Build record name
@@ -278,18 +274,15 @@ function Write-ValidationResult {
             "Content-Type"     = "application/json"
             "OData-MaxVersion" = "4.0"
             "OData-Version"    = "4.0"
-            "Prefer"           = "return=representation"
         }
 
-        # POST request to create record (with retry for transient 429/503/504 errors)
-        $response = Invoke-WithRetry -ScriptBlock {
-            Invoke-RestMethod `
-                -Uri $apiUrl `
-                -Method Post `
-                -Headers $headers `
-                -Body $jsonBody `
-                -ErrorAction Stop
-        } -OperationName "Write-ValidationResult"
+        # POST request to create record
+        $response = Invoke-RestMethod `
+            -Uri $apiUrl `
+            -Method Post `
+            -Headers $headers `
+            -Body $jsonBody `
+            -ErrorAction Stop
 
         # Extract created record ID from response headers or body
         # Dataverse returns the ID in the OData-EntityId header
@@ -317,7 +310,4 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $recordId
 }
 
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Write-ValidationResult
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

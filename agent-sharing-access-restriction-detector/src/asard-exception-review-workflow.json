@@ -33,7 +33,7 @@
           "type": "String",
           "metadata": {
             "schemaName": "fsi_ASARD_TeamsChannelId",
-            "description": "Microsoft Teams channel ID for exception review notifications"
+            "description": "Microsoft Teams channel ID for governance notifications"
           }
         },
         "fsi_ASARD_AdaptiveCardTemplateUrl": {
@@ -42,22 +42,6 @@
           "metadata": {
             "schemaName": "fsi_ASARD_AdaptiveCardTemplateUrl",
             "description": "Base URL for adaptive card template hosting (e.g., GitHub raw content or Azure Blob Storage)"
-          }
-        },
-        "fsi_ASARD_AdaptiveCardTemplateToken": {
-          "defaultValue": "",
-          "type": "SecureString",
-          "metadata": {
-            "schemaName": "fsi_ASARD_AdaptiveCardTemplateToken",
-            "description": "Optional bearer token for authenticated access to adaptive card template URLs (e.g., private GitHub repo or Azure Blob Storage). Leave empty for publicly accessible templates."
-          }
-        },
-        "fsi_ASARD_PlaybookUrl": {
-          "defaultValue": "https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/",
-          "type": "String",
-          "metadata": {
-            "schemaName": "fsi_ASARD_PlaybookUrl",
-            "description": "URL to the ASARD exception management playbook for adaptive card links"
           }
         }
       },
@@ -77,12 +61,7 @@
             },
             "timeZone": "UTC"
           },
-          "description": "Daily scheduled trigger at 08:00 UTC to review exception expiration dates",
-          "runtimeConfiguration": {
-            "concurrency": {
-              "runs": 1
-            }
-          }
+          "description": "Daily scheduled trigger at 08:00 UTC to review exception expiration dates"
         }
       },
       "actions": {
@@ -100,6 +79,78 @@
           "runAfter": {},
           "description": "Capture current UTC date for expiration queries"
         },
+        "Validate_TeamsChannelId_Configured": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@empty(parameters('fsi_ASARD_TeamsChannelId'))",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Terminate_Missing_TeamsChannelId": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "ConfigurationError",
+                  "message": "Environment variable fsi_ASARD_TeamsChannelId is not configured. Set this environment variable to the governance Teams channel ID before activating the workflow."
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "runAfter": {
+            "Initialize_Today": [
+              "Succeeded"
+            ]
+          },
+          "description": "Pre-flight validation: ensure TeamsChannelId is configured. Terminates with ConfigurationError if empty."
+        },
+        "Validate_TemplateUrl_Configured": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@empty(parameters('fsi_ASARD_AdaptiveCardTemplateUrl'))",
+                  true
+                ]
+              },
+              {
+                "not": {
+                  "startsWith": [
+                    "@toLower(parameters('fsi_ASARD_AdaptiveCardTemplateUrl'))",
+                    "https://"
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Terminate_Invalid_TemplateUrl": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "ConfigurationError",
+                  "message": "Environment variable fsi_ASARD_AdaptiveCardTemplateUrl is not configured or does not use HTTPS scheme. Set this to a trusted HTTPS URL (e.g., GitHub raw content or Azure Blob Storage)."
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "runAfter": {
+            "Validate_TeamsChannelId_Configured": [
+              "Succeeded"
+            ]
+          },
+          "description": "Pre-flight validation: ensure AdaptiveCardTemplateUrl is non-empty and uses HTTPS scheme. Terminates with ConfigurationError if invalid."
+        },
         "Initialize_ExpiringThreshold": {
           "type": "InitializeVariable",
           "inputs": {
@@ -112,16 +163,23 @@
             ]
           },
           "runAfter": {
-            "Initialize_Today": [
+            "Validate_TemplateUrl_Configured": [
               "Succeeded"
             ]
           },
           "description": "Calculate expiring threshold: 14 days from now"
         },
-        "Scope_Main": {
-          "type": "Scope",
-          "actions": {
-            "Query_Expiring_Exceptions": {
+        "Parallel_Branch_Expiring_And_Expired": {
+          "type": "Parallel",
+          "runAfter": {
+            "Initialize_ExpiringThreshold": [
+              "Succeeded"
+            ]
+          },
+          "branches": [
+            {
+              "actions": {
+                "Query_Expiring_Exceptions": {
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
@@ -137,13 +195,7 @@
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "runAfter": {},
-                  "runtimeConfiguration": {
-                    "paginationPolicy": {
-                      "minimumItemCount": 100000
-                    }
-                  },
-                  "description": "Query for exceptions expiring within 14 days. Uses runtime pagination policy for automatic @odata.nextLink continuation beyond 5000 records."
+                  "description": "Query for exceptions expiring within 14 days (compliance_status=914430002, expires_at between today and today+14)"
                 },
                 "Condition_Check_Expiring_Exceptions_Exist": {
                   "type": "If",
@@ -167,9 +219,9 @@
                       "type": "Select",
                       "inputs": {
                         "from": "@outputs('Query_Expiring_Exceptions')?['body/value']",
-                        "select": "@{concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expires: ', formatDateTime(item()?['fsi_exception_expires_at'], 'yyyy-MM-dd'), ' | Days Remaining: ', string(div(sub(ticks(item()?['fsi_exception_expires_at']), ticks(utcNow())), 864000000000)), ' | Approved By: ', coalesce(item()?['fsi_exception_approved_by'], 'N/A'), ' | Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(coalesce(item()?['fsi_exception_justification'], ''), 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))}"
+                        "select": "@concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expires: ', coalesce(item()?['fsi_exception_expires_at'], 'N/A'), ' | Days Remaining: ', string(div(sub(ticks(item()?['fsi_exception_expires_at']), ticks(utcNow())), 864000000000)), ' | Approved By: ', coalesce(item()?['fsi_exception_approved_by'], 'N/A'), ' | Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(item()?['fsi_exception_justification'], 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))"
                       },
-                      "description": "Transform records to formatted strings with null-safe coalesce() field access"
+                      "description": "Transform Dataverse records to expiring list strings with days_remaining calculation"
                     },
                     "Post_Expiring_Notification": {
                       "type": "OpenApiConnection",
@@ -196,24 +248,23 @@
                     },
                     "Build_Expiring_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(replace(join(body('Build_Expiring_List'), '\\n'), '\\', '\\\\'), '\\\\n', '\\n'), '\"', '\\\"')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', parameters('fsi_ASARD_PlaybookUrl')))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expiring_List'), '\\n')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
                       "runAfter": {
                         "Load_Expiring_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expiring exception data including playbook URL. Exception list values are JSON-escaped (backslashes and double quotes) before template substitution to prevent malformed JSON from Dataverse field values."
+                      "description": "Populate adaptive card template with expiring exception data"
                     },
                     "Load_Expiring_Card_Template": {
                       "type": "Http",
                       "inputs": {
                         "method": "GET",
                         "uri": "@{parameters('fsi_ASARD_AdaptiveCardTemplateUrl')}/adaptive-card-asard-exception-expiring.json",
-                        "headers": "@if(empty(parameters('fsi_ASARD_AdaptiveCardTemplateToken')), json('{}'), json(concat('{\"Authorization\": \"Bearer ', parameters('fsi_ASARD_AdaptiveCardTemplateToken'), '\"}')))",
                         "retryPolicy": {
                           "type": "exponential",
                           "count": 3,
-                          "interval": "PT10S"
+                          "interval": "PT5S"
                         }
                       },
                       "runAfter": {
@@ -221,10 +272,14 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template with exponential retry policy for transient failures. Uses optional bearer token (fsi_ASARD_AdaptiveCardTemplateToken) for private URL authentication."
+                      "description": "Load adaptive card template from source control or blob storage. WARNING: Ensure fsi_ASARD_AdaptiveCardTemplateUrl is configured with a trusted HTTPS URL. No URL scheme validation or content integrity check is performed — misconfiguration could load templates from untrusted sources."
                     }
                   }
-                },
+                }
+              }
+            },
+            {
+              "actions": {
                 "Query_Expired_Exceptions": {
                   "type": "OpenApiConnection",
                   "inputs": {
@@ -241,13 +296,7 @@
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "runAfter": {},
-                  "runtimeConfiguration": {
-                    "paginationPolicy": {
-                      "minimumItemCount": 100000
-                    }
-                  },
-                  "description": "Query for expired exceptions (expires_at < today). Uses runtime pagination policy for automatic @odata.nextLink continuation beyond 5000 records."
+                  "description": "Query for expired exceptions (compliance_status=914430002, expires_at < today)"
                 },
                 "Condition_Check_Expired_Exceptions_Exist": {
                   "type": "If",
@@ -287,14 +336,11 @@
                                   "recordId": "@item()?['fsi_agentsharingcomplianceid']",
                                   "item/fsi_compliance_status": 914430001,
                                   "item/fsi_exception_expires_at": null,
-                                  "item/fsi_exception_justification": null,
-                                  "item/fsi_exception_approved_by": null,
-                                  "item/fsi_exception_approved_at": null,
                                   "item/fsi_exception_review_date": null
                                 },
                                 "authentication": "@parameters('$authentication')"
                               },
-                              "description": "Reset compliance_status to NonCompliant (914430001) and clear all exception fields"
+                              "description": "Reset compliance_status to NonCompliant (914430001) and clear expiration fields. Audit trail fields (fsi_exception_justification, fsi_exception_approved_by, fsi_exception_approved_at) are preserved for compliance auditing."
                             }
                           },
                           "runAfter": {},
@@ -337,15 +383,14 @@
                       "type": "Select",
                       "inputs": {
                         "from": "@outputs('Query_Expired_Exceptions')?['body/value']",
-                        "select": "@{concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expired: ', formatDateTime(item()?['fsi_exception_expires_at'], 'yyyy-MM-dd'), ' | Previous Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(coalesce(item()?['fsi_exception_justification'], ''), 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))}"
+                        "select": "@concat('Agent: ', coalesce(item()?['fsi_agent_name'], 'N/A'), ' | Environment: ', coalesce(item()?['fsi_environment_name'], 'N/A'), ' | Expired: ', formatDateTime(item()?['fsi_exception_expires_at'], 'yyyy-MM-dd'), ' | Previous Justification: ', if(greater(length(coalesce(item()?['fsi_exception_justification'], '')), 100), concat(substring(item()?['fsi_exception_justification'], 0, 97), '...'), coalesce(item()?['fsi_exception_justification'], 'N/A')))"
                       },
                       "runAfter": {
                         "Apply_To_Each_Expired_Exception": [
-                          "Succeeded",
-                          "Failed"
+                          "Succeeded"
                         ]
                       },
-                      "description": "Transform expired records to formatted strings with null-safe coalesce() field access"
+                      "description": "Transform expired records to list for notification"
                     },
                     "Post_Expired_Notification": {
                       "type": "OpenApiConnection",
@@ -372,24 +417,23 @@
                     },
                     "Build_Expired_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(replace(join(body('Build_Expired_List'), '\\n'), '\\', '\\\\'), '\\\\n', '\\n'), '\"', '\\\"')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', parameters('fsi_ASARD_PlaybookUrl')))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expired_List'), '\\n')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
                       "runAfter": {
                         "Load_Expired_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expired exception data including playbook URL. Exception list values are JSON-escaped (backslashes and double quotes) before template substitution to prevent malformed JSON from Dataverse field values."
+                      "description": "Populate adaptive card template with expired exception data"
                     },
                     "Load_Expired_Card_Template": {
                       "type": "Http",
                       "inputs": {
                         "method": "GET",
                         "uri": "@{parameters('fsi_ASARD_AdaptiveCardTemplateUrl')}/adaptive-card-asard-exception-expired.json",
-                        "headers": "@if(empty(parameters('fsi_ASARD_AdaptiveCardTemplateToken')), json('{}'), json(concat('{\"Authorization\": \"Bearer ', parameters('fsi_ASARD_AdaptiveCardTemplateToken'), '\"}')))",
                         "retryPolicy": {
                           "type": "exponential",
                           "count": 3,
-                          "interval": "PT10S"
+                          "interval": "PT5S"
                         }
                       },
                       "runAfter": {
@@ -397,19 +441,15 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template with exponential retry policy for transient failures. Uses optional bearer token (fsi_ASARD_AdaptiveCardTemplateToken) for private URL authentication."
+                      "description": "Load adaptive card template from source control or blob storage. WARNING: Ensure fsi_ASARD_AdaptiveCardTemplateUrl is configured with a trusted HTTPS URL. No URL scheme validation or content integrity check is performed — misconfiguration could load templates from untrusted sources."
                     }
                   }
                 }
-          },
-          "runAfter": {
-            "Initialize_ExpiringThreshold": [
-              "Succeeded"
-            ]
-          },
-          "description": "Main execution scope wrapping parallel exception processing for error handling"
+              }
+            }
+          ]
         },
-        "Scope_Error_Handler": {
+        "Scope_Flow_Error_Handler": {
           "type": "Scope",
           "actions": {
             "Post_Flow_Error_Notification": {
@@ -423,28 +463,28 @@
                 "parameters": {
                   "poster": "Flow bot",
                   "location": "@parameters('fsi_ASARD_TeamsChannelId')",
-                  "body/messageBody": "ASARD Exception Review workflow failed. Check flow run history for details.\n\nFlow: ASARD Exception Review Workflow\nTimestamp: @{utcNow()}",
-                  "body/messageTitle": "ASARD Exception Review — Flow Error"
+                  "body/messageBody": "🚨 ASARD Exception Review Workflow encountered a critical error. One or more branches (expiring/expired exception processing) failed. Review flow run history in Power Automate portal for details.",
+                  "body/messageTitle": "🚨 ASARD Exception Review — CRITICAL ERROR"
                 },
                 "authentication": "@parameters('$authentication')"
               },
-              "description": "Post error notification to Teams governance channel when exception review fails"
+              "runAfter": {},
+              "description": "Post critical error notification to Teams governance channel when workflow fails unexpectedly."
             }
           },
           "runAfter": {
-            "Scope_Main": [
+            "Parallel_Branch_Expiring_And_Expired": [
               "Failed",
-              "Skipped",
               "TimedOut"
             ]
           },
-          "description": "Error handler for exception review flow failures — posts notification to governance channel"
+          "description": "Top-level error handler: catches failures from query, HTTP template load, or notification actions and posts governance notification."
         }
       }
     },
     "templateName": "asard-exception-review-workflow",
     "displayName": "ASARD Exception Review Workflow",
-    "description": "Agent Sharing Access Restriction Detector (ASARD) — Exception review workflow. Daily scheduled workflow to review agent sharing exceptions. Sends Teams notifications for expiring exceptions (within 14 days) and auto-resets expired exceptions to NonCompliant status. Scheduled daily at 08:00 UTC.",
+    "description": "Agent Sharing Access Restriction Detector (ASARD) — Exception review workflow. Reviews agent sharing exceptions daily. Sends Teams notifications for exceptions expiring within 14 days and auto-resets expired exceptions to NonCompliant status with audit trail preservation.",
     "owner": {
       "objectId": "",
       "tenantId": ""
@@ -455,7 +495,7 @@
     "solution": "FSI-AgentGov",
     "component": "ASARD",
     "version": "v1.0.0",
-    "phase": "enforcement-and-remediation",
+    "phase": "exception-management",
     "requirement": "ENF-03"
   },
   "_metadata": {
@@ -482,10 +522,7 @@
     "deploymentInstructions": [
       "Import flow into target environment via Power Automate portal or ALM pipelines",
       "Configure connection references: Dataverse (shared_commondataserviceforapps), Teams (shared_teams)",
-      "Set environment variable fsi_ASARD_TeamsChannelId with governance leads channel ID",
-      "Set environment variable fsi_ASARD_AdaptiveCardTemplateUrl with adaptive card template hosting URL (e.g., GitHub raw content or Azure Blob Storage)",
-      "Set environment variable fsi_ASARD_AdaptiveCardTemplateToken with bearer token if template URL requires authentication (leave empty for public URLs)",
-      "Set environment variable fsi_ASARD_PlaybookUrl with exception management playbook URL (default provided)",
+      "Configure environment variables: fsi_ASARD_TeamsChannelId (governance Teams channel) and fsi_ASARD_AdaptiveCardTemplateUrl (adaptive card template hosting URL, e.g., GitHub raw content or Azure Blob Storage)",
       "Enable flow and verify daily schedule (08:00 UTC)",
       "Test manually via 'Run' button in Power Automate portal"
     ],

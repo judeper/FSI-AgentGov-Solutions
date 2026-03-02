@@ -66,8 +66,12 @@ class FUSClient:
         scope = [f"{self.environment_url}/.default"]
 
         if self.interactive:
+            if not self.client_id:
+                raise ValueError(
+                    "client_id is required for interactive authentication"
+                )
             app = msal.PublicClientApplication(
-                self.client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d",
+                self.client_id,
                 authority=authority,
             )
             result = app.acquire_token_interactive(scopes=scope)

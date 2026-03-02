@@ -43,7 +43,7 @@
       "description": "Dataverse environment URL for generating direct links to violation records",
       "type": "String",
       "defaultValue": "",
-      "isRequired": true,
+      "isRequired": false,
       "hint": "Example: https://org.crm.dynamics.com"
     },
     {
@@ -56,21 +56,12 @@
       "hint": "Default: 15 minutes (aligns with scheduled flow frequency)"
     },
     {
-      "schemaName": "fsi_SDM_DefaultScopeOwner",
-      "displayName": "Default Scope Owner",
-      "description": "Dataverse systemuser GUID used as owner for auto-created placeholder agent scopes",
-      "type": "String",
-      "defaultValue": "",
-      "isRequired": true,
-      "hint": "Example: 12345678-1234-1234-1234-123456789012 (systemuser GUID of a service account)"
-    },
-    {
       "schemaName": "fsi_SDM_ClientId",
       "displayName": "SDM Client ID",
       "description": "Azure AD application client ID for Office 365 Management API authentication",
       "type": "String",
       "defaultValue": "",
-      "isRequired": true,
+      "isRequired": false,
       "hint": "Example: 12345678-1234-1234-1234-123456789012"
     },
     {
@@ -79,8 +70,26 @@
       "description": "Azure AD application client secret for Office 365 Management API authentication",
       "type": "Secret",
       "defaultValue": "",
-      "isRequired": true,
+      "isRequired": false,
       "hint": "Store securely - used for OAuth2 client credentials flow"
+    },
+    {
+      "schemaName": "fsi_SDM_ManagementApiEndpoint",
+      "displayName": "Management API Endpoint",
+      "description": "Office 365 Management API base URL. Use https://manage.office.com for commercial, https://manage.office365.us for GCC High, or https://manage.protection.outlook.com for DoD.",
+      "type": "String",
+      "defaultValue": "https://manage.office.com",
+      "isRequired": false,
+      "hint": "Default: https://manage.office.com (commercial cloud)"
+    },
+    {
+      "schemaName": "fsi_SDM_ActiveScopeStatus",
+      "displayName": "Active Scope Status Code",
+      "description": "Option-set value for 'Active' status on fsi_agentscope. Override if your environment uses a different value due to unmanaged layers.",
+      "type": "Decimal",
+      "defaultValue": "10002",
+      "isRequired": false,
+      "hint": "Default: 10002 (Active). Change only if option-set values differ in your environment."
     }
   ]
 }

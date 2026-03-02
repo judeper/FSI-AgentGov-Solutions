@@ -8,7 +8,7 @@ The flow:
 1. Runs on a daily schedule
 2. Calls Microsoft Graph API to get Message Center posts
 3. Upserts posts to Dataverse
-4. Sends Teams notifications for high or critical severity posts
+4. Sends Teams notifications for high-severity posts
 
 ## Prerequisites
 
@@ -57,6 +57,7 @@ Configure:
   - **Client ID:** Your app registration client ID
   - **Credential Type:** Secret
   - **Secret:** From Key Vault output, or entered directly
+- **Retry policy:** Change from default to **Fixed interval** — Count: `3`, Interval: `PT30S` (30 seconds). This handles transient Graph API errors (429 throttling, 503 service unavailable) without manual re-runs.
 
 ### Authentication Screenshot Reference
 
@@ -75,9 +76,7 @@ Configure:
 └─────────────────────────────────────────────┘
 ```
 
-## Step 4: Parse JSON Response (Single-Request Path Only)
-
-> **Important:** This step applies only if you are **not** using the pagination pattern in Step 5. When using the Do Until pagination loop, messages are extracted directly via `body('HTTP')?['value']` inside the loop, so a separate Parse JSON action is unnecessary. If you use pagination, skip this step.
+## Step 4: Parse JSON Response
 
 Add action: **Parse JSON**
 
@@ -129,7 +128,10 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 2. **Initialize variable** `allMessages` (Array) = `[]`
 3. **Do Until** `@empty(variables('nextLink'))`:
    - HTTP GET to `@{variables('nextLink')}` (with same authentication)
-   - **Set variable** `allMessages`: `@{union(variables('allMessages'), body('HTTP')?['value'])}`
+   - **Set variable** `allMessages` = `@{union(variables('allMessages'), body('HTTP')?['value'])}`
+
+> **Warning:** Do NOT use "Append to array" here. `Append to array` adds a single element, so it would create a nested array `[[page1_msgs], [page2_msgs]]` instead of a flat list. Use `Set variable` with `union()` to merge page results correctly.
+
    - **Set variable** `nextLink` = `@{coalesce(body('HTTP')?['@odata.nextLink'], '')}`
 4. Process `allMessages` in the Apply to each loop
 
@@ -222,6 +224,8 @@ If you cannot modify the table schema, use this pattern:
 | services | `@{join(items('Apply_to_each')?['services'], ', ')}` |
 | startDateTime | `@{items('Apply_to_each')?['startDateTime']}` |
 | actionRequiredByDateTime | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
+| lastModifiedDateTime | `@{items('Apply_to_each')?['lastModifiedDateTime']}` |
+| isMajorChange | `@{items('Apply_to_each')?['isMajorChange']}` |
 | body | `@{coalesce(items('Apply_to_each')?['body']?['content'], '')}` |
 
 **Category mapping:**
@@ -260,33 +264,18 @@ For category and severity, you need to map API text values to Dataverse choice v
 
 > **Tip:** If your Dataverse choices use numeric IDs (e.g., `100000000` for High), use those IDs instead of text values in your Switch cases.
 
-## Step 7: Teams Notification for High/Critical Severity (New Messages Only)
+## Step 7: Teams Notification for High Severity
 
-Inside the Apply to each loop, after the Dataverse upsert/add action:
+Inside the Apply to each loop, after the Dataverse action:
 
-### Prevent Duplicate Notifications
-
-The flow runs daily and processes all messages. Without a dedup check, the same high/critical posts trigger repeated Teams alerts on every run. **You must guard against this.**
-
-**Approach: Check if the record already existed in Dataverse**
-
-If using the **Manual Check Pattern** (List rows → Condition → Add or Update):
-- Only send the Teams notification inside the **"If no" (Add)** branch. Existing records have already been notified.
-
-If using the **Alternate Key (Upsert)** pattern:
-1. Before the upsert, add **Dataverse - List rows** with filter: `messagecenterId eq '@{items('Apply_to_each')?['id']}'`
-2. Add a **Condition**: `@empty(outputs('List_rows')?['body/value'])` is equal to `true`
-3. Only send the Teams notification when the condition is true (record is new)
-
-> **Why this matters:** Without this check, a daily flow with 5 high-severity posts sends 5 duplicate notifications every day, indefinitely.
-
-### Notification Condition
-
-Inside the "record is new" branch, add a **Condition** to notify when action is truly needed:
+Add **Condition** to notify when action is truly needed:
 
 **Option A: Basic Check**
 ```
-@or(equals(items('Apply_to_each')?['severity'], 'high'), equals(items('Apply_to_each')?['severity'], 'critical'))
+@or(
+  equals(items('Apply_to_each')?['severity'], 'high'),
+  equals(items('Apply_to_each')?['severity'], 'critical')
+)
 ```
 
 OR
@@ -309,6 +298,15 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 ```
 
 This prevents notifications for posts with past deadlines.
+
+**Preventing Duplicate Notifications:**
+
+The conditions above evaluate ALL posts on every run, which means previously notified posts will trigger alerts again. To prevent duplicates, add a custom Dataverse column (e.g., `notifiedOn`, DateTime) and include an additional check:
+
+1. After sending a Teams notification, add a **Dataverse - Update a row** action to set `notifiedOn` to `@{utcNow()}`
+2. Add this check to your notification condition: `notifiedOn` **is equal to** `null`
+
+This ensures each post triggers at most one notification. If you later want to re-notify (e.g., deadline approaching), you can reset `notifiedOn` or add a separate reminder condition.
 
 **Optional Enhancement:** Also check `isMajorChange`:
 
@@ -341,8 +339,9 @@ Replace placeholders in the card with dynamic content:
 - `{severity}` → `@{items('Apply_to_each')?['severity']}`
 - `{category}` → `@{items('Apply_to_each')?['category']}`
 - `{services}` → `@{join(items('Apply_to_each')?['services'], ', ')}`
-- `{actionRequiredByDateTime}` → `@{items('Apply_to_each')?['actionRequiredByDateTime']}`
+- `{actionRequiredByDateTime}` → `@{coalesce(items('Apply_to_each')?['actionRequiredByDateTime'], 'None')}`
 - `{id}` → `@{items('Apply_to_each')?['id']}`
+- `{recordId}` → `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` (replace `cr123_` with your publisher prefix — see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix))
 
 ## Step 8: Error Handling
 
@@ -375,22 +374,23 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 3. Wait for the flow to complete
 4. Check:
    - Dataverse table has new rows
-   - Teams channel received notifications (if high or critical severity posts exist)
+   - Teams channel received notifications (if high-severity posts exist)
 
 ## Complete Flow Structure
 
 ```
 ┌─ Recurrence (Daily at 9 AM)
 │
-├─ Initialize variables (nextLink, allMessages)
-│
 ├─ [Scope: Try]
 │   ├─ Get secret (Azure Key Vault)
+│   ├─ Initialize variables (nextLink, allMessages)
 │   │
 │   ├─ Do Until (nextLink is empty)
 │   │   ├─ HTTP GET nextLink
 │   │   ├─ Set allMessages = union(allMessages, value)
 │   │   └─ Set nextLink = @odata.nextLink
+│   │
+│   ├─ Parse JSON (optional, for schema validation)
 │   │
 │   └─ Apply to each (allMessages)
 │       ├─ Upsert row (alternate key)
@@ -398,7 +398,7 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 │       │   ├─ List rows (check if exists)
 │       │   └─ Condition → Add or Update
 │       │
-│       └─ Condition (new message AND high/critical severity?)
+│       └─ Condition (high severity OR future action required?)
 │           └─ Yes: Post adaptive card to Teams
 │
 └─ [Scope: Catch] (runs on failure)
@@ -447,11 +447,11 @@ Daily polling is well within these limits. Even hourly polling (not recommended)
 
 ---
 
-## Recommended Optimization: Delta Tracking
+## Optional Optimizations
 
 ### Delta Tracking with lastModifiedDateTime
 
-For production deployments, delta tracking is **strongly recommended** to reduce unnecessary processing and complement the dedup notification check in Step 7. While the dedup check prevents duplicate Teams notifications, delta tracking also reduces API payload size and Dataverse operations.
+After your first sync, you can filter to only retrieve recently modified posts. This reduces processing time and API payload size.
 
 **Pattern:**
 

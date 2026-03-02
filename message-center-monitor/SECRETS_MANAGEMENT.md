@@ -79,11 +79,14 @@ Configure:
 ### Via Azure CLI
 
 ```bash
+# Pipe the secret via stdin to avoid exposing it in shell history or process listings
 az keyvault secret set \
   --vault-name kv-messagecenter-monitor \
   --name MessageCenterClientSecret \
-  --value "your-client-secret-value"
+  --value @- <<< "your-client-secret-value"
 ```
+
+> **Security note:** Avoid passing secrets directly as `--value` command-line arguments, which are visible in shell history (`~/.bash_history`) and process listings (`ps`). Use `--value @-` with piped stdin or `--value @secret.txt` with a file.
 
 ## Step 3: Grant Power Automate Access
 

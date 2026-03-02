@@ -381,7 +381,7 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
 
 # Compute summary statistics
 $totalScans = $validationsReadable.Count
-$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Passed' }).Count
+$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Compliant' }).Count
 $scansWithViolations = ($validationsReadable | Where-Object { $_.violationCount -gt 0 }).Count
 $totalViolations = $violationsReadable.Count
 $criticalViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Critical' }).Count
@@ -391,10 +391,13 @@ $warningViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Warn
 # Compute overall status (worst-case across all scans)
 $overallStatus = "Compliant"
 $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStatus -ErrorAction SilentlyContinue
-if ($statusValues -contains "Failed" -or $statusValues -contains "Error") {
-    $overallStatus = "NonCompliant"
+if ($statusValues -contains "Failed") {
+    $overallStatus = "Failed"
 }
-elseif ($statusValues -contains "Warning" -or $statusValues -contains "Review") {
+elseif ($statusValues -contains "Review") {
+    $overallStatus = "Review"
+}
+elseif ($statusValues -contains "Warning") {
     $overallStatus = "Warning"
 }
 elseif ($totalScans -eq 0) {

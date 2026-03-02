@@ -164,7 +164,7 @@ try {
 
     $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
 
-    # Az.Accounts 3.0+ returns Token as SecureString
+    # Handle SecureString token type returned by Az.Accounts >=3.0
     $tokenValue = if ($tokenResult.Token -is [System.Security.SecureString]) {
         $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
     } else {

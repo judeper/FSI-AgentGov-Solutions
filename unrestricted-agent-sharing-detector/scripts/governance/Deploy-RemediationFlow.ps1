@@ -93,8 +93,8 @@ Write-Host "  Flow: $flowName"
 
 # --- Check Existing ---
 $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-$escapedFlowName = $flowName -replace "'", "''"
-$checkUrl = "$apiBase/workflows?`$filter=name eq '$escapedFlowName'&`$select=workflowid,name,statecode"
+$flowNameEscaped = $flowName -replace "'", "''"
+$checkUrl = "$apiBase/workflows?`$filter=name eq '$flowNameEscaped'&`$select=workflowid,name,statecode"
 
 $existing = $null
 try {

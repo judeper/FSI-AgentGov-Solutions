@@ -25,7 +25,9 @@ Use the `New-AgentBaseline.ps1` script to analyze historical access and generate
 .\scripts\New-AgentBaseline.ps1 `
     -AgentId "12345678-1234-1234-1234-123456789012" `
     -Environment "https://contoso.crm.dynamics.com" `
-    -Days 30
+    -EnvironmentId "87654321-4321-4321-4321-210987654321" `
+    -OwnerId "user-guid" `
+    -Days 7
 ```
 
 **What it does:**
@@ -74,7 +76,7 @@ Create baselines manually for precise control over allowed resources.
 | `fsi_zone` | Governance zone (1-3) | 3 (Enterprise Managed) |
 | `fsi_owner` | Agent owner (user lookup) | John Smith |
 | `fsi_purpose` | Declared agent purpose | "Answer customer inquiries" |
-| `fsi_status` | Baseline status | 2 (Active) |
+| `fsi_status` | Baseline status | 10002 (Active) |
 
 ### Scope Arrays (JSON Format)
 
@@ -99,17 +101,17 @@ Create baselines manually for precise control over allowed resources.
 
 | Value | Label | Meaning |
 |-------|-------|---------|
-| 1 | **Draft** | Baseline being configured, not monitored |
-| 2 | **Active** | Baseline active, violations detected |
-| 3 | **Under Review** | Baseline under review (pauses monitoring) |
-| 4 | **Suspended** | Baseline suspended (not monitored) |
-| 5 | **Archived** | Baseline archived (no monitoring) |
+| 10001 | **Draft** | Baseline being configured, not monitored |
+| 10002 | **Active** | Baseline active, violations detected |
+| 10003 | **Under Review** | Baseline under review (pauses monitoring) |
+| 10004 | **Suspended** | Baseline suspended (not monitored) |
+| 10005 | **Archived** | Baseline archived (no monitoring) |
 
 **Monitoring behavior:**
 
 - **Active:** Full monitoring, violations created
 - **Draft/Under Review:** No violations created
-- **Suspended:** No monitoring (baselines with status 4 are not scanned)
+- **Suspended:** Not monitored (fsi_status eq 10002 filter excludes suspended scopes)
 - **Archived:** No monitoring
 
 ---
@@ -120,9 +122,9 @@ Baselines are classified by governance zone, affecting detection behavior.
 
 | Zone | Label | Detection Frequency | Approval Rigor |
 |------|-------|--------------------|-|
-| 1 | Personal Productivity | Daily batch | Self-service |
-| 2 | Team Collaboration | Hourly | Team lead approval |
-| 3 | Enterprise Managed | Real-time (15 min) | Security + Data Owner |
+| 1 | Personal Productivity | Every 15 minutes | Self-service |
+| 2 | Team Collaboration | Every 15 minutes | Team lead approval |
+| 3 | Enterprise Managed | Every 15 minutes | Security + Data Owner |
 
 **Zone selection criteria:**
 

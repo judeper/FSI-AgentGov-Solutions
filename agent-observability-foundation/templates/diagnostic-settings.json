@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "metadata": {
-    "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to Azure Blob Storage (StorageV2) for long-term SEC 17a-4 retention.",
+    "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to StorageV2 storage (hierarchical namespace disabled) for long-term SEC 17a-4 retention.",
     "version": "0.1.0",
     "lastUpdated": "February 2026"
   },
@@ -16,30 +16,30 @@
     "storageAccountId": {
       "type": "string",
       "metadata": {
-        "description": "Full resource ID of the Azure Blob Storage (StorageV2) account for log export (e.g., /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name})"
+        "description": "Full resource ID of the StorageV2 storage account for log export (hierarchical namespace must be disabled). Example: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Storage/storageAccounts/{name}"
       }
     },
     "settingName": {
       "type": "string",
-      "defaultValue": "export-to-storage",
+      "defaultValue": "export-to-adls",
       "metadata": {
         "description": "Name for the diagnostic settings configuration"
       }
     },
     "retentionDays": {
       "type": "int",
-      "defaultValue": 2555,
+      "defaultValue": 0,
       "minValue": 0,
       "maxValue": 365000,
       "metadata": {
-        "description": "DEPRECATED: Azure no longer enforces retention via diagnostic settings (Sep 2023). Use storage account lifecycle management policies to enforce SEC 17a-4(a) 7-year retention. This parameter is retained for documentation purposes only."
+        "description": "DEPRECATED: Azure deprecated retentionPolicy on diagnostic settings (September 2023); these values are silently ignored by current API versions. Retention must be managed via storage account lifecycle management policies or WORM immutability (see docs/worm-configuration.md). Default 0 indicates retention is managed externally."
       }
     }
   },
   "resources": [
     {
       "type": "Microsoft.Insights/components/providers/diagnosticSettings",
-      "apiVersion": "2021-05-01",
+      "apiVersion": "2021-05-01-preview",
       "name": "[concat(parameters('appInsightsName'), '/Microsoft.Insights/', parameters('settingName'))]",
       "properties": {
         "storageAccountId": "[parameters('storageAccountId')]",
@@ -47,22 +47,38 @@
           {
             "category": "AppTraces",
             "categoryGroup": null,
-            "enabled": true
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
           },
           {
             "category": "AppEvents",
             "categoryGroup": null,
-            "enabled": true
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
           },
           {
             "category": "AppRequests",
             "categoryGroup": null,
-            "enabled": true
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
           },
           {
             "category": "AppExceptions",
             "categoryGroup": null,
-            "enabled": true
+            "enabled": true,
+            "retentionPolicy": {
+              "enabled": true,
+              "days": "[parameters('retentionDays')]"
+            }
           }
         ]
       }

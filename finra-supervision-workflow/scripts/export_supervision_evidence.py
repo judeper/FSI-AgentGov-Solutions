@@ -8,7 +8,6 @@ and compliance evidence with SHA-256 integrity hashing.
 Usage:
     python export_supervision_evidence.py \
         --environment-url https://org.crm.dynamics.com \
-        --tenant-id <your-tenant-id> \
         --output-path ./exports \
         --start-date 2026-01-01 \
         --end-date 2026-01-31
@@ -18,24 +17,48 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
-import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 try:
     import requests
-    from msal import PublicClientApplication  # noqa: F401 — validated at import time
+    from msal import PublicClientApplication, ConfidentialClientApplication
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
     sys.exit(1)
 
-from auth import get_access_token
+
+def get_access_token(tenant_id: str, client_id: str = None, client_secret: str = None,
+                     interactive: bool = False, environment_url: str = None) -> str:
+    """Acquire access token for Dataverse."""
+    scope = [f"{environment_url}/.default"]
+
+    if interactive:
+        app = PublicClientApplication(
+            client_id="51f81489-12ee-4a9e-aaae-a2591f45987d",
+            authority=f"https://login.microsoftonline.com/{tenant_id}"
+        )
+        result = app.acquire_token_interactive(scopes=scope)
+    else:
+        app = ConfidentialClientApplication(
+            client_id=client_id,
+            client_credential=client_secret,
+            authority=f"https://login.microsoftonline.com/{tenant_id}"
+        )
+        result = app.acquire_token_for_client(scopes=scope)
+
+    if "access_token" in result:
+        return result["access_token"]
+    else:
+        print(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
+        sys.exit(1)
 
 
 def fetch_records(environment_url: str, access_token: str, entity_set: str,
                   filter_query: str = None, select_columns: list = None) -> tuple:
-    """Fetch records from Dataverse with pagination. Returns (records, incomplete)."""
+    """Fetch records from Dataverse with pagination."""
     base_url = f"{environment_url.rstrip('/')}/api/data/v9.2/{entity_set}"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -56,36 +79,15 @@ def fetch_records(environment_url: str, access_token: str, entity_set: str,
         url += "?" + "&".join(params)
 
     all_records = []
-    incomplete = False
+    had_error = False
     while url:
-        max_retries = 3
-        response = None
-        for attempt in range(max_retries + 1):
-            try:
-                response = requests.get(url, headers=headers)
-            except requests.exceptions.RequestException as exc:
-                if attempt < max_retries:
-                    wait = 2 ** attempt
-                    print(f"  Network error ({exc}), retrying in {wait}s...")
-                    time.sleep(wait)
-                    continue
-                print(f"Error: Network request failed after {max_retries} retries: {exc}")
-                incomplete = True
-                break
-            if response.status_code in (429, 502, 503, 504) and attempt < max_retries:
-                retry_after = int(response.headers.get("Retry-After", 2 ** attempt))
-                print(f"  Transient error {response.status_code}, retrying in {retry_after}s...")
-                time.sleep(retry_after)
-                continue
-            break
-
-        if incomplete or response is None:
-            break
+        response = requests.get(url, headers=headers)
 
         if response.status_code != 200:
-            print(f"Error fetching records: {response.status_code}")
+            print(f"WARNING: API error fetching records: {response.status_code}")
             print(response.text)
-            incomplete = True
+            print("WARNING: Export may contain partial data. Verify completeness before submitting as regulatory evidence.")
+            had_error = True
             break
 
         data = response.json()
@@ -97,7 +99,7 @@ def fetch_records(environment_url: str, access_token: str, entity_set: str,
         if url:
             print(f"  Fetching next page... ({len(all_records)} records so far)")
 
-    return all_records, incomplete
+    return all_records, had_error
 
 
 def calculate_sha256(filepath: str) -> str:
@@ -109,7 +111,7 @@ def calculate_sha256(filepath: str) -> str:
     return sha256_hash.hexdigest()
 
 
-def export_to_json(data, filepath: str) -> dict:
+def export_to_json(data: list, filepath: str) -> dict:
     """Export data to JSON file and return metadata."""
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
@@ -132,9 +134,9 @@ def generate_sla_metrics(queue_records: list) -> dict:
     if total == 0:
         return {"total": 0, "message": "No records in date range"}
 
-    completed = [r for r in queue_records if r.get("fsi_state") in [100000002, 100000004]]  # Approved or Rejected
-    pending = [r for r in queue_records if r.get("fsi_state") in [100000000, 100000001]]  # Pending or In Review
-    escalated = [r for r in queue_records if r.get("fsi_state") == 100000003]  # Escalated
+    completed = [r for r in queue_records if r.get("fsi_state") in [3, 5]]  # Approved or Rejected
+    pending = [r for r in queue_records if r.get("fsi_state") in [1, 2]]  # Pending or InReview
+    escalated = [r for r in queue_records if r.get("fsi_state") == 4]  # Escalated
 
     # Calculate SLA breaches (items completed after SLA due)
     sla_breached = 0
@@ -173,14 +175,14 @@ def generate_sla_metrics(queue_records: list) -> dict:
         "sla_compliance_rate": round((len(completed) - sla_breached) / len(completed) * 100, 2) if completed else 0,
         "average_review_time_hours": round(avg_review_time, 2),
         "by_zone": {
-            "zone_1": len([r for r in queue_records if r.get("fsi_zone") == 100000000]),
-            "zone_2": len([r for r in queue_records if r.get("fsi_zone") == 100000001]),
-            "zone_3": len([r for r in queue_records if r.get("fsi_zone") == 100000002]),
+            "zone_1": len([r for r in queue_records if r.get("fsi_zone") == 1]),
+            "zone_2": len([r for r in queue_records if r.get("fsi_zone") == 2]),
+            "zone_3": len([r for r in queue_records if r.get("fsi_zone") == 3]),
         },
         "by_outcome": {
-            "approved": len([r for r in completed if r.get("fsi_reviewoutcome") == 100000000]),
-            "rejected": len([r for r in completed if r.get("fsi_reviewoutcome") == 100000001]),
-            "escalated": len([r for r in completed if r.get("fsi_reviewoutcome") == 100000002]),
+            "approved": len([r for r in completed if r.get("fsi_reviewoutcome") == 1]),
+            "rejected": len([r for r in completed if r.get("fsi_reviewoutcome") == 2]),
+            "escalated": len([r for r in completed if r.get("fsi_reviewoutcome") == 3]),
         }
     }
 
@@ -188,9 +190,9 @@ def generate_sla_metrics(queue_records: list) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Export FINRA Supervision Workflow evidence")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
-    parser.add_argument("--tenant-id", required=True, help="Azure AD tenant ID")
+    parser.add_argument("--tenant-id", required=True, help="Azure AD tenant ID (GUID format: 12345678-1234-1234-1234-123456789abc)")
     parser.add_argument("--client-id", help="Service principal client ID")
-    parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var)")
+    parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive authentication")
     parser.add_argument("--output-path", required=True, help="Output directory for exports")
     parser.add_argument("--start-date", required=True, help="Start date (YYYY-MM-DD)")
@@ -198,16 +200,19 @@ def main():
 
     args = parser.parse_args()
 
-    # Validate date arguments
-    for date_arg, date_name in [(args.start_date, "--start-date"), (args.end_date, "--end-date")]:
-        try:
-            datetime.strptime(date_arg, "%Y-%m-%d")
-        except ValueError:
-            print(f"Error: {date_name} must be in YYYY-MM-DD format, got '{date_arg}'")
-            sys.exit(1)
+    # Fall back to environment variable for client secret
+    if not args.client_secret:
+        args.client_secret = os.environ.get("FSW_CLIENT_SECRET")
 
-    if args.start_date > args.end_date:
-        print(f"Error: --start-date ({args.start_date}) must not be after --end-date ({args.end_date})")
+    # Validate tenant-id GUID format
+    guid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+    if not guid_pattern.match(args.tenant_id):
+        print("Error: --tenant-id must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789abc)")
+        sys.exit(1)
+
+    # Validate HTTPS
+    if not args.environment_url.startswith("https://"):
+        print("Error: --environment-url must start with 'https://' (e.g., https://org.crm.dynamics.com)")
         sys.exit(1)
 
     print("=" * 60)
@@ -221,12 +226,6 @@ def main():
     # Create output directory
     os.makedirs(args.output_path, exist_ok=True)
 
-    # Resolve client secret from env var or CLI arg
-    client_secret = args.client_secret or os.environ.get("FSW_CLIENT_SECRET")
-    if args.client_secret:
-        print("Warning: --client-secret on CLI is visible in process lists. Prefer FSW_CLIENT_SECRET env var.",
-              file=sys.stderr)
-
     # Authenticate
     print("\nAuthenticating...")
     if args.interactive:
@@ -235,11 +234,11 @@ def main():
             interactive=True,
             environment_url=args.environment_url
         )
-    elif args.client_id and client_secret:
+    elif args.client_id and args.client_secret:
         access_token = get_access_token(
             args.tenant_id,
             client_id=args.client_id,
-            client_secret=client_secret,
+            client_secret=args.client_secret,
             environment_url=args.environment_url
         )
     else:
@@ -248,12 +247,25 @@ def main():
 
     print("Authentication successful")
 
-    # Build date filter
-    date_filter = f"fsi_queueddate ge {args.start_date}T00:00:00Z and fsi_queueddate le {args.end_date}T23:59:59Z"
+    # Parse and validate dates
+    try:
+        start_dt = datetime.strptime(args.start_date, "%Y-%m-%d")
+    except ValueError:
+        print(f"Error: --start-date '{args.start_date}' is not in YYYY-MM-DD format")
+        sys.exit(1)
+    try:
+        end_dt = datetime.strptime(args.end_date, "%Y-%m-%d")
+    except ValueError:
+        print(f"Error: --end-date '{args.end_date}' is not in YYYY-MM-DD format")
+        sys.exit(1)
+    if start_dt > end_dt:
+        print(f"Error: --start-date ({args.start_date}) must not be after --end-date ({args.end_date})")
+        sys.exit(1)
 
-    # Generate filename prefix based on date range
-    start_dt = datetime.strptime(args.start_date, "%Y-%m-%d")
-    end_dt = datetime.strptime(args.end_date, "%Y-%m-%d")
+    # Build date filter
+    # Use lt next-day instead of le 23:59:59Z to avoid missing sub-second items
+    end_next_day = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+    date_filter = f"fsi_queueddate ge {args.start_date}T00:00:00Z and fsi_queueddate lt {end_next_day}T00:00:00Z"
 
     # Determine if this is a week or quarter export
     days_diff = (end_dt - start_dt).days
@@ -270,23 +282,24 @@ def main():
             "start_date": args.start_date,
             "end_date": args.end_date,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "exported_by": "export_supervision_evidence.py v1.0.0"
+            "exported_by": "export_supervision_evidence.py v1.0.0",
+            "status": "complete"
         },
         "files": []
     }
 
-    any_incomplete = False
+    has_errors = False
 
     # Export SupervisionQueue
     print("\nExporting SupervisionQueue...")
-    queue_records, incomplete = fetch_records(
+    queue_records, queue_error = fetch_records(
         args.environment_url,
         access_token,
         "fsi_supervisionqueues",
         filter_query=date_filter
     )
-    if incomplete:
-        any_incomplete = True
+    if queue_error:
+        has_errors = True
     print(f"  Found {len(queue_records)} queue records")
 
     queue_filepath = os.path.join(args.output_path, f"SupervisionQueue-{period_suffix}.json")
@@ -297,15 +310,15 @@ def main():
 
     # Export SupervisionLog
     print("\nExporting SupervisionLog...")
-    log_filter = f"fsi_timestamp ge {args.start_date}T00:00:00Z and fsi_timestamp le {args.end_date}T23:59:59Z"
-    log_records, incomplete = fetch_records(
+    log_filter = f"fsi_timestamp ge {args.start_date}T00:00:00Z and fsi_timestamp lt {end_next_day}T00:00:00Z"
+    log_records, log_error = fetch_records(
         args.environment_url,
         access_token,
         "fsi_supervisionlogs",
         filter_query=log_filter
     )
-    if incomplete:
-        any_incomplete = True
+    if log_error:
+        has_errors = True
     print(f"  Found {len(log_records)} log records")
 
     log_filepath = os.path.join(args.output_path, f"SupervisionLog-{period_suffix}.json")
@@ -332,14 +345,14 @@ def main():
 
     # Export SupervisionConfig (for reference)
     print("\nExporting SupervisionConfig...")
-    config_records, incomplete = fetch_records(
+    config_records, config_error = fetch_records(
         args.environment_url,
         access_token,
         "fsi_supervisionconfigs",
         filter_query="fsi_active eq true"
     )
-    if incomplete:
-        any_incomplete = True
+    if config_error:
+        has_errors = True
     print(f"  Found {len(config_records)} config records")
 
     config_filepath = os.path.join(args.output_path, f"SupervisionConfig-{period_suffix}.json")
@@ -347,13 +360,9 @@ def main():
     manifest["files"].append(config_metadata)
     print(f"  Exported to: {config_filepath}")
 
-    # Flag incomplete exports in manifest
-    if any_incomplete:
-        manifest["export_info"]["incomplete"] = True
-        manifest["export_info"]["error"] = (
-            "One or more data fetches returned partial results due to API errors "
-            "during pagination. Record counts may not reflect complete data."
-        )
+    # Update manifest status based on errors
+    if has_errors:
+        manifest["export_info"]["status"] = "partial"
 
     # Write manifest
     manifest_filepath = os.path.join(args.output_path, f"manifest-{period_suffix}.json")
@@ -371,6 +380,11 @@ def main():
     print(f"  2. {os.path.basename(log_filepath)}")
     print(f"  3. {os.path.basename(metrics_filepath)}")
     print(f"  4. {os.path.basename(manifest_filepath)} (integrity verification)")
+
+    if has_errors:
+        print("\nWARNING: Export completed with errors. Data may be incomplete.")
+        print("Do not submit as regulatory evidence without verifying completeness.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

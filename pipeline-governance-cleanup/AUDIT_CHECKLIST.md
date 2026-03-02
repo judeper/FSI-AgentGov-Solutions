@@ -60,7 +60,7 @@ How this solution supports regulatory compliance.
 | **FFIEC IT Handbook** | Configuration management | Centralized host documentation, inventory records |
 | **SOX 404** | IT general controls | Force-link execution records, segregation of duties |
 | **FINRA 4511** | Books and records | Complete inventory, change logs, communication records |
-| **FINRA 3110** | Supervision and oversight | Pipeline approval gates, deployment authorization records |
+| **FINRA 3110** | Supervision and oversight | Pipeline approval gates, supervisory control documentation |
 
 ---
 

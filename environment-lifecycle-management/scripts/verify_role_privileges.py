@@ -68,7 +68,7 @@ EXPECTED_ROLES = {
             "Read": "Organization",
             "Write": None,  # CRITICAL: Must be None for immutability
             "Delete": None,  # CRITICAL: Must be None for immutability
-            "Append": "Organization",
+            "Append": None,
             "AppendTo": None,
         },
     },
@@ -247,13 +247,8 @@ def main():
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ELM_ENVIRONMENT_URL"),
-        required=not os.environ.get("ELM_ENVIRONMENT_URL"),
-        help="Dataverse environment URL (or set ELM_ENVIRONMENT_URL env var)",
-    )
-    parser.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Use interactive browser authentication",
+        required=True,
+        help="Dataverse environment URL",
     )
     parser.add_argument(
         "--role-name",
@@ -272,15 +267,12 @@ def main():
     args = parser.parse_args()
 
     # Validate required arguments
-    if not all([args.tenant_id, args.environment_url]):
+    if not all([args.tenant_id, args.client_id, args.environment_url]):
         parser.error("Missing required arguments or environment variables")
 
-    if not args.interactive and not args.client_id:
-        parser.error("Either --interactive with --client-id or --client-id with --client-secret is required")
-
-    # Prompt for secret if needed
+    # Prompt for secret if not provided
     client_secret = args.client_secret
-    if not args.interactive and not client_secret:
+    if not client_secret:
         import getpass
         client_secret = getpass.getpass("Client secret: ")
 
@@ -294,7 +286,6 @@ def main():
             client_id=args.client_id,
             client_secret=client_secret,
             environment_url=args.environment_url,
-            interactive=args.interactive,
         )
 
         results = {

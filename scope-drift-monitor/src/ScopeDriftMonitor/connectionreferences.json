@@ -20,6 +20,12 @@
       "description": "Microsoft Teams connection for posting violation alert Adaptive Cards to Teams channels"
     },
     {
+      "connectionReferenceLogicalName": "fsi_cr_http_azuread",
+      "connectionReferenceDisplayName": "HTTP with Azure AD Connection",
+      "connectorId": "/providers/Microsoft.PowerApps/apis/shared_webcontentsv2",
+      "description": "HTTP with Azure AD connection for calling Office 365 Management API to query Unified Audit Log"
+    },
+    {
       "connectionReferenceLogicalName": "fsi_cr_approvals",
       "connectionReferenceDisplayName": "Approvals Connection",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_approvals",

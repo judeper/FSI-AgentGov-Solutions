@@ -13,7 +13,8 @@ All notable changes to the FINRA Supervision Workflow solution are documented he
 - Four security roles (Supervisor, Queue Manager, Admin, Auditor)
 - Deployment script (`deploy.py`)
 - Evidence export script (`export_supervision_evidence.py`)
-- Power BI dashboard setup guide (manual build; no `.pbix` template included)
+- ~~FINRA 3120 report generator (`generate_3120_report.py`)~~ — Planned for a future release (see README)
+- Power BI dashboard setup guide (template planned for future release)
 - Integration with Communication Compliance API
 - Documentation suite (prerequisites, schema, flows, troubleshooting)
 
@@ -27,9 +28,5 @@ All notable changes to the FINRA Supervision Workflow solution are documented he
 ### Known Limitations
 
 - Communication Compliance polling (not real-time webhook)
-- Manual Power BI deployment required (no `.pbix` template included)
+- Manual Power BI deployment required
 - Zone/tier configuration via model-driven app only
-
-### Planned
-
-- FINRA 3120 report generator (not yet included)

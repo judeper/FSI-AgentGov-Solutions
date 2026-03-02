@@ -16,14 +16,14 @@ File located in the `src/` directory:
 **Option A: Create ZIP Archive**
 ```bash
 # From the inactivity-timeout-enforcement directory:
-zip -r ITE-Solution-v1.0.3.zip \
+zip -r ITE-Solution-v1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
   src/detect-inactivity-timeout-noncompliance.json
 ```
 
 **Option B: Create Structured Folder**
 ```
-ITE-Solution-v1.0.3/
+ITE-Solution-v1.0.1/
 ├── SOLUTION-DOCUMENTATION.md
 └── solution-components/
     └── detect-inactivity-timeout-noncompliance.json
@@ -31,14 +31,14 @@ ITE-Solution-v1.0.3/
 
 ### 4. Email Template
 
-**Subject:** Inactivity Timeout Enforcement (ITE) - Solution Delivery v1.0.3
+**Subject:** Inactivity Timeout Enforcement (ITE) - Solution Delivery v1.0.1
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Inactivity Timeout Enforcement (ITE) solution package, version 1.0.3.
+Please find attached the Inactivity Timeout Enforcement (ITE) solution package, version 1.0.1.
 
 This solution provides continuous automated monitoring of Power Platform environment inactivity
 timeout configurations with zone-based policy enforcement.
@@ -57,7 +57,7 @@ Package Contents:
 
 Key Capabilities:
 ✓ Daily automated scans across all Power Platform environments
-✓ Zone-based policy enforcement (Personal: optional ≤120min, Team: ≤90min, Enterprise: ≤60min)
+✓ Zone-based policy enforcement (Personal: optional ≤120min, Team: ≤120min, Enterprise: ≤60min)
 ✓ Three-state compliance classification (Compliant, Non-Compliant, Unknown)
 ✓ Guarded email alerting (notifications sent only when issues detected)
 ✓ Immutable compliance audit trail in Dataverse
@@ -101,7 +101,7 @@ Before sending to customer, verify:
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File size is reasonable (JSON file should be < 100KB)
 - [ ] No sensitive data in JSON file (tenant IDs, email addresses should be placeholders)
-- [ ] Version numbers are consistent (v1.0.3) across all files
+- [ ] Version numbers are consistent (v1.0.1) across all files
 
 ### 6. Files NOT to Include
 
@@ -130,7 +130,7 @@ Remind customer they will need:
 
 **Data Setup:**
 - Environment policy registry (`fsi_environmentpolicies` table) populated with zone-based timeout requirements
-- Recommended zone policy: Zone 1 (Personal) = optional (≤120min), Zone 2 (Team) = ≤90min, Zone 3 (Enterprise) = ≤60min
+- Recommended zone policy: Zone 1 (Personal) = optional (≤120min), Zone 2 (Team) = ≤120min, Zone 3 (Enterprise) = ≤60min
 
 ### 8. Follow-Up Support
 
@@ -157,7 +157,7 @@ Offer these follow-up services:
 
 3. **Timeout Policy Recommendation:**
    - **Zone 1 (Personal):** Optional; ≤120 minutes if enabled — Individual development environments
-   - **Zone 2 (Team):** ≤90 minutes (required) — Team collaboration environments
+   - **Zone 2 (Team):** ≤120 minutes (required) — Team collaboration environments
    - **Zone 3 (Enterprise):** ≤60 minutes (required) — Production environments processing sensitive financial data
    - **CRITICAL:** Zone 3 environments must have the shortest timeouts per NIST 800-53 AC-11 and FINRA 4511 requirements
 
@@ -184,7 +184,6 @@ Provide this checklist to customer for post-deployment validation:
 
 □ Environment variables set:
   □ fsi_ITE_NotificationRecipients
-  □ fsi_ITE_ConcurrencyLimit (informational only — does not control runtime concurrency)
 
 □ Flow activated with daily 06:00 UTC schedule
 
@@ -200,6 +199,6 @@ Provide this checklist to customer for post-deployment validation:
 
 ---
 
-**Package Version:** v1.0.3
+**Package Version:** v1.0.1
 **Release Date:** February 2026
 **Solution:** Inactivity Timeout Enforcement (ITE)

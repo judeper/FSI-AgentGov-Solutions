@@ -72,7 +72,7 @@
 .OUTPUTS
     Array of PSCustomObjects containing validation result records. Each object
     includes fields: name, runId, zone, severity, validationType, rawValue,
-    reason, remediationHint, checkCount, baselineId, timestamp.
+    reason, remediationHint, timestamp, checkCount, baselineId.
 
 .NOTES
     Version: 1.0.0
@@ -156,13 +156,13 @@ function Get-SSCValidationResults {
             # Attempt to get token from current Graph context
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
-                if ($context) {
-                    # Graph SDK v2 removed the AccessToken property from Get-MgContext
-                    Write-Warning "Microsoft Graph SDK context found but cannot extract Dataverse token. Graph SDK v2 removed the AccessToken property. Provide a Dataverse-scoped token via -AccessToken parameter."
+                if ($context -and $context.AccessToken) {
+                    $token = $context.AccessToken
+                    Write-Verbose "Using access token from current Microsoft Graph session."
                 }
             }
             catch {
-                Write-Verbose "Failed to retrieve Graph context: $($_.Exception.Message)"
+                Write-Verbose "Failed to retrieve token from Graph context: $($_.Exception.Message)"
             }
         }
 
@@ -210,9 +210,9 @@ function Get-SSCValidationResults {
             "fsi_rawvalue",
             "fsi_reason",
             "fsi_remediationhint",
+            "fsi_timestamp",
             "fsi_checkcount",
-            "fsi_baselineid",
-            "fsi_timestamp"
+            "fsi_baselineid"
         ) -join ","
 
         $queryUrl = "$DataverseUrl/api/data/v9.2/fsi_validationhistories?`$orderby=fsi_timestamp desc&`$select=$selectFields"
@@ -290,4 +290,5 @@ if ($MyInvocation.InvocationName -ne '.') {
     Write-Host "Retrieved $($results.Count) validation records" -ForegroundColor Green
     return $results
 }
+
 

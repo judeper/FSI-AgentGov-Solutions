@@ -67,7 +67,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
 Write-Host "`n[UASD Violation Report Export]" -ForegroundColor Cyan
 Write-Host "  Source: $DataverseUrl"
@@ -166,12 +165,32 @@ if ($outputDir -and -not (Test-Path $outputDir)) {
 
 if ($OutputFormat -eq "CSV") {
     $OutputPath = [System.IO.Path]::ChangeExtension($OutputPath, ".csv")
-    $violations | ForEach-Object { [PSCustomObject]$_ } | Export-Csv -Path $OutputPath -NoTypeInformation
+    # Sanitize string fields to prevent CSV injection (CWE-1236)
+    $sanitized = $violations | ForEach-Object {
+        $obj = [PSCustomObject]$_
+        foreach ($prop in $obj.PSObject.Properties) {
+            if ($prop.Value -is [string] -and $prop.Value.Length -gt 0 -and $prop.Value[0] -in @('=', '+', '-', '@')) {
+                $prop.Value = "'" + $prop.Value
+            }
+        }
+        $obj
+    }
+    $sanitized | Export-Csv -Path $OutputPath -NoTypeInformation
     Write-Host "  Violations exported: $OutputPath" -ForegroundColor Green
 
     if ($IncludeExceptions -and $exceptions.Count -gt 0) {
         $exPath = $OutputPath -replace '\.csv$', '-exceptions.csv'
-        $exceptions | ForEach-Object { [PSCustomObject]$_ } | Export-Csv -Path $exPath -NoTypeInformation
+        # Sanitize string fields to prevent CSV injection (CWE-1236)
+        $sanitizedExceptions = $exceptions | ForEach-Object {
+            $obj = [PSCustomObject]$_
+            foreach ($prop in $obj.PSObject.Properties) {
+                if ($prop.Value -is [string] -and $prop.Value.Length -gt 0 -and $prop.Value[0] -in @('=', '+', '-', '@')) {
+                    $prop.Value = "'" + $prop.Value
+                }
+            }
+            $obj
+        }
+        $sanitizedExceptions | Export-Csv -Path $exPath -NoTypeInformation
         Write-Host "  Exceptions exported: $exPath" -ForegroundColor Green
     }
 } else {

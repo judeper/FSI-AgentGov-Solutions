@@ -62,6 +62,7 @@ function Get-CAAZoneClassification {
     param(
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
+        [ValidatePattern('^[a-zA-Z0-9\-]+$')]
         [string]$EnvironmentId,
 
         [Parameter(Mandatory)]
@@ -95,12 +96,6 @@ function Get-CAAZoneClassification {
 
         try {
             Write-Verbose "Looking up zone in ELM for environment: $EnvironmentId"
-
-            # Validate EnvironmentId is a valid GUID to prevent OData injection
-            if ($EnvironmentId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-                Write-Verbose "EnvironmentId is not a valid GUID format, skipping ELM lookup"
-                return $null
-            }
 
             $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environments?" +
                    "`$filter=fsi_environment_guid eq '$EnvironmentId'&" +

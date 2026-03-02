@@ -235,11 +235,19 @@ RETURN
 **Exception SLA %**
 ```dax
 SLA Compliance % =
-DIVIDE(
-    COUNTROWS(FILTER(ComplianceException, ComplianceException[fsi_slastatus] = 1)),
-    COUNTROWS(ComplianceException),
-    0
-)
+VAR OnTrack =
+    CALCULATE(
+        COUNTROWS(ComplianceException),
+        ComplianceException[fsi_slastatus] = 1,
+        ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
+    )
+VAR Total =
+    CALCULATE(
+        COUNTROWS(ComplianceException),
+        ComplianceException[fsi_exceptionstatus] IN {1, 2, 3}
+    )
+RETURN
+    DIVIDE(OnTrack, Total, 1)
 ```
 
 ---

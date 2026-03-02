@@ -46,7 +46,7 @@ function Get-AgentFileUploadSettings {
         Exclude the default environment from the scan.
 
     .PARAMETER GracePeriodHours
-        Exclude environments created within this many hours. Valid range: 0-168 (default: 24).
+        Exclude environments created within this many hours. Valid range: 0-168 (default: 48).
 
     .PARAMETER IncludeDrafts
         Include draft/unpublished agents. By default, only published (active) agents
@@ -96,7 +96,7 @@ function Get-AgentFileUploadSettings {
 
         [Parameter()]
         [ValidateRange(0, 168)]
-        [int]$GracePeriodHours = 24,
+        [int]$GracePeriodHours = 48,
 
         [Parameter()]
         [switch]$IncludeDrafts,
@@ -114,6 +114,7 @@ function Get-AgentFileUploadSettings {
 
     # Dot-source validation helpers
     . (Join-Path $privateRoot 'Test-ParameterValidation.ps1')
+    . (Join-Path $privateRoot 'Get-ZoneClassification.ps1')
 
     # Import FUSClient module
     Import-Module (Join-Path $privateRoot 'FUSClient.psm1') -Force
@@ -306,7 +307,7 @@ function Get-AgentFileUploadSettings {
         Write-Verbose "Found $($bots.Count) agent(s) in: $envName"
 
         # Get zone classification for this environment
-        $zone = & (Join-Path $privateRoot 'Get-ZoneClassification.ps1') `
+        $zone = Get-ZoneClassification `
             -EnvironmentId $envId `
             -EnvironmentDisplayName $envName `
             -DataverseUrl $DataverseUrl `

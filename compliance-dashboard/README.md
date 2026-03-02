@@ -98,7 +98,7 @@ pac solution import --path ./templates/ComplianceDashboard_1_0_0.zip
 The solution package includes:
 - 5 Dataverse tables (control master, assessments, scores, exceptions, evidence)
 - 2 Power Automate flows (score calculator, exception monitor)
-- Security role definitions documented (Viewer, Assessor, Admin — must be created manually post-import)
+- 3 security roles (Viewer, Assessor, Admin)
 
 See [Dataverse Schema](docs/dataverse-schema.md) for table structure details.
 
@@ -112,12 +112,16 @@ export AZURE_TENANT_ID="your-tenant-id"
 export AZURE_CLIENT_ID="your-client-id"
 export AZURE_CLIENT_SECRET="your-client-secret"
 
-# Load control master data (62 controls)
+# Load control master data into Dataverse
 python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com"
 
-# Export full sample dataset to local JSON (62 controls, 90 days history, exceptions)
+# Export all sample data (assessments, scores, exceptions) to JSON
 python scripts/load_sample_data.py --export
 ```
+
+> **⚠️ Security Note:** Avoid setting `AZURE_CLIENT_SECRET` directly in shell commands, as it may be recorded in shell history. For production deployments, use [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/), [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential) from `azure-identity`, or managed identity instead.
+
+> **Note:** The `--environment` mode currently uploads control master data only. Use `--export` to generate assessment, score, and exception JSON files, then import them via Power Apps or the Dataverse API.
 
 **Production Deployment:** Clear sample data before production use.
 
@@ -201,8 +205,8 @@ Overall Score = Σ(Control Score × Control Weight × Zone Multiplier) / Σ(Cont
 
 Where:
 - Control Score: 0 (Non-Compliant), 50 (Partial), 100 (Compliant)
-- Control Weight: Based on regulatory impact (1.0 - 3.0)
-- Zone Multiplier: Based on zone risk level (see Zone Weighting table below)
+- Control Weight: Based on regulatory impact
+- Zone Multiplier: See Zone Weighting table below
 ```
 
 ### Zone Weighting
@@ -212,8 +216,6 @@ Where:
 | Zone 1 | 1.0 | Personal productivity, lower risk |
 | Zone 2 | 1.5 | Team collaboration, moderate risk |
 | Zone 3 | 2.0 | Enterprise managed, highest risk |
-
-> **Note:** These weight multipliers are used by the CD-ScoreCalculator flow to adjust control weights based on zone risk level.
 
 ### Control Status Definitions
 

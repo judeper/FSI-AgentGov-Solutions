@@ -22,7 +22,8 @@ Common issues and solutions for the Compliance Dashboard.
 
 2. **Check Data Exists in Dataverse**
    - Open Power Apps > Tables
-   - Verify `fsi_controlmaster` has 62 rows   - Verify `fsi_controlassessment` has assessment records
+   - Verify `fsi_controlmaster` has 62 rows
+   - Verify `fsi_controlassessment` has assessment records
 
 3. **Refresh Dataset**
    - Click Refresh in Power BI Desktop
@@ -161,15 +162,6 @@ Solution:
 **Symptoms:**
 - SLA status not updating
 - No alert notifications sent
-
-**Error: "Empty 'To' field" or notification actions skipped**
-```
-Solution:
-1. Verify fsi_CD_NotificationEmail environment variable is set
-2. Navigate to Power Apps > Solutions > Compliance Dashboard > Environment Variables
-3. Set fsi_CD_NotificationEmail to a valid email address
-4. Flows guard against empty email — notifications are silently skipped if unconfigured
-```
 
 **Error: "User not found"**
 ```
@@ -325,20 +317,21 @@ Solution:
 
 ### Rebuild Score History
 
-If score history is corrupted or missing, manually trigger the CD-ScoreCalculator flow for each missing date, or delete and re-import the solution with sample data:
+If score history is corrupted or missing, manually trigger the CD-ScoreCalculator flow for each date or re-run assessments:
 
 ```powershell
-# Reload sample data including 90-day score history
-python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com" --force
+# Reload control master data and regenerate sample scores
+python scripts/load_sample_data.py --export --force
 ```
 
 ### Reset Exception SLA Status
 
-If SLA calculations are incorrect, manually trigger the CD-ExceptionMonitor flow to recalculate all open exceptions:
+If SLA calculations are incorrect, manually trigger the CD-ExceptionMonitor flow:
 
-1. Navigate to Power Automate > CD-ExceptionMonitor
-2. Click **Test** > **Manually** to run immediately
-3. Verify SLA statuses are updated correctly in the fsi_complianceexception table
+```powershell
+# Trigger the CD-ExceptionMonitor flow manually from Power Automate
+# Navigate to: Power Automate > CD-ExceptionMonitor > Test > Manually
+```
 
 ### Restore Control Master
 

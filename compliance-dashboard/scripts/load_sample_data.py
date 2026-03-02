@@ -95,17 +95,7 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
         if control["fsi_controlid"] in existing_ids and not force:
             continue
 
-        if force and control["fsi_controlid"] in existing_ids:
-            # Find existing record ID for upsert
-            existing_record = next(
-                r for r in existing_records
-                if r.get("fsi_controlid") == control["fsi_controlid"]
-            )
-            record_id = existing_record["fsi_controlmasterid"]
-            patch_url = f"{api_url}({record_id})"
-            response = session.patch(patch_url, headers=headers, json=control)
-        else:
-            response = session.post(api_url, headers=headers, json=control)
+        response = session.post(api_url, headers=headers, json=control)
 
         if response.status_code in [201, 204]:
             loaded += 1
@@ -114,144 +104,6 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
             print(f"  Error loading {control['fsi_controlid']}: {response.status_code}")
 
     return {"loaded": loaded, "total": len(controls)}
-
-
-def load_assessments(dataverse_url: str, token: str, controls: list, force: bool = False) -> dict:
-    """Load sample assessment data into Dataverse."""
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "OData-MaxVersion": "4.0",
-        "OData-Version": "4.0"
-    }
-
-    session = requests.Session()
-    retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("https://", adapter)
-
-    # Resolve control master GUIDs by controlid
-    cm_url = f"{dataverse_url}/api/data/v9.2/fsi_controlmasters?$select=fsi_controlmasterid,fsi_controlid"
-    cm_map = {}
-    next_url = cm_url
-    while next_url:
-        resp = session.get(next_url, headers=headers).json()
-        for r in resp.get("value", []):
-            cm_map[r["fsi_controlid"]] = r["fsi_controlmasterid"]
-        next_url = resp.get("@odata.nextLink")
-
-    if not cm_map:
-        print("  Warning: No control master records found. Load controls first.")
-        return {"loaded": 0, "total": 0}
-
-    api_url = f"{dataverse_url}/api/data/v9.2/fsi_controlassessments"
-    assessments = generate_sample_assessments(controls)
-    loaded = 0
-    for assessment in assessments:
-        control_ref = assessment.pop("fsi_controlid_ref", None)
-        if control_ref and control_ref in cm_map:
-            assessment["fsi_ControlMasterId@odata.bind"] = f"/fsi_controlmasters({cm_map[control_ref]})"
-        else:
-            print(f"  Skipping assessment: control {control_ref} not found in Dataverse")
-            continue
-
-        response = session.post(api_url, headers=headers, json=assessment)
-        if response.status_code in [201, 204]:
-            loaded += 1
-        else:
-            print(f"  Error loading assessment: {response.status_code}")
-
-    return {"loaded": loaded, "total": len(assessments)}
-
-
-def load_scores(dataverse_url: str, token: str, force: bool = False) -> dict:
-    """Load sample daily compliance scores into Dataverse."""
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "OData-MaxVersion": "4.0",
-        "OData-Version": "4.0"
-    }
-
-    api_url = f"{dataverse_url}/api/data/v9.2/fsi_compliancescores"
-
-    session = requests.Session()
-    retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("https://", adapter)
-
-    scores = generate_sample_scores()
-    loaded = 0
-    for score in scores:
-        score["fsi_name"] = f"Compliance Score {score['fsi_scoredate']}"
-        response = session.post(api_url, headers=headers, json=score)
-        if response.status_code in [201, 204]:
-            loaded += 1
-        else:
-            print(f"  Error loading score: {response.status_code}")
-
-    return {"loaded": loaded, "total": len(scores)}
-
-
-def load_exceptions(dataverse_url: str, token: str, force: bool = False) -> dict:
-    """Load sample compliance exceptions into Dataverse."""
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "OData-MaxVersion": "4.0",
-        "OData-Version": "4.0"
-    }
-
-    session = requests.Session()
-    retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("https://", adapter)
-
-    # Resolve control assessment GUIDs by control ID (most recent per control)
-    ca_url = (
-        f"{dataverse_url}/api/data/v9.2/fsi_controlassessments"
-        "?$select=fsi_controlassessmentid"
-        "&$expand=fsi_controlmasterid($select=fsi_controlid)"
-        "&$orderby=fsi_assessmentdate desc"
-    )
-    ca_map = {}
-    next_url = ca_url
-    while next_url:
-        resp = session.get(next_url, headers=headers).json()
-        for r in resp.get("value", []):
-            cid = r.get("fsi_controlmasterid", {}).get("fsi_controlid")
-            if cid and cid not in ca_map:
-                ca_map[cid] = r["fsi_controlassessmentid"]
-        next_url = resp.get("@odata.nextLink")
-
-    # Resolve a default owner (first systemuser) for fsi_owner lookup
-    user_url = f"{dataverse_url}/api/data/v9.2/systemusers?$select=systemuserid&$top=1&$filter=isdisabled eq false"
-    user_resp = session.get(user_url, headers=headers).json()
-    default_owner_id = None
-    if user_resp.get("value"):
-        default_owner_id = user_resp["value"][0]["systemuserid"]
-
-    api_url = f"{dataverse_url}/api/data/v9.2/fsi_complianceexceptions"
-    exceptions = generate_sample_exceptions()
-    loaded = 0
-    for exception in exceptions:
-        control_ref = exception.pop("fsi_controlid_ref", None)
-        if control_ref and control_ref in ca_map:
-            exception["fsi_ControlAssessmentId@odata.bind"] = f"/fsi_controlassessments({ca_map[control_ref]})"
-        elif control_ref:
-            print(f"  Warning: No assessment found for control {control_ref}, skipping exception")
-            continue
-
-        if default_owner_id:
-            exception["fsi_Owner@odata.bind"] = f"/systemusers({default_owner_id})"
-
-        response = session.post(api_url, headers=headers, json=exception)
-        if response.status_code in [201, 204]:
-            loaded += 1
-        else:
-            print(f"  Error loading exception: {response.status_code}")
-
-    return {"loaded": loaded, "total": len(exceptions)}
 
 
 def generate_sample_assessments(controls: list, days: int = 90) -> list:
@@ -304,8 +156,7 @@ def generate_sample_assessments(controls: list, days: int = 90) -> list:
                 score = {1: 100, 2: 50, 3: 0}.get(status, 0)
 
                 assessment = {
-                    "fsi_name": f"Assessment {control['fsi_controlid']} Z{zone} {assessment_date.strftime('%Y-%m-%d')}",
-                    "fsi_controlid_ref": control["fsi_controlid"],
+                    "fsi_controlid": control["fsi_controlid"],
                     "fsi_zone": zone,
                     "fsi_status": status,
                     "fsi_score": score,
@@ -342,14 +193,13 @@ def generate_sample_scores(days: int = 90) -> list:
         zone2 = round(min(100, max(0, overall + random.uniform(-3, 3))), 1)
         zone3 = round(min(100, max(0, overall + random.uniform(-10, -5))), 1)
 
-        # Calculate counts based on score (62 total controls)
+        # Calculate counts based on score (62 total control-zone pairs counted)
         # Score formula: (compliant*100 + partial*50 + noncompliant*0) / total
         # Work backwards from overall score
-        total_controls = 62
-        compliant_count = int(total_controls * overall / 100)
-        remaining = total_controls - compliant_count
-        noncompliant_count = min(random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4))), remaining)
-        partial_count = total_controls - compliant_count - noncompliant_count
+        compliant_count = int(62 * overall / 100)
+        remaining = 62 - compliant_count
+        noncompliant_count = random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4)))
+        partial_count = max(0, 62 - compliant_count - noncompliant_count)
 
         score = {
             "fsi_scoredate": date.strftime("%Y-%m-%d"),
@@ -420,7 +270,7 @@ def generate_sample_exceptions() -> list:
 
         exception = {
             "fsi_name": template["name"],
-            "fsi_controlid_ref": template["control"],
+            "fsi_controlid": template["control"],
             "fsi_severity": severity,
             "fsi_exceptionstatus": random.choice(statuses),
             "fsi_description": f"Sample exception for {template['control']}: {template['name']}",
@@ -556,17 +406,9 @@ def main():
         print(f"  Loaded: {result['loaded']} records")
 
     if not args.controls_only:
-        print("\nLoading assessment data...")
-        result = load_assessments(args.environment, token, controls, args.force)
-        print(f"  Loaded: {result['loaded']} of {result['total']} records")
-
-        print("\nLoading daily score data...")
-        result = load_scores(args.environment, token, args.force)
-        print(f"  Loaded: {result['loaded']} of {result['total']} records")
-
-        print("\nLoading exception data...")
-        result = load_exceptions(args.environment, token, args.force)
-        print(f"  Loaded: {result['loaded']} of {result['total']} records")
+        print("\nNote: Assessment, score, and exception upload to Dataverse is not yet implemented.")
+        print("Use --export to generate JSON files, then import via Power Apps or Dataverse API.")
+        print("Use --dry-run to preview generated data locally.")
 
     print("\nSample data loading complete!")
 

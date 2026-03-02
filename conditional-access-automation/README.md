@@ -47,6 +47,8 @@ Automated deployment and compliance monitoring of Entra ID Conditional Access po
     - Use Named Locations to restrict Service Principal sign-ins to trusted networks
     - Monitor Service Principal sign-ins via Entra ID logs (filter: User Type = Service Principal)
 
+    This solution documents Service Principal CA policy considerations in the Prerequisites section above.
+
 ## Architecture
 
 The solution is organized in two tiers:
@@ -137,14 +139,12 @@ Install-Module Az.KeyVault -Scope CurrentUser
 # Dry run first to preview changes
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
-    -WhatIf
+    -DryRun
 
 # Deploy policies
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
     -EnablePolicies $false  # Deploy in report-only mode first
 ```
@@ -155,7 +155,6 @@ Install-Module Az.KeyVault -Scope CurrentUser
 # Check policy coverage
 .\scripts\Test-PolicyCompliance.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -OutputPath "./reports"
 ```
 
@@ -167,7 +166,6 @@ After testing in report-only mode:
 # Enable policies
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
     -EnablePolicies $true
 ```
@@ -242,19 +240,16 @@ Deploys Conditional Access policy templates.
 ```powershell
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -TemplateSet "<All|Zone1|Zone2|Zone3>" `
     [-TemplatePath "./templates"] `
     [-EnablePolicies <$true|$false>] `
-    [-WhatIf]
+    [-DryRun]
 ```
 
 **Parameters:**
-- `TenantId` - Entra ID tenant GUID
-- `ConfigPath` - Path to tenant configuration JSON
 - `TemplateSet` - Which templates to deploy (All, Zone1, Zone2, Zone3)
 - `EnablePolicies` - Deploy enabled ($true) or report-only ($false)
-- `-WhatIf` - Preview changes without deploying
+- `DryRun` - Preview changes without deploying
 
 ### Test-PolicyCompliance.ps1
 
@@ -263,7 +258,6 @@ Verifies policy coverage and identifies gaps.
 ```powershell
 .\scripts\Test-PolicyCompliance.ps1 `
     -TenantId "<tenant-id>" `
-    -ConfigPath "./config.json" `
     -OutputPath "./reports" `
     [-IncludeReportOnly]
 ```
@@ -271,7 +265,6 @@ Verifies policy coverage and identifies gaps.
 **Output:**
 - `PolicyCoverage-YYYY-MM-DD.json` - Coverage analysis
 - `PolicyGaps-YYYY-MM-DD.json` - Identified gaps
-- `ComplianceReport-YYYY-MM-DD.html` - Human-readable report
 
 ### Watch-PolicyDrift.ps1
 
@@ -280,10 +273,7 @@ Monitors for unauthorized policy changes.
 ```powershell
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baselines/baseline.json" `
-    [-ConfigPath "./config.json"] `
-    [-OutputPath "./reports/drift.json"] `
-    [-SeverityThreshold <Passed|Warning|GracePeriod|Failed|Error>]
+    -BaselinePath "./baseline"
 ```
 
 **Detects:**
@@ -426,16 +416,16 @@ Implementation guidance in FSI-AgentGov:
 
 | Component | File | Purpose |
 |-----------|------|--------|
-| Dataverse Schema | See [SCHEMA.md](./docs/SCHEMA.md) | 3 tables, 2 shared option sets |
-| Environment Variables | See [SCHEMA.md](./docs/SCHEMA.md) | 7 runtime configuration variables |
-| Connection References | See [SCHEMA.md](./docs/SCHEMA.md) | 4 Power Automate connector references |
+| Dataverse Schema | `scripts/create_dataverse_schema.py` *(planned — not yet implemented)* | 3 tables, 2 shared option sets |
+| Environment Variables | `scripts/create_environment_variables.py` *(planned — not yet implemented)* | 7 runtime configuration variables |
+| Connection References | `scripts/create_connection_references.py` *(planned — not yet implemented)* | 3 Power Automate connector references (Graph connector planned) |
 | Daily Compliance Flow | `src/caa-daily-compliance-flow.json` | Automated daily validation scan |
 | ELM Provisioning Hook | `src/caa-provisioning-hook-flow.json` | Zone-based policy deployment on environment creation |
 | Teams Alert Card | `src/adaptive-card-caa-alert.json` | Violation notification template |
 | Evidence Export | `scripts/Export-CAAComplianceEvidence.ps1` | SHA-256 integrity-hashed evidence packages |
 | Evidence Verification | `scripts/Test-EvidenceIntegrity.ps1` | Hash verification for exported evidence |
 | CAAClient Module | `scripts/private/CAAClient.psm1` | 8 Dataverse functions (Connect, Read, Write) |
-| Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` | Unattended daily execution via Azure Automation (deployed separately to Azure Automation account; not included in this repo) |
+| Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` *(planned — not yet implemented)* | Unattended daily execution via Azure Automation |
 
 ## Configuration Placeholders
 

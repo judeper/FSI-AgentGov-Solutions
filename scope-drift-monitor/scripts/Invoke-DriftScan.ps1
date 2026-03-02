@@ -60,10 +60,15 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientSecret = $env:AZURE_CLIENT_SECRET
+    [securestring]$ClientSecret
 )
 
 $ErrorActionPreference = "Stop"
+
+# Convert environment variable to SecureString if parameter not provided
+if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
+    $ClientSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
+}
 
 # Structured audit logging
 function Write-AuditLog {
@@ -77,82 +82,17 @@ function Write-AuditLog {
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
-# Align with Power Automate flow enum values
+# Align with Customizations.xml picklist values
 $ViolationType = @{
-    Connector      = 1
-    SharePoint     = 2
-    DataverseTable = 3
-    ExternalAPI    = 4
-    ExpiredScope   = 5
-    NoBaseline     = 6
+    Connector      = 10001
+    Scope          = 10002
+    DataverseTable = 10003
+    ExternalAPI    = 10004
+    ExpiredScope   = 10005
+    NoBaseline     = 10006
 }
 
 #region Helper Functions
-
-function Get-OrCreate-PlaceholderScope {
-    <#
-    .SYNOPSIS
-        Gets or creates a Draft placeholder scope for unscoped agents.
-    #>
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Environment,
-
-        [Parameter(Mandatory = $true)]
-        [string]$Token,
-
-        [Parameter(Mandatory = $true)]
-        [string]$AgentId
-    )
-
-    $headers = @{
-        "Authorization"    = "Bearer $Token"
-        "Content-Type"     = "application/json"
-        "OData-MaxVersion" = "4.0"
-        "OData-Version"    = "4.0"
-        "Prefer"           = "return=representation"
-    }
-
-    # Check if a placeholder scope already exists for this agent
-    $filter = "fsi_agentid eq '$AgentId' and fsi_status eq 1"
-    $uri = "$Environment/api/data/v9.2/fsi_agentscopes?`$filter=$filter&`$select=fsi_agentscopeid&`$top=1"
-
-    try {
-        $existing = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-        if ($existing.value.Count -gt 0) {
-            return $existing.value[0].fsi_agentscopeid
-        }
-    }
-    catch {
-        Write-Warning "Could not query placeholder scope: $($_.Exception.Message)"
-    }
-
-    # Create a new Draft placeholder scope
-    $scopeRecord = @{
-        fsi_name          = "Unscoped Agent - $AgentId"
-        fsi_agentid       = $AgentId
-        fsi_environmentid = $script:WhoAmIOrganizationId
-        fsi_zone          = 1
-        fsi_status        = 1  # Draft
-        fsi_purpose       = "Auto-created placeholder for unscoped agent drift detection"
-    }
-
-    if ($script:WhoAmIUserId) {
-        $scopeRecord["fsi_owner@odata.bind"] = "/systemusers($($script:WhoAmIUserId))"
-    }
-
-    $uri = "$Environment/api/data/v9.2/fsi_agentscopes"
-    $body = $scopeRecord | ConvertTo-Json -Depth 5
-
-    try {
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
-        return $response.fsi_agentscopeid
-    }
-    catch {
-        Write-Warning "Could not create placeholder scope: $($_.Exception.Message)"
-        return $null
-    }
-}
 
 function Get-AccessToken {
     param(
@@ -163,7 +103,7 @@ function Get-AccessToken {
         [string]$ClientId,
 
         [Parameter(Mandatory = $true)]
-        [string]$ClientSecret,
+        [securestring]$ClientSecret,
 
         [Parameter(Mandatory = $true)]
         [string]$Scope
@@ -172,7 +112,7 @@ function Get-AccessToken {
     $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
     $body = @{
         client_id     = $ClientId
-        client_secret = $ClientSecret
+        client_secret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
         scope         = $Scope
         grant_type    = "client_credentials"
     }
@@ -210,10 +150,11 @@ function Get-ActiveScopes {
         "Prefer"           = "odata.include-annotations=*"
     }
 
-    # Query for Active status (fsi_status eq 2)
-    $filter = "fsi_status eq 2"
+    # Query for Active status (fsi_status eq 10002)
+    $filter = "fsi_status eq 10002"
     if ($AgentId) {
-        $filter = "$filter and fsi_agentid eq '$AgentId'"
+        $sanitizedAgentId = $AgentId -replace "'", "''"
+        $filter = "$filter and fsi_agentid eq '$sanitizedAgentId'"
     }
 
     $uri = "$Environment/api/data/v9.2/fsi_agentscopes?`$filter=$filter"
@@ -261,6 +202,11 @@ function Get-AuditEvents {
 
         # Handle pagination
         while ($nextPageUri) {
+            # Validate pagination URL host
+            if ($nextPageUri -notmatch '^https://manage\.office\.com/') {
+                Write-Warning "Skipping untrusted pagination URL: $nextPageUri"
+                break
+            }
             $response = Invoke-WebRequest -Uri $nextPageUri -Headers $headers -Method Get
             $blobs = $response.Content | ConvertFrom-Json
             if ($blobs) {
@@ -277,6 +223,11 @@ function Get-AuditEvents {
         # Fetch each content blob
         foreach ($blob in $contentBlobs) {
             try {
+                # Validate content blob URI host
+                if ($blob.contentUri -notmatch '^https://manage\.office\.com/') {
+                    Write-Warning "Skipping untrusted content URI: $($blob.contentUri)"
+                    continue
+                }
                 $blobEvents = Invoke-RestMethod -Uri $blob.contentUri -Headers $headers -Method Get
 
                 # Filter for CopilotInteraction events (RecordType 261)
@@ -321,7 +272,7 @@ function Compare-ScopeVsActual {
         $violations += @{
             Type        = "No Baseline Defined"
             Resource    = "All accessed resources"
-            Severity    = 2  # High
+            Severity    = 10002  # High
             Details     = "Agent has no baseline scope defined. All access flagged for review."
         }
         return $violations
@@ -355,12 +306,12 @@ function Compare-ScopeVsActual {
     if ($eventData.AISystemPlugin) {
         foreach ($plugin in $eventData.AISystemPlugin) {
             if ($plugin.Name -and $plugin.Enabled -eq $true) {
-                $connectorName = $plugin.Name -replace "Connector$", ""
+                $connectorName = $plugin.Name
                 if ($connectorName -notin $allowedConnectors) {
                     $violations += @{
                         Type        = "Unauthorized Connector"
                         Resource    = $connectorName
-                        Severity    = 2  # High
+                        Severity    = 10002  # High
                         Details     = "Connector '$connectorName' not in allowed list"
                     }
                 }
@@ -395,7 +346,7 @@ function Compare-ScopeVsActual {
             $violations += @{
                 Type        = "Unauthorized SharePoint Site"
                 Resource    = $site
-                Severity    = 3  # Medium
+                Severity    = 10003  # Medium
                 Details     = "SharePoint site '$site' not in allowed list"
             }
         }
@@ -410,7 +361,7 @@ function Compare-ScopeVsActual {
                     $violations += @{
                         Type        = "Unauthorized Dataverse Table"
                         Resource    = $resource.Name
-                        Severity    = 3  # Medium
+                        Severity    = 10003  # Medium
                         Details     = "Dataverse table '$($resource.Name)' not in allowed list"
                     }
                 }
@@ -418,13 +369,13 @@ function Compare-ScopeVsActual {
 
             # External APIs
             if ($resource.Type -eq "ExternalAPI" -or
-                ($resource.Id -match "^https?://" -and $resource.Id -notmatch "(sharepoint|microsoft|office)\.com")) {
-                if ($resource.Id -notin $allowedApis) {
+                ($resource.Url -match "^https?://" -and $resource.Url -notmatch "(sharepoint|microsoft|office)\.com")) {
+                if ($resource.Url -notin $allowedApis) {
                     $violations += @{
                         Type        = "Unauthorized External API"
-                        Resource    = $resource.Id
-                        Severity    = 2  # High
-                        Details     = "External API '$($resource.Id)' not in allowed list"
+                        Resource    = $resource.Url
+                        Severity    = 10002  # High
+                        Details     = "External API '$($resource.Url)' not in allowed list"
                     }
                 }
             }
@@ -438,10 +389,10 @@ function Get-SeverityLabel {
     param([int]$Severity)
 
     switch ($Severity) {
-        1 { return "Critical" }
-        2 { return "High" }
-        3 { return "Medium" }
-        4 { return "Low" }
+        10001 { return "Critical" }
+        10002 { return "High" }
+        10003 { return "Medium" }
+        10004 { return "Low" }
         default { return "Unknown" }
     }
 }
@@ -452,7 +403,7 @@ function Get-ViolationTypeCode {
     switch ($TypeName) {
         "No Baseline Defined"          { return $ViolationType.NoBaseline }
         "Unauthorized Connector"       { return $ViolationType.Connector }
-        "Unauthorized SharePoint Site" { return $ViolationType.SharePoint }
+        "Unauthorized SharePoint Site" { return $ViolationType.Scope }
         "Unauthorized Dataverse Table" { return $ViolationType.DataverseTable }
         "Unauthorized External API"    { return $ViolationType.ExternalAPI }
         default                        { return 0 }
@@ -474,7 +425,7 @@ function Create-ViolationRecord {
         [Parameter(Mandatory = $true)]
         [hashtable]$Violation,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$ScopeId,
 
         [Parameter(Mandatory = $false)]
@@ -497,13 +448,15 @@ function Create-ViolationRecord {
         fsi_resourcename  = $Violation.Resource
         fsi_resourceurl   = if ($Violation.Resource -match "^https?://") { $Violation.Resource } else { $null }
         fsi_severity      = $Violation.Severity
-        fsi_status        = 1  # Open
+        fsi_status        = 10001  # Open
         fsi_detectedon    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_accessdetails = $Violation.Details
     }
 
-    # Scope reference is required
-    $violationRecord["fsi_agentscopeid@odata.bind"] = "/fsi_agentscopes($ScopeId)"
+    # Add scope reference if available
+    if ($ScopeId) {
+        $violationRecord["fsi_agentscopeid@odata.bind"] = "/fsi_agentscopes($ScopeId)"
+    }
 
     # Add audit record ID if available
     if ($AuditRecordId) {
@@ -545,12 +498,6 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
     exit 1
 }
 
-# Validate AgentId format if provided
-if ($AgentId -and $AgentId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
-    Write-Error "AgentId must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789012)"
-    exit 1
-}
-
 # Authenticate
 Write-Host "Authenticating..." -ForegroundColor Gray
 
@@ -570,24 +517,6 @@ try {
 catch {
     Write-Error "Failed to authenticate to Dataverse: $($_.Exception.Message)"
     exit 1
-}
-
-# Get calling user context for placeholder scope creation
-try {
-    $whoAmIHeaders = @{
-        "Authorization"    = "Bearer $dataverseToken"
-        "Content-Type"     = "application/json"
-        "OData-MaxVersion" = "4.0"
-        "OData-Version"    = "4.0"
-    }
-    $whoAmI = Invoke-RestMethod -Uri "$Environment/api/data/v9.2/WhoAmI" -Headers $whoAmIHeaders -Method Get
-    $script:WhoAmIUserId = $whoAmI.UserId
-    $script:WhoAmIOrganizationId = $whoAmI.OrganizationId
-}
-catch {
-    Write-Warning "Could not call WhoAmI: $($_.Exception.Message)"
-    $script:WhoAmIUserId = $null
-    $script:WhoAmIOrganizationId = ""
 }
 
 # Get active scopes from Dataverse
@@ -658,17 +587,6 @@ foreach ($event in $events) {
     # Create violation records
     foreach ($violation in $violations) {
         $scopeId = if ($scope) { $scope.fsi_agentscopeid } else { $null }
-
-        # Ensure scope reference exists (required by Dataverse schema)
-        if (-not $scopeId) {
-            $agentIdForScope = if ($eventAgentId) { $eventAgentId } else { "unknown" }
-            $scopeId = Get-OrCreate-PlaceholderScope -Environment $Environment -Token $dataverseToken -AgentId $agentIdForScope
-            if (-not $scopeId) {
-                Write-Warning "Skipping violation — could not create placeholder scope for agent '$agentIdForScope'"
-                continue
-            }
-        }
-
         $auditRecordId = $event.Id
 
         $result = Create-ViolationRecord `

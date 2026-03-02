@@ -18,23 +18,30 @@ graph LR
     end
 
     subgraph "Long-Term Storage"
-        D[Azure Blob Storage<br/>StorageV2 Account]
+        D[ADLS Gen2<br/>Storage Account]
         E[SEC 17a-4<br/>Compliance Archive]
     end
 
-    subgraph "Analytics & Reporting"
-        F[KQL Query Library]
-        G[Azure Workbooks]
-        H[Power BI Reports]
+    subgraph "Delivered Phases"
+        F[KQL Query Library<br/>Phase 2 ✓]
+        G[Azure Workbooks<br/>Phase 3 ✓]
+        H[Alert Rules<br/>Phase 3 ✓]
+        I[Power BI Semantic Model<br/>Phase 3.5 ✓]
+    end
+
+    subgraph "Future Phases"
+        J[Power BI Reports &amp; Dashboards<br/>Phase 4]
     end
 
     A -->|CopilotInteraction<br/>customEvents| B
     B -->|Workspace Binding| C
     B -->|Diagnostic Settings<br/>Export| D
     D -->|WORM Policy| E
-    C --> F
-    C --> G
-    C --> H
+    C -->|Phase 2 ✓| F
+    C -->|Phase 3 ✓| G
+    C -->|Phase 3 ✓| H
+    C -->|Phase 3.5 ✓| I
+    C -.->|Coming Phase 4| J
 
     style A fill:#0078d4,color:#fff
     style B fill:#50e6ff,color:#000
@@ -44,6 +51,7 @@ graph LR
     style F fill:#50e6ff,color:#000
     style G fill:#50e6ff,color:#000
     style H fill:#50e6ff,color:#000
+    style I fill:#50e6ff,color:#000
 ```
 
 ## Component Details
@@ -75,11 +83,11 @@ The Log Analytics workspace serves as the unified query surface for telemetry da
 
 **Configuration Notes:**
 - Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full 2-year interactive access
-- Archive retention beyond 730 days requires Azure Blob Storage (StorageV2) export (configured via Diagnostic Settings)
+- Archive retention beyond 730 days requires ADLS Gen2 export (configured via Diagnostic Settings)
 
 **Framework Control Reference:** Supports Control 3.2 (Usage Analytics and Activity Monitoring) by providing real-time query capability for session metrics, message volumes, and interaction patterns.
 
-### Azure Blob Storage (StorageV2) Account
+### ADLS Gen2 Storage Account
 
 **Type:** StorageV2 (general-purpose v2)
 **Hierarchical Namespace:** DISABLED (required for Diagnostic Settings export)
@@ -89,7 +97,7 @@ The Log Analytics workspace serves as the unified query surface for telemetry da
 The storage account receives telemetry exports via Azure Monitor Diagnostic Settings. Data is stored in JSON format organized by date hierarchy.
 
 **Critical Configuration:**
-- Do NOT enable hierarchical namespace - Diagnostic Settings export does not support StorageV2 with hierarchical namespace enabled
+- Do NOT enable hierarchical namespace - Diagnostic Settings export does not support ADLS Gen2 with hierarchical namespace enabled
 - WORM policy configuration is manual (see [docs/worm-configuration.md](docs/worm-configuration.md)) to prevent accidental immutable lockdown
 
 **Framework Control Reference:** Helps meet SEC 17a-4 long-term retention requirements when configured with WORM policy for immutable storage.
@@ -102,7 +110,7 @@ The storage account receives telemetry exports via Azure Monitor Diagnostic Sett
 
 **Retention Policy:** Configured at storage account level (separate from Log Analytics retention)
 
-Diagnostic Settings establish the export pipeline from Application Insights to Azure Blob Storage (StorageV2). This enables retention periods beyond the 730-day Log Analytics maximum.
+Diagnostic Settings establish the export pipeline from Application Insights to ADLS Gen2 storage. This enables retention periods beyond the 730-day Log Analytics maximum.
 
 ### RBAC Separation
 
@@ -111,7 +119,7 @@ The architecture establishes two distinct access paths to support separation of 
 | Data Path | Role | Scope | Access | Purpose |
 |-----------|------|-------|--------|---------|
 | Operational | Monitoring Reader | Resource Group | Log Analytics queries | Real-time monitoring, troubleshooting |
-| Compliance | Storage Blob Data Reader | Storage Account | Azure Blob Storage access | Audit evidence retrieval, regulatory examination |
+| Compliance | Storage Blob Data Reader | Storage Account | ADLS Gen2 blob access | Audit evidence retrieval, regulatory examination |
 
 **Framework Control Reference:** Supports Control 1.6 (DSPM for AI) separation of duties by isolating operational monitoring from compliance audit access. Also supports Control 2.8 (Access Control and Segregation of Duties) by enforcing distinct roles for different data access patterns.
 
@@ -120,7 +128,7 @@ The architecture establishes two distinct access paths to support separation of 
 | Data Path | Role Assignment | Resource Access | Primary Use Case |
 |-----------|-----------------|-----------------|------------------|
 | Operational Monitoring | Monitoring Reader | Log Analytics Workspace | SOC analysts - real-time queries, alerts, incident response |
-| Compliance Audit | Storage Blob Data Reader | Azure Blob Storage (StorageV2) Account | Compliance officers - audit evidence, regulatory examination |
+| Compliance Audit | Storage Blob Data Reader | ADLS Gen2 Storage Account | Compliance officers - audit evidence, regulatory examination |
 | Infrastructure Admin | Contributor | Resource Group | Platform operations - deployment, configuration changes |
 
 This separation ensures that:
@@ -133,40 +141,49 @@ This separation ensures that:
 | Tier | Storage Location | Retention Period | Query Access | Primary Use Case |
 |------|------------------|------------------|--------------|------------------|
 | Hot | Log Analytics interactive | 730 days | Real-time KQL | Daily operations, incident response, performance monitoring |
-| Archive | Azure Blob Storage (StorageV2) export | 6+ years (with WORM) | Search jobs / blob access | SEC 17a-4 audit, regulatory examination, legal hold |
+| Archive | ADLS Gen2 export | 6+ years (with WORM) | Search jobs / blob access | SEC 17a-4 audit, regulatory examination, legal hold |
 
 **Retention Configuration Notes:**
 - Log Analytics 730-day retention satisfies SEC 17a-4(b)(4) 2-year requirement for interactive access
-- Azure Blob Storage (StorageV2) with WORM policy satisfies SEC 17a-4(a) 6-year requirement for immutable archival
-- Cohasset has validated Azure Blob Storage immutable storage for SEC 17a-4(f) compliance
+- ADLS Gen2 with WORM policy satisfies SEC 17a-4(a) 6-year requirement for immutable archival
+- Cohasset has validated ADLS Gen2 immutable storage for SEC 17a-4(f) compliance
 
-## Analytics & Reporting Components
+## Delivered Phases
 
-### KQL Query Library
+### KQL Query Library (Phase 2 — Delivered in v1.1.0)
 
-A library of 14 pre-built KQL queries for common telemetry analysis patterns:
+The KQL query library provides 14 pre-built queries for common telemetry analysis patterns:
 - Session analytics (volume, duration, completion rates)
 - Performance metrics (latency distribution P50/P95/P99)
 - Error analysis (failure rates, exception patterns)
 - Governance evidence collection (audit trail extraction)
+- SR 11-7 model risk monitoring (drift detection, output monitoring, validation)
 
-### Azure Monitor Workbooks
+See [queries/README.md](queries/README.md) for the full query catalog.
 
-Three interactive workbooks for operational dashboards:
-- Operational Health (4 tabs): Overview, Availability, Error Rates, Latency
-- Error Diagnostics (5 tabs): Summary, Drill-Down, Root Cause, Event Detail
-- Usage Overview (5 tabs): Adoption, Engagement, Channel Distribution, GenAI Quality
+### Azure Monitor Workbooks (Phase 3 — Delivered in v1.1.0)
 
-### Alert Rules
+Interactive workbooks for operational dashboards:
+- Agent health overview
+- Usage trends and adoption metrics
+- Error diagnostics and root cause analysis
+- Generative AI quality monitoring
+
+See [workbooks/README.md](workbooks/README.md) for workbook details.
+
+### Alert Rules (Phase 3 — Delivered in v1.1.0)
 
 Proactive alerting with dynamic thresholds:
-- ALRT-01: High failure rate detection
-- ALRT-02: Latency regression detection
-- ALRT-03: Abnormal usage (bidirectional)
+- Error rate threshold alerts (ALRT-01)
+- Latency degradation detection (ALRT-02)
+- Usage anomaly detection (ALRT-03)
+- Zone-based notification routing via Teams and email
 
-### Power BI Integration
+See [alerts/README.md](alerts/README.md) for alert rule details.
 
-Executive reporting via Power BI:
+### Power BI Integration (Coming in Phase 4)
+
+Phase 4 will deliver executive reporting via Power BI:
 - Cross-agent comparison dashboards
 - Business outcome correlation
 - ROI and adoption metrics
@@ -176,12 +193,12 @@ Executive reporting via Power BI:
 
 | Regulation | Requirement | How This Architecture Supports |
 |------------|-------------|-------------------------------|
-| **SEC 17a-4** | 2-year accessibility (b)(4), 6-year retention (a), immutable storage (f) | 730-day Log Analytics + Azure Blob Storage (StorageV2) export with WORM policy capability |
+| **SEC 17a-4** | 2-year accessibility (b)(4), 6-year retention (a), immutable storage (f) | 730-day Log Analytics + ADLS Gen2 export with WORM policy capability |
 | **FINRA 4511** | Books and records retention, audit trail | Application Insights customEvents with full interaction capture |
 | **SOX 302/404** | Internal controls documentation, evidence preservation | Immutable ProvisioningLog, quarterly evidence export |
 | **SR 11-7** | Model risk management, ongoing monitoring | Telemetry foundation for performance monitoring and model validation |
 
 ---
 
-*Architecture version: 0.1.0*
+*Architecture version: 1.1.0*
 *Last updated: February 2026*

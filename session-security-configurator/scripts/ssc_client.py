@@ -66,6 +66,11 @@ class SSCClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
 
+        if not self.environment_url.startswith("https://"):
+            raise ValueError(
+                f"environment_url must use HTTPS scheme, got: {self.environment_url}"
+            )
+
         if interactive:
             if not client_id:
                 raise ValueError(
@@ -257,7 +262,7 @@ def main():
     parser = argparse.ArgumentParser(description="Dataverse Web API client for Session Security Configurator", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--tenant-id", default=os.environ.get("SSC_TENANT_ID"), help="Entra ID tenant ID (or set SSC_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("SSC_CLIENT_ID"), help="Application (client) ID (or set SSC_CLIENT_ID env var)")
-    parser.add_argument("--client-secret", default=os.environ.get("SSC_CLIENT_SECRET"), help="Client secret (or set SSC_CLIENT_SECRET env var)")
+    parser.add_argument("--client-secret", default=os.environ.get("SSC_CLIENT_SECRET"), help="Client secret (or set SSC_CLIENT_SECRET env var). WARNING: Prefer SSC_CLIENT_SECRET env var to avoid exposing secrets in process lists and shell history")
     parser.add_argument("--environment-url", default=os.environ.get("SSC_ENVIRONMENT_URL"), help="Dataverse environment URL (or set SSC_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
     parser.add_argument("--test-connection", action="store_true", help="Test connection to Dataverse")
