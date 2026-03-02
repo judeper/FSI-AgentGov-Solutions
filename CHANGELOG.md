@@ -8,11 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Action Confirmation Auditor** — New `Test-UserDefinedActionMessages.ps1` governance script validates the Copilot Studio "User-Defined Action Messages" toggle per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional). Supports Control 1.23.
+- **Generative AI Config Auditor** — Two new compliance rules:
+  - Rule 5 (`UnauthorizedModelKnowledge`): Validates "Use AI general knowledge" / Model Knowledge toggle against zone policy (Zone 3 disabled, Zone 2 requires approval, Zone 1 allowed)
+  - Rule 6 (`UnauthorizedSemanticSearch`): Validates Semantic Search toggle against zone policy (Zone 3 requires approval, Zone 2 allowed with logging, Zone 1 allowed)
+  - Updated `Get-ExpectedGenAIPolicy.ps1`, `Get-AgentGenAISettings.ps1`, `Compare-GenAIConfigCompliance.ps1`, and Dataverse schema
+- **Unrestricted Agent Sharing Detector** — New `Test-AgentSharingCompliance.ps1` and `Get-ExpectedSharingPolicy.ps1` governance scripts for zone-based sharing compliance validation; new `uasd_client.py` Dataverse client
+
 ### Fixed
 
 - **UASD Adaptive Card:** Corrected "Run Audit Script" URL to match actual deployment guide path; corrected "View Documentation" URL to point to Control 1.1 (was incorrectly referencing Control 2.24)
 
-### Added
+### Previously Added
 
 - **UASD v1.0.2** — Flow 4 (`UASD-Exception-Expiration-Monitor`) build instructions: proactive exception expiration handling with configurable warning threshold and Teams alerts
 - **Deployment Guide v0.1** — Use-case mapping, solution layers, and Compliance Dashboard integration sequencing
@@ -126,4 +135,4 @@ Individual solution changelogs:
 - [Environment Lifecycle Management](./environment-lifecycle-management/CHANGELOG.md) - v1.1.2
 - [Message Center Monitor](./message-center-monitor/CHANGELOG.md) - v2.1.1
 - [Pipeline Governance Cleanup](./pipeline-governance-cleanup/CHANGELOG.md) - v1.0.8
-- [Deny Event Correlation Report](./deny-event-correlation-report/CHANGELOG.md) - v1.1.0
+- [Deny Event Correlation Report](./deny-event-correlation-report/CHANGELOG.md) - v2.0.0

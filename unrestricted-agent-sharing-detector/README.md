@@ -33,6 +33,8 @@ unrestricted-agent-sharing-detector/
     ├── requirements.txt
     └── governance/
         ├── Invoke-SharingAudit.ps1
+        ├── Test-AgentSharingCompliance.ps1
+        ├── Get-ExpectedSharingPolicy.ps1
         ├── Export-ViolationReport.ps1
         ├── Import-ApprovedSecurityGroups.ps1
         ├── Deploy-DetectionFlow.ps1

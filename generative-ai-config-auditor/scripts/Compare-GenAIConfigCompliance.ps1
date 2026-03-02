@@ -9,8 +9,9 @@
     regulatory context.
 
     Checks include: AOAI enabled vs policy, orchestration mode vs policy,
-    generative answers node usage vs policy, and AOAI connection whitelist
-    validation when a Dataverse URL is provided.
+    generative answers node usage vs policy, AOAI connection whitelist
+    validation when a Dataverse URL is provided, Model Knowledge toggle
+    vs policy, and Semantic Search toggle vs policy.
 
 .NOTES
     File: Compare-GenAIConfigCompliance.ps1
@@ -39,7 +40,8 @@ function Compare-GenAIConfigCompliance {
         Pipeline input: PSCustomObject[] from Get-AgentGenAISettings.
         Each object must include AgentId, AgentName, AzureOpenAIEnabled,
         OrchestrationMode, GenerativeAnswersNodeCount, AoaiConnectionId,
-        EnvironmentDisplayName, Zone, and AgentStatus properties.
+        ModelKnowledgeEnabled, SemanticSearchEnabled, EnvironmentDisplayName,
+        Zone, and AgentStatus properties.
 
     .PARAMETER IncludeCompliant
         Include compliant agents in output. By default, only violations are returned.
@@ -78,8 +80,8 @@ function Compare-GenAIConfigCompliance {
         PSCustomObject[] -- One object per agent with properties:
         AgentId, AgentName, EnvironmentId, EnvironmentDisplayName, Zone,
         AzureOpenAIEnabled, OrchestrationMode, GenerativeAnswersNodeCount,
-        AoaiConnectionId, IsCompliant, Severity, ViolationType,
-        RegulatoryContext, AgentStatus
+        AoaiConnectionId, ModelKnowledgeEnabled, SemanticSearchEnabled,
+        IsCompliant, Severity, ViolationType, RegulatoryContext, AgentStatus
     #>
     [CmdletBinding()]
     param(
@@ -221,6 +223,26 @@ function Compare-GenAIConfigCompliance {
                 }
             }
 
+            # Rule 5: Model Knowledge toggle vs policy
+            if ($agent.ModelKnowledgeEnabled -eq 'Yes' -and $policy.ModelKnowledgePolicy -in @('Disabled', 'RequiresApproval')) {
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'UnauthorizedModelKnowledge'
+                    Description      = "Model Knowledge (AI general knowledge) is enabled but policy is '$($policy.ModelKnowledgePolicy)' in $agentZone"
+                    Severity         = $policy.ModelKnowledgeViolationSeverity
+                    RegulatoryContext = "FINRA 3110 - supervisory controls for AI knowledge sources; $($policy.RegulatoryContext)"
+                }
+            }
+
+            # Rule 6: Semantic Search toggle vs policy
+            if ($agent.SemanticSearchEnabled -eq 'Yes' -and $policy.SemanticSearchPolicy -eq 'RequiresApproval') {
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'UnauthorizedSemanticSearch'
+                    Description      = "Semantic Search (Dataverse vector search) is enabled but requires explicit approval in $agentZone"
+                    Severity         = $policy.SemanticSearchViolationSeverity
+                    RegulatoryContext = "SOX 404 - internal control over data search capabilities; $($policy.RegulatoryContext)"
+                }
+            }
+
             # Determine overall compliance for this agent
             $isCompliant = $violations.Count -eq 0
 
@@ -253,6 +275,8 @@ function Compare-GenAIConfigCompliance {
                 OrchestrationMode          = $agent.OrchestrationMode
                 GenerativeAnswersNodeCount = $agent.GenerativeAnswersNodeCount
                 AoaiConnectionId           = $agent.AoaiConnectionId
+                ModelKnowledgeEnabled      = $agent.ModelKnowledgeEnabled
+                SemanticSearchEnabled      = $agent.SemanticSearchEnabled
                 IsCompliant                = $isCompliant
                 Severity                   = if ($isCompliant) { $null } else { $worstSeverity }
                 ViolationType              = if ($isCompliant) { $null } else { $worstViolationType }

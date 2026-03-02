@@ -53,6 +53,7 @@ When a required confirmation is missing, severity is classified as:
 ## Features
 
 - **Per-Action Validation** -- Inspects each action node in agent topics for confirmation steps
+- **User-Defined Action Messages** -- Validates that agents have user-defined action messages configured per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional)
 - **Zone Compliance** -- Enforces zone-specific confirmation requirements using ELM zone classification
 - **Exception Management** -- Approval workflow for legitimate confirmation bypasses
 - **Multiple Output Formats** -- Console, JSON, CSV evidence export
@@ -83,6 +84,7 @@ action-confirmation-auditor/
     │   ├── Get-ExpectedConfirmationPolicy.ps1
     │   ├── Get-ZoneClassification.ps1
     │   ├── Test-ParameterValidation.ps1
+    │   ├── Test-UserDefinedActionMessages.ps1  # User-defined action messages validation
     │   └── Import-ActionRiskClassifications.ps1  # v1.1 stub
     └── private/
         ├── Connect-EnvironmentDataverse.ps1

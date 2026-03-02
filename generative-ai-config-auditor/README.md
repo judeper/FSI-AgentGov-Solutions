@@ -1,6 +1,6 @@
 # Generative AI Config Auditor
 
-Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources) for Copilot Studio agents against zone-specific governance policies.
+Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies.
 
 ## Status
 
@@ -13,7 +13,7 @@ Validates generative AI feature configurations (Azure OpenAI integration, genera
 
 ## Overview
 
-The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, and unvetted knowledge sources across Power Platform environments.
+The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Model Knowledge (AI general knowledge) usage, and unapproved Semantic Search enablement across Power Platform environments.
 
 Unlike the Content Moderation Monitor which validates moderation levels, GAC audits the generative AI feature configuration itself -- which AI capabilities are enabled, how they are configured, and whether connections to Azure OpenAI are on the approved whitelist.
 
@@ -27,6 +27,8 @@ Each governance zone defines which generative AI features are permitted and unde
 | Generative Orchestration | Allowed | Allowed with approval | Restricted (classic unless exception) |
 | Generative Answers Nodes | Allowed | Allowed | Explicit allowlist per topic |
 | AOAI Connection Whitelist | Advisory (warning) | Enforced (high) | Enforced (critical) |
+| Model Knowledge | Allowed | Requires approval | Disabled (only approved knowledge sources) |
+| Semantic Search | Allowed | Allowed with logging | Requires explicit approval |
 
 ### Violation Severity Matrix
 
@@ -35,6 +37,8 @@ Each governance zone defines which generative AI features are permitted and unde
 | Unapproved AOAI Connection | Warning | High | Critical |
 | Generative Orchestration (unauthorized) | Warning | Medium | Critical |
 | Generative Answers (unauthorized) | Warning | Medium | High |
+| Model Knowledge (unauthorized) | Warning | Medium | Critical |
+| Semantic Search (unauthorized) | Warning | Medium | High |
 | Unknown Configuration | Warning | Medium | High |
 
 ## Features

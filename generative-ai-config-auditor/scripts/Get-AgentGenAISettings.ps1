@@ -108,7 +108,8 @@ function Get-AgentGenAISettings {
         PSCustomObject[] -- One object per agent with properties:
         EnvironmentId, EnvironmentDisplayName, Zone, AgentId, AgentName,
         AzureOpenAIEnabled, OrchestrationMode, KnowledgeSourceCount,
-        GenerativeAnswersNodeCount, AoaiConnectionId, AgentStatus, TopicSummary
+        GenerativeAnswersNodeCount, AoaiConnectionId, ModelKnowledgeEnabled,
+        SemanticSearchEnabled, AgentStatus, TopicSummary
     #>
     [CmdletBinding()]
     param(
@@ -261,6 +262,8 @@ function Get-AgentGenAISettings {
             KnowledgeSourceCount        = 0
             GenerativeAnswersNodeCount  = 0
             AoaiConnectionId            = $null
+            ModelKnowledgeEnabled       = 'Unable to Determine'
+            SemanticSearchEnabled       = 'Unable to Determine'
             TopicSummary                = ''
         }
 
@@ -277,7 +280,7 @@ function Get-AgentGenAISettings {
         try {
             $settingsUri = "$baseUrl/api/data/v9.2/bot_botsettings?" +
                 "`$filter=_botid_value eq '$($Bot.botid)'&" +
-                "`$select=fsi_aoaienabled,fsi_orchestrationmode,fsi_aoaiconnectionid"
+                "`$select=fsi_aoaienabled,fsi_orchestrationmode,fsi_aoaiconnectionid,fsi_modelknowledgeenabled,fsi_semanticsearchenabled"
 
             $settingsResponse = Invoke-RestMethod -Uri $settingsUri -Method Get -Headers $headers -ErrorAction Stop
 
@@ -297,6 +300,16 @@ function Get-AgentGenAISettings {
                 # Parse AOAI connection ID
                 if ($setting.fsi_aoaiconnectionid) {
                     $config.AoaiConnectionId = $setting.fsi_aoaiconnectionid
+                }
+
+                # Parse Model Knowledge enabled flag
+                if ($null -ne $setting.fsi_modelknowledgeenabled) {
+                    $config.ModelKnowledgeEnabled = if ($setting.fsi_modelknowledgeenabled) { 'Yes' } else { 'No' }
+                }
+
+                # Parse Semantic Search enabled flag
+                if ($null -ne $setting.fsi_semanticsearchenabled) {
+                    $config.SemanticSearchEnabled = if ($setting.fsi_semanticsearchenabled) { 'Yes' } else { 'No' }
                 }
             }
         } catch {
@@ -333,6 +346,36 @@ function Get-AgentGenAISettings {
                             $config.OrchestrationMode = $rawValue.mode
                         }
                         break
+                    }
+                }
+
+                # Fallback: Model Knowledge toggle
+                if ($config.ModelKnowledgeEnabled -eq 'Unable to Determine') {
+                    foreach ($key in @('ModelKnowledge', 'modelKnowledge', 'UseModelKnowledge', 'useModelKnowledge', 'AllowAIKnowledge', 'allowAIKnowledge')) {
+                        if ($botConfig.PSObject.Properties.Name -contains $key) {
+                            $rawValue = $botConfig.$key
+                            if ($rawValue -is [bool]) {
+                                $config.ModelKnowledgeEnabled = if ($rawValue) { 'Yes' } else { 'No' }
+                            } elseif ($rawValue -is [string]) {
+                                $config.ModelKnowledgeEnabled = if ($rawValue -eq 'true') { 'Yes' } else { 'No' }
+                            }
+                            break
+                        }
+                    }
+                }
+
+                # Fallback: Semantic Search toggle
+                if ($config.SemanticSearchEnabled -eq 'Unable to Determine') {
+                    foreach ($key in @('SemanticSearch', 'semanticSearch', 'UseSemanticSearch', 'useSemanticSearch', 'DataverseSearch', 'dataverseSearch')) {
+                        if ($botConfig.PSObject.Properties.Name -contains $key) {
+                            $rawValue = $botConfig.$key
+                            if ($rawValue -is [bool]) {
+                                $config.SemanticSearchEnabled = if ($rawValue) { 'Yes' } else { 'No' }
+                            } elseif ($rawValue -is [string]) {
+                                $config.SemanticSearchEnabled = if ($rawValue -eq 'true') { 'Yes' } else { 'No' }
+                            }
+                            break
+                        }
                     }
                 }
             } catch {
@@ -549,6 +592,8 @@ function Get-AgentGenAISettings {
                 KnowledgeSourceCount       = $genAIConfig.KnowledgeSourceCount
                 GenerativeAnswersNodeCount = $genAIConfig.GenerativeAnswersNodeCount
                 AoaiConnectionId           = $genAIConfig.AoaiConnectionId
+                ModelKnowledgeEnabled      = $genAIConfig.ModelKnowledgeEnabled
+                SemanticSearchEnabled      = $genAIConfig.SemanticSearchEnabled
                 AgentStatus                = if ($bot.statecode -eq 0) { 'Active' } else { 'Inactive' }
                 TopicSummary               = $genAIConfig.TopicSummary
                 DataverseUrl               = $envDataverseUrl
