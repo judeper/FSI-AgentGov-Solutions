@@ -337,11 +337,23 @@ The solution requires the following connection references:
 
 The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
 - MSI is enabled for the Power Platform environment
-- MSI has **Power Platform Administrator** role assignment
+- MSI service principal is added as a **member** of the Power Platform Administrator role in Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members
 
 #### Configuration Steps
 
-**Step 1: Create Dataverse Tables**
+> **Important:** Complete Step 1 (MSI setup) before importing the flow. The flow uses MSI for BAP Admin API authentication — skipping this step causes 401 Unauthorized errors on first run.
+
+**Step 1: Configure Managed Service Identity**
+
+1. Enable MSI for the Power Platform environment:
+   - Navigate to Azure Portal → Managed Identities → Create
+   - Assign identity to Power Platform environment
+2. Grant Power Platform Administrator role to MSI:
+   - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members**
+   - Add the MSI service principal as a member
+3. Verify the role assignment is active before proceeding to Step 2
+
+**Step 2: Create Dataverse Tables**
 
 Execute the following in Dataverse (via Power Apps maker portal → Tables → New table):
 
@@ -364,25 +376,6 @@ Execute the following in Dataverse (via Power Apps maker portal → Tables → N
    - Plural Name: Inactivity Timeout Error Logs
    - Primary Column: Auto-number (e.g., `ERR-{SEQNUM:5}`)
    - Add columns per Data Model section
-
-**Step 2: Populate Environment Policies**
-
-Add environment policies to `fsi_environmentpolicies` table with zone-based max durations:
-
-```
-Example Policy Records:
-┌──────────────────────────────────┬────────────────────────┬──────┬─────────────────────┐
-│ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
-│ (Power Platform Env Name)        │ name                   │ zone │ duration (minutes)  │
-├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
-│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 3    │ 60                  │
-│ Sandbox-87654321-bcde-2345-bcde  │ Finance UAT            │ 2    │ 120                 │
-│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 1    │ 120                 │
-│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 3    │ 60                  │
-└──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
-```
-
-**Note:** To get canonical environment names, navigate to [Power Platform Admin Center](https://admin.powerplatform.microsoft.com) → Environments → Select environment → Settings → Details. The **Environment URL** contains the canonical name.
 
 **Step 3: Import Solution**
 
@@ -413,14 +406,24 @@ Create environment variables in Power Platform:
 | `fsi_ITE_ConcurrencyLimit` | Number | `5` | Informational only — not read by the flow. Parallel degree is hardcoded to 5 in the flow's `runtimeConfiguration`. To change concurrency, modify the flow JSON directly. |
 | `fsi_ITE_ScanFrequencyHours` | Number | `24` | Informational only — not read by the flow. The trigger uses a hardcoded daily recurrence. To change scan frequency, modify the flow trigger directly. |
 
-**Step 6: Configure Managed Service Identity**
+**Step 6: Populate Environment Policies**
 
-1. Enable MSI for the Power Platform environment:
-   - Navigate to Azure Portal → Managed Identities → Create
-   - Assign identity to Power Platform environment
-2. Grant Power Platform Administrator role to MSI:
-   - Navigate to Microsoft 365 Admin Center → Roles → Power Platform Administrator
-   - Add MSI service principal as member
+Add environment policies to `fsi_environmentpolicies` table with zone-based max durations:
+
+```
+Example Policy Records:
+┌──────────────────────────────────┬────────────────────────┬──────┬─────────────────────┐
+│ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
+│ (Power Platform Env Name)        │ name                   │ zone │ duration (minutes)  │
+├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
+│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 3    │ 60                  │
+│ Sandbox-87654321-bcde-2345-bcde  │ Finance UAT            │ 2    │ 120                 │
+│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 1    │ 120                 │
+│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 3    │ 60                  │
+└──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
+```
+
+**Note:** To get canonical environment names, navigate to [Power Platform Admin Center](https://admin.powerplatform.microsoft.com) → Environments → Select environment → Settings → Details. The **Environment URL** contains the canonical name.
 
 **Step 7: Activate Flow**
 
@@ -481,6 +484,8 @@ Create environment variables in Power Platform:
 - Document policy exceptions with business justification
 
 **Compliance Remediation:**
+
+> **Automated remediation:** [`Set-InactivityTimeout.ps1`](https://github.com/judeper/FSI-AgentGov/blob/main/scripts/governance/Set-InactivityTimeout.ps1) in the FSI-AgentGov repository (`scripts/governance/`) can apply timeout settings programmatically across multiple environments. Remediation scripts are maintained separately in FSI-AgentGov and are not included in this solution package. Manual steps are documented below.
 
 For **Non-Compliant** environments (timeout disabled):
 1. Navigate to [Power Platform Admin Center](https://admin.powerplatform.microsoft.com)
