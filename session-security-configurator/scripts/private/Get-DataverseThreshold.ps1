@@ -129,13 +129,13 @@ function Get-DataverseThreshold {
             # Attempt to get token from current Graph context
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
-                if ($context) {
-                    # Graph SDK v2 removed the AccessToken property from Get-MgContext
-                    Write-Warning "Microsoft Graph SDK context found but cannot extract Dataverse token. Graph SDK v2 removed the AccessToken property. Provide a Dataverse-scoped token via -AccessToken parameter."
+                if ($context -and $context.AccessToken) {
+                    $token = $context.AccessToken
+                    Write-Verbose "Using access token from current Microsoft Graph session."
                 }
             }
             catch {
-                Write-Verbose "Failed to retrieve Graph context: $($_.Exception.Message)"
+                Write-Verbose "Failed to retrieve token from Graph context: $($_.Exception.Message)"
             }
         }
 
@@ -218,4 +218,5 @@ if ($MyInvocation.InvocationName -ne '.') {
     $result = Get-DataverseThreshold @PSBoundParameters
     return $result
 }
+
 

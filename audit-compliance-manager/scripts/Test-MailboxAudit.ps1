@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -51,7 +51,7 @@
     - ValidationType: "MailboxAudit"
     - Checks: Array of check results
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: High
+    - Confidence: HIGH
     - Reason: Summary explanation
 
 .NOTES
@@ -121,7 +121,6 @@ function Test-MailboxAudit {
     $checks = @()
     $overallStatus = "Unknown"
     $reason = ""
-    $auditDisabled = "Unknown"
 
     try {
         Write-Host "========================================" -ForegroundColor Cyan
@@ -140,7 +139,7 @@ function Test-MailboxAudit {
         if ($CertificateThumbprint) { $connectParams.CertificateThumbprint = $CertificateThumbprint }
         if ($CertificateFilePath) { $connectParams.CertificateFilePath = $CertificateFilePath }
 
-        Connect-AuditServices @connectParams -ExchangeOnly
+        Connect-AuditServices -ExchangeOnly @connectParams
 
         Write-Host "Connected to Exchange Online." -ForegroundColor Green
         Write-Host ""
@@ -263,8 +262,15 @@ function Test-MailboxAudit {
         }
     }
     finally {
-        # Disconnect using shared helper (consistent with Test-UnifiedAuditLog)
-        Disconnect-AuditServices
+        # Disconnect from Exchange Online
+        try {
+            Write-Host "Disconnecting from Exchange Online..." -ForegroundColor Yellow
+            Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
+            Write-Host "Disconnected." -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Warning: Error during disconnect: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
     }
 
     # Return structured result
@@ -273,13 +279,12 @@ function Test-MailboxAudit {
         ValidationType = "MailboxAudit"
         Checks         = $checks
         OverallStatus  = $overallStatus
-        Confidence     = "High"
+        Confidence     = "HIGH"
         Reason         = $reason
-        RawValue       = "AuditDisabled=$auditDisabled"
     }
 }
 
-# Execute if script is run directly (not dot-sourced)
+# Execute the validation when run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
     Test-MailboxAudit @PSBoundParameters
 }

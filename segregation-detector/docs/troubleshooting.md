@@ -17,7 +17,6 @@ Common issues and solutions for the Segregation of Duties Detector.
    - `RoleManagement.Read.Directory`
    - `User.Read.All`
    - `Directory.Read.All`
-   - `Application.Read.All`
 
 ### "Invalid client secret"
 
@@ -40,11 +39,8 @@ Common issues and solutions for the Segregation of Duties Detector.
 3. Scope mismatch
 
 **Solutions:**
-1. Verify rules are loaded by querying Dataverse directly:
-   ```
-   Invoke-RestMethod -Uri "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_enabled eq true" -Headers @{Authorization="Bearer $token"}
-   ```
-2. Import default rules: `.\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com" -RuleSet Default`
+1. Verify rules: `Get-ConflictRules` returns active rules
+2. Import default rules: `.\Import-ConflictRules.ps1 -RuleSet Default`
 3. Check role context matches actual assignments
 
 ### Too many false positives

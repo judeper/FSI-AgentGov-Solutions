@@ -21,12 +21,12 @@ Stores zone-specific session security baseline configurations.
 | fsi_signinfrequencyminutes | Integer | Expected sign-in frequency in minutes |
 | fsi_authstrength | String (200) | Expected authentication strength policy name |
 | fsi_requirecompliantdevice | Boolean | Whether compliant device is required |
-| fsi_pimmaxactivationhours | Integer | Max PIM activation duration in hours |
+| fsi_pimmaxactivationhours | Integer | PIM maximum activation duration in hours |
 | fsi_pimrequireapproval | Boolean | Whether PIM activation requires approval |
 | fsi_pimrequireauthcontext | Boolean | Whether PIM activation requires auth context |
 | fsi_isactive | Boolean | Whether this baseline is the current active configuration |
 | fsi_capturedon | DateTime | Timestamp when baseline was captured |
-| fsi_rawjson | Memo (100000) | Full JSON snapshot of CA session settings at capture time |
+| fsi_rawjson | Memo | Full JSON snapshot of CA session settings at capture time |
 | createdby | Lookup (User) | User who created the record |
 | createdon | DateTime | Record creation timestamp |
 | modifiedby | Lookup (User) | User who last modified the record |
@@ -47,7 +47,7 @@ Immutable audit log of all validation runs.
 | fsi_zone | Option Set | Zone validated (fsi_acv_zone) |
 | fsi_severity | Option Set | Result severity (fsi_acv_severity) |
 | fsi_validationtype | Option Set | Validation dimension (fsi_ssc_validationtype) |
-| fsi_rawvalue | Memo (100000) | Serialized validation results JSON |
+| fsi_rawvalue | Memo (100000) | Actual config values checked (full JSON) |
 | fsi_reason | String (4000) | Detailed result explanation |
 | fsi_remediationhint | String (2000) | Suggested fix for alerting |
 | fsi_timestamp | DateTime | Validation execution timestamp |
@@ -69,7 +69,7 @@ Threshold violations requiring operator attention.
 | fsi_name | String (200) | Violation display name |
 | fsi_zone | Option Set | Affected zone (fsi_acv_zone) |
 | fsi_severity | Option Set | Violation severity (fsi_acv_severity) |
-| fsi_drifttype | String (200) | Type of drift (e.g., SignInFrequencyWeakened, AuthStrengthDowngraded) |
+| fsi_drifttype | String (200) | Type of drift detected |
 | fsi_expectedvalue | String (2000) | Baseline expected value |
 | fsi_actualvalue | String (2000) | Actual observed value |
 | fsi_policyid | String (200) | CA policy ID that drifted |
@@ -109,7 +109,7 @@ Global option set for validation result severity.
 
 ### fsi_ssc_validationtype (SSC-specific)
 
-Global option set for session security validation dimensions.
+Local option set for session security validation dimensions.
 
 | Value | Label | Description |
 |-------|-------|-------------|
@@ -129,9 +129,9 @@ Configurable thresholds stored as Dataverse environment variables.
 | fsi_SSC_Zone1SignInFrequencyMinutes | Decimal | 480 | Zone 1 session limit (8 hours) |
 | fsi_SSC_Zone2SignInFrequencyMinutes | Decimal | 240 | Zone 2 session limit (4 hours) |
 | fsi_SSC_Zone3SignInFrequencyMinutes | Decimal | 60 | Zone 3 session limit (1 hour) |
-| fsi_SSC_Zone1AuthStrength | String | standard | Zone 1 authentication strength |
-| fsi_SSC_Zone2AuthStrength | String | passwordless | Zone 2 authentication strength |
-| fsi_SSC_Zone3AuthStrength | String | phishing-resistant | Zone 3 authentication strength |
+| fsi_SSC_Zone1AuthStrength | String | Standard MFA | Zone 1 authentication strength |
+| fsi_SSC_Zone2AuthStrength | String | Passwordless | Zone 2 authentication strength |
+| fsi_SSC_Zone3AuthStrength | String | Phishing-resistant | Zone 3 authentication strength |
 
 ## Deployment
 

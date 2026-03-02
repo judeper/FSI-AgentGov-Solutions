@@ -5,7 +5,7 @@ This guide explains how to configure Microsoft Teams notifications for Message C
 ## Overview
 
 The solution sends adaptive card notifications to a Teams channel when:
-- A Message Center post has **high or critical severity**
+- A Message Center post has **high** or **critical** severity
 - A post has an **action required deadline**
 
 ## Prerequisites
@@ -84,8 +84,9 @@ Build the card dynamically using expressions:
 | `{category}` | `@{items('Apply_to_each')?['category']}` |
 | `{services}` | `@{join(items('Apply_to_each')?['services'], ', ')}` |
 | `{startDateTime}` | `@{items('Apply_to_each')?['startDateTime']}` |
-| `{actionRequiredByDateTime}` | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
+| `{actionRequiredByDateTime}` | `@{coalesce(items('Apply_to_each')?['actionRequiredByDateTime'], 'None')}` |
 | `{id}` | `@{items('Apply_to_each')?['id']}` |
+| `{recordId}` | `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` — replace `cr123_` with your publisher prefix (see [Dataverse Record Link](#dataverse-record-link-optional)) |
 
 ## Step 4: Configure Notification Conditions
 
@@ -107,7 +108,9 @@ Only send notifications for important posts. In your flow:
 Or use the visual editor:
 - Condition 1: `severity` equals `high`
 - OR
-- Condition 2: `actionRequiredByDateTime` is not equal to `null`
+- Condition 2: `severity` equals `critical`
+- OR
+- Condition 3: `actionRequiredByDateTime` is not equal to `null`
 
 ## Step 5: Add User Mentions (Optional)
 
@@ -200,7 +203,6 @@ See `teams-notification-card.json` for the complete template with:
 Route different severity levels to different channels:
 
 ```
-Critical Severity → #platform-alerts-urgent (with @mentions)
 High Severity → #platform-alerts-urgent (with @mentions)
 Normal Severity → #platform-alerts (no notification)
 ```
@@ -223,7 +225,7 @@ Use a **Switch** action based on the services array, or multiple conditions.
 
 ### Don't Over-Notify
 
-- Only alert on high/critical severity and action-required posts
+- Only alert on high severity and action-required posts
 - Most Message Center posts are informational (normal severity)
 - Too many notifications = notification fatigue
 

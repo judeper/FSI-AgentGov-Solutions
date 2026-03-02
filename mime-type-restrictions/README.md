@@ -1,6 +1,6 @@
 # MIME Type Restrictions for File Uploads
 
-> **Version:** 1.0.1
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.
@@ -39,21 +39,16 @@ This module is optional — the core solution operates independently without it.
 mime-type-restrictions/
 ├── README.md
 ├── CHANGELOG.md
-├── SOLUTION-DOCUMENTATION.md
-├── DELIVERY-CHECKLIST.md
+├── SOLUTION-DOCUMENTATION.md         # Full technical documentation for customer delivery
+├── DELIVERY-CHECKLIST.md             # Customer delivery packaging checklist
 └── src/
     ├── ValidateMimeTypePlugin.cs     # Dataverse plugin for server-side MIME validation
     ├── dlp-policy-template.json      # DLP policy template for MIME restrictions
     ├── MimeConfig.json               # MIME type allowlist/blocklist configuration
     ├── query-mime-blocks.kql          # Sentinel query for blocked MIME type events
-    ├── BUILD-INSTRUCTIONS.md          # Step-by-step plugin build guide
     ├── high-volume-blocks.json       # Sentinel alert for high-volume block patterns
     └── query-exception-usage.kql     # Sentinel query for exception usage tracking
 ```
-
-## Security Considerations
-
-- **Create-only plugin coverage:** The Dataverse plugin registers on the `Create` message for the `annotation` entity only. Updates to an existing annotation's `documentbody` are **not validated**, meaning a file could be replaced in an existing attachment without triggering server-side inspection. The DLP policy (Layer 1) and Sentinel monitoring (Layer 3) provide compensating controls. Organizations requiring `Update` coverage should register an additional plugin step on the `Update` message with a filtering attribute of `documentbody`. See SOLUTION-DOCUMENTATION.md § Plugin Registration for details.
 
 ## Prerequisites
 
@@ -79,11 +74,11 @@ mime-type-restrictions/
 | Plugin not triggering | Plugin not registered or registration step inactive | Re-register plugin in Dataverse Plugin Registration Tool; verify step is active |
 | Allowed MIME type blocked | `MimeConfig.json` allowlist missing the type | Add the MIME type to the allowlist and redeploy configuration |
 | Sentinel queries return empty | Diagnostic logs not flowing to workspace | Verify Dataverse audit logging is enabled and connected to Sentinel |
-| DLP policy not enforcing | Policy in TestWithNotifications mode or not assigned | Switch policy to Block mode; verify policy scope includes target environment |
+| DLP policy not enforcing | Policy in audit-only mode or not assigned | Switch policy to enforce mode; verify policy scope includes target environment |
 
 ### Logs
 
-Review Dataverse plugin trace logs for errors. For Sentinel queries, check the `SigninLogs` and `DataverseActivity` tables.
+Review Dataverse plugin trace logs for errors. For Sentinel queries, check the `PowerPlatformDlpActivity_CL` custom log table.
 
 ## License
 

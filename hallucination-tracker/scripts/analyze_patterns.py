@@ -16,6 +16,7 @@ import time
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple
+from urllib.parse import urlparse
 
 try:
     from msal import ConfidentialClientApplication
@@ -35,13 +36,6 @@ CATEGORIES = {
     100000004: "confidence_overstatement"
 }
 
-SEVERITIES = {
-    100000000: "Low",
-    100000001: "Medium",
-    100000002: "High",
-    100000003: "Critical",
-}
-
 SEVERITY_WEIGHTS = {
     100000003: 4,  # critical
     100000002: 3,  # high
@@ -49,12 +43,18 @@ SEVERITY_WEIGHTS = {
     100000000: 1,  # low
 }
 
+SEVERITY_LABELS = {
+    100000003: "critical",
+    100000002: "high",
+    100000001: "medium",
+    100000000: "low",
+}
+
+SEVERITY_LABEL_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unknown": 0}
+
 
 class PatternAnalyzer:
     """Analyzes hallucination patterns from feedback data."""
-
-    # Buffer in seconds before actual token expiry to trigger re-auth
-    _TOKEN_EXPIRY_BUFFER = 60
 
     def __init__(self, environment: str, tenant_id: str, client_id: str, client_secret: str):
         self.environment = environment.rstrip("/")
@@ -62,10 +62,9 @@ class PatternAnalyzer:
         self.client_id = client_id
         self.client_secret = client_secret
         self.token = None
-        self._token_expiry: float = 0
 
     def authenticate(self):
-        """Acquire access token and track expiry."""
+        """Acquire access token."""
         app = ConfidentialClientApplication(
             self.client_id,
             authority=f"https://login.microsoftonline.com/{self.tenant_id}",
@@ -75,70 +74,59 @@ class PatternAnalyzer:
         if "access_token" not in result:
             raise Exception(f"Authentication failed: {result.get('error_description')}")
         self.token = result["access_token"]
-        expires_in = result.get("expires_in", 3600)
-        self._token_expiry = time.monotonic() + int(expires_in)
-
-    def _ensure_valid_token(self):
-        """Re-authenticate if the token is near expiry."""
-        if time.monotonic() >= self._token_expiry - self._TOKEN_EXPIRY_BUFFER:
-            self.authenticate()
 
     def get_feedback(self, days: int = 30) -> Tuple[List[Dict], bool]:
         """Retrieve hallucination feedback from Dataverse.
 
         Returns:
-            Tuple of (results list, is_complete flag). is_complete is False
-            when pagination failed and data may be truncated.
+            A tuple of (records, is_complete) where is_complete indicates
+            whether all pages were successfully retrieved.
         """
-        max_retries = 3
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0"
+        }
 
         start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
         url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select=fsi_category,fsi_severity,fsi_agentid&$filter=createdon ge {start_date}"
 
+        results = []
+        is_complete = False
+        max_retries = 5
+        retry_count = 0
         try:
-            results = []
-            is_complete = True
             while url:
-                self._ensure_valid_token()
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                    "OData-MaxVersion": "4.0",
-                    "OData-Version": "4.0"
-                }
-
-                response = None
-                for attempt in range(max_retries):
-                    response = requests.get(url, headers=headers, timeout=(10, 120))
-                    if response.status_code == 429 or response.status_code >= 500:
-                        raw_retry = response.headers.get("Retry-After")
-                        try:
-                            retry_after = int(raw_retry) if raw_retry else 2 ** attempt
-                        except ValueError:
-                            retry_after = 2 ** attempt
-                        print(f"  Retrying after {retry_after}s (HTTP {response.status_code}, attempt {attempt + 1}/{max_retries})")
-                        time.sleep(retry_after)
-                    else:
+                response = requests.get(url, headers=headers, timeout=30)
+                if response.status_code == 429:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        print("Error: Max retries exceeded for rate limiting.")
                         break
-
+                    retry_after = int(response.headers.get("Retry-After", "60"))
+                    print(f"Warning: Rate limited. Retrying after {retry_after}s (attempt {retry_count}/{max_retries})...")
+                    time.sleep(retry_after)
+                    continue
                 if response.status_code != 200:
-                    print(f"Error: API returned {response.status_code}: {response.text[:200]}")
-                    is_complete = False
+                    print(f"Warning: API returned status {response.status_code}: {response.text[:200]}")
                     break
                 data = response.json()
                 results.extend(data.get("value", []))
                 url = data.get("@odata.nextLink")
+            else:
+                is_complete = True
             return results, is_complete
-        except (requests.RequestException, json.JSONDecodeError) as e:
-            sys.exit(f"Error: Failed to retrieve feedback data: {type(e).__name__}: {e}")
-        except Exception as e:
-            sys.exit(f"Error: Authentication failed during pagination: {e}")
+        except requests.RequestException as e:
+            print(f"Warning: Could not fetch feedback: {e}")
+
+        return results, is_complete
 
     def analyze_by_category(self, feedback: List[Dict]) -> Dict:
         """Analyze feedback distribution by category."""
         categories = Counter()
         for item in feedback:
-            cat = item.get("fsi_category") or 0
+            cat = item.get("fsi_category", 0)
             categories[CATEGORIES.get(cat, "unknown")] += 1
         return dict(categories)
 
@@ -146,7 +134,7 @@ class PatternAnalyzer:
         """Analyze feedback distribution by agent."""
         agents = Counter()
         for item in feedback:
-            agent_id = item.get("fsi_agentid") or "unknown"
+            agent_id = item.get("fsi_agentid", "unknown")
             agents[agent_id] += 1
         return dict(agents)
 
@@ -154,25 +142,22 @@ class PatternAnalyzer:
         """Analyze severity distribution."""
         severity = Counter()
         for item in feedback:
-            sev = item.get("fsi_severity") or 100000000
-            severity[sev] += 1
+            sev = item.get("fsi_severity")
+            severity[SEVERITY_LABELS.get(sev, "unknown")] += 1
         return dict(severity)
 
     def calculate_agent_scores(self, feedback: List[Dict]) -> Dict:
-        """Calculate accuracy scores per agent.
+        """Calculate accuracy scores per agent using weighted penalty rate.
 
-        Note: Scores are based solely on hallucination report count and severity.
-        Without total interaction volume data (not currently available from
-        Dataverse), scores are not normalized by usage — a high-volume agent
-        with few issues may score the same as a low-volume agent with the same
-        number of issues. TODO: Normalize by total agent interactions once
-        interaction telemetry is available.
+        Score = 100 - min((weighted_issues / total_reports) * 25, 100).
+        The average severity weight (1-4) is scaled by 25 to produce a
+        penalty range of 25-100, giving meaningful score differentiation.
         """
         agent_data = {}
 
         for item in feedback:
-            agent_id = item.get("fsi_agentid") or "unknown"
-            severity = item.get("fsi_severity") or 100000000
+            agent_id = item.get("fsi_agentid", "unknown")
+            severity = item.get("fsi_severity")
 
             if agent_id not in agent_data:
                 agent_data[agent_id] = {"total": 0, "weighted_issues": 0}
@@ -180,11 +165,15 @@ class PatternAnalyzer:
             agent_data[agent_id]["total"] += 1
             agent_data[agent_id]["weighted_issues"] += SEVERITY_WEIGHTS.get(severity, 1)
 
-        # Calculate scores (100 - penalty)
+        # Calculate scores as rate-based penalty (normalized by report count)
         scores = {}
         for agent_id, data in agent_data.items():
-            penalty = min(data["weighted_issues"] * 2, 100)  # Cap at 100
-            scores[agent_id] = max(0, 100 - penalty)
+            total = data["total"]
+            if total == 0:
+                scores[agent_id] = 100
+            else:
+                penalty = min((data["weighted_issues"] / total) * 25, 100)
+                scores[agent_id] = max(0, round(100 - penalty))
 
         return scores
 
@@ -232,9 +221,10 @@ class PatternAnalyzer:
 ========================================
 """
         if not is_complete:
-            report += f"""
-⚠ DATA INCOMPLETE — pagination failed after {total} records.
-  Percentages and patterns below may not reflect the full dataset.
+            report += """
+*** WARNING: PARTIAL DATA ***
+Not all pages were retrieved. Counts, percentages,
+and agent scores below may be understated.
 """
 
         report += f"""
@@ -252,14 +242,14 @@ Category Distribution:
             report += f"  {cat}: {count} ({pct:.1f}%)\n"
 
         report += "\nSeverity Distribution:\n"
-        for sev, count in sorted(severity_analysis.items(), key=lambda x: -SEVERITY_WEIGHTS.get(x[0], 0)):
+        for sev, count in sorted(severity_analysis.items(), key=lambda x: -SEVERITY_LABEL_ORDER.get(x[0], 0)):
             pct = (count / total * 100) if total > 0 else 0
-            report += f"  {SEVERITIES.get(sev, f'unknown({sev})')}: {count} ({pct:.1f}%)\n"
+            report += f"  {sev}: {count} ({pct:.1f}%)\n"
 
         report += "\nAgent Scores:\n"
         for agent_id, score in sorted(agent_scores.items(), key=lambda x: x[1]):
             rating = "Excellent" if score >= 95 else "Good" if score >= 85 else "Needs Improvement" if score >= 70 else "Critical"
-            report += f"  {agent_id[:8]}{'...' if len(agent_id) > 8 else ''}: {score} ({rating})\n"
+            report += f"  {agent_id[:8]}...: {score} ({rating})\n"
 
         if patterns:
             report += "\nDetected Patterns:\n"
@@ -273,37 +263,45 @@ def main():
     parser = argparse.ArgumentParser(description="Hallucination Pattern Analyzer")
     parser.add_argument("--environment", required=True, help="Dataverse environment URL")
     parser.add_argument("--days", type=int, default=30, help="Analysis period in days")
-    parser.add_argument("--verbose", "-v", action="store_true")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed output")
     parser.add_argument("--dry-run", action="store_true", help="Use sample data")
 
     args = parser.parse_args()
 
-    if args.days < 1:
-        sys.exit("Error: --days must be a positive integer")
+    # Validate environment URL format
+    parsed = urlparse(args.environment)
+    if parsed.scheme not in ("https",) or not parsed.netloc:
+        print("Error: --environment must be an HTTPS URL (e.g., https://your-org.crm.dynamics.com)")
+        sys.exit(1)
 
-    if not args.environment.startswith("https://"):
-        sys.exit("Error: --environment must be a valid HTTPS URL (e.g., https://your-org.crm.dynamics.com)")
+    # Defense-in-depth: restrict to known Dataverse domains
+    allowed_suffixes = (".crm.dynamics.com", ".crm2.dynamics.com", ".crm3.dynamics.com",
+                        ".crm4.dynamics.com", ".crm5.dynamics.com", ".crm6.dynamics.com",
+                        ".crm7.dynamics.com", ".crm8.dynamics.com", ".crm9.dynamics.com",
+                        ".crm11.dynamics.com", ".crm12.dynamics.com", ".crm14.dynamics.com",
+                        ".crm15.dynamics.com", ".crm17.dynamics.com", ".crm19.dynamics.com",
+                        ".crm20.dynamics.com", ".crm21.dynamics.com")
+    if not any(parsed.netloc.endswith(suffix) for suffix in allowed_suffixes):
+        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com)")
+        print(f"  Got: {parsed.netloc}")
+        sys.exit(1)
+
+    if not args.dry_run:
+        missing = [v for v in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET")
+                   if not os.environ.get(v)]
+        if missing:
+            print(f"Error: Missing required environment variables: {', '.join(missing)}")
+            sys.exit(1)
 
     print("========================================")
     print("  Hallucination Pattern Analyzer")
     print("========================================")
 
-    if not args.dry_run:
-        tenant_id = os.environ.get("AZURE_TENANT_ID")
-        client_id = os.environ.get("AZURE_CLIENT_ID")
-        client_secret = os.environ.get("AZURE_CLIENT_SECRET")
-        if not all([tenant_id, client_id, client_secret]):
-            sys.exit("Error: AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables are required")
-    else:
-        tenant_id = None
-        client_id = None
-        client_secret = None
-
     analyzer = PatternAnalyzer(
         args.environment,
-        tenant_id,
-        client_id,
-        client_secret
+        os.environ.get("AZURE_TENANT_ID"),
+        os.environ.get("AZURE_CLIENT_ID"),
+        os.environ.get("AZURE_CLIENT_SECRET")
     )
 
     if args.dry_run:
@@ -319,17 +317,22 @@ def main():
         is_complete = True
     else:
         print("\nAuthenticating...")
-        try:
-            analyzer.authenticate()
-        except Exception as e:
-            sys.exit(f"Error: Authentication failed: {e}")
+        analyzer.authenticate()
         print("  Authenticated")
         print("\nFetching feedback data...")
         feedback, is_complete = analyzer.get_feedback(args.days)
         print(f"  Retrieved {len(feedback)} reports")
 
-    report = analyzer.generate_report(feedback, args.days, is_complete)
+    report = analyzer.generate_report(feedback, days=args.days, is_complete=is_complete)
     print(report)
+
+    if args.verbose:
+        print("\nVerbose Details:")
+        for item in feedback:
+            cat = CATEGORIES.get(item.get("fsi_category", 0), "unknown")
+            sev = SEVERITY_LABELS.get(item.get("fsi_severity"), "unknown")
+            agent = item.get("fsi_agentid", "unknown")
+            print(f"  Agent: {agent}, Category: {cat}, Severity: {sev}")
 
 
 if __name__ == "__main__":

@@ -9,14 +9,6 @@
     "$authentication": {
       "defaultValue": {},
       "type": "SecureObject"
-    },
-    "fsi_CD_NotificationEmail": {
-      "defaultValue": "",
-      "type": "String",
-      "metadata": {
-        "schemaName": "fsi_CD_NotificationEmail",
-        "description": "Email address for compliance notifications"
-      }
     }
   },
   "triggers": {
@@ -27,8 +19,7 @@
         "startTime": "2026-01-01T06:00:00Z",
         "timeZone": "UTC"
       },
-      "type": "Recurrence",
-      "operationOptions": "SingleInstance"
+      "type": "Recurrence"
     }
   },
   "actions": {
@@ -147,7 +138,7 @@
         ]
       }
     },
-    "Initialize_ProcessedControls": {
+    "Initialize_CD_NotificationEmail": {
       "runAfter": {
         "Initialize_StatusCounts": [
           "Succeeded"
@@ -157,16 +148,16 @@
       "inputs": {
         "variables": [
           {
-            "name": "ProcessedControls",
-            "type": "object",
-            "value": {}
+            "name": "CD_NotificationEmail",
+            "type": "string",
+            "value": "@parameters('fsi_CD_NotificationEmail')"
           }
         ]
       }
     },
-    "Initialize_ItemErrorCount": {
+    "Initialize_SeenControls": {
       "runAfter": {
-        "Initialize_ProcessedControls": [
+        "Initialize_CD_NotificationEmail": [
           "Succeeded"
         ]
       },
@@ -174,213 +165,248 @@
       "inputs": {
         "variables": [
           {
-            "name": "ItemErrorCount",
-            "type": "integer",
-            "value": 0
+            "name": "SeenControls",
+            "type": "string",
+            "value": ""
           }
         ]
-      }
+      },
+      "description": "Pipe-delimited list of control IDs already processed for deduplication (e.g., |ctrl1|ctrl2|)"
     },
-    "List_Control_Assessments": {
+    "Scope_Main": {
       "runAfter": {
-        "Initialize_ItemErrorCount": [
+        "Initialize_SeenControls": [
           "Succeeded"
         ]
       },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "fsi_cr_dataverse",
-          "operationId": "ListRecords",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-        },
-        "parameters": {
-          "entityName": "fsi_controlassessments",
-          "$select": "fsi_controlassessmentid,fsi_assessmentdate,fsi_status,fsi_zone,fsi_score",
-          "$expand": "fsi_controlmasterid($select=fsi_controlid,fsi_pillar,fsi_weight)",
-          "$filter": "fsi_assessmentdate ge @{formatDateTime(addDays(utcNow(), -365), 'yyyy-MM-dd')}",
-          "$orderby": "fsi_assessmentdate desc"
-        },
-        "authentication": "@parameters('$authentication')"
-      },
-      "runtimeConfiguration": {
-        "paginationPolicy": {
-          "minimumItemCount": 5000
-        },
-        "retryPolicy": {
-          "count": 3,
-          "type": "exponential",
-          "interval": "PT10S",
-          "maximumInterval": "PT1H"
-        }
-      }
-    },
-    "Apply_to_each_Assessment": {
-      "foreach": "@outputs('List_Control_Assessments')?['body/value']",
+      "type": "Scope",
       "actions": {
-        "Scope_Process_Assessment": {
+        "List_Control_Assessments": {
           "runAfter": {},
-          "type": "Scope",
-          "actions": {
-        "Condition_Not_Already_Processed": {
-          "actions": {
-            "Condition_Status_Not_NA": {
-          "actions": {
-            "Get_Control_Weight": {
-              "runAfter": {},
-              "type": "Compose",
-              "inputs": "@coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_weight'], 0)"
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
             },
-            "Get_Zone_Multiplier": {
-              "runAfter": {
-                "Get_Control_Weight": [
-                  "Succeeded"
-                ]
-              },
-              "type": "Compose",
-              "inputs": "@if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 3), 2.0, if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 2), 1.5, 1.0))"
+            "parameters": {
+              "entityName": "fsi_controlassessments",
+              "$select": "fsi_controlassessmentid,fsi_assessmentdate,fsi_status,fsi_zone,fsi_score",
+              "$expand": "fsi_controlmasterid($select=fsi_controlid,fsi_pillar,fsi_weight)",
+              "$filter": "fsi_assessmentdate ge @{formatDateTime(addDays(utcNow(), -90), 'yyyy-MM-dd')}",
+              "$orderby": "fsi_assessmentdate desc"
             },
-            "Calculate_Weighted_Score": {
-              "runAfter": {
-                "Get_Zone_Multiplier": [
-                  "Succeeded"
-                ]
-              },
-              "type": "Compose",
-              "inputs": "@mul(mul(items('Apply_to_each_Assessment')?['fsi_score'], outputs('Get_Control_Weight')), outputs('Get_Zone_Multiplier'))"
-            },
-            "Increment_TotalWeightedScore": {
-              "runAfter": {
-                "Calculate_Weighted_Score": [
-                  "Succeeded"
-                ]
-              },
-              "type": "IncrementVariable",
-              "inputs": {
-                "name": "TotalWeightedScore",
-                "value": "@outputs('Calculate_Weighted_Score')"
-              }
-            },
-            "Increment_TotalWeight": {
-              "runAfter": {
-                "Increment_TotalWeightedScore": [
-                  "Succeeded"
-                ]
-              },
-              "type": "IncrementVariable",
-              "inputs": {
-                "name": "TotalWeight",
-                "value": "@mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))"
-              }
-            },
-            "Update_Status_Counts": {
-              "runAfter": {
-                "Increment_TotalWeight": [
-                  "Succeeded"
-                ]
-              },
-              "type": "SetVariable",
-              "inputs": {
-                "name": "StatusCounts",
-                "value": "@if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 1), setProperty(variables('StatusCounts'), 'compliant', add(variables('StatusCounts')?['compliant'], 1)), if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 2), setProperty(variables('StatusCounts'), 'partial', add(variables('StatusCounts')?['partial'], 1)), setProperty(variables('StatusCounts'), 'noncompliant', add(variables('StatusCounts')?['noncompliant'], 1))))"
-              }
-            },
-            "Get_Pillar_Key": {
-              "runAfter": {
-                "Update_Status_Counts": [
-                  "Succeeded"
-                ]
-              },
-              "type": "Compose",
-              "inputs": "@string(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_pillar'], 0))"
-            },
-            "Update_PillarScores": {
-              "runAfter": {
-                "Get_Pillar_Key": [
-                  "Succeeded"
-                ]
-              },
-              "type": "SetVariable",
-              "inputs": {
-                "name": "PillarScores",
-                "value": "@setProperty(variables('PillarScores'), outputs('Get_Pillar_Key'), json(concat('{\"weightedSum\":', string(add(variables('PillarScores')?[outputs('Get_Pillar_Key')]?['weightedSum'], outputs('Calculate_Weighted_Score'))), ',\"weight\":', string(add(variables('PillarScores')?[outputs('Get_Pillar_Key')]?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier')))), '}')))"
-              }
-            },
-            "Get_Zone_Key": {
-              "runAfter": {
-                "Update_PillarScores": [
-                  "Succeeded"
-                ]
-              },
-              "type": "Compose",
-              "inputs": "@string(items('Apply_to_each_Assessment')?['fsi_zone'])"
-            },
-            "Update_ZoneScores": {
-              "runAfter": {
-                "Get_Zone_Key": [
-                  "Succeeded"
-                ]
-              },
-              "type": "SetVariable",
-              "inputs": {
-                "name": "ZoneScores",
-                "value": "@setProperty(variables('ZoneScores'), outputs('Get_Zone_Key'), json(concat('{\"weightedSum\":', string(add(variables('ZoneScores')?[outputs('Get_Zone_Key')]?['weightedSum'], outputs('Calculate_Weighted_Score'))), ',\"weight\":', string(add(variables('ZoneScores')?[outputs('Get_Zone_Key')]?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier')))), '}')))"
-              }
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
             }
           },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Apply_to_each_Assessment": {
+      "foreach": "@outputs('List_Control_Assessments')?['body/value']",
+      "actions": {
+        "Get_Control_Key": {
           "runAfter": {},
+          "type": "Compose",
+          "inputs": "@concat(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlid'], '-', string(items('Apply_to_each_Assessment')?['fsi_zone']))",
+          "description": "Unique key for control-zone deduplication"
+        },
+        "Condition_Not_Already_Seen": {
+          "actions": {
+            "Mark_Control_Seen": {
+              "runAfter": {},
+              "type": "SetVariable",
+              "inputs": {
+                "name": "SeenControls",
+                "value": "@if(equals(variables('SeenControls'), ''), concat('|', outputs('Get_Control_Key'), '|'), concat(variables('SeenControls'), outputs('Get_Control_Key'), '|'))"
+              }
+            },
+            "Condition_Status_Not_NA": {
+              "actions": {
+                "Get_Control_Weight": {
+                  "runAfter": {},
+                  "type": "Compose",
+                  "inputs": "@items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_weight']"
+                },
+                "Get_Zone_Multiplier": {
+                  "runAfter": {
+                    "Get_Control_Weight": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 3), 2.0, if(equals(items('Apply_to_each_Assessment')?['fsi_zone'], 2), 1.5, 1.0))"
+                },
+                "Calculate_Weighted_Score": {
+                  "runAfter": {
+                    "Get_Zone_Multiplier": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@mul(mul(items('Apply_to_each_Assessment')?['fsi_score'], outputs('Get_Control_Weight')), outputs('Get_Zone_Multiplier'))"
+                },
+                "Increment_TotalWeightedScore": {
+                  "runAfter": {
+                    "Calculate_Weighted_Score": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "TotalWeightedScore",
+                    "value": "@outputs('Calculate_Weighted_Score')"
+                  }
+                },
+                "Increment_TotalWeight": {
+                  "runAfter": {
+                    "Increment_TotalWeightedScore": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "IncrementVariable",
+                  "inputs": {
+                    "name": "TotalWeight",
+                    "value": "@mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))"
+                  }
+                },
+                "Update_Status_Counts": {
+                  "runAfter": {
+                    "Increment_TotalWeight": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "StatusCounts",
+                    "value": {
+                      "compliant": "@if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 1), add(variables('StatusCounts')?['compliant'], 1), variables('StatusCounts')?['compliant'])",
+                      "partial": "@if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 2), add(variables('StatusCounts')?['partial'], 1), variables('StatusCounts')?['partial'])",
+                      "noncompliant": "@if(equals(items('Apply_to_each_Assessment')?['fsi_status'], 3), add(variables('StatusCounts')?['noncompliant'], 1), variables('StatusCounts')?['noncompliant'])"
+                    }
+                  }
+                },
+                "Get_Pillar_Key": {
+                  "runAfter": {
+                    "Update_Status_Counts": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@string(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_pillar'])"
+                },
+                "Get_Zone_Key": {
+                  "runAfter": {
+                    "Get_Pillar_Key": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@string(items('Apply_to_each_Assessment')?['fsi_zone'])"
+                },
+                "Update_PillarScores": {
+                  "runAfter": {
+                    "Get_Zone_Key": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "PillarScores",
+                    "value": {
+                      "1": {
+                        "weightedSum": "@if(equals(outputs('Get_Pillar_Key'), '1'), add(variables('PillarScores')?['1']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('PillarScores')?['1']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Pillar_Key'), '1'), add(variables('PillarScores')?['1']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('PillarScores')?['1']?['weight'])"
+                      },
+                      "2": {
+                        "weightedSum": "@if(equals(outputs('Get_Pillar_Key'), '2'), add(variables('PillarScores')?['2']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('PillarScores')?['2']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Pillar_Key'), '2'), add(variables('PillarScores')?['2']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('PillarScores')?['2']?['weight'])"
+                      },
+                      "3": {
+                        "weightedSum": "@if(equals(outputs('Get_Pillar_Key'), '3'), add(variables('PillarScores')?['3']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('PillarScores')?['3']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Pillar_Key'), '3'), add(variables('PillarScores')?['3']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('PillarScores')?['3']?['weight'])"
+                      },
+                      "4": {
+                        "weightedSum": "@if(equals(outputs('Get_Pillar_Key'), '4'), add(variables('PillarScores')?['4']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('PillarScores')?['4']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Pillar_Key'), '4'), add(variables('PillarScores')?['4']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('PillarScores')?['4']?['weight'])"
+                      }
+                    }
+                  }
+                },
+                "Update_ZoneScores": {
+                  "runAfter": {
+                    "Update_PillarScores": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "ZoneScores",
+                    "value": {
+                      "1": {
+                        "weightedSum": "@if(equals(outputs('Get_Zone_Key'), '1'), add(variables('ZoneScores')?['1']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('ZoneScores')?['1']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Zone_Key'), '1'), add(variables('ZoneScores')?['1']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('ZoneScores')?['1']?['weight'])"
+                      },
+                      "2": {
+                        "weightedSum": "@if(equals(outputs('Get_Zone_Key'), '2'), add(variables('ZoneScores')?['2']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('ZoneScores')?['2']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Zone_Key'), '2'), add(variables('ZoneScores')?['2']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('ZoneScores')?['2']?['weight'])"
+                      },
+                      "3": {
+                        "weightedSum": "@if(equals(outputs('Get_Zone_Key'), '3'), add(variables('ZoneScores')?['3']?['weightedSum'], outputs('Calculate_Weighted_Score')), variables('ZoneScores')?['3']?['weightedSum'])",
+                        "weight": "@if(equals(outputs('Get_Zone_Key'), '3'), add(variables('ZoneScores')?['3']?['weight'], mul(outputs('Get_Control_Weight'), outputs('Get_Zone_Multiplier'))), variables('ZoneScores')?['3']?['weight'])"
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Mark_Control_Seen": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@items('Apply_to_each_Assessment')?['fsi_status']",
+                        4
+                      ]
+                    }
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "Get_Control_Key": [
+              "Succeeded"
+            ]
+          },
           "expression": {
             "and": [
               {
                 "not": {
-                  "equals": [
-                    "@items('Apply_to_each_Assessment')?['fsi_status']",
-                    4
+                  "contains": [
+                    "@variables('SeenControls')",
+                    "@concat('|', outputs('Get_Control_Key'), '|')"
                   ]
                 }
               }
             ]
           },
-          "type": "If"
-            },
-            "Mark_Control_Processed": {
-              "runAfter": {
-                "Condition_Status_Not_NA": [
-                  "Succeeded",
-                  "Skipped"
-                ]
-              },
-              "type": "SetVariable",
-              "inputs": {
-                "name": "ProcessedControls",
-                "value": "@setProperty(variables('ProcessedControls'), concat(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], 'null'), '_', string(coalesce(items('Apply_to_each_Assessment')?['fsi_zone'], 0))), true)"
-              }
-            }
-          },
-          "runAfter": {},
-          "expression": {
-            "equals": [
-              "@coalesce(variables('ProcessedControls')?[concat(coalesce(items('Apply_to_each_Assessment')?['fsi_controlmasterid']?['fsi_controlmasterid'], 'null'), '_', string(coalesce(items('Apply_to_each_Assessment')?['fsi_zone'], 0)))], false)",
-              false
-            ]
-          },
-          "type": "If"
-        }
-          }
-        },
-        "Increment_ItemErrorCount": {
-          "runAfter": {
-            "Scope_Process_Assessment": [
-              "Failed",
-              "TimedOut"
-            ]
-          },
-          "type": "IncrementVariable",
-          "inputs": {
-            "name": "ItemErrorCount",
-            "value": 1
-          },
-          "description": "Track per-item processing errors for post-loop notification"
+          "type": "If",
+          "description": "Skip duplicate assessments — only process latest per control-zone (results ordered by date desc)"
         }
       },
       "runAfter": {
@@ -395,68 +421,10 @@
         }
       }
     },
-    "Condition_Item_Processing_Errors": {
+    "Calculate_Overall_Score": {
       "runAfter": {
         "Apply_to_each_Assessment": [
           "Succeeded"
-        ]
-      },
-      "expression": {
-        "and": [
-          {
-            "greater": [
-              "@variables('ItemErrorCount')",
-              0
-            ]
-          },
-          {
-            "not": {
-              "equals": [
-                "@parameters('fsi_CD_NotificationEmail')",
-                ""
-              ]
-            }
-          }
-        ]
-      },
-      "type": "If",
-      "actions": {
-        "Send_Item_Error_Notification": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "fsi_cr_outlook",
-              "operationId": "SendEmailV2",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-            },
-            "parameters": {
-              "emailMessage": {
-                "To": "@{parameters('fsi_CD_NotificationEmail')}",
-                "Subject": "WARNING: Score Calculator - @{variables('ItemErrorCount')} assessments failed processing",
-                "Body": "<p><strong style='color:orange;'>Per-item processing errors detected.</strong></p><p><strong>Failed Items:</strong> @{variables('ItemErrorCount')}</p><p>One or more control assessments could not be processed (possible causes: deleted control master records, null navigation properties, or transient Dataverse errors). The overall compliance score may be incomplete. Review flow run history for details.</p><p><strong>Timestamp:</strong> @{utcNow()}</p>",
-                "Importance": "High"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "runtimeConfiguration": {
-            "retryPolicy": {
-              "count": 3,
-              "type": "exponential",
-              "interval": "PT10S",
-              "maximumInterval": "PT1H"
-            }
-          }
-        }
-      },
-      "description": "Notify when individual assessments failed processing during the loop"
-    },
-    "Calculate_Overall_Score": {
-      "runAfter": {
-        "Condition_Item_Processing_Errors": [
-          "Succeeded",
-          "Skipped"
         ]
       },
       "type": "Compose",
@@ -471,7 +439,7 @@
       "type": "OpenApiConnection",
       "inputs": {
         "host": {
-          "connectionName": "fsi_cr_dataverse",
+          "connectionName": "shared_commondataserviceforapps",
           "operationId": "ListRecords",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
@@ -480,17 +448,17 @@
           "$select": "fsi_complianceexceptionid",
           "$filter": "fsi_exceptionstatus eq 1 or fsi_exceptionstatus eq 2 or fsi_exceptionstatus eq 3"
         },
-        "authentication": "@parameters('$authentication')"
+        "authentication": "@parameters('$authentication')",
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "maximumInterval": "PT1M"
+        }
       },
       "runtimeConfiguration": {
         "paginationPolicy": {
           "minimumItemCount": 5000
-        },
-        "retryPolicy": {
-          "count": 3,
-          "type": "exponential",
-          "interval": "PT10S",
-          "maximumInterval": "PT1H"
         }
       }
     },
@@ -503,55 +471,59 @@
       "type": "OpenApiConnection",
       "inputs": {
         "host": {
-          "connectionName": "fsi_cr_dataverse",
+          "connectionName": "shared_commondataserviceforapps",
           "operationId": "ListRecords",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
         "parameters": {
           "entityName": "fsi_compliancescores",
-          "$filter": "fsi_scoredate eq @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
           "$select": "fsi_compliancescoreid",
+          "$filter": "fsi_scoredate eq @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
           "$top": 1
         },
-        "authentication": "@parameters('$authentication')"
-      },
-      "runtimeConfiguration": {
+        "authentication": "@parameters('$authentication')",
         "retryPolicy": {
-          "count": 3,
           "type": "exponential",
+          "count": 3,
           "interval": "PT10S",
-          "maximumInterval": "PT1H"
+          "maximumInterval": "PT1M"
         }
-      }
+      },
+      "description": "Duplicate guard: check if a score record already exists for today"
     },
-    "Condition_Score_Record_Exists": {
+    "Condition_No_Existing_Score": {
       "runAfter": {
         "Check_Existing_Score_Today": [
           "Succeeded"
         ]
       },
       "expression": {
-        "greater": [
-          "@length(outputs('Check_Existing_Score_Today')?['body/value'])",
-          0
+        "and": [
+          {
+            "equals": [
+              "@length(outputs('Check_Existing_Score_Today')?['body/value'])",
+              0
+            ]
+          }
         ]
       },
       "type": "If",
+      "description": "Only create a new score record if none exists for today — prevents duplicates on manual re-trigger or retry",
       "actions": {
-        "Update_Existing_Score_Record": {
+        "Create_Compliance_Score_Record": {
           "runAfter": {},
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "fsi_cr_dataverse",
-              "operationId": "UpdateRecord",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
             },
             "parameters": {
               "entityName": "fsi_compliancescores",
-              "recordId": "@first(outputs('Check_Existing_Score_Today')?['body/value'])?['fsi_compliancescoreid']",
               "item": {
                 "fsi_name": "Compliance Score @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+                "fsi_scoredate": "@formatDateTime(utcNow(), 'yyyy-MM-dd')",
                 "fsi_overallscore": "@outputs('Calculate_Overall_Score')",
                 "fsi_pillar1score": "@if(greater(variables('PillarScores')?['1']?['weight'], 0), div(variables('PillarScores')?['1']?['weightedSum'], variables('PillarScores')?['1']?['weight']), 0)",
                 "fsi_pillar2score": "@if(greater(variables('PillarScores')?['2']?['weight'], 0), div(variables('PillarScores')?['2']?['weightedSum'], variables('PillarScores')?['2']?['weight']), 0)",
@@ -566,110 +538,140 @@
                 "fsi_exceptioncount": "@length(outputs('Get_Open_Exception_Count')?['body/value'])"
               }
             },
-            "authentication": "@parameters('$authentication')"
-          },
-          "runtimeConfiguration": {
+            "authentication": "@parameters('$authentication')",
             "retryPolicy": {
-              "count": 3,
               "type": "exponential",
+              "count": 3,
               "interval": "PT10S",
-              "maximumInterval": "PT1H"
+              "maximumInterval": "PT1M"
             }
           }
         }
       },
       "else": {
-        "actions": {
-          "Create_Compliance_Score_Record": {
-            "runAfter": {},
-            "type": "OpenApiConnection",
-            "inputs": {
-              "host": {
-                "connectionName": "fsi_cr_dataverse",
-                "operationId": "CreateRecord",
-                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-              },
-              "parameters": {
-                "entityName": "fsi_compliancescores",
-                "item": {
-                  "fsi_name": "Compliance Score @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
-                  "fsi_scoredate": "@formatDateTime(utcNow(), 'yyyy-MM-dd')",
-                  "fsi_overallscore": "@outputs('Calculate_Overall_Score')",
-                  "fsi_pillar1score": "@if(greater(variables('PillarScores')?['1']?['weight'], 0), div(variables('PillarScores')?['1']?['weightedSum'], variables('PillarScores')?['1']?['weight']), 0)",
-                  "fsi_pillar2score": "@if(greater(variables('PillarScores')?['2']?['weight'], 0), div(variables('PillarScores')?['2']?['weightedSum'], variables('PillarScores')?['2']?['weight']), 0)",
-                  "fsi_pillar3score": "@if(greater(variables('PillarScores')?['3']?['weight'], 0), div(variables('PillarScores')?['3']?['weightedSum'], variables('PillarScores')?['3']?['weight']), 0)",
-                  "fsi_pillar4score": "@if(greater(variables('PillarScores')?['4']?['weight'], 0), div(variables('PillarScores')?['4']?['weightedSum'], variables('PillarScores')?['4']?['weight']), 0)",
-                  "fsi_zone1score": "@if(greater(variables('ZoneScores')?['1']?['weight'], 0), div(variables('ZoneScores')?['1']?['weightedSum'], variables('ZoneScores')?['1']?['weight']), 0)",
-                  "fsi_zone2score": "@if(greater(variables('ZoneScores')?['2']?['weight'], 0), div(variables('ZoneScores')?['2']?['weightedSum'], variables('ZoneScores')?['2']?['weight']), 0)",
-                  "fsi_zone3score": "@if(greater(variables('ZoneScores')?['3']?['weight'], 0), div(variables('ZoneScores')?['3']?['weightedSum'], variables('ZoneScores')?['3']?['weight']), 0)",
-                  "fsi_compliantcount": "@variables('StatusCounts')?['compliant']",
-                  "fsi_partialcount": "@variables('StatusCounts')?['partial']",
-                  "fsi_noncompliantcount": "@variables('StatusCounts')?['noncompliant']",
-                  "fsi_exceptioncount": "@length(outputs('Get_Open_Exception_Count')?['body/value'])"
-                }
-              },
-              "authentication": "@parameters('$authentication')"
-            },
-            "runtimeConfiguration": {
-              "retryPolicy": {
-                "count": 3,
-                "type": "exponential",
-                "interval": "PT10S",
-                "maximumInterval": "PT1H"
-              }
-            }
-          }
-        }
+        "actions": {}
+      }
+      }
       }
     },
-    "Condition_Notify_Failure": {
+    "Condition_Send_Success_Notification": {
       "runAfter": {
-        "Condition_Score_Record_Exists": [
-          "Failed",
-          "TimedOut",
-          "Skipped"
+        "Scope_Main": [
+          "Succeeded"
         ]
       },
       "expression": {
-        "not": {
-          "equals": [
-            "@parameters('fsi_CD_NotificationEmail')",
-            ""
-          ]
-        }
+        "and": [
+          {
+            "not": {
+              "equals": [
+                "@variables('CD_NotificationEmail')",
+                ""
+              ]
+            }
+          }
+        ]
       },
       "type": "If",
+      "description": "Only send success notification if notification email is configured and non-empty",
       "actions": {
-        "Send_Failure_Notification": {
+        "Send_Success_Notification": {
           "runAfter": {},
           "type": "OpenApiConnection",
           "inputs": {
             "host": {
-              "connectionName": "fsi_cr_outlook",
+              "connectionName": "shared_office365",
               "operationId": "SendEmailV2",
               "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
             },
             "parameters": {
               "emailMessage": {
-                "To": "@{parameters('fsi_CD_NotificationEmail')}",
-                "Subject": "FAILED: Compliance Score Calculation - @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
-                "Body": "<p><strong style='color:red;'>Compliance score calculation failed.</strong></p><p>The CD-ScoreCalculator flow encountered an error during execution. Please review the flow run history in Power Automate for details.</p><p><strong>Timestamp:</strong> @{utcNow()}</p>",
-                "Importance": "High"
+                "To": "@{variables('CD_NotificationEmail')}",
+                "Subject": "Compliance Score Calculated - @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+                "Body": "<p>Daily compliance score calculation completed successfully.</p><p><strong>Overall Score:</strong> @{outputs('Calculate_Overall_Score')}</p><p><strong>Status Breakdown:</strong></p><ul><li>Compliant: @{variables('StatusCounts')?['compliant']}</li><li>Partial: @{variables('StatusCounts')?['partial']}</li><li>Non-Compliant: @{variables('StatusCounts')?['noncompliant']}</li></ul><p><strong>Open Exceptions:</strong> @{length(outputs('Get_Open_Exception_Count')?['body/value'])}</p>",
+                "Importance": "Normal"
               }
             },
-            "authentication": "@parameters('$authentication')"
-          },
-          "runtimeConfiguration": {
+            "authentication": "@parameters('$authentication')",
             "retryPolicy": {
-              "count": 3,
               "type": "exponential",
+              "count": 3,
               "interval": "PT10S",
-              "maximumInterval": "PT1H"
+              "maximumInterval": "PT1M"
             }
           }
         }
       },
-      "description": "Only send failure notification if notification email is configured"
+      "else": {
+        "actions": {}
+      }
+    },
+    "Scope_Error_Handler": {
+      "runAfter": {
+        "Scope_Main": [
+          "Failed",
+          "TimedOut"
+        ]
+      },
+      "type": "Scope",
+      "actions": {
+        "Check_Email_Configured_SC": {
+          "runAfter": {},
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "equals": [
+                    "@variables('CD_NotificationEmail')",
+                    ""
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "equals": [
+                    "@variables('CD_NotificationEmail')",
+                    "@null"
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Send_Error_Notification": {
+              "runAfter": {},
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "emailMessage": {
+                    "To": "@{variables('CD_NotificationEmail')}",
+                    "Subject": "ALERT: CD-ScoreCalculator Flow Failed - @{formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm')}",
+                    "Body": "<p><strong style='color:red;'>Flow Execution Failed</strong></p><p>The CD-ScoreCalculator flow encountered an error during execution. Please check the flow run history in Power Automate for details.</p><p><strong>Timestamp:</strong> @{utcNow()}</p>",
+                    "Importance": "High"
+                  }
+                },
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "description": "Only send error notification if CD_NotificationEmail is configured"
+        }
+      }
     }
   },
   "outputs": {},

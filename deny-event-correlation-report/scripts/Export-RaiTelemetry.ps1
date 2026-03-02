@@ -33,7 +33,7 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 2.0.0
+    Version: 1.3
     Requires: Az.Accounts module
     Authentication: Entra ID (Azure AD) - uses Connect-AzAccount
 
@@ -73,7 +73,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\RaiTelemetry-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv"
+    [string]$OutputPath = ".\RaiTelemetry-$(Get-Date -Format 'yyyy-MM-dd').csv"
 )
 
 #Requires -Version 7.0
@@ -94,15 +94,9 @@ function Invoke-AppInsightsQuery {
     # Get access token for Application Insights API
     # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026)
     try {
-        $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
-        if (-not $tokenResult) {
+        $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+        if (-not $token) {
             throw "Failed to acquire access token. Ensure you have authenticated with Connect-AzAccount."
-        }
-        # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
-        $tokenString = if ($tokenResult.Token -is [System.Security.SecureString]) {
-            $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
-        } else {
-            $tokenResult.Token
         }
     }
     catch {
@@ -110,62 +104,61 @@ function Invoke-AppInsightsQuery {
     }
 
     $headers = @{
-        "Authorization" = "Bearer $tokenString"
+        "Authorization" = "Bearer $($token.Token)"
         "Content-Type" = "application/json"
     }
 
-    # URL encode the query
-    Add-Type -AssemblyName System.Web
-    $encodedQuery = [System.Web.HttpUtility]::UrlEncode($Query)
+    # URL encode the query (using .NET built-in for cross-platform compatibility)
+    $encodedQuery = [System.Uri]::EscapeDataString($Query)
 
     $uri = "https://api.applicationinsights.io/v1/apps/$AppId/query?query=$encodedQuery"
 
-    $maxRetries = 3
-    $attempt = 0
+    try {
+        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+        return $response
+    }
+    catch {
+        if ($_.Exception.Response) {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            $statusDesc = $_.Exception.Response.StatusDescription
 
-    while ($true) {
-        try {
-            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-            return $response
-        }
-        catch {
-            if ($_.Exception.Response) {
-                $statusCode = $_.Exception.Response.StatusCode.value__
-                $statusDesc = $_.Exception.Response.StatusDescription
-
-                switch ($statusCode) {
-                    401 { throw "Authentication failed. Ensure you have authenticated with Connect-AzAccount and have Monitoring Reader role on the Application Insights resource." }
-                    403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
-                    404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
-                    429 {
-                        $attempt++
-                        if ($attempt -ge $maxRetries) {
-                            throw "Rate limited after $maxRetries retries. Try again later."
+            switch ($statusCode) {
+                401 { throw "Authentication failed. Ensure you have authenticated with Connect-AzAccount and have Monitoring Reader role on the Application Insights resource." }
+                403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
+                404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
+                429 {
+                    # Rate limited — retry with bounded backoff
+                    $retryAfter = 60
+                    if ($_.Exception.Response.Headers -and $_.Exception.Response.Headers["Retry-After"]) {
+                        $parsedRetry = 0
+                        if ([int]::TryParse($_.Exception.Response.Headers["Retry-After"], [ref]$parsedRetry) -and $parsedRetry -gt 0 -and $parsedRetry -le 300) {
+                            $retryAfter = $parsedRetry
                         }
-                        $retryAfter = 30 * $attempt
-                        $retryHeader = $_.Exception.Response.Headers | Where-Object { $_.Key -eq 'Retry-After' }
-                        if ($retryHeader) {
-                            $retryAfter = [int]$retryHeader.Value[0]
-                        }
-                        Write-Warning "Rate limited (HTTP 429). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
-                        Start-Sleep -Seconds $retryAfter
-                        continue
                     }
-                    { $_ -ge 500 -and $_ -le 599 } {
-                        $attempt++
-                        if ($attempt -ge $maxRetries) {
-                            throw "Server error (HTTP $statusCode) after $maxRetries retries: $statusDesc"
-                        }
-                        $retryAfter = 30 * $attempt
-                        Write-Warning "Server error (HTTP $statusCode). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
-                        Start-Sleep -Seconds $retryAfter
-                        continue
+                    if (-not (Get-Variable -Name '_retryDepth' -Scope Script -ErrorAction SilentlyContinue)) {
+                        $script:_retryDepth = 0
                     }
-                    default { throw "API request failed: $statusCode - $statusDesc" }
+                    $script:_retryDepth++
+                    if ($script:_retryDepth -gt 3) {
+                        $script:_retryDepth = 0
+                        throw "Rate limit retry exhausted after 3 attempts."
+                    }
+                    Write-Warning "Rate limited by Application Insights API. Retry $($script:_retryDepth)/3 in ${retryAfter}s..."
+                    Start-Sleep -Seconds $retryAfter
+                    try {
+                        $result = Invoke-AppInsightsQuery -AppId $AppId -Query $Query
+                        $script:_retryDepth = 0
+                        return $result
+                    }
+                    catch {
+                        $script:_retryDepth = 0
+                        throw
+                    }
                 }
+                default { throw "API request failed: $statusCode - $statusDesc" }
             }
-            throw "API request failed: $_"
         }
+        throw "API request failed: $_"
     }
 }
 
@@ -230,9 +223,9 @@ try {
         throw "StartDate must be before EndDate."
     }
 
-    # Build KQL query
-    $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
-    $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
+    # Convert to UTC before formatting to ensure the 'Z' suffix is accurate
+    $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
     $kqlQuery = @"
 customEvents
@@ -279,7 +272,7 @@ customEvents
     if (-not $raiEvents -or @($raiEvents).Count -eq 0) {
         Write-Host "No RAI ContentFiltered events found for the specified date range." -ForegroundColor Yellow
         Write-Host "Note: Ensure Copilot Studio agents are configured with Application Insights." -ForegroundColor Gray
-        exit 0
+        return
     }
 
     $eventCount = @($raiEvents).Count
@@ -297,7 +290,7 @@ customEvents
             FilterSeverity  = $_.filterSeverity
             UserId          = $_.userId
             IsHighSeverity  = $_.filterSeverity -eq "High"
-            CustomDimensions = $_.customDimensions | ConvertTo-Json -Compress -Depth 5
+            CustomDimensions = $_.customDimensions | ConvertTo-Json -Compress
         }
     }
 
@@ -327,7 +320,7 @@ customEvents
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Warning "Script execution failed: $_"
+    Write-Error "Script execution failed: $_"
     exit 1
 }
 

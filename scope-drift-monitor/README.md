@@ -16,7 +16,6 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 | **Real-Time Detection** | Monitor access within 15 minutes of occurrence |
 | **Drift Alerts** | Immediate notification when scope exceeded |
 | **Expansion Workflow** | Request and approve scope changes |
-| **Audit Trail** | Detection run history for compliance evidence |
 
 ## Architecture
 
@@ -24,7 +23,7 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Scope Drift Monitor                           │
 ├─────────────────────────────────────────────────────────────────┤
-│  Baseline Mgr  │  Drift Detector  │  Alert Engine  │ Audit Trail │
+│  Baseline Mgr  │  Drift Detector  │  Alert Engine  │  Expansion │
 └────────────────┴──────────────────┴────────────────┴────────────┘
                               ▲
                               │ Analysis
@@ -41,7 +40,6 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
 │ Unified     │ Defender      │ SharePoint    │ Dataverse         │
 │ Audit Log   │ CloudAppEvents│ Audit         │ Audit             │
-│ ✅ v1.1.0   │ 🔜 Planned    │ 🔜 Planned    │ 🔜 Planned        │
 └─────────────┴───────────────┴───────────────┴───────────────────┘
 ```
 
@@ -121,10 +119,11 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
-| `fsi_SDM_ClientId` | Azure AD application client ID |
-| `fsi_SDM_ClientSecret` | Azure AD application client secret |
-| `fsi_SDM_DefaultScopeOwner` | Systemuser GUID for auto-created placeholder scopes |
+| `fsi_SDM_ClientId` | Azure AD application client ID (used by scripts; flows use connection references) |
+| `fsi_SDM_ClientSecret` | Azure AD application client secret (used by scripts; flows use connection references) |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
+| `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on fsi_agentscope (default: 10002) |
+| `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.protection.outlook.com` for DoD) |
 
 ### 3. Configure Connection References
 
@@ -134,12 +133,13 @@ Connect each connection reference to an appropriate connection:
 - `fsi_cr_outlook` - Office 365 Outlook connection
 - `fsi_cr_teams` - Microsoft Teams connection
 - `fsi_cr_approvals` - Approvals connection
+- `fsi_cr_http_azuread` - HTTP with Microsoft Entra ID (Office 365 Management APIs)
 
 ### 4. Capture Agent Baselines
 
 ```powershell
 # Auto-generate baseline from audit history
-.\scripts\New-AgentBaseline.ps1 -AgentId "guid" -Environment "https://your-org.crm.dynamics.com" -Days 30
+.\scripts\New-AgentBaseline.ps1 -AgentId "guid" -Environment "https://your-org.crm.dynamics.com" -EnvironmentId "env-guid" -OwnerId "user-guid"
 ```
 
 ### 5. Turn On Flows
@@ -157,7 +157,7 @@ Connect each connection reference to an appropriate connection:
 .\scripts\Invoke-DriftScan.ps1 -Environment "https://your-org.crm.dynamics.com"
 
 # Test alert delivery
-.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://..." -EmailRecipient "security@contoso.com" -FromEmail "alerts@contoso.com"
+.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://your-webhook-url" -EmailRecipient "security@contoso.com"
 ```
 
 ## Documentation
@@ -184,22 +184,20 @@ Connect each connection reference to an appropriate connection:
 
 ### Detection Sources
 
-| Source | Data Captured | Status |
-|--------|---------------|--------|
-| **Unified Audit Log** | CopilotInteraction events with connector details | ✅ Implemented |
-| **CloudAppEvents** | Defender detections including shadow IT | 🔜 Planned |
-| **SharePoint Audit** | Site/library access events | 🔜 Planned |
-| **Dataverse Audit** | Table read/write operations | 🔜 Planned |
-
-> **Note:** v1.1.0 implements Unified Audit Log detection only. The architecture is designed to support additional sources in future releases.
+| Source | Data Captured |
+|--------|---------------|
+| **Unified Audit Log** | CopilotInteraction events with connector details |
+| **CloudAppEvents** | Defender detections including shadow IT |
+| **SharePoint Audit** | Site/library access events |
+| **Dataverse Audit** | Table read/write operations |
 
 ### Detection Frequency
 
-| Mode | Frequency | Use Case |
-|------|-----------|----------|
-| **Real-Time** | 15 minutes | Critical agents in Zone 3 |
-| **Near Real-Time** | 1 hour | Standard Zone 2 agents |
-| **Batch** | Daily | Zone 1 personal agents |
+| Mode | Frequency | Description |
+|------|-----------|-------------|
+| **Scheduled** | Every 15 minutes | All agents across all zones are checked on each recurrence cycle |
+
+> **Note:** The SDM-DriftDetector flow runs on a single 15-minute recurrence for all zones. Zone-based frequency differentiation is not currently implemented.
 
 ## Scope Expansion Workflow
 
@@ -208,7 +206,7 @@ When drift is detected, users can request scope expansion:
 ```
 Drift Detected → Alert Sent → Expansion Requested
        ↓
-Data Owner Review → Security Review → Approved/Denied
+Security Team Review → Approved/Denied
        ↓
 If Approved: Update Agent Scope → Close Violation
 If Denied: Remediate Access → Close Violation
@@ -218,10 +216,12 @@ If Denied: Remediate Access → Close Violation
 
 | Scope Type | Approvers |
 |------------|-----------|
-| New Connector | Security + Data Owner |
-| New SharePoint Site | Site Owner + Security |
-| New Dataverse Table | Data Steward + Security |
-| New External API | Security + Legal |
+| New Connector | Security Team |
+| New SharePoint Site | Security Team |
+| New Dataverse Table | Security Team |
+| New External API | Security Team |
+
+> **Note:** All expansion requests are currently routed to the security team (`fsi_SDM_SecurityTeamEmail`) for approval. Dual-approval workflows (e.g., Data Owner + Security) are not yet implemented. The schema includes `fsi_dataownerapproval` and `fsi_dataownerapprovedby` fields for future use.
 
 ## Regulatory Alignment
 

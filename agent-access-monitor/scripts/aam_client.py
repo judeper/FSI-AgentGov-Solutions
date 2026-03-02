@@ -65,7 +65,6 @@ class AAMClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
-        self._session.mount("http://", adapter)
 
         if interactive:
             # Public client for interactive auth
@@ -491,7 +490,7 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret (or set AAM_CLIENT_SECRET env var)",
+        help="Client secret (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
     )
     parser.add_argument(
         "--environment-url",

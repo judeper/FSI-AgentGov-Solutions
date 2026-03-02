@@ -51,7 +51,7 @@ def print_banner():
     print("    - AccessValidationHistory table (org-owned, immutable audit trail)")
     print("    - AccessViolation table (user-owned, compliance violations)")
     print("    - Environment variables (scan config, alerting params)")
-    print("    - Connection references (Dataverse, Office 365, Teams, Azure Automation)")
+    print("    - Connection references (Dataverse, Office 365, Teams)")
     print()
 
 
@@ -147,7 +147,7 @@ def _print_post_deployment(is_dry_run: bool):
         print()
         print("  \u2713 Dataverse Schema: 3 tables, 2 shared option sets")
         print("  \u2713 Environment Variables: 6 variables (fsi_AAM_*)")
-        print("  \u2713 Connection References: 4 references (fsi_cr_*_accessmonitor)")
+        print("  \u2713 Connection References: 3 references (fsi_cr_*_accessmonitor)")
         print()
         print("  POST-DEPLOYMENT STEPS:")
         print("  1. Security: Remove Write/Delete privileges on fsi_AccessValidationHistory")
@@ -207,7 +207,7 @@ Examples:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret for Service Principal auth",
+        help="Client secret for Service Principal auth (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
     )
     parser.add_argument(
         "--interactive",

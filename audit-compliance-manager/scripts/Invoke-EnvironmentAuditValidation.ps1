@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
 
 <#
@@ -187,10 +187,8 @@ Write-Host ""
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
 try {
-    Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
     . "$scriptRoot\private\Connect-PowerPlatform.ps1"
     . "$scriptRoot\private\Write-ValidationResult.ps1"
-    . "$scriptRoot\Invoke-EnvironmentDiscovery.ps1"
     . "$scriptRoot\Test-EnvironmentAudit.ps1"
     . "$scriptRoot\Test-EnvironmentRetention.ps1"
 }
@@ -274,7 +272,7 @@ if (-not $SkipDiscovery) {
         if ($CertificateThumbprint) { $discoveryParams.CertificateThumbprint = $CertificateThumbprint }
         if ($IncludeTrialDev) { $discoveryParams.IncludeTrialDev = $true }
 
-        $discoveryResult = Invoke-EnvironmentDiscovery @discoveryParams
+        $discoveryResult = & "$scriptRoot\Invoke-EnvironmentDiscovery.ps1" @discoveryParams
 
         $results.NewEnvironments = $discoveryResult.NewEnvironments
         $results.SkippedUnclassified = $discoveryResult.SkippedUnclassified
@@ -314,11 +312,11 @@ else {
 
     try {
         # Query registry for active, classified environments
-        $registryFilter = "fsi_status eq 100000000 and fsi_zone ne 100000000"  # Active and not Unclassified
+        $registryFilter = "fsi_status eq 1 and fsi_zone ne 0"  # Active and not Unclassified
 
         if (-not $IncludeTrialDev) {
-            # Exclude Developer (100000002) and Trial (100000003) unless override
-            $registryFilter += " and (fsi_overrideinclude eq true or (fsi_environmenttype ne 100000002 and fsi_environmenttype ne 100000003))"
+            # Exclude Trial (4) and Developer (3) unless override
+            $registryFilter += " and (fsi_overrideinclude eq true or (fsi_environmenttype ne 3 and fsi_environmenttype ne 4))"
         }
 
         $registryUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=$registryFilter&`$select=fsi_environmentid,fsi_name,fsi_environmenturl,fsi_zone,fsi_environmenttype"
@@ -338,9 +336,9 @@ else {
                 EnvironmentName = $env.fsi_name
                 EnvironmentUrl  = $env.fsi_environmenturl
                 Zone            = switch ($env.fsi_zone) {
-                    100000001 { "Zone1" }
-                    100000002 { "Zone2" }
-                    100000003 { "Zone3" }
+                    1 { "Zone1" }
+                    2 { "Zone2" }
+                    3 { "Zone3" }
                     default { "Unclassified" }
                 }
                 EnvironmentType = $env.fsi_environmenttype
@@ -494,11 +492,11 @@ foreach ($env in $validationSet) {
     elseif ($statuses -contains "Warning" -or $statuses -contains "GracePeriod") {
         $envResult.OverallStatus = "Warning"
     }
-    elseif ($statuses | Where-Object { $_ -ne "Passed" }) {
-        $envResult.OverallStatus = "Unknown"
+    elseif ($statuses -match "Passed") {
+        $envResult.OverallStatus = "Passed"
     }
     else {
-        $envResult.OverallStatus = "Passed"
+        $envResult.OverallStatus = "Unknown"
     }
 
     # Write per-environment orchestrator record
@@ -525,8 +523,7 @@ foreach ($env in $validationSet) {
 
     # Update fsi_lastvalidated in registry
     try {
-        $safeEnvId = $envId -replace "'", "''"
-        $registryUpdateUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=fsi_environmentid eq '$safeEnvId'"
+        $registryUpdateUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=fsi_environmentid eq '$envId'"
         $headers = @{
             "Authorization"    = "Bearer $centralDataverseToken"
             "Accept"           = "application/json"
@@ -585,7 +582,7 @@ if ($allStatuses -contains "Error" -or $allStatuses -contains "Failed") {
 elseif ($allStatuses -contains "Warning" -or $allStatuses -contains "GracePeriod") {
     $results.OverallStatus = "Warning"
 }
-elseif ($allStatuses -contains "Passed" -and $allStatuses.Count -eq $results.TotalEnvironments) {
+elseif ($allStatuses -match "Passed" -and $allStatuses.Count -eq $results.TotalEnvironments) {
     $results.OverallStatus = "Passed"
 }
 else {

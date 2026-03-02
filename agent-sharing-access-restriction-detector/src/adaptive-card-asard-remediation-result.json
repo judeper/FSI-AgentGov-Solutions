@@ -1,12 +1,12 @@
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
-  "version": "1.5",
+  "version": "1.4",
   "body": [
     {
       "type": "Container",
       "id": "headerSection",
-      "style": "{{header_style}}",
+      "style": "${header_style}",
       "bleed": true,
       "items": [
         {
@@ -18,7 +18,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "{{status_icon}} Agent Sharing Remediation — {{status_text}}",
+                  "text": "${status_icon} Agent Sharing Remediation — ${status_text}",
                   "weight": "Bolder",
                   "size": "Large",
                   "wrap": true
@@ -54,19 +54,19 @@
           "facts": [
             {
               "title": "Agent Name",
-              "value": "{{agent_name}}"
+              "value": "${agent_name}"
             },
             {
               "title": "Environment",
-              "value": "{{environment_name}}"
+              "value": "${environment_name}"
             },
             {
               "title": "Governance Zone",
-              "value": "{{zone_name}}"
+              "value": "${zone_name}"
             },
             {
               "title": "Violation Type",
-              "value": "{{violation_type}}"
+              "value": "${violation_type}"
             }
           ]
         }
@@ -90,24 +90,24 @@
           "facts": [
             {
               "title": "Decision",
-              "value": "{{approval_decision}}"
+              "value": "${approval_decision}"
             },
             {
               "title": "Approver",
-              "value": "{{approver_email}}"
+              "value": "${approver_email}"
             },
             {
               "title": "Decision Date",
-              "value": "{{approval_date}}"
+              "value": "${approval_date}"
             }
           ]
         },
         {
           "type": "TextBlock",
-          "text": "{{decision_notes}}",
+          "text": "${decision_notes}",
           "wrap": true,
           "spacing": "Medium",
-          "isVisible": {{show_decision_notes}}
+          "isVisible": "${show_decision_notes}"
         }
       ]
     },
@@ -115,7 +115,7 @@
       "type": "Container",
       "id": "remediationResultSection",
       "separator": true,
-      "isVisible": {{show_remediation_result}},
+      "isVisible": "${show_remediation_result}",
       "items": [
         {
           "type": "TextBlock",
@@ -127,14 +127,14 @@
         },
         {
           "type": "TextBlock",
-          "text": "{{remediation_status_text}}",
-          "color": "{{remediation_status_color}}",
+          "text": "${remediation_status_text}",
+          "color": "${remediation_status_color}",
           "weight": "Bolder",
           "wrap": true
         },
         {
           "type": "TextBlock",
-          "text": "{{remediation_details}}",
+          "text": "${remediation_details}",
           "wrap": true,
           "spacing": "Small"
         }
@@ -144,7 +144,7 @@
       "type": "Container",
       "id": "currentAccessSection",
       "separator": true,
-      "isVisible": {{show_current_access}},
+      "isVisible": "${show_current_access}",
       "items": [
         {
           "type": "TextBlock",
@@ -156,7 +156,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "{{current_access_list}}",
+          "text": "${current_access_list}",
           "wrap": true,
           "spacing": "Small"
         },
@@ -166,11 +166,11 @@
           "facts": [
             {
               "title": "Total Members",
-              "value": "{{total_members}}"
+              "value": "${total_members}"
             },
             {
               "title": "Access Scope",
-              "value": "{{access_scope}}"
+              "value": "${access_scope}"
             }
           ]
         }
@@ -180,7 +180,7 @@
       "type": "Container",
       "id": "errorDetailsSection",
       "separator": true,
-      "isVisible": {{show_error_details}},
+      "isVisible": "${show_error_details}",
       "items": [
         {
           "type": "TextBlock",
@@ -193,7 +193,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "{{error_message}}",
+          "text": "${error_message}",
           "wrap": true,
           "color": "Attention",
           "spacing": "Small"
@@ -204,11 +204,11 @@
           "facts": [
             {
               "title": "Error Code",
-              "value": "{{error_code}}"
+              "value": "${error_code}"
             },
             {
               "title": "Timestamp",
-              "value": "{{error_timestamp}}"
+              "value": "${error_timestamp}"
             }
           ]
         }
@@ -229,7 +229,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "{{next_steps_text}}",
+          "text": "${next_steps_text}",
           "wrap": true,
           "spacing": "Small"
         }
@@ -253,15 +253,15 @@
           "facts": [
             {
               "title": "Compliance Status",
-              "value": "{{compliance_status}}"
+              "value": "${compliance_status}"
             },
             {
               "title": "Last Checked",
-              "value": "{{last_checked}}"
+              "value": "${last_checked}"
             },
             {
               "title": "Remediation Date",
-              "value": "{{remediation_date}}"
+              "value": "${remediation_date}"
             }
           ]
         }
@@ -272,14 +272,14 @@
     {
       "type": "Action.OpenUrl",
       "title": "View Agent Details",
-      "url": "{{agent_details_url}}",
-      "isVisible": {{show_action_buttons}}
+      "url": "${agent_details_url}",
+      "isVisible": "${show_action_buttons}"
     },
     {
       "type": "Action.OpenUrl",
       "title": "View Compliance Report",
-      "url": "{{compliance_report_url}}",
-      "isVisible": {{show_action_buttons}}
+      "url": "${compliance_report_url}",
+      "isVisible": "${show_action_buttons}"
     }
   ],
   "msteams": {
@@ -290,6 +290,8 @@
     "templateVersion": "1.0.0",
     "solution": "Agent Sharing Access Restriction Detector (ASARD)",
     "description": "Adaptive card for agent sharing remediation result notifications — supports success, rejection, and error states with conditional sections",
+    "renderingPipeline": "adaptive-cards-templating",
+    "renderingNotes": "This card uses ${variable} placeholders rendered via the Adaptive Cards Templating SDK. Do not mix with {{variable}} string-replacement syntax used by alert/exception cards.",
     "templateVariables": [
       "status_icon",
       "status_text",
@@ -323,23 +325,22 @@
       "agent_details_url",
       "compliance_report_url"
     ],
-    "templateSyntax": "{{variable}} — replaced via string substitution in workflow Compose actions (not Adaptive Cards Templating SDK). Boolean properties (isVisible) use unquoted {{variable}} placeholders to ensure correct JSON boolean output after substitution.",
     "usageExamples": {
       "success": {
         "status_icon": "✅",
         "status_text": "APPROVED & REMEDIATED",
         "header_style": "good",
         "approval_decision": "APPROVED",
-        "show_decision_notes": false,
-        "show_remediation_result": true,
+        "show_decision_notes": "false",
+        "show_remediation_result": "true",
         "remediation_status_text": "✅ Remediation executed successfully",
         "remediation_status_color": "Good",
-        "remediation_details": "✅ Replaced 5 principals with 2 approved security groups\\n✅ BAP API PATCH completed successfully",
-        "show_current_access": true,
-        "show_error_details": false,
+        "remediation_details": "✅ Replaced 5 principals with 2 approved security groups\\n✅ Post-remediation validation: PASSED",
+        "show_current_access": "true",
+        "show_error_details": "false",
         "next_steps_text": "Agent is now compliant. Sharing access restricted to approved security groups per zone policy.",
         "compliance_status": "COMPLIANT",
-        "show_action_buttons": true
+        "show_action_buttons": "true"
       },
       "rejected": {
         "status_icon": "❌",
@@ -347,31 +348,31 @@
         "header_style": "attention",
         "approval_decision": "REJECTED",
         "decision_notes": "Agent still in active use by legacy team, postpone remediation until migration complete",
-        "show_decision_notes": true,
-        "show_remediation_result": false,
-        "show_current_access": false,
-        "show_error_details": false,
+        "show_decision_notes": "true",
+        "show_remediation_result": "false",
+        "show_current_access": "false",
+        "show_error_details": "false",
         "next_steps_text": "Agent remains non-compliant and will appear in next scheduled approval run (24 hours). Consider granting time-bound exception if remediation not feasible.",
         "compliance_status": "NON-COMPLIANT",
-        "show_action_buttons": true
+        "show_action_buttons": "true"
       },
       "error": {
         "status_icon": "⚠️",
         "status_text": "APPROVED — REMEDIATION FAILED",
         "header_style": "warning",
         "approval_decision": "APPROVED",
-        "show_decision_notes": false,
-        "show_remediation_result": true,
+        "show_decision_notes": "false",
+        "show_remediation_result": "true",
         "remediation_status_text": "⚠️ Remediation failed",
         "remediation_status_color": "Attention",
         "remediation_details": "Failed to apply sharing restrictions due to API error. Manual intervention required.",
-        "show_current_access": false,
-        "show_error_details": true,
+        "show_current_access": "false",
+        "show_error_details": "true",
         "error_message": "HTTP 403 Forbidden - Managed Identity lacks Power Platform Administrator role assignment",
         "error_code": "403",
         "next_steps_text": "Verify Managed Identity has Power Platform Administrator role. Retry remediation after role assignment. Contact governance team if issue persists.",
         "compliance_status": "ERROR",
-        "show_action_buttons": true
+        "show_action_buttons": "true"
       }
     }
   }

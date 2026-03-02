@@ -36,7 +36,7 @@ CONNECTION_REFS = [
     {
         "logical_name": "fsi_cr_powerplatformadmin_sharingdetector",
         "display_name": "Power Platform for Admins - UASD",
-        "connector": "shared_powerplatformforadmins",
+        "connector": "shared_powerappsforadmins",
         "description": "Power Platform for Admins connector for environment and agent discovery",
     },
 ]
@@ -63,7 +63,7 @@ def create_connection_references(client: DataverseClient, dry_run: bool = False)
             if not dry_run and not client.dry_run:
                 existing = client.query(
                     "connectionreferences",
-                    filter_expr=f"connectionreferencelogicalname eq '{logical_name.replace(chr(39), chr(39)*2)}'"
+                    filter_expr=f"connectionreferencelogicalname eq '{logical_name}'"
                 )
                 if existing:
                     print(f"  {logical_name}: already exists, skipping")
@@ -129,8 +129,7 @@ Examples:
   python create_uasd_connection_references.py \\
       --tenant-id <tenant-id> \\
       --environment-url https://org.crm.dynamics.com \\
-      --client-id <app-id> \\
-      --client-secret <secret>
+      --client-id <app-id>
 
   # Dry run to preview changes
   python create_uasd_connection_references.py \\
@@ -150,11 +149,6 @@ Examples:
         "--client-id",
         default=os.environ.get("UASD_CLIENT_ID"),
         help="Service Principal application ID (or UASD_CLIENT_ID env var)"
-    )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("UASD_CLIENT_SECRET"),
-        help="Service Principal client secret (or UASD_CLIENT_SECRET env var)"
     )
     parser.add_argument(
         "--environment-url",
@@ -179,7 +173,7 @@ Examples:
         parser.error("--tenant-id and --environment-url are required")
 
     # Handle client secret for Service Principal auth
-    client_secret = args.client_secret
+    client_secret = os.environ.get("UASD_CLIENT_SECRET")
     if not args.interactive and not client_secret:
         if args.client_id:
             import getpass

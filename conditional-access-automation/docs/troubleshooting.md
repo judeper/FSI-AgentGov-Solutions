@@ -388,11 +388,14 @@ Get-MgIdentityConditionalAccessPolicy |
 
 ### Restore from Baseline
 
+Restore CA policies from a previously exported baseline by re-deploying:
+
 ```powershell
-.\scripts\Restore-PolicyBaseline.ps1 `
+.\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline" `
-    -Confirm
+    -ConfigPath "./config/tenant-config.json" `
+    -TemplateSet "All" `
+    -EnablePolicies $true
 ```
 
 ---
@@ -403,7 +406,14 @@ If issues persist:
 
 1. Collect diagnostic information:
 ```powershell
-.\scripts\Export-Diagnostics.ps1 -OutputPath "./diagnostics"
+# Gather CA policy state
+Get-MgIdentityConditionalAccessPolicy |
+    Where-Object { $_.DisplayName -like "CA-*" } |
+    Select-Object DisplayName, State, Id |
+    ConvertTo-Json -Depth 5 | Out-File "./diagnostics/ca-policies.json"
+
+# Check Graph API connectivity
+Get-MgContext | Select-Object Account, TenantId, Scopes
 ```
 
 2. Check Microsoft service health:

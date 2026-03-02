@@ -22,7 +22,7 @@
         "description": "Short name for the Action Group (max 12 characters, used in SMS/email notifications)"
       }
     },
-    "emailAddress": {
+    "emailAddressZone1": {
       "type": "string",
       "metadata": {
         "description": "Email address for Zone 1 alert notifications (provides audit trail)"
@@ -53,7 +53,7 @@
         "emailReceivers": [
           {
             "name": "Zone 1 General Ops",
-            "emailAddress": "[parameters('emailAddress')]",
+            "emailAddress": "[parameters('emailAddressZone1')]",
             "useCommonAlertSchema": true
           }
         ],

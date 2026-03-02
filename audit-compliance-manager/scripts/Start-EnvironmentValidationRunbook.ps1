@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -100,14 +100,14 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$ClientId,
 
     [Parameter(Mandatory = $false)]
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [SecureString]$ClientSecret,
+    [string]$ClientSecret,
 
     [Parameter(Mandatory = $false)]
     [switch]$IncludeTrialDev,
@@ -148,7 +148,8 @@ try {
     if ($CertificateThumbprint) { $envParams.CertificateThumbprint = $CertificateThumbprint }
 
     if ($ClientSecret) {
-        $envParams.ClientSecret = $ClientSecret
+        # Convert plain text secret to SecureString
+        $envParams.ClientSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
     }
 
     if ($IncludeTrialDev) { $envParams.IncludeTrialDev = $true }
@@ -156,7 +157,7 @@ try {
 
     Write-Verbose "Invoking Invoke-EnvironmentAuditValidation with parameters: $($envParams.Keys -join ', ')"
 
-    # Execute environment validation orchestrator (invoke as script, not dot-sourced)
+    # Execute environment validation orchestrator
     $validationResults = & "$scriptRoot\Invoke-EnvironmentAuditValidation.ps1" @envParams
 
     Write-Verbose "Validation complete. Total environments: $($validationResults.TotalEnvironments)"
@@ -173,10 +174,7 @@ try {
 
     if ($CertificateThumbprint) {
         # Certificate authentication
-        $cert = Get-ChildItem Cert: -Recurse | Where-Object Thumbprint -eq $CertificateThumbprint | Select-Object -First 1
-        if (-not $cert) {
-            throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
-        }
+        $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
         Write-Verbose "Certificate found: $($cert.Subject)"
 
         $tokenResult = Get-MsalToken `
@@ -188,9 +186,11 @@ try {
     }
     elseif ($ClientSecret) {
         # Client secret authentication
+        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+
         $tokenResult = Get-MsalToken `
             -ClientId $ClientId `
-            -ClientSecret $ClientSecret `
+            -ClientSecret $secureSecret `
             -TenantId $TenantId `
             -Scopes $dataverseScope `
             -ErrorAction Stop
@@ -239,7 +239,6 @@ try {
     }
 
     # Build output object with drift info and aggregated alerts
-    $perEnvResults = if ($validationResults.PerEnvironmentResults) { $validationResults.PerEnvironmentResults } else { @() }
     $output = [PSCustomObject]@{
         RunType                 = "EnvironmentValidation"
         RunId                   = $validationResults.RunId
@@ -250,7 +249,7 @@ try {
         NewEnvironments         = $validationResults.NewEnvironments
         SkippedUnclassified     = $validationResults.SkippedUnclassified
         SkippedTrialDev         = $validationResults.SkippedTrialDev
-        AlertsRequired          = @($perEnvResults | Where-Object { $_.AlertRequired })
+        AlertsRequired          = @($validationResults.PerEnvironmentResults | Where-Object { $_.AlertRequired })
     }
 
     Write-Verbose "Alerts required for $($output.AlertsRequired.Count) environment(s)"

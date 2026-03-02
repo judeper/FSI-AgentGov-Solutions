@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -160,13 +160,4 @@ function New-CanaryEvent {
     }
 }
 
-# Execute if script is run directly (not dot-sourced)
-if ($MyInvocation.InvocationName -ne '.') {
-    $result = New-CanaryEvent @PSBoundParameters
-    return $result
-}
-
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function New-CanaryEvent
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

@@ -41,7 +41,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Gap | Resolution |
 |---------|-----|------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Telemetry available; KQL queries needed for governance evidence extraction | Coming in Phase 2: KQL Query Library |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Telemetry available; KQL queries needed for governance evidence extraction | Delivered in v1.1.0: KQL Query Library (see queries/) |
 
 ---
 
@@ -66,11 +66,11 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Gap | Resolution |
 |---------|-----|------------|
-| [3.1 - Operational Dashboards](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Workspace foundation established; visualization needed | Coming in Phase 3: Azure Monitor Workbooks |
+| [3.1 - Operational Dashboards](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Workspace foundation established; visualization needed | Delivered in v1.1.0: Azure Monitor Workbooks (see workbooks/) |
 
 ---
 
-### Azure Blob Storage (StorageV2) Export
+### ADLS Gen2 Storage Export
 
 **Description:** StorageV2 storage account (hierarchical namespace disabled) receiving Diagnostic Settings exports with WORM policy capability for immutable archival.
 
@@ -150,11 +150,11 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-## Delivered in v1.1.0
+## Delivered Phases
 
-### KQL Query Library
+### Phase 2: KQL Query Library (Delivered in v1.1.0)
 
-**Artifacts:** GOV-01 (Governance Evidence KQL), GOV-02 (Performance KQL), GOV-03 (Compliance KQL) — 14 production queries
+**Artifacts:** 14 production KQL queries across 5 categories (compliance, performance, usage-analytics, error-categorization, sr11-7-model-risk)
 
 **Provides evidence for:**
 
@@ -167,9 +167,9 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-### Workbooks and Alerts
+### Phase 3: Workbooks and Alerts (Delivered in v1.1.0)
 
-**Artifacts:** Operational Health Workbook, Error Diagnostics Workbook, Usage Overview Workbook, ALRT-01 through ALRT-03 (Alert Rules)
+**Artifacts:** 3 Azure Monitor Workbooks (Operational Health, Error Diagnostics, Usage Overview), 3 Alert Rules (ALRT-01 through ALRT-03), 3 Zone-specific Action Groups
 
 **Provides evidence for:**
 
@@ -180,11 +180,9 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-## Future Phase Placeholders
+### Phase 4: Power BI and Viva Insights (Coming)
 
-### Power BI and Viva Insights
-
-**Artifacts:** PBI-01 (Executive Dashboard), PBI-02 (Compliance Report)
+**Artifacts:** PBI-01 (Executive Dashboard), PBI-02 (Compliance Report), VIVA-01 (Adoption Metrics), VIVA-02 (Productivity Correlation)
 
 **Will provide evidence for:**
 
@@ -193,16 +191,14 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | [3.1 - Agent Inventory and Metadata Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Executive-level inventory visualization |
 | [3.2 - Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Cross-agent usage comparison and business correlation |
 
-> **VIVA-01 and VIVA-02 replaced by Copilot Studio Analytics:** The previously planned Viva Insights adoption metrics (VIVA-01) and productivity correlation (VIVA-02) artifacts are now provided by the [Copilot Studio Analytics](../copilot-studio-analytics/) solution. CSA delivers Viva Insights-equivalent business impact analytics (session outcomes, CSAT, Agent Assisted Hours, ROI) for organizations without Viva Insights licenses. See the [CSA parity matrix](../copilot-studio-analytics/docs/viva-insights-parity-matrix.md) for detailed feature comparison.
-
 ---
 
 ## Regulatory Cross-Reference
 
 | Regulation | Requirement | Phase 1 Coverage | Future Phase |
 |------------|-------------|------------------|--------------|
-| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + Azure Blob Storage (StorageV2) with WORM capability | Phase 5: Validation testing |
-| **FINRA 4511** | 6-year record retention | Azure Blob Storage (StorageV2) with WORM policy | Phase 2: Audit trail KQL queries |
+| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + ADLS Gen2 with WORM capability | Phase 5: Validation testing |
+| **FINRA 4511** | 6-year record retention | ADLS Gen2 with WORM policy | Phase 2: Audit trail KQL queries |
 | **FINRA 3110** | Supervisory procedures | Telemetry foundation | Phase 2: Decision audit KQL queries |
 | **SOX 302/404** | Internal controls evidence | RBAC separation + immutable storage | Phase 2: Control evidence collection |
 | **SR 11-7** | Model risk management and ongoing monitoring | Performance telemetry foundation | Phase 2: Risk monitoring KQL queries |
@@ -217,7 +213,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | 1.3 | SharePoint Content Governance | PII Sanitization Guidance | Primary |
 | 1.4 | Advanced Connector Policies | RBAC Separation | Supporting |
 | 1.6 | DSPM for AI | RBAC Separation, Log Analytics, PII Guidance | Primary + Supporting |
-| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, Azure Blob Storage (StorageV2) | Primary |
+| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, ADLS Gen2 | Primary |
 | 2.6 | Model Risk Management | App Insights (telemetry available) | Partial |
 | 2.8 | Access Control and Segregation of Duties | RBAC Separation | Supporting |
 | 2.9 | Agent Performance Monitoring | App Insights, Sampling Configuration | Primary + Supporting |
@@ -226,5 +222,5 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-*Governance Mapping version: 0.1.0*
+*Governance Mapping version: 1.1.0*
 *Last updated: February 2026*

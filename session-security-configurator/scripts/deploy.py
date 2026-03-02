@@ -276,7 +276,7 @@ Environment Variables (optional):
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("SSC_CLIENT_SECRET"),
-        help="Service Principal client secret (or SSC_CLIENT_SECRET env var)"
+        help="Service Principal client secret (or SSC_CLIENT_SECRET env var). WARNING: Prefer SSC_CLIENT_SECRET env var to avoid exposing secrets in process lists and shell history"
     )
     parser.add_argument(
         "--environment-url",
@@ -323,8 +323,8 @@ Environment Variables (optional):
         parser.error("--tenant-id and --environment-url are required")
 
     # Validate authentication method
-    if not args.client_id:
-        parser.error("--client-id is required for all authentication modes (interactive and service principal)")
+    if not args.interactive and not args.client_id:
+        parser.error("Must specify either --interactive or --client-id for authentication")
 
     # Validate mutual exclusivity of selective deployment flags
     selective_flags = [args.tables_only, args.vars_only, args.refs_only]

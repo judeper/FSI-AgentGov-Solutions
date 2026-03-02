@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -165,8 +165,8 @@ Write-Host ""
 # Dot-source required helper scripts
 $scriptRoot = $PSScriptRoot
 try {
-    . "$scriptRoot/private/Connect-PowerPlatform.ps1"
-    . "$scriptRoot/private/Get-ValidationResults.ps1"
+    . "$scriptRoot\private\Connect-PowerPlatform.ps1"
+    . "$scriptRoot\private\Get-ValidationResults.ps1"
 }
 catch {
     Write-Error "Failed to load helper scripts: $($_.Exception.Message)"
@@ -263,11 +263,11 @@ Write-Host "Building evidence package..." -ForegroundColor Cyan
 
 # Map option set numeric values back to string names for readability
 $severityMap = @{
-    100000000 = "Passed"
-    100000001 = "Warning"
-    100000002 = "GracePeriod"
-    100000003 = "Failed"
-    100000004 = "Error"
+    1 = "Passed"
+    2 = "Warning"
+    3 = "GracePeriod"
+    4 = "Failed"
+    5 = "Error"
 }
 
 $scopeMap = @{
@@ -276,10 +276,10 @@ $scopeMap = @{
 }
 
 $zoneMap = @{
-    100000000 = "Unclassified"
-    100000001 = "Zone1"
-    100000002 = "Zone2"
-    100000003 = "Zone3"
+    0 = "Unclassified"
+    1 = "Zone1"
+    2 = "Zone2"
+    3 = "Zone3"
 }
 
 # Convert option set values to readable strings
@@ -290,7 +290,7 @@ $validationsReadable = $validations | ForEach-Object {
         scope            = if ($scopeMap.ContainsKey($_.fsi_scope)) { $scopeMap[$_.fsi_scope] } else { $_.fsi_scope }
         environmentId    = $_.fsi_environmentid
         environmentName  = $_.fsi_environmentname
-        zone             = if ($null -ne $_.fsi_zone -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
+        zone             = if ($_.fsi_zone -ne $null -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
         severity         = if ($severityMap.ContainsKey($_.fsi_severity)) { $severityMap[$_.fsi_severity] } else { $_.fsi_severity }
         validationType   = $_.fsi_validationtype
         rawValue         = $_.fsi_rawvalue

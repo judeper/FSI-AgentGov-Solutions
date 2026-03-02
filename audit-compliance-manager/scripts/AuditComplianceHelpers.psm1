@@ -46,8 +46,7 @@ function Invoke-WithRetry {
         Executes a script block with exponential backoff and jitter for transient errors.
 
     .DESCRIPTION
-        Retries on HTTP 429 (throttled), 500 (internal server error), 502 (bad gateway),
-        503 (service unavailable), and 504 (gateway timeout).
+        Retries on HTTP 429 (throttled), 503 (service unavailable), and 504 (gateway timeout).
         Uses exponential backoff with random jitter to avoid thundering herd.
         Non-retryable errors (4xx except 429) are thrown immediately.
 
@@ -90,7 +89,7 @@ function Invoke-WithRetry {
         [string]$OperationName = "Operation"
     )
 
-    $retryableStatusCodes = @(429, 500, 502, 503, 504)
+    $retryableStatusCodes = @(429, 503, 504)
     $attempt = 0
 
     while ($true) {
@@ -106,7 +105,7 @@ function Invoke-WithRetry {
             if ($_.Exception.Response) {
                 $statusCode = [int]$_.Exception.Response.StatusCode
             }
-            elseif ($_.Exception.Message -match '\b(4\d{2}|5\d{2})\b') {
+            elseif ($_.Exception.Message -match '\b([4-5]\d{2})\b') {
                 $candidateCode = [int]$Matches[1]
                 if ($candidateCode -ge 400 -and $candidateCode -le 599) {
                     $statusCode = $candidateCode
@@ -431,12 +430,11 @@ function Write-DataverseComplianceRecord {
         $record.fsi_lasteventcaptured = $LastEventCaptured.ToUniversalTime().ToString("o")
     }
 
-    # Use Dataverse alternate key upsert (atomic create-or-update, no race condition)
-    $safeEnvironmentId = $EnvironmentId -replace "'", "''"
-    $upsertUri = "/api/data/v9.2/fsi_auditenvironmentcompliances(fsi_environmentid='$safeEnvironmentId')"
+    # Upsert compliance record using Dataverse alternate key on fsi_environmentid
+    $upsertUri = "/api/data/v9.2/fsi_auditenvironmentcompliances(fsi_environmentid='$EnvironmentId')"
 
     try {
-        Write-Verbose "Upserting compliance record for environment $EnvironmentId via alternate key"
+        Write-Verbose "Upserting compliance record for environment $EnvironmentId"
         $result = Invoke-DataverseRequest -EnvironmentUrl $EnvironmentUrl -RelativeUri $upsertUri -Token $Token -Method PATCH -Body $record
 
         return $result

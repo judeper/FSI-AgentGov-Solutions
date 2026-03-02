@@ -42,22 +42,29 @@ param(
     [string]$ContentModerationLevel = 'Unknown',
 
     [Parameter()]
-    [string]$BaselinePath
+    [string]$BaselinePath,
+
+    [Parameter()]
+    [object]$Baseline
 )
 
 #region Load Baseline
 
-if (-not $BaselinePath) {
-    $BaselinePath = Join-Path $PSScriptRoot '..' '..' 'templates' 'fileupload-baseline.json'
+if ($Baseline) {
+    $baseline = $Baseline
+} else {
+    if (-not $BaselinePath) {
+        $BaselinePath = Join-Path $PSScriptRoot '..' '..' 'templates' 'fileupload-baseline.json'
+    }
+
+    $resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BaselinePath)
+
+    if (-not (Test-Path $resolvedPath)) {
+        throw "Baseline file not found: $resolvedPath"
+    }
+
+    $baseline = Get-Content $resolvedPath -Raw | ConvertFrom-Json
 }
-
-$resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BaselinePath)
-
-if (-not (Test-Path $resolvedPath)) {
-    throw "Baseline file not found: $resolvedPath"
-}
-
-$baseline = Get-Content $resolvedPath -Raw | ConvertFrom-Json
 
 #endregion
 
@@ -87,16 +94,33 @@ function Test-ModerationSufficient {
 # Normalize zone name for baseline lookup
 $zoneKey = switch ($Zone) {
     'Zone1'  { 'Zone 1' }
-    'Zone2'  { 'Zone 2' }
-    'Zone3'  { 'Zone 3' }
     'Zone 1' { 'Zone 1' }
+    'Zone2'  { 'Zone 2' }
     'Zone 2' { 'Zone 2' }
+    'Zone3'  { 'Zone 3' }
     'Zone 3' { 'Zone 3' }
     default  { $null }
 }
 
 # Handle unknown zone
-if (-not $zoneKey -or $zoneKey -notin $baseline.zoneRequirements.PSObject.Properties.Name) {
+if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name -contains $zoneKey)) {
+    # $null FileUploadEnabled = indeterminate; fail closed per FUSClient.psm1 contract
+    if ($null -eq $FileUploadEnabled) {
+        return [PSCustomObject]@{
+            Zone                    = $Zone
+            ExpectedFileUpload      = 'Review Required'
+            ActualFileUpload        = 'Indeterminate'
+            ExpectedModeration      = 'Unknown'
+            ActualModeration        = $ContentModerationLevel
+            IsCompliant             = $false
+            FileUploadCompliant     = $false
+            ModerationCompliant     = $false
+            Severity                = 'Medium'
+            ViolationType           = 'Unknown_Zone_IndeterminateFileUpload'
+            RegulatoryContext       = 'FINRA 4511 — File upload status could not be determined for agent in unclassified environment; manual review required'
+        }
+    }
+
     # Unknown zone with file uploads enabled is Medium severity
     if ($FileUploadEnabled -eq $true) {
         return [PSCustomObject]@{
@@ -130,6 +154,24 @@ if (-not $zoneKey -or $zoneKey -notin $baseline.zoneRequirements.PSObject.Proper
 }
 
 $zonePolicy = $baseline.zoneRequirements.$zoneKey
+
+# Handle indeterminate file upload status — fail closed
+if ($null -eq $FileUploadEnabled) {
+    return [PSCustomObject]@{
+        Zone                    = $Zone
+        ExpectedFileUpload      = if ($zonePolicy.fileUploadAllowed) { 'Allowed' } else { 'Disabled' }
+        ActualFileUpload        = 'Indeterminate'
+        ExpectedModeration      = $zonePolicy.minimumModerationLevel
+        ActualModeration        = $ContentModerationLevel
+        IsCompliant             = $false
+        FileUploadCompliant     = $false
+        ModerationCompliant     = $false
+        Severity                = 'High'
+        ViolationType           = "${zoneKey}_IndeterminateFileUpload" -replace ' ', ''
+        RegulatoryContext       = "FINRA 4511 — File upload status could not be determined for agent in $zoneKey; configuration may be missing or unparseable. Manual review required."
+    }
+}
+
 $isFileUploadEnabled = $FileUploadEnabled -eq $true
 
 # Determine file upload compliance
@@ -163,19 +205,14 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $severity = 'High'
         $violationType = 'Zone2_FileUploadEnabled_InsufficientModeration'
         $regulatoryContext = "FINRA 4511, SEC 17a-3 — File upload enabled in $($zoneKey) (Team Collaboration) without $($zonePolicy.minimumModerationLevel) content moderation minimum; user-uploaded content requires elevated content controls"
-    } else {
-        # Moderation is sufficient but approval cannot be verified programmatically
-        $severity = 'Info'
-        $violationType = 'Zone2_FileUploadEnabled_NoApproval'
-        $regulatoryContext = "FINRA 4511, GLBA 501(b) — File upload enabled in $($zoneKey) (Team Collaboration) with sufficient moderation, but governance approval status cannot be verified programmatically; manual review recommended"
-        $fileUploadCompliant = $false
     }
+    # Note: approval status cannot be verified programmatically — flagged for governance review
 } elseif ($isFileUploadEnabled -and $zoneKey -eq 'Zone 1') {
     # Zone 1: allowed, but check minimum moderation
     $moderationSufficient = Test-ModerationSufficient -Actual $ContentModerationLevel -Required $zonePolicy.minimumModerationLevel
-    if (-not $moderationSufficient -and $ContentModerationLevel -eq 'Unknown') {
+    if (-not $moderationSufficient) {
         $moderationCompliant = $false
-        $severity = 'Low'
+        $severity = 'Warning'
         $violationType = 'Zone1_NoModeration'
         $regulatoryContext = "FINRA 25-07 — File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
     }

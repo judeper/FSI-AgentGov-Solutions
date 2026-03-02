@@ -122,11 +122,13 @@ if (-not (Test-Path $TemplatePath)) {
 }
 
 $templateContent = Get-Content $TemplatePath -Raw | ConvertFrom-Json
-if (-not $templateContent.authenticationContexts) {
-    throw "Invalid template: Missing 'authenticationContexts' property"
+if ($templateContent -is [System.Array]) {
+    $authContexts = $templateContent
+} elseif ($templateContent.authenticationContexts) {
+    $authContexts = $templateContent.authenticationContexts
+} else {
+    throw "Invalid template: Expected JSON array or object with 'authenticationContexts'"
 }
-
-$authContexts = $templateContent.authenticationContexts
 Write-Host "Loaded $($authContexts.Count) authentication context definitions." -ForegroundColor Green
 
 # Apply ID prefix remapping if specified

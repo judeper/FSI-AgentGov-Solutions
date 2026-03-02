@@ -30,13 +30,16 @@
 |--------|------|----------|-------------|
 | `fsi_run_id` | String(100) | Yes | Unique validation run identifier |
 | `fsi_run_timestamp` | DateTime | No | When the scan ran |
+| `fsi_validation_time` | DateTime | No | Validation completion time (written by flow and FUSClient) |
 | `fsi_total_agents` | Integer | No | Total agents scanned |
 | `fsi_compliant_count` | Integer | No | Agents passing validation |
 | `fsi_violation_count` | Integer | No | Agents with violations |
 | `fsi_file_upload_enabled_count` | Integer | No | Agents with file uploads enabled |
+| `fsi_overall_status` | String(50) | No | Overall validation status (Passed/Warning/Failed/Error) |
 | `fsi_compliance_rate` | Decimal(2) | No | Compliance percentage (0-100) |
 | `fsi_environments_scanned` | Integer | No | Number of environments scanned |
 | `fsi_scan_duration_seconds` | Integer | No | Scan duration in seconds |
+| `fsi_summary_json` | Memo(10000) | No | Full validation result as JSON |
 | `fsi_notes` | Memo(10000) | No | Run notes |
 
 ### fsi_fileupload_violation
@@ -52,7 +55,7 @@
 | `fsi_environment_name` | String(500) | No | Environment display name |
 | `fsi_zone` | Picklist | No | Governance zone |
 | `fsi_severity` | Picklist | No | Violation severity (fsi_acv_severity) |
-| `fsi_violation_type` | String(100) | No | Type: Zone3_FileUploadEnabled_NoApproval, Zone3_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_NoApproval, Zone2_FileUploadEnabled_InsufficientModeration, Zone1_NoModeration, Unknown_Zone_FileUploadEnabled, EvaluationFailed |
+| `fsi_violation_type` | String(100) | No | Type: Zone3_FileUploadEnabled_NoApproval, Zone3_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_NoApproval, Unknown_Zone_FileUploadEnabled, Zone1_NoModeration, EvaluationFailed |
 | `fsi_file_upload_expected` | Boolean | No | Expected file upload status per zone |
 | `fsi_file_upload_actual` | Boolean | No | Actual file upload status |
 | `fsi_content_moderation_level` | String(50) | No | Current moderation level |
@@ -90,7 +93,7 @@ These option sets are shared across ACV/SSC/AAM/CMM/FUS solutions:
 
 | Schema Name | Type | Default | Description |
 |-------------|------|---------|-------------|
-| `fsi_FUS_GracePeriodHours` | Decimal | 24 | Hours before drift violations are raised |
+| `fsi_FUS_GracePeriodHours` | Decimal | 24 | Hours before drift violations are raised. Note: Dataverse env var default is 24; PowerShell scripts default to 48 if env var is not set. The Dataverse value takes precedence at runtime. |
 | `fsi_FUS_ScanFrequencyHours` | Decimal | 24 | Automated scan interval |
 | `fsi_FUS_IncludeSandbox` | String | false | Include sandbox environments |
 | `fsi_FUS_IncludeDrafts` | String | false | Include draft agents |
@@ -105,7 +108,7 @@ These option sets are shared across ACV/SSC/AAM/CMM/FUS solutions:
 | `fsi_cr_dataverse_fileuploadsecurity` | Dataverse | Baseline/violation storage |
 | `fsi_cr_office365_fileuploadsecurity` | Office 365 | Email notifications |
 | `fsi_cr_teams_fileuploadsecurity` | Teams | Adaptive card alerts |
-| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation | Runbook execution |
+| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation | Runbook trigger and monitoring |
 
 ---
 

@@ -14,7 +14,7 @@
 
 .NOTES
     File: Get-AgentModerationSettings.ps1
-    Version: 1.0.1
+    Version: 1.0.0
     Solution: Content Moderation Monitor (v7)
 #>
 
@@ -336,11 +336,13 @@ function Get-AgentModerationSettings {
         Write-Verbose "Found $($bots.Count) agent(s) in: $envName"
 
         # Get zone classification for this environment
-        $zone = & (Join-Path $privateRoot 'Get-ZoneClassification.ps1') `
+        $zoneResult = & (Join-Path $privateRoot 'Get-ZoneClassification.ps1') `
             -EnvironmentId $envId `
             -EnvironmentDisplayName $envName `
             -DataverseUrl $DataverseUrl `
             -AccessToken $elmToken
+        # Extract Zone string from PSCustomObject returned by Get-ZoneClassification.ps1
+        $zone = if ($zoneResult -is [PSCustomObject] -and $zoneResult.Zone) { $zoneResult.Zone } else { "$zoneResult" }
 
         Write-Verbose "Zone classification for $envName`: $zone"
 

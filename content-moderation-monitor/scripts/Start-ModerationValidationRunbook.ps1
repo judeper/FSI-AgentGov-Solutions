@@ -73,21 +73,19 @@
 .OUTPUTS
     JSON object with properties:
     - RunType: "ModerationValidation"
-    - RunId: GUID string for run correlation
     - Timestamp: ISO 8601 UTC timestamp
     - TotalAgents: Count of scanned agents
     - TotalEnvironments: Count of scanned environments
-    - EnvironmentNames: Comma-separated string of scanned environment display names
-    - OverallStatus: Passed | Critical | Failed | Review | Error
+    - OverallStatus: Passed | Warning | Failed | Error
     - Reason: Summary explanation
-    - ZoneSummary: Hashtable with Zone1/Zone2/Zone3/Unknown sub-objects { Total, Compliant, Violations }
+    - ZoneSummary: Hashtable with Zone1/Zone2/Zone3 sub-objects { Total, Compliant, Violations }
     - Violations: Array of violation details
     - Drift: Object with HasDrift, IsFirstRun, DriftedAgents, Details
     - AlertRequired: Boolean flag for flow routing
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.0.0
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -241,10 +239,8 @@ try {
     # Dot-source the script to load the function
     . $complianceScript
 
-    # Note: PersistResults is intentionally NOT set here. The Power Automate
-    # flow's Write_Validation_History action handles Dataverse persistence
-    # to avoid duplicate history records with uncorrelated run_ids.
     $scanParams = @{
+        PersistResults   = $true
         DataverseUrl     = $DataverseUrl
         DataverseToken   = $dataverseToken
         OutputFormat     = 'Object'
@@ -268,8 +264,6 @@ try {
     # Calculate summary from scan results
     $totalAgents = $scanResult.Count
     $uniqueEnvs = ($scanResult | Select-Object -Property EnvironmentId -Unique).Count
-    $environmentNameList = ($scanResult | Select-Object -Property EnvironmentDisplayName -Unique |
-        ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
     $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
@@ -282,11 +276,11 @@ try {
 
     $overallStatus = 'Passed'
     if ($criticalCount -gt 0) {
-        $overallStatus = 'Critical'
+        $overallStatus = 'Failed'
     } elseif ($highCount -gt 0) {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $violationCount -gt 0) {
-        $overallStatus = 'Review'
+        $overallStatus = 'Warning'
     }
 
     Write-Verbose "Scan complete. Overall status: $overallStatus"
@@ -411,8 +405,9 @@ try {
     #region Determine alert flags
 
     $hasViolations = $violations.Count -gt 0
+    $hasCriticalOrHigh = @($violations | Where-Object { $_.Severity -eq 'Critical' -or $_.Severity -eq 'High' }).Count -gt 0
     $hasWeakenedDrift = @($driftedAgents | Where-Object { $_.Direction -eq 'Weakened' }).Count -gt 0
-    $alertRequired = $hasViolations -or $hasWeakenedDrift
+    $alertRequired = $hasCriticalOrHigh -or $hasWeakenedDrift
 
     # Highest severity from violations (Critical > High > Medium > Warning > Info)
     $severityOrder = @('Critical', 'High', 'Medium', 'Warning', 'Info')
@@ -435,11 +430,10 @@ try {
 
     # Build reason string
     $reason = switch ($overallStatus) {
-        'Passed'   { "All $totalAgents agents across $uniqueEnvs environments compliant" }
-        'Review'   { "$violationCount violation(s) detected across $uniqueEnvs environments" }
-        'Failed'   { "$violationCount violation(s) detected including high severity" }
-        'Critical' { "$violationCount violation(s) detected including critical severity" }
-        default    { "Validation completed with status: $overallStatus" }
+        'Passed'  { "All $totalAgents agents across $uniqueEnvs environments compliant" }
+        'Warning' { "$violationCount violation(s) detected across $uniqueEnvs environments" }
+        'Failed'  { "$violationCount violation(s) detected including high/critical severity" }
+        default   { "Validation completed with status: $overallStatus" }
     }
 
     if ($hasDrift) {
@@ -458,7 +452,7 @@ try {
         $zoneKey = $agent.Zone
         if ($zoneKey -and $zoneTotals.ContainsKey($zoneKey)) {
             $zoneTotals[$zoneKey]++
-        } else {
+        } elseif (-not $zoneKey -or -not $zoneTotals.ContainsKey($zoneKey)) {
             $zoneTotals['Unknown']++
         }
     }
@@ -467,7 +461,7 @@ try {
         $zoneKey = $v.Zone
         if ($zoneKey -and $zoneViolations.ContainsKey($zoneKey)) {
             $zoneViolations[$zoneKey]++
-        } else {
+        } elseif (-not $zoneKey -or -not $zoneViolations.ContainsKey($zoneKey)) {
             $zoneViolations['Unknown']++
         }
     }
@@ -490,27 +484,23 @@ try {
 
     #region Build and emit output
 
-    $runId = [guid]::NewGuid().ToString()
-
     $output = [PSCustomObject]@{
-        RunType            = "ModerationValidation"
-        RunId              = $runId
-        Timestamp          = (Get-Date -AsUTC -Format "o")
-        TotalAgents        = $totalAgents
-        TotalEnvironments  = $uniqueEnvs
-        EnvironmentNames   = $environmentNameList
-        OverallStatus      = $overallStatus
-        Reason             = $reason
-        ZoneSummary        = [PSCustomObject]$enrichedZoneSummary
-        Violations         = $violations
-        Drift              = [PSCustomObject]@{
+        RunType           = "ModerationValidation"
+        Timestamp         = (Get-Date -AsUTC -Format "o")
+        TotalAgents       = $totalAgents
+        TotalEnvironments = $uniqueEnvs
+        OverallStatus     = $overallStatus
+        Reason            = $reason
+        ZoneSummary       = [PSCustomObject]$enrichedZoneSummary
+        Violations        = $violations
+        Drift             = [PSCustomObject]@{
             HasDrift      = $hasDrift
             IsFirstRun    = $globalIsFirstRun
             DriftedAgents = $driftedAgents.Count
             Details       = $driftDetails
         }
-        AlertRequired      = $alertRequired
-        AlertSeverity      = $alertSeverity
+        AlertRequired     = $alertRequired
+        AlertSeverity     = $alertSeverity
     }
 
     Write-Verbose "Alert required: $($output.AlertRequired)"
@@ -530,11 +520,9 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "ModerationValidation"
-        RunId             = [guid]::NewGuid().ToString()
         Timestamp         = (Get-Date -AsUTC -Format "o")
         TotalAgents       = 0
         TotalEnvironments = 0
-        EnvironmentNames  = ""
         OverallStatus     = "Error"
         Reason            = $_.Exception.Message
         ZoneSummary       = [PSCustomObject]@{}

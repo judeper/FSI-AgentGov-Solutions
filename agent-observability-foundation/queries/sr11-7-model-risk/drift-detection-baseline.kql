@@ -8,9 +8,11 @@
 //
 // Output Schema:
 //   Topic (string) - Topic/intent category
-//   BaselineCount (long) - Baseline period message count
-//   CurrentCount (long) - Current period message count
-//   DriftPercent (real) - Percentage change from baseline
+//   BaselineDailyRate (real) - Baseline period daily event rate (count / days)
+//   CurrentDailyRate (real) - Current period daily event rate (count / days)
+//   BaselineCount (long) - Baseline period raw message count
+//   CurrentCount (long) - Current period raw message count
+//   DriftPercent (real) - Percentage change in daily rate from baseline
 //   DriftDirection (string) - INCREASE or DECREASE
 //   InvestigationRequired (bool) - True if DriftPercent exceeds threshold
 //
@@ -22,11 +24,11 @@
 //   OCC 2011-12 - Trigger-based model revalidation
 //
 // Sample Output:
-// | Topic              | BaselineCount | CurrentCount | DriftPercent | DriftDirection | InvestigationRequired |
-// | LoanRecommendation | 1250          | 1875         | 50.0         | INCREASE       | true                  |
-// | AccountInquiry     | 3450          | 3105         | 10.0         | DECREASE       | false                 |
-// | InvestmentAdvice   | 890           | 1068         | 20.0         | INCREASE       | true                  |
-// | NewTopic           | 0             | 156          | 100.0        | INCREASE       | true                  |
+// | Topic              | BaselineDailyRate | CurrentDailyRate | BaselineCount | CurrentCount | DriftPercent | DriftDirection | InvestigationRequired |
+// | LoanRecommendation | 13.89             | 26.79            | 1250          | 1875         | 92.9         | INCREASE       | true                  |
+// | AccountInquiry     | 38.33             | 43.57            | 3450          | 3105         | 13.7         | INCREASE       | false                 |
+// | InvestmentAdvice   | 9.89              | 15.26            | 890           | 1068         | 54.3         | INCREASE       | true                  |
+// | NewTopic           | 0.0               | 22.29            | 0             | 156          | 100.0        | INCREASE       | true                  |
 //
 // Notes:
 //   - 20% drift threshold is configurable; higher-risk agents should use lower threshold (e.g., 10%)
@@ -46,23 +48,27 @@ let Baseline = customEvents
 | where timestamp between (BaselineStart .. BaselineEnd)
 | where name == "BotMessageSend"
 | extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
-| summarize BaselineCount = count() by Topic;
+| summarize BaselineCount = count() by Topic
+| extend BaselineDailyRate = round(todouble(BaselineCount) / BaselineDays, 2);
 
 let Current = customEvents
 | where timestamp > ago(1d * MonitoringDays)
 | where name == "BotMessageSend"
 | extend Topic = coalesce(tostring(customDimensions["TopicName"]), "Unknown")
-| summarize CurrentCount = count() by Topic;
+| summarize CurrentCount = count() by Topic
+| extend CurrentDailyRate = round(todouble(CurrentCount) / MonitoringDays, 2);
 
 Baseline
 | join kind=fullouter Current on Topic
 | extend Topic = coalesce(Topic, Topic1)
 | extend BaselineCount = coalesce(BaselineCount, 0)
 | extend CurrentCount = coalesce(CurrentCount, 0)
-| extend DriftPercent = iff(BaselineCount > 0,
-    round(abs(todouble(CurrentCount - BaselineCount)) / BaselineCount * 100, 1),
+| extend BaselineDailyRate = coalesce(BaselineDailyRate, 0.0)
+| extend CurrentDailyRate = coalesce(CurrentDailyRate, 0.0)
+| extend DriftPercent = iff(BaselineDailyRate > 0,
+    round(abs(CurrentDailyRate - BaselineDailyRate) / BaselineDailyRate * 100, 1),
     100.0)
-| extend DriftDirection = iff(CurrentCount > BaselineCount, "INCREASE", "DECREASE")
+| extend DriftDirection = iff(CurrentDailyRate > BaselineDailyRate, "INCREASE", "DECREASE")
 | extend InvestigationRequired = DriftPercent > DriftThreshold
-| project Topic, BaselineCount, CurrentCount, DriftPercent, DriftDirection, InvestigationRequired
+| project Topic, BaselineDailyRate, CurrentDailyRate, BaselineCount, CurrentCount, DriftPercent, DriftDirection, InvestigationRequired
 | order by DriftPercent desc

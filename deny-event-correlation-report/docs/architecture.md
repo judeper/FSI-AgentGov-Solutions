@@ -2,40 +2,40 @@
 
 ## Solution Overview
 
-The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from four Microsoft data sources, stores them in a centralized location, and supports visualization for daily operational reporting (Power BI template planned; use KQL queries in the interim).
+The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from three Microsoft data sources, stores them in a centralized location, and provides Power BI visualization for daily operational reporting.
 
 ## Data Flow
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                                   DATA SOURCES                                       │
-├──────────────────┬──────────────────┬──────────────────┬────────────────────────────-─┤
-│                  │                  │                  │                              │
-│  Purview Audit   │   Purview DLP    │ Application      │  Defender                    │
-│ (CopilotInter-   │  (DlpRuleMatch)  │ Insights         │  CloudAppEvents              │
-│   action)        │                  │ (ContentFiltered)│  (XPIA/Jailbreak)            │
-│                  │                  │                  │                              │
-└────────┬─────────┴────────┬─────────┴────────┬─────────┴──────────────┬───────────────┘
-         │                  │                  │                        │
-         │ Search-          │ Search-          │ REST API               │ Graph API
-         │ UnifiedAuditLog  │ UnifiedAuditLog  │ (KQL)                  │ (Adv. Hunting)
-         │                  │                  │                        │
-         ▼                  ▼                  ▼                        ▼
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                              EXTRACTION LAYER                                        │
-│                                                                                      │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐    │
-│  │ Export-Copilot  │ │ Export-Dlp      │ │ Export-Rai      │ │ Export-Defender  │    │
-│  │ DenyEvents.ps1  │ │ CopilotEvents   │ │ Telemetry.ps1   │ │ CopilotEvents   │    │
-│  │                 │ │ .ps1            │ │                 │ │ .ps1            │    │
-│  └────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘    │
-│           │                   │                   │                   │              │
-│           └───────────────────┼───────────────────┼───────────────────┘              │
-│                               │                   │                                  │
-│                    Invoke-DailyDenyReport.ps1                                        │
-│                       (Orchestration)                                                │
-│                               │                                                      │
-└───────────────────────────────┼──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        DATA SOURCES                                     │
+├─────────────────┬─────────────────┬─────────────────────────────────────┤
+│                 │                 │                                     │
+│  Purview Audit  │   Purview DLP   │      Application Insights           │
+│ (CopilotInter-  │  (DlpRuleMatch) │     (ContentFiltered)               │
+│   action)       │                 │                                     │
+│                 │                 │                                     │
+└────────┬────────┴────────┬────────┴──────────────┬──────────────────────┘
+         │                 │                       │
+         │ Search-         │ Search-               │ REST API
+         │ UnifiedAuditLog │ UnifiedAuditLog       │ (KQL)
+         │                 │                       │
+         ▼                 ▼                       ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     EXTRACTION LAYER                                    │
+│                                                                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+│  │ Export-Copilot  │  │ Export-Dlp      │  │ Export-Rai      │         │
+│  │ DenyEvents.ps1  │  │ CopilotEvents   │  │ Telemetry.ps1   │         │
+│  │                 │  │ .ps1            │  │                 │         │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘         │
+│           │                    │                    │                   │
+│           └────────────────────┼────────────────────┘                   │
+│                                │                                        │
+│                    Invoke-DailyDenyReport.ps1                           │
+│                       (Orchestration)                                   │
+│                                │                                        │
+└────────────────────────────────┼────────────────────────────────────────┘
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -49,8 +49,7 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 │  │  └── 2026-01-26/                                                 │   │
 │  │      ├── CopilotDenyEvents-2026-01-26.csv                       │   │
 │  │      ├── DlpCopilotEvents-2026-01-26.csv                        │   │
-│  │      ├── RaiTelemetry-2026-01-26.csv                            │   │
-│  │      └── DefenderCopilotEvents-2026-01-26.csv                   │   │
+│  │      └── RaiTelemetry-2026-01-26.csv                            │   │
 │  │                                                                  │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                         │
@@ -125,8 +124,7 @@ CloudAppEvents
 | `Export-CopilotDenyEvents.ps1` | Extract CopilotInteraction deny events | Search-UnifiedAuditLog |
 | `Export-DlpCopilotEvents.ps1` | Extract DLP matches for Copilot | Search-UnifiedAuditLog |
 | `Export-RaiTelemetry.ps1` | Extract RAI telemetry | Application Insights REST API |
-| `Export-DefenderCopilotEvents.ps1` | Extract XPIA/Jailbreak detections (orchestrated — opt-out via -SkipDefenderEvents; requires Defender for Cloud Apps) | Defender Advanced Hunting |
-| `Invoke-DailyDenyReport.ps1` | Orchestrate all extractions (Purview Audit, DLP, RAI, Defender via opt-out) | N/A |
+| `Invoke-DailyDenyReport.ps1` | Orchestrate all extractions | N/A |
 
 ### 3. Storage Layer
 
@@ -140,15 +138,15 @@ CloudAppEvents
 
 ### 4. Visualization Layer
 
-**Power BI Template** provides (planned — template not yet included in this repository; use `kql-queries/correlation-analysis.kql` for cross-source analysis in the interim):
+**Power BI Template** provides:
+
+> **Note:** The Power BI template (`.pbit`) is not included in this solution. Build a report in Power BI Desktop by connecting to your CSV exports or Log Analytics workspace using the queries in `kql-queries/correlation-analysis.kql`. The recommended report pages are:
 
 - Executive summary dashboard
 - Event detail drill-down
 - Multi-source correlation
 - Daily trend analysis
 - Alerting integration
-
-> **Note:** Use the KQL queries in `kql-queries/correlation-analysis.kql` for cross-source analysis until the Power BI template is available.
 
 ## Deployment Options
 
@@ -169,7 +167,7 @@ Task Scheduler
 ├── Task: Daily Deny Report
 ├── Trigger: Daily at 6:00 AM
 ├── Action: PowerShell.exe -File Invoke-DailyDenyReport.ps1
-└── Credentials: Service account with View-Only Audit Logs role
+└── Credentials: Service account with Audit Reader role
 ```
 
 ### Option C: Power Automate (Low-Code Alternative)
@@ -186,11 +184,10 @@ Power Automate Flow
 
 ### Authentication
 
-!!! info "Authentication: Entra ID (Azure AD)"
-    Application Insights API key authentication was **deprecated** and has been removed.
-    `Export-RaiTelemetry.ps1` was migrated to Entra ID (OAuth 2.0) authentication on February 4, 2026.
+!!! success "Authentication Migration Complete: Entra ID (Azure AD)"
+    Application Insights API key authentication was deprecated and `Export-RaiTelemetry.ps1` was migrated to Entra ID authentication on **February 4, 2026**. No `-ApiKey` parameter exists; the script uses `Connect-AzAccount` and `Get-AzAccessToken`.
 
-    See [Authentication Migration](prerequisites.md#authentication-migration) for details.
+    See [Authentication Migration](prerequisites.md#authentication-migration) for configuration details.
 
     *Migration completed: February 4, 2026*
 
@@ -212,6 +209,25 @@ The exported data may contain:
 - SIT match indicators (may indicate sensitive data exposure)
 
 **Recommendation:** Classify exports as "Internal - Confidential"
+
+### Securing CSV Exports
+
+CSV exports contain sensitive compliance data that requires protection:
+
+| Field | Script | Risk |
+|-------|--------|------|
+| `UserId` (UPN) | All three scripts | PII — identifies individual employees |
+| `SitMatchDetails` | Export-DlpCopilotEvents.ps1 | Reveals sensitive info type match counts and confidence levels |
+| `OverrideJustification` | Export-DlpCopilotEvents.ps1 | Free-text field — may contain sensitive context |
+| `CustomDimensions` | Export-RaiTelemetry.ps1 | May contain conversation metadata |
+
+**Recommended controls:**
+
+1. **File system ACLs** — Restrict CSV output directories to authorized service accounts and compliance officers only
+2. **Encryption at rest** — Store exports on BitLocker-encrypted volumes (Windows) or encrypted storage (Azure Blob with SSE)
+3. **Retention policy** — Delete local CSV files after successful upload to Azure Blob Storage; apply immutable retention on blob tier
+4. **Audit access** — Enable Azure Storage diagnostic logging to track who downloads exports
+5. **Network controls** — Use Private Link for Azure Blob Storage; restrict Power BI workspace access to authorized viewers
 
 ### Network Security
 
@@ -253,4 +269,4 @@ The exported data may contain:
 
 ---
 
-*FSI Agent Governance Framework v2.0.0 - February 2026*
+*FSI Agent Governance Framework v1.2 - January 2026*

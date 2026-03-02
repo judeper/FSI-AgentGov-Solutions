@@ -18,7 +18,7 @@
     },
     "definition": {
       "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-      "contentVersion": "1.0.0.0",
+      "contentVersion": "1.0.1.0",
       "parameters": {
         "$connections": {
           "defaultValue": {},
@@ -59,12 +59,12 @@
               {
                 "name": "NotificationRecipients",
                 "type": "string",
-                "value": ""
+                "value": "@{coalesce(environmentVariables('fsi_ITE_NotificationRecipients'), '')}"
               }
             ]
           },
           "runAfter": {},
-          "description": "Initialize NotificationRecipients to empty string. The actual value is read from the environment variable inside Scope_Try (Set_NotificationRecipients_FromEnvVar) so that a missing variable is caught by the error handler."
+          "description": "Semicolon-separated email addresses for compliance alert notifications. Reads from environment variable fsi_ITE_NotificationRecipients."
         },
         "Initialize_ScanRunId": {
           "type": "InitializeVariable",
@@ -84,42 +84,15 @@
           },
           "description": "Unique identifier for the current scan run. Used to correlate compliance records written during this execution."
         },
-        "Initialize_ConcurrencyLimit": {
-          "type": "InitializeVariable",
-          "inputs": {
-            "variables": [
-              {
-                "name": "ConcurrencyLimit",
-                "type": "integer",
-                "value": 5
-              }
-            ]
-          },
-          "runAfter": {
-            "Initialize_ScanRunId": [
-              "Succeeded"
-            ]
-          },
-          "description": "Informational: parallel degree for environment evaluation. Actual concurrency is set in Apply_to_Each_Environment runtimeConfiguration (hardcoded to 5)."
-        },
         "Scope_Try": {
           "type": "Scope",
           "actions": {
-            "Set_NotificationRecipients_FromEnvVar": {
-              "type": "SetVariable",
-              "inputs": {
-                "name": "NotificationRecipients",
-                "value": "@{environmentVariables('fsi_ITE_NotificationRecipients')}"
-              },
-              "runAfter": {},
-              "description": "Read notification recipients from environment variable inside Scope_Try so that a missing variable is caught by Scope_Catch. The variable is pre-initialized to empty string to guarantee Scope_Catch can safely reference it."
-            },
             "Load_Environment_Policies": {
               "type": "OpenApiConnection",
               "inputs": {
                 "parameters": {
                   "entityName": "fsi_environmentpolicies",
-                  "$select": "fsi_environmentid,fsi_zone,fsi_requiredmaxduration"
+                  "$select": "fsi_environmentid,fsi_environmentdisplayname,fsi_zone,fsi_requiredmaxduration"
                 },
                 "host": {
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -127,11 +100,7 @@
                   "operationId": "ListRecords"
                 }
               },
-              "runAfter": {
-                "Set_NotificationRecipients_FromEnvVar": [
-                  "Succeeded"
-                ]
-              },
+              "runAfter": {},
               "description": "Retrieve all environment policy rows from Dataverse. Each row maps an EnvironmentName to its zone and required maximum inactivity timeout duration."
             },
             "Compose_Policy_Array": {
@@ -148,7 +117,7 @@
               "type": "Http",
               "inputs": {
                 "method": "GET",
-                "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2016-11-01&$top=5000",
+                "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2016-11-01",
                 "headers": {
                   "Content-Type": "application/json"
                 },
@@ -168,7 +137,7 @@
                   "Succeeded"
                 ]
               },
-              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication. Retries on transient failures with exponential backoff. Requests up to 5000 results via $top to mitigate default page size limits. Known limitation: does not follow @odata.nextLink — tenants exceeding $top may return partial results."
+              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication. Retries on transient failures with exponential backoff. NOTE: This action retrieves the first page of results only (default API page size). Tenants with environments exceeding the API page size (~500) should implement nextLink pagination or partition environment scanning."
             },
             "Apply_to_Each_Environment": {
               "type": "Foreach",
@@ -294,29 +263,39 @@
                           },
                           "description": "Extract whether inactivity timeout is enabled for this environment."
                         },
-                        "Parse_Duration_Minutes": {
+                        "Sanitize_Duration": {
                           "type": "Compose",
-                          "inputs": "@if(or(equals(outputs('Set_TimeoutEnabled'), null), equals(outputs('Set_TimeoutEnabled'), false)), 0, if(equals(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], null), -1, if(and(contains(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'H'), contains(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'M')), add(mul(int(first(split(replace(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT', ''), 'H'))), 60), int(replace(last(split(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'H')), 'M', ''))), if(contains(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'H'), mul(int(first(split(replace(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT', ''), 'H'))), 60), int(replace(replace(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT', ''), 'M', ''))))))",
+                          "inputs": "@if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'S'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M')), 'M'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H')), 'H'), 'PT0M')), coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'))",
                           "runAfter": {
                             "Set_TimeoutEnabled": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Parse ISO 8601 duration to minutes. Returns 0 if timeout is disabled, -1 if timeout is enabled but duration is null (misconfigured). Handles PTnM, PTnH, and PTnHnM formats."
+                          "description": "Sanitize ISO 8601 duration by stripping seconds component (nS). Handles PTnHnMnS, PTnMnS, PTnHnS, and PTnS formats. Seconds-only durations (PTnS) are treated as 0 minutes."
+                        },
+                        "Parse_Duration_Minutes": {
+                          "type": "Compose",
+                          "inputs": "@if(not(equals(outputs('Set_TimeoutEnabled'), true)), 0, if(and(contains(outputs('Sanitize_Duration'), 'H'), contains(outputs('Sanitize_Duration'), 'M')), add(mul(int(first(split(replace(outputs('Sanitize_Duration'), 'PT', ''), 'H'))), 60), int(replace(last(split(outputs('Sanitize_Duration'), 'H')), 'M', ''))), if(contains(outputs('Sanitize_Duration'), 'H'), mul(int(first(split(replace(outputs('Sanitize_Duration'), 'PT', ''), 'H'))), 60), int(replace(replace(outputs('Sanitize_Duration'), 'PT', ''), 'M', '')))))",
+                          "runAfter": {
+                            "Sanitize_Duration": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Parse ISO 8601 duration to minutes. Handles PTnM (minutes only), PTnH (hours only), and PTnHnM (hours + minutes) formats. Seconds are pre-stripped by Sanitize_Duration. Returns 0 if timeout is not explicitly enabled (disabled or null)."
                         },
                         "Evaluate_Compliance": {
                           "type": "Compose",
-                          "inputs": "@if(or(equals(outputs('Set_TimeoutEnabled'), null), equals(outputs('Set_TimeoutEnabled'), false)), 'Non-Compliant', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Non-Compliant', if(equals(outputs('Set_RequiredMaxDuration'), null), 'Unknown', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant'))))",
+                          "inputs": "@if(not(equals(outputs('Set_TimeoutEnabled'), true)), 'Non-Compliant', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant'))",
                           "runAfter": {
                             "Parse_Duration_Minutes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Evaluate compliance: disabled → Non-Compliant; enabled but no duration configured → Non-Compliant; duration exceeds required maximum → Non-Compliant; required max duration not defined in policy → Unknown; otherwise → Compliant."
+                          "description": "Determine compliance status: not enabled (disabled or null) → Non-Compliant; duration exceeds required maximum → Non-Compliant; otherwise → Compliant."
                         },
                         "Set_Compliance_Notes": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout state unknown (null from API)', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(equals(outputs('Parse_Duration_Minutes'), -1), 'Inactivity timeout enabled but no duration configured', if(equals(outputs('Set_RequiredMaxDuration'), null), 'Policy exists but fsi_requiredmaxduration is not configured', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum'))))))",
+                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout enabled status is null — non-compliant', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum'))))",
                           "runAfter": {
                             "Evaluate_Compliance": [
                               "Succeeded"
@@ -326,13 +305,13 @@
                         },
                         "Map_Compliance_Status_Value": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, if(equals(outputs('Evaluate_Compliance'), 'Unknown'), 2, 0))",
+                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, 0)",
                           "runAfter": {
                             "Set_Compliance_Notes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant, 2 = Unknown."
+                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant."
                         },
                         "Create_Compliance_Record": {
                           "type": "OpenApiConnection",
@@ -377,9 +356,9 @@
                       "actions": {
                         "Determine_Error_Type": {
                           "type": "Compose",
-                          "inputs": "@if(or(equals(outputs('Get_Privacy_Settings')?['statusCode'], null), equals(outputs('Get_Privacy_Settings')?['statusCode'], 200)), 'ActionError', coalesce(if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 401), 'Unauthorized', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 403), 'Forbidden', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 404), 'NotFound', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 429), 'Throttled', null)))), 'HttpError'))",
+                          "inputs": "@coalesce(if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 401), 'Unauthorized', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 403), 'Forbidden', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 404), 'NotFound', if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 429), 'Throttled', null)))), if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 200), 'DataverseError', 'ParseError'))",
                           "runAfter": {},
-                          "description": "Map failure to error type. If Get_Privacy_Settings has no status code (didn't execute) or returned 200 (downstream action failed), classify as ActionError. Known HTTP errors: 401 → Unauthorized, 403 → Forbidden, 404 → NotFound, 429 → Throttled. Unknown HTTP errors → HttpError."
+                          "description": "Map HTTP status code to error type: 401 → Unauthorized, 403 → Forbidden, 404 → NotFound, 429 → Throttled. If HTTP succeeded (200) but the scope failed, classifies as DataverseError. Other/unknown → ParseError."
                         },
                         "Create_API_Error_Log": {
                           "type": "OpenApiConnection",
@@ -389,7 +368,7 @@
                               "item/fsi_name": "@{concat('API Error - ', outputs('Set_EnvironmentName'), ' - ', utcNow('yyyy-MM-ddTHH:mm:ssZ'))}",
                               "item/fsi_environmentid": "@outputs('Set_EnvironmentName')",
                               "item/fsi_errortype": "@outputs('Determine_Error_Type')",
-                              "item/fsi_errorraw": "@{coalesce(body('Get_Privacy_Settings'), string(result('Scope_BAP_API_Try')))}",
+                              "item/fsi_errorraw": "@{if(equals(outputs('Get_Privacy_Settings')?['statusCode'], 200), string(result('Scope_BAP_API_Try')), coalesce(body('Get_Privacy_Settings'), string(result('Scope_BAP_API_Try'))))}",
                               "item/fsi_timestamp": "@utcNow()"
                             },
                             "host": {
@@ -414,7 +393,7 @@
                               "item/fsi_environmentid": "@outputs('Set_EnvironmentName')",
                               "item/fsi_environmentname": "@outputs('Set_EnvironmentDisplayName')",
                               "item/fsi_inactivitytimeoutenabled": null,
-                              "item/fsi_timeoutduration": 0,
+                              "item/fsi_timeoutduration": null,
                               "item/fsi_requiredmaxduration": "@outputs('Set_RequiredMaxDuration')",
                               "item/fsi_compliancestatus": 2,
                               "item/fsi_lastscandate": "@utcNow()",
@@ -431,19 +410,22 @@
                           "runAfter": {
                             "Create_API_Error_Log": [
                               "Succeeded",
-                              "Failed"
+                              "Failed",
+                              "Skipped",
+                              "TimedOut"
                             ]
                           },
-                          "description": "Write Unknown compliance record when BAP API call fails. Zone is preserved from policy lookup. Timeout enabled set to null (unknown) since the API did not respond."
+                          "description": "Write Unknown compliance record when BAP API call fails. Zone is preserved from policy lookup. Runs regardless of error log outcome to ensure audit trail completeness."
                         }
                       },
                       "runAfter": {
                         "Scope_BAP_API_Try": [
                           "Failed",
-                          "TimedOut"
+                          "TimedOut",
+                          "Skipped"
                         ]
                       },
-                      "description": "Catch scope for per-environment BAP API failures. Creates error log entry and Unknown compliance record without aborting the scan. Known limitation: run-after does not include Skipped — if Scope_BAP_API_Try is skipped (extremely unlikely), the catch will not fire. Adding Skipped is unsafe because the catch handler references Try-scope outputs that would be null."
+                      "description": "Catch scope for per-environment BAP API failures. Creates error log entry and Unknown compliance record without aborting the scan."
                     }
                   },
                   "else": {
@@ -457,7 +439,7 @@
                             "item/fsi_environmentid": "@outputs('Set_EnvironmentName')",
                             "item/fsi_environmentname": "@outputs('Set_EnvironmentDisplayName')",
                             "item/fsi_inactivitytimeoutenabled": null,
-                            "item/fsi_timeoutduration": 0,
+                            "item/fsi_timeoutduration": null,
                             "item/fsi_requiredmaxduration": 0,
                             "item/fsi_compliancestatus": 2,
                             "item/fsi_lastscandate": "@utcNow()",
@@ -493,7 +475,9 @@
                         "runAfter": {
                           "Create_Unknown_NoPolicyRecord": [
                             "Succeeded",
-                            "Failed"
+                            "Failed",
+                            "Skipped",
+                            "TimedOut"
                           ]
                         },
                         "description": "Write MissingPolicy error log entry. Action item: add an fsi_environmentpolicy row for this environment."
@@ -518,7 +502,7 @@
                   "repetitions": 5
                 }
               },
-              "description": "Iterate over all Power Platform environments with hardcoded concurrency of 5. Each iteration resolves the environment policy, retrieves privacy settings, evaluates compliance, and writes an immutable Dataverse record."
+              "description": "Iterate over all Power Platform environments with concurrency of 5. Each iteration resolves the environment policy, retrieves privacy settings, evaluates compliance, and writes an immutable Dataverse record."
             },
             "Query_NonCompliant_Records": {
               "type": "OpenApiConnection",
@@ -540,7 +524,7 @@
                   "Failed"
                 ]
               },
-              "description": "Query all Non-Compliant records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs on partial results when some iterations fail."
+              "description": "Query all Non-Compliant records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results."
             },
             "Query_Unknown_Records": {
               "type": "OpenApiConnection",
@@ -562,7 +546,7 @@
                   "Failed"
                 ]
               },
-              "description": "Query all Unknown records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs on partial results when some iterations fail."
+              "description": "Query all Unknown records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results."
             },
             "Query_Compliant_Count": {
               "type": "OpenApiConnection",
@@ -584,7 +568,7 @@
                   "Failed"
                 ]
               },
-              "description": "Count Compliant records from the current scan run for summary statistics in the notification email. Runs on partial results when some iterations fail."
+              "description": "Count Compliant records from the current scan run for summary statistics in the notification email. Runs after both Succeeded and Failed to capture partial results."
             },
             "Condition_Has_Issues": {
               "type": "If",
@@ -609,20 +593,20 @@
                   "type": "Select",
                   "inputs": {
                     "from": "@union(body('Query_NonCompliant_Records')?['value'], body('Query_Unknown_Records')?['value'])",
-                    "select": "<tr><td>@{item()?['fsi_environmentname']}</td><td>@{if(equals(item()?['fsi_zone'], 1), 'Personal', if(equals(item()?['fsi_zone'], 2), 'Team', if(equals(item()?['fsi_zone'], 3), 'Enterprise', 'Unassigned')))}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{item()?['fsi_notes']}</td></tr>"
+                    "select": "<tr><td>@{replace(replace(replace(coalesce(item()?['fsi_environmentname'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td><td>@{if(equals(item()?['fsi_zone'], 1), 'Personal', if(equals(item()?['fsi_zone'], 2), 'Team', if(equals(item()?['fsi_zone'], 3), 'Enterprise', string(item()?['fsi_zone']))))}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{replace(replace(replace(coalesce(item()?['fsi_notes'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr>"
                   },
                   "runAfter": {},
                   "description": "Transform Non-Compliant and Unknown records into HTML table rows for the notification email."
                 },
                 "Compose_Email_Subject": {
                   "type": "Compose",
-                  "inputs": "@{concat('[NON-COMPLIANT] Inactivity Timeout Compliance Scan — ', string(add(length(body('Query_NonCompliant_Records')?['value']), length(body('Query_Unknown_Records')?['value']))), ' issue(s) detected')}",
+                  "inputs": "@{concat(if(greater(length(body('Query_NonCompliant_Records')?['value']), 0), '[NON-COMPLIANT]', '[UNKNOWN]'), ' Inactivity Timeout Compliance Scan — ', string(add(length(body('Query_NonCompliant_Records')?['value']), length(body('Query_Unknown_Records')?['value']))), ' issue(s) detected')}",
                   "runAfter": {},
                   "description": "Build email subject line with total issue count (Non-Compliant + Unknown)."
                 },
                 "Compose_Email_Body": {
                   "type": "Compose",
-                  "inputs": "<html><body><h2>Inactivity Timeout Compliance Scan Results</h2><p><strong>Scan Date:</strong> @{utcNow()}</p><p><strong>Scan Run ID:</strong> @{variables('ScanRunId')}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Compliant</strong></td><td>@{if(equals(actionOutputs('Query_Compliant_Count')?['statusCode'], 200), string(length(body('Query_Compliant_Count')?['value'])), 'N/A')}</td></tr><tr><td><strong>Non-Compliant</strong></td><td>@{length(body('Query_NonCompliant_Records')?['value'])}</td></tr><tr><td><strong>Unknown</strong></td><td>@{length(body('Query_Unknown_Records')?['value'])}</td></tr></table><hr/><h3>Issues Requiring Attention</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr style='background-color:#f0f0f0;'><th>Environment</th><th>Zone</th><th>Status</th><th>Timeout Enabled</th><th>Actual Duration (min)</th><th>Required Max (min)</th><th>Notes</th></tr>@{join(body('Build_Issue_Rows'), '')}</table><hr/><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow. Part of the FSI Agent Governance — Inactivity Timeout Enforcement solution. Supports compliance with GLBA 501(b), SOX 302, FINRA 4511.</em></p></body></html>",
+                  "inputs": "<html><body><h2>Inactivity Timeout Compliance Scan Results</h2><p><strong>Scan Date:</strong> @{utcNow()}</p><p><strong>Scan Run ID:</strong> @{variables('ScanRunId')}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Compliant</strong></td><td>@{length(body('Query_Compliant_Count')?['value'])}</td></tr><tr><td><strong>Non-Compliant</strong></td><td>@{length(body('Query_NonCompliant_Records')?['value'])}</td></tr><tr><td><strong>Unknown</strong></td><td>@{length(body('Query_Unknown_Records')?['value'])}</td></tr></table><hr/><h3>Issues Requiring Attention</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr style='background-color:#f0f0f0;'><th>Environment</th><th>Zone</th><th>Status</th><th>Timeout Enabled</th><th>Actual Duration (min)</th><th>Required Max (min)</th><th>Notes</th></tr>@{join(body('Build_Issue_Rows'), '')}</table><hr/><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow. Part of the FSI Agent Governance — Inactivity Timeout Enforcement solution. Supports compliance with GLBA 501(b), SOX 302, FINRA 4511.</em></p></body></html>",
                   "runAfter": {
                     "Build_Issue_Rows": [
                       "Succeeded"
@@ -687,15 +671,14 @@
                   "Succeeded"
                 ],
                 "Query_Compliant_Count": [
-                  "Succeeded",
-                  "Failed"
+                  "Succeeded"
                 ]
               },
               "description": "Guard condition: only send notification when Non-Compliant count > 0 OR Unknown count > 0. If all environments are compliant, no email is sent."
             }
           },
           "runAfter": {
-            "Initialize_ConcurrencyLimit": [
+            "Initialize_ScanRunId": [
               "Succeeded"
             ]
           },
@@ -723,7 +706,7 @@
                     "parameters": {
                       "emailMessage/To": "@variables('NotificationRecipients')",
                       "emailMessage/Subject": "[CRITICAL] ITE Inactivity Timeout Compliance Scan — Flow Failure",
-                      "emailMessage/Body": "<html><body><h2>[CRITICAL] Inactivity Timeout Compliance Scan — Flow Failure</h2><p>The ITE daily compliance scan flow encountered an unexpected error during execution.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Flow Run ID</strong></td><td>@{workflow()['run']['name']}</td></tr><tr><td><strong>Timestamp</strong></td><td>@{utcNow()}</td></tr><tr><td><strong>Scan Run ID</strong></td><td>@{variables('ScanRunId')}</td></tr></table><p><strong>Note:</strong> Partial scan results may have been written to Dataverse and reported via a separate compliance alert email. Check the scan run ID above to correlate records.</p><p>Please investigate the flow run history in the <a href='https://make.powerautomate.com'>Power Automate portal</a> for detailed error information.</p><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow error handler.</em></p></body></html>",
+                      "emailMessage/Body": "<html><body><h2>[CRITICAL] Inactivity Timeout Compliance Scan — Flow Failure</h2><p>The ITE daily compliance scan flow encountered an unexpected error during execution.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Flow Run ID</strong></td><td>@{workflow()['run']['name']}</td></tr><tr><td><strong>Timestamp</strong></td><td>@{utcNow()}</td></tr><tr><td><strong>Scan Run ID</strong></td><td>@{variables('ScanRunId')}</td></tr></table><p>Please investigate the flow run history in the <a href='https://make.powerautomate.com'>Power Automate portal</a> for detailed error information.</p><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow error handler.</em></p></body></html>",
                       "emailMessage/Importance": "High"
                     },
                     "host": {
@@ -737,23 +720,29 @@
                 }
               },
               "else": {
-                "actions": {
-                  "Terminate_No_Recipients": {
-                    "type": "Terminate",
-                    "inputs": {
-                      "runStatus": "Failed",
-                      "runError": {
-                        "code": "MissingNotificationRecipients",
-                        "message": "Flow error handler fired but fsi_ITE_NotificationRecipients environment variable is not configured. No error notification could be sent. Check flow run history for details."
-                      }
-                    },
-                    "runAfter": {},
-                    "description": "Terminate with Failed status when error email cannot be sent due to missing notification recipients. Ensures the failure is visible in Power Automate run history."
-                  }
-                }
+                "actions": {}
               },
               "runAfter": {},
-              "description": "Guard: only send error email when NotificationRecipients is configured. If recipients are missing, terminates with Failed status to ensure visibility in run history."
+              "description": "Guard: only send error email when NotificationRecipients is configured. Prevents SendEmailV2 failure on empty To field."
+            },
+            "Terminate_Flow_As_Failed": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "ScopeTryFailure",
+                  "message": "The main execution scope (Scope_Try) failed. Check flow run history for details."
+                }
+              },
+              "runAfter": {
+                "Check_Recipients_Before_Error_Email": [
+                  "Succeeded",
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              },
+              "description": "Ensure the flow run is marked as Failed in Power Automate portal when Scope_Try fails. Prevents silent success on critical compliance scan failures."
             }
           },
           "runAfter": {
@@ -763,7 +752,7 @@
               "Skipped"
             ]
           },
-          "description": "Error handling scope: catches unexpected failures or skipped initialization in Scope_Try and sends CRITICAL notification email."
+          "description": "Error handling scope: catches unexpected failures in Scope_Try and sends CRITICAL notification email, then terminates flow as Failed."
         }
       }
     },

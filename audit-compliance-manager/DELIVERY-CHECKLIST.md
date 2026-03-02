@@ -1,4 +1,4 @@
-# ACM Solution - Customer Delivery Checklist
+# Audit Compliance Manager - Customer Delivery Checklist
 
 ## Files to Include in Customer Package
 
@@ -12,107 +12,41 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **PowerShell Components:**
 - [ ] **AuditComplianceHelpers.psm1** — Shared helper module (MI auth, retry, Dataverse, email)
 - [ ] **AuditComplianceHelpers.psd1** — Module manifest
-- [ ] **Check-AuditLoggingCompliance.ps1** — Detection runbook (ALCA)
-- [ ] **Enable-AuditLogging.ps1** — Remediation runbook (ALCA)
-- [ ] **Invoke-TenantAuditValidation.ps1** — Tenant-level validation orchestrator (ACV)
-- [ ] **Invoke-EnvironmentAuditValidation.ps1** — Environment-level validation orchestrator (ACV)
-- [ ] **Invoke-EnvironmentDiscovery.ps1** — Environment discovery script (ACV)
-- [ ] **Start-TenantValidationRunbook.ps1** — Tenant validation runbook entry point (ACV)
-- [ ] **Start-EnvironmentValidationRunbook.ps1** — Environment validation runbook entry point (ACV)
-- [ ] **Export-AuditValidationEvidence.ps1** — Evidence export with SHA-256 hashing (ACV)
-- [ ] **Test-UnifiedAuditLog.ps1** — Unified audit log validation (ACV)
-- [ ] **Test-MailboxAudit.ps1** — Mailbox audit validation (ACV)
-- [ ] **Test-PurviewRetention.ps1** — Purview retention validation (ACV)
-- [ ] **Test-EnvironmentAudit.ps1** — Environment audit validation (ACV)
-- [ ] **Test-EnvironmentRetention.ps1** — Environment retention validation (ACV)
-- [ ] **Test-EvidenceIntegrity.ps1** — Evidence hash verification (ACV)
-- [ ] **scripts/private/Compare-ValidationBaseline.ps1** — Drift detection (ACV)
-- [ ] **scripts/private/Connect-AuditServices.ps1** — Service connection helper (ACV)
-- [ ] **scripts/private/Connect-PowerPlatform.ps1** — Power Platform connection helper (ACV)
-- [ ] **scripts/private/Get-ValidationResults.ps1** — Validation results query (ACV)
-- [ ] **scripts/private/New-CanaryEvent.ps1** — Canary event creation (ACV)
-- [ ] **scripts/private/Write-ValidationResult.ps1** — Validation result writer (ACV)
+- [ ] **Check-AuditLoggingCompliance.ps1** — Detection runbook
+- [ ] **Enable-AuditLogging.ps1** — Remediation runbook
 - [ ] **AuditComplianceHelpers.Tests.ps1** — Pester unit tests (optional, for validation)
-- [ ] **Validators.Tests.ps1** — Pester tests for validator scripts (optional, for validation)
-- [ ] **Configure-SecurityRoles.ps1** — Security role configuration script
 
 **Python Components:**
-- [ ] **create_audit_compliance_schema.py** — ALCA Dataverse schema creation script
-- [ ] **create_dataverse_schema.py** — ACV Dataverse schema creation script
-- [ ] **create_connection_references.py** — Connection reference setup script
-- [ ] **create_environment_variables.py** — Environment variable setup script
-- [ ] **deploy.py** — Deployment orchestrator
-- [ ] **alca_client.py** — ALCA Dataverse Web API client library
-- [ ] **acv_client.py** — ACV Dataverse Web API client library
+- [ ] **create_audit_compliance_schema.py** — Dataverse schema creation script
+- [ ] **alca_client.py** — Dataverse Web API client library
 - [ ] **requirements.txt** — Python dependencies
 
 **Power Automate:**
-- [ ] **audit-remediation-approval-flow.json** — Approval workflow template (ALCA)
-- [ ] **tenant-validation-flow.json** — Tenant-level audit validation flow (ACV)
-- [ ] **environment-validation-flow.json** — Environment-level audit validation flow (ACV)
-- [ ] **adaptive-card-tenant-alert.json** — Tenant alert adaptive card template (ACV)
-- [ ] **adaptive-card-environment-alert.json** — Environment alert adaptive card template (ACV)
+- [ ] **audit-remediation-approval-flow.json** — Approval workflow template
 
 **Supporting Documentation:**
 - [ ] **docs/deployment-guide.md** — Azure Automation deployment guide
 - [ ] **docs/scheduling-guide.md** — Runbook scheduling configuration
 - [ ] **docs/testing-scenarios.md** — Test scenarios and troubleshooting
-- [ ] **docs/evidence-export-guide.md** — Evidence export and integrity verification guide
-- [ ] **docs/FLOW_SETUP.md** — Power Automate flow setup guide
-- [ ] **docs/acv-CHANGELOG.md** — ACV subsystem changelog
-- [ ] **docs/alca-CHANGELOG.md** — ALCA subsystem changelog
 
 ### 3. Packaging Instructions
 
 **Option A: Create ZIP Archive**
 ```bash
-# From the audit-compliance-manager directory:
+# From the audit-logging-compliance-automation directory:
 zip -r ACM-Solution-v1.0.0.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
-  scripts/AuditComplianceHelpers.Tests.ps1 \
   scripts/Check-AuditLoggingCompliance.ps1 \
   scripts/Enable-AuditLogging.ps1 \
-  scripts/Configure-SecurityRoles.ps1 \
-  scripts/Invoke-TenantAuditValidation.ps1 \
-  scripts/Invoke-EnvironmentAuditValidation.ps1 \
-  scripts/Invoke-EnvironmentDiscovery.ps1 \
-  scripts/Start-TenantValidationRunbook.ps1 \
-  scripts/Start-EnvironmentValidationRunbook.ps1 \
-  scripts/Export-AuditValidationEvidence.ps1 \
-  scripts/Test-UnifiedAuditLog.ps1 \
-  scripts/Test-MailboxAudit.ps1 \
-  scripts/Test-PurviewRetention.ps1 \
-  scripts/Test-EnvironmentAudit.ps1 \
-  scripts/Test-EnvironmentRetention.ps1 \
-  scripts/Test-EvidenceIntegrity.ps1 \
-  scripts/private/Compare-ValidationBaseline.ps1 \
-  scripts/private/Connect-AuditServices.ps1 \
-  scripts/private/Connect-PowerPlatform.ps1 \
-  scripts/private/Get-ValidationResults.ps1 \
-  scripts/private/New-CanaryEvent.ps1 \
-  scripts/private/Write-ValidationResult.ps1 \
   scripts/create_audit_compliance_schema.py \
-  scripts/create_dataverse_schema.py \
-  scripts/create_connection_references.py \
-  scripts/create_environment_variables.py \
-  scripts/deploy.py \
   scripts/alca_client.py \
-  scripts/acv_client.py \
   scripts/requirements.txt \
   templates/audit-remediation-approval-flow.json \
-  templates/tenant-validation-flow.json \
-  templates/environment-validation-flow.json \
-  templates/adaptive-card-tenant-alert.json \
-  templates/adaptive-card-environment-alert.json \
   docs/deployment-guide.md \
   docs/scheduling-guide.md \
-  docs/testing-scenarios.md \
-  docs/evidence-export-guide.md \
-  docs/FLOW_SETUP.md \
-  docs/acv-CHANGELOG.md \
-  docs/alca-CHANGELOG.md
+  docs/testing-scenarios.md
 ```
 
 **Option B: Create Structured Folder**
@@ -123,16 +57,13 @@ ACM-Solution-v1.0.0/
 │   ├── AuditComplianceHelpers.psm1
 │   ├── AuditComplianceHelpers.psd1
 │   ├── Check-AuditLoggingCompliance.ps1
-│   ├── Configure-SecurityRoles.ps1
 │   └── Enable-AuditLogging.ps1
 ├── Python-Components/
 │   ├── create_audit_compliance_schema.py
 │   ├── alca_client.py
 │   └── requirements.txt
 ├── Power-Automate/
-│   ├── audit-remediation-approval-flow.json
-│   ├── tenant-validation-flow.json
-│   └── environment-validation-flow.json
+│   └── audit-remediation-approval-flow.json
 └── Deployment-Guides/
     ├── deployment-guide.md
     ├── scheduling-guide.md
@@ -244,7 +175,7 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 45 files are included (25 PowerShell, 8 Python, 5 JSON templates, 7 docs)
+- [ ] All 11 files are included (4 PowerShell, 3 Python, 1 JSON, 3 docs)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `contoso.onmicrosoft.com`)
@@ -349,7 +280,7 @@ Dataverse Application User:
 
 PowerShell Modules:
 □ Microsoft.PowerApps.Administration.PowerShell (2.0+) imported
-□ ExchangeOnlineManagement (3.7.0+) imported
+□ ExchangeOnlineManagement (3.0+) imported
 □ AuditComplianceHelpers (1.0.0) custom module uploaded
 
 Dataverse Schema:
@@ -359,8 +290,8 @@ Dataverse Schema:
 □ Alternate key fsi_environmentid_key created
 
 Runbooks:
-□ ALCA-Check-AuditLoggingCompliance runbook created and published
-□ ALCA-Enable-AuditLogging runbook created and published
+□ ACM-Check-AuditLoggingCompliance runbook created and published
+□ ACM-Enable-AuditLogging runbook created and published
 □ Helper module referenced correctly in both runbooks
 
 Test Execution:
@@ -392,4 +323,4 @@ Operational Readiness:
 
 **Package Version:** v1.0.0
 **Release Date:** February 2026
-**Solution:** Audit Compliance Manager (ACM) — includes ACV and ALCA subsystems
+**Solution:** Audit Compliance Manager (ACM)

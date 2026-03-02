@@ -65,6 +65,69 @@ $script:ZoneNormalizationMap = @{
 
 #endregion
 
+#region Authentication
+
+function Connect-DataverseApi {
+    <#
+    .SYNOPSIS
+        Authenticates to Dataverse and returns a connection hashtable.
+
+    .PARAMETER Url
+        The Dataverse environment URL.
+
+    .PARAMETER TenantId
+        The Microsoft Entra tenant ID.
+
+    .PARAMETER ClientId
+        App registration client ID for service principal auth.
+
+    .PARAMETER ClientSecret
+        App registration client secret.
+
+    .PARAMETER Interactive
+        Use interactive (browser) authentication.
+
+    .OUTPUTS
+        Hashtable with BaseUrl and Headers for Dataverse API calls.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Url,
+        [Parameter(Mandatory)]
+        [string]$TenantId,
+        [string]$ClientId,
+        [SecureString]$ClientSecret,
+        [switch]$Interactive
+    )
+
+    $scope = "$($Url.TrimEnd('/'))/.default"
+
+    if ($Interactive) {
+        Write-Verbose "Authenticating interactively to $Url"
+        $interactiveClientId = if ($env:FSI_INT_InteractiveClientId) { $env:FSI_INT_InteractiveClientId } else { '51f81489-12ee-4a9e-aaae-a2591f45987d' }
+        $token = Get-MsalToken -TenantId $TenantId -ClientId $interactiveClientId -Scopes $scope -Interactive
+    } else {
+        Write-Verbose "Authenticating with service principal to $Url"
+        $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
+        $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -ClientCredential $credential -Scopes $scope
+    }
+
+    return @{
+        BaseUrl = "$($Url.TrimEnd('/'))/api/data/v9.2"
+        Headers = @{
+            'Authorization'    = "Bearer $($token.AccessToken)"
+            'OData-MaxVersion' = '4.0'
+            'OData-Version'    = '4.0'
+            'Accept'           = 'application/json'
+            'Content-Type'     = 'application/json'
+            'Prefer'           = 'return=representation'
+        }
+    }
+}
+
+#endregion
+
 #region Solution-to-Control Mapping
 
 function Get-SolutionControlMapping {
@@ -180,9 +243,9 @@ function Get-SolutionTableConfig {
             StatusType      = 'Choice'          # Choice 1-5
             TimestampField  = 'fsi_timestamp'
             RunIdField      = 'fsi_runid'
-            FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
+            FilterLatest    = "`$filter=fsi_validationtype eq 'Orchestrator'&`$orderby=fsi_timestamp desc&`$top=1"
             SolutionName    = 'Conditional Access Automation'
-            SolutionVersion = 'v1.1.0'
+            SolutionVersion = 'v1.0.0'
         }
     }
 }
@@ -455,6 +518,7 @@ function Get-DashboardTableConfig {
 
 # Export all public functions
 Export-ModuleMember -Function @(
+    'Connect-DataverseApi'
     'Get-SolutionControlMapping'
     'Get-SolutionTableConfig'
     'ConvertTo-DashboardStatus'

@@ -14,37 +14,28 @@
       "schemaName": "fsi_CD_TeamsWebhook",
       "displayName": "Teams Webhook URL",
       "description": "Microsoft Teams incoming webhook URL for posting alerts",
-      "type": "Secret",
+      "type": "String",
       "defaultValue": "",
       "isRequired": false,
-      "hint": "Webhook URL is stored as Secret to prevent unauthorized access"
+      "hint": "Example: https://contoso.webhook.office.com/webhookb2/..."
     },
     {
       "schemaName": "fsi_CD_DataverseEnvironment",
-      "displayName": "Dataverse Environment URL (Future Use)",
-      "description": "Reserved for future use — not referenced by any current flow. Flows use connection references instead. Leave blank during import.",
+      "displayName": "Dataverse Environment URL",
+      "description": "Dataverse environment URL for API calls",
       "type": "String",
       "defaultValue": "",
       "isRequired": false,
       "hint": "Example: https://org.crm.dynamics.com"
     },
     {
-      "schemaName": "fsi_CD_DailySummaryHourUTC",
-      "displayName": "Daily Summary Hour (UTC)",
-      "description": "Hour (00-23) in UTC when the daily breach summary email is sent by CD-ExceptionMonitor. Default is 09 (9 AM UTC).",
-      "type": "String",
-      "defaultValue": "09",
-      "isRequired": false,
-      "hint": "Example: 14 for 2 PM UTC"
-    },
-    {
       "schemaName": "fsi_CD_SLAMultiplier",
-      "displayName": "SLA Multiplier (Future Use)",
-      "description": "Reserved for future use — not referenced by any current flow. SLA periods are hardcoded in CD-ExceptionMonitor. Leave at default during import.",
+      "displayName": "SLA Multiplier",
+      "description": "Reserved for future use. SLA periods are currently hardcoded in CD-ExceptionMonitor (Critical=7d, High=14d, Medium=30d, Low=90d). This variable is not yet referenced by any flow.",
       "type": "Decimal",
       "defaultValue": "1.0",
       "isRequired": false,
-      "hint": "Example: 1.5 extends all SLAs by 50%"
+      "hint": "Not currently used — reserved for future SLA configurability"
     }
   ]
 }

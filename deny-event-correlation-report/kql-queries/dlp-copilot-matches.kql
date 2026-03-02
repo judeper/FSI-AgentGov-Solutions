@@ -6,14 +6,15 @@
 // Purpose: Query DLP rule match events for Microsoft 365 Copilot policy location
 // Data Source: OfficeActivity table in Log Analytics (requires M365 audit connector)
 //
-// NOTE: These queries use coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
-// to support both standard deployments (where the audit JSON is in AuditData)
-// and non-standard connector configurations (where it may be in OfficeObjectId).
-//
 // Prerequisites:
 //   - Azure Log Analytics workspace with Office 365 audit data connector
 //   - DLP policies configured for "Microsoft 365 Copilot and Copilot Chat" location
 //   - Microsoft 365 E5 or E5 Compliance license
+//
+// IMPORTANT: These queries use parse_json(OfficeObjectId) to extract audit data.
+// Depending on your M365 audit connector configuration, the full audit JSON
+// may be in the AuditData or RawEventData column instead of OfficeObjectId.
+// Verify your schema and adjust the column name if queries return empty results.
 // ============================================================================
 
 // -----------------------------------------------------------------------------
@@ -21,8 +22,8 @@
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(24h)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
@@ -54,8 +55,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -74,8 +75,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend SensitiveInfoTypes = AuditData.SensitiveInfoTypeData
@@ -97,8 +98,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(1h)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -123,8 +124,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
@@ -145,8 +146,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
@@ -167,8 +168,8 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"
-| extend AuditData = coalesce(parse_json(AuditData), parse_json(OfficeObjectId))
+| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| extend AuditData = parse_json(OfficeObjectId)
 | where AuditData.Workload == "MicrosoftCopilot"
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails

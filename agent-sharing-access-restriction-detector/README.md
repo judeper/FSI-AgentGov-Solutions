@@ -31,16 +31,12 @@ agent-sharing-access-restriction-detector/
 └── src/
     ├── asard-remediation-approval-workflow.json       # Remediation approval flow
     ├── asard-exception-review-workflow.json            # Exception review and expiration flow
-    ├── adaptive-card-asard-alert.json                  # Violation alert card (standalone — not loaded by workflows)
-    ├── adaptive-card-asard-remediation-approval.json   # Remediation approval card (standalone — not loaded by workflows)
-    ├── adaptive-card-asard-remediation-result.json     # Remediation result card (standalone — not loaded by workflows)
-    ├── adaptive-card-asard-exception-expiring.json     # Exception expiring warning card (loaded by exception review workflow)
-    └── adaptive-card-asard-exception-expired.json      # Exception expired notification card (loaded by exception review workflow)
+    ├── adaptive-card-asard-alert.json                  # Violation alert card
+    ├── adaptive-card-asard-remediation-approval.json   # Remediation approval card
+    ├── adaptive-card-asard-remediation-result.json     # Remediation result card
+    ├── adaptive-card-asard-exception-expiring.json     # Exception expiring warning card
+    └── adaptive-card-asard-exception-expired.json      # Exception expired notification card
 ```
-
-> **Note:** Three adaptive card templates (`alert`, `remediation-approval`, `remediation-result`) are standalone templates provided for external consumption or future workflow integration. They are not currently loaded by the solution workflows. The remediation workflow uses inline markdown via `PostMessageToConversation` rather than adaptive card templates. Only the exception expiring and expired cards are actively loaded and used by the exception review workflow.
-
-> **Template Note:** `adaptive-card-asard-remediation-result.json` is a pre-parse template that contains unquoted `{{variable}}` boolean placeholders for Adaptive Cards `isVisible` conditional visibility. This is the correct and intentional template injection pattern, but the file will not pass JSON validation until variables are substituted at runtime.
 
 ## Supporting Scripts (FSI-AgentGov)
 
@@ -56,8 +52,10 @@ agent-sharing-access-restriction-detector/
 
 | Table | Purpose |
 |-------|---------|
-| `fsi_agentsharingcompliances` | Agent sharing compliance records with violation details, exception fields, and remediation status |
+| `fsi_agentsharingcompliances` | Detected sharing policy violations with agent identity, zone, and remediation status |
 | `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per zone |
+| `fsi_agentsharingcompliances.fsi_exception_*` | Time-bound exception records with approval audit trail (columns on compliance table) |
+| `fsi_agentsharingcompliances.fsi_remediation_*` | Immutable remediation action history (columns on compliance table) |
 
 ## Prerequisites
 
@@ -66,20 +64,6 @@ agent-sharing-access-restriction-detector/
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
 - Power Automate Premium license (for approval workflows)
-- Three connection references configured in the solution:
-  - **Dataverse** (`shared_commondataserviceforapps` / `fsi_cr_dataverse_asard`)
-  - **Microsoft Teams** (`shared_teams` / `fsi_cr_teams_asard`)
-  - **Approvals** (`shared_approvals` / `fsi_cr_approvals_asard`)
-- Six environment variables configured across the workflows:
-
-  | Variable | Used By | Description |
-  |----------|---------|-------------|
-  | `fsi_ASARD_ApprovalEmail` | Remediation workflow | Email address for sending approval requests |
-  | `fsi_ASARD_TeamsChannelId` | Both workflows | Teams channel ID for governance notifications |
-  | `fsi_ASARD_ApprovalTimeoutDays` | Remediation workflow | Number of days before unanswered approvals auto-reject |
-  | `fsi_ASARD_AdaptiveCardTemplateUrl` | Exception review workflow | URL for adaptive card templates used in notifications |
-  | `fsi_ASARD_AdaptiveCardTemplateToken` | Exception review workflow | Optional bearer token for authenticated access to adaptive card template URLs (leave empty for public URLs) |
-  | `fsi_ASARD_PlaybookUrl` | Exception review workflow | URL to the ASARD playbook/runbook for remediation guidance |
 
 ## Deployment
 
@@ -93,6 +77,18 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 - [Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) — End-to-end setup
 - [Exception Management](https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/) — Exception lifecycle operations
 - [Troubleshooting Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-troubleshooting-guide/) — Diagnostics and resolution
+
+## FSI Governance Compliance Checklist
+
+| Control | Description | Implementation Evidence |
+|---------|-------------|------------------------|
+| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | `asard-remediation-approval-workflow.json` — Zone-based approved security group enforcement via `fsi_approvedsecuritygrouppolicies` table; BAP Admin API PATCH to replace non-compliant sharing principals |
+| [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | `asard-remediation-approval-workflow.json` — Governance lead approval required before remediation; zone classification determines allowed security groups; `asard-exception-review-workflow.json` — Time-bound exceptions with audit trail preservation |
+
+## Known Limitations
+
+- **30-day runtime limit**: The sequential approval loop (concurrency=1) with 7-day timeouts means >4 agents will exceed Power Automate's 30-day maximum runtime limit, silently dropping later agents. For environments with >4 non-compliant agents, consider batch approval or a child flow pattern.
+- **Sovereign cloud deployment**: The BAP Admin API base URL is configurable via the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. Override for GCC, GCC-High, or DoD deployments.
 
 ## License
 

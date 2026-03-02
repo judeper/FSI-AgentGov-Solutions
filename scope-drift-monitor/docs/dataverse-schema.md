@@ -12,16 +12,17 @@ Table definitions for the Scope Drift Monitor.
 │  (scope definitions)│     │  (drift detections) │
 └─────────────────────┘     └─────────────────────┘
          │                            │
-         ├────────────────┐           ▼
-         │                │ ┌─────────────────────┐
-         │                └>│ fsi_expansionrequest│
+         │                            ▼
+         │                  ┌─────────────────────┐
+         │                  │ fsi_expansionrequest│
          │                  │ (scope changes)     │
          │                  └─────────────────────┘
+         │
          ▼
-┌─────────────────────┐     ┌─────────────────────┐
-│  fsi_scopeitem      │     │  fsi_detectionrun   │
-│  (allowed resources)│     │  (run audit trail)  │
-└─────────────────────┘     └─────────────────────┘
+┌─────────────────────┐
+│  fsi_scopeitem      │
+│  (allowed resources)│
+└─────────────────────┘
 ```
 
 ---
@@ -56,19 +57,19 @@ Master scope definition for each AI agent.
 
 | Value | Label |
 |-------|-------|
-| 1 | Zone 1 - Personal Productivity |
-| 2 | Zone 2 - Team Collaboration |
-| 3 | Zone 3 - Enterprise Managed |
+| 10001 | Zone 1 - Personal Productivity |
+| 10002 | Zone 2 - Team Collaboration |
+| 10003 | Zone 3 - Enterprise Managed |
 
 ### Choice: fsi_status
 
 | Value | Label |
 |-------|-------|
-| 1 | Draft |
-| 2 | Active |
-| 3 | Under Review |
-| 4 | Suspended |
-| 5 | Archived |
+| 10001 | Draft |
+| 10002 | Active |
+| 10003 | Under Review |
+| 10004 | Suspended |
+| 10005 | Archived |
 
 ### Sample Data
 
@@ -77,9 +78,9 @@ Master scope definition for each AI agent.
   "fsi_name": "Customer Service Agent",
   "fsi_agentid": "12345678-1234-1234-1234-123456789012",
   "fsi_environmentid": "87654321-4321-4321-4321-210987654321",
-  "fsi_zone": 3,
+  "fsi_zone": 10003,
   "fsi_purpose": "Answer customer inquiries using approved knowledge sources",
-  "fsi_status": 2,
+  "fsi_status": 10002,
   "fsi_allowedconnectors": "[\"SharePoint\", \"Dataverse\"]",
   "fsi_allowedsites": "[\"https://contoso.sharepoint.com/sites/CustomerKB\"]",
   "fsi_allowedtables": "[\"contact\", \"case\", \"knowledgearticle\"]",
@@ -98,7 +99,6 @@ Individual scope items with detailed configuration.
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_scopeitemid` | Uniqueidentifier | Yes | Primary key |
-| `fsi_name` | String (200) | Yes | Scope item display name |
 | `fsi_agentscopeid` | Lookup | Yes | Parent scope |
 | `fsi_itemtype` | Choice | Yes | Type of resource |
 | `fsi_resourcename` | String (200) | Yes | Resource identifier |
@@ -115,21 +115,21 @@ Individual scope items with detailed configuration.
 
 | Value | Label |
 |-------|-------|
-| 1 | Connector |
-| 2 | SharePoint Site |
-| 3 | SharePoint Library |
-| 4 | Dataverse Table |
-| 5 | External API |
-| 6 | File Share |
-| 7 | Database |
+| 10001 | Connector |
+| 10002 | SharePoint Site |
+| 10003 | SharePoint Library |
+| 10004 | Dataverse Table |
+| 10005 | External API |
+| 10006 | File Share |
+| 10007 | Database |
 
 ### Choice: fsi_accesslevel
 
 | Value | Label |
 |-------|-------|
-| 1 | Read Only |
-| 2 | Read/Write |
-| 3 | Full Control |
+| 10001 | Read Only |
+| 10002 | Read/Write |
+| 10003 | Full Control |
 
 ---
 
@@ -143,7 +143,7 @@ Detected scope drift violations.
 |--------|------|----------|-------------|
 | `fsi_scopeviolationid` | Uniqueidentifier | Yes | Primary key |
 | `fsi_name` | String (200) | Yes | Violation title |
-| `fsi_agentscopeid` | Lookup | Yes | Agent scope |
+| `fsi_agentscopeid` | Lookup | Recommended | Agent scope (omitted for "No Baseline Defined" violations) |
 | `fsi_violationtype` | Choice | Yes | Type of drift |
 | `fsi_resourcename` | String (200) | Yes | Accessed resource |
 | `fsi_resourceurl` | String (500) | No | Resource URL |
@@ -155,49 +155,48 @@ Detected scope drift violations.
 | `fsi_resolvedon` | DateTime | No | Resolution timestamp |
 | `fsi_resolutiontype` | Choice | No | How resolved |
 | `fsi_expansionrequestid` | Lookup | No | Related expansion request |
-| `fsi_notificationfailed` | Boolean | No | Notification delivery failed |
 | `createdon` | DateTime | Auto | Record creation |
 
 ### Choice: fsi_violationtype
 
 | Value | Label |
 |-------|-------|
-| 1 | Unauthorized Connector |
-| 2 | Unauthorized SharePoint Site |
-| 3 | Unauthorized Dataverse Table |
-| 4 | Unauthorized External API |
-| 5 | Expired Scope Item |
-| 6 | No Baseline Defined |
+| 10001 | Unauthorized Connector |
+| 10002 | Unauthorized SharePoint Site |
+| 10003 | Unauthorized Dataverse Table |
+| 10004 | Unauthorized External API |
+| 10005 | Expired Scope Item |
+| 10006 | No Baseline Defined |
 
 ### Choice: fsi_severity
 
 | Value | Label |
 |-------|-------|
-| 1 | Critical |
-| 2 | High |
-| 3 | Medium |
-| 4 | Low |
+| 10001 | Critical |
+| 10002 | High |
+| 10003 | Medium |
+| 10004 | Low |
 
 ### Choice: fsi_status
 
 | Value | Label |
 |-------|-------|
-| 1 | Open |
-| 2 | Under Investigation |
-| 3 | Expansion Requested |
-| 4 | Resolved - Scope Expanded |
-| 5 | Resolved - Access Removed |
-| 6 | Closed - False Positive |
+| 10001 | Open |
+| 10002 | Under Investigation |
+| 10003 | Expansion Requested |
+| 10004 | Resolved - Scope Expanded |
+| 10005 | Resolved - Access Removed |
+| 10006 | Closed - False Positive |
 
 ### Choice: fsi_resolutiontype
 
 | Value | Label |
 |-------|-------|
-| 1 | Scope Expanded |
-| 2 | Agent Remediated |
-| 3 | Access Revoked |
-| 4 | False Positive |
-| 5 | Risk Accepted |
+| 10001 | Scope Expanded |
+| 10002 | Agent Remediated |
+| 10003 | Access Revoked |
+| 10004 | False Positive |
+| 10005 | Risk Accepted |
 
 ---
 
@@ -216,7 +215,6 @@ Requests to expand agent scope.
 | `fsi_requesttype` | Choice | Yes | Type of expansion |
 | `fsi_resourcename` | String (200) | Yes | Resource to add |
 | `fsi_resourceurl` | String (500) | No | Resource URL |
-| `fsi_requestedaccesslevel` | Choice | No | Requested access level (uses fsi_accesslevel values) |
 | `fsi_justification` | Text | Yes | Business justification |
 | `fsi_requestedby` | Lookup (User) | Yes | Requestor |
 | `fsi_requestedon` | DateTime | Yes | Request timestamp |
@@ -232,52 +230,31 @@ Requests to expand agent scope.
 
 | Value | Label |
 |-------|-------|
-| 1 | Add Connector |
-| 2 | Add SharePoint Site |
-| 3 | Add Dataverse Table |
-| 4 | Add External API |
-| 5 | Increase Access Level |
+| 10001 | Add Connector |
+| 10002 | Add SharePoint Site |
+| 10003 | Add Dataverse Table |
+| 10004 | Add External API |
+| 10005 | Increase Access Level |
 
 ### Choice: fsi_status
 
 | Value | Label |
 |-------|-------|
-| 1 | Pending |
-| 2 | Data Owner Review |
-| 3 | Security Review |
-| 4 | Approved |
-| 5 | Denied |
-| 6 | Cancelled |
-| 7 | Failed |
+| 10001 | Pending |
+| 10002 | Data Owner Review |
+| 10003 | Security Review |
+| 10004 | Approved |
+| 10005 | Denied |
+| 10006 | Cancelled |
 
 ### Choice: fsi_dataownerapproval / fsi_securityapproval
 
 | Value | Label |
 |-------|-------|
-| 1 | Pending |
-| 2 | Approved |
-| 3 | Denied |
-| 4 | Delegated |
-
----
-
-## Table: fsi_detectionrun
-
-Audit trail of detection run executions for compliance evidence.
-
-### Columns
-
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `fsi_detectionrunid` | Uniqueidentifier | Yes | Primary key |
-| `fsi_name` | String (200) | Yes | Run display name |
-| `fsi_runstart` | DateTime | Yes | Detection window start |
-| `fsi_runend` | DateTime | Yes | Detection window end |
-| `fsi_eventsprocessed` | Integer | Yes | Number of audit events processed |
-| `fsi_violationscreated` | Integer | Yes | Number of violations created |
-| `fsi_activescopescount` | Integer | Yes | Number of active scopes at run time |
-| `fsi_summary` | Text | No | JSON summary of run details |
-| `createdon` | DateTime | Auto | Record creation timestamp |
+| 10001 | Pending |
+| 10002 | Approved |
+| 10003 | Denied |
+| 10004 | Delegated |
 
 ---
 
@@ -293,7 +270,6 @@ Read-only access.
 | fsi_scopeitem | Read |
 | fsi_scopeviolation | Read |
 | fsi_expansionrequest | Read |
-| fsi_detectionrun | Read |
 
 ### SDM Analyst
 
@@ -313,6 +289,20 @@ Full administrative access.
 | Table | Permissions |
 |-------|-------------|
 | All tables | Full |
+
+---
+
+## Design Decisions
+
+### Custom Status Fields vs. statecode/statuscode
+
+All four tables use custom `fsi_status` choice fields instead of Dataverse's built-in `statecode`/`statuscode` system. This is an intentional design decision:
+
+- **Cross-table consistency**: All tables use the same `fsi_status` pattern with publisher-prefixed option values, enabling uniform filtering and reporting across the solution.
+- **Deployment portability**: Custom fields travel with the solution and are not affected by target environment state/status configurations.
+- **Flow compatibility**: Power Automate expressions reference `fsi_status` directly with numeric comparisons. Built-in state transitions add complexity to flow logic without proportional benefit for this use case.
+
+Deployers who prefer built-in state management may map `fsi_status` transitions to `statecode`/`statuscode` via business rules or plugins.
 
 ---
 

@@ -137,8 +137,7 @@ Write-Verbose "Connected."
 
 # Check if app already exists
 Write-Verbose "Checking for existing app registration..."
-$sanitizedAppName = $AppName -replace "'", "''"
-$existingApp = Get-MgApplication -Filter "displayName eq '$sanitizedAppName'" -ErrorAction SilentlyContinue
+$existingApp = Get-MgApplication -Filter "displayName eq '$AppName'" -ErrorAction SilentlyContinue
 
 if ($existingApp) {
     Write-Verbose "App registration already exists: $($existingApp.AppId)"

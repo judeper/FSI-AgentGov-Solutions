@@ -24,25 +24,19 @@ Step-by-step instructions for deploying Conditional Access policies for AI workl
 
 ## Step 1: Prerequisites Check
 
-Run the prerequisites verification script:
+Run the prerequisites verification:
 
 ```powershell
-.\scripts\Test-Prerequisites.ps1 -TenantId "<tenant-id>"
-```
+# Verify PowerShell version
+$PSVersionTable.PSVersion
 
-Expected output:
-```
-Checking prerequisites...
-✓ PowerShell 7.4 detected
-✓ Microsoft.Graph module installed (v2.15.0)
-✓ Az.KeyVault module installed (v5.2.0)
-✓ Entra ID P2 license active
-✓ Conditional Access Administrator role assigned
-✓ Break-glass accounts found (2)
-✓ All prerequisites met
-```
+# Verify required modules
+Get-Module -ListAvailable Microsoft.Graph*, Az.KeyVault, Az.Accounts |
+    Select-Object Name, Version | Format-Table
 
-If any checks fail, resolve before proceeding.
+# Verify roles (connect to Graph first)
+Connect-MgGraph -Scopes "RoleManagement.Read.Directory"
+```
 
 ---
 
@@ -154,8 +148,12 @@ Create `config/tenant-config.json`:
 
 ### 3.3 Validate Configuration
 
+Verify the configuration file is valid JSON and contains all required fields:
+
 ```powershell
-.\scripts\Test-Configuration.ps1 -ConfigPath "./config/tenant-config.json"
+$config = Get-Content "./config/tenant-config.json" -Raw | ConvertFrom-Json
+$config | Select-Object tenantId, policyPrefix
+$config.breakGlassAccounts  # Should list 2 accounts
 ```
 
 ---
@@ -337,8 +335,7 @@ All policies should show `State: enabled`.
 # Schedule drift detection (run daily)
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline" `
-    -AlertWebhook "<teams-webhook-url>"
+    -BaselinePath "./baseline"
 ```
 
 ### 7.2 Regular Compliance Checks
@@ -355,11 +352,10 @@ Schedule weekly compliance reports:
 ### 7.3 Evidence Export (Quarterly)
 
 ```powershell
-.\scripts\Export-PolicyEvidence.ps1 `
-    -TenantId "<tenant-id>" `
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
     -OutputPath "./evidence" `
-    -StartDate "2026-01-01" `
-    -EndDate "2026-03-31"
+    -FromDate "2026-01-01" -ToDate "2026-03-31"
 ```
 
 ---

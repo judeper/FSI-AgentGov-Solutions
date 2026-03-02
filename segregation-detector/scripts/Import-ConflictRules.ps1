@@ -26,7 +26,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
-    [ValidatePattern('^https://', ErrorMessage = "Environment URL must use HTTPS to protect bearer tokens in transit.")]
+    [ValidatePattern('^https://[\w.-]+\.(crm\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)/?$')]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -43,6 +43,9 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
+    # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
+    # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
+    [ValidateNotNullOrEmpty()]
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
 )
 
@@ -50,64 +53,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Normalize Environment URL: strip trailing slashes to prevent malformed API URIs
-$Environment = $Environment.TrimEnd('/')
+# Import shared helper functions (Invoke-WithRetry, Get-AccessToken)
+. (Join-Path $PSScriptRoot "SoDShared.ps1")
 
-# TODO: Invoke-RestMethodWithRetry and Get-AccessToken are duplicated in Invoke-SoDScan.ps1.
-# Extract to a shared module to prevent implementation drift (see GAP-0000-01).
-
-# Structured audit logging for import operations
-function Write-AuditLog {
-    param(
-        [string]$Message,
-        [string]$Level = "INFO",
-        [string]$CorrelationId = $script:CorrelationId
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
-    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+# Validate credentials
+if (-not $TenantId -or -not $ClientId) {
+    throw "TenantId and ClientId are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID environment variables or pass parameters."
 }
-$script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
-
-function Invoke-RestMethodWithRetry {
-    param(
-        [string]$Uri,
-        [hashtable]$Headers,
-        [string]$Method = "Get",
-        $Body,
-        [string]$ContentType,
-        [int]$MaxRetries = 3
-    )
-    $attempt = 0
-    while ($true) {
-        try {
-            $params = @{
-                Uri     = $Uri
-                Headers = $Headers
-                Method  = $Method
-            }
-            if ($Body) { $params.Body = $Body }
-            if ($ContentType) { $params.ContentType = $ContentType }
-            return Invoke-RestMethod @params
-        } catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            if (($statusCode -eq 429 -or $statusCode -ge 500) -and $attempt -lt $MaxRetries) {
-                $retryAfter = $_.Exception.Response.Headers['Retry-After']
-                $wait = if ($retryAfter) { [int]$retryAfter } else { [math]::Pow(2, $attempt + 1) }
-                Write-Warning "HTTP $statusCode. Retrying after $wait seconds (attempt $($attempt+1)/$MaxRetries)..."
-                Start-Sleep -Seconds $wait
-                $attempt++
-            } else {
-                throw
-            }
-        }
-    }
+if (-not $ClientSecret) {
+    throw "ClientSecret is required. Set FSI_CLIENT_SECRET environment variable or pass -ClientSecret parameter."
 }
-
-# Validate required parameters
-if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
-    throw "TenantId, ClientId, and ClientSecret are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET (or FSI_CLIENT_SECRET) environment variables or pass parameters."
-}
-Write-Warning "For production use, store secrets in Azure Key Vault and use Managed Identity."
 
 # Default rule sets
 $DefaultRules = @{
@@ -120,7 +75,6 @@ $DefaultRules = @{
             fsi_roleb = "Pipeline Approver"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Prevents self-approval of agent changes in deployment pipelines"
@@ -133,7 +87,6 @@ $DefaultRules = @{
             fsi_roleb = "Solution Promoter"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Requires independent review for solution promotions"
@@ -146,23 +99,9 @@ $DefaultRules = @{
             fsi_roleb = "Flow Approver"
             fsi_rolebcontext = 4
             fsi_severity = 2
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Enforces flow change review process"
-        },
-        @{
-            fsi_name = "Connection Creator cannot be Connection Approver"
-            fsi_category = 1
-            fsi_rolea = "Connection Creator"
-            fsi_roleacontext = 4
-            fsi_roleb = "Connection Approver"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
-            fsi_scope = 3  # Same Environment
-            fsi_enabled = $true
-            fsi_allowexception = $true
-            fsi_description = "Ensures connection review process"
         },
         @{
             fsi_name = "DLP Policy Author cannot be DLP Policy Approver"
@@ -172,10 +111,21 @@ $DefaultRules = @{
             fsi_roleb = "DLP Policy Approver"
             fsi_rolebcontext = 3
             fsi_severity = 1
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Prevents self-exemption from DLP policies"
+        },
+        @{
+            fsi_name = "Connection Creator cannot be Connection Approver"
+            fsi_category = 1
+            fsi_rolea = "Connection Creator"
+            fsi_roleacontext = 4
+            fsi_roleb = "Connection Approver"
+            fsi_rolebcontext = 4
+            fsi_severity = 2
+            fsi_enabled = $true
+            fsi_allowexception = $true
+            fsi_description = "Ensures connection review by independent party"
         }
     )
 
@@ -188,7 +138,6 @@ $DefaultRules = @{
             fsi_roleb = "Agent Publisher"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin should not publish their own work"
@@ -201,7 +150,6 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 2
-            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Security role separation from development"
@@ -214,7 +162,6 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 2
-            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Compliance role separation from development"
@@ -227,20 +174,18 @@ $DefaultRules = @{
             fsi_roleb = "Environment Approver"
             fsi_rolebcontext = 3
             fsi_severity = 2
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Environment lifecycle separation"
         },
         @{
-            fsi_name = "Data Steward cannot be Data Consumer (sensitive)"
+            fsi_name = "Data Steward cannot be Data Consumer for sensitive data"
             fsi_category = 2
             fsi_rolea = "Data Steward"
             fsi_roleacontext = 4
             fsi_roleb = "Data Consumer"
             fsi_rolebcontext = 4
             fsi_severity = 3
-            fsi_scope = 3  # Same Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Data access separation for sensitive data"
@@ -256,7 +201,6 @@ $DefaultRules = @{
             fsi_roleb = "Agent Developer"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Global admin should not be an agent developer"
@@ -269,7 +213,6 @@ $DefaultRules = @{
             fsi_roleb = "Basic User"
             fsi_rolebcontext = 4
             fsi_severity = 2
-            fsi_scope = 4  # Any Environment
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin/user role separation"
@@ -282,45 +225,46 @@ $DefaultRules = @{
             fsi_roleb = "Application Administrator"
             fsi_rolebcontext = 1
             fsi_severity = 1
-            fsi_scope = 1  # Tenant
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Prevents privilege escalation paths"
         },
         @{
-            fsi_name = "Break-Glass Account cannot be used for non-emergency operations"
+            fsi_name = "Break-Glass Account should not have non-emergency roles"
             fsi_category = 3
             fsi_rolea = "Break-Glass Account"
             fsi_roleacontext = 1
-            fsi_roleb = "Any Non-Emergency Use"
+            fsi_roleb = "Basic User"
             fsi_rolebcontext = 4
             fsi_severity = 1
-            fsi_scope = 4  # Any Environment
-            fsi_enabled = $false
+            fsi_enabled = $true
             fsi_allowexception = $false
-            fsi_description = "Template rule — disabled by default. Role names must be customized to match your Entra ID break-glass account naming convention and Dataverse security roles before enabling."
+            fsi_description = "Emergency access accounts must not be used for routine operations"
         }
     )
 }
 
-function Get-AccessToken {
+function Get-ExistingRules {
     param(
-        [string]$TenantId,
-        [string]$ClientId,
-        [string]$ClientSecret,
-        [string]$Scope
+        [string]$Environment,
+        [string]$Token
     )
 
-    $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
-    $body = @{
-        client_id     = $ClientId
-        client_secret = $ClientSecret
-        scope         = $Scope
-        grant_type    = "client_credentials"
+    $headers = @{
+        "Authorization"    = "Bearer $Token"
+        "Content-Type"     = "application/json"
+        "OData-MaxVersion" = "4.0"
+        "OData-Version"    = "4.0"
     }
 
-    $response = Invoke-RestMethodWithRetry -Uri $tokenUrl -Headers @{} -Method Post -Body $body -ContentType "application/x-www-form-urlencoded"
-    return $response.access_token
+    $results = @()
+    $nextLink = "$Environment/api/data/v9.2/fsi_conflictrules?`$select=fsi_rolea,fsi_roleb,fsi_category"
+    while ($nextLink) {
+        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
+        $results += $response.value
+        $nextLink = $response.'@odata.nextLink'
+    }
+    return $results
 }
 
 function Import-Rule {
@@ -337,26 +281,11 @@ function Import-Rule {
         "OData-Version" = "4.0"
     }
 
-    # Check for existing rule by name (idempotency)
-    $escapedName = $Rule.fsi_name -replace "'", "''"
-    $checkUri = "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_name eq '$escapedName'"
-    try {
-        $existing = Invoke-RestMethodWithRetry -Uri $checkUri -Headers $headers -Method Get
-        if ($existing.value.Count -gt 0) {
-            return @{ Success = $true; Rule = $Rule.fsi_name; Skipped = $true }
-        }
-    } catch {
-        if ($_.Exception.Response.StatusCode.value__ -ne 404) {
-            Write-Warning "Existence check failed for '$($Rule.fsi_name)': $($_.Exception.Message)"
-            throw
-        }
-    }
-
     $uri = "$Environment/api/data/v9.2/fsi_conflictrules"
     $body = $Rule | ConvertTo-Json -Depth 5
 
     try {
-        $response = Invoke-RestMethodWithRetry -Uri $uri -Headers $headers -Method Post -Body $body
+        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body }
         return @{ Success = $true; Rule = $Rule.fsi_name }
     } catch {
         return @{ Success = $false; Rule = $Rule.fsi_name; Error = $_.Exception.Message }
@@ -375,6 +304,24 @@ $rulesToImport = @()
 if ($RuleFile) {
     Write-Host "Loading rules from: $RuleFile"
     $rulesToImport = Get-Content $RuleFile -Raw | ConvertFrom-Json -AsHashtable
+
+    # Validate required fields in each rule from the JSON file
+    $requiredFields = @('fsi_name', 'fsi_category', 'fsi_rolea', 'fsi_roleacontext', 'fsi_roleb', 'fsi_rolebcontext', 'fsi_severity', 'fsi_enabled')
+    $validCategories = 1..3
+    $validSeverities = 1..4
+    $validContexts = 1..5
+    foreach ($r in $rulesToImport) {
+        foreach ($field in $requiredFields) {
+            if (-not $r.ContainsKey($field)) {
+                throw "Rule '$($r.fsi_name ?? 'unknown')' is missing required field '$field'."
+            }
+        }
+        if ($r.fsi_category -notin $validCategories) { throw "Rule '$($r.fsi_name)': fsi_category must be 1-3." }
+        if ($r.fsi_severity -notin $validSeverities) { throw "Rule '$($r.fsi_name)': fsi_severity must be 1-4." }
+        if ($r.fsi_roleacontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_roleacontext must be 1-5." }
+        if ($r.fsi_rolebcontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_rolebcontext must be 1-5." }
+    }
+    Write-Host "  Schema validation passed" -ForegroundColor Green
 } else {
     Write-Host "Loading rule set: $RuleSet"
 
@@ -392,36 +339,42 @@ if ($RuleFile) {
 
 Write-Host "  Found $($rulesToImport.Count) rules to import"
 Write-Host ""
-Write-AuditLog "Import started for environment $Environment ($($rulesToImport.Count) rules)"
 
 # Get token
 Write-Host "Authenticating..." -ForegroundColor Gray
 $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
-$tokenAcquiredAt = Get-Date
-$tokenRefreshInterval = [TimeSpan]::FromMinutes(45)
 Write-Host "  Authenticated successfully" -ForegroundColor Green
+Write-Host ""
+
+# Query existing rules for duplicate detection
+Write-Host "Checking for existing rules..." -ForegroundColor Gray
+$existingRules = Get-ExistingRules -Environment $Environment -Token $token
+Write-Host "  Found $($existingRules.Count) existing rules" -ForegroundColor Green
 Write-Host ""
 
 # Import rules
 Write-Host "Importing rules..." -ForegroundColor Gray
 $imported = 0
-$skipped = 0
 $failed = 0
+$skipped = 0
 
 foreach ($rule in $rulesToImport) {
-    # Refresh token if approaching expiry (Azure AD tokens have 60-90 min lifetime)
-    if ((Get-Date) - $tokenAcquiredAt -gt $tokenRefreshInterval) {
-        $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
-        $tokenAcquiredAt = Get-Date
-        Write-Verbose "Token refreshed"
+    # Check for duplicates by role pair and category
+    $isDuplicate = $existingRules | Where-Object {
+        $_.fsi_rolea -eq $rule.fsi_rolea -and
+        $_.fsi_roleb -eq $rule.fsi_roleb -and
+        $_.fsi_category -eq $rule.fsi_category
     }
+    if ($isDuplicate) {
+        $skipped++
+        Write-Host "  Skipped (duplicate): $($rule.fsi_name)" -ForegroundColor Yellow
+        continue
+    }
+
     if ($PSCmdlet.ShouldProcess("Rule: $($rule.fsi_name)", "Import to $Environment")) {
         $result = Import-Rule -Environment $Environment -Token $token -Rule $rule
 
-        if ($result.Success -and $result.Skipped) {
-            $skipped++
-            Write-Host "  Skipped (exists): $($result.Rule)" -ForegroundColor Yellow
-        } elseif ($result.Success) {
+        if ($result.Success) {
             $imported++
             Write-Host "  Imported: $($result.Rule)" -ForegroundColor Green
         } else {
@@ -439,10 +392,3 @@ Write-Host ""
 Write-Host "Imported: $imported"
 Write-Host "Skipped:  $skipped"
 Write-Host "Failed:   $failed"
-Write-AuditLog "Import complete. Imported=$imported Skipped=$skipped Failed=$failed"
-
-# Exit with meaningful code for CI/CD pipeline integration
-if ($failed -gt 0) {
-    exit 1  # Some rules failed to import
-}
-exit 0

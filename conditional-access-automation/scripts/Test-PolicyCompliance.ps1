@@ -180,6 +180,7 @@ Write-Verbose "Retrieving Conditional Access policies..."
 try {
     $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
     $fsiPolicies = $allPolicies | Where-Object {
+        $_.DisplayName -like "CA-FSI-*" -or
         $_.DisplayName -like "CA-CopilotStudio-*" -or
         $_.DisplayName -like "CA-AgentBuilder-*" -or
         $_.DisplayName -like "CA-M365Copilot-*" -or
@@ -379,15 +380,15 @@ foreach ($policy in $fsiPolicies) {
         $freqType = $sessionControls.SignInFrequency.Type
         Write-Verbose "  [PASS] $($policy.DisplayName) - Sign-in frequency: $freqValue $freqType"
 
-        $zone3SessionFailed = $false
         if ($isZone3 -and $hasPersistentBrowser) {
             $browserMode = $sessionControls.PersistentBrowser.Mode
             if ($browserMode -eq "never") {
                 Write-Verbose "  [PASS] $($policy.DisplayName) - Persistent browser: $browserMode"
+                $complianceResults.checksPassed++
             }
             else {
-                $zone3SessionFailed = $true
                 Write-Verbose "  [WARN] $($policy.DisplayName) - Persistent browser mode is '$browserMode', expected 'never' for Zone3"
+                $complianceResults.checksFailed++
                 $complianceResults.gaps += @{
                     type = "SessionControlMisconfigured"
                     policy = $policy.DisplayName
@@ -397,18 +398,14 @@ foreach ($policy in $fsiPolicies) {
             }
         }
         elseif ($isZone3 -and -not $hasPersistentBrowser) {
-            $zone3SessionFailed = $true
             Write-Verbose "  [WARN] $($policy.DisplayName) - Zone3 policy missing persistentBrowser control"
+            $complianceResults.checksFailed++
             $complianceResults.gaps += @{
                 type = "MissingSessionControl"
                 policy = $policy.DisplayName
                 detail = "Zone3 policy should have persistentBrowser set to 'never'"
                 recommendation = "Add persistentBrowser session control with mode 'never'"
             }
-        }
-
-        if ($zone3SessionFailed) {
-            $complianceResults.checksFailed++
         }
         else {
             $complianceResults.checksPassed++

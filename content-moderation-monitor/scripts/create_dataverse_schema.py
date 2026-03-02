@@ -373,7 +373,7 @@ def create_table_with_columns(
                     ),
                     "Description": _label("Primary name attribute"),
                     "RequiredLevel": {"Value": "ApplicationRequired"},
-                    "MaxLength": 200,
+                    "MaxLength": 500,
                     "FormatName": {"Value": "Text"},
                 },
             ],

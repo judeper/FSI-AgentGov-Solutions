@@ -1,0 +1,88 @@
+// ============================================================================
+// Defender CloudAppEvents - KQL Query for Microsoft Defender
+// FSI Agent Governance Framework
+// ============================================================================
+//
+// Purpose: Query Defender CloudAppEvents for Copilot XPIA (Cross-Prompt
+//          Injection Attack) and Jailbreak detections
+// Data Source: CloudAppEvents table in Microsoft Defender Advanced Hunting
+//
+// Prerequisites:
+//   - Microsoft Defender for Cloud Apps license
+//   - Advanced Hunting access in Microsoft 365 Defender portal
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Query 1: XPIA and Jailbreak Detections (Last 24 Hours)
+// -----------------------------------------------------------------------------
+CloudAppEvents
+| where Timestamp > ago(24h)
+| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| extend parsedFields = parse_json(RawEventData)
+| where parsedFields.XPIADetected == true
+    or parsedFields.JailbreakDetected == true
+| extend
+    UserId = tostring(parsedFields.UserId),
+    AgentId = tostring(parsedFields.AgentId),
+    AgentName = tostring(parsedFields.AgentName),
+    AppHost = tostring(parsedFields.AppHost),
+    XPIADetected = tobool(parsedFields.XPIADetected),
+    JailbreakDetected = tobool(parsedFields.JailbreakDetected),
+    ThreatType = case(
+        parsedFields.XPIADetected == true and parsedFields.JailbreakDetected == true, "XPIA+Jailbreak",
+        parsedFields.XPIADetected == true, "XPIA",
+        parsedFields.JailbreakDetected == true, "Jailbreak",
+        "Unknown"
+    )
+| project
+    Timestamp,
+    UserId,
+    AgentId,
+    AgentName,
+    AppHost,
+    ActionType,
+    XPIADetected,
+    JailbreakDetected,
+    ThreatType
+| order by Timestamp desc
+
+// -----------------------------------------------------------------------------
+// Query 2: XPIA/Jailbreak Summary by Agent (Last 7 Days)
+// -----------------------------------------------------------------------------
+CloudAppEvents
+| where Timestamp > ago(7d)
+| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| extend parsedFields = parse_json(RawEventData)
+| where parsedFields.XPIADetected == true
+    or parsedFields.JailbreakDetected == true
+| extend
+    AgentId = tostring(parsedFields.AgentId),
+    AgentName = tostring(parsedFields.AgentName),
+    XPIADetected = tobool(parsedFields.XPIADetected),
+    JailbreakDetected = tobool(parsedFields.JailbreakDetected)
+| summarize
+    TotalEvents = count(),
+    XPIACount = countif(XPIADetected),
+    JailbreakCount = countif(JailbreakDetected),
+    UniqueUsers = dcount(tostring(parse_json(RawEventData).UserId))
+    by AgentId, AgentName, bin(Timestamp, 1d)
+| order by TotalEvents desc
+
+// -----------------------------------------------------------------------------
+// Query 3: Hourly Trend of XPIA/Jailbreak Events (Last 24 Hours)
+// -----------------------------------------------------------------------------
+CloudAppEvents
+| where Timestamp > ago(24h)
+| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| extend parsedFields = parse_json(RawEventData)
+| where parsedFields.XPIADetected == true
+    or parsedFields.JailbreakDetected == true
+| extend
+    ThreatType = case(
+        parsedFields.XPIADetected == true and parsedFields.JailbreakDetected == true, "XPIA+Jailbreak",
+        parsedFields.XPIADetected == true, "XPIA",
+        parsedFields.JailbreakDetected == true, "Jailbreak",
+        "Unknown"
+    )
+| summarize EventCount = count() by ThreatType, bin(Timestamp, 1h)
+| order by Timestamp asc

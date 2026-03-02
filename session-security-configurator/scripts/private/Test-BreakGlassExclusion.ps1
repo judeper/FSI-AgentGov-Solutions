@@ -93,8 +93,8 @@ function Test-BreakGlassExclusion {
         }
 
         if ($Config.breakGlassAccounts.Count -eq 0) {
-            Write-Warning "No break-glass accounts configured. Skipping validation."
-            return $true
+            Write-Error "No break-glass accounts configured. Cannot validate exclusions."
+            return $false
         }
 
         if (-not $PolicyTemplate.conditions.users) {
@@ -201,4 +201,5 @@ if ($MyInvocation.InvocationName -ne '.') {
     $result = Test-BreakGlassExclusion @PSBoundParameters
     return $result
 }
+
 

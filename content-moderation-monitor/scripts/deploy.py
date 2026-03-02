@@ -197,7 +197,7 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CMM_CLIENT_SECRET"),
-        help="Service principal secret (or set CMM_CLIENT_SECRET env var)",
+        help="[DEPRECATED: use CMM_CLIENT_SECRET env var instead] Service principal secret",
     )
     parser.add_argument(
         "--environment-url",
@@ -238,6 +238,13 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Warn if --client-secret was passed via CLI (visible in process listings)
+    if args.client_secret and not os.environ.get("CMM_CLIENT_SECRET"):
+        print(
+            "WARNING: --client-secret passes secrets via command-line arguments "
+            "visible in process listings. Use CMM_CLIENT_SECRET env var instead."
+        )
 
     # Validate required arguments
     if not args.tenant_id:

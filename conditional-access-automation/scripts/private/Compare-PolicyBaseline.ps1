@@ -105,6 +105,7 @@ function Compare-CAAPolicyBaseline {
         param([object[]]$Expected, [object[]]$Actual)
         $e = @($Expected | Where-Object { $_ })
         $a = @($Actual | Where-Object { $_ })
+        if ($e.Count -eq 0 -and $a.Count -eq 0) { return $true }
         if ($e.Count -ne $a.Count) { return $false }
         $diff = Compare-Object -ReferenceObject $e -DifferenceObject $a -PassThru
         return ($null -eq $diff -or $diff.Count -eq 0)

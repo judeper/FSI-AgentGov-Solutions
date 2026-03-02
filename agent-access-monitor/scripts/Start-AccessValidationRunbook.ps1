@@ -1,4 +1,4 @@
-#Requires -Version 7.1
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -145,10 +145,8 @@ function Get-DriftDirection {
 
     # Restrictiveness orderings (most restrictive first)
     $sharingModeOrder = @{
-        'NoSharingToSecurityGroups'      = 1
-        'ExcludeSharingToSecurityGroups'  = 2
-        'IncludeSharingToSecurityGroups'  = 3
-        'noLimit'                         = 4
+        'ExcludeSharingToSecurityGroups' = 1
+        'noLimit'                        = 2
     }
 
     switch ($SettingName) {
@@ -255,6 +253,9 @@ try {
         $ExcludeSandbox = $false
     }
 
+    $baselineMaxAgeDays = [int](Get-AAMEnvironmentVariable -Name "BaselineMaxAgeDays" -DefaultValue 30)
+    Write-Verbose "BaselineMaxAgeDays: $baselineMaxAgeDays"
+
     Write-Verbose "Dataverse parameters loaded"
 
     #endregion
@@ -279,9 +280,6 @@ try {
     if ($ExcludeSandbox) { $scanParams['ExcludeSandbox'] = $true }
     if ($ExcludeTrial)   { $scanParams['ExcludeTrial'] = $true }
 
-    # Include compliant environments so drift detection can examine all environments
-    $scanParams['IncludeCompliant'] = $true
-
     $scanResult = & $complianceScript @scanParams
 
     Write-Verbose "Scan complete. Overall status: $($scanResult.OverallStatus)"
@@ -293,26 +291,15 @@ try {
 
     Write-Verbose "Running per-environment drift detection against active baselines"
 
-    # Reuse environment access settings from the compliance scan to avoid duplicate API calls
-    $liveSettings = $scanResult.EnvironmentSettings
+    # Query environment settings directly for drift detection (includes all environments
+    # with BotLimitSharingMode, BotAuthoringSharingDisabled, BotPublishedLimitSharingMode)
+    $getSettingsScript = Join-Path $scriptRoot 'Get-EnvironmentAccessSettings.ps1'
+    $envSettingsParams = @{ GracePeriodHours = $GracePeriodHours }
+    if ($ExcludeSandbox) { $envSettingsParams['ExcludeSandbox'] = $true }
+    if ($ExcludeTrial) { $envSettingsParams['ExcludeTrial'] = $true }
+    $allEnvironments = & $getSettingsScript @envSettingsParams
 
-    # Build lookup by EnvironmentId for drift comparison
-    $settingsLookup = @{}
-    if ($liveSettings) {
-        foreach ($s in $liveSettings) {
-            $settingsLookup[$s.EnvironmentId] = $s
-        }
-    }
-
-    # Collect all environment results (both compliant and non-compliant)
     $driftResults = @()
-    $allEnvironments = @()
-
-    # Get environments from scan - the Environments property contains non-compliant results
-    # Each has EnvironmentId, EnvironmentDisplayName, Zone, Violations, etc.
-    if ($scanResult.Environments) {
-        $allEnvironments += $scanResult.Environments
-    }
 
     foreach ($env in $allEnvironments) {
         $envId = $env.EnvironmentId
@@ -326,6 +313,7 @@ try {
             Zone            = $env.Zone
             HasDrift        = $false
             IsFirstRun      = $false
+            IsStaleBaseline = $false
             Changes         = @()
             Direction       = $null
         }
@@ -340,25 +328,32 @@ try {
             } else {
                 $bl = $baseline | Select-Object -First 1
 
-                # Look up live access settings for this environment
-                $currentSettings = if ($settingsLookup.ContainsKey($envId)) { $settingsLookup[$envId] } else { $null }
+                # Check for stale baseline
+                if ($bl.fsi_captured_at) {
+                    $capturedAt = [datetime]$bl.fsi_captured_at
+                    $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
+                    if ($ageInDays -gt $baselineMaxAgeDays) {
+                        Write-Verbose "Stale baseline for ${envName}: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
+                        $driftEntry.IsStaleBaseline = $true
+                    }
+                }
 
                 # Compare 3 key settings
                 $settingsToCheck = @(
                     @{
                         Name     = 'bot-limitSharingMode'
                         Baseline = $bl.fsi_bot_limit_sharing_mode
-                        Current  = if ($currentSettings) { $currentSettings.BotLimitSharingMode } else { $null }
+                        Current  = $env.BotLimitSharingMode
                     },
                     @{
                         Name     = 'bot-authoringSharingDisabled'
                         Baseline = [string]$bl.fsi_bot_authoring_sharing_disabled
-                        Current  = if ($currentSettings) { [string]$currentSettings.BotAuthoringSharingDisabled } else { '' }
+                        Current  = [string]$env.BotAuthoringSharingDisabled
                     },
                     @{
                         Name     = 'bot-publishedBotLimitSharingMode'
-                        Baseline = $bl.fsi_bot_published_limit_sharing_mode
-                        Current  = if ($currentSettings) { $currentSettings.BotPublishedLimitSharingMode } else { $null }
+                        Baseline = $bl.fsi_bot_published_bot_limit_sharing_mode
+                        Current  = $env.BotPublishedLimitSharingMode
                     }
                 )
 
@@ -430,8 +425,9 @@ try {
     #region Determine alert flags
 
     $hasDrift = ($driftResults | Where-Object { $_.HasDrift }).Count -gt 0
+    $hasStaleBaselines = ($driftResults | Where-Object { $_.IsStaleBaseline }).Count -gt 0
     $hasViolations = $violations.Count -gt 0
-    $alertRequired = $hasViolations -or $hasDrift
+    $alertRequired = $hasViolations -or $hasDrift -or $hasStaleBaselines
 
     # Highest severity from violations (Critical > High > Warning > Info)
     $severityOrder = @('Critical', 'High', 'Warning', 'Info')
@@ -460,6 +456,11 @@ try {
         $reason += "; $driftCount environments drifted from baseline"
     }
 
+    if ($hasStaleBaselines) {
+        $staleCount = ($driftResults | Where-Object { $_.IsStaleBaseline }).Count
+        $reason += "; $staleCount environments have stale baselines (>$baselineMaxAgeDays days)"
+    }
+
     #endregion
 
     #region Build enriched ZoneSummary
@@ -472,7 +473,7 @@ try {
     if ($scanResult.Environments) {
         foreach ($env in $scanResult.Environments) {
             $z = $env.Zone
-            if ($z -and $zoneNonCompliant.ContainsKey($z) -and -not $env.IsCompliant) {
+            if ($z -and $zoneNonCompliant.ContainsKey($z)) {
                 $zoneNonCompliant[$z]++
             }
         }
@@ -527,22 +528,6 @@ try {
 } catch {
     Write-Verbose "Error occurred: $($_.Exception.Message)"
 
-    # Write failure record to Dataverse audit trail (FINRA 4511 evidence of all attempts)
-    try {
-        if ($script:DataverseUrl -or $DataverseUrl) {
-            $failureRecord = @{
-                TotalEnvironments = 0
-                CompliantCount    = 0
-                ViolationCount    = 0
-                OverallStatus     = 'Error'
-            }
-            Write-AAMValidationHistory -ValidationResult $failureRecord -RunId ([guid]::NewGuid().ToString())
-            Write-Verbose "Failure audit record written to Dataverse"
-        }
-    } catch {
-        Write-Verbose "Could not write failure audit record: $($_.Exception.Message)"
-    }
-
     $errorOutput = [PSCustomObject]@{
         RunType           = "AccessValidation"
         Timestamp         = (Get-Date -AsUTC -Format "o")
@@ -560,5 +545,5 @@ try {
         AlertSeverity     = "Error"
     }
 
-    $errorOutput | ConvertTo-Json -Depth 10
+    $errorOutput | ConvertTo-Json -Depth 5
 }

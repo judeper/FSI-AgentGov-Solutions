@@ -26,9 +26,6 @@
 .PARAMETER DryRun
     Preview deployment without making changes. Shows what would be deployed.
 
-.PARAMETER DetailedOutput
-    Show detailed output including full az CLI commands and resource IDs.
-
 .EXAMPLE
     .\deploy-workbooks.ps1 -ResourceGroup "rg-agent-observability-dev" `
                            -ApplicationInsightsId "/subscriptions/.../components/ai-aof-observability"
@@ -73,10 +70,7 @@ param(
     [string]$Environment = "dev",
 
     [Parameter(Mandatory=$false)]
-    [switch]$DryRun,
-
-    [Parameter(Mandatory=$false)]
-    [switch]$DetailedOutput
+    [switch]$DryRun
 )
 
 Set-StrictMode -Version Latest
@@ -280,30 +274,24 @@ function Deploy-SingleWorkbook {
         [string]$ApplicationInsightsId,
 
         [Parameter(Mandatory=$false)]
-        [switch]$DryRun,
-
-        [Parameter(Mandatory=$false)]
-        [switch]$DetailedOutput
+        [switch]$DryRun
     )
 
     # Resolve paths relative to script location
     $scriptDir = Split-Path -Parent $PSCommandPath
-    $templateRawPath = Join-Path $scriptDir $TemplatePath
-    $parametersRawPath = Join-Path $scriptDir $ParametersPath
+    $templateFullPath = Join-Path $scriptDir $TemplatePath | Resolve-Path -ErrorAction Stop
+    $parametersFullPath = Join-Path $scriptDir $ParametersPath | Resolve-Path -ErrorAction Stop
 
     # Verify files exist
-    if (-not (Test-Path $templateRawPath)) {
-        Write-Host "    ${COLOR_RED}✗ Template file not found: $templateRawPath${COLOR_RESET}"
+    if (-not (Test-Path $templateFullPath)) {
+        Write-Host "    ${COLOR_RED}✗ Template file not found: $templateFullPath${COLOR_RESET}"
         return $false
     }
 
-    if (-not (Test-Path $parametersRawPath)) {
-        Write-Host "    ${COLOR_RED}✗ Parameters file not found: $parametersRawPath${COLOR_RESET}"
+    if (-not (Test-Path $parametersFullPath)) {
+        Write-Host "    ${COLOR_RED}✗ Parameters file not found: $parametersFullPath${COLOR_RESET}"
         return $false
     }
-
-    $templateFullPath = Resolve-Path $templateRawPath
-    $parametersFullPath = Resolve-Path $parametersRawPath
 
     # DryRun mode: show what would be deployed
     if ($DryRun) {
@@ -327,7 +315,7 @@ function Deploy-SingleWorkbook {
     # Deploy workbook
     Write-Host "  Deploying workbook '$DisplayName'..." -ForegroundColor Cyan
 
-    if ($DetailedOutput) {
+    if ($VerbosePreference -eq 'Continue') {
         Write-Host "    Template: $templateFullPath" -ForegroundColor Gray
         Write-Host "    Parameters: $parametersFullPath" -ForegroundColor Gray
     }
@@ -358,7 +346,7 @@ function Deploy-SingleWorkbook {
         Write-Host "    ${COLOR_GREEN}✓ Workbook deployed successfully${COLOR_RESET}"
         Write-Host "    Workbook ID: $workbookId" -ForegroundColor White
 
-        if ($DetailedOutput) {
+        if ($VerbosePreference -eq 'Continue') {
             Write-Host "    Provisioning State: $($deployment.properties.provisioningState)" -ForegroundColor Gray
         }
 
@@ -439,8 +427,7 @@ try {
             -ParametersPath $parametersPath `
             -ResourceGroup $ResourceGroup `
             -ApplicationInsightsId $ApplicationInsightsId `
-            -DryRun:$DryRun `
-            -DetailedOutput:$DetailedOutput
+            -DryRun:$DryRun
 
         if ($success) {
             $deployedCount++
@@ -505,7 +492,7 @@ try {
             Write-Host "    - Review error messages above" -ForegroundColor White
             Write-Host "    - Verify Application Insights resource ID is correct" -ForegroundColor White
             Write-Host "    - Check Azure RBAC permissions (need Contributor or Owner)" -ForegroundColor White
-            Write-Host "    - Run with -DetailedOutput for detailed output" -ForegroundColor White
+            Write-Host "    - Run with -Verbose for detailed output" -ForegroundColor White
         }
     }
 
@@ -525,7 +512,7 @@ try {
     Write-Host "${COLOR_RED}ERROR: Unexpected error occurred${COLOR_RESET}" -ForegroundColor Red
     Write-Host "  $_" -ForegroundColor Red
 
-    if ($DetailedOutput) {
+    if ($VerbosePreference -eq 'Continue') {
         Write-Host ""
         Write-Host "Stack trace:" -ForegroundColor Gray
         Write-Host $_.ScriptStackTrace -ForegroundColor Gray

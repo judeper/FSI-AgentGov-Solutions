@@ -18,8 +18,19 @@
     "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
   },
   "grantControls": {
-    "operator": "OR",
-    "builtInControls": ["compliantDevice", "domainJoinedDevice"]
+    "operator": "AND",
+    "builtInControls": ["mfa", "compliantDevice"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 1,
+      "type": "hours",
+      "isEnabled": true
+    },
+    "persistentBrowser": {
+      "mode": "never",
+      "isEnabled": true
+    }
   },
   "_metadata": {
     "schemaVersion": "v1.0",

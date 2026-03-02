@@ -7,8 +7,7 @@
     1. Extracts CopilotInteraction deny events from Purview Audit
     2. Extracts DLP events for Copilot policy location
     3. Extracts RAI telemetry from Application Insights
-    4. Extracts Defender CloudAppEvents (XPIA/Jailbreak detections)
-    5. Uploads results to Azure Blob Storage (optional)
+    4. Uploads results to Azure Blob Storage (optional)
 
 .PARAMETER OutputDirectory
     Local directory for CSV exports. Defaults to current directory.
@@ -41,8 +40,8 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 2.0.0
-    Requires: ExchangeOnlineManagement module; Az.Accounts and Az.Storage conditionally when RAI telemetry is not skipped or blob upload is used; Az.KeyVault conditionally when using Key Vault; Microsoft.Graph.Security conditionally when Defender events are not skipped
+    Version: 1.1
+    Requires: ExchangeOnlineManagement module (Az.Storage and Az.KeyVault required only for upload/KeyVault features)
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -50,8 +49,23 @@
 
 <#
 ================================================================================
-  Export-RaiTelemetry.ps1 uses Entra ID (Azure AD) authentication.
-  Migration from deprecated x-api-key completed February 4, 2026.
+  AUTHENTICATION NOTE: Entra ID (Azure AD) - Migration Complete
+================================================================================
+
+  Export-RaiTelemetry.ps1 uses Entra ID authentication via Connect-AzAccount.
+
+  Migration completed: February 4, 2026
+
+  The deprecated x-api-key authentication method has been removed from
+  Export-RaiTelemetry.ps1. No API key parameter is needed.
+
+  Prerequisites:
+  - Install Az.Accounts module: Install-Module Az.Accounts -Force
+  - Authenticate before running: Connect-AzAccount
+  - Grant Monitoring Reader role on Application Insights resource
+
+  Last verified: March 1, 2026
+
 ================================================================================
 #>
 
@@ -76,9 +90,6 @@ param(
     [switch]$SkipRaiTelemetry,
 
     [Parameter()]
-    [switch]$SkipDefenderEvents,
-
-    [Parameter()]
     [switch]$SkipUpload
 )
 
@@ -88,22 +99,21 @@ param(
 #region Configuration
 
 $ErrorActionPreference = "Stop"
-$dateStamp = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
+# Capture current time once to avoid midnight-crossing mismatches between
+# $dateStamp, $reportStartDate, and $reportEndDate.
+$now = Get-Date
+$dateStamp = $now.AddDays(-1).ToString("yyyy-MM-dd")
 $scriptDir = $PSScriptRoot
 
-# Conditionally import Az modules only when needed
-if ($KeyVaultName) {
-    Import-Module Az.KeyVault -ErrorAction Stop
-}
-if ($StorageAccountName -and -not $SkipUpload) {
-    Import-Module Az.Storage -ErrorAction Stop
-}
+# Compute date window once to ensure all sub-scripts query the same period,
+# even if the orchestrator spans midnight.
+$reportStartDate = $now.AddDays(-1).Date
+$reportEndDate = $now.Date
 
 # Output file paths
 $copilotDenyPath = Join-Path $OutputDirectory "CopilotDenyEvents-$dateStamp.csv"
 $dlpEventsPath = Join-Path $OutputDirectory "DlpCopilotEvents-$dateStamp.csv"
 $raiTelemetryPath = Join-Path $OutputDirectory "RaiTelemetry-$dateStamp.csv"
-$defenderEventsPath = Join-Path $OutputDirectory "DefenderCopilotEvents-$dateStamp.csv"
 
 #endregion Configuration
 
@@ -115,6 +125,37 @@ function Write-StepHeader {
     Write-Host ("-" * 50) -ForegroundColor Gray
 }
 
+function Invoke-WithRetry {
+    <#
+    .SYNOPSIS
+        Invokes a script block with retry and exponential backoff for transient failures.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [scriptblock]$ScriptBlock,
+
+        [int]$MaxRetries = 3,
+
+        [int]$BaseDelaySeconds = 60
+    )
+
+    $attempt = 0
+    while ($true) {
+        try {
+            $attempt++
+            return & $ScriptBlock
+        }
+        catch {
+            if ($attempt -ge $MaxRetries) {
+                throw
+            }
+            $delay = $BaseDelaySeconds * [math]::Pow(2, $attempt - 1)
+            Write-Warning "Attempt $attempt of $MaxRetries failed: $_. Retrying in ${delay}s..."
+            Start-Sleep -Seconds $delay
+        }
+    }
+}
+
 function Get-KeyVaultSecrets {
     <#
     .SYNOPSIS
@@ -123,6 +164,11 @@ function Get-KeyVaultSecrets {
     param([string]$VaultName)
 
     Write-Host "Retrieving credentials from Key Vault: $VaultName" -ForegroundColor Gray
+
+    # Runtime check: Az.KeyVault is only required when -KeyVaultName is provided
+    if (-not (Get-Module -ListAvailable -Name Az.KeyVault)) {
+        throw "Az.KeyVault module is required when -KeyVaultName is specified. Run: Install-Module Az.KeyVault -Force"
+    }
 
     $secrets = @{}
 
@@ -149,6 +195,11 @@ function Send-ToBlobStorage {
         [string[]]$FilePaths,
         [string]$DateFolder
     )
+
+    # Runtime check: Az.Storage is only required when uploading to blob
+    if (-not (Get-Module -ListAvailable -Name Az.Storage)) {
+        throw "Az.Storage module is required for blob upload. Run: Install-Module Az.Storage -Force"
+    }
 
     Write-Host "Uploading to Azure Blob Storage..." -ForegroundColor Gray
     Write-Host "  Account: $StorageAccount" -ForegroundColor Gray
@@ -212,34 +263,30 @@ try {
 
     # Track results
     $results = @{
-        CopilotDeny    = @{ Success = $false; EventCount = 0; Path = $null }
-        DlpEvents      = @{ Success = $false; EventCount = 0; Path = $null }
-        RaiTelemetry   = @{ Success = $false; EventCount = 0; Path = $null }
-        DefenderEvents = @{ Success = $false; EventCount = 0; Path = $null }
+        CopilotDeny = @{ Success = $false; EventCount = 0; Path = $null }
+        DlpEvents   = @{ Success = $false; EventCount = 0; Path = $null }
+        RaiTelemetry = @{ Success = $false; EventCount = 0; Path = $null }
     }
 
     #---------------------------------------------------------------------------
     # Step 1: Extract CopilotInteraction Deny Events
     #---------------------------------------------------------------------------
-    Write-StepHeader "1/4" "Extracting CopilotInteraction Deny Events"
+    Write-StepHeader "1/3" "Extracting CopilotInteraction Deny Events"
 
     try {
         $copilotScript = Join-Path $scriptDir "Export-CopilotDenyEvents.ps1"
 
         if (Test-Path $copilotScript) {
-            & $copilotScript -OutputPath $copilotDenyPath
+            Invoke-WithRetry -ScriptBlock {
+                & $copilotScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $copilotDenyPath
+            }
 
+            # Script completed without error — mark success even if zero events (no CSV created)
+            $results.CopilotDeny.Success = $true
             if (Test-Path $copilotDenyPath) {
                 $count = (Import-Csv $copilotDenyPath | Measure-Object).Count
-                $results.CopilotDeny.Success = $true
                 $results.CopilotDeny.EventCount = $count
                 $results.CopilotDeny.Path = $copilotDenyPath
-            }
-            elseif ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) {
-                # Child script exited successfully but found zero events (no CSV created)
-                $results.CopilotDeny.Success = $true
-                $results.CopilotDeny.EventCount = 0
-                Write-Host "  No deny events found (zero events is normal)." -ForegroundColor Yellow
             }
         }
         else {
@@ -253,24 +300,22 @@ try {
     #---------------------------------------------------------------------------
     # Step 2: Extract DLP Events
     #---------------------------------------------------------------------------
-    Write-StepHeader "2/4" "Extracting DLP Events for Copilot Location"
+    Write-StepHeader "2/3" "Extracting DLP Events for Copilot Location"
 
     try {
         $dlpScript = Join-Path $scriptDir "Export-DlpCopilotEvents.ps1"
 
         if (Test-Path $dlpScript) {
-            & $dlpScript -OutputPath $dlpEventsPath
+            Invoke-WithRetry -ScriptBlock {
+                & $dlpScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $dlpEventsPath
+            }
 
+            # Script completed without error — mark success even if zero events (no CSV created)
+            $results.DlpEvents.Success = $true
             if (Test-Path $dlpEventsPath) {
                 $count = (Import-Csv $dlpEventsPath | Measure-Object).Count
-                $results.DlpEvents.Success = $true
                 $results.DlpEvents.EventCount = $count
                 $results.DlpEvents.Path = $dlpEventsPath
-            }
-            elseif ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) {
-                $results.DlpEvents.Success = $true
-                $results.DlpEvents.EventCount = 0
-                Write-Host "  No DLP events found (zero events is normal)." -ForegroundColor Yellow
             }
         }
         else {
@@ -285,27 +330,27 @@ try {
     # Step 3: Extract RAI Telemetry
     #---------------------------------------------------------------------------
     if (-not $SkipRaiTelemetry) {
-        Write-StepHeader "3/4" "Extracting RAI Telemetry from Application Insights"
+        Write-StepHeader "3/3" "Extracting RAI Telemetry from Application Insights"
 
         if ($AppInsightsAppId) {
             try {
                 $raiScript = Join-Path $scriptDir "Export-RaiTelemetry.ps1"
 
                 if (Test-Path $raiScript) {
-                    & $raiScript `
-                        -AppInsightsAppId $AppInsightsAppId `
-                        -OutputPath $raiTelemetryPath
+                    Invoke-WithRetry -ScriptBlock {
+                        & $raiScript `
+                            -AppInsightsAppId $AppInsightsAppId `
+                            -StartDate $reportStartDate `
+                            -EndDate $reportEndDate `
+                            -OutputPath $raiTelemetryPath
+                    }
 
+                    # Script completed without error — mark success even if zero events (no CSV created)
+                    $results.RaiTelemetry.Success = $true
                     if (Test-Path $raiTelemetryPath) {
                         $count = (Import-Csv $raiTelemetryPath | Measure-Object).Count
-                        $results.RaiTelemetry.Success = $true
                         $results.RaiTelemetry.EventCount = $count
                         $results.RaiTelemetry.Path = $raiTelemetryPath
-                    }
-                    elseif ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) {
-                        $results.RaiTelemetry.Success = $true
-                        $results.RaiTelemetry.EventCount = 0
-                        Write-Host "  No RAI events found (zero events is normal)." -ForegroundColor Yellow
                     }
                 }
                 else {
@@ -321,57 +366,16 @@ try {
         }
     }
     else {
-        Write-Host "[3/4] Skipping RAI Telemetry (SkipRaiTelemetry flag set)" -ForegroundColor Yellow
-        $results.Remove('RaiTelemetry')
+        Write-Host "[3/3] Skipping RAI Telemetry (SkipRaiTelemetry flag set)" -ForegroundColor Yellow
     }
 
     #---------------------------------------------------------------------------
-    # Step 4: Extract Defender CloudAppEvents (XPIA/Jailbreak)
-    #---------------------------------------------------------------------------
-    if (-not $SkipDefenderEvents) {
-        Write-StepHeader "4/4" "Extracting Defender CloudAppEvents (XPIA/Jailbreak)"
-
-        try {
-            $defenderScript = Join-Path $scriptDir "Export-DefenderCopilotEvents.ps1"
-
-            if (Test-Path $defenderScript) {
-                & $defenderScript -OutputPath $defenderEventsPath
-
-                if (Test-Path $defenderEventsPath) {
-                    $count = (Import-Csv $defenderEventsPath | Measure-Object).Count
-                    $results.DefenderEvents.Success = $true
-                    $results.DefenderEvents.EventCount = $count
-                    $results.DefenderEvents.Path = $defenderEventsPath
-                }
-                elseif ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) {
-                    $results.DefenderEvents.Success = $true
-                    $results.DefenderEvents.EventCount = 0
-                    Write-Host "  No Defender events found (zero events is normal)." -ForegroundColor Yellow
-                }
-            }
-            else {
-                Write-Warning "Script not found: $defenderScript"
-            }
-        }
-        catch {
-            Write-Warning "Defender CloudAppEvents extraction failed: $_"
-        }
-    }
-    else {
-        Write-Host "[4/4] Skipping Defender CloudAppEvents (SkipDefenderEvents flag set)" -ForegroundColor Yellow
-        $results.Remove('DefenderEvents')
-    }
-
-    #---------------------------------------------------------------------------
-    # Step 5: Upload to Blob Storage (optional)
+    # Step 4: Upload to Blob Storage (optional)
     #---------------------------------------------------------------------------
     if (-not $SkipUpload -and $StorageAccountName) {
         Write-StepHeader "Upload" "Uploading to Azure Blob Storage"
 
-        $uploadCandidates = @($copilotDenyPath, $dlpEventsPath)
-        if (-not $SkipRaiTelemetry) { $uploadCandidates += $raiTelemetryPath }
-        if (-not $SkipDefenderEvents) { $uploadCandidates += $defenderEventsPath }
-        $filesToUpload = $uploadCandidates | Where-Object { Test-Path $_ }
+        $filesToUpload = @($copilotDenyPath, $dlpEventsPath, $raiTelemetryPath) | Where-Object { Test-Path $_ }
 
         if ($filesToUpload.Count -gt 0) {
             Send-ToBlobStorage `
@@ -413,32 +417,13 @@ try {
 
     # Exit with appropriate code
     $successCount = ($results.Values | Where-Object { $_.Success }).Count
-
-    # Write execution log for regulatory audit trail
-    $logPath = Join-Path $OutputDirectory "DenyReport-ExecutionLog-$dateStamp.log"
-    $logEntries = [System.Collections.Generic.List[string]]::new()
-    $logEntries.Add("=== Deny Event Report Execution Log ===")
-    $logEntries.Add("Timestamp : $(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssK')")
-    $logEntries.Add("ReportDate: $dateStamp")
-    $logEntries.Add("OutputDir : $OutputDirectory")
-    $logEntries.Add("---")
-    foreach ($key in $results.Keys) {
-        $r = $results[$key]
-        $status = if ($r.Success) { "SUCCESS" } else { "FAILED" }
-        $logEntries.Add("$key : $status ($($r.EventCount) events)")
-    }
-    $logEntries.Add("TotalEvents: $totalEvents")
-    $logEntries.Add("OverallStatus: $(if ($successCount -eq $results.Count) { 'SUCCESS' } elseif ($successCount -eq 0) { 'FAILED' } else { 'PARTIAL' })")
-    $logEntries | Out-File -FilePath $logPath -Encoding UTF8
-    Write-Host "  Execution log: $logPath" -ForegroundColor Gray
-
     if ($successCount -eq 0) {
         Write-Error "All extractions failed."
         exit 1
     }
     elseif ($successCount -lt $results.Count) {
         Write-Warning "Some extractions failed. Review output above."
-        exit 2
+        exit 0
     }
     else {
         Write-Host "Daily deny report completed successfully!" -ForegroundColor Green

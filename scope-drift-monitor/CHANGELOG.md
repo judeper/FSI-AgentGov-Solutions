@@ -21,6 +21,7 @@ All notable changes to the Scope Drift Monitor.
   - `fsi_cr_outlook` - Office 365 Outlook connector
   - `fsi_cr_teams` - Microsoft Teams connector
   - `fsi_cr_approvals` - Approvals connector
+  - `fsi_cr_http_azuread` - HTTP with Azure AD for Management API
 - **Environment Variables:**
   - `fsi_SDM_TenantId` - Azure AD tenant ID
   - `fsi_SDM_DataverseEnvironment` - Dataverse environment URL
@@ -30,7 +31,8 @@ All notable changes to the Scope Drift Monitor.
   - `fsi_SDM_DetectionWindowMinutes` - Detection lookback window in minutes
   - `fsi_SDM_ClientId` - Azure AD application client ID
   - `fsi_SDM_ClientSecret` - Azure AD application client secret
-  - `fsi_SDM_DefaultScopeOwner` - Dataverse systemuser GUID for auto-created placeholder agent scopes
+  - `fsi_SDM_ManagementApiEndpoint` - Office 365 Management API base URL (commercial, GCC High, or DoD)
+  - `fsi_SDM_ActiveScopeStatus` - Active scope status code override for environments with custom option-set values
 - **Documentation:**
   - `flow-configuration.md` - Flow setup and configuration guide
   - `troubleshooting.md` - Common issues and resolutions
@@ -51,6 +53,7 @@ All notable changes to the Scope Drift Monitor.
 - Graceful degradation when audit sources unavailable
 - Dual alert delivery (Teams + email) for all violations
 - Single-approver workflow with 7-day timeout for expansion requests
+- Single-approver (`approvalType: "Basic"`) is an intentional v1.1 design choice for operational simplicity; regulated environments requiring separation of duties (FINRA, OCC, GDPR) should consider upgrading to `"Approve/Reject - Everyone must approve"` or multi-tier approval in a future release
 
 ---
 
@@ -64,7 +67,6 @@ All notable changes to the Scope Drift Monitor.
   - `fsi_scopeitem` - Individual scope items
   - `fsi_scopeviolation` - Drift violations
   - `fsi_expansionrequest` - Scope expansion requests
-  - `fsi_detectionrun` - Drift detection run tracking
 - **Security Roles:**
   - SDM Viewer - Read-only access
   - SDM Analyst - Violation and request management

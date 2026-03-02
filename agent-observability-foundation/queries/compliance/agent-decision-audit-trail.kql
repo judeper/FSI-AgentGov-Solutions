@@ -4,13 +4,12 @@
 // Parameters:
 //   {TimeRange} - Time window (default: 7d) - workbook parameter syntax
 //   {AgentId} - Optional agent filter (default: all agents)
-//   {IncludePII} - Boolean flag: true = raw UserId (authorized reviewers only), false = hashed (default)
 //
 // Output Schema:
 //   Timestamp (datetime) - When decision occurred
 //   AgentId (string) - Agent identifier
 //   SessionId (string) - Conversation session ID
-//   UserId (string) - User identifier (hashed unless IncludePII=true)
+//   UserId (string) - User identifier (always hashed for PII protection)
 //   Prompt (string) - User input
 //   Response (string) - Agent output
 //   Sources (dynamic) - Knowledge sources cited
@@ -34,7 +33,7 @@
 // | 2026-02-04T09:45:12Z | agent-002 | sess-def-456  | sha256:b4e3d0f1a8... | "Show recent transactions"      | "Here are your last 5..."     | 0.8                 |
 //
 // Notes:
-//   - Default mode hashes UserId for PII protection (hash_sha256)
+//   - UserId is always hashed (hash_sha256) for PII protection per FSI compliance requirements
 //   - Fields with NULL produce coalesce warning ('NOT_CAPTURED')
 //   - CompletenessPercent helps identify telemetry gaps before audits
 //   - For workbook integration, replace {Parameter} with workbook parameter controls
@@ -42,7 +41,6 @@
 
 let TimeRange = {TimeRange:7d};
 let AgentIdFilter = "{AgentId:all}";
-let IncludePII = {IncludePII:false};
 
 customEvents
 | where timestamp > ago(TimeRange)
@@ -51,7 +49,7 @@ customEvents
 | where AgentIdFilter == "all" or AgentId == AgentIdFilter
 | extend SessionId = tostring(session_Id)
 | extend UserIdRaw = tostring(customDimensions["fromName"])
-| extend UserId = iff(IncludePII, UserIdRaw, hash_sha256(UserIdRaw))
+| extend UserId = hash_sha256(UserIdRaw)
 | extend Prompt = coalesce(tostring(customDimensions["text"]), "NOT_CAPTURED")
 | extend Response = coalesce(tostring(customDimensions["speak"]), "NOT_CAPTURED")
 | extend Sources = todynamic(coalesce(tostring(customDimensions["citationSources"]), "[]"))

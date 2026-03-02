@@ -145,13 +145,16 @@ BASELINE_COLUMNS = [
 HISTORY_COLUMNS = [
     ("fsi_run_id", "string", lambda: _string_col("fsi_run_id", "Run ID", 100, True)),
     ("fsi_run_timestamp", "datetime", lambda: _datetime_col("fsi_run_timestamp", "Run Timestamp")),
+    ("fsi_validation_time", "datetime", lambda: _datetime_col("fsi_validation_time", "Validation Time")),
     ("fsi_total_agents", "integer", lambda: _int_col("fsi_total_agents", "Total Agents")),
     ("fsi_compliant_count", "integer", lambda: _int_col("fsi_compliant_count", "Compliant Count")),
     ("fsi_violation_count", "integer", lambda: _int_col("fsi_violation_count", "Violation Count")),
     ("fsi_file_upload_enabled_count", "integer", lambda: _int_col("fsi_file_upload_enabled_count", "File Upload Enabled Count")),
+    ("fsi_overall_status", "string", lambda: _string_col("fsi_overall_status", "Overall Status", 50)),
     ("fsi_compliance_rate", "decimal", lambda: _decimal_col("fsi_compliance_rate", "Compliance Rate %")),
     ("fsi_environments_scanned", "integer", lambda: _int_col("fsi_environments_scanned", "Environments Scanned")),
     ("fsi_scan_duration_seconds", "integer", lambda: _int_col("fsi_scan_duration_seconds", "Scan Duration (s)", 0, 86400)),
+    ("fsi_summary_json", "memo", lambda: _memo_col("fsi_summary_json", "Summary JSON")),
     ("fsi_notes", "memo", lambda: _memo_col("fsi_notes", "Run Notes")),
 ]
 
@@ -163,8 +166,8 @@ VIOLATION_COLUMNS = [
     ("fsi_zone", "picklist", lambda: _picklist_col("fsi_zone", "Zone", "fsi_acv_zone")),
     ("fsi_severity", "picklist", lambda: _picklist_col("fsi_severity", "Severity", "fsi_acv_severity")),
     ("fsi_violation_type", "string", lambda: _string_col("fsi_violation_type", "Violation Type", 100)),
-    ("fsi_file_upload_expected", "boolean", lambda: _bool_col("fsi_file_upload_expected", "File Upload Expected")),
-    ("fsi_file_upload_actual", "boolean", lambda: _bool_col("fsi_file_upload_actual", "File Upload Actual")),
+    ("fsi_file_upload_expected", "string", lambda: _string_col("fsi_file_upload_expected", "File Upload Expected", 50)),
+    ("fsi_file_upload_actual", "string", lambda: _string_col("fsi_file_upload_actual", "File Upload Actual", 50)),
     ("fsi_content_moderation_level", "string", lambda: _string_col("fsi_content_moderation_level", "Content Moderation Level", 50)),
     ("fsi_content_moderation_minimum", "string", lambda: _string_col("fsi_content_moderation_minimum", "Minimum Required Moderation", 50)),
     ("fsi_detected_on", "datetime", lambda: _datetime_col("fsi_detected_on", "Detected On")),

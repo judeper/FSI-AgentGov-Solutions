@@ -7,6 +7,7 @@
     PowerShellVersion = '7.0'
 
     FunctionsToExport = @(
+        'Connect-DataverseApi'
         'Get-SolutionControlMapping'
         'Get-SolutionTableConfig'
         'ConvertTo-DashboardStatus'

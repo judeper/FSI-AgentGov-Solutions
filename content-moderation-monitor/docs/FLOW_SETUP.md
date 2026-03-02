@@ -72,6 +72,8 @@ If importing fails or you need to customize the flow:
 
 Update these variables in the flow designer (Initialize Variable actions):
 
+> **Note:** These variables are currently hardcoded as `InitializeVariable` actions in the flow JSON. The solution already deploys `fsi_CMM_TeamsGroupId` and `fsi_CMM_TeamsChannelId` as Dataverse environment variables. For multi-environment portability, consider migrating flow variables to Dataverse environment variable lookups (via the Dataverse connector) so the flow does not require manual editing per environment.
+
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
 | `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL (where CMM schema is deployed) |
@@ -84,8 +86,6 @@ Update these variables in the flow designer (Initialize Variable actions):
 | `TeamsGroupId` | String | `your-group-id-here` | Teams group (team) ID for moderation alerts |
 | `TeamsChannelId` | String | `your-channel-id-here` | Teams channel ID for moderation alerts (get from channel link) |
 | `ComplianceDistributionList` | String | `alerts@your-org.com` | Email distribution list for all alerts |
-
-> **⚠️ Important:** The `Post_Teams_Card` action's inline adaptive card contains a `${ManualCheckUrl}` placeholder in the "Run Manual Check" button URL. This placeholder is **not** replaced by the flow's `@replace()` expression chain and must be manually edited before import. Open `src/moderation-validation-flow.json`, search for `${ManualCheckUrl}`, and replace it with your organization's manual check URL (e.g., your Power Platform Admin Center URL or a custom validation page). If left unchanged, the button will link to the literal string `${ManualCheckUrl}`.
 
 **How to get Teams Channel ID:**
 
@@ -126,36 +126,23 @@ The flow uses four connection references deployed during Phase 2:
    - If no connection exists, click **Add new connection** and authenticate
 4. Save the flow
 
-## Step 4: Validation History Write
+## Step 4: Validation History Persistence
 
-> **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). The `Write_Validation_History` action runs **before** alerting to help ensure the audit trail exists even if alert delivery fails.
+> **Important:** Validation history persistence to Dataverse is handled by the **PowerShell runbook** (`Start-ModerationValidationRunbook.ps1`) using the `-PersistResults` switch and `Write-ModerationValidationHistory` in `CMMClient.psm1` — **not** by the Power Automate flow itself. The flow's role is orchestration and alerting; the flow goes directly from `Parse_Results` to `Check_Alert_Required`.
 
 **Dataverse table:** `fsi_ModerationValidationHistory` (OrganizationOwned, immutable)
 
-**Connection reference:** `fsi_cr_dataverse_moderationmonitor`
+**How persistence works:**
 
-**Column mapping:**
-
-| Flow Expression | Dataverse Column | Type | Description |
-|----------------|------------------|------|-------------|
-| `"ModerationScan-" + Timestamp` | `fsi_name` | String | Display name with scan timestamp |
-| `guid()` | `fsi_run_id` | String (GUID) | Unique run identifier (from runbook output) |
-| `OverallStatus` | `fsi_overall_status` | String | Passed, Failed, or Error |
-| `length(Violations)` | `fsi_violation_count` | Integer | Number of violations detected |
-| `TotalAgents` | `fsi_total_agents` | Integer | Total agents scanned |
-| `string(TotalEnvironments)` | `fsi_environments_scanned` | String | Comma-separated list of scanned environments |
-| Full JSON output | `fsi_summary_json` | Memo | Complete runbook output for audit |
-| `Timestamp` | `fsi_validation_time` | DateTime | Scan execution timestamp |
-
-**Why it runs before alerting:**
-
-The `Write_Validation_History` action executes immediately after `Parse_Results` and before `Check_Alert_Required`. This sequencing helps ensure the immutable audit record is created regardless of whether alerting succeeds or fails. The `Check_Alert_Required` action uses `runAfter: [Succeeded, Failed]` on `Write_Validation_History`, so operators still receive alerts even if the Dataverse write encounters an error.
+1. The flow triggers `Start-ModerationValidationRunbook.ps1` via Azure Automation
+2. The runbook calls `Write-ModerationValidationHistory` (in `CMMClient.psm1`) to persist scan results to Dataverse
+3. The flow receives the runbook output JSON, parses it (`Parse_Results`), and evaluates alert conditions (`Check_Alert_Required`)
 
 **Troubleshooting validation history writes:**
 
 | Error Code | Cause | Resolution |
 |-----------|-------|------------|
-| 403 Forbidden | Identity lacks Create permission on `fsi_ModerationValidationHistory` | Assign security role with Organization-level Create on the table |
+| 403 Forbidden | Runbook identity lacks Create permission on `fsi_ModerationValidationHistory` | Assign security role with Organization-level Create on the table |
 | 404 Not Found | Table not deployed to environment | Deploy Dataverse schema from Phase 2 (`scripts/deploy.py`) |
 | 400 Bad Request | Schema mismatch (column names don't match) | Verify column names match the schema deployed in Phase 2 |
 
@@ -174,9 +161,8 @@ Watch for these key actions to complete successfully:
 
 - **Create_Automation_Job**: Runbook job created (returns jobId)
 - **Wait_For_Job**: Job status polling (max 2 hours, 30-second intervals)
-- **Get_Job_Output**: JSON output retrieved from completed runbook
+- **Get_Job_Output**: JSON output retrieved from completed runbook (includes Dataverse persistence by the runbook)
 - **Parse_Results**: JSON schema validation passes
-- **Write_Validation_History**: Validation results written to Dataverse (HTTP 204 No Content = success)
 - **Check_Alert_Required**: Condition evaluates based on AlertRequired flag
 - **Post_Teams_Card** (if Critical/Failed/Error): Adaptive card posted to Teams
 - **Send_Alert_Email** (if alert required): Email sent to distribution list
@@ -188,16 +174,15 @@ Watch for these key actions to complete successfully:
 - Flow completes successfully
 - No Teams card posted
 - No email sent
-- Validation history record written to Dataverse
+- Validation history record written to Dataverse by the runbook
 - Check Azure Automation job output for `"OverallStatus": "Passed"`
 
 **If validation fails or drift detected:**
 
 - Flow completes successfully
 - **Critical/Failed/Error**: Teams card posted + email sent (High importance)
-- **High**: Teams card posted + email sent (High importance)
-- **Warning**: Email sent only (Normal importance)
-- Validation history record written to Dataverse
+- **High/Warning**: Email sent only (Normal importance)
+- Validation history record written to Dataverse by the runbook
 - Check Teams channel for adaptive card with per-agent violation and drift details
 - Check email for HTML table with zone summary, agent violations, and drift detection
 
@@ -255,7 +240,7 @@ After the flow is running, capture the initial baseline for drift detection:
 | Critical | Yes | Yes | High |
 | Failed | Yes | Yes | High |
 | Error | Yes | Yes | High |
-| High | Yes | Yes | High |
+| High | No | Yes | Normal |
 | Warning | No | Yes | Normal |
 | Passed/Info | No | No | - |
 
@@ -263,12 +248,11 @@ After the flow is running, capture the initial baseline for drift detection:
 
 ### Dataverse Write Failures
 
-See the **Validation History Write** section above for error code resolution (403, 404, 400).
+See the **Validation History Persistence** section above for error code resolution (403, 404, 400).
 
 Additional checks:
-- Verify `fsi_cr_dataverse_moderationmonitor` connection reference is bound to a valid Dataverse connection
-- Confirm the connection identity has Create permission on `fsi_ModerationValidationHistory`
-- Check that column names in the flow match the deployed schema exactly
+- Confirm the runbook identity has Create permission on `fsi_ModerationValidationHistory`
+- Check that column names in `CMMClient.psm1` match the deployed schema exactly
 
 ### Azure Automation Job Failures
 
@@ -306,11 +290,7 @@ Additional checks:
 
 ### Adaptive Card Template Updates
 
-> **Note:** The adaptive card template exists in two locations with **different scopes**:
-> - **Inline card** (`src/moderation-validation-flow.json`, `Post_Teams_Card` action): A summary-level alert card with run status and zone totals. This is the version deployed with the flow.
-> - **Standalone card** (`src/adaptive-card-moderation-alert.json`): An extended reference/testing version with additional Violations detail, Drift Detection, and "Run Manual Check" action sections, designed for use in the [Adaptive Card Designer](https://adaptivecards.io/designer/).
->
-> These two cards are **not identical** — the standalone version contains sections not present in the inline flow card. When modifying shared sections (summary, zone columns, styling), update both locations. When adding violation-detail or drift-detection features, update only the standalone card unless you also intend to extend the flow card.
+> **Note:** The adaptive card template is defined inline within the flow JSON (`src/moderation-validation-flow.json`) in the `Post_Teams_Card` action. A standalone copy also exists at `src/adaptive-card-moderation-alert.json` for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/). Changes to the card design must be applied to **both** locations to keep them in sync.
 
 ### Flow Errors (Scope_Catch)
 

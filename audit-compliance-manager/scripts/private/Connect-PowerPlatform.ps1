@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
 
 <#
@@ -199,15 +199,26 @@ function Connect-PowerPlatform {
                 throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
             }
 
-            $tokenResult = Get-MsalToken `
-                -ClientId $ClientId `
-                -ClientSecret $ClientSecret `
-                -TenantId $TenantId `
-                -Scopes $dataverseScope `
-                -ErrorAction Stop
+            # Convert SecureString to plain text for MSAL
+            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+            $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
 
-            $result.DataverseAccessToken = $tokenResult.AccessToken
-            Write-Host "Acquired Dataverse Web API token (service principal)." -ForegroundColor Green
+            try {
+                $tokenResult = Get-MsalToken `
+                    -ClientId $ClientId `
+                    -ClientSecret (ConvertTo-SecureString $plainSecret -AsPlainText -Force) `
+                    -TenantId $TenantId `
+                    -Scopes $dataverseScope `
+                    -ErrorAction Stop
+
+                $result.DataverseAccessToken = $tokenResult.AccessToken
+                Write-Host "Acquired Dataverse Web API token (service principal)." -ForegroundColor Green
+            }
+            finally {
+                # Clear plain text secret from memory
+                $plainSecret = $null
+            }
         }
         elseif ($authMethod -eq "ServicePrincipal-Certificate") {
             # Use MSAL.PS for token acquisition with certificate
@@ -219,7 +230,7 @@ function Connect-PowerPlatform {
             }
 
             # Get certificate from store
-            $cert = Get-ChildItem Cert: -Recurse | Where-Object Thumbprint -eq $CertificateThumbprint | Select-Object -First 1
+            $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction SilentlyContinue
             if (-not $cert) {
                 throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
             }
@@ -283,7 +294,4 @@ if ($MyInvocation.InvocationName -ne '.') {
     return $authResult
 }
 
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Connect-PowerPlatform
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

@@ -30,11 +30,11 @@ Abnormal Usage alert uses `GreaterOrLessThan` operator to detect both usage spik
 
 Each alert deploys 3 separate scheduled query rules (one per zone) with zone-filtered KQL queries. This pattern enables zone-specific action group routing and avoids alert rule sprawl.
 
-| Zone | Action Group | Teams Channel | Email Recipient | Severity Range |
+| Zone | Action Group | Teams Channel | Email Parameter | Severity Range |
 |------|--------------|---------------|-----------------|----------------|
-| Zone 1 - Personal | action-group-zone1 | #general-ops | ops-team@example.com | 2-3 (Warning, Informational) |
-| Zone 2 - Team | action-group-zone2 | #team-ops | team-ops@example.com | 1-2 (Error, Warning) |
-| Zone 3 - Enterprise | action-group-zone3 | #enterprise-ops | enterprise-ops@example.com | 0-1 (Critical, Error) |
+| Zone 1 - Personal | action-group-zone1 | #general-ops | emailAddressZone1 | 2-3 (Warning, Informational) |
+| Zone 2 - Team | action-group-zone2 | #team-ops | emailAddressZone2 | 1-2 (Error, Warning) |
+| Zone 3 - Enterprise | action-group-zone3 | #enterprise-ops | emailAddressZone3 | 0-1 (Critical, Error) |
 
 **Severity Progression:**
 Zone 3 alerts use higher severity levels (0=Critical, 1=Error) than Zone 1 (2=Warning, 3=Informational) to reflect enterprise SLA enforcement requirements. This aligns with FSI-AgentGov framework risk-based governance tiers.
@@ -239,10 +239,24 @@ alerts/
 
 ## Related Documentation
 
-- **Phase 3 Plan 02:** [03-02-SUMMARY.md](../../.planning/phases/03-azure-monitor-workbooks-alert-rules/03-02-SUMMARY.md) - Action groups and Teams integration
-- **Phase 3 Plan 04:** [03-04-SUMMARY.md](../../.planning/phases/03-azure-monitor-workbooks-alert-rules/03-04-SUMMARY.md) - Alert rule templates
+- **Phase 3 Plan 02:** [MILESTONES.md](../../.planning/MILESTONES.md) - Action groups and Teams integration
+- **Phase 3 Plan 04:** [MILESTONES.md](../../.planning/MILESTONES.md) - Alert rule templates
 - **Governance Mapping:** [governance-mapping.md](../governance-mapping.md) - Control alignment for alerting infrastructure
 - **Framework Controls:** [FSI-AgentGov controls catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)
+
+## Teams Connection Setup (Post-Deployment)
+
+The Logic App ARM template references a Microsoft Teams API connection (`Microsoft.Web/connections`) but does **not** include the connection resource in the template. The Teams connector requires interactive OAuth consent and must be created manually after deployment.
+
+**Steps:**
+1. Deploy the Logic App via `deploy-alerts.ps1` (Phase 1)
+2. Open the Logic App in Azure Portal → **API connections**
+3. Click the `teams-connection` (shows "Error" status initially)
+4. Click **Edit API connection** → **Authorize** → sign in with a Teams-licensed account
+5. Click **Save** to complete the OAuth consent flow
+6. Return to the Logic App Designer and update the `Post_to_Teams` action with your target Team ID and Channel ID
+
+> **Note:** The Teams API connection token expires periodically. If notifications stop working, re-authorize the connection via the Azure Portal.
 
 ## Troubleshooting
 

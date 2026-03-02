@@ -107,7 +107,7 @@ If creating a new environment:
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| Compliance Administrator role | Application | Access Communication Compliance alerts via Purview API |
+| `SecurityEvents.Read.All` | Application | Read Communication Compliance alerts |
 | `User.Read.All` | Application | Look up supervisor users |
 
 ### Power Platform API
@@ -120,7 +120,7 @@ If creating a new environment:
 
 | Connector | License | Purpose |
 |-----------|---------|---------|
-| Dataverse | Standard | Queue and log tables |
+| Dataverse | Premium | Queue and log tables |
 | HTTP with Azure AD | Premium | Graph API calls |
 | Office 365 Outlook | Standard | Email notifications |
 | Microsoft Teams | Standard | Teams notifications |

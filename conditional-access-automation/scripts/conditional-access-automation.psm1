@@ -1,20 +1,18 @@
-<#
-.SYNOPSIS
-    Root module for Conditional Access Automation.
+# Root module for conditional-access-automation
+# Dot-source each exported function script
+$exportedScripts = @(
+    'Deploy-CAPolicies.ps1',
+    'Test-PolicyCompliance.ps1',
+    'Register-ServicePrincipal.ps1',
+    'Watch-PolicyDrift.ps1',
+    'Export-PolicyBaseline.ps1',
+    'Export-CAAComplianceEvidence.ps1',
+    'Test-EvidenceIntegrity.ps1'
+)
 
-.DESCRIPTION
-    Dot-sources all public scripts and private helpers to make functions
-    available when the module is imported via Import-Module.
-#>
-
-# Import private helpers
-$privatePath = Join-Path $PSScriptRoot 'private'
-Get-ChildItem -Path $privatePath -Filter '*.ps1' -ErrorAction SilentlyContinue | ForEach-Object {
-    . $_.FullName
+foreach ($script in $exportedScripts) {
+    $scriptPath = Join-Path $PSScriptRoot $script
+    if (Test-Path $scriptPath) {
+        . $scriptPath
+    }
 }
-
-# Public scripts (Deploy-CAPolicies.ps1, Test-PolicyCompliance.ps1, etc.) are
-# standalone scripts with top-level param() blocks and imperative execution code.
-# They must be invoked directly (e.g., .\scripts\Deploy-CAPolicies.ps1), not
-# dot-sourced, because dot-sourcing would evaluate their mandatory parameters
-# and execute their body at import time.

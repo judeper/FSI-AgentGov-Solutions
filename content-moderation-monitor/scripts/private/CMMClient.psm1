@@ -8,7 +8,7 @@
 
 .NOTES
     Module: CMMClient.psm1
-    Version: 1.0.1
+    Version: 1.0.0
     Author: FSI Agent Governance Team
 #>
 
@@ -211,9 +211,11 @@ function Get-ModerationBaseline {
     [CmdletBinding()]
     param(
         [Parameter()]
+        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
         [string]$EnvironmentId,
 
         [Parameter()]
+        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
         [string]$AgentId,
 
         [Parameter()]
@@ -226,19 +228,14 @@ function Get-ModerationBaseline {
     }
 
     try {
-        $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
         $filter = "statecode eq 0"
         if ($EnvironmentId) {
-            if ($EnvironmentId -notmatch $guidPattern) {
-                throw "EnvironmentId '$EnvironmentId' is not a valid GUID format."
-            }
-            $filter += " and fsi_environment_guid eq '$EnvironmentId'"
+            $safeEnvId = $EnvironmentId -replace "'", "''"
+            $filter += " and fsi_environment_guid eq '$safeEnvId'"
         }
         if ($AgentId) {
-            if ($AgentId -notmatch $guidPattern) {
-                throw "AgentId '$AgentId' is not a valid GUID format."
-            }
-            $filter += " and fsi_agent_id eq '$AgentId'"
+            $safeAgentId = $AgentId -replace "'", "''"
+            $filter += " and fsi_agent_id eq '$safeAgentId'"
         }
         if ($ActiveOnly) {
             $filter += " and fsi_is_active eq true"
@@ -622,6 +619,7 @@ function Save-CMMBaseline {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
+        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
         [string]$EnvironmentGuid,
 
         [Parameter(Mandatory)]
@@ -631,6 +629,7 @@ function Save-CMMBaseline {
         [string]$Zone,
 
         [Parameter(Mandatory)]
+        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
         [string]$AgentId,
 
         [Parameter(Mandatory)]
@@ -658,14 +657,9 @@ function Save-CMMBaseline {
             'OData-Version'    = '4.0'
         }
 
-        # Validate GUID format to prevent OData injection
-        $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
-        if ($AgentId -notmatch $guidPattern) {
-            throw "AgentId '$AgentId' is not a valid GUID format."
-        }
-
         # Deactivate existing active baseline for this agent
-        $deactivateFilter = "fsi_is_active eq true and fsi_agent_id eq '$AgentId'"
+        $safeAgentId = $AgentId -replace "'", "''"
+        $deactivateFilter = "fsi_is_active eq true and fsi_agent_id eq '$safeAgentId'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?`$filter=$deactivateFilter&`$select=fsi_moderationbaselineid"
 
         $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers

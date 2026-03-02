@@ -122,9 +122,16 @@ try {
     Write-Verbose "DataverseUrl: $DataverseUrl"
     Write-Verbose "ConfigPath: $ConfigPath"
 
-    # Resolve script root for sibling script invocation
+    # Resolve script path (do NOT dot-source — it is a standalone script, not a function)
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
+
+    $complianceScript = "$scriptRoot\Test-SessionCompliance.ps1"
+    if (-not (Test-Path $complianceScript)) {
+        throw "Test-SessionCompliance.ps1 not found at: $complianceScript"
+    }
+
+    Write-Verbose "Compliance script resolved: $complianceScript"
 
     # Build parameters for Test-SessionCompliance
     # Do NOT pass -Interactive or -OutputPath (not suitable for runbook context)
@@ -143,8 +150,8 @@ try {
 
     Write-Verbose "Invoking Test-SessionCompliance with parameters: $($validationParams.Keys -join ', ')"
 
-    # Execute session validation orchestrator (invoke as script, not function)
-    $validationResults = & "$scriptRoot\Test-SessionCompliance.ps1" @validationParams
+    # Execute session validation orchestrator via call operator (not dot-source)
+    $validationResults = & $complianceScript @validationParams
 
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
 
@@ -155,7 +162,7 @@ try {
     Import-Module MSAL.PS -ErrorAction Stop
 
     # Get certificate for authentication
-    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
+    $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
     Write-Verbose "Certificate found: $($cert.Subject)"
 
     # Acquire token

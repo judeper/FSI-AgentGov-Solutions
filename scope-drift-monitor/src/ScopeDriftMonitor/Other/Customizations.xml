@@ -59,17 +59,17 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_agentscope_zone">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Zone 1 - Personal Productivity" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Zone 2 - Team Collaboration" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Zone 3 - Enterprise Managed" languagecode="1033" />
                   </labels>
@@ -113,27 +113,27 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_agentscope_status">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Draft" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Active" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Under Review" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Suspended" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Archived" languagecode="1033" />
                   </labels>
@@ -249,37 +249,37 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeitem_itemtype">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Connector" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="SharePoint Site" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="SharePoint Library" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Dataverse Table" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="External API" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="6">
+                <option value="10006">
                   <labels>
                     <label description="File Share" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="7">
+                <option value="10007">
                   <labels>
                     <label description="Database" languagecode="1033" />
                   </labels>
@@ -312,17 +312,17 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeitem_accesslevel">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Read Only" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Read/Write" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Full Control" languagecode="1033" />
                   </labels>
@@ -414,7 +414,7 @@
               <Type>lookup</Type>
               <Name>fsi_agentscopeid</Name>
               <LogicalName>fsi_agentscopeid</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
+              <RequiredLevel>Recommended</RequiredLevel>
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <Targets>
                 <target>fsi_agentscope</target>
@@ -428,32 +428,32 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeviolation_violationtype">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Unauthorized Connector" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Unauthorized SharePoint Site" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Unauthorized Dataverse Table" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Unauthorized External API" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Expired Scope Item" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="6">
+                <option value="10006">
                   <labels>
                     <label description="No Baseline Defined" languagecode="1033" />
                   </labels>
@@ -486,22 +486,22 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeviolation_severity">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Critical" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="High" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Medium" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Low" languagecode="1033" />
                   </labels>
@@ -516,32 +516,32 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeviolation_status">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Open" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Under Investigation" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Expansion Requested" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Resolved - Scope Expanded" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Resolved - Access Removed" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="6">
+                <option value="10006">
                   <labels>
                     <label description="Closed - False Positive" languagecode="1033" />
                   </labels>
@@ -592,27 +592,27 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_scopeviolation_resolutiontype">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Scope Expanded" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Agent Remediated" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Access Revoked" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="False Positive" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Risk Accepted" languagecode="1033" />
                   </labels>
@@ -628,14 +628,6 @@
               <Targets>
                 <target>fsi_expansionrequest</target>
               </Targets>
-            </attribute>
-            <attribute PhysicalName="fsi_notificationfailed">
-              <Type>bit</Type>
-              <Name>fsi_notificationfailed</Name>
-              <LogicalName>fsi_notificationfailed</LogicalName>
-              <RequiredLevel>None</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <DefaultValue>0</DefaultValue>
             </attribute>
           </attributes>
         </entity>
@@ -702,27 +694,27 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_expansionrequest_requesttype">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Add Connector" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Add SharePoint Site" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Add Dataverse Table" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Add External API" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Increase Access Level" languagecode="1033" />
                   </labels>
@@ -783,39 +775,34 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_expansionrequest_status">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Pending" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Data Owner Review" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Security Review" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Approved" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="5">
+                <option value="10005">
                   <labels>
                     <label description="Denied" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="6">
+                <option value="10006">
                   <labels>
                     <label description="Cancelled" languagecode="1033" />
-                  </labels>
-                </option>
-                <option value="7">
-                  <labels>
-                    <label description="Failed" languagecode="1033" />
                   </labels>
                 </option>
               </optionset>
@@ -828,22 +815,22 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_expansionrequest_approval">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Pending" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Approved" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Denied" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Delegated" languagecode="1033" />
                   </labels>
@@ -868,22 +855,22 @@
               <DisplayMask>ValidForAdvancedFind</DisplayMask>
               <optionset Name="fsi_expansionrequest_securityapproval">
                 <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
+                <option value="10001">
                   <labels>
                     <label description="Pending" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="2">
+                <option value="10002">
                   <labels>
                     <label description="Approved" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="3">
+                <option value="10003">
                   <labels>
                     <label description="Denied" languagecode="1033" />
                   </labels>
                 </option>
-                <option value="4">
+                <option value="10004">
                   <labels>
                     <label description="Delegated" languagecode="1033" />
                   </labels>
@@ -909,128 +896,111 @@
               <Format>DateAndTime</Format>
               <ImeMode>Inactive</ImeMode>
             </attribute>
-            <attribute PhysicalName="fsi_requestedaccesslevel">
-              <Type>picklist</Type>
-              <Name>fsi_requestedaccesslevel</Name>
-              <LogicalName>fsi_requestedaccesslevel</LogicalName>
-              <RequiredLevel>None</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <optionset Name="fsi_expansionrequest_requestedaccesslevel">
-                <OptionSetType>Picklist</OptionSetType>
-                <option value="1">
-                  <labels>
-                    <label description="Read Only" languagecode="1033" />
-                  </labels>
-                </option>
-                <option value="2">
-                  <labels>
-                    <label description="Read/Write" languagecode="1033" />
-                  </labels>
-                </option>
-                <option value="3">
-                  <labels>
-                    <label description="Full Control" languagecode="1033" />
-                  </labels>
-                </option>
-              </optionset>
-            </attribute>
-          </attributes>
-        </entity>
-      </EntityInfo>
-    </Entity>
-    <!-- Table: fsi_detectionrun -->
-    <Entity Name="fsi_detectionrun">
-      <EntityInfo>
-        <entity Name="fsi_detectionrun">
-          <LocalizedNames>
-            <LocalizedName description="Detection Run" languagecode="1033" />
-          </LocalizedNames>
-          <LocalizedCollectionNames>
-            <LocalizedCollectionName description="Detection Runs" languagecode="1033" />
-          </LocalizedCollectionNames>
-          <Descriptions>
-            <Description description="Audit trail of detection run executions for compliance evidence" languagecode="1033" />
-          </Descriptions>
-          <attributes>
-            <attribute PhysicalName="fsi_detectionrunid">
-              <Type>uniqueidentifier</Type>
-              <Name>fsi_detectionrunid</Name>
-              <LogicalName>fsi_detectionrunid</LogicalName>
-              <RequiredLevel>SystemRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <IsPrimaryId>1</IsPrimaryId>
-            </attribute>
-            <attribute PhysicalName="fsi_name">
-              <Type>nvarchar</Type>
-              <Name>fsi_name</Name>
-              <LogicalName>fsi_name</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <MaxLength>200</MaxLength>
-              <ImeMode>auto</ImeMode>
-              <IsPrimaryName>1</IsPrimaryName>
-            </attribute>
-            <attribute PhysicalName="fsi_runstart">
-              <Type>datetime</Type>
-              <Name>fsi_runstart</Name>
-              <LogicalName>fsi_runstart</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <Format>DateAndTime</Format>
-              <ImeMode>Inactive</ImeMode>
-            </attribute>
-            <attribute PhysicalName="fsi_runend">
-              <Type>datetime</Type>
-              <Name>fsi_runend</Name>
-              <LogicalName>fsi_runend</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <Format>DateAndTime</Format>
-              <ImeMode>Inactive</ImeMode>
-            </attribute>
-            <attribute PhysicalName="fsi_eventsprocessed">
-              <Type>int</Type>
-              <Name>fsi_eventsprocessed</Name>
-              <LogicalName>fsi_eventsprocessed</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <MinValue>0</MinValue>
-              <MaxValue>2147483647</MaxValue>
-            </attribute>
-            <attribute PhysicalName="fsi_violationscreated">
-              <Type>int</Type>
-              <Name>fsi_violationscreated</Name>
-              <LogicalName>fsi_violationscreated</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <MinValue>0</MinValue>
-              <MaxValue>2147483647</MaxValue>
-            </attribute>
-            <attribute PhysicalName="fsi_activescopescount">
-              <Type>int</Type>
-              <Name>fsi_activescopescount</Name>
-              <LogicalName>fsi_activescopescount</LogicalName>
-              <RequiredLevel>ApplicationRequired</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <MinValue>0</MinValue>
-              <MaxValue>2147483647</MaxValue>
-            </attribute>
-            <attribute PhysicalName="fsi_summary">
-              <Type>ntext</Type>
-              <Name>fsi_summary</Name>
-              <LogicalName>fsi_summary</LogicalName>
-              <RequiredLevel>None</RequiredLevel>
-              <DisplayMask>ValidForAdvancedFind</DisplayMask>
-              <MaxLength>100000</MaxLength>
-              <ImeMode>auto</ImeMode>
-            </attribute>
           </attributes>
         </entity>
       </EntityInfo>
     </Entity>
   </Entities>
-  <roles />
-  <workflows />
+  <roles>
+    <Role name="SDM Viewer" id="{a1b2c3d4-e5f6-7890-abcd-ef1234567890}">
+      <RolePrivileges>
+        <RolePrivilege name="prvReadfsi_agentscope" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvReadfsi_expansionrequest" level="Global" />
+      </RolePrivileges>
+    </Role>
+    <Role name="SDM Analyst" id="{b2c3d4e5-f6a7-8901-bcde-f12345678901}">
+      <RolePrivileges>
+        <RolePrivilege name="prvReadfsi_agentscope" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvWritefsi_scopeviolation" level="BusinessUnit" />
+        <RolePrivilege name="prvReadfsi_expansionrequest" level="Global" />
+        <RolePrivilege name="prvCreatefsi_expansionrequest" level="BusinessUnit" />
+        <RolePrivilege name="prvWritefsi_expansionrequest" level="BusinessUnit" />
+      </RolePrivileges>
+    </Role>
+    <Role name="SDM Admin" id="{c3d4e5f6-a7b8-9012-cdef-123456789012}">
+      <RolePrivileges>
+        <RolePrivilege name="prvReadfsi_agentscope" level="Global" />
+        <RolePrivilege name="prvCreatefsi_agentscope" level="Global" />
+        <RolePrivilege name="prvWritefsi_agentscope" level="Global" />
+        <RolePrivilege name="prvDeletefsi_agentscope" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvCreatefsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvWritefsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvDeletefsi_scopeitem" level="Global" />
+        <RolePrivilege name="prvReadfsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvCreatefsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvWritefsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvDeletefsi_scopeviolation" level="Global" />
+        <RolePrivilege name="prvReadfsi_expansionrequest" level="Global" />
+        <RolePrivilege name="prvCreatefsi_expansionrequest" level="Global" />
+        <RolePrivilege name="prvWritefsi_expansionrequest" level="Global" />
+        <RolePrivilege name="prvDeletefsi_expansionrequest" level="Global" />
+      </RolePrivileges>
+    </Role>
+  </roles>
+  <workflows>
+    <Workflow WorkflowId="{d4e5f6a7-b8c9-0123-def0-1234567890ab}" Name="SDM-DriftDetector">
+      <JsonFileName>/Workflows/SDM-DriftDetector.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsTransacted>0</IsTransacted>
+    </Workflow>
+    <Workflow WorkflowId="{e5f6a7b8-c9d0-1234-ef01-234567890abc}" Name="SDM-AlertDispatcher">
+      <JsonFileName>/Workflows/SDM-AlertDispatcher.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsTransacted>0</IsTransacted>
+    </Workflow>
+    <Workflow WorkflowId="{f6a7b8c9-d0e1-2345-f012-34567890abcd}" Name="SDM-ExpansionProcessor">
+      <JsonFileName>/Workflows/SDM-ExpansionProcessor.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <IsTransacted>0</IsTransacted>
+    </Workflow>
+  </workflows>
   <fieldSecurityProfiles />
   <templates />
   <EntityMaps />

@@ -83,7 +83,7 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 ┌───────────────────┐     ┌──────────────────┐      ┌──────────────────┐
 │  Teams Adaptive   │     │  Email Alert     │      │  Evidence Export │
 │  Card             │     │  (Critical/High) │      │  (SHA-256)       │
-│  (Critical/High)  │     │                  │      │                  │
+│  (Critical only)  │     │                  │      │                  │
 └───────────────────┘     └──────────────────┘      └──────────────────┘
 ```
 
@@ -104,8 +104,7 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 | Zone 2 | Low | **High** | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | **Medium** | Best practice uplift recommended for team agents |
 | Zone 1 | Low | **High** | Governance gap — Below minimum content moderation threshold |
-| Unknown | Low | **High** | Governance gap — Unclassified environment with minimal content moderation |
-| Unknown | Medium | **Warning** | Governance gap — Environment not assigned to zone |
+| Unknown | Any non-compliant | **Warning** | Governance gap — Environment not assigned to zone |
 
 ### Solution Components
 
@@ -206,8 +205,10 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
    - Extract individual violations (agent ID, environment, zone, severity, regulatory context)
 
 3. **Persist to Dataverse:**
-   - Write validation summary to `fsi_moderationvalidationhistory` table (includes full JSON summary blob with violation details)
-   - Correlate via `RunId` (GUID for each scan)
+   - Handled by `Test-ContentModerationCompliance.ps1` via `-PersistResults` flag
+   - Writes validation summary to `fsi_moderationvalidationhistory` table
+   - Writes individual violations to `fsi_moderationviolations` table
+   - Correlates via `RunId` (single GUID per scan for both history and violations)
 
 4. **Detect Drift:**
    - Query `fsi_moderationbaseline` for active baselines
@@ -216,9 +217,9 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
    - Add drift violations to alert payload
 
 5. **Send Alerts (Conditional):**
-   - **Critical violations:** Teams adaptive card + Email (High importance)
-   - **High violations:** Teams adaptive card + Email (High importance)
-   - **Warning violations:** Email only (Normal importance)
+   - **Critical violations:** Teams adaptive card + Email
+   - **High violations:** Email only
+   - **Medium/Warning violations:** Logged to Dataverse, no alert
 
 **Adaptive Card Structure:**
 
@@ -311,7 +312,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   },
   "metadata": {
     "framework": "FSI Agent Governance",
-    "solution": "Content Moderation Monitor v1.0.1",
+    "solution": "Content Moderation Monitor v1.0.0",
     "controlReference": "1.27"
   }
 }
@@ -342,13 +343,13 @@ Purpose: Organization-owned immutable audit trail of validation scans with summa
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationvalidationhistoryid` | GUID | Primary key |
-| `fsi_name` | String(200) | Record name (`{Status}-{Timestamp}`) |
+| `fsi_name` | String(500) | Record name (`{Status}-{Timestamp}`) |
 | `fsi_run_id` | String(36) | Correlation GUID for batch scan |
 | `fsi_validation_time` | DateTime | Scan execution timestamp (UTC) |
 | `fsi_total_agents` | Integer | Count of agents evaluated |
 | `fsi_compliant_count` | Integer | Agents passing moderation checks |
 | `fsi_violation_count` | Integer | Total violations detected |
-| `fsi_overall_status` | String(50) | Passed, Critical, Failed, Review, or Error |
+| `fsi_overall_status` | String(50) | Passed, Failed, Warning, or Critical |
 | `fsi_environments_scanned` | String(2000) | Comma-separated environment list |
 | `fsi_summary_json` | Memo | Full JSON summary blob |
 
@@ -359,7 +360,7 @@ Purpose: Per-agent violation records with severity classification and regulatory
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationviolationid` | GUID | Primary key |
-| `fsi_name` | String(200) | Record name (`{AgentName}-{Zone}-{Date}`) |
+| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Date}`) |
 | `fsi_environment_guid` | String(100) | Power Platform environment GUID |
 | `fsi_environment_name` | String(500) | Environment display name |
 | `fsi_agent_id` | String(100) | Copilot Studio agent GUID |
@@ -379,7 +380,7 @@ Purpose: Per-agent moderation level snapshots for drift detection (one active ba
 | Column | Type | Description |
 |--------|------|-------------|
 | `fsi_moderationbaselineid` | GUID | Primary key |
-| `fsi_name` | String(200) | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
+| `fsi_name` | String(500) | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
 | `fsi_environment_guid` | String(100) | Power Platform environment GUID |
 | `fsi_environment_name` | String(500) | Environment display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Zone classification |
@@ -457,7 +458,9 @@ python deploy.py \
    - Dataverse connection
    - Office 365 connection
    - Teams connection (if using Teams alerts)
-4. Update Initialize Variable actions in the flow designer with your environment-specific values (see [FLOW_SETUP.md](docs/FLOW_SETUP.md#step-2-configure-variables) for the full variable list)
+4. Set environment variables:
+   - `fsi_CMM_DataverseUrl`: Governance environment URL
+   - `fsi_CMM_NotificationRecipients`: Compliance team emails
 5. Activate flow
 
 **Step 6: Capture Initial Baseline**
@@ -492,7 +495,7 @@ Test-ContentModerationCompliance -OutputFormat Json | ConvertFrom-Json
 Test-ContentModerationCompliance `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -PersistResults
-# Expected: Records created in fsi_moderationvalidationhistory table
+# Expected: Records created in fsi_moderationvalidationhistory and fsi_moderationviolations tables
 ```
 
 **Test 4: Evidence Export**
@@ -586,7 +589,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.1
+**Solution Version:** 1.0.0
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -597,7 +600,6 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 - Coordinate moderation policy updates with business stakeholders
 
 **Version History:**
-- **v1.0.1 (February 2026):** Control reference correction, FSI language compliance
 - **v1.0.0 (February 2026):** Initial release with per-agent validation, drift detection, and evidence export
 
 ---

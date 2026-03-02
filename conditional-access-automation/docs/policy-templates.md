@@ -317,14 +317,14 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
     "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
   },
   "grantControls": {
-    "operator": "OR",
-    "builtInControls": ["compliantDevice", "domainJoinedDevice"]
+    "operator": "AND",
+    "builtInControls": ["mfa", "compliantDevice"]
   }
 }
 ```
 
 **Key Settings:**
-- Compliant OR hybrid Azure AD joined device
+- MFA AND compliant device required
 - Covers Windows, macOS, iOS, Android
 - Zone 3 users only
 

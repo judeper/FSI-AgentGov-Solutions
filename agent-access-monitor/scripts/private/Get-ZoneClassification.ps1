@@ -1,6 +1,6 @@
-# Zone Classification — standalone implementation
-# Standalone zone classification helper (not currently called by main scripts).
-#   -EnvironmentId, -EnvironmentDisplayName, -DataverseUrl, -AccessToken
+# Zone Classification — local implementation
+# Classifies environments into governance zones using naming convention
+# or optional Dataverse ELM lookup.
 
 [CmdletBinding()]
 param(
@@ -17,58 +17,43 @@ param(
     [string]$AccessToken
 )
 
-# Attempt ELM Dataverse lookup if URL is provided
+# Try Dataverse ELM lookup first if connection details provided
 if ($DataverseUrl -and $AccessToken) {
     try {
-        # Validate GUID format to prevent OData injection
-        if ($EnvironmentId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-            throw "Invalid GUID format for EnvironmentId: '$EnvironmentId'"
-        }
         $headers = @{
             'Authorization'    = "Bearer $AccessToken"
             'Accept'           = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
         }
-        $filter = "fsi_environment_guid eq '$EnvironmentId'"
-        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_accessbaselines?`$filter=$filter and fsi_is_active eq true&`$select=fsi_zone&`$top=1"
-        $maxRetries = 3
-        $response = $null
-        for ($i = 0; $i -lt $maxRetries; $i++) {
-            try {
-                $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
-                break
-            } catch {
-                $statusCode = $_.Exception.Response.StatusCode.value__
-                if (($statusCode -eq 429 -or $statusCode -ge 500) -and $i -lt ($maxRetries - 1)) {
-                    $delay = [math]::Pow(2, $i)
-                    Write-Verbose "Zone classification request failed (HTTP $statusCode), retrying in ${delay}s..."
-                    Start-Sleep -Seconds $delay
-                } else {
-                    throw
-                }
-            }
-        }
+        $filter = "fsi_environment_id eq '$($EnvironmentId -replace "'", "''")'"
+        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentlifecycles?" +
+               "`$filter=$filter&`$select=fsi_zone&`$top=1"
+        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
         if ($response.value.Count -gt 0) {
             $zoneValue = $response.value[0].fsi_zone
-            $zoneMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
-            if ($zoneMap.ContainsKey([int]$zoneValue)) {
-                return $zoneMap[[int]$zoneValue]
+            $zoneNameMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
+            if ($zoneNameMap.ContainsKey([int]$zoneValue)) {
+                return $zoneNameMap[[int]$zoneValue]
             }
         }
     } catch {
-        Write-Verbose "ELM lookup failed for $EnvironmentId : $($_.Exception.Message). Falling back to naming convention."
+        Write-Verbose "ELM lookup failed for $EnvironmentId, falling back to naming convention: $($_.Exception.Message)"
     }
 }
 
-# Fallback: naming convention heuristic
-$name = $EnvironmentDisplayName
-if ($name -match '(?i)(prod|production|enterprise|zone\s*3)') {
-    return 'Zone3'
-} elseif ($name -match '(?i)(team|department|shared|zone\s*2)') {
-    return 'Zone2'
-} elseif ($name -match '(?i)(personal|dev|sandbox|zone\s*1)') {
-    return 'Zone1'
+# Fallback: naming convention classification
+if ($EnvironmentDisplayName) {
+    $name = $EnvironmentDisplayName.ToLower()
+    if ($name -match '\bz3\b' -or $name -match 'zone.?3' -or $name -match 'enterprise') {
+        return 'Zone3'
+    }
+    if ($name -match '\bz2\b' -or $name -match 'zone.?2' -or $name -match 'team') {
+        return 'Zone2'
+    }
+    if ($name -match '\bz1\b' -or $name -match 'zone.?1' -or $name -match 'personal') {
+        return 'Zone1'
+    }
 }
 
 return 'Unknown'

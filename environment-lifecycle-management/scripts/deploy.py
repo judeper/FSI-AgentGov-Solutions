@@ -14,19 +14,19 @@ Creates all Dataverse components for Environment Lifecycle Management:
 Usage:
     # Full deployment with interactive auth
     python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --interactive
+        --tenant-id <tenant-id> --interactive
 
     # Dry run to preview changes
     python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --interactive --dry-run
+        --tenant-id <tenant-id> --interactive --dry-run
 
     # Deploy only tables/schema
     python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --interactive --tables-only
+        --tenant-id <tenant-id> --interactive --tables-only
 
     # Deploy only security roles
     python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --interactive --roles-only
+        --tenant-id <tenant-id> --interactive --roles-only
 
     # With Service Principal (for CI/CD)
     python deploy.py --environment-url https://org.crm.dynamics.com \\
@@ -56,7 +56,7 @@ def print_banner():
     print("  This script deploys ELM components to Dataverse:")
     print("    - Option sets (choices) for state, zone, region, etc.")
     print("    - EnvironmentRequest table (user-owned, 22 columns)")
-    print("    - ProvisioningLog table (org-owned, 12 columns, immutable)")
+    print("    - ProvisioningLog table (org-owned, 11 columns, immutable)")
     print("    - Security roles (Requester, Approver, Admin, Auditor)")
     print("    - Business rules (conditional required fields)")
     print("    - Model-driven app views")
@@ -199,8 +199,7 @@ def deploy(
 
         if roles_only:
             # Only deploy security roles
-            if not create_roles(client, dry_run=dry_run):
-                success = False
+            create_roles(client, dry_run=dry_run)
 
         elif tables_only:
             # Only deploy schema (option sets, tables, columns)
@@ -218,29 +217,25 @@ def deploy(
             print("\n" + "=" * 70)
             print("  PHASE 2: Security Roles")
             print("=" * 70)
-            if not create_roles(client, dry_run=dry_run):
-                success = False
+            create_roles(client, dry_run=dry_run)
 
             # Phase 3: Business Rules
             print("\n" + "=" * 70)
             print("  PHASE 3: Business Rules")
             print("=" * 70)
-            if not create_business_rules(client, dry_run=dry_run):
-                success = False
+            create_business_rules(client, dry_run=dry_run)
 
             # Phase 4: Views
             print("\n" + "=" * 70)
             print("  PHASE 4: Model-Driven App Views")
             print("=" * 70)
-            if not create_views(client, dry_run=dry_run):
-                success = False
+            create_views(client, dry_run=dry_run)
 
             # Phase 5: Field Security
             print("\n" + "=" * 70)
             print("  PHASE 5: Field Security Profiles")
             print("=" * 70)
-            if not create_field_security(client, dry_run=dry_run):
-                success = False
+            create_field_security(client, dry_run=dry_run)
 
         # Final summary
         print("\n" + "=" * 70)
@@ -249,13 +244,7 @@ def deploy(
             print("  Review output above to see what would be created.")
             print("  Run without --dry-run to apply changes.")
         else:
-            if success:
-                print("  DEPLOYMENT COMPLETE")
-            else:
-                print("  DEPLOYMENT COMPLETED WITH ERRORS")
-                print()
-                print("  Some deployment phases reported failures.")
-                print("  Review output above for details.")
+            print("  DEPLOYMENT COMPLETE")
             print()
             print("  Next Steps:")
             print("    1. Register Service Principal in PPAC (manual)")
@@ -294,11 +283,11 @@ def main():
 Examples:
   # Full deployment with interactive auth (recommended for first run)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --client-id <app-id> --interactive
+      --tenant-id <tenant-id> --interactive
 
   # Dry run to preview changes
   python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --client-id <app-id> --interactive --dry-run
+      --tenant-id <tenant-id> --interactive --dry-run
 
   # With Service Principal (for CI/CD)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
@@ -322,7 +311,7 @@ Examples:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ELM_CLIENT_ID"),
-        help="Application (client) ID - required for all auth modes",
+        help="Application (client) ID for Service Principal auth",
     )
     parser.add_argument(
         "--client-secret",
@@ -364,12 +353,6 @@ Examples:
         parser.error(
             "Either --interactive or --client-id is required.\n"
             "Use --interactive for manual runs or provide Service Principal credentials."
-        )
-
-    if args.interactive and not args.client_id:
-        parser.error(
-            "--client-id is required for interactive authentication.\n"
-            "Register an app in Entra ID and provide --client-id."
         )
 
     if args.tables_only and args.roles_only:

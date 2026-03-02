@@ -14,7 +14,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 
 ### Step 1: Create Microsoft Entra ID App Registration
 
-- [ ] Go to [Microsoft Entra admin center](https://entra.microsoft.com) > Applications > App Registrations
+- [ ] Go to [Microsoft Entra admin center](https://entra.microsoft.com) > Applications > App registrations
 - [ ] Click "New registration"
 - [ ] Name: `Message Center Monitor`
 - [ ] Account type: Single tenant

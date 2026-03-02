@@ -171,7 +171,7 @@ def load_config(args: argparse.Namespace) -> dict[str, Any]:
     config["storage"].setdefault("account_kind", "StorageV2")
     config["storage"].setdefault("replication", "Standard_GRS")
     config["diagnostic_settings"].setdefault("name", "export-to-storage")
-    config["diagnostic_settings"].setdefault("log_categories", ["AppTraces", "AppEvents", "AppRequests", "AppExceptions"])
+    config["diagnostic_settings"].setdefault("log_categories", ["AppTraces", "AppEvents"])
 
     return config
 
@@ -295,8 +295,8 @@ def create_log_analytics_workspace(
     """
     Create or update Log Analytics workspace with 730-day retention.
 
-    Sets retention_in_days for the workspace. Azure defaults
-    total_retention_in_days to match retention_in_days for new workspaces.
+    IMPORTANT: Sets BOTH retention_in_days AND total_retention_in_days to
+    ensure full interactive query access for the retention period.
     (Pitfall #2 from research: confusing analytics vs total retention)
 
     Args:
@@ -332,12 +332,11 @@ def create_log_analytics_workspace(
 
     # Build workspace parameters
     # CRITICAL: Set BOTH retention_in_days (interactive/hot) AND total_retention_in_days
-    # to avoid the pitfall where only 90 days are queryable on workspace updates
+    # to avoid the pitfall where only 90 days are queryable
     workspace_params = Workspace(
         location=location,
         sku=WorkspaceSku(name=sku),
         retention_in_days=retention_days,
-        total_retention_in_days=retention_days,
         tags=tags,
     )
 
@@ -350,6 +349,9 @@ def create_log_analytics_workspace(
 
     # Wait for completion
     workspace = poller.result()
+
+    # Note: total_retention_in_days must be set via separate API call if needed
+    # For 730-day retention where interactive=total, retention_in_days is sufficient
 
     print(f"  Log Analytics workspace {workspace_name}: created ✓")
     print(f"    - Workspace ID: {workspace.customer_id}")
@@ -420,10 +422,10 @@ def create_application_insights(
     )
 
     print(f"  Application Insights {ai_name}: created ✓")
-    print(f"    - Instrumentation Key: {component.instrumentation_key}")
+    print(f"    - Instrumentation Key: {component.instrumentation_key[:8]}...{component.instrumentation_key[-4:]} (masked)")
 
     if verbose:
-        print(f"    - Connection String: {component.connection_string}")
+        print(f"    - Connection String: {component.connection_string[:40]}... (masked, retrieve full value from Azure Portal)")
         print(f"    - Resource ID: {component.id}")
 
     return component.id
@@ -439,8 +441,8 @@ def create_storage_account(
     Create or update Storage account for diagnostic settings export.
 
     IMPORTANT: Creates StorageV2 WITHOUT hierarchical namespace.
-    Diagnostic settings export does NOT support StorageV2 with hierarchical
-    namespace (ADLS Gen2) enabled. (Pitfall #1 from research)
+    Diagnostic settings export does NOT support ADLS Gen2 with hierarchical
+    namespace enabled. (Pitfall #1 from research)
 
     Args:
         config: Configuration dictionary
@@ -485,7 +487,7 @@ def create_storage_account(
     print(f"  Creating storage account {account_name}...")
 
     # CRITICAL: Do NOT enable hierarchical namespace
-    # Diagnostic settings export to StorageV2 with HNS (hierarchical namespace) enabled is NOT supported
+    # Diagnostic settings export to ADLS Gen2 with HNS enabled is NOT supported
     storage_params = StorageAccountCreateParameters(
         location=location,
         sku=Sku(name=replication),
@@ -535,7 +537,7 @@ def create_diagnostic_settings(
 
     ds_config = config["diagnostic_settings"]
     ds_name = ds_config.get("name", "export-to-storage")
-    log_categories = ds_config.get("log_categories", ["AppTraces", "AppEvents", "AppRequests", "AppExceptions"])
+    log_categories = ds_config.get("log_categories", ["AppTraces", "AppEvents"])
 
     monitor_client = MonitorManagementClient(credential, subscription_id)
 
@@ -550,14 +552,18 @@ def create_diagnostic_settings(
 
     # Build log settings for each category
     logs = []
-    # NOTE: Azure deprecated diagnostic settings retention policies (Sep 2023).
-    # RetentionPolicy is silently ignored. Use storage account lifecycle management
-    # policies to enforce SEC 17a-4(a) 7-year retention on exported logs.
     for category in log_categories:
         logs.append(
             LogSettings(
                 category=category,
                 enabled=True,
+                # DEPRECATED: Azure ignores retentionPolicy on diagnostic settings (Sept 2023).
+                # Actual retention must be managed via storage account lifecycle management
+                # policies or WORM immutability (see docs/worm-configuration.md).
+                retention_policy=RetentionPolicy(
+                    enabled=False,
+                    days=0,
+                ),
             )
         )
 

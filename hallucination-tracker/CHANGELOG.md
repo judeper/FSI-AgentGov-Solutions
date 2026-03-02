@@ -4,7 +4,7 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-## [1.0.0] - February 2026
+## [0.1.0-preview] - February 2026
 
 ### Added
 
@@ -12,7 +12,8 @@ All notable changes to the Hallucination Feedback Tracker.
 - **Feedback Sources:**
   - User thumbs-down reactions
   - Supervisor rejections from FSW
-  - Automated checks (citation verification, date validation, number sanity)
+  - Automated verification checks
+  - Customer complaints
 - **Hallucination Categories:**
   - Factual error
   - Fabricated data
@@ -23,6 +24,7 @@ All notable changes to the Hallucination Feedback Tracker.
   - Category clustering
   - Agent-specific patterns
   - Severity distribution
+  - Trend detection
 - **Python Scripts:**
   - `analyze_patterns.py` - Pattern detection
 - **Agent Scoring:**
@@ -41,4 +43,4 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-*Hallucination Feedback Tracker - FSI Agent Governance Framework*
+*Hallucination Feedback Tracker v0.1.0-preview - FSI Agent Governance Framework*

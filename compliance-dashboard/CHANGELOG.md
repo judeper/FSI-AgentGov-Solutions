@@ -16,8 +16,8 @@ All notable changes to the Compliance Dashboard solution.
 - **Power Platform Solution Package:**
   - Unmanaged solution package (ComplianceDashboard_1_0_0.zip)
   - Contains Dataverse schema and Power Automate flows
-  - Connection reference configuration for Dataverse and Outlook
-  - Environment variables for notification email and Teams webhook (HTTP connector)
+  - Connection reference configuration for Dataverse, Outlook, Teams
+  - Environment variables for notification email and Teams webhook
 - **Enhanced Sample Data:**
   - Full 62-control coverage with zone applicability
   - 90-day historical compliance score data for trend analysis
@@ -51,14 +51,14 @@ All notable changes to the Compliance Dashboard solution.
   - `fsi_compliancescore` - Daily compliance score snapshots
   - `fsi_complianceexception` - Exception tracking with SLA management
   - `fsi_complianceevidence` - Evidence collection with integrity hashing
-- **Security Role Specifications (manual creation required post-import):**
+- **Security Roles:**
   - CD Viewer - Read-only dashboard access
   - CD Assessor - Assessment entry and exception management
   - CD Admin - Full administrative access
 - **Power Automate Flows:**
   - CD-ScoreCalculator - Daily compliance score calculation
   - CD-ExceptionMonitor - Hourly SLA status monitoring
-  - CD-EvidenceCollector - Scheduled evidence collection (planned for v1.1.0 — not included in this release)
+  - CD-EvidenceCollector - Scheduled evidence collection (planned — not yet implemented)
 - **Power BI Dashboard:**
   - Executive Summary page
   - Pillar Overview page

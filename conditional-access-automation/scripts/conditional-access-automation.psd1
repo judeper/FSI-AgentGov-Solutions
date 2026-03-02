@@ -9,7 +9,7 @@
     CompatiblePSEditions = @('Core')
     
     # ID used to uniquely identify this module
-    GUID              = 'a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d'
+    GUID              = 'b7f3e2a9-4c1d-48e5-9a6b-d8f2c7e50134'
     
     # Author of this module
     Author            = 'FSI Agent Governance Framework'
@@ -42,17 +42,14 @@
     # ScriptsToProcess = @()
     
     # Functions to export from this module
-    # Public scripts are standalone .ps1 files with top-level param() blocks;
-    # they are invoked directly, not as module-exported functions.
-    # Private helper functions (e.g., Get-CAAPolicyBaseline, Compare-CAAPolicyBaseline)
-    # are exported for use by the standalone scripts and advanced consumers.
     FunctionsToExport = @(
-        'Get-CAAPolicyBaseline',
-        'Compare-CAAPolicyBaseline',
-        'Connect-CAAGraphSession',
-        'Get-CAAZoneClassification',
-        'Test-CAAConfigPath',
-        'Get-CAAValidationResults'
+        'Deploy-CAPolicies',
+        'Test-PolicyCompliance',
+        'Register-ServicePrincipal',
+        'Watch-PolicyDrift',
+        'Export-PolicyBaseline',
+        'Export-CAAComplianceEvidence',
+        'Test-EvidenceIntegrity'
     )
     
     # Cmdlets to export from this module

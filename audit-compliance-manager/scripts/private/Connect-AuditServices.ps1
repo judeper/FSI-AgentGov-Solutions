@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -261,12 +261,4 @@ function Disconnect-AuditServices {
     }
 }
 
-# Execute if script is run directly (not dot-sourced)
-if ($MyInvocation.InvocationName -ne '.') {
-    Connect-AuditServices @PSBoundParameters
-}
-
-# Export function if this script is dot-sourced (no-op outside a module)
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Connect-AuditServices, Connect-ComplianceSession, Disconnect-AuditServices
-}
+# Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

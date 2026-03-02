@@ -43,16 +43,17 @@ SHARED_OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Critical", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "High", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
-            {"Value": 4, "Label": {"LocalizedLabels": [{"Label": "Info", "LanguageCode": 1033}]}},
+            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Passed", "LanguageCode": 1033}]}},
+            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
+            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "GracePeriod", "LanguageCode": 1033}]}},
+            {"Value": 4, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
+            {"Value": 5, "Label": {"LocalizedLabels": [{"Label": "Error", "LanguageCode": 1033}]}},
         ],
     },
 }
 
 
-def create_shared_optionsets(client: AAMClient, dry_run: bool = False) -> tuple:
+def create_shared_optionsets(client: AAMClient, dry_run: bool = False) -> dict:
     """
     Check for shared option sets and create only if missing.
 
@@ -60,17 +61,16 @@ def create_shared_optionsets(client: AAMClient, dry_run: bool = False) -> tuple:
     Dataverse environment. This function is idempotent.
 
     Returns:
-        Tuple of (created_count, skipped_count)
+        Dict with 'created' and 'skipped' counts.
     """
     print("\n[Checking Shared Option Sets]")
-    created = 0
-    skipped = 0
+    counts = {"created": 0, "skipped": 0}
 
     for name, definition in SHARED_OPTIONSETS.items():
         existing = client.get_global_optionset(name)
         if existing:
             print(f"  {name}: already exists (shared with ACV), skipping")
-            skipped += 1
+            counts["skipped"] += 1
             continue
 
         if dry_run:
@@ -78,9 +78,9 @@ def create_shared_optionsets(client: AAMClient, dry_run: bool = False) -> tuple:
         else:
             client.create_global_optionset(definition)
             print(f"  {name}: created (not found in environment)")
-        created += 1
+        counts["created"] += 1
 
-    return created, skipped
+    return counts
 
 
 # ============================================================================
@@ -130,7 +130,6 @@ def get_validation_history_entity() -> dict:
     return {
         "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
         "SchemaName": "fsi_AccessValidationHistory",
-        "EntitySetName": "fsi_accessvalidationhistory",
         "DisplayName": {"LocalizedLabels": [{"Label": "Access Validation History", "LanguageCode": 1033}]},
         "DisplayCollectionName": {"LocalizedLabels": [{"Label": "Access Validation History", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Immutable access validation audit log for FINRA 4511/SEC 17a-3 regulatory evidence", "LanguageCode": 1033}]},
@@ -237,7 +236,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_bot_published_limit_sharing_mode",
+        "SchemaName": "fsi_bot_published_bot_limit_sharing_mode",
         "DisplayName": {"LocalizedLabels": [{"Label": "Published Bot Limit Sharing Mode", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Published bot sharing limitation mode setting", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -295,7 +294,7 @@ HISTORY_TABLE_COLUMNS = [
         "SchemaName": "fsi_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone at time of validation", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "None"},
+        "RequiredLevel": {"Value": "ApplicationRequired"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     {
@@ -303,7 +302,7 @@ HISTORY_TABLE_COLUMNS = [
         "SchemaName": "fsi_severity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Overall validation result severity", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "None"},
+        "RequiredLevel": {"Value": "ApplicationRequired"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_severity')",
     },
     {
@@ -434,6 +433,15 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "SchemaName": "fsi_severity_label",
+        "DisplayName": {"LocalizedLabels": [{"Label": "Severity Label", "LanguageCode": 1033}]},
+        "Description": {"LocalizedLabels": [{"Label": "Original severity classification string (Critical, High, Warning, Info)", "LanguageCode": 1033}]},
+        "RequiredLevel": {"Value": "None"},
+        "MaxLength": 50,
+        "FormatName": {"Value": "Text"},
+    },
+    {
+        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
         "SchemaName": "fsi_regulatory_context",
         "DisplayName": {"LocalizedLabels": [{"Label": "Regulatory Context", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Regulatory requirement context (e.g., FINRA 4511, SEC 17a-3)", "LanguageCode": 1033}]},
@@ -497,70 +505,68 @@ VIOLATION_TABLE_COLUMNS = [
 # Schema Deployment Functions
 # ============================================================================
 
-def create_tables(client: AAMClient, dry_run: bool = False) -> tuple:
+def create_tables(client: AAMClient, dry_run: bool = False) -> dict:
     """Create AAM tables with primary name attributes.
 
     Returns:
-        Tuple of (created_count, skipped_count)
+        Dict with 'created' and 'skipped' counts.
     """
     print("\n[Creating Tables]")
-    created = 0
-    skipped = 0
+    counts = {"created": 0, "skipped": 0}
 
     # Create AccessBaseline table
     baseline_logical_name = "fsi_accessbaseline"
     existing = client.get_entity_metadata(baseline_logical_name)
     if existing:
         print(f"  {baseline_logical_name}: already exists")
-        skipped += 1
+        counts["skipped"] += 1
     elif dry_run:
         print(f"  {baseline_logical_name}: would create (User-owned, auditing enabled)")
-        created += 1
+        counts["created"] += 1
     else:
         client.create_entity(get_access_baseline_entity())
         print(f"  {baseline_logical_name}: created")
-        created += 1
+        counts["created"] += 1
 
     # Create AccessValidationHistory table
     history_logical_name = "fsi_accessvalidationhistory"
     existing = client.get_entity_metadata(history_logical_name)
     if existing:
         print(f"  {history_logical_name}: already exists")
-        skipped += 1
+        counts["skipped"] += 1
     elif dry_run:
         print(f"  {history_logical_name}: would create (Org-owned, auditing enabled, immutable)")
-        created += 1
+        counts["created"] += 1
     else:
         client.create_entity(get_validation_history_entity())
         print(f"  {history_logical_name}: created")
-        created += 1
+        counts["created"] += 1
 
     # Create AccessViolation table
     violation_logical_name = "fsi_accessviolation"
     existing = client.get_entity_metadata(violation_logical_name)
     if existing:
         print(f"  {violation_logical_name}: already exists")
-        skipped += 1
+        counts["skipped"] += 1
     elif dry_run:
         print(f"  {violation_logical_name}: would create (User-owned, auditing enabled)")
-        created += 1
+        counts["created"] += 1
     else:
         client.create_entity(get_access_violation_entity())
         print(f"  {violation_logical_name}: created")
-        created += 1
+        counts["created"] += 1
 
-    return created, skipped
+    return counts
 
 
-def create_columns(client: AAMClient, dry_run: bool = False) -> tuple:
+def create_columns(client: AAMClient, dry_run: bool = False) -> dict:
     """Create columns on AAM tables.
 
     Returns:
-        Tuple of (created_count, skipped_count)
+        Dict with 'created' and 'skipped' counts.
     """
     print("\n[Creating Columns]")
-    created = 0
-    skipped = 0
+    counts = {"created": 0, "skipped": 0}
 
     # AccessBaseline columns
     print("  AccessBaseline columns:")
@@ -569,14 +575,14 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> tuple:
         existing = client.get_attribute_metadata("fsi_accessbaseline", col_name)
         if existing:
             print(f"    {col_name}: already exists")
-            skipped += 1
+            counts["skipped"] += 1
         elif dry_run:
             print(f"    {col_name}: would create")
-            created += 1
+            counts["created"] += 1
         else:
             client.create_attribute("fsi_accessbaseline", col)
             print(f"    {col_name}: created")
-            created += 1
+            counts["created"] += 1
 
     # AccessValidationHistory columns
     print("  AccessValidationHistory columns:")
@@ -585,14 +591,14 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> tuple:
         existing = client.get_attribute_metadata("fsi_accessvalidationhistory", col_name)
         if existing:
             print(f"    {col_name}: already exists")
-            skipped += 1
+            counts["skipped"] += 1
         elif dry_run:
             print(f"    {col_name}: would create")
-            created += 1
+            counts["created"] += 1
         else:
             client.create_attribute("fsi_accessvalidationhistory", col)
             print(f"    {col_name}: created")
-            created += 1
+            counts["created"] += 1
 
     # AccessViolation columns
     print("  AccessViolation columns:")
@@ -601,16 +607,16 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> tuple:
         existing = client.get_attribute_metadata("fsi_accessviolation", col_name)
         if existing:
             print(f"    {col_name}: already exists")
-            skipped += 1
+            counts["skipped"] += 1
         elif dry_run:
             print(f"    {col_name}: would create")
-            created += 1
+            counts["created"] += 1
         else:
             client.create_attribute("fsi_accessviolation", col)
             print(f"    {col_name}: created")
-            created += 1
+            counts["created"] += 1
 
-    return created, skipped
+    return counts
 
 
 def create_schema(client: AAMClient, dry_run: bool = False) -> dict:
@@ -637,19 +643,19 @@ def create_schema(client: AAMClient, dry_run: bool = False) -> dict:
     }
 
     # Step 1: Check/create shared option sets (must exist before tables reference them)
-    os_created, os_skipped = create_shared_optionsets(client, dry_run)
-    results["optionsets_created"] = os_created
-    results["optionsets_skipped"] = os_skipped
+    os_counts = create_shared_optionsets(client, dry_run)
+    results["optionsets_created"] = os_counts["created"]
+    results["optionsets_skipped"] = os_counts["skipped"]
 
     # Step 2: Create tables
-    tbl_created, tbl_skipped = create_tables(client, dry_run)
-    results["tables_created"] = tbl_created
-    results["tables_skipped"] = tbl_skipped
+    tbl_counts = create_tables(client, dry_run)
+    results["tables_created"] = tbl_counts["created"]
+    results["tables_skipped"] = tbl_counts["skipped"]
 
     # Step 3: Create columns
-    col_created, col_skipped = create_columns(client, dry_run)
-    results["columns_created"] = col_created
-    results["columns_skipped"] = col_skipped
+    col_counts = create_columns(client, dry_run)
+    results["columns_created"] = col_counts["created"]
+    results["columns_skipped"] = col_counts["skipped"]
 
     print("\n" + "=" * 60)
     if dry_run:
@@ -681,7 +687,7 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret",
+        help="Client secret (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
     )
     parser.add_argument(
         "--environment-url",

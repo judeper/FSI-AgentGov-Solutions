@@ -3,7 +3,6 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "description": "Logic App for transforming Azure Monitor common alert schema to Microsoft Teams notifications. Acts as intermediary between Action Groups and Teams channels (direct webhooks produce malformed messages).",
-    "prerequisite": "A Teams API connection (Microsoft.Web/connections) must be pre-created and OAuth-authorized in Azure Portal before this Logic App will execute successfully. Navigate to Azure Portal > API Connections > Add > Microsoft Teams, then complete the OAuth consent flow. The connection name must match the 'teamsConnectionName' parameter.",
     "version": "0.1.0",
     "lastUpdated": "February 2026"
   },
@@ -31,14 +30,16 @@
     },
     "teamsTeamId": {
       "type": "string",
+      "defaultValue": "TEAM_ID",
       "metadata": {
-        "description": "Microsoft Teams Team ID for alert notifications. Find via Teams Admin Center or Graph API."
+        "description": "Microsoft Teams Team ID for alert notifications. Obtain from Teams admin or Graph API."
       }
     },
     "teamsChannelId": {
       "type": "string",
+      "defaultValue": "CHANNEL_ID",
       "metadata": {
-        "description": "Microsoft Teams Channel ID for alert notifications. Find via Teams Admin Center or Graph API."
+        "description": "Microsoft Teams Channel ID for alert notifications. Obtain from Teams admin or Graph API."
       }
     }
   },
@@ -60,6 +61,14 @@
             "$connections": {
               "defaultValue": {},
               "type": "Object"
+            },
+            "teamsTeamId": {
+              "defaultValue": "[parameters('teamsTeamId')]",
+              "type": "String"
+            },
+            "teamsChannelId": {
+              "defaultValue": "[parameters('teamsChannelId')]",
+              "type": "String"
             }
           },
           "triggers": {
@@ -99,86 +108,115 @@
             }
           },
           "actions": {
-            "Parse_Alert_Payload": {
+            "Notification_Scope": {
               "runAfter": {},
-              "type": "ParseJson",
-              "inputs": {
-                "content": "@triggerBody()",
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "schemaId": { "type": "string" },
-                    "data": {
+              "type": "Scope",
+              "actions": {
+                "Parse_Alert_Payload": {
+                  "runAfter": {},
+                  "type": "ParseJson",
+                  "inputs": {
+                    "content": "@triggerBody()",
+                    "schema": {
                       "type": "object",
                       "properties": {
-                        "essentials": {
+                        "schemaId": { "type": "string" },
+                        "data": {
                           "type": "object",
                           "properties": {
-                            "alertRule": { "type": "string" },
-                            "severity": { "type": "string" },
-                            "description": { "type": "string" },
-                            "firedDateTime": { "type": "string" }
+                            "essentials": {
+                              "type": "object",
+                              "properties": {
+                                "alertRule": { "type": "string" },
+                                "severity": { "type": "string" },
+                                "description": { "type": "string" },
+                                "firedDateTime": { "type": "string" }
+                              }
+                            },
+                            "customProperties": { "type": "object" }
                           }
-                        },
-                        "customProperties": { "type": "object" }
+                        }
                       }
+                    }
+                  }
+                },
+                "Determine_Severity_Color": {
+                  "runAfter": {
+                    "Parse_Alert_Payload": ["Succeeded"]
+                  },
+                  "type": "InitializeVariable",
+                  "inputs": {
+                    "variables": [
+                      {
+                        "name": "severityColor",
+                        "type": "string",
+                        "value": "@{if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev0'), 'ff0000', if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev1'), 'ff8c00', 'ffd700'))}"
+                      }
+                    ]
+                  }
+                },
+                "Format_Teams_Message": {
+                  "runAfter": {
+                    "Determine_Severity_Color": ["Succeeded"]
+                  },
+                  "type": "Compose",
+                  "inputs": {
+                    "contentType": "html",
+                    "content": "<div style='border-left: 4px solid #@{variables('severityColor')}; padding-left: 12px;'><h3>@{body('Parse_Alert_Payload')?['data']?['essentials']?['alertRule']}</h3><p><strong>Severity:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['severity']}</p><p><strong>Description:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['description']}</p><p><strong>Time:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['firedDateTime']}</p>@{if(not(empty(body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'])), concat('<p><strong>Zone:</strong> ', body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'], '</p>'), '')}<p><strong>Control:</strong> @{body('Parse_Alert_Payload')?['data']?['customProperties']?['ControlReference']}</p><p><a href=\"@{body('Parse_Alert_Payload')?['data']?['customProperties']?['RunbookUrl']}\">View Runbook</a></p></div>"
+                  }
+                },
+                "Post_to_Teams": {
+                  "runAfter": {
+                    "Format_Teams_Message": ["Succeeded"]
+                  },
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['teams']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/v1.0/teams/@{encodeURIComponent(parameters('teamsTeamId'))}/channels/@{encodeURIComponent(parameters('teamsChannelId'))}/messages",
+                    "body": {
+                      "body": {
+                        "contentType": "html",
+                        "content": "@{outputs('Format_Teams_Message')}"
+                      }
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT20S",
+                      "maximumInterval": "PT1H",
+                      "minimumInterval": "PT10S"
                     }
                   }
                 }
               }
             },
-            "Determine_Severity_Color": {
+            "On_Failure": {
               "runAfter": {
-                "Parse_Alert_Payload": ["Succeeded"]
-              },
-              "type": "InitializeVariable",
-              "inputs": {
-                "variables": [
-                  {
-                    "name": "severityColor",
-                    "type": "string",
-                    "value": "@{if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev0'), 'ff0000', if(equals(body('Parse_Alert_Payload')?['data']?['essentials']?['severity'], 'Sev1'), 'ff8c00', 'ffd700'))}"
-                  }
-                ]
-              }
-            },
-            "Format_Teams_Message": {
-              "runAfter": {
-                "Determine_Severity_Color": ["Succeeded"]
+                "Notification_Scope": ["Failed", "TimedOut"]
               },
               "type": "Compose",
               "inputs": {
-                "contentType": "html",
-                "content": "<div style='border-left: 4px solid #@{variables('severityColor')}; padding-left: 12px;'><h3>@{body('Parse_Alert_Payload')?['data']?['essentials']?['alertRule']}</h3><p><strong>Severity:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['severity']}</p><p><strong>Description:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['description']}</p><p><strong>Time:</strong> @{body('Parse_Alert_Payload')?['data']?['essentials']?['firedDateTime']}</p>@{if(not(empty(body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'])), concat('<p><strong>Zone:</strong> ', body('Parse_Alert_Payload')?['data']?['customProperties']?['Zone'], '</p>'), '')}<p><strong>Control:</strong> @{body('Parse_Alert_Payload')?['data']?['customProperties']?['ControlReference']}</p><p><a href=\"@{body('Parse_Alert_Payload')?['data']?['customProperties']?['RunbookUrl']}\">View Runbook</a></p></div>"
+                "status": "Failed",
+                "error": "Teams notification delivery failed. Check API connection authorization and Team/Channel IDs.",
+                "workflowRunId": "@workflow().run.name",
+                "timestamp": "@utcNow()"
               }
             },
-            "Post_to_Teams": {
+            "Terminate_On_Failure": {
               "runAfter": {
-                "Format_Teams_Message": ["Succeeded"]
+                "On_Failure": ["Succeeded"]
               },
-              "type": "ApiConnection",
+              "type": "Terminate",
               "inputs": {
-                "host": {
-                  "connection": {
-                    "name": "@parameters('$connections')['teams']['connectionId']"
-                  }
-                },
-                "method": "post",
-                "path": "[concat('/v1.0/teams/', parameters('teamsTeamId'), '/channels/', parameters('teamsChannelId'), '/messages')]",
-                "body": {
-                  "body": {
-                    "contentType": "html",
-                    "content": "@{outputs('Format_Teams_Message')?['content']}"
-                  }
-                }
-              },
-              "runtimeConfiguration": {
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 4,
-                  "interval": "PT30S",
-                  "minimumInterval": "PT15S",
-                  "maximumInterval": "PT1H"
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "TeamsNotificationFailed",
+                  "message": "Alert notification could not be delivered to Teams. Review Logic App run history for details."
                 }
               }
             }
@@ -211,7 +249,7 @@
       "type": "securestring",
       "value": "[listCallbackURL(concat(resourceId('Microsoft.Logic/workflows', parameters('logicAppName')), '/triggers/manual'), '2019-05-01').value]",
       "metadata": {
-        "description": "HTTP callback URL for the Logic App trigger (use in Action Group configuration). Contains SAS token — typed as securestring to prevent exposure in deployment history."
+        "description": "HTTP callback URL for the Logic App trigger (use in Action Group configuration)"
       }
     }
   }

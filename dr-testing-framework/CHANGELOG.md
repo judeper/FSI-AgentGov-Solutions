@@ -4,26 +4,6 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [Unreleased]
-
-### Fixed
-
-- Tightened environment URL validation regex to use explicit TLD allowlist (`com`, `us`, `cn`, `de`) instead of permissive `\w+`
-- Added GCC High Dataverse URL support (`microsoftdynamics.us`)
-- Added warning message when `Save-TestResult` fails after retries (previously silent)
-
-### Added
-
-- Pester tests for URL validation, save failure handling, and script structure (`Invoke-DRTest.Tests.ps1`)
-- Dataverse `fsi_drtestresults` table schema documentation in README (column types, option set values, field descriptions)
-
-### Planned
-
-- **Evidence Export:** Compliance artifact generation
-- **Gap Management:** Gap identification and remediation tracking
-
----
-
 ## [1.0.0] - February 2026
 
 ### Added
@@ -43,8 +23,13 @@ All notable changes to the DR Testing Framework.
   - `Invoke-DRTest.ps1` - Execute DR tests
 - **Metrics:**
   - RTO measurement and comparison
-  - RPO tracking (targets defined; measurement not yet implemented — RPO fields omitted from Dataverse until implemented)
+  - RPO tracking (targets defined; actual measurement requires backup timestamp comparison — not yet implemented)
   - Success rate calculation
+- **Gap Management** (planned):
+  - Gap identification
+  - Remediation tracking
+- **Evidence Export** (planned):
+  - Compliance artifact generation
 - **Documentation:**
   - Prerequisites and licensing
   - Test scenario details

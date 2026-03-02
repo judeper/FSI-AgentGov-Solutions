@@ -85,7 +85,7 @@ function Get-PowerPlatformEnvironments {
 
     try {
         # Use pac admin list to get all environments (pac env list does not support --json)
-        $envJson = pac admin list --json 2>&1
+        $envJson = pac admin list --json 2>$null
 
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to list environments. Ensure you are authenticated with pac auth create and have Power Platform Admin role."

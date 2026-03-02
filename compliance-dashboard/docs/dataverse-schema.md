@@ -11,13 +11,14 @@ Table definitions for the Compliance Dashboard data model.
 │  fsi_controlmaster  │────<│ fsi_controlassessment│
 │  (62 controls)      │     │  (assessments)       │
 └─────────────────────┘     └─────────────────────┘
-                                      │ 1:N
-                             ┌────────┴────────┐
-                             ▼                  ▼
-                    ┌─────────────────────┐  ┌─────────────────────┐
-                    │fsi_complianceexception│  │ fsi_complianceevidence│
-                    │  (open exceptions)   │  │  (evidence links)    │
-                    └─────────────────────┘  └─────────────────────┘
+                                    │          │
+                                    │          │
+                                    ▼          ▼
+                          ┌──────────────────┐ ┌─────────────────────┐
+                          │fsi_compliance    │ │ fsi_complianceevidence│
+                          │  exception       │ │  (evidence links)    │
+                          │  (open exceptions)│ └─────────────────────┘
+                          └──────────────────┘
 
 ┌─────────────────────┐
 │ fsi_compliancescore │
@@ -142,9 +143,9 @@ Daily compliance score snapshots for trend analysis.
 | `fsi_zone1score` | Decimal | No | Zone 1 score |
 | `fsi_zone2score` | Decimal | No | Zone 2 score |
 | `fsi_zone3score` | Decimal | No | Zone 3 score |
-| `fsi_compliantcount` | Integer | Yes | Count of compliant control+zone assessments (max 200) |
-| `fsi_partialcount` | Integer | Yes | Count of partial control+zone assessments (max 200) |
-| `fsi_noncompliantcount` | Integer | Yes | Count of non-compliant control+zone assessments (max 200) |
+| `fsi_compliantcount` | Integer | Yes | Count of compliant controls |
+| `fsi_partialcount` | Integer | Yes | Count of partial controls |
+| `fsi_noncompliantcount` | Integer | Yes | Count of non-compliant controls |
 | `fsi_exceptioncount` | Integer | Yes | Count of open exceptions |
 | `createdon` | DateTime | Auto | Record creation timestamp |
 
@@ -208,7 +209,7 @@ Open compliance exceptions requiring remediation.
 ### Business Rule: Calculate SLA Status
 
 ```
-IF fsi_exceptionstatus IN (1, 2, 3) THEN
+IF fsi_status IN (1, 2, 3) THEN
   IF fsi_daysopen > SLA[fsi_severity] THEN
     fsi_slastatus = 3 (Breached)
   ELSE IF fsi_daysopen > SLA[fsi_severity] * 0.8 THEN
@@ -303,7 +304,7 @@ Full administrative access.
 
 ### Option 1: Solution Import
 
-Import the managed solution:
+Import the unmanaged solution:
 
 ```powershell
 pac solution import --path ./templates/ComplianceDashboard_1_0_0.zip

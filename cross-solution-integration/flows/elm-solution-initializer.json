@@ -17,13 +17,14 @@
             "parameters": {
               "entityName": "fsi_environmentrequests",
               "recordId": "@triggerBody()?['_fsi_environmentrequest_value']"
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "minimumInterval": "PT10S",
+              "maximumInterval": "PT1M"
             }
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "maximumInterval": "PT1M"
           },
           "runAfter": {}
         },
@@ -43,6 +44,68 @@
             "Get_ELM_Request": ["Succeeded"]
           }
         },
+        "Handle_Get_Request_Failure": {
+          "type": "Scope",
+          "actions": {
+            "Log_Request_Failure": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_provisioninglogs",
+                  "item": {
+                    "fsi_name": "INT-Init-FAILED-GetRequest-@{utcNow('yyyyMMddHHmmss')}",
+                    "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
+                    "fsi_action": 11,
+                    "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"error\":\"Failed to retrieve ELM environment request record\",\"requestValue\":\"@{triggerBody()?['_fsi_environmentrequest_value']}\"}",
+                    "fsi_actor": "CrossSolutionIntegration",
+                    "fsi_actortype": 3,
+                    "fsi_success": false
+                  }
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              },
+              "runAfter": {}
+            },
+            "Notify_Request_Failure_Teams": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToConversation",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                },
+                "parameters": {
+                  "poster": "Flow bot",
+                  "location": "Channel",
+                  "body": {
+                    "recipient": {
+                      "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                      "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                    },
+                    "messageBody": "<p><strong>⚠️ Environment Initialization Failed — Request Lookup</strong></p><p>Could not retrieve ELM environment request record.<br/>Request Value: @{triggerBody()?['_fsi_environmentrequest_value']}<br/><br/>Possible causes: deleted request, permission error, or invalid reference.<br/>Action required: Investigate the triggering provisioning log entry.</p>"
+                  }
+                }
+              },
+              "runAfter": {
+                "Log_Request_Failure": ["Succeeded"]
+              }
+            }
+          },
+          "runAfter": {
+            "Get_ELM_Request": ["Failed", "TimedOut"]
+          }
+        },
         "Register_In_ACV": {
           "type": "Scope",
           "actions": {
@@ -58,13 +121,14 @@
                   "entityName": "fsi_environmentregistrys",
                   "$filter": "fsi_environmentid eq '@{outputs('Extract_Provisioning_Data')?['environmentId']}'",
                   "$top": 1
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
                 }
-              },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "maximumInterval": "PT1M"
               },
               "runAfter": {}
             },
@@ -94,13 +158,14 @@
                         "fsi_discoveredon": "@utcNow()",
                         "fsi_notes": "Auto-registered via ELM provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
                       }
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "minimumInterval": "PT10S",
+                      "maximumInterval": "PT1M"
                     }
-                  },
-                  "retryPolicy": {
-                    "type": "exponential",
-                    "count": 3,
-                    "interval": "PT10S",
-                    "maximumInterval": "PT1M"
                   },
                   "runAfter": {}
                 }
@@ -119,20 +184,18 @@
                         "entityName": "fsi_environmentregistrys",
                         "recordId": "@first(body('Check_ACV_Exists')?['value'])?['fsi_environmentregistryid']",
                         "item": {
-                          "fsi_name": "@outputs('Extract_Provisioning_Data')?['environmentName']",
                           "fsi_zone": "@outputs('Extract_Provisioning_Data')?['zone']",
                           "fsi_status": 1,
-                          "fsi_environmenttype": "@outputs('Extract_Provisioning_Data')?['environmentType']",
-                          "fsi_environmenturl": "@outputs('Extract_Provisioning_Data')?['environmentUrl']",
                           "fsi_notes": "Updated via ELM re-provisioning. Request: @{outputs('Extract_Provisioning_Data')?['requestNumber']}"
                         }
+                      },
+                      "retryPolicy": {
+                        "type": "exponential",
+                        "count": 3,
+                        "interval": "PT10S",
+                        "minimumInterval": "PT10S",
+                        "maximumInterval": "PT1M"
                       }
-                    },
-                    "retryPolicy": {
-                      "type": "exponential",
-                      "count": 3,
-                      "interval": "PT10S",
-                      "maximumInterval": "PT1M"
                     },
                     "runAfter": {}
                   }
@@ -161,27 +224,58 @@
                 "fsi_name": "INT-Init-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
                 "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
                 "fsi_action": 11,
-                "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"acvRegistered\":@{if(equals(actions('Register_In_ACV')?['status'], 'Succeeded'), 'true', 'false')},\"zone\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['zone'], '')}\",\"environmentId\":\"@{outputs('Extract_Provisioning_Data')?['environmentId']}\"}",
+                "fsi_actiondetails": "@{json(concat('{\"action\":\"SolutionInitializer\",\"acvRegistered\":true,\"zone\":\"', outputs('Extract_Provisioning_Data')?['zone'], '\",\"environmentId\":\"', outputs('Extract_Provisioning_Data')?['environmentId'], '\"}'))}",
                 "fsi_actor": "CrossSolutionIntegration",
                 "fsi_actortype": 3,
-                "fsi_success": "@equals(actions('Register_In_ACV')?['status'], 'Succeeded')"
+                "fsi_success": true
               }
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "minimumInterval": "PT10S",
+              "maximumInterval": "PT1M"
             }
           },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "maximumInterval": "PT1M"
-          },
           "runAfter": {
-            "Register_In_ACV": ["Succeeded", "Failed"]
+            "Register_In_ACV": ["Succeeded"]
           }
         },
-        "Scope_Notify_Teams": {
+        "Handle_ACV_Registration_Failure": {
           "type": "Scope",
           "actions": {
-            "Notify_Teams": {
+            "Log_Failure": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_provisioninglogs",
+                  "item": {
+                    "fsi_name": "INT-Init-FAILED-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
+                    "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
+                    "fsi_action": 11,
+                    "fsi_actiondetails": "@{json(concat('{\"action\":\"SolutionInitializer\",\"acvRegistered\":false,\"error\":\"ACV registration failed or timed out\",\"zone\":\"', outputs('Extract_Provisioning_Data')?['zone'], '\",\"environmentId\":\"', outputs('Extract_Provisioning_Data')?['environmentId'], '\"}'))}",
+                    "fsi_actor": "CrossSolutionIntegration",
+                    "fsi_actortype": 3,
+                    "fsi_success": false
+                  }
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              },
+              "runAfter": {}
+            },
+            "Notify_Failure_Teams": {
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {
@@ -197,28 +291,48 @@
                       "groupId": "@parameters('fsi_INT_TeamsGroupId')",
                       "channelId": "@parameters('fsi_INT_TeamsChannelId')"
                     },
-                    "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: @{if(equals(actions('Register_In_ACV')?['status'], 'Succeeded'), '✅ Registered', '❌ Registration Failed')}<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
+                    "messageBody": "<p><strong>⚠️ Environment Initialization Failed</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ❌ Failed<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}<br/><br/>Action required: Manually register environment in ACV.</p>"
                   }
                 }
               },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "maximumInterval": "PT1M"
-              },
-              "runAfter": {}
+              "runAfter": {
+                "Log_Failure": ["Succeeded"]
+              }
             }
           },
           "runAfter": {
-            "Log_Initialization": ["Succeeded", "Failed"]
+            "Register_In_ACV": ["Failed", "TimedOut"]
           }
         },
-        "Handle_Notify_Outcome": {
-          "type": "Compose",
-          "inputs": "Notification @{coalesce(actions('Scope_Notify_Teams')?['status'], 'Skipped')}",
+        "Notify_Teams": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_teams",
+              "operationId": "PostMessageToConversation",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+            },
+            "parameters": {
+              "poster": "Flow bot",
+              "location": "Channel",
+              "body": {
+                "recipient": {
+                  "groupId": "@parameters('fsi_INT_TeamsGroupId')",
+                  "channelId": "@parameters('fsi_INT_TeamsChannelId')"
+                },
+                "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ✅ Registered<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
+              }
+            }
+          },
           "runAfter": {
-            "Scope_Notify_Teams": ["Succeeded", "Failed", "Skipped"]
+            "Log_Initialization": ["Succeeded"]
+          }
+        },
+        "Handle_Notify_Teams_Failure": {
+          "type": "Compose",
+          "inputs": "Teams notification failed — initialization completed successfully but notification could not be sent.",
+          "runAfter": {
+            "Notify_Teams": ["Failed", "TimedOut"]
           }
         }
       },
@@ -237,15 +351,22 @@
               "subscriptionRequest/scope": 4,
               "subscriptionRequest/filterexpression": "fsi_action eq 13 and fsi_success eq true"
             }
-          },
-          "runtimeConfiguration": {
-            "concurrency": {
-              "runs": 1
-            }
           }
         }
       },
-      "contentVersion": "1.0.0.0"
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "fsi_INT_TeamsGroupId": {
+          "type": "string",
+          "defaultValue": "",
+          "metadata": { "description": "Teams group ID for initialization notifications" }
+        },
+        "fsi_INT_TeamsChannelId": {
+          "type": "string",
+          "defaultValue": "",
+          "metadata": { "description": "Teams channel ID for initialization notifications" }
+        }
+      }
     },
     "connectionReferences": {
       "shared_commondataserviceforapps": {

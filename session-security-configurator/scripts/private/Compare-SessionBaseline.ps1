@@ -75,10 +75,7 @@ param(
     [object]$Policy,
 
     [Parameter(Mandatory = $true)]
-    [object]$Baseline,
-
-    [Parameter(Mandatory = $false)]
-    [object[]]$AuthStrengthPolicies = @()
+    [object]$Baseline
 )
 
 $ErrorActionPreference = "Stop"
@@ -90,10 +87,7 @@ function Compare-SessionBaseline {
         [object]$Policy,
 
         [Parameter(Mandatory = $true)]
-        [object]$Baseline,
-
-        [Parameter(Mandatory = $false)]
-        [object[]]$AuthStrengthPolicies = @()
+        [object]$Baseline
     )
 
     try {
@@ -172,41 +166,31 @@ function Compare-SessionBaseline {
         }
 
         # Check 3: Authentication strength
+        # Graph API returns a GUID in AuthenticationStrength.Id while baseline JSON
+        # stores a display name (e.g. "passwordless"). Resolve the policy GUID to its
+        # display name so comparisons use the same type.
         $policyAuthStrengthId = $Policy.GrantControls.AuthenticationStrength.Id
+        $policyAuthStrength = if ($policyAuthStrengthId) {
+            $Policy.GrantControls.AuthenticationStrength.DisplayName
+        } else { $null }
         $baselineAuthStrength = $Baseline.authenticationStrength
 
-        # Resolve policy GUID to display name if auth strength policies are provided
-        $policyAuthStrengthName = $null
-        if ($policyAuthStrengthId -and $AuthStrengthPolicies.Count -gt 0) {
-            $matchedPolicy = $AuthStrengthPolicies | Where-Object { $_.Id -eq $policyAuthStrengthId }
-            $policyAuthStrengthName = $matchedPolicy.DisplayName
-        }
-
-        # Compare using resolved display name (case-insensitive contains match)
-        $authMatch = $false
-        if ($baselineAuthStrength -eq $null -and $policyAuthStrengthId -eq $null) {
-            $authMatch = $true
-            Write-Verbose "  ✓ authenticationStrength matches: null (not required)"
-        }
-        elseif ($baselineAuthStrength -and $policyAuthStrengthName) {
-            $authMatch = $policyAuthStrengthName -like "*$baselineAuthStrength*"
-        }
-        elseif ($baselineAuthStrength -eq $policyAuthStrengthId) {
-            # Fallback: direct comparison if no lookup available (backward compatibility)
-            $authMatch = $true
-        }
-
-        if (-not $authMatch) {
-            $actualDisplay = if ($policyAuthStrengthName) { $policyAuthStrengthName } elseif ($policyAuthStrengthId) { $policyAuthStrengthId } else { "not configured" }
-            $results.Mismatches += @{
-                Property = "authenticationStrength"
-                Expected = if ($baselineAuthStrength) { $baselineAuthStrength } else { "not required" }
-                Actual = $actualDisplay
+        if ($policyAuthStrength -ne $baselineAuthStrength) {
+            # Handle null comparisons (Zone 1 has no auth strength requirement)
+            if ($baselineAuthStrength -eq $null -and $policyAuthStrength -eq $null) {
+                Write-Verbose "  ✓ authenticationStrength matches: null (not required)"
             }
-            Write-Verbose "  Mismatch: authenticationStrength - Expected $baselineAuthStrength, Actual $actualDisplay"
+            else {
+                $results.Mismatches += @{
+                    Property = "authenticationStrength"
+                    Expected = if ($baselineAuthStrength) { $baselineAuthStrength } else { "not required" }
+                    Actual = if ($policyAuthStrength) { $policyAuthStrength } else { "not configured" }
+                }
+                Write-Verbose "  Mismatch: authenticationStrength - Expected $baselineAuthStrength, Actual $policyAuthStrength"
+            }
         }
-        elseif (-not ($baselineAuthStrength -eq $null -and $policyAuthStrengthId -eq $null)) {
-            Write-Verbose "  ✓ authenticationStrength matches: $policyAuthStrengthName"
+        else {
+            Write-Verbose "  ✓ authenticationStrength matches: $policyAuthStrength"
         }
 
         # Check 4: Compliant device requirement
@@ -253,4 +237,5 @@ if ($MyInvocation.InvocationName -ne '.') {
     $result = Compare-SessionBaseline @PSBoundParameters
     return $result
 }
+
 

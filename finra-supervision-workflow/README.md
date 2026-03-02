@@ -50,10 +50,11 @@ Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 c
 |------------|--------|-------------|
 | Retrieve Communication Compliance alerts | **API** | Graph API with Compliance Admin permissions |
 | Create Dataverse tables | **Automated** | `deploy.py` |
-| Create security roles | **Manual** | Solution import or Dataverse admin center |
+| Create security roles | **Manual** | See `docs/security-roles.md`; `deploy.py` prints privilege matrix |
 | Configure Communication Compliance | **Manual** | Purview compliance portal |
 | Deploy Power BI dashboard | **Manual** | Import .pbix template |
 | Configure escalation rules | **Manual** | Model-driven app settings |
+| Solution packaging | **Not implemented** | Components deployed via Web API; no managed/unmanaged solution package for ALM pipelines |
 
 ## Who Should Use This
 
@@ -81,7 +82,7 @@ Primary queue table for items requiring supervisory review.
 | `fsi_tier` | Choice | Tier 1/2/3 agent classification |
 | `fsi_contentpreview` | Multiline Text | Truncated content preview (500 chars) |
 | `fsi_flaggedreason` | Text | Why item was flagged |
-| `fsi_state` | Choice | Pending, In Review, Approved, Escalated, Rejected |
+| `fsi_state` | Choice | Pending, InReview, Approved, Escalated, Rejected |
 | `fsi_assignedprincipal` | Lookup (User) | Assigned supervisory principal |
 | `fsi_queueddate` | DateTime | When item entered queue |
 | `fsi_sladue` | DateTime | SLA deadline |
@@ -99,7 +100,7 @@ Immutable audit trail for supervision actions.
 | `fsi_lognumber` | Auto Number | LOG-000001 format |
 | `fsi_queueitem` | Lookup (SupervisionQueue) | Related queue item |
 | `fsi_action` | Choice | Queued, Assigned, Claimed, Reviewed, Approved, Rejected, Escalated, Reassigned, Closed |
-| `fsi_actor` | Text | UPN of person taking action |
+| `fsi_actor` | Lookup (User) | Person taking action |
 | `fsi_timestamp` | DateTime | Action timestamp |
 | `fsi_details` | Multiline Text | Action details/notes |
 
@@ -109,7 +110,7 @@ Configuration for supervision rules by zone/tier.
 
 | Column | Type | Purpose |
 |--------|------|---------|
-| `fsi_name` | Text | Zone-Tier combination name (primary column) |
+| `fsi_name` | Text | Zone-tier combination name (primary column) |
 | `fsi_zone` | Choice | Zone 1/2/3 |
 | `fsi_tier` | Choice | Tier 1/2/3 |
 | `fsi_slahours` | Number | Hours before SLA breach |
@@ -117,7 +118,7 @@ Configuration for supervision rules by zone/tier.
 | `fsi_reviewpercent` | Number | Percentage requiring review (Zone 1: 5%, Zone 3: 100%) |
 | `fsi_defaultprincipal` | Lookup (User) | Default supervisory principal |
 | `fsi_escalationto` | Lookup (User) | Escalation recipient |
-| `fsi_active` | Yes/No | Configuration active toggle |
+| `fsi_active` | Yes/No | Configuration active flag |
 
 See [docs/dataverse-schema.md](./docs/dataverse-schema.md) for complete schema.
 
@@ -155,7 +156,7 @@ See [docs/communication-compliance-setup.md](./docs/communication-compliance-set
 
 ### Step 3: Create Security Roles
 
-The solution defines four security roles (manual creation or solution import required; see [docs/security-roles.md](./docs/security-roles.md)):
+Create four security roles manually or via solution import (the deployment script outputs the required privilege matrix but does not provision roles automatically):
 
 | Role | Access |
 |------|--------|
@@ -171,14 +172,14 @@ Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md)
 1. **Ingest Flagged Items** - Polls Communication Compliance, creates queue items
 2. **Assignment Flow** - Routes items to supervisory principals based on zone/tier
 3. **Escalation Flow** - Scheduled flow for SLA monitoring and escalation
-4. **Review Complete** - Logs review completion, notifies stakeholders
+4. **Review Complete Flow** - Logs review completion, handles escalation routing
 
 ### Step 5: Deploy Power BI Dashboard (Optional)
 
 1. Open Power BI Desktop
-2. Connect to Dataverse and select the supervision tables (see [docs/power-bi-setup.md](./docs/power-bi-setup.md) for manual connection steps)
-3. Configure dashboard pages using the measures and visuals documented in the setup guide
-4. Publish to Power BI Service
+2. Build the dashboard manually using the instructions in [docs/power-bi-setup.md](./docs/power-bi-setup.md) Step 2, Option B
+
+> **Note:** The `templates/SupervisionDashboard.pbit` template is not yet included in this release. Use the manual connection steps in the Power BI setup guide.
 
 ### Step 6: Configure Supervision Rules
 
@@ -188,22 +189,7 @@ Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md)
 4. Assign default supervisory principals
 5. Configure escalation paths
 
-### Step 7: Configure Data Retention
-
-Configure Dataverse data lifecycle policies to enforce the 7-year retention requirement (FINRA 4511 / SEC 17a-4):
-
-1. Open the [Power Platform admin center](https://admin.powerplatform.microsoft.com)
-2. Navigate to **Environments** > select your environment > **Settings** > **Data management** > **Bulk record deletion**
-3. Ensure no automated deletion policies target the `fsi_supervisionqueue` or `fsi_supervisionlog` tables within the 7-year window
-4. Configure long-term retention:
-   - Navigate to **Settings** > **Data management** > **Long-term data retention**
-   - Add the `fsi_supervisionqueue` and `fsi_supervisionlog` tables
-   - Set retention period to **7 years** (minimum per FINRA 4511)
-5. For environments using Dataverse for Teams or limited storage, consider archiving records older than 2 years to Azure Data Lake via Synapse Link while retaining them for the full 7-year period
-
-> **Note:** Dataverse does not enforce retention periods automatically. Without explicit configuration, records may be deleted during storage management or environment cleanup, violating FINRA 4511 and SEC 17a-4 preservation requirements.
-
-### Step 8: Test End-to-End
+### Step 7: Test End-to-End
 
 1. Trigger a Communication Compliance alert (test message with flagged terms)
 2. Verify item appears in SupervisionQueue
@@ -237,27 +223,32 @@ Random Sample   |
         Supervisor Reviews
             |       \
             v        v
-        Approved   Rejected
+        Approved   Rejected/Escalated
             |           |
             v           v
-        Closed      Closed
+        Closed    Escalation Flow
             |           |
             v           v
-    SupervisionLog  SupervisionLog
-
-        (Separately, Escalation Flow runs hourly
-         to escalate Pending/In Review items past SLA)
+    SupervisionLog  Notify Senior Principal
 ```
 
 ## Supervision Rules by Zone
 
-| Zone | Review Coverage | SLA | Escalation |
-|------|----------------|-----|------------|
-| Zone 1 (Personal) | 5–25% sampling (varies by tier) | 24–48 hours | 48–72 hours |
-| Zone 2 (Team) | 10–50% sampling (varies by tier) | 8–48 hours | 24–72 hours |
-| Zone 3 (Enterprise) | 100% review | 4–24 hours | 8–48 hours |
+| Zone | Tier | Review Coverage | SLA | Escalation |
+|------|------|----------------|-----|------------|
+| Zone 1 (Personal) | Tier 1 | 25% sampling | 24 hours | 48 hours |
+| Zone 1 (Personal) | Tier 2 | 10% sampling | 48 hours | 72 hours |
+| Zone 1 (Personal) | Tier 3 | 5% sampling | 48 hours | 72 hours |
+| Zone 2 (Team) | Tier 1 | 50% sampling | 8 hours | 24 hours |
+| Zone 2 (Team) | Tier 2 | 25% sampling | 24 hours | 48 hours |
+| Zone 2 (Team) | Tier 3 | 10% sampling | 48 hours | 72 hours |
+| Zone 3 (Enterprise) | Tier 1 | 100% review | 4 hours | 8 hours |
+| Zone 3 (Enterprise) | Tier 2 | 100% review | 8 hours | 24 hours |
+| Zone 3 (Enterprise) | Tier 3 | 100% review | 24 hours | 48 hours |
 
-> See [docs/dataverse-schema.md](./docs/dataverse-schema.md#default-configuration) for the full per-tier breakdown.
+> See [docs/dataverse-schema.md](./docs/dataverse-schema.md) for the full zone×tier configuration matrix.
+
+> **Sampling layers:** The review percentages above apply at the flow level (SupervisionConfig `fsi_reviewpercent`). Communication Compliance policies apply independent, upstream sampling (e.g., Zone 1 at 5%, Zone 2 at 25%, Zone 3 at 100% — see [docs/communication-compliance-setup.md](./docs/communication-compliance-setup.md)). These two sampling layers are independent and multiplicative. For example, Zone 1 / Tier 1 has an effective review rate of approximately 1.25% (5% CC sampling × 25% flow-level review). Adjust rates in both layers to achieve your target supervision coverage.
 
 ## Evidence Collection
 
@@ -266,8 +257,6 @@ Random Sample   |
 ```bash
 python scripts/export_supervision_evidence.py \
     --environment-url https://org.crm.dynamics.com \
-    --tenant-id <your-tenant-id> \
-    --interactive \
     --output-path ./exports \
     --start-date 2026-01-20 \
     --end-date 2026-01-26
@@ -277,8 +266,7 @@ Exports include:
 - `SupervisionQueue-Week04-2026.json` - All queue items with outcomes
 - `SupervisionLog-Week04-2026.json` - Complete audit trail
 - `SLACompliance-Week04-2026.json` - SLA metrics
-- `SupervisionConfig-Week04-2026.json` - Active configuration snapshot
-- `manifest-Week04-2026.json` - SHA-256 hashes for integrity
+- `manifest.json` - SHA-256 hashes for integrity
 
 ### FINRA 3120 Testing Evidence
 
@@ -296,7 +284,7 @@ Quarterly testing reports per FINRA Rule 3120:
 | **FINRA 3120** | Testing supervisory controls | Quarterly evidence export, SLA metrics |
 | **FINRA 24-09** | Gen AI communication supervision | AI agent output review workflow |
 | **SEC 17a-3** | Recordkeeping | Immutable SupervisionLog |
-| **SEC 17a-4** | Record preservation | 7-year retention via Dataverse (FINRA 4511) |
+| **SEC 17a-4** | Record preservation | 6-year retention via Dataverse |
 
 ## Documentation
 

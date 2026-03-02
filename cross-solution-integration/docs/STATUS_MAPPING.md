@@ -94,14 +94,14 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 ```
 
-| Compliance Rate | CD Status | Status Threshold | Logic |
-|----------------|-----------|------------------|-------|
+| Compliance Rate | CD Status | CD Score | Logic |
+|----------------|-----------|----------|-------|
 | 100% | 1 (Compliant) | 100 | All agents meet zone moderation requirements |
-| ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some gaps |
-| < 80% | 3 (Non-Compliant) | 0 | Significant moderation policy gaps |
+| ≥ 80% | 2 (Partial) | 80–99 | Most agents compliant, some gaps |
+| < 80% | 3 (Non-Compliant) | 0–79 | Significant moderation policy gaps |
 | 0 agents | 4 (Not Applicable) | — | No agents to validate |
 
-**Score formula:** `fsi_score = compliance_rate` (direct percentage, not threshold-based). The Status Threshold column shows the default score per status tier; the actual `fsi_score` written to `fsi_controlassessment` is the raw compliance rate for trend analysis.
+**Score formula:** `fsi_score = compliance_rate` (direct percentage, not threshold-based). The `fsi_status` derivation uses thresholds above; `fsi_score` preserves the actual rate for trend analysis.
 
 ---
 
@@ -111,14 +111,13 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 **Source field:** `fsi_compliance_rate` (Decimal)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
-| Compliance Rate | CD Status | Status Threshold | Logic |
-|----------------|-----------|------------------|-------|
+| Compliance Rate | CD Status | CD Score | Logic |
+|----------------|-----------|----------|-------|
 | 100% | 1 (Compliant) | 100 | All agents meet zone file upload policy |
-| ≥ 80% | 2 (Partial) | 50 | Most agents compliant, some with unauthorized uploads |
-| < 80% | 3 (Non-Compliant) | 0 | Significant file upload policy violations |
-| 0 agents | 4 (Not Applicable) | — | No agents to validate |
+| ≥ 80% | 2 (Partial) | 80–99 | Most agents compliant, some with unauthorized uploads |
+| < 80% | 3 (Non-Compliant) | 0–79 | Significant file upload policy violations |
 
-**Score formula:** Same as CMM — direct compliance rate for `fsi_score`, threshold-based for `fsi_status`. The Status Threshold column shows defaults per status tier; the actual `fsi_score` is the raw compliance rate.
+**Score formula:** Same as CMM — direct compliance rate for `fsi_score`, threshold-based for `fsi_status`.
 
 ---
 
@@ -159,15 +158,16 @@ When creating/updating `fsi_controlassessment` records:
   "fsi_assessmentdate": "2026-02-10T06:00:00Z",
   "fsi_status": 1,
   "fsi_score": 100,
-  "fsi_notes": "Automated: ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
-  "fsi_nextreviewdate": "2026-02-11T06:00:00Z"
+  "fsi_notes": "Automated assessment via ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
+  "fsi_nextreviewdate": "2026-02-11T06:00:00Z",
+  "fsi_evidencecount": 1
 }
 
 ```
 
 **Key behaviors:**
-- **Upsert logic:** Match on `fsi_controlmasterid` + date. Create new if no same-day record exists; update if exists. **Note:** Zone-based segmentation is not yet implemented — the current flow and `Sync-SolutionAssessments.ps1` do not filter by `fsi_zone` when querying existing assessments. Per-zone assessment records are a future enhancement.
-- **Zone handling (planned):** If a solution validates across all zones, create one assessment per zone. This requires adding `fsi_zone` to the upsert filter and iterating per zone. Not yet implemented in the flow template or PowerShell sync script.
+- **Upsert logic:** Match on `fsi_controlmasterid` + `fsi_zone` + date. Create new if no same-day record exists; update if exists.
+- **Zone handling:** If a solution validates across all zones, create one assessment per zone.
 - **Notes field:** Include solution name, version, run ID, and raw status for audit trail.
 - **Next review date:** Set to tomorrow (daily feed cadence).
 
@@ -192,4 +192,4 @@ When Tier 2 solutions export evidence packages, register them in `fsi_compliance
 
 ---
 
-*Status Mapping Reference v1.1.0 — February 2026*
+*Status Mapping Reference v1.0.0 — February 2026*

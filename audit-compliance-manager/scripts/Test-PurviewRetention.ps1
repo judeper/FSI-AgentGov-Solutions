@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
 
 <#
@@ -64,7 +64,7 @@
     - Checks: Array of check results
     - Gaps: Array of record type coverage gaps
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: High
+    - Confidence: HIGH
     - Reason: Summary explanation
 
 .NOTES
@@ -502,8 +502,15 @@ function Test-PurviewRetention {
         }
     }
     finally {
-        # Disconnect using shared helper (consistent with Test-UnifiedAuditLog)
-        Disconnect-AuditServices
+        # Disconnect from Security & Compliance PowerShell
+        try {
+            Write-Host "Disconnecting from Security & Compliance PowerShell..." -ForegroundColor Yellow
+            Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
+            Write-Host "Disconnected." -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Warning: Error during disconnect: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
     }
 
     # Return structured result
@@ -515,9 +522,8 @@ function Test-PurviewRetention {
         Checks              = $checks
         Gaps                = $gaps
         OverallStatus       = $overallStatus
-        Confidence          = "High"
+        Confidence          = "HIGH"
         Reason              = $reason
-        RawValue            = "PolicyCount=$(if ($null -ne $policies) { $policies.Count } else { 0 }),RequiredDays=$minimumRequiredDays"
     }
 }
 
@@ -536,7 +542,7 @@ function Get-RequiredRetentionDuration {
     else { return "TenYears" }
 }
 
-# Execute if script is run directly (not dot-sourced)
+# Execute the validation when run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
     Test-PurviewRetention @PSBoundParameters
 }

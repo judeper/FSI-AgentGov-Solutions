@@ -18,11 +18,6 @@
 .PARAMETER DataverseUrl
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
-.PARAMETER TenantId
-    The Azure AD tenant GUID for Dataverse authentication. When omitted,
-    the script attempts to resolve the tenant ID from an existing Graph
-    session (Get-MgContext).
-
 .PARAMETER OutputPath
     Directory path where the evidence JSON and SHA-256 files will be written.
     The directory is created automatically if it does not exist.
@@ -37,12 +32,12 @@
     Optional validation run identifier to scope evidence to a specific run.
 
 .PARAMETER IncludeBaselines
-    When specified, includes active CA policy baselines in the evidence package.
-    Enabled by default.
+    Include active CA policy baselines in the evidence package.
+    Both baselines and violations are included by default when neither switch is specified.
 
 .PARAMETER IncludeViolations
-    When specified, includes active CA policy violations in the evidence package.
-    Enabled by default.
+    Include active CA policy violations in the evidence package.
+    Both baselines and violations are included by default when neither switch is specified.
 
 .EXAMPLE
     .\Export-CAAComplianceEvidence.ps1 -DataverseUrl 'https://org.crm.dynamics.com' `
@@ -79,18 +74,13 @@
     for evidence integrity verification during regulatory examinations.
 #>
 
-#Requires -Version 5.1
-#Requires -Modules Az.Accounts
+#Requires -Version 7.0
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
     [string]$DataverseUrl,
-
-    [Parameter()]
-    [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
-    [string]$TenantId,
 
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -106,14 +96,20 @@ param(
     [string]$RunId,
 
     [Parameter()]
-    [switch]$IncludeBaselines = $true,
+    [switch]$IncludeBaselines,
 
     [Parameter()]
-    [switch]$IncludeViolations = $true
+    [switch]$IncludeViolations
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Default: include both baselines and violations when neither switch is specified
+if (-not $IncludeBaselines -and -not $IncludeViolations) {
+    $IncludeBaselines = [switch]::new($true)
+    $IncludeViolations = [switch]::new($true)
+}
 
 # Import private helpers
 . $PSScriptRoot/private/Get-CAAValidationResults.ps1
@@ -161,19 +157,19 @@ if (-not (Test-Path $OutputPath)) {
 }
 
 # --- Authenticate ---
-# Try CAAClient module first; fall back to Az token if Phase 2 stub throws
-$accessToken = $null
+Write-Verbose 'Connecting to Dataverse...'
 try {
-    Write-Verbose 'Connecting to Dataverse via CAAClient...'
-    $connectionInfo = Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $TenantId
-    $accessToken = $script:AccessToken
+    $tenantHint = ([Uri]$DataverseUrl).Host.Split('.')[0]
+    Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $tenantHint
+} catch {
+    Write-Verbose "CAAClient not available: $_"
 }
-catch {
-    Write-Verbose "CAAClient not available (Phase 2 stub): $($_.Exception.Message)"
-}
+$accessToken = $script:AccessToken
 
+# If CAAClient sets module-scoped token, retrieve it; otherwise fall back
+# to interactive token acquisition for the Dataverse resource
 if (-not $accessToken) {
-    Write-Verbose 'Acquiring access token for Dataverse via Az module...'
+    Write-Verbose 'Acquiring access token for Dataverse...'
     try {
         $tokenResponse = Get-AzAccessToken -ResourceUrl $DataverseUrl
         $accessToken = $tokenResponse.Token
@@ -227,15 +223,15 @@ if ($IncludeBaselines) {
 }
 
 # --- Compute summary ---
-$passedCount  = @($validations | Where-Object { $_.fsi_overall_status -eq 'Passed' }).Count
-$failedCount  = @($validations | Where-Object { $_.fsi_overall_status -in @('Failed', 'Error') }).Count
-$warningCount = @($validations | Where-Object { $_.fsi_overall_status -in @('Warning', 'GracePeriod') }).Count
+$passedCount  = @($validations | Where-Object { $_.fsi_overallstatus -eq 'Passed' }).Count
+$failedCount  = @($validations | Where-Object { $_.fsi_overallstatus -in @('Failed', 'Error') }).Count
+$warningCount = @($validations | Where-Object { $_.fsi_overallstatus -in @('Warning', 'GracePeriod') }).Count
 
 # Determine overall status (worst severity across all validation records)
 $overallStatus = 'Passed'
 $highestPriority = 0
 foreach ($v in $validations) {
-    $status = $v.fsi_overall_status
+    $status = $v.fsi_overallstatus
     if ($status -and $severityPriority.ContainsKey($status)) {
         $priority = $severityPriority[$status]
         if ($priority -gt $highestPriority) {
@@ -253,25 +249,23 @@ foreach ($v in $validations) {
         $zoneBreakdown[$zone] = @{ passed = 0; failed = 0; warning = 0; total = 0 }
     }
     $zoneBreakdown[$zone].total++
-    switch ($v.fsi_overall_status) {
+    switch ($v.fsi_overallstatus) {
         'Passed'      { $zoneBreakdown[$zone].passed++ }
         { $_ -in @('Failed', 'Error') } { $zoneBreakdown[$zone].failed++ }
         { $_ -in @('Warning', 'GracePeriod') } { $zoneBreakdown[$zone].warning++ }
     }
 }
 
-# --- Resolve tenant ID for metadata ---
-$resolvedTenantId = if ($TenantId) { $TenantId } else { 'unknown' }
-if ($resolvedTenantId -eq 'unknown') {
-    try {
-        $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-        if ($mgContext -and $mgContext.TenantId) {
-            $resolvedTenantId = $mgContext.TenantId
-        }
+# --- Resolve tenant ID ---
+$tenantId = 'unknown'
+try {
+    $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+    if ($mgContext -and $mgContext.TenantId) {
+        $tenantId = $mgContext.TenantId
     }
-    catch {
-        Write-Verbose "Could not determine tenant ID from Graph context: $_"
-    }
+}
+catch {
+    Write-Verbose "Could not determine tenant ID from Graph context: $_"
 }
 
 # --- Build evidence object ---
@@ -283,7 +277,7 @@ $evidence = [ordered]@{
     metadata    = [ordered]@{
         exportedAt     = (Get-Date).ToUniversalTime().ToString('o')
         scope          = 'Tenant'
-        tenantId       = $resolvedTenantId
+        tenantId       = $tenantId
         fromDate       = $FromDate.ToUniversalTime().ToString('o')
         toDate         = $ToDate.ToUniversalTime().ToString('o')
         runId          = if ($RunId) { $RunId } else { $null }

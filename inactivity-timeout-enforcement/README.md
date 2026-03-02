@@ -1,6 +1,6 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.3
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
@@ -23,8 +23,8 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 inactivity-timeout-enforcement/
 ├── README.md
 ├── CHANGELOG.md
-├── SOLUTION-DOCUMENTATION.md
 ├── DELIVERY-CHECKLIST.md
+├── SOLUTION-DOCUMENTATION.md
 └── src/
     └── detect-inactivity-timeout-noncompliance.json  # Daily compliance detection flow
 ```
@@ -37,10 +37,14 @@ inactivity-timeout-enforcement/
 
 ## Deployment
 
-1. Import the JSON file as a cloud flow into your Power Platform environment
+1. Import the flow JSON file (`src/detect-inactivity-timeout-noncompliance.json`) into your Power Platform environment
 2. Configure connection references (see prerequisites)
-3. Activate the cloud flow
+3. Activate cloud flows
 4. Verify deployment using the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
+
+## Known Limitations
+
+- **Single-page environment enumeration:** The `List_Environments` action retrieves the first page of results from the BAP Admin API without following `nextLink` pagination. Tenants with environments exceeding the default API page size (~500) should extend the flow with a Do Until loop to accumulate all pages before processing.
 
 ## License
 

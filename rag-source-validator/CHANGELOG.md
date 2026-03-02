@@ -20,12 +20,12 @@ All notable changes to the RAG Source Validator.
 - **PowerShell Scripts:**
   - `Invoke-SourceValidation.ps1` - Run validation
 - **Supported Source Types:**
-  - SharePoint Document Libraries
-  - *(Planned: SharePoint Lists, Dataverse Tables, Azure Blob Storage)*
+  - SharePoint Document Libraries (full validation)
+  - SharePoint Lists, Pages, Dataverse Tables, Azure Blob Storage, External APIs, Database Queries (registered in schema; validation not yet implemented)
 - **Validation Types:**
   - SHA-256 hash validation
-  - Schema drift detection *(planned)*
-  - Freshness monitoring *(planned)*
+  - Schema drift detection
+  - Freshness monitoring
 - **Documentation:**
   - Prerequisites and licensing
   - Dataverse schema definitions

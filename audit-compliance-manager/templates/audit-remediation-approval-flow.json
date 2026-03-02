@@ -3,9 +3,9 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "title": "ALCA - Audit Remediation Approval Flow",
-    "description": "Weekly approval workflow for remediating non-compliant Power Platform environments. Queries Dataverse for environments with fsi_compliancestatus = Non-Compliant, requests governance approval, then triggers the Enable-AuditLogging runbook via Azure Automation.",
+    "description": "Weekly approval workflow for remediating non-compliant Power Platform environments. Queries Dataverse for environments with fsi_compliancestatus = Non-Compliant, requests governance approval, then triggers the Enable-AuditLogging runbook via Azure Automation. NOTE: This template uses a single-approver model with no zone isolation. For regulated environments requiring separation of duties, customize the OData filter to scope by zone and assign zone-specific approvers.",
     "version": "1.0.0",
-    "solution": "Audit Logging Compliance Automation (ALCA)",
+    "solution": "Audit Compliance Manager (ACM)",
     "prerequisites": [
       "Dataverse connection with read access to fsi_auditenvironmentcompliance table",
       "Azure Automation account with Enable-AuditLogging runbook published",
@@ -35,15 +35,9 @@
         "schedule": {
           "weekDays": ["Monday"],
           "hours": ["7"],
-          "minutes": [0]
+          "minutes": ["0"]
         },
         "timeZone": "Eastern Standard Time"
-      },
-      "conditions": [],
-      "runtimeConfiguration": {
-        "concurrency": {
-          "runs": 1
-        }
       },
       "metadata": {
         "operationMetadataId": "trigger-weekly-recurrence",
@@ -114,7 +108,7 @@
           {
             "name": "AutomationAccountName",
             "type": "string",
-            "value": "aa-audit-validator"
+            "value": "FSI-AgentGov-Automation"
           }
         ]
       },
@@ -132,7 +126,7 @@
           {
             "name": "ResourceGroupName",
             "type": "string",
-            "value": "rg-audit-validation"
+            "value": "rg-fsi-agentgov"
           }
         ]
       },
@@ -206,11 +200,11 @@
         ]
       }
     },
-    "Scope_Try": {
-      "actions": {
-        "Step_1_-_Query_Non-Compliant_Environments": {
+    "Step_1_-_Query_Non-Compliant_Environments": {
       "type": "Http",
-      "runAfter": {},
+      "runAfter": {
+        "Initialize_Variable_-_EnvironmentList": ["Succeeded"]
+      },
       "inputs": {
         "method": "GET",
         "uri": "@{variables('DataverseEnvironmentUrl')}/api/data/v9.2/fsi_auditenvironmentcompliances?$filter=fsi_compliancestatus eq 100000001&$select=fsi_environmentid,fsi_environmentname,fsi_lastchecked,fsi_auditenabled,fsi_dataverseauditenabled,fsi_errormessage&$orderby=fsi_environmentname asc",
@@ -223,17 +217,18 @@
         "authentication": {
           "type": "ManagedServiceIdentity",
           "audience": "@{variables('DataverseEnvironmentUrl')}"
+        },
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "minimumInterval": "PT5S",
+          "maximumInterval": "PT1M"
         }
       },
       "metadata": {
         "operationMetadataId": "step1-query-dataverse",
-        "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication. Pagination is enabled to handle large result sets via @odata.nextLink (minimumItemCount=10000)."
-      },
-      "runtimeConfiguration": {
-        "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT30S", "minimumInterval": "PT15S", "maximumInterval": "PT5M" },
-        "paginationPolicy": {
-          "minimumItemCount": 10000
-        }
+        "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication."
       }
     },
     "Set_NonCompliantCount": {
@@ -258,7 +253,7 @@
           "Environment ID": "@item()?['fsi_environmentid']",
           "Purview Audit": "@if(equals(item()?['fsi_auditenabled'], true), '✅ Enabled', '❌ Disabled')",
           "Dataverse Audit": "@if(equals(item()?['fsi_dataverseauditenabled'], true), '✅ Enabled', '❌ Disabled')",
-          "Last Checked": "@if(empty(item()?['fsi_lastchecked']), 'Never', formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm'))"
+          "Last Checked": "@formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm')"
         }
       }
     },
@@ -348,14 +343,18 @@
                 "authentication": {
                   "type": "ManagedServiceIdentity",
                   "audience": "https://management.azure.com"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT5S",
+                  "maximumInterval": "PT1M"
                 }
               },
               "metadata": {
                 "operationMetadataId": "step4a-trigger-runbook",
                 "notes": "Creates an Azure Automation job to run Enable-AuditLogging.ps1. Uses Managed Identity for Azure Management API authentication. The runbook will remediate ALL non-compliant environments."
-              },
-              "runtimeConfiguration": {
-                "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT30S", "minimumInterval": "PT15S", "maximumInterval": "PT5M" }
               }
             },
             "Wait_for_Runbook_Completion": {
@@ -369,37 +368,40 @@
                 "timeout": "PT2H"
               },
               "actions": {
-                "Delay_Before_Status_Check": {
-                  "type": "Wait",
-                  "runAfter": {},
-                  "inputs": {
-                    "interval": {
-                      "count": 30,
-                      "unit": "Second"
-                    }
-                  }
-                },
                 "Check_Runbook_Job_Status": {
-                  "type": "Http",
                   "runAfter": {
                     "Delay_Before_Status_Check": ["Succeeded"]
                   },
+                  "type": "Http",
                   "inputs": {
                     "method": "GET",
                     "uri": "https://management.azure.com/subscriptions/@{variables('SubscriptionId')}/resourceGroups/@{variables('ResourceGroupName')}/providers/Microsoft.Automation/automationAccounts/@{variables('AutomationAccountName')}/jobs/@{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}?api-version=2023-11-01",
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "minimumInterval": "PT5S",
+                      "maximumInterval": "PT1M"
+                    }
+                  }
+                },
+                "Delay_Before_Status_Check": {
+                  "runAfter": {},
+                  "type": "Wait",
+                  "inputs": {
+                    "interval": {
+                      "count": 30,
+                      "unit": "Second"
                     }
                   },
-                  "runtimeConfiguration": {
-                    "retryPolicy": { "type": "exponential", "count": 3, "interval": "PT10S", "minimumInterval": "PT5S", "maximumInterval": "PT1M" }
-                  }
+                  "description": "Wait 30 seconds before checking job status"
                 }
               },
-              "metadata": {
-                "notes": "Poll runbook job status every 30 seconds until completion or failure (max 2 hours, 240 iterations)."
-              }
+              "description": "Wait until remediation runbook job completes or fails (max 2 hours)"
             },
             "Step_5_-_Send_Completion_Notification_Approved": {
               "type": "OpenApiConnection",
@@ -421,29 +423,6 @@
               },
               "metadata": {
                 "operationMetadataId": "step5-notification-approved"
-              }
-            },
-            "Send_Remediation_Error_Notification": {
-              "type": "OpenApiConnection",
-              "runAfter": {
-                "Wait_for_Runbook_Completion": ["Failed", "Skipped", "TimedOut"]
-              },
-              "inputs": {
-                "host": {
-                  "connectionName": "shared_office365",
-                  "operationId": "SendEmailV2",
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                },
-                "parameters": {
-                  "emailMessage/To": "@variables('NotificationRecipients')",
-                  "emailMessage/Subject": "ALCA: Remediation Error — Runbook Failed After Approval",
-                  "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Error</h2><p>The remediation runbook <strong>failed or timed out</strong> after governance approval was granted.</p><h3>Summary</h3><ul><li><strong>Non-Compliant Environments:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li></ul><h3>Recommended Actions</h3><ol><li>Check Azure Automation runbook job logs for error details</li><li>Review the <a href=\"https://make.powerautomate.com\">Power Automate</a> flow run history</li><li>If transient, re-trigger remediation manually via Enable-AuditLogging.ps1</li></ol><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
-                  "emailMessage/Importance": "High"
-                }
-              },
-              "metadata": {
-                "operationMetadataId": "remediation-error-notification",
-                "notes": "Sends error notification when the remediation runbook fails or times out after approval."
               }
             }
           },
@@ -485,20 +464,12 @@
           }
         }
       }
-      }
-      },
-      "runAfter": {
-        "Initialize_Variable_-_EnvironmentList": ["Succeeded"]
-      },
-      "type": "Scope",
-      "description": "Main approval and remediation execution scope with error handling"
     },
-    "Scope_Catch": {
+    "Error_Handling_-_Runbook_Failure": {
       "type": "Scope",
       "runAfter": {
-        "Scope_Try": ["Failed", "Skipped", "TimedOut"]
+        "Step_2_-_Check_Non-Compliant_Count": ["Failed", "TimedOut", "Skipped"]
       },
-      "description": "Error handling scope - send notification on failure",
       "actions": {
         "Send_Error_Notification": {
           "type": "OpenApiConnection",

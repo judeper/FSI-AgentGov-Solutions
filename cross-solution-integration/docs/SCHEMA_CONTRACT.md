@@ -75,11 +75,11 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 | AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | `fsi_accessviolation` |
 | CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | `fsi_moderationviolation` |
 | FUS | `fsi_fileupload_baseline` | `fsi_fileupload_validationhistory` | `fsi_fileupload_violation` |
-| CAA | — | `fsi_capolicyvalidationhistory` | — |
+| CAA | — | `fsi_capolicyvalidationhistory` | `fsi_capolicyviolation` |
 
 ### Correlation
 
-All solutions correlate records via `fsi_run_id` — a logical GUID generated per validation run. This is a string field, not a Dataverse lookup relationship.
+All solutions correlate records via `fsi_runid` — a logical GUID generated per validation run. This is a string field, not a Dataverse lookup relationship.
 
 ---
 

@@ -1,5 +1,5 @@
-#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+#Requires -Version 7.0
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
 .SYNOPSIS
@@ -71,11 +71,6 @@
 .NOTES
     Version: 1.0.0
 
-    MSAL.PS deprecation notice:
-    MSAL.PS is a community module deprecated by Microsoft in favor of
-    Microsoft.Identity.Client. Plan migration to Microsoft.Identity.Client
-    to reduce supply-chain risk. See https://github.com/AzureAD/MSAL.PS
-
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates
@@ -102,13 +97,13 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$TenantId,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$ClientId,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
@@ -136,19 +131,18 @@ try {
     # Build parameters for Invoke-TenantAuditValidation
     # Do NOT pass -Interactive or -OutputPath (not suitable for runbook context)
     $ualParams = @{
-        Zone         = $Zone
-        DataverseUrl = $DataverseUrl
+        Zone = $Zone
     }
 
     if ($TenantId) { $ualParams.TenantId = $TenantId }
     if ($ClientId) { $ualParams.ClientId = $ClientId }
     if ($CertificateThumbprint) { $ualParams.CertificateThumbprint = $CertificateThumbprint }
     if ($SkipCanaryValidation) { $ualParams.SkipCanaryValidation = $true }
-    if ($PSBoundParameters.ContainsKey('CanaryWaitSeconds')) { $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds }
+    if ($CanaryWaitSeconds) { $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds }
 
     Write-Verbose "Invoking Invoke-TenantAuditValidation with parameters: $($ualParams.Keys -join ', ')"
 
-    # Execute tenant validation orchestrator (invoke as script, not dot-sourced)
+    # Execute tenant validation orchestrator
     $validationResults = & "$scriptRoot\Invoke-TenantAuditValidation.ps1" @ualParams
 
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
@@ -160,10 +154,7 @@ try {
     Import-Module MSAL.PS -ErrorAction Stop
 
     # Get certificate for authentication
-    $cert = Get-ChildItem Cert: -Recurse | Where-Object Thumbprint -eq $CertificateThumbprint | Select-Object -First 1
-    if (-not $cert) {
-        throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
-    }
+    $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
     Write-Verbose "Certificate found: $($cert.Subject)"
 
     # Acquire token
@@ -252,14 +243,8 @@ catch {
     $errorOutput = [PSCustomObject]@{
         RunType       = "TenantValidation"
         Timestamp     = (Get-Date -AsUTC -Format "o")
-        Zone          = $Zone
         OverallStatus = "Error"
         Reason        = $_.Exception.Message
-        Validators    = @{}
-        Drift         = @{
-            Overall      = @{ DriftDetected = $false }
-            PerValidator = @{}
-        }
         AlertRequired = $true
         AlertSeverity = "Error"
     }

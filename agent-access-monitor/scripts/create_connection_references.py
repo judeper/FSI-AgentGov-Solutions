@@ -36,12 +36,6 @@ CONNECTION_REFS = [
         "connector": "shared_teams",
         "description": "Teams connector for sending compliance alert notifications",
     },
-    {
-        "logical_name": "fsi_cr_azureautomation_accessmonitor",
-        "display_name": "Azure Automation - Agent Access Monitor",
-        "connector": "shared_azureautomation",
-        "description": "Azure Automation connector for triggering and monitoring validation runbook jobs",
-    },
 ]
 
 
@@ -141,7 +135,7 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret (or set AAM_CLIENT_SECRET env var)",
+        help="Client secret (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
     )
     parser.add_argument(
         "--environment-url",

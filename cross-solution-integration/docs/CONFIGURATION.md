@@ -33,15 +33,18 @@ $params = @{
 
 ### Cross-Environment (Advanced)
 
-If solutions are in different environments, configure separate connections per solution in Power Automate, or run `Sync-SolutionAssessments.ps1` once per environment:
+Cross-environment deployment is not currently supported by `Sync-SolutionAssessments.ps1`, which accepts a single `-DataverseUrl` parameter. All Tier 2 solution tables must be accessible from that environment.
+
+If cross-environment support is required, extend the script to accept per-solution URLs or use virtual tables/Dataverse data integration to surface remote tables locally.
 
 ```powershell
-# Run against each environment separately
-.\Sync-SolutionAssessments.ps1 -DataverseUrl "https://acv-org.crm.dynamics.com" `
-    -TenantId "tenant-guid" -Solutions ACV -Interactive
-
-.\Sync-SolutionAssessments.ps1 -DataverseUrl "https://ssc-org.crm.dynamics.com" `
-    -TenantId "tenant-guid" -Solutions SSC -Interactive
+# Single-environment only (current implementation)
+$params = @{
+    DataverseUrl = "https://org.crm.dynamics.com"
+    TenantId     = "tenant-guid"
+    Interactive  = $true
+}
+.\Sync-SolutionAssessments.ps1 @params
 ```
 
 ## Security Roles
@@ -55,6 +58,7 @@ The service principal or interactive user needs:
 | AAM | AAM Viewer (or custom) | Read `fsi_accessvalidationhistory` |
 | CMM | CMM Viewer (or custom) | Read `fsi_moderationvalidationhistory` |
 | FUS | FUS Viewer (or custom) | Read `fsi_fileupload_validationhistory` |
+| CAA | CAA Viewer (or custom) | Read `fsi_capolicyvalidationhistory` |
 | CD | CD Assessor | Create/Update `fsi_controlassessment`, `fsi_complianceevidence` |
 
 ## Scheduling

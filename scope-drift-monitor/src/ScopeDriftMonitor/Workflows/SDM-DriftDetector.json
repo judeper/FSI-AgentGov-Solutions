@@ -36,7 +36,7 @@
           {
             "name": "LastCheckTime",
             "type": "string",
-            "value": "@{addMinutes(utcNow(), mul(-1, int(float(parameters('fsi_SDM_DetectionWindowMinutes')))))}"
+            "value": "@{addMinutes(utcNow(), mul(-1, int(parameters('fsi_SDM_DetectionWindowMinutes'))))}"
           }
         ]
       }
@@ -152,29 +152,17 @@
       "type": "OpenApiConnection",
       "inputs": {
         "host": {
-          "connectionName": "shared_commondataserviceforapps",
+          "connectionName": "fsi_cr_dataverse",
           "operationId": "ListRecords",
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
         "parameters": {
           "entityName": "fsi_agentscopes",
-          "$filter": "fsi_status eq 2",
+          "$filter": "fsi_status eq @{int(coalesce(parameters('fsi_SDM_ActiveScopeStatus'), '10002'))}",
           "$select": "fsi_agentscopeid,fsi_name,fsi_agentid,fsi_environmentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis",
-          "$top": 5000
+          "$expand": "fsi_owner($select=internalemailaddress,fullname)"
         },
         "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      },
-      "runtimeConfiguration": {
-        "paginationPolicy": {
-          "minimumItemCount": 5000
-        }
       }
     },
     "Scope_Query_Unified_Audit_Log": {
@@ -185,12 +173,21 @@
       },
       "type": "Scope",
       "actions": {
-        "Set_Initial_Content_Page_Uri": {
+        "Validate_ManagementApiEndpoint": {
           "runAfter": {},
+          "type": "Compose",
+          "inputs": "@if(or(equals(coalesce(parameters('fsi_SDM_ManagementApiEndpoint'), 'https://manage.office.com'), 'https://manage.office.com'), equals(coalesce(parameters('fsi_SDM_ManagementApiEndpoint'), 'https://manage.office.com'), 'https://manage.office365.us'), equals(coalesce(parameters('fsi_SDM_ManagementApiEndpoint'), 'https://manage.office.com'), 'https://manage.office.eaglex.ic.gov')), coalesce(parameters('fsi_SDM_ManagementApiEndpoint'), 'https://manage.office.com'), 'https://manage.office.com')"
+        },
+        "Set_Initial_Content_Page_Uri": {
+          "runAfter": {
+            "Validate_ManagementApiEndpoint": [
+              "Succeeded"
+            ]
+          },
           "type": "SetVariable",
           "inputs": {
             "name": "ContentPageUri",
-            "value": "https://manage.office.com/api/v1.0/@{variables('TenantId')}/activity/feed/subscriptions/content?contentType=Audit.General&startTime=@{variables('LastCheckTime')}&endTime=@{utcNow()}"
+            "value": "@{outputs('Validate_ManagementApiEndpoint')}/api/v1.0/@{variables('TenantId')}/activity/feed/subscriptions/content?contentType=Audit.General&startTime=@{variables('LastCheckTime')}&endTime=@{utcNow()}"
           }
         },
         "Paginate_Content_Blobs": {
@@ -208,34 +205,28 @@
           "actions": {
             "HTTP_Get_Content_Page": {
               "runAfter": {},
-              "type": "Http",
+              "type": "OpenApiConnection",
               "inputs": {
-                "method": "GET",
-                "uri": "@{variables('ContentPageUri')}",
-                "authentication": {
-                  "type": "ActiveDirectoryOAuth",
-                  "audience": "https://manage.office.com",
-                  "tenant": "@{variables('TenantId')}",
-                  "clientId": "@{parameters('fsi_SDM_ClientId')}",
-                  "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+                "host": {
+                  "connectionName": "fsi_cr_http_azuread",
+                  "operationId": "InvokeHttp",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontentsv2"
                 },
+                "parameters": {
+                  "url": "@{variables('ContentPageUri')}",
+                  "method": "GET",
+                  "audience": "@{outputs('Validate_ManagementApiEndpoint')}"
+                },
+                "authentication": "@parameters('$authentication')",
                 "retryPolicy": {
                   "type": "exponential",
-                  "count": 4,
+                  "count": 3,
                   "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "runtimeConfiguration": {
-                "secureData": {
-                  "properties": [
-                    "inputs"
-                  ]
+                  "maximumInterval": "PT1M"
                 }
               }
             },
-            "Append_Page_Content_Blobs": {
+            "Append_Page_Content_Blobs":{
               "runAfter": {
                 "HTTP_Get_Content_Page": [
                   "Succeeded"
@@ -256,50 +247,56 @@
               "type": "SetVariable",
               "inputs": {
                 "name": "ContentPageUri",
-                "value": "@coalesce(outputs('HTTP_Get_Content_Page')?['headers']?['NextPageUri'], '')"
+                "value": "@if(startsWith(coalesce(outputs('HTTP_Get_Content_Page')?['headers']?['NextPageUri'], ''), concat(outputs('Validate_ManagementApiEndpoint'), '/')), outputs('HTTP_Get_Content_Page')?['headers']?['NextPageUri'], '')"
               }
             }
           }
         },
-        "For_Each_Content_Blob": {
+        "Filter_Trusted_Content_Blobs": {
           "runAfter": {
             "Paginate_Content_Blobs": [
               "Succeeded"
             ]
           },
+          "type": "Query",
+          "inputs": {
+            "from": "@variables('ContentBlobs')",
+            "where": "@startsWith(item()?['contentUri'], concat(outputs('Validate_ManagementApiEndpoint'), '/'))"
+          }
+        },
+        "For_Each_Content_Blob": {
+          "runAfter": {
+            "Filter_Trusted_Content_Blobs": [
+              "Succeeded"
+            ]
+          },
           "type": "Foreach",
-          "foreach": "@variables('ContentBlobs')",
+          "foreach": "@body('Filter_Trusted_Content_Blobs')",
           "actions": {
             "HTTP_Get_Blob_Content": {
               "runAfter": {},
-              "type": "Http",
+              "type": "OpenApiConnection",
               "inputs": {
-                "method": "GET",
-                "uri": "@{items('For_Each_Content_Blob')?['contentUri']}",
-                "authentication": {
-                  "type": "ActiveDirectoryOAuth",
-                  "audience": "https://manage.office.com",
-                  "tenant": "@{variables('TenantId')}",
-                  "clientId": "@{parameters('fsi_SDM_ClientId')}",
-                  "secret": "@{parameters('fsi_SDM_ClientSecret')}"
+                "host": {
+                  "connectionName": "fsi_cr_http_azuread",
+                  "operationId": "InvokeHttp",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_webcontentsv2"
                 },
+                "parameters": {
+                  "url": "@{items('For_Each_Content_Blob')?['contentUri']}",
+                  "method": "GET",
+                  "audience": "@{outputs('Validate_ManagementApiEndpoint')}"
+                },
+                "authentication": "@parameters('$authentication')",
                 "retryPolicy": {
                   "type": "exponential",
-                  "count": 4,
+                  "count": 3,
                   "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "runtimeConfiguration": {
-                "secureData": {
-                  "properties": [
-                    "inputs"
-                  ]
+                  "maximumInterval": "PT1M"
                 }
               }
             },
-            "Filter_CopilotInteraction_Events": {
+            "Filter_CopilotInteraction_Events":{
               "runAfter": {
                 "HTTP_Get_Blob_Content": [
                   "Succeeded"
@@ -367,7 +364,7 @@
         }
       }
     },
-    "For_Each_Audit_Event": {
+    "List_Recent_Violations": {
       "runAfter": {
         "Scope_Query_Unified_Audit_Log": [
           "Succeeded",
@@ -375,50 +372,56 @@
           "TimedOut"
         ]
       },
-      "type": "Foreach",
-      "foreach": "@take(variables('AuditEvents'), 200)",
-      "actions": {
-        "Check_Existing_Violations_For_Event": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_commondataserviceforapps",
-              "operationId": "ListRecords",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-            },
-            "parameters": {
-              "entityName": "fsi_scopeviolations",
-              "$filter": "fsi_auditrecordid eq '@{replace(items('For_Each_Audit_Event')?['Id'], '''', '''''')}'",
-              "$select": "fsi_scopeviolationid",
-              "$top": 1
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "fsi_cr_dataverse",
+          "operationId": "ListRecords",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
         },
-        "Condition_No_Duplicate": {
-          "runAfter": {
-            "Check_Existing_Violations_For_Event": [
-              "Succeeded"
-            ]
-          },
+        "parameters": {
+          "entityName": "fsi_scopeviolations",
+          "$filter": "fsi_auditrecordid ne null and createdon ge @{addDays(utcNow(), -7)}",
+          "$select": "fsi_auditrecordid"
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "Build_Processed_Audit_Ids": {
+      "runAfter": {
+        "List_Recent_Violations": [
+          "Succeeded"
+        ]
+      },
+      "type": "Select",
+      "inputs": {
+        "from": "@coalesce(outputs('List_Recent_Violations')?['body/value'], json('[]'))",
+        "select": "@item()?['fsi_auditrecordid']"
+      }
+    },
+    "For_Each_Audit_Event": {
+      "runAfter": {
+        "Build_Processed_Audit_Ids": [
+          "Succeeded"
+        ]
+      },
+      "type": "Foreach",
+      "foreach": "@variables('AuditEvents')",
+      "actions": {
+        "Condition_Event_Not_Processed": {
+          "runAfter": {},
           "type": "If",
           "expression": {
-            "equals": [
-              "@length(outputs('Check_Existing_Violations_For_Event')?['body/value'])",
-              0
-            ]
+            "not": {
+              "contains": [
+                "@body('Build_Processed_Audit_Ids')",
+                "@items('For_Each_Audit_Event')?['Id']"
+              ]
+            }
           },
           "actions": {
-        "Parse_Event_Agent_Id": {
-          "runAfter": {},
+            "Parse_Event_Agent_Id": {
+              "runAfter": {},
           "type": "Compose",
           "inputs": "@items('For_Each_Audit_Event')?['EventData']?['AgentId']"
         },
@@ -431,7 +434,7 @@
           "type": "Query",
           "inputs": {
             "from": "@outputs('List_Active_Agent_Scopes')?['body/value']",
-            "where": "@equals(item()?['fsi_agentid'], outputs('Parse_Event_Agent_Id'))"
+            "where": "@and(or(equals(item()?['fsi_agentid'], outputs('Parse_Event_Agent_Id')), equals(item()?['fsi_agentid'], items('For_Each_Audit_Event')?['EventData']?['AgentId'])), or(equals(items('For_Each_Audit_Event')?['EventData']?['EnvironmentId'], null), equals(item()?['fsi_environmentid'], items('For_Each_Audit_Event')?['EventData']?['EnvironmentId'])))"
           }
         },
         "Condition_Scope_Found": {
@@ -481,33 +484,17 @@
                   "expression": {
                     "and": [
                       {
-                        "or": [
-                          {
-                            "equals": [
-                              "@outputs('Determine_Resource_Type')",
-                              "SharePoint"
-                            ]
-                          },
-                          {
-                            "equals": [
-                              "@outputs('Determine_Resource_Type')",
-                              "SharePointSite"
-                            ]
-                          }
-                        ]
-                      },
-                      {
                         "not": {
                           "equals": [
-                            "@coalesce(items('For_Each_Accessed_Resource')?['SiteUrl'], '')",
-                            ""
+                            "@items('For_Each_Accessed_Resource')?['SiteUrl']",
+                            null
                           ]
                         }
                       },
                       {
                         "not": {
                           "contains": [
-                            "@if(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '[]')), '['), json(toLower(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '[]'))), json('[]'))",
+                            "@toLower(string(json(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '[]'))))",
                             "@toLower(items('For_Each_Accessed_Resource')?['SiteUrl'])"
                           ]
                         }
@@ -520,36 +507,35 @@
                       "type": "OpenApiConnection",
                       "inputs": {
                         "host": {
-                          "connectionName": "shared_commondataserviceforapps",
+                          "connectionName": "fsi_cr_dataverse",
                           "operationId": "CreateRecord",
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                         },
                         "parameters": {
                           "entityName": "fsi_scopeviolations",
                           "item": {
-                            "fsi_name": "@{take(concat('Unauthorized SharePoint Site - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
+                            "fsi_name": "Unauthorized SharePoint Site - @{outputs('Get_Matched_Scope')?['fsi_name']}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
-                            "fsi_violationtype": 2,
+                            "fsi_violationtype": 10002,
                             "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
                             "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['SiteUrl']}",
-                            "fsi_severity": 3,
-                            "fsi_status": 1,
+                            "fsi_severity": 10003,
+                            "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"action\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Action'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"file\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"action\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Action'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"file\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
                           }
                         },
-                        "authentication": "@parameters('$authentication')"
-                      },
-                      "retryPolicy": {
-                        "type": "exponential",
-                        "count": 3,
-                        "interval": "PT10S",
-                        "minimumInterval": "PT10S",
-                        "maximumInterval": "PT1H"
+                        "authentication": "@parameters('$authentication')",
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "maximumInterval": "PT1M"
+                        }
                       }
                     },
-                    "Increment_Violations_SP": {
+                    "Increment_Violations_SP":{
                       "runAfter": {
                         "Create_SharePoint_Violation": [
                           "Succeeded"
@@ -567,7 +553,8 @@
                   "runAfter": {
                     "Check_SharePoint_Site_Access": [
                       "Succeeded",
-                      "Skipped"
+                      "Skipped",
+                      "Failed"
                     ]
                   },
                   "type": "If",
@@ -582,7 +569,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@if(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '[]')), '['), json(toLower(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '[]'))), json('[]'))",
+                            "@toLower(string(json(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '[]'))))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
@@ -595,35 +582,34 @@
                       "type": "OpenApiConnection",
                       "inputs": {
                         "host": {
-                          "connectionName": "shared_commondataserviceforapps",
+                          "connectionName": "fsi_cr_dataverse",
                           "operationId": "CreateRecord",
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                         },
                         "parameters": {
                           "entityName": "fsi_scopeviolations",
                           "item": {
-                            "fsi_name": "@{take(concat('Unauthorized Connector - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
+                            "fsi_name": "Unauthorized Connector - @{outputs('Get_Matched_Scope')?['fsi_name']}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
-                            "fsi_violationtype": 1,
+                            "fsi_violationtype": 10001,
                             "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
-                            "fsi_severity": 2,
-                            "fsi_status": 1,
+                            "fsi_severity": 10002,
+                            "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"connector\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"connector\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
                           }
                         },
-                        "authentication": "@parameters('$authentication')"
-                      },
-                      "retryPolicy": {
-                        "type": "exponential",
-                        "count": 3,
-                        "interval": "PT10S",
-                        "minimumInterval": "PT10S",
-                        "maximumInterval": "PT1H"
+                        "authentication": "@parameters('$authentication')",
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "maximumInterval": "PT1M"
+                        }
                       }
                     },
-                    "Increment_Violations_Connector": {
+                    "Increment_Violations_Connector":{
                       "runAfter": {
                         "Create_Connector_Violation": [
                           "Succeeded"
@@ -641,7 +627,8 @@
                   "runAfter": {
                     "Check_Connector_Access": [
                       "Succeeded",
-                      "Skipped"
+                      "Skipped",
+                      "Failed"
                     ]
                   },
                   "type": "If",
@@ -656,7 +643,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@if(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '[]')), '['), json(toLower(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '[]'))), json('[]'))",
+                            "@toLower(string(json(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '[]'))))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Url'])"
                           ]
                         }
@@ -669,36 +656,35 @@
                       "type": "OpenApiConnection",
                       "inputs": {
                         "host": {
-                          "connectionName": "shared_commondataserviceforapps",
+                          "connectionName": "fsi_cr_dataverse",
                           "operationId": "CreateRecord",
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                         },
                         "parameters": {
                           "entityName": "fsi_scopeviolations",
                           "item": {
-                            "fsi_name": "@{take(concat('Unauthorized External API - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
+                            "fsi_name": "Unauthorized External API - @{outputs('Get_Matched_Scope')?['fsi_name']}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
-                            "fsi_violationtype": 4,
+                            "fsi_violationtype": 10004,
                             "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
                             "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['Url']}",
-                            "fsi_severity": 2,
-                            "fsi_status": 1,
+                            "fsi_severity": 10002,
+                            "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"api\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Url'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"api\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Url'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
                           }
                         },
-                        "authentication": "@parameters('$authentication')"
-                      },
-                      "retryPolicy": {
-                        "type": "exponential",
-                        "count": 3,
-                        "interval": "PT10S",
-                        "minimumInterval": "PT10S",
-                        "maximumInterval": "PT1H"
+                        "authentication": "@parameters('$authentication')",
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "maximumInterval": "PT1M"
+                        }
                       }
                     },
-                    "Increment_Violations_API": {
+                    "Increment_Violations_API":{
                       "runAfter": {
                         "Create_API_Violation": [
                           "Succeeded"
@@ -716,7 +702,8 @@
                   "runAfter": {
                     "Check_External_API_Access": [
                       "Succeeded",
-                      "Skipped"
+                      "Skipped",
+                      "Failed"
                     ]
                   },
                   "type": "If",
@@ -741,7 +728,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@if(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '[]')), '['), json(toLower(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '[]'))), json('[]'))",
+                            "@toLower(string(json(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '[]'))))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
@@ -754,37 +741,130 @@
                       "type": "OpenApiConnection",
                       "inputs": {
                         "host": {
-                          "connectionName": "shared_commondataserviceforapps",
+                          "connectionName": "fsi_cr_dataverse",
                           "operationId": "CreateRecord",
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                         },
                         "parameters": {
                           "entityName": "fsi_scopeviolations",
                           "item": {
-                            "fsi_name": "@{take(concat('Unauthorized Dataverse Table - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
+                            "fsi_name": "Unauthorized Dataverse Table - @{outputs('Get_Matched_Scope')?['fsi_name']}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
-                            "fsi_violationtype": 3,
+                            "fsi_violationtype": 10003,
                             "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
-                            "fsi_severity": 3,
-                            "fsi_status": 1,
+                            "fsi_severity": 10003,
+                            "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
                             "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"table\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"table\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
                           }
                         },
-                        "authentication": "@parameters('$authentication')"
-                      },
-                      "retryPolicy": {
-                        "type": "exponential",
-                        "count": 3,
-                        "interval": "PT10S",
-                        "minimumInterval": "PT10S",
-                        "maximumInterval": "PT1H"
+                        "authentication": "@parameters('$authentication')",
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "maximumInterval": "PT1M"
+                        }
                       }
                     },
-                    "Increment_Violations_Table": {
+                    "Increment_Violations_Table":{
                       "runAfter": {
                         "Create_Dataverse_Table_Violation": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "IncrementVariable",
+                      "inputs": {
+                        "name": "ViolationsFound",
+                        "value": 1
+                      }
+                    }
+                  }
+                }
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            },
+            "For_Each_AISystemPlugin": {
+              "runAfter": {
+                "For_Each_Accessed_Resource": [
+                  "Succeeded",
+                  "Skipped",
+                  "Failed"
+                ]
+              },
+              "type": "Foreach",
+              "foreach": "@coalesce(items('For_Each_Audit_Event')?['EventData']?['AISystemPlugin'], json('[]'))",
+              "actions": {
+                "Check_Plugin_Is_Unauthorized_Connector": {
+                  "runAfter": {},
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@items('For_Each_AISystemPlugin')?['Enabled']",
+                          true
+                        ]
+                      },
+                      {
+                        "not": {
+                          "equals": [
+                            "@items('For_Each_AISystemPlugin')?['Name']",
+                            null
+                          ]
+                        }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@toLower(string(json(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '[]'))))",
+                            "@toLower(items('For_Each_AISystemPlugin')?['Name'])"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Create_Plugin_Connector_Violation": {
+                      "runAfter": {},
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "fsi_cr_dataverse",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "fsi_scopeviolations",
+                          "item": {
+                            "fsi_name": "Unauthorized Connector (Plugin) - @{outputs('Get_Matched_Scope')?['fsi_name']}",
+                            "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
+                            "fsi_violationtype": 10001,
+                            "fsi_resourcename": "@{items('For_Each_AISystemPlugin')?['Name']}",
+                            "fsi_severity": 10002,
+                            "fsi_status": 10001,
+                            "fsi_detectedon": "@{utcNow()}",
+                            "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                            "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"connector\":\"', replace(replace(replace(replace(replace(coalesce(items('For_Each_AISystemPlugin')?['Name'], ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"source\":\"AISystemPlugin\"}'))}"
+                          }
+                        },
+                        "authentication": "@parameters('$authentication')",
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "maximumInterval": "PT1M"
+                        }
+                      }
+                    },
+                    "Increment_Violations_Plugin": {
+                      "runAfter": {
+                        "Create_Plugin_Connector_Violation": [
                           "Succeeded"
                         ]
                       },
@@ -806,143 +886,70 @@
           },
           "else": {
             "actions": {
-              "Find_Existing_Draft_Scope": {
+              "Condition_Has_Agent_Id": {
                 "runAfter": {},
-                "type": "OpenApiConnection",
-                "inputs": {
-                  "host": {
-                    "connectionName": "shared_commondataserviceforapps",
-                    "operationId": "ListRecords",
-                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                  },
-                  "parameters": {
-                    "entityName": "fsi_agentscopes",
-                    "$filter": "fsi_agentid eq '@{replace(coalesce(items('For_Each_Audit_Event')?['EventData']?['AgentId'], if(equals(outputs('Parse_Event_Agent_Id'), null), 'unknown', if(equals(string(outputs('Parse_Event_Agent_Id')), ''), 'unknown', string(outputs('Parse_Event_Agent_Id'))))), '''', '''''')}' and fsi_status eq 1",
-                    "$select": "fsi_agentscopeid",
-                    "$top": 1
-                  },
-                  "authentication": "@parameters('$authentication')"
-                },
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "Condition_Draft_Scope_Exists": {
-                "runAfter": {
-                  "Find_Existing_Draft_Scope": [
-                    "Succeeded"
-                  ]
-                },
                 "type": "If",
                 "expression": {
-                  "greater": [
-                    "@length(outputs('Find_Existing_Draft_Scope')?['body/value'])",
-                    0
-                  ]
-                },
-                "actions": {
-                  "Use_Existing_Draft_Scope": {
-                    "runAfter": {},
-                    "type": "Compose",
-                    "inputs": "@first(outputs('Find_Existing_Draft_Scope')?['body/value'])?['fsi_agentscopeid']"
+                  "not": {
+                    "equals": [
+                      "@outputs('Parse_Event_Agent_Id')",
+                      null
+                    ]
                   }
                 },
-                "else": {
-                  "actions": {
-                    "Create_Draft_Scope_For_Unscoped_Agent": {
-                      "runAfter": {},
-                      "type": "OpenApiConnection",
-                      "inputs": {
-                        "host": {
-                          "connectionName": "shared_commondataserviceforapps",
-                          "operationId": "CreateRecord",
-                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                        },
-                        "parameters": {
-                          "entityName": "fsi_agentscopes",
-                          "item": {
-                            "fsi_name": "Unscoped Agent - @{coalesce(items('For_Each_Audit_Event')?['EventData']?['AgentId'], if(equals(outputs('Parse_Event_Agent_Id'), null), 'Unknown', if(equals(string(outputs('Parse_Event_Agent_Id')), ''), 'Unknown', string(outputs('Parse_Event_Agent_Id')))))}",
-                            "fsi_agentid": "@{coalesce(items('For_Each_Audit_Event')?['EventData']?['AgentId'], if(equals(outputs('Parse_Event_Agent_Id'), null), 'unknown', if(equals(string(outputs('Parse_Event_Agent_Id')), ''), 'unknown', string(outputs('Parse_Event_Agent_Id')))))}",
-                            "fsi_zone": 1,
-                            "fsi_status": 1,
-                            "fsi_purpose": "Auto-created placeholder for unscoped agent drift detection",
-                            "fsi_environmentid": "@{coalesce(items('For_Each_Audit_Event')?['EventData']?['EnvironmentId'], '00000000-0000-0000-0000-000000000000')}",
-                            "fsi_owner@odata.bind": "/systemusers(@{parameters('fsi_SDM_DefaultScopeOwner')})"
-                          }
-                        },
-                        "authentication": "@parameters('$authentication')"
+                "actions": {
+                  "Create_No_Baseline_Violation": {
+                    "runAfter": {},
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "fsi_cr_dataverse",
+                        "operationId": "CreateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                       },
+                      "parameters": {
+                        "entityName": "fsi_scopeviolations",
+                        "item": {
+                          "fsi_name": "No Baseline Defined - Unknown Agent",
+                          "fsi_violationtype": 10006,
+                          "fsi_resourcename": "Agent activity detected without scope definition",
+                          "fsi_severity": 10002,
+                          "fsi_status": 10001,
+                          "fsi_detectedon": "@{utcNow()}",
+                          "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
+                          "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\",\"agentHost\":\"', replace(replace(replace(replace(replace(coalesce(string(outputs('Parse_Event_Agent_Id')), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')",
                       "retryPolicy": {
                         "type": "exponential",
                         "count": 3,
                         "interval": "PT10S",
-                        "minimumInterval": "PT10S",
-                        "maximumInterval": "PT1H"
+                        "maximumInterval": "PT1M"
                       }
                     }
-                  }
-                }
-              },
-              "Create_No_Baseline_Violation": {
-                "runAfter": {
-                  "Condition_Draft_Scope_Exists": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "OpenApiConnection",
-                "inputs": {
-                  "host": {
-                    "connectionName": "shared_commondataserviceforapps",
-                    "operationId": "CreateRecord",
-                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                   },
-                  "parameters": {
-                    "entityName": "fsi_scopeviolations",
-                    "item": {
-                      "fsi_name": "No Baseline Defined - @{coalesce(items('For_Each_Audit_Event')?['EventData']?['AgentId'], if(equals(outputs('Parse_Event_Agent_Id'), null), 'Unknown Agent', if(equals(string(outputs('Parse_Event_Agent_Id')), ''), 'Unknown Agent', string(outputs('Parse_Event_Agent_Id')))))}",
-                      "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{coalesce(outputs('Use_Existing_Draft_Scope'), outputs('Create_Draft_Scope_For_Unscoped_Agent')?['body/fsi_agentscopeid'])})",
-                      "fsi_violationtype": 6,
-                      "fsi_resourcename": "Agent activity detected without scope definition",
-                      "fsi_severity": 2,
-                      "fsi_status": 1,
-                      "fsi_detectedon": "@{utcNow()}",
-                      "fsi_auditrecordid": "@{items('For_Each_Audit_Event')?['Id']}",
-                      "fsi_accessdetails": "@{json(concat('{\"user\":\"', replace(replace(replace(replace(replace(replace(items('For_Each_Audit_Event')?['UserId'], decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"agentHost\":\"', replace(replace(replace(replace(replace(replace(coalesce(string(outputs('Parse_Event_Agent_Id')), ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
+                  "Increment_Violations_NoBaseline":{
+                    "runAfter": {
+                      "Create_No_Baseline_Violation": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "IncrementVariable",
+                    "inputs": {
+                      "name": "ViolationsFound",
+                      "value": 1
                     }
-                  },
-                  "authentication": "@parameters('$authentication')"
+                  }
                 },
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "minimumInterval": "PT10S",
-                  "maximumInterval": "PT1H"
-                }
-              },
-              "Increment_Violations_NoBaseline": {
-                "runAfter": {
-                  "Create_No_Baseline_Violation": [
-                    "Succeeded"
-                  ]
-                },
-                "type": "IncrementVariable",
-                "inputs": {
-                  "name": "ViolationsFound",
-                  "value": 1
+                "else": {
+                  "actions": {}
                 }
               }
             }
           }
         }
-        },
-          "else": {
-            "actions": {}
-          }
+        }
         }
       },
       "runtimeConfiguration": {
@@ -955,168 +962,127 @@
       "runAfter": {
         "For_Each_Audit_Event": [
           "Succeeded",
-          "Failed"
+          "Failed",
+          "TimedOut"
         ]
       },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "shared_commondataserviceforapps",
-          "operationId": "ListRecords",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-        },
-        "parameters": {
-          "entityName": "fsi_scopeitems",
-          "$filter": "fsi_enabled eq true and fsi_expiredate ne null and fsi_expiredate lt @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
-          "$select": "fsi_scopeitemid,fsi_name,fsi_resourcename,fsi_expiredate",
-          "$expand": "fsi_agentscopeid($select=fsi_agentscopeid,fsi_name,fsi_status)"
-        },
-        "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      }
-    },
-    "For_Each_Expired_Item": {
-      "runAfter": {
-        "Check_Expired_Scope_Items": [
-          "Succeeded"
-        ]
-      },
-      "type": "Foreach",
-      "foreach": "@outputs('Check_Expired_Scope_Items')?['body/value']",
+      "type": "Scope",
       "actions": {
-        "Condition_Has_Active_Scope": {
+        "List_Expired_Scope_Items": {
           "runAfter": {},
-          "type": "If",
-          "expression": {
-            "and": [
-              {
-                "not": {
-                  "equals": [
-                    "@items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_agentscopeid']",
-                    null
-                  ]
-                }
-              },
-              {
-                "equals": [
-                  "@items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_status']",
-                  2
-                ]
-              }
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_dataverse",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "fsi_scopeitems",
+              "$filter": "fsi_enabled eq true and fsi_expiredate ne null and fsi_expiredate lt @{formatDateTime(utcNow(), 'yyyy-MM-dd')}",
+              "$select": "fsi_scopeitemid,fsi_resourcename,fsi_resourceurl,fsi_itemtype,fsi_expiredate",
+              "$expand": "fsi_agentscopeid($select=fsi_agentscopeid,fsi_name)"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "For_Each_Expired_Item": {
+          "runAfter": {
+            "List_Expired_Scope_Items": [
+              "Succeeded"
             ]
           },
+          "type": "Foreach",
+          "foreach": "@coalesce(outputs('List_Expired_Scope_Items')?['body/value'], json('[]'))",
           "actions": {
-            "Check_Existing_Expiry_Violation": {
+            "Create_Expired_Violation": {
               "runAfter": {},
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {
-                  "connectionName": "shared_commondataserviceforapps",
-                  "operationId": "ListRecords",
+                  "connectionName": "fsi_cr_dataverse",
+                  "operationId": "CreateRecord",
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
                 },
                 "parameters": {
                   "entityName": "fsi_scopeviolations",
-                  "$filter": "fsi_violationtype eq 5 and fsi_resourcename eq '@{replace(items('For_Each_Expired_Item')?['fsi_resourcename'], '''', '''''')}' and _fsi_agentscopeid_value eq '@{items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_agentscopeid']}' and fsi_status eq 1",
-                  "$select": "fsi_scopeviolationid",
-                  "$top": 1
+                  "item": {
+                    "fsi_name": "Expired Scope Item - @{items('For_Each_Expired_Item')?['fsi_resourcename']}",
+                    "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_agentscopeid']})",
+                    "fsi_violationtype": 10005,
+                    "fsi_resourcename": "@{items('For_Each_Expired_Item')?['fsi_resourcename']}",
+                    "fsi_resourceurl": "@{coalesce(items('For_Each_Expired_Item')?['fsi_resourceurl'], '')}",
+                    "fsi_severity": 10003,
+                    "fsi_status": 10001,
+                    "fsi_detectedon": "@{utcNow()}",
+                    "fsi_accessdetails": "@{json(concat('{\"expiredOn\":\"', items('For_Each_Expired_Item')?['fsi_expiredate'], '\",\"itemType\":', string(items('For_Each_Expired_Item')?['fsi_itemtype']), '}'))}"
+                  }
                 },
-                "authentication": "@parameters('$authentication')"
-              },
-              "retryPolicy": {
-                "type": "exponential",
-                "count": 3,
-                "interval": "PT10S",
-                "minimumInterval": "PT10S",
-                "maximumInterval": "PT1H"
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
               }
             },
-            "Condition_No_Existing_Expiry_Violation": {
+            "Disable_Expired_Item": {
               "runAfter": {
-                "Check_Existing_Expiry_Violation": [
+                "Create_Expired_Violation": [
                   "Succeeded"
                 ]
               },
-              "type": "If",
-              "expression": {
-                "equals": [
-                  "@length(outputs('Check_Existing_Expiry_Violation')?['body/value'])",
-                  0
-                ]
-              },
-              "actions": {
-                "Create_Expiry_Violation": {
-                  "runAfter": {},
-                  "type": "OpenApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_commondataserviceforapps",
-                      "operationId": "CreateRecord",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-                    },
-                    "parameters": {
-                      "entityName": "fsi_scopeviolations",
-                      "item": {
-                        "fsi_name": "@{take(concat('Expired Scope Item - ', items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_name']), 200)}",
-                        "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_agentscopeid']})",
-                        "fsi_violationtype": 5,
-                        "fsi_resourcename": "@{items('For_Each_Expired_Item')?['fsi_resourcename']}",
-                        "fsi_severity": 3,
-                        "fsi_status": 1,
-                        "fsi_detectedon": "@{utcNow()}",
-                        "fsi_accessdetails": "@{json(concat('{\"scopeItem\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Expired_Item')?['fsi_name'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\",\"expiredOn\":\"', replace(replace(replace(replace(replace(replace(coalesce(items('For_Each_Expired_Item')?['fsi_expiredate'], ''), decodeUriComponent('%00'), ''), '\\', '\\\\'), '\"', '\\\"'), decodeUriComponent('%0A'), '\\n'), decodeUriComponent('%0D'), '\\r'), decodeUriComponent('%09'), '\\t'), '\"}'))}"
-                      }
-                    },
-                    "authentication": "@parameters('$authentication')"
-                  },
-                  "retryPolicy": {
-                    "type": "exponential",
-                    "count": 3,
-                    "interval": "PT10S",
-                    "minimumInterval": "PT10S",
-                    "maximumInterval": "PT1H"
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "fsi_cr_dataverse",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_scopeitems",
+                  "recordId": "@items('For_Each_Expired_Item')?['fsi_scopeitemid']",
+                  "item": {
+                    "fsi_enabled": false
                   }
                 },
-                "Increment_Violations_Expired": {
-                  "runAfter": {
-                    "Create_Expiry_Violation": [
-                      "Succeeded"
-                    ]
-                  },
-                  "type": "IncrementVariable",
-                  "inputs": {
-                    "name": "ViolationsFound",
-                    "value": 1
-                  }
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
                 }
+              }
+            },
+            "Increment_Violations_Expired": {
+              "runAfter": {
+                "Disable_Expired_Item": [
+                  "Succeeded"
+                ]
               },
-              "else": {
-                "actions": {}
+              "type": "IncrementVariable",
+              "inputs": {
+                "name": "ViolationsFound",
+                "value": 1
               }
             }
           },
-          "else": {
-            "actions": {}
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
           }
-        }
-      },
-      "runtimeConfiguration": {
-        "concurrency": {
-          "repetitions": 1
         }
       }
     },
     "Compose_Detection_Summary": {
       "runAfter": {
-        "For_Each_Expired_Item": [
+        "Check_Expired_Scope_Items": [
           "Succeeded",
-          "Failed"
+          "Failed",
+          "TimedOut"
         ]
       },
       "type": "Compose",
@@ -1126,131 +1092,13 @@
           "windowStart": "@{variables('LastCheckTime')}",
           "windowEnd": "@{utcNow()}",
           "sourcesChecked": "@{variables('SourceStatus')}",
-          "eventsReceived": "@{length(variables('AuditEvents'))}",
-          "eventsProcessed": "@{min(length(variables('AuditEvents')), 200)}",
-          "eventsSkipped": "@{max(sub(length(variables('AuditEvents')), 200), 0)}",
+          "eventsProcessed": "@{length(variables('AuditEvents'))}",
           "violationsCreated": "@{variables('ViolationsFound')}",
           "activeScopesCount": "@{length(outputs('List_Active_Agent_Scopes')?['body/value'])}"
         }
       }
-    },
-    "Persist_Detection_Summary": {
-      "runAfter": {
-        "Compose_Detection_Summary": [
-          "Succeeded"
-        ]
-      },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "shared_commondataserviceforapps",
-          "operationId": "CreateRecord",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
-        },
-        "parameters": {
-          "entityName": "fsi_detectionruns",
-          "item": {
-            "fsi_name": "Detection Run - @{utcNow()}",
-            "fsi_runstart": "@{variables('LastCheckTime')}",
-            "fsi_runend": "@{utcNow()}",
-            "fsi_eventsprocessed": "@{min(length(variables('AuditEvents')), 200)}",
-            "fsi_violationscreated": "@{variables('ViolationsFound')}",
-            "fsi_activescopescount": "@{length(outputs('List_Active_Agent_Scopes')?['body/value'])}",
-            "fsi_summary": "@{string(outputs('Compose_Detection_Summary'))}"
-          }
-        },
-        "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      }
-    },
-    "Alert_Detection_Summary_Failure": {
-      "runAfter": {
-        "Persist_Detection_Summary": [
-          "Failed"
-        ]
-      },
-      "type": "OpenApiConnection",
-      "inputs": {
-        "host": {
-          "connectionName": "shared_office365",
-          "operationId": "SendEmailV2",
-          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-        },
-        "parameters": {
-          "emailMessage": {
-            "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
-            "Subject": "[Scope Drift] ALERT: Detection summary persistence failed",
-            "Body": "<html><body><p><strong>Alert:</strong> The Scope Drift Monitor detection run at @{utcNow()} completed processing but failed to persist the detection summary record to Dataverse after all retries.</p><p><strong>Violations detected this cycle:</strong> @{variables('ViolationsFound')}</p><p><strong>Events processed:</strong> @{min(length(variables('AuditEvents')), 200)}</p><p>Violation records were still created successfully. Only the summary/audit trail record is missing. Please investigate the Dataverse connection and fsi_detectionruns table.</p></body></html>",
-            "Importance": "High"
-          }
-        },
-        "authentication": "@parameters('$authentication')"
-      },
-      "retryPolicy": {
-        "type": "exponential",
-        "count": 3,
-        "interval": "PT10S",
-        "minimumInterval": "PT10S",
-        "maximumInterval": "PT1H"
-      }
-    },
-    "Condition_Events_Skipped": {
-      "runAfter": {
-        "Persist_Detection_Summary": [
-          "Succeeded"
-        ],
-        "Alert_Detection_Summary_Failure": [
-          "Succeeded",
-          "Skipped"
-        ]
-      },
-      "type": "If",
-      "expression": {
-        "greater": [
-          "@sub(length(variables('AuditEvents')), 200)",
-          0
-        ]
-      },
-      "actions": {
-        "Send_Events_Skipped_Notification": {
-          "runAfter": {},
-          "type": "OpenApiConnection",
-          "inputs": {
-            "host": {
-              "connectionName": "shared_office365",
-              "operationId": "SendEmailV2",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-            },
-            "parameters": {
-              "emailMessage": {
-                "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
-                "Subject": "[Scope Drift] WARNING: Audit events exceeded processing cap",
-                "Body": "<html><body><p><strong>Warning:</strong> The Scope Drift Monitor detection run at @{utcNow()} received @{length(variables('AuditEvents'))} audit events but only processed 200 due to the per-run cap.</p><p><strong>Events skipped:</strong> @{sub(length(variables('AuditEvents')), 200)}</p><p>Skipped events were not analyzed for scope violations. This may occur during high-activity periods and could mask real violations. Consider increasing detection frequency or reviewing the skipped time window manually.</p></body></html>",
-                "Importance": "High"
-              }
-            },
-            "authentication": "@parameters('$authentication')"
-          },
-          "retryPolicy": {
-            "type": "exponential",
-            "count": 3,
-            "interval": "PT10S",
-            "minimumInterval": "PT10S",
-            "maximumInterval": "PT1H"
-          }
-        }
-      },
-      "else": {
-        "actions": {}
-      }
     }
   },
   "outputs": {},
-  "description": "SDM-DriftDetector: Scheduled detection flow that polls Unified Audit Log for CopilotInteraction events and creates violations for out-of-scope access. Known limitation: Check_Existing_Violations_For_Event uses one Dataverse query per audit event (N+1 pattern, up to 200 queries per cycle) because Power Automate lacks batch query support without a custom connector."
+  "description": "SDM-DriftDetector: Scheduled detection flow that polls Unified Audit Log for CopilotInteraction events and creates violations for out-of-scope access"
 }

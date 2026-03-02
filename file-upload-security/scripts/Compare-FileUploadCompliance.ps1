@@ -88,7 +88,7 @@ function Compare-FileUploadCompliance {
         }
 
         Write-Verbose "Loading file upload baseline from: $resolvedPath"
-        $null = Get-Content $resolvedPath -Raw | ConvertFrom-Json  # validate JSON parses
+        $cachedBaseline = Get-Content $resolvedPath -Raw | ConvertFrom-Json
 
         #endregion
 
@@ -102,9 +102,7 @@ function Compare-FileUploadCompliance {
             Critical = 0
             High     = 0
             Medium   = 0
-            Low      = 0
             Warning  = 0
-            Info     = 0
         }
 
         #endregion
@@ -129,12 +127,8 @@ function Compare-FileUploadCompliance {
                     -Zone $agentZone `
                     -FileUploadEnabled $fileUploadEnabled `
                     -ContentModerationLevel $moderationLevel `
-                    -BaselinePath $resolvedPath
+                    -Baseline $cachedBaseline
             } catch {
-                # Re-throw baseline/config errors to halt scan rather than mask them as per-agent warnings
-                if ($_.Exception.Message -match 'Baseline file not found|not valid JSON') {
-                    throw
-                }
                 Write-Warning "Failed to evaluate compliance for agent '$($agent.AgentName)': $($_.Exception.Message)"
                 $result = [PSCustomObject]@{
                     Zone                = $agentZone
@@ -199,7 +193,7 @@ function Compare-FileUploadCompliance {
 
         if ($violationCount -gt 0) {
             Write-Verbose "  Violations by severity:"
-            foreach ($sev in @('Critical', 'High', 'Medium', 'Low', 'Warning', 'Info')) {
+            foreach ($sev in @('Critical', 'High', 'Medium', 'Warning')) {
                 if ($severityCounts[$sev] -gt 0) {
                     Write-Verbose "    $($sev): $($severityCounts[$sev])"
                 }

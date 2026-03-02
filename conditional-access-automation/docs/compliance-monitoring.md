@@ -8,7 +8,7 @@ Monitor Conditional Access policy compliance, detect drift, and generate evidenc
 |------------|--------|-----------|
 | Policy compliance check | `Test-PolicyCompliance.ps1` | Weekly |
 | Configuration drift detection | `Watch-PolicyDrift.ps1` | Daily |
-| Evidence export | `Export-PolicyEvidence.ps1` | Quarterly |
+| Evidence export | `Export-CAAComplianceEvidence.ps1` | Quarterly |
 | Coverage gap analysis | `Test-PolicyCompliance.ps1` | On-demand |
 
 ---
@@ -35,7 +35,6 @@ Verify that deployed CA policies match expected configuration and cover all requ
 |------|---------|
 | `PolicyCoverage-YYYY-MM-DD.json` | Coverage analysis by zone and application |
 | `PolicyGaps-YYYY-MM-DD.json` | Identified gaps and recommendations |
-| `ComplianceReport-YYYY-MM-DD.html` | Human-readable summary report |
 
 ### Compliance Checks
 
@@ -89,9 +88,7 @@ First, export a known-good baseline:
 ```powershell
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline" `
-    -AlertWebhook "<teams-webhook-url>" `
-    [-SilentMode]
+    -BaselinePath "./baseline"
 ```
 
 ### Detected Changes
@@ -168,11 +165,11 @@ Generate compliance evidence for regulatory examinations (FINRA, SEC, OCC).
 ### Usage
 
 ```powershell
-.\scripts\Export-PolicyEvidence.ps1 `
-    -TenantId "<tenant-id>" `
+.\scripts\Export-CAAComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
     -OutputPath "./evidence" `
-    -StartDate "2026-01-01" `
-    -EndDate "2026-03-31"
+    -FromDate "2026-01-01" `
+    -ToDate "2026-03-31"
 ```
 
 ### Output Files
@@ -299,8 +296,7 @@ foreach ($file in $manifest.files) {
 .\scripts\Test-PolicyCompliance.ps1 `
     -TenantId "<tenant-id>" `
     -ConfigPath "./config/tenant-config.json" `
-    -OutputPath "./reports" `
-    -AnalyzeGaps
+    -OutputPath "./reports"
 ```
 
 ### Gap Report

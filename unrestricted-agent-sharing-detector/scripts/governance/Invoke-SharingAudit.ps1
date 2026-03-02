@@ -3,17 +3,11 @@
 
 <#
 .SYNOPSIS
-    Performs an on-demand sharing audit of Power Platform apps (proxy for Copilot Studio agents).
+    Performs an on-demand sharing audit of all Copilot Studio agents.
 
 .DESCRIPTION
-    Scans all Power Platform environments and their apps for sharing configurations
-    that violate organizational policy.
-
-    NOTE: This script uses Get-AdminPowerApp and Get-AdminPowerAppRoleAssignment
-    cmdlets which enumerate Power Apps, not Copilot Studio agents directly.
-    These cmdlets may not return Copilot Studio agent-specific sharing
-    configurations. For comprehensive agent scanning, use the Detection Flow
-    (UASD-Detector-Scan-Agents) which queries the Dataverse Web API directly.
+    Scans all Power Platform environments and their Copilot Studio agents
+    for sharing configurations that violate organizational policy.
     
     Detects five violation types:
     - ORG_WIDE_SHARING: Agent shared with Everyone or All Users
@@ -79,15 +73,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
 
 # --- Authentication ---
 Write-Host "`n[UASD On-Demand Sharing Audit]" -ForegroundColor Cyan
 
 if (-not (Get-AzContext)) {
     Write-Host "  Authenticating..." -ForegroundColor Yellow
-    if ($HomeTenantId) { Connect-AzAccount -TenantId $HomeTenantId | Out-Null }
-    else { Connect-AzAccount | Out-Null }
+    Connect-AzAccount | Out-Null
 }
 
 $context = Get-AzContext
@@ -128,24 +120,17 @@ try {
         Write-Host "  Scanning: $envDisplayName ($envId)" -ForegroundColor Gray
 
         try {
-            # NOTE: Get-AdminPowerApp enumerates Power Apps, not Copilot Studio agents directly.
-            # Use the Detection Flow for comprehensive agent-specific scanning.
-            $preErrorCount = $Error.Count
-            $apps = Get-AdminPowerApp -EnvironmentName $envId -ErrorAction SilentlyContinue
-            if (-not $apps -and $Error.Count -gt $preErrorCount) {
-                $lastErr = $Error[0]
-                if ($lastErr.ToString() -match 'Forbidden|Unauthorized|Access') {
-                    Write-Warning "  Permissions error scanning environment $envDisplayName - audit results may be incomplete: $($lastErr.ToString())"
-                }
-            }
+            # Get all Copilot Studio agents (chatbots) in this environment
+            $agents = Get-AdminPowerAppChatBot -EnvironmentName $envId -ErrorAction Stop
 
-            foreach ($app in $apps) {
+            foreach ($agent in $agents) {
                 $agentCount++
-                $agentId = $app.AppName
-                $agentName = $app.DisplayName
+                $agentId = $agent.ChatBotName
+                $agentName = $agent.DisplayName
 
                 # Extract sharing configuration
                 $sharingScope = "unknown"
+                $principals = @()
                 $publicLinkEnabled = $false
                 $crossTenantEnabled = $false
                 $securityGroups = @()
@@ -153,7 +138,7 @@ try {
 
                 # Check app permissions/sharing
                 try {
-                    $permissions = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -AppName $agentId -ErrorAction SilentlyContinue
+                    $permissions = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -AppName $agentId -ErrorAction Stop
                     
                     foreach ($perm in $permissions) {
                         $principalType = $perm.PrincipalType
@@ -168,10 +153,8 @@ try {
                                 GroupId = $principalId
                                 DisplayName = $principalDisplayName
                             }
-
-                            # Check for cross-tenant (null-safe for strict mode)
-                            $permTenantId = if ($perm.PSObject.Properties['PrincipalTenantId']) { $perm.PrincipalTenantId } else { $null }
-                            if ($permTenantId -and $permTenantId -ne $HomeTenantId) {
+                            # Cross-tenant check for group principals
+                            if ($perm.PrincipalTenantId -and $perm.PrincipalTenantId -ne $HomeTenantId) {
                                 $crossTenantEnabled = $true
                             }
                         }
@@ -181,28 +164,32 @@ try {
                                 DisplayName = $principalDisplayName
                             }
 
-                            # Check for cross-tenant (null-safe for strict mode)
-                            $permTenantId = if ($perm.PSObject.Properties['PrincipalTenantId']) { $perm.PrincipalTenantId } else { $null }
-                            if ($permTenantId -and $permTenantId -ne $HomeTenantId) {
+                            # Check for cross-tenant
+                            if ($perm.PrincipalTenantId -and $perm.PrincipalTenantId -ne $HomeTenantId) {
                                 $crossTenantEnabled = $true
                             }
                         }
                     }
 
-                    # Deduplicate: collapse multiple role assignments (e.g., CanView + CanEdit) per principal.
-                    # If future enhancements need per-role granularity, revise to group rather than deduplicate.
-                    $securityGroups = @($securityGroups | Sort-Object -Property GroupId -Unique)
-                    $individualShares = @($individualShares | Sort-Object -Property UserId -Unique)
-
-                    # Check for public/anonymous link access (null-safe for strict mode)
-                    $hasPublicLink = try {
-                        $app.Internal.properties.sharingConfiguration.publicLinkEnabled -eq $true
-                    } catch { $false }
-                    if ($hasPublicLink) {
+                    # Check for public/anonymous link access
+                    if ($agent.Internal -and $agent.Internal.properties -and
+                        $agent.Internal.properties.sharingConfiguration -and
+                        $agent.Internal.properties.sharingConfiguration.publicLinkEnabled -eq $true) {
                         $publicLinkEnabled = $true
                     }
                 } catch {
                     Write-Host "    Warning: Could not read permissions for $agentName" -ForegroundColor Yellow
+                    [void]$violations.Add(@{
+                        scan_run_id      = $scanRunId
+                        agent_id         = $agentId
+                        agent_name       = $agentName
+                        environment_id   = $envId
+                        environment_name = $envDisplayName
+                        violation_type   = "SCAN_COVERAGE_GAP"
+                        severity         = "Warning"
+                        description      = "Could not read permissions for agent: $($_.Exception.Message)"
+                        detected_at      = $scanTimestamp
+                    })
                     continue
                 }
 
@@ -225,7 +212,7 @@ try {
                         detected_at      = $scanTimestamp
                     }
                     if ($IncludeEvidence) {
-                        $evidenceJson = (ConvertTo-Json -InputObject @($permissions) -Depth 5 -Compress)
+                        $evidenceJson = ($permissions | ConvertTo-Json -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -249,7 +236,12 @@ try {
                         detected_at      = $scanTimestamp
                     }
                     if ($IncludeEvidence) {
-                        $evidenceJson = (@{ publicLinkEnabled = $true; agentId = $agentId } | ConvertTo-Json -Depth 5 -Compress)
+                        $evidenceData = @{
+                            agentId = $agentId
+                            publicLinkEnabled = $true
+                            sharingConfiguration = $agent.Internal.properties.sharingConfiguration
+                        }
+                        $evidenceJson = ($evidenceData | ConvertTo-Json -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -299,7 +291,7 @@ try {
                         detected_at      = $scanTimestamp
                     }
                     if ($IncludeEvidence) {
-                        $evidenceJson = (ConvertTo-Json -InputObject @($individualShares) -Depth 5 -Compress)
+                        $evidenceJson = ($individualShares | ConvertTo-Json -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -324,10 +316,9 @@ try {
                     }
                     if ($IncludeEvidence) {
                         $crossTenantPrincipals = $permissions | Where-Object {
-                            $tid = if ($_.PSObject.Properties['PrincipalTenantId']) { $_.PrincipalTenantId } else { $null }
-                            $tid -and $tid -ne $HomeTenantId
+                            $_.PrincipalTenantId -and $_.PrincipalTenantId -ne $HomeTenantId
                         }
-                        $evidenceJson = (ConvertTo-Json -InputObject @($crossTenantPrincipals) -Depth 5 -Compress)
+                        $evidenceJson = ($crossTenantPrincipals | ConvertTo-Json -Depth 5 -Compress)
                         $violation["evidence_json"] = $evidenceJson
                         $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                             [System.Text.Encoding]::UTF8.GetBytes($evidenceJson)
@@ -339,6 +330,17 @@ try {
             }
         } catch {
             Write-Host "    Warning: Failed to scan environment $envDisplayName - $($_.Exception.Message)" -ForegroundColor Yellow
+            [void]$violations.Add(@{
+                scan_run_id      = $scanRunId
+                agent_id         = ""
+                agent_name       = ""
+                environment_id   = $envId
+                environment_name = $envDisplayName
+                violation_type   = "SCAN_COVERAGE_GAP"
+                severity         = "Warning"
+                description      = "Failed to scan environment: $($_.Exception.Message)"
+                detected_at      = $scanTimestamp
+            })
         }
     }
 } catch {
@@ -381,7 +383,17 @@ if ($outputDir -and -not (Test-Path $outputDir)) {
 
 if ($OutputFormat -eq "CSV") {
     $OutputPath = [System.IO.Path]::ChangeExtension($OutputPath, ".csv")
-    $violations | ForEach-Object { [PSCustomObject]$_ } | Export-Csv -Path $OutputPath -NoTypeInformation
+    # Sanitize string fields to prevent CSV injection (CWE-1236)
+    $sanitized = $violations | ForEach-Object {
+        $obj = [PSCustomObject]$_
+        foreach ($prop in $obj.PSObject.Properties) {
+            if ($prop.Value -is [string] -and $prop.Value.Length -gt 0 -and $prop.Value[0] -in @('=', '+', '-', '@')) {
+                $prop.Value = "'" + $prop.Value
+            }
+        }
+        $obj
+    }
+    $sanitized | Export-Csv -Path $OutputPath -NoTypeInformation
 } else {
     $OutputPath = [System.IO.Path]::ChangeExtension($OutputPath, ".json")
     $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding utf8

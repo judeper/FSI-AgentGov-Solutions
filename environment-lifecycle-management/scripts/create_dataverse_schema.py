@@ -22,7 +22,6 @@ PUBLISHER_PREFIX = "fsi"
 
 OPTIONSETS = {
     "fsi_er_state": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_state",
         "DisplayName": {"LocalizedLabels": [{"Label": "Request State", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Workflow state for environment requests", "LanguageCode": 1033}]},
@@ -41,7 +40,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_er_zone": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Environment governance zone classification", "LanguageCode": 1033}]},
@@ -54,7 +52,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_er_environmenttype": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_environmenttype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Power Platform environment type", "LanguageCode": 1033}]},
@@ -67,7 +64,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_er_region": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_region",
         "DisplayName": {"LocalizedLabels": [{"Label": "Region", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Geographic region for environment", "LanguageCode": 1033}]},
@@ -81,7 +77,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_er_datasensitivity": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_datasensitivity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Data Sensitivity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Data sensitivity classification", "LanguageCode": 1033}]},
@@ -95,7 +90,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_er_expectedusers": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_er_expectedusers",
         "DisplayName": {"LocalizedLabels": [{"Label": "Expected Users", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Expected user population", "LanguageCode": 1033}]},
@@ -109,7 +103,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_pl_action": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_pl_action",
         "DisplayName": {"LocalizedLabels": [{"Label": "Provisioning Action", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Provisioning log action type", "LanguageCode": 1033}]},
@@ -135,7 +128,6 @@ OPTIONSETS = {
         ],
     },
     "fsi_pl_actortype": {
-        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_pl_actortype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Actor Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Type of actor performing the action", "LanguageCode": 1033}]},

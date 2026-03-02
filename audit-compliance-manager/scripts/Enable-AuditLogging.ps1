@@ -1,6 +1,6 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0.0' }
-#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.7.0' }
+#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0' }
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0' }
 
 <#
 .SYNOPSIS
@@ -35,11 +35,8 @@
     Dataverse for all environments with fsi_compliancestatus = Non-Compliant (100000001).
 
 .PARAMETER EnableTenantUnifiedAudit
-    Bool. Default: $true. Enables tenant-wide Purview unified audit via Set-AdminConfig
-    unless explicitly set to $false. This is a tenant-wide change — use with caution.
-    WARNING: Automated callers (e.g., the ALCA remediation approval flow) should
-    explicitly pass -EnableTenantUnifiedAudit $false unless tenant-wide enablement
-    is intended, since the default $true will always attempt this change.
+    Switch. If set, enables tenant-wide Purview unified audit via Set-AdminConfig.
+    Default: $true. This is a tenant-wide change — use with caution.
 
 .PARAMETER WhatIf
     Switch. If set, simulates remediation without making changes.
@@ -75,7 +72,7 @@ param(
     [string]$TenantDomain,
 
     [Parameter(Mandatory = $false)]
-    [ValidatePattern('^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')]
+    [ValidatePattern('^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
     [string]$EnvironmentId,
 
     [Parameter(Mandatory = $false)]
@@ -86,7 +83,7 @@ param(
 # Configuration
 # ============================================================================
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # 6 Copilot Studio entities requiring entity-level audit
 $CopilotStudioEntities = @(
@@ -256,8 +253,8 @@ try {
     }
     else {
         # Power Platform authentication
-        $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com/"
-        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -AccessToken $ppToken
+        $ppToken = Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com"
+        Add-PowerAppsAccount -Endpoint prod -TenantID $TenantDomain -ApplicationId $null -AccessToken $ppToken
         Write-Output "  Power Platform: Connected"
 
         # Exchange Online authentication
@@ -302,8 +299,7 @@ try {
             }
             else {
                 Write-Warning "Environment $EnvironmentId not found via Power Platform Admin. Attempting Dataverse lookup..."
-                $safeEnvironmentId = $EnvironmentId -replace "'", "''"
-                $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$safeEnvironmentId'"
+                $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_environmentid eq '$EnvironmentId'"
                 $dvRecord = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $filterUri -Token $dvToken -Method GET
                 if ($dvRecord.value -and $dvRecord.value.Count -gt 0) {
                     $targetEnvironments = @([PSCustomObject]@{
@@ -330,21 +326,8 @@ try {
             $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_compliancestatus eq 100000001&`$select=fsi_environmentid,fsi_environmentname"
             $nonCompliant = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $filterUri -Token $dvToken -Method GET
 
-            # Handle Dataverse pagination via @odata.nextLink
-            $allRecords = @()
-            if ($nonCompliant.value) {
-                $allRecords += $nonCompliant.value
-            }
-            while ($nonCompliant.'@odata.nextLink') {
-                $nextUri = $nonCompliant.'@odata.nextLink' -replace [regex]::Escape($DataverseEnvironmentUrl.TrimEnd('/')), ''
-                $nonCompliant = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $nextUri -Token $dvToken -Method GET
-                if ($nonCompliant.value) {
-                    $allRecords += $nonCompliant.value
-                }
-            }
-
-            if ($allRecords.Count -gt 0) {
-                foreach ($record in $allRecords) {
+            if ($nonCompliant.value -and $nonCompliant.value.Count -gt 0) {
+                foreach ($record in $nonCompliant.value) {
                     # Look up environment URL from Power Platform
                     $env = Get-AdminPowerAppEnvironment -EnvironmentName $record.fsi_environmentid -ErrorAction SilentlyContinue
                     $envUrl = if ($env) { $env.Internal.Properties.linkedEnvironmentMetadata.instanceUrl } else { $null }
@@ -418,11 +401,6 @@ try {
         $envName = $targetEnv.EnvironmentName
         $envUrl = $targetEnv.EnvironmentUrl
 
-        # Refresh Dataverse token each iteration to avoid expiry during long scans
-        if (-not $isWhatIf) {
-            $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
-        }
-
         Write-Output "`n  --- Environment $envIndex/$($targetEnvironments.Count): $envName ($envId) ---"
 
         $envResult = [PSCustomObject]@{
@@ -462,8 +440,6 @@ try {
             # -----------------------------------------------------------------
             Write-Output "    [4a] Org-level Dataverse audit..."
 
-            $changesMade = $false
-
             if (-not $isWhatIf) {
                 $orgInfo = Get-EnvironmentOrgId -EnvUrl $envUrl -Token $envToken
                 if (-not $orgInfo) {
@@ -482,7 +458,6 @@ try {
                         Enable-OrgLevelAudit -EnvUrl $envUrl -Token $envToken -OrgId $orgId -IsWhatIf $false
                         Write-Output "      Org-level audit: ENABLED"
                         $envResult.OrgAudit = "Enabled"
-                        $changesMade = $true
                     }
                 }
             }
@@ -504,24 +479,10 @@ try {
                         $entityResults += "$entity=WhatIf"
                     }
                     else {
-                        # Check if entity-level audit is already enabled before making changes
-                        $entityAlreadyEnabled = $false
-                        try {
-                            $entityAlreadyEnabled = Test-EntityAuditEnabled -EnvUrl $envUrl -Token $envToken -EntityLogicalName $entity
-                        }
-                        catch {
-                            Write-Verbose "      Could not check entity audit status for $entity : $($_.Exception.Message)"
-                        }
-
-                        if ($entityAlreadyEnabled) {
-                            Write-Output "      $entity : Already enabled"
-                            $entityResults += "$entity=Already Enabled"
-                        }
-                        elseif ($PSCmdlet.ShouldProcess("Entity: $entity in $envName", "Enable entity-level auditing")) {
+                        if ($PSCmdlet.ShouldProcess("Entity: $entity in $envName", "Enable entity-level auditing")) {
                             Enable-EntityLevelAudit -EnvUrl $envUrl -Token $envToken -EntityLogicalName $entity -IsWhatIf $false
                             Write-Output "      $entity : ENABLED"
                             $entityResults += "$entity=Enabled"
-                            $changesMade = $true
                         }
                     }
                 }
@@ -566,14 +527,8 @@ try {
 
                 if ($orgValid -and $entityValidCount -eq $entityTotalCount) {
                     $envResult.Validation = "PASS"
-                    if ($changesMade) {
-                        $envResult.Status = "Remediated"
-                        $envSuccessful++
-                    }
-                    else {
-                        $envResult.Status = "No Changes"
-                        $envNoChanges++
-                    }
+                    $envResult.Status = "Remediated"
+                    $envSuccessful++
 
                     # Update Dataverse compliance record to Compliant
                     Write-Output "    [4d] Updating compliance record to Compliant..."

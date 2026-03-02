@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Environment Request",
-  "description": "Schema for the enriched post-flow payload after the bridging Power Automate flow processes Copilot Studio agent output. The Copilot agent outputs string values (e.g., securityGroupName as a display name); the bridging flow resolves these to API-compatible values (e.g., access.securityGroupId as a UUID via Graph API lookup) and maps choice field strings to Dataverse integer values before writing to the EnvironmentRequest table. Mappings: environmentType: Sandbox=1, Production=2, Developer=3; region: United States=1, Europe=2, United Kingdom=3, Australia=4; dataSensitivity: Public=1, Internal=2, Confidential=3, Restricted=4; expectedUsers: Just me (1)=1, Small team (2-10)=2, Large team (11-50)=3, Department (50+)=4.",
+  "description": "Schema for Copilot Studio agent output when submitting environment requests to Power Automate",
   "type": "object",
   "required": [
     "requestId",
