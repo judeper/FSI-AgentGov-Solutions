@@ -248,7 +248,7 @@
                     },
                     "Build_Expiring_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expiring_List'), '\\n')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(join(body('Build_Expiring_List'), '\\n'), '\\', '\\\\'), '\"', '\\\"')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
                       "runAfter": {
                         "Load_Expiring_Card_Template": [
                           "Succeeded"
@@ -417,7 +417,7 @@
                     },
                     "Build_Expired_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', join(body('Build_Expired_List'), '\\n')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(join(body('Build_Expired_List'), '\\n'), '\\', '\\\\'), '\"', '\\\"')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
                       "runAfter": {
                         "Load_Expired_Card_Template": [
                           "Succeeded"
