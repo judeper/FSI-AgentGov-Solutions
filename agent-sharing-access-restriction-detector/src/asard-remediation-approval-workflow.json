@@ -80,7 +80,7 @@
               {
                 "name": "ApprovalTimeoutDays",
                 "type": "integer",
-                "value": 7
+                "value": "@{if(and(not(equals(parameters('fsi_ASARD_ApprovalTimeoutDays'), null)), greater(parameters('fsi_ASARD_ApprovalTimeoutDays'), 0)), int(parameters('fsi_ASARD_ApprovalTimeoutDays')), 7)}"
               }
             ]
           },
@@ -745,10 +745,10 @@
                         "access_scope_current": "Organization-wide or unapproved groups",
                         "remove_principals_list": "@{join(body('Select_Remove_Principals_Display'), '\n')}",
                         "remove_count": "@{length(body('Parse_Current_Principals'))}",
-                        "add_principals_list": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Add_Groups_Display'), '\n'), 'None (all access removed per Zone 1 policy)')}",
+                        "add_principals_list": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Add_Groups_Display'), '\n'), concat('None (all access removed per Zone ', string(variables('CurrentZone')), ' policy)'))}",
                         "add_count": "@{length(outputs('Query_Approved_Groups_For_Zone')?['body/value'])}",
                         "member_count_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Proposed_Member_Counts'), ' + '), '0')}",
-                        "access_scope_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), 'Approved security groups only', 'No group access (Zone 1)')}",
+                        "access_scope_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), 'Approved security groups only', concat('No group access (Zone ', string(variables('CurrentZone')), ')'))}",
                         "impact_summary": "@{concat('Access change: ', length(body('Parse_Current_Principals')), ' principals removed, ', length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups added')}",
                         "approved_groups_policy": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), concat(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups configured for this zone'), 'No approved groups (Zone 1 — no group sharing allowed)')}",
                         "scan_run_id": "@{items('Apply_to_each_Agent')?['fsi_scan_run_id']}",

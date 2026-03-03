@@ -1,0 +1,7 @@
+{
+  "domainFacts": [
+    "The variable 'CurrentZone' (integer) holds the agent's governance zone: 1=Zone 1 (High Sensitivity, no group sharing), 2=Zone 2 (Moderate Sensitivity, named groups only), 3=Zone 3 (Enterprise Managed, approved groups only). Zone-specific fallback strings must use variables('CurrentZone') rather than hardcoding 'Zone 1'.",
+    "The 'fsi_ASARD_ApprovalTimeoutDays' environment variable is a Number type — it can be null (not configured) or a positive integer. Always guard with a null check and a greater-than-zero check before calling int(). Default fallback is 7 days.",
+    "Adaptive card templates are populated via string replace() chains on a loaded JSON template. Any Dataverse field values inserted into the template (agent_name, exception_justification, principal display names) must be JSON-escaped: first escape backslashes (replace VALUE with '\\\\'), then escape double-quotes (replace with '\\\"'), before the outer @json() parse call."
+  ]
+}
