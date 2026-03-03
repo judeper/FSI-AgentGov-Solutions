@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="Microsoft.Graph.Identity.SignIns"; ModuleVersion="2.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -188,7 +188,11 @@ try {
             [string]$DataverseToken,
 
             [Parameter(Mandatory = $true)]
-            [string]$CurrentStatus
+            [string]$CurrentStatus,
+
+            [Parameter(Mandatory = $true)]
+            [ValidateSet("Zone1", "Zone2", "Zone3")]
+            [string]$Zone
         )
 
         try {
@@ -207,8 +211,10 @@ try {
             $currentSeverity = $severityMap[$CurrentStatus]
 
             # Build OData filter for baseline query
-            # Find most recent Passed (severity=1) validation
-            $filter = "fsi_severity eq 1"
+            # Find most recent Passed (severity=1) validation for this zone
+            $zoneMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003 }
+            $zoneVal = $zoneMap[$Zone]
+            $filter = "fsi_severity eq 1 and fsi_zone eq $zoneVal"
 
             # Construct API URL with OData query
             $apiUrl = "$DataverseUrl/api/data/v9.2/fsi_validationhistories"
@@ -310,7 +316,8 @@ try {
     $drift = Get-DriftStatus `
         -DataverseUrl $DataverseUrl `
         -DataverseToken $dataverseToken `
-        -CurrentStatus $validationResults.OverallStatus
+        -CurrentStatus $validationResults.OverallStatus `
+        -Zone $Zone
 
     Write-Verbose "Drift detected: $($drift.DriftDetected)"
 

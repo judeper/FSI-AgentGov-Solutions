@@ -140,7 +140,7 @@ python scripts/ssc_client.py --test-connection \
 ### Validate CA Policy Configuration
 
 ```powershell
-.\scripts\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\config\tenant-config.json" -Verbose
+.\scripts\Test-SessionCompliance.ps1 -Zone Zone3 -ConfigPath ".\tenant-config.json" -Verbose
 ```
 
 ## Common Misconfigurations

@@ -21,6 +21,7 @@ PUBLISHER_PREFIX = "fsi"
 # Shared option sets (reused from ACV) - only create if missing
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
@@ -34,6 +35,7 @@ SHARED_OPTIONSETS = {
         ],
     },
     "fsi_acv_severity": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_severity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Validation Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Validation result severity", "LanguageCode": 1033}]},
@@ -52,6 +54,7 @@ SHARED_OPTIONSETS = {
 # SSC-specific option sets
 OPTIONSETS = {
     "fsi_ssc_validationtype": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_ssc_validationtype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Session Validation Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Type of session security validation", "LanguageCode": 1033}]},
@@ -517,12 +520,17 @@ def create_columns(client: SSCClient, dry_run: bool) -> None:
 
 def create_schema(client: SSCClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
+    errors = 0
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
-    create_columns(client, dry_run)
+    try:
+        create_columns(client, dry_run)
+    except Exception as e:
+        print(f"  Column creation error: {e}")
+        errors += 1
     print("\n=== Schema Creation Complete ===")
     return {
-        "errors": 0,
+        "errors": errors,
         "option_sets": option_set_results,
         "tables": table_results,
     }

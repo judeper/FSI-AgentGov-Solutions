@@ -184,7 +184,7 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 **Verify scope update:**
 
 1. Open flow run history
-2. Expand **Update_Agent_Scope_Connectors** action
+2. Expand **Update_Agent_Scope_List** action
 3. Review inputs and outputs
 4. Check Dataverse record directly
 

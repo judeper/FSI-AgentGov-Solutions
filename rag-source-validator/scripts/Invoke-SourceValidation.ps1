@@ -27,6 +27,7 @@
     Microsoft Graph API base URL. Supports sovereign clouds:
     https://graph.microsoft.com (commercial, default),
     https://graph.microsoft.us (GCC High),
+    https://dod-graph.microsoft.us (DoD),
     https://microsoftgraph.chinacloudapi.cn (China).
 
 .PARAMETER AuthBaseUrl
@@ -62,11 +63,19 @@ param(
     [SecureString]$ClientSecret,
 
     # Sovereign cloud support: override for Graph API base URL.
+    # NOTE: GraphBaseUrl, AuthBaseUrl, and Environment must all target the same sovereign cloud.
+    # Mismatched combinations (e.g., commercial Graph URL with GCC-High auth) will fail at
+    # authentication with an opaque error. Valid pairings:
+    #   Commercial: graph.microsoft.com      + login.microsoftonline.com  + *.crm.dynamics.com
+    #   GCC-High:   graph.microsoft.us       + login.microsoftonline.us   + *.crm.microsoftdynamics.us
+    #   DoD:        dod-graph.microsoft.us   + login.microsoftonline.us   + *.crm.appsplatform.us
+    #   China:      microsoftgraph.chinacloudapi.cn + login.chinacloudapi.cn + *.crm.dynamics.cn
     [Parameter(Mandatory = $false)]
-    [ValidateSet("https://graph.microsoft.com", "https://graph.microsoft.us", "https://microsoftgraph.chinacloudapi.cn")]
+    [ValidateSet("https://graph.microsoft.com", "https://graph.microsoft.us", "https://dod-graph.microsoft.us", "https://microsoftgraph.chinacloudapi.cn")]
     [string]$GraphBaseUrl = "https://graph.microsoft.com",
 
     # Sovereign cloud support: override for Azure AD token endpoint base URL.
+    # Must match the same sovereign cloud as GraphBaseUrl and Environment (see note above).
     [Parameter(Mandatory = $false)]
     [ValidateSet("https://login.microsoftonline.com", "https://login.microsoftonline.us", "https://login.chinacloudapi.cn")]
     [string]$AuthBaseUrl = "https://login.microsoftonline.com",
@@ -86,6 +95,10 @@ function Write-Log {
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     $entry = "$timestamp [$Level] $Message"
     if ($LogFile) {
+        $logDir = Split-Path -Parent $LogFile
+        if ($logDir -and -not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
         $entry | Out-File -FilePath $LogFile -Append -Encoding utf8
     }
 }
@@ -95,6 +108,27 @@ if ($Environment -notmatch '^https://[a-z0-9\-]+\.(crm[0-9]*\.dynamics\.com|crm\
     throw "Invalid Environment URL '$Environment'. Expected a Dataverse environment URL (e.g., https://contoso.crm.dynamics.com)."
 }
 $Environment = $Environment.TrimEnd('/')
+
+# Cross-validate that GraphBaseUrl, AuthBaseUrl, and Environment target the same sovereign cloud
+$cloudPairings = @{
+    Commercial = @{ Graph = "https://graph.microsoft.com";          Auth = "https://login.microsoftonline.com"; EnvPattern = 'crm[0-9]*\.dynamics\.com' }
+    GCCHigh    = @{ Graph = "https://graph.microsoft.us";           Auth = "https://login.microsoftonline.us";  EnvPattern = 'crm\.microsoftdynamics\.us' }
+    DoD        = @{ Graph = "https://dod-graph.microsoft.us";       Auth = "https://login.microsoftonline.us";  EnvPattern = 'crm\.appsplatform\.us' }
+    China      = @{ Graph = "https://microsoftgraph.chinacloudapi.cn"; Auth = "https://login.chinacloudapi.cn"; EnvPattern = 'crm\.dynamics\.cn' }
+}
+$detectedCloud = $null
+foreach ($cloud in $cloudPairings.GetEnumerator()) {
+    if ($Environment -match $cloud.Value.EnvPattern) { $detectedCloud = $cloud.Key; break }
+}
+if ($detectedCloud) {
+    $expected = $cloudPairings[$detectedCloud]
+    if ($GraphBaseUrl -ne $expected.Graph) {
+        throw "Sovereign cloud mismatch: Environment '$Environment' is $detectedCloud but GraphBaseUrl '$GraphBaseUrl' does not match expected '$($expected.Graph)'. All three parameters must target the same cloud."
+    }
+    if ($AuthBaseUrl -ne $expected.Auth) {
+        throw "Sovereign cloud mismatch: Environment '$Environment' is $detectedCloud but AuthBaseUrl '$AuthBaseUrl' does not match expected '$($expected.Auth)'. All three parameters must target the same cloud."
+    }
+}
 
 # Convert SecureString or fall back to environment variable
 if ($null -eq $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
@@ -165,7 +199,7 @@ function Get-SharePointContent {
     # Note: Direct SharePoint REST URLs (*.sharepoint.com/_api/...) are allowed by this
     # check but will fail authentication — the script only acquires a Graph API-scoped
     # token. Use Graph API URLs (graph.microsoft.com/v1.0/sites/...) for SharePoint access.
-    if ($Uri -notmatch '^https://(graph\.microsoft\.(com|us)|microsoftgraph\.chinacloudapi\.cn|[a-z0-9\-]+\.sharepoint\.(com|us|cn))/') {
+    if ($Uri -notmatch '^https://(graph\.microsoft\.(com|us)|dod-graph\.microsoft\.us|microsoftgraph\.chinacloudapi\.cn|[a-z0-9\-]+\.sharepoint\.(com|us|cn)|[a-z0-9\-]+\.sharepoint-mil\.us)/') {
         throw "Blocked URI '$Uri': only Microsoft Graph and SharePoint domains (commercial and sovereign clouds) are allowed."
     }
 
@@ -177,7 +211,7 @@ function Get-SharePointContent {
     try {
         # Fetch actual file content instead of metadata to avoid volatile fields
         # (lastModifiedDateTime, eTag, view counts) causing false-positive hash changes.
-        $contentUri = if ($Uri -match '/items/[^/]+$') { "$Uri/content" } elseif ($Uri -match ':/.+:$') { $Uri -replace ':$', ':/content' } else { $Uri }
+        $contentUri = if ($Uri -match '/items/[^/]+$') { "$Uri/content" } elseif ($Uri -match ':/.+:$') { $Uri -replace ':$', ':/content' } else { Write-Warning "URI '$Uri' does not match known Graph API content patterns (/items/{id} or :/path:). Fetching as-is; response may contain volatile metadata fields causing false-positive hash mismatches."; $Uri }
         $response = Invoke-WebRequest -Uri $contentUri -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
         # Read raw bytes to ensure binary content (PDF, DOCX, etc.) is not
         # charset-decoded to a string, which would produce incorrect hashes on PS 7.0–7.3.
@@ -215,7 +249,8 @@ function Get-KnowledgeSources {
     }
 
     $results = [System.Collections.Generic.List[object]]::new()
-    $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
+    $selectColumns = "fsi_knowledgesourceid,fsi_name,fsi_sourcetype,fsi_sourceuri,fsi_currenthash,fsi_baselinehash,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
+    $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$select=$selectColumns&`$filter=$filter"
     while ($nextLink) {
         $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
         $results.AddRange([object[]]$response.value)
@@ -246,7 +281,8 @@ function Update-SourceHash {
         [string]$Token,
         [string]$SourceId,
         [string]$Hash,
-        [string]$BaselineHash
+        [string]$BaselineHash,
+        [int]$Status
     )
 
     $headers = @{
@@ -263,6 +299,9 @@ function Update-SourceHash {
     }
     if ($BaselineHash) {
         $update.fsi_baselinehash = $BaselineHash
+    }
+    if ($Status) {
+        $update.fsi_status = $Status
     }
     $body = $update | ConvertTo-Json
 
@@ -285,7 +324,10 @@ function Update-SourceStatus {
     }
 
     $uri = "$Environment/api/data/v9.2/fsi_knowledgesources($SourceId)"
-    $body = @{ fsi_status = $Status } | ConvertTo-Json
+    $body = @{
+        fsi_status = $Status
+        fsi_lastvalidated = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    } | ConvertTo-Json
 
     Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
 }
@@ -332,6 +374,7 @@ Write-Host ""
 Write-Log "RAG Source Validator started. Environment: $Environment"
 
 if (-not $TenantId -or -not $ClientId -or -not $clientSecretPlain) {
+    Write-Log "FATAL: Missing credentials. Set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables (or pass -ClientSecret)." -Level "ERROR"
     Write-Error "Missing credentials. Set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables (or pass -ClientSecret)."
 }
 
@@ -342,8 +385,13 @@ Write-Host ""
 Write-Host "Authenticating..." -ForegroundColor Gray
 $graphScope = "$GraphBaseUrl/.default"
 $dataverseScope = "$Environment/.default"
-$graphTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $graphScope
-$dataverseTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $dataverseScope
+try {
+    $graphTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $graphScope
+    $dataverseTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $dataverseScope
+} catch {
+    Write-Log "FATAL: Authentication failed: $($_.Exception.Message)" -Level "ERROR"
+    throw
+}
 $script:tokenCache[$graphScope] = $graphTokenInfo
 $script:tokenCache[$dataverseScope] = $dataverseTokenInfo
 # Clear plaintext secret from memory after initial token acquisition
@@ -381,6 +429,7 @@ foreach ($source in $sources) {
     Write-Host "Validating: $($source.fsi_name)" -ForegroundColor White
 
     $startTime = Get-Date
+    $sourceUpdated = $false
     $result = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($($source.fsi_knowledgesourceid))"
         fsi_validationtime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -404,6 +453,16 @@ foreach ($source in $sources) {
                 Write-Log "SKIPPED: $($source.fsi_name) - Dataverse validation not yet implemented" -Level "WARN"
                 $skipped++
                 # Skip hash comparison for unsupported types
+                $content = $null
+            }
+            {$_ -in 2,3,5,6,7,8} { # Planned types: SharePoint List, SharePoint Page, Azure Blob Container, Azure Blob File, External API, Database Query
+                Write-Warning "Source type $_ validation not yet implemented for source '$($source.fsi_name)'. Marking as 'Not Implemented'."
+                $result.fsi_result = 7  # Skipped - Not Implemented
+                $result.fsi_currenthash = $null
+                $result.fsi_hashchanged = $false
+                Write-Host "  SKIPPED - Source type $_ validation not yet implemented" -ForegroundColor Yellow
+                Write-Log "SKIPPED: $($source.fsi_name) - source type $_ validation not yet implemented" -Level "WARN"
+                $skipped++
                 $content = $null
             }
             default {
@@ -468,21 +527,10 @@ foreach ($source in $sources) {
                 $passed++
             }
 
-            # Update source hash (write baseline on first run)
-            $baselineParam = @{}
-            if (-not $source.fsi_baselinehash) {
-                $baselineParam.BaselineHash = $currentHash
-            }
-            try {
-                Update-SourceHash -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam
-            } catch {
-                Write-Warning "Failed to update source hash for '$($source.fsi_name)': $($_.Exception.Message)"
-            }
-
             # Freshness validation: check if source exceeds its freshness threshold.
             # Note: fsi_lastmodified must be maintained externally (e.g., via Power Automate
             # or SharePoint webhooks). This script reads but does not update it.
-            if ($source.fsi_freshnessthreshold -and $source.fsi_lastmodified) {
+            if ($null -ne $source.fsi_freshnessthreshold -and $source.fsi_lastmodified) {
                 $daysSinceModified = ((Get-Date).ToUniversalTime() - ([datetime]$source.fsi_lastmodified).ToUniversalTime()).TotalDays
                 if ($daysSinceModified -gt $source.fsi_freshnessthreshold) {
                     Write-Host "  STALE - Last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -ForegroundColor Yellow
@@ -491,6 +539,7 @@ foreach ($source in $sources) {
                         # Preserve hash-mismatch result — integrity violations must not be
                         # reclassified as staleness (SEC 17a-4, FINRA 4511).
                         Write-Warning "Source '$($source.fsi_name)' is also stale, but hash-mismatch result is preserved as the higher-severity finding."
+                        $stale++  # Count staleness independently; counters represent conditions, not a partition
                     } else {
                         $result.fsi_result = 4  # Failed - Stale Content
                         $stale++
@@ -498,11 +547,25 @@ foreach ($source in $sources) {
                     }
                 }
             }
+
+            # Update source hash and status in a single PATCH (write baseline on first run)
+            $statusMap = @{ 1 = 1; 2 = 3; 3 = 3; 4 = 4; 5 = 3; 6 = 3; 7 = 1; 8 = 1 }
+            $newStatus = $statusMap[[int]$result.fsi_result]
+            $baselineParam = @{}
+            if (-not $source.fsi_baselinehash) {
+                $baselineParam.BaselineHash = $currentHash
+            }
+            try {
+                Update-SourceHash -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam -Status $newStatus
+                $sourceUpdated = $true
+            } catch {
+                Write-Warning "Failed to update source hash for '$($source.fsi_name)': $($_.Exception.Message)"
+            }
         }
 
         # Freshness validation for unsupported source types: these skip content
         # retrieval but may still have freshness metadata from Dataverse.
-        if ($null -eq $content -and $source.fsi_freshnessthreshold -and $source.fsi_lastmodified) {
+        if ($null -eq $content -and $null -ne $source.fsi_freshnessthreshold -and $source.fsi_lastmodified) {
             $daysSinceModified = ((Get-Date).ToUniversalTime() - ([datetime]$source.fsi_lastmodified).ToUniversalTime()).TotalDays
             if ($daysSinceModified -gt $source.fsi_freshnessthreshold) {
                 Write-Host "  STALE - Last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -ForegroundColor Yellow
@@ -531,14 +594,16 @@ foreach ($source in $sources) {
 
     $result.fsi_duration = [int]((Get-Date) - $startTime).TotalMilliseconds
 
-    # Update fsi_knowledgesource.fsi_status to reflect validation outcome
-    $statusMap = @{ 1 = 1; 2 = 3; 3 = 3; 4 = 4; 5 = 3; 6 = 3 }  # result → status: Passed→Active, Mismatch/SchemaDrift/Unavail/Error→Failed, Stale→Stale
-    $newStatus = $statusMap[[int]$result.fsi_result]
-    if ($newStatus) {
-        try {
-            Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
-        } catch {
-            Write-Warning "Failed to update source status for '$($source.fsi_name)': $($_.Exception.Message)"
+    # Update fsi_knowledgesource.fsi_status to reflect validation outcome (skipped if already merged into Update-SourceHash)
+    if (-not $sourceUpdated) {
+        $statusMap = @{ 1 = 1; 2 = 3; 3 = 3; 4 = 4; 5 = 3; 6 = 3; 7 = 1; 8 = 1 }  # result → status: Passed/Skipped→Active, Mismatch/SchemaDrift/Unavail/Error→Failed, Stale→Stale
+        $newStatus = $statusMap[[int]$result.fsi_result]
+        if ($newStatus) {
+            try {
+                Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
+            } catch {
+                Write-Warning "Failed to update source status for '$($source.fsi_name)': $($_.Exception.Message)"
+            }
         }
     }
 
@@ -547,6 +612,7 @@ foreach ($source in $sources) {
         New-ValidationResult -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -Result $result
     } catch {
         Write-Warning "Failed to record validation result for '$($source.fsi_name)': $($_.Exception.Message)"
+        Write-Log "AUDIT GAP: Validation result record not created for '$($source.fsi_name)' (result=$($result.fsi_result)). Status was updated but no fsi_validationresult exists. Error: $($_.Exception.Message)" -Level "ERROR"
     }
 }
 

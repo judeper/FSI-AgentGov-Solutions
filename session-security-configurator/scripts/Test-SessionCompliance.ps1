@@ -332,8 +332,16 @@ try {
         $zonePolicies = $sscPolicies | Where-Object { $_.DisplayName -like "*$Zone*" }
 
         if (-not $zonePolicies -or $zonePolicies.Count -eq 0) {
-            Write-Warning "No SSC policies found matching zone: $Zone"
-            $zonePolicies = $sscPolicies
+            Write-Warning "No SSC policies found matching zone '$Zone'. Only found: $($sscPolicies | ForEach-Object { $_.DisplayName } | Join-String -Separator ', ')"
+            $results.Validators.SessionControls = @{
+                Status = "Warning"
+                Confidence = "MEDIUM"
+                Reason = "No zone-specific policies found for '$Zone'"
+                PoliciesChecked = $sscPolicies.Count
+                Mismatches = @()
+                Timestamp = Get-Date -Format "o"
+            }
+            return $results
         }
 
         Write-Host "Validating $($zonePolicies.Count) policy(ies) for zone: $Zone" -ForegroundColor Cyan

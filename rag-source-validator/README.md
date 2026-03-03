@@ -13,9 +13,9 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 | Feature | Description |
 |---------|-------------|
 | **Hash Validation** | SHA-256 content hash verification (binary-safe) |
-| **Change Detection** | Real-time and scheduled modification tracking |
+| **Change Detection** | Content modification detection via hash comparison |
 | **Source Registry** | Centralized inventory of all knowledge sources |
-| **Freshness Monitoring** | Alert on stale or outdated content |
+| **Freshness Monitoring** | Detect stale or outdated content (detection only; alert delivery not yet implemented) |
 | **Audit Trail** | Complete history of source changes |
 
 ## Architecture
@@ -77,11 +77,11 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ## Quick Start
 
-### 1. Deploy Dataverse Schema
+### 1. Deploy Dataverse Schema (Manual)
 
-Import the Dataverse solution into your Power Platform environment using the Power Platform admin center or `pac` CLI.
+The Dataverse schema must currently be created manually. The deployable solution package (`solution.xml`, managed/unmanaged `.zip`) is not yet available, so the solution cannot be imported via the Power Platform admin center or `pac` CLI at this time.
 
-> **Note:** The deployable solution package (solution.xml, managed/unmanaged .zip) is not yet available. The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md) and must be created manually or via `pac` CLI until the packaged solution is published.
+> **Note:** The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md). Create the tables and columns manually or via `pac` CLI using the schema reference until the packaged solution is published.
 
 ### 2. Register Knowledge Sources
 
@@ -93,23 +93,29 @@ Register sources directly in the `fsi_knowledgesource` Dataverse table via the m
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
 ```
 
-For sovereign cloud environments (GCC High, China), specify the corresponding Graph and auth endpoints:
+For sovereign cloud environments (GCC High, DoD, China), specify the corresponding Graph and auth endpoints:
 
 ```powershell
 # GCC High
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.microsoftdynamics.us" `
     -GraphBaseUrl "https://graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
 
+# DoD
+.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.appsplatform.us" `
+    -GraphBaseUrl "https://dod-graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
+
 # 21Vianet China
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.cn" `
     -GraphBaseUrl "https://microsoftgraph.chinacloudapi.cn" -AuthBaseUrl "https://login.chinacloudapi.cn"
 ```
 
+> **Cross-validation:** The script validates that `GraphBaseUrl`, `AuthBaseUrl`, and `Environment` all target the same sovereign cloud. Mismatched combinations (e.g., commercial Graph URL with a GCC-High environment) will produce a clear error at startup.
+
 The script automatically captures baselines on first run for sources without an existing hash.
 
 ## Deployment
 
-1. Import the Dataverse solution into your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema) for current status)
+1. Create the Dataverse schema manually in your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema-manual) for current status)
 2. Set environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` for service principal access (certificate-based authentication and managed identities are recommended for production but not yet supported by the script)
 3. Register knowledge sources via the model-driven app or Dataverse API
 4. Run `Invoke-SourceValidation.ps1` to capture baselines and validate
@@ -232,6 +238,8 @@ For documents with references, validates all links are accessible.
 |------------|---------|
 | **SharePoint direct URLs** | The script acquires a Graph API-scoped token only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
 | **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
+| **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC 17a-4 and FINRA 4511 contexts. |
+| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC 17a-4, FINRA 4511, SOX 404), consider adding unit tests for hash computation, URI validation, freshness threshold arithmetic, and status-transition logic before production use. |
 
 ### Common Issues
 

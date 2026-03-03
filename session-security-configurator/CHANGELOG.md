@@ -18,7 +18,7 @@ All notable changes to the Session Security Configurator solution are documented
   - fsi_ValidationHistory table (organization-owned immutable audit log)
   - fsi_DriftViolation table (user-owned alert management)
   - Global option sets: fsi_acv_zone, fsi_acv_severity
-  - Local option set: fsi_ssc_validationtype
+  - Global option set: fsi_ssc_validationtype
   - Environment variables for zone thresholds
 
 - Phase 3: Power Automate Integration - Daily validation flow, Teams alerting

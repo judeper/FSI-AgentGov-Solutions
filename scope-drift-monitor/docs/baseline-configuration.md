@@ -122,9 +122,11 @@ Baselines are classified by governance zone, affecting detection behavior.
 
 | Zone | Label | Detection Frequency | Approval Rigor |
 |------|-------|--------------------|-|
-| 1 | Personal Productivity | Every 15 minutes | Self-service |
-| 2 | Team Collaboration | Every 15 minutes | Team lead approval |
-| 3 | Enterprise Managed | Every 15 minutes | Security + Data Owner |
+| 1 | Personal Productivity | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+| 2 | Team Collaboration | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+| 3 | Enterprise Managed | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+
+> **Note:** Zone-differentiated approval rigor (self-service for Zone 1, team lead for Zone 2, dual Security + Data Owner for Zone 3) is planned but not yet implemented. All zones currently route expansion requests to the security team. The schema includes `fsi_dataownerapproval` and `fsi_dataownerapprovedby` fields for future use.
 
 **Zone selection criteria:**
 
@@ -133,7 +135,7 @@ Baselines are classified by governance zone, affecting detection behavior.
 | User scope | Individual | Team/Department | Organization-wide |
 | Data sensitivity | Low | Medium | High |
 | Regulatory impact | None | Some | Critical |
-| Approval required | No | Team lead | Security team |
+| Approval required | Security team | Security team | Security team |
 
 ---
 
@@ -253,14 +255,14 @@ Update-DataverseRecord -EntityName "fsi_agentscope" -RecordId $scopeId -Data @{
 **Zone 1 (Personal):**
 
 - Broader allowed scope acceptable
-- Self-service expansion typical
+- Security team approval for expansion (self-service planned for future)
 - Focus on connector restrictions
 
 **Zone 2 (Team):**
 
 - Team-specific SharePoint sites
 - Shared Dataverse tables
-- Team lead approval for expansion
+- Security team approval for expansion (team lead approval planned for future)
 
 **Zone 3 (Enterprise):**
 

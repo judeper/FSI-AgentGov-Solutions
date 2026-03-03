@@ -74,7 +74,11 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [securestring]$ClientSecret
+    [securestring]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("https://manage.office.com", "https://manage.office365.us", "https://manage.office.eaglex.ic.gov", "https://manage.protection.outlook.com")]
+    [string]$ManagementApiEndpoint = "https://manage.office.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -148,7 +152,7 @@ function Get-CopilotAuditEvents {
 
     # Ensure subscription is active
     try {
-        $subscriptionUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=Audit.General"
+        $subscriptionUri = "$ManagementApiEndpoint/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=Audit.General"
         $null = Invoke-RestMethod -Uri $subscriptionUri -Method Post -Headers $headers -ErrorAction SilentlyContinue
     }
     catch {
@@ -170,7 +174,7 @@ function Get-CopilotAuditEvents {
         Write-Host "  Querying window: $startDate to $endDate" -ForegroundColor Gray
 
         # Get content blobs for this 24-hour window
-        $contentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startDate&endTime=$endDate"
+        $contentUri = "$ManagementApiEndpoint/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startDate&endTime=$endDate"
 
         try {
             $contentBlobs = @()
@@ -179,7 +183,7 @@ function Get-CopilotAuditEvents {
             # Handle pagination via NextPageUri header
             while ($nextPageUri) {
                 # Validate pagination URL host
-                if ($nextPageUri -notmatch '^https://manage\.office\.com/') {
+                if ($nextPageUri -notmatch "^$([regex]::Escape($ManagementApiEndpoint))/") {
                     Write-Warning "Skipping untrusted pagination URL: $nextPageUri"
                     break
                 }
@@ -202,7 +206,7 @@ function Get-CopilotAuditEvents {
             foreach ($blob in $contentBlobs) {
                 try {
                     # Validate content blob URI host
-                    if ($blob.contentUri -notmatch '^https://manage\.office\.com/') {
+                    if ($blob.contentUri -notmatch "^$([regex]::Escape($ManagementApiEndpoint))/") {
                         Write-Warning "Skipping untrusted content URI: $($blob.contentUri)"
                         continue
                     }
@@ -413,7 +417,7 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
 Write-Host "Authenticating..." -ForegroundColor Gray
 
 try {
-    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://manage.office.com/.default"
+    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default"
     Write-Host "  Office 365 Management API: authenticated" -ForegroundColor Green
 }
 catch {

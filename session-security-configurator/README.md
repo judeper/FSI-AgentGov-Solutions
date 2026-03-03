@@ -25,6 +25,8 @@ Automated session security baseline management for Microsoft 365 AI agent admini
 
 ### PowerShell Modules
 
+PowerShell **7.1 or later** is required (`#Requires -Version 7.1` is declared by core scripts for `Get-Date -AsUTC` support).
+
 ```powershell
 Install-Module Microsoft.Graph.Authentication, `
     Microsoft.Graph.Identity.SignIns, `
@@ -67,13 +69,22 @@ python scripts/deploy.py \
     --interactive
 ```
 
-### Step 2: Deploy Authentication Contexts
+### Step 2: Prepare Configuration
+
+Copy the configuration template and fill in your organization's values:
+
+```powershell
+Copy-Item .\templates\tenant-config.example.json .\tenant-config.json
+# Edit tenant-config.json with your tenant-specific settings
+```
+
+### Step 3: Deploy Authentication Contexts
 
 ```powershell
 .\scripts\Deploy-AuthContexts.ps1 -TenantId <your-tenant-id> -Verbose
 ```
 
-### Step 3: Deploy Step-Up Policies
+### Step 4: Deploy Step-Up Policies
 
 ```powershell
 # Deploy Zone 3 step-up policy (most restrictive, preview mode)
@@ -85,7 +96,7 @@ python scripts/deploy.py \
     -Verbose
 ```
 
-### Step 4: Validate Configuration
+### Step 5: Validate Configuration
 
 ```powershell
 # Validate Zone 3 session configuration
@@ -104,7 +115,7 @@ python scripts/deploy.py \
     -Interactive
 ```
 
-### Step 5: Export Compliance Evidence
+### Step 6: Export Compliance Evidence
 
 ```powershell
 # Export session security validation evidence
@@ -255,8 +266,8 @@ This solution supports the following FSI-AgentGov controls:
 
 ## Related Solutions
 
-- **Audit Configuration Validator** — Complementary audit retention validation
-- **Conditional Access Automation** — Additional CA policy management
+- **[Audit Configuration Validator](../audit-compliance-manager/)** — Complementary audit retention validation
+- **[Conditional Access Automation](../conditional-access-automation/)** — Additional CA policy management
 
 ## License
 

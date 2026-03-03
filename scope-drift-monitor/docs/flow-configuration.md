@@ -81,7 +81,7 @@ Configure environment variables for your organization.
 | `fsi_SDM_ClientSecret` | Azure AD application client secret | *(stored securely)* |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL | `https://manage.office.com` (commercial) |
 
-> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against known Microsoft Management API endpoints (`manage.office.com`, `manage.office365.us`, `manage.office.eaglex.ic.gov`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints.
+> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against known Microsoft Management API endpoints (`manage.office.com`, `manage.office365.us`, `manage.office.eaglex.ic.gov`, `manage.protection.outlook.com`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints.
 
 ### Configuring Environment Variables
 
@@ -116,6 +116,10 @@ Configure environment variables for your organization.
 | Lookback window | 15 minutes | Audit events to analyze (overlap prevents gaps) |
 | Pagination limit | 50 iterations | Max content blob pages fetched per run |
 
+> **⚠ Concurrency constraint:** The `For_Each_Content_Blob` loop uses `SetVariable` with `union()` (in `Flatten_Filtered_Events`) to accumulate audit events. Its concurrency **must remain at 1**. Raising concurrency would cause lost-update data corruption because `SetVariable` is not atomic across parallel iterations.
+
+> **Scaling consideration:** The `Update_Scope_LastValidated` step issues one Dataverse `UpdateRecord` call per active agent scope (N+1 pattern) at concurrency 5. This is adequate for most deployments, but environments with 200+ scopes will generate 200+ API calls every 15 minutes. For large deployments, consider increasing the recurrence interval or monitoring Dataverse API quota usage.
+
 **To modify detection frequency:**
 
 1. Open the flow in edit mode
@@ -128,6 +132,8 @@ Configure environment variables for your organization.
 1. **Office 365 Management API** - CopilotInteraction events (RecordType 261)
 
 > **Note:** The flow uses only the Office 365 Management API (Unified Audit Log) for detection. Ensure Management API subscriptions are configured per the [prerequisites](prerequisites.md).
+
+> **Known limitation:** The detection summary (`Compose_Detection_Summary`) is built at the end of each cycle but is not persisted to Dataverse or any external store. Operational telemetry (events processed, violations created, source availability) is only available through Power Automate's 28-day run history. Organizations with FSI audit retention requirements should export flow run data to a long-term store (see [Troubleshooting > Export Flow Run Data](troubleshooting.md#export-flow-run-data)).
 
 ### SDM-AlertDispatcher
 
@@ -179,6 +185,8 @@ Configure environment variables for your organization.
 | **Approved** | Update agent scope, close violation (if linked), notify requestor |
 | **Rejected** | Update request status, notify requestor with comments |
 | **Timeout** | Update request to cancelled, notify requestor |
+
+> **Known limitation:** Expansion requests of type 10005 (Increase Access Level) are approved through the workflow but require **manual scope configuration** by an administrator. The flow skips automatic scope list updates for this request type because access level changes cannot be expressed as list-append operations. The approval notification email instructs the requestor to contact the security team for manual configuration.
 
 ---
 

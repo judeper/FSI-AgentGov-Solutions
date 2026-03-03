@@ -3,7 +3,7 @@
 Create connection references for Session Security Configurator.
 
 Connection references enable Power Automate flows to access Dataverse,
-Office 365, and Teams for session validation and alerting.
+Office 365, Teams, and Azure Automation for session validation and alerting.
 """
 
 import argparse
@@ -31,6 +31,12 @@ CONNECTION_REFS = [
         "display_name": "Teams - Session Security Configurator",
         "connector": "shared_teams",
         "description": "Teams connector for drift violation adaptive card alerts",
+    },
+    {
+        "logical_name": "fsi_cr_azureautomation_sessionvalidation",
+        "display_name": "Azure Automation - Session Security Configurator",
+        "connector": "shared_azureautomation",
+        "description": "Azure Automation connector for triggering session validation runbooks",
     },
 ]
 
@@ -106,6 +112,7 @@ Connection references created:
   - fsi_cr_dataverse_sessionvalidation (Dataverse connector)
   - fsi_cr_office365_sessionvalidation (Office 365 connector)
   - fsi_cr_teams_sessionvalidation (Teams connector)
+  - fsi_cr_azureautomation_sessionvalidation (Azure Automation connector)
 
 These connection references must be bound to actual connections in Power Automate
 before flows can use them.

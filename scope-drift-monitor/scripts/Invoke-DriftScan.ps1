@@ -60,7 +60,11 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [securestring]$ClientSecret
+    [securestring]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("https://manage.office.com", "https://manage.office365.us", "https://manage.office.eaglex.ic.gov", "https://manage.protection.outlook.com")]
+    [string]$ManagementApiEndpoint = "https://manage.office.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -85,7 +89,7 @@ $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 # Align with Customizations.xml picklist values
 $ViolationType = @{
     Connector      = 10001
-    Scope          = 10002
+    SharePointSite = 10002
     DataverseTable = 10003
     ExternalAPI    = 10004
     ExpiredScope   = 10005
@@ -181,7 +185,10 @@ function Get-AuditEvents {
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
-        [int]$Minutes
+        [int]$Minutes,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ApiEndpoint = "https://manage.office.com"
     )
 
     $events = @()
@@ -194,7 +201,7 @@ function Get-AuditEvents {
     }
 
     # Get content blobs for the time period
-    $contentUri = "https://manage.office.com/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startTime&endTime=$endTime"
+    $contentUri = "$ApiEndpoint/api/v1.0/$TenantId/activity/feed/subscriptions/content?contentType=Audit.General&startTime=$startTime&endTime=$endTime"
 
     try {
         $contentBlobs = @()
@@ -203,7 +210,8 @@ function Get-AuditEvents {
         # Handle pagination
         while ($nextPageUri) {
             # Validate pagination URL host
-            if ($nextPageUri -notmatch '^https://manage\.office\.com/') {
+            $escapedEndpoint = [regex]::Escape($ApiEndpoint)
+            if ($nextPageUri -notmatch "^$escapedEndpoint/") {
                 Write-Warning "Skipping untrusted pagination URL: $nextPageUri"
                 break
             }
@@ -224,7 +232,8 @@ function Get-AuditEvents {
         foreach ($blob in $contentBlobs) {
             try {
                 # Validate content blob URI host
-                if ($blob.contentUri -notmatch '^https://manage\.office\.com/') {
+                $escapedBlobEndpoint = [regex]::Escape($ApiEndpoint)
+                if ($blob.contentUri -notmatch "^$escapedBlobEndpoint/") {
                     Write-Warning "Skipping untrusted content URI: $($blob.contentUri)"
                     continue
                 }
@@ -403,7 +412,7 @@ function Get-ViolationTypeCode {
     switch ($TypeName) {
         "No Baseline Defined"          { return $ViolationType.NoBaseline }
         "Unauthorized Connector"       { return $ViolationType.Connector }
-        "Unauthorized SharePoint Site" { return $ViolationType.Scope }
+        "Unauthorized SharePoint Site" { return $ViolationType.SharePointSite }
         "Unauthorized Dataverse Table" { return $ViolationType.DataverseTable }
         "Unauthorized External API"    { return $ViolationType.ExternalAPI }
         default                        { return 0 }
@@ -440,6 +449,22 @@ function Create-ViolationRecord {
         "Content-Type"     = "application/json"
         "OData-MaxVersion" = "4.0"
         "OData-Version"    = "4.0"
+    }
+
+    # Deduplication: skip if a violation for this audit record already exists
+    if ($AuditRecordId) {
+        $sanitizedAuditId = $AuditRecordId -replace "'", "''"
+        $checkUri = "$Environment/api/data/v9.2/fsi_scopeviolations?`$filter=fsi_auditrecordid eq '$sanitizedAuditId'&`$select=fsi_scopeviolationid&`$top=1"
+        try {
+            $existing = Invoke-RestMethod -Uri $checkUri -Headers $headers -Method Get
+            if ($existing.value.Count -gt 0) {
+                Write-AuditLog "Skipping duplicate violation for audit record $AuditRecordId" -Level "DEBUG"
+                return $null
+            }
+        }
+        catch {
+            Write-Warning "Could not check for existing violation: $($_.Exception.Message)"
+        }
     }
 
     $violationRecord = @{
@@ -502,7 +527,7 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
 Write-Host "Authenticating..." -ForegroundColor Gray
 
 try {
-    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://manage.office.com/.default"
+    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default"
     Write-Host "  Office 365 Management API: authenticated" -ForegroundColor Green
 }
 catch {
@@ -541,7 +566,7 @@ foreach ($scope in $scopes) {
 # Get audit events
 Write-Host ""
 Write-Host "Querying audit events from last $Minutes minutes..." -ForegroundColor Gray
-$events = Get-AuditEvents -Token $managementToken -TenantId $TenantId -Minutes $Minutes
+$events = Get-AuditEvents -Token $managementToken -TenantId $TenantId -Minutes $Minutes -ApiEndpoint $ManagementApiEndpoint
 Write-Host "  Found $($events.Count) CopilotInteraction event(s)"
 
 # Process events and detect violations

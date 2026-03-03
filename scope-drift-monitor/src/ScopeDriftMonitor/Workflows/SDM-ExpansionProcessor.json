@@ -103,7 +103,7 @@
           "WebhookApprovalCreationInput/title": "Scope Expansion: @{outputs('Get_Request_Details')?['body/fsi_name']}",
           "WebhookApprovalCreationInput/assignedTo": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
           "WebhookApprovalCreationInput/details": "@{outputs('Build_Approval_Details')}",
-          "WebhookApprovalCreationInput/itemLink": "@{concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_expansionrequest&id=', outputs('Get_Request_Details')?['body/fsi_expansionrequestid'])}",
+          "WebhookApprovalCreationInput/itemLink": "@{if(not(empty(parameters('fsi_SDM_DataverseEnvironment'))), concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_expansionrequest&id=', outputs('Get_Request_Details')?['body/fsi_expansionrequestid']), '')}",
           "WebhookApprovalCreationInput/itemLinkDescription": "View Request in Dataverse"
         },
         "authentication": "@parameters('$authentication')",
@@ -132,7 +132,13 @@
             "fsi_status": 10003
           }
         },
-        "authentication": "@parameters('$authentication')"
+        "authentication": "@parameters('$authentication')",
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "maximumInterval": "PT1M"
+        }
       }
     },
     "Condition_Check_Approval_Outcome": {
@@ -193,7 +199,13 @@
                   "recordId": "@outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_agentscopeid']",
                   "$select": "fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis"
                 },
-                "authentication": "@parameters('$authentication')"
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
               }
             },
             "Parse_Current_List": {
@@ -222,7 +234,7 @@
               "type": "Compose",
               "inputs": "@union(body('Parse_Current_List'), createArray(coalesce(outputs('Get_Request_Details')?['body/fsi_resourceurl'], outputs('Get_Request_Details')?['body/fsi_resourcename'])))"
             },
-            "Update_Agent_Scope_Connectors": {
+            "Update_Agent_Scope_List": {
               "runAfter": {
                 "Append_New_Resource": [
                   "Succeeded"
@@ -242,7 +254,13 @@
                     "@{outputs('Determine_Scope_Field_To_Update')}": "@{string(outputs('Append_New_Resource'))}"
                   }
                 },
-                "authentication": "@parameters('$authentication')"
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
               }
             }
           },
@@ -273,13 +291,85 @@
                 "fsi_completedon": "@{utcNow()}"
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
+          }
+        },
+        "Handle_Scope_Update_Failure": {
+          "runAfter": {
+            "Condition_Is_List_Update": [
+              "Failed"
+            ]
+          },
+          "type": "Scope",
+          "actions": {
+            "Update_Request_Failed": {
+              "runAfter": {},
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "fsi_cr_dataverse",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_expansionrequests",
+                  "recordId": "@triggerOutputs()?['body/fsi_expansionrequestid']",
+                  "item": {
+                    "fsi_status": 10001
+                  }
+                },
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              }
+            },
+            "Send_Scope_Update_Failure_Notification": {
+              "runAfter": {
+                "Update_Request_Failed": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "fsi_cr_outlook",
+                  "operationId": "SendEmailV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "emailMessage": {
+                    "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
+                    "Subject": "[Scope Expansion] ERROR: Scope update failed for @{outputs('Get_Request_Details')?['body/fsi_name']}",
+                    "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Update Failed</div><p>The expansion request was approved but the agent scope could not be updated in Dataverse. The request has been reset to Pending status.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p>Please investigate and retry the scope update manually.</p></body></html>",
+                    "Importance": "High"
+                  }
+                },
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              }
+            }
           }
         },
         "Condition_Has_Related_Violation": {
           "runAfter": {
             "Update_Request_Approved": [
-              "Succeeded"
+              "Succeeded",
+              "Failed"
             ]
           },
           "type": "If",
@@ -310,7 +400,13 @@
                     "fsi_resolvedon": "@{utcNow()}"
                   }
                 },
-                "authentication": "@parameters('$authentication')"
+                "authentication": "@parameters('$authentication')",
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
               }
             }
           },
@@ -333,13 +429,49 @@
             },
             "parameters": {
               "emailMessage": {
-                "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
+                "To": "@{if(empty(coalesce(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], '')), parameters('fsi_SDM_SecurityTeamEmail'), outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'])}",
                 "Subject": "[Scope Expansion] APPROVED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
                 "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#107c10;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Approved</div><p>Your scope expansion request has been approved.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td><strong>Approved By:</strong></td><td>@{first(outputs('Start_Approval')?['body/responses'])?['responder/displayName']}</td></tr><tr><td><strong>Approved On:</strong></td><td>@{formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm')} UTC</td></tr></table><p>@{if(equals(outputs('Get_Request_Details')?['body/fsi_requesttype'], 10005), 'Access level changes require manual configuration by an administrator. Please contact the security team.', 'The agent scope has been automatically updated. No further action is required.')}</p></body></html>",
                 "Importance": "Normal"
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
+          }
+        },
+        "Handle_Request_Approved_Failure": {
+          "runAfter": {
+            "Update_Request_Approved": [
+              "Failed"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "fsi_cr_outlook",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage": {
+                "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
+                "Subject": "[Scope Expansion] ERROR: Failed to update approved request @{outputs('Get_Request_Details')?['body/fsi_name']}",
+                "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Request Status Update Failed</div><p>The scope expansion was approved and the agent scope was successfully updated, but the request record could not be updated to Approved status. The record remains in Under Review status and requires manual correction.</p><p><strong>Request ID:</strong> @{triggerOutputs()?['body/fsi_expansionrequestid']}</p><p><strong>Agent:</strong> @{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</p><p><strong>Request Type:</strong> @{outputs('Get_Request_Type_Label')}</p></body></html>",
+                "Importance": "High"
+              }
+            },
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
           }
         }
       },
@@ -364,13 +496,20 @@
                   "fsi_completedon": "@{utcNow()}"
                 }
               },
-              "authentication": "@parameters('$authentication')"
+              "authentication": "@parameters('$authentication')",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              }
             }
           },
           "Send_Denial_Notification": {
             "runAfter": {
               "Update_Request_Denied": [
-                "Succeeded"
+                "Succeeded",
+                "Failed"
               ]
             },
             "type": "OpenApiConnection",
@@ -382,13 +521,49 @@
               },
               "parameters": {
                 "emailMessage": {
-                  "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
+                  "To": "@{if(empty(coalesce(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], '')), parameters('fsi_SDM_SecurityTeamEmail'), outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'])}",
                   "Subject": "[Scope Expansion] DENIED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
                   "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Denied</div><p>Your scope expansion request has been denied.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td><strong>Denied By:</strong></td><td>@{first(outputs('Start_Approval')?['body/responses'])?['responder/displayName']}</td></tr></table><p><strong>Comments:</strong></p><p>@{replace(replace(coalesce(first(outputs('Start_Approval')?['body/responses'])?['comments'], 'No comments provided.'), '<', '&lt;'), '>', '&gt;')}</p><p>If you believe this decision was made in error, please contact the security team or submit a new request with additional justification.</p></body></html>",
                   "Importance": "Normal"
                 }
               },
-              "authentication": "@parameters('$authentication')"
+              "authentication": "@parameters('$authentication')",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              }
+            }
+          },
+          "Handle_Denial_Update_Failure": {
+            "runAfter": {
+              "Update_Request_Denied": [
+                "Failed"
+              ]
+            },
+            "type": "OpenApiConnection",
+            "inputs": {
+              "host": {
+                "connectionName": "fsi_cr_outlook",
+                "operationId": "SendEmailV2",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+              },
+              "parameters": {
+                "emailMessage": {
+                  "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
+                  "Subject": "[Scope Expansion] ERROR: Failed to update denied request @{outputs('Get_Request_Details')?['body/fsi_name']}",
+                  "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Request Status Update Failed</div><p>The scope expansion request was denied, but the request record could not be updated to Denied status. The record remains in Under Review status and requires manual correction.</p><p><strong>Request ID:</strong> @{triggerOutputs()?['body/fsi_expansionrequestid']}</p><p><strong>Agent:</strong> @{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</p><p><strong>Request Type:</strong> @{outputs('Get_Request_Type_Label')}</p></body></html>",
+                  "Importance": "High"
+                }
+              },
+              "authentication": "@parameters('$authentication')",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "maximumInterval": "PT1M"
+              }
             }
           }
         }
@@ -419,7 +594,13 @@
                 "fsi_completedon": "@{utcNow()}"
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
           }
         },
         "Send_Timeout_Notification": {
@@ -437,13 +618,19 @@
             },
             "parameters": {
               "emailMessage": {
-                "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
+                "To": "@{if(empty(coalesce(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], '')), parameters('fsi_SDM_SecurityTeamEmail'), outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'])}",
                 "Subject": "[Scope Expansion] EXPIRED: @{outputs('Get_Request_Details')?['body/fsi_name']}",
                 "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#ff8c00;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Expired</div><p>Your scope expansion request has expired after 7 days without a decision.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p>Please resubmit the request if the scope expansion is still needed.</p></body></html>",
                 "Importance": "Normal"
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
           }
         }
       }
@@ -472,7 +659,13 @@
                 "fsi_status": 10001
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
           }
         },
         "Send_Error_Notification": {
@@ -490,13 +683,19 @@
             },
             "parameters": {
               "emailMessage": {
-                "To": "@{outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress']}",
+                "To": "@{if(empty(coalesce(outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'], '')), parameters('fsi_SDM_SecurityTeamEmail'), outputs('Get_Request_Details')?['body/fsi_requestedby/internalemailaddress'])}",
                 "Subject": "[Scope Expansion] ERROR: @{outputs('Get_Request_Details')?['body/fsi_name']}",
                 "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Scope Expansion Request Error</div><p>Your scope expansion request could not be processed due to an error with the approval service.</p><table><tr><td><strong>Agent:</strong></td><td>@{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</td></tr><tr><td><strong>Request:</strong></td><td>@{outputs('Get_Request_Type_Label')}</td></tr><tr><td><strong>Resource:</strong></td><td>@{replace(replace(coalesce(outputs('Get_Request_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p>The request has been reset to Pending status. Please try again or contact the security team for assistance.</p></body></html>",
                 "Importance": "High"
               }
             },
-            "authentication": "@parameters('$authentication')"
+            "authentication": "@parameters('$authentication')",
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "maximumInterval": "PT1M"
+            }
           }
         }
       }
@@ -522,7 +721,43 @@
             "Importance": "High"
           }
         },
-        "authentication": "@parameters('$authentication')"
+        "authentication": "@parameters('$authentication')",
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "maximumInterval": "PT1M"
+        }
+      }
+    },
+    "Handle_Update_Under_Review_Failure": {
+      "runAfter": {
+        "Update_Request_Under_Review": [
+          "Failed"
+        ]
+      },
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "fsi_cr_outlook",
+          "operationId": "SendEmailV2",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+        },
+        "parameters": {
+          "emailMessage": {
+            "To": "@{parameters('fsi_SDM_SecurityTeamEmail')}",
+            "Subject": "[Scope Expansion] ERROR: Failed to update request status @{triggerOutputs()?['body/fsi_expansionrequestid']}",
+            "Body": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}</style></head><body><div class=\"header\">Expansion Request Processing Error</div><p>Failed to update expansion request to Under Review status. The approval was not started and the request remains in Pending status. Manual intervention is required.</p><p><strong>Request ID:</strong> @{triggerOutputs()?['body/fsi_expansionrequestid']}</p><p><strong>Agent:</strong> @{outputs('Get_Request_Details')?['body/fsi_agentscopeid/fsi_name']}</p><p><strong>Request Type:</strong> @{outputs('Get_Request_Type_Label')}</p></body></html>",
+            "Importance": "High"
+          }
+        },
+        "authentication": "@parameters('$authentication')",
+        "retryPolicy": {
+          "type": "exponential",
+          "count": 3,
+          "interval": "PT10S",
+          "maximumInterval": "PT1M"
+        }
       }
     }
   },

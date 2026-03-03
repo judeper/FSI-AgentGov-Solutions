@@ -80,6 +80,11 @@
 #Requires -Version 7.0
 #Requires -Modules Microsoft.Graph.Identity.SignIns
 
+# Note: SupportsShouldProcess is intentionally omitted. Use -DryRun as the canonical
+# preview mechanism (connects read-only for conflict audit unless -SkipConflictAudit
+# is also specified). See Deploy-AuthContexts.ps1 for comparison; that script uses
+# both SupportsShouldProcess and -DryRun because it queries existing auth contexts
+# before deciding create vs update.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -193,31 +198,36 @@ switch ($Zone) {
 Write-Host "`nTemplates to deploy:" -ForegroundColor Yellow
 $templatesToDeploy | ForEach-Object { Write-Host "  - $_" }
 
-# Connect to Microsoft Graph
-Write-Host "`nConnecting to Microsoft Graph..." -ForegroundColor Cyan
-
 # Dot-source helper scripts
 . "$PSScriptRoot\private\Connect-GraphSession.ps1"
 . "$PSScriptRoot\private\Test-BreakGlassExclusion.ps1"
 
-# Build connection parameters
-$connectParams = @{
-    TenantId = $TenantId
-}
+# Connect to Microsoft Graph (skip only if DryRun AND SkipConflictAudit)
+if (-not $DryRun -or -not $SkipConflictAudit) {
+    Write-Host "`nConnecting to Microsoft Graph..." -ForegroundColor Cyan
 
-if ($Interactive) {
-    $connectParams.Interactive = $true
-}
-elseif ($ClientId -and $CertificateThumbprint) {
-    $connectParams.ClientId = $ClientId
-    $connectParams.CertificateThumbprint = $CertificateThumbprint
+    # Build connection parameters
+    $connectParams = @{
+        TenantId = $TenantId
+    }
+
+    if ($Interactive) {
+        $connectParams.Interactive = $true
+    }
+    elseif ($ClientId -and $CertificateThumbprint) {
+        $connectParams.ClientId = $ClientId
+        $connectParams.CertificateThumbprint = $CertificateThumbprint
+    }
+    else {
+        throw "Either -Interactive or both -ClientId and -CertificateThumbprint must be specified."
+    }
+
+    Connect-GraphSession @connectParams | Out-Null
+    Write-Host "Graph API connected." -ForegroundColor Green
 }
 else {
-    throw "Either -Interactive or both -ClientId and -CertificateThumbprint must be specified."
+    Write-Host "`nDry run mode with -SkipConflictAudit - skipping Microsoft Graph connection." -ForegroundColor Yellow
 }
-
-Connect-GraphSession @connectParams | Out-Null
-Write-Host "Graph API connected." -ForegroundColor Green
 
 # --- 72-HOUR BAKE PERIOD ENFORCEMENT ---
 if ($EnablePolicies) {

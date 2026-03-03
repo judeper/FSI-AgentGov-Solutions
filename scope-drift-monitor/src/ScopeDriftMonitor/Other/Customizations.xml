@@ -1062,6 +1062,25 @@
         </Descriptions>
       </RelationshipDescription>
     </EntityRelationship>
+    <EntityRelationship Name="fsi_expansionrequest_scopeviolation">
+      <EntityRelationshipType>OneToMany</EntityRelationshipType>
+      <IsCustomizable>0</IsCustomizable>
+      <IntroducedVersion>1.1.0.0</IntroducedVersion>
+      <IsHierarchical>0</IsHierarchical>
+      <ReferencingEntityName>fsi_scopeviolation</ReferencingEntityName>
+      <ReferencedEntityName>fsi_expansionrequest</ReferencedEntityName>
+      <CascadeAssign>NoCascade</CascadeAssign>
+      <CascadeDelete>RemoveLink</CascadeDelete>
+      <CascadeReparent>NoCascade</CascadeReparent>
+      <CascadeShare>NoCascade</CascadeShare>
+      <CascadeUnshare>NoCascade</CascadeUnshare>
+      <ReferencingAttributeName>fsi_expansionrequestid</ReferencingAttributeName>
+      <RelationshipDescription>
+        <Descriptions>
+          <Description description="Expansion Request to Scope Violation relationship (1:N, optional lookup)" languagecode="1033" />
+        </Descriptions>
+      </RelationshipDescription>
+    </EntityRelationship>
     <EntityRelationship Name="fsi_scopeviolation_expansionrequest">
       <EntityRelationshipType>OneToMany</EntityRelationshipType>
       <IsCustomizable>0</IsCustomizable>

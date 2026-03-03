@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules Microsoft.Graph.Identity.SignIns, MSAL.PS
 
 <#
@@ -145,15 +145,23 @@ try {
         throw "CertificateThumbprint is required when -Interactive is not specified."
     }
 
-    # Connect to Microsoft Graph
+    # Connect to Microsoft Graph using shared helper
     Write-Verbose "Connecting to Microsoft Graph..."
 
+    . "$PSScriptRoot\private\Connect-GraphSession.ps1"
+
+    $connectParams = @{}
+    if ($TenantId) { $connectParams.TenantId = $TenantId }
     if ($Interactive) {
-        Connect-MgGraph -TenantId $TenantId -Scopes "Policy.Read.All" -NoWelcome -ErrorAction Stop
+        $connectParams.Interactive = $true
+        $connectParams.Scopes = @("Policy.Read.All")
     }
     else {
-        Connect-MgGraph -TenantId $TenantId -ClientId $ClientId -CertificateThumbprint $CertificateThumbprint -NoWelcome -ErrorAction Stop
+        $connectParams.ClientId = $ClientId
+        $connectParams.CertificateThumbprint = $CertificateThumbprint
     }
+
+    Connect-GraphSession @connectParams | Out-Null
 
     Write-Verbose "Connected to Microsoft Graph"
 
@@ -161,7 +169,7 @@ try {
     Write-Verbose "Querying CA policies with session controls..."
 
     $policies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop | Where-Object {
-        $_.State -eq "enabled" -and
+        $_.State -in @("enabled", "enabledForReportingButNotEnforced") -and
         $_.SessionControls -and
         $_.SessionControls.SignInFrequency
     }
@@ -363,7 +371,7 @@ try {
         fsi_pimrequireauthcontext  = $null
         fsi_isactive               = $true
         fsi_capturedon             = $capturedOn
-        fsi_rawjson                = ($sessionSettings | ConvertTo-Json -Depth 5 -Compress)
+        fsi_rawjson                = (ConvertTo-Json -InputObject @($sessionSettings) -Depth 5 -Compress)
     } | ConvertTo-Json
 
     $createResponse = Invoke-RestMethod `
@@ -398,11 +406,6 @@ catch {
     throw
 }
 finally {
-    # Disconnect from Graph
-    try {
-        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-    }
-    catch {
-        # Ignore disconnect errors
-    }
+    # Disconnect from Graph using shared helper
+    Disconnect-GraphSession
 }

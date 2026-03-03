@@ -31,51 +31,31 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Dataverse (Scope Registry)                    │
 ├────────────────┬────────────────┬────────────────┬──────────────┤
-│ Agent Scope    │ Access Log     │ Drift          │ Expansion    │
-│ Definition     │ (aggregated)   │ Violation      │ Request      │
+│ Agent Scope    │ Scope Items    │ Drift          │ Expansion    │
+│ Definition     │ (per-resource) │ Violation      │ Request      │
 └────────────────┴────────────────┴────────────────┴──────────────┘
                               ▲
                               │ Data Sources
                               │
-┌─────────────┬───────────────┬───────────────┬───────────────────┐
-│ Unified     │ Defender      │ SharePoint    │ Dataverse         │
-│ Audit Log   │ CloudAppEvents│ Audit         │ Audit             │
-└─────────────┴───────────────┴───────────────┴───────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Unified Audit Log (CopilotInteraction events, RecordType 261) │
+│ ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ │
+│ Future: CloudAppEvents · SharePoint Audit · Dataverse Audit   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Scope Components
 
-### Connectors
+Each agent scope record (`fsi_agentscope`) defines allowed resources as JSON arrays:
 
-| Component | Description |
-|-----------|-------------|
-| **Allowed Connectors** | List of permitted connector types |
-| **Blocked Connectors** | Explicitly denied connectors |
-| **Premium Connectors** | Track premium connector usage |
+| Component | Field | Description |
+|-----------|-------|-------------|
+| **Connectors** | `fsi_allowedconnectors` | JSON array of permitted connector types |
+| **SharePoint Sites** | `fsi_allowedsites` | JSON array of allowed site URLs |
+| **Dataverse Tables** | `fsi_allowedtables` | JSON array of allowed table logical names |
+| **External APIs** | `fsi_allowedapis` | JSON array of approved API endpoint URLs |
 
-### SharePoint Sites
-
-| Component | Description |
-|-----------|-------------|
-| **Allowed Sites** | Specific site URLs the agent can access |
-| **Site Collections** | Entire collections if broader access needed |
-| **Excluded Paths** | Specific folders/libraries to exclude |
-
-### Dataverse Tables
-
-| Component | Description |
-|-----------|-------------|
-| **Allowed Tables** | Specific tables agent can query |
-| **Row-Level Scope** | Optional filters on allowed rows |
-| **Column Restrictions** | Specific columns if needed |
-
-### External APIs
-
-| Component | Description |
-|-----------|-------------|
-| **Allowed Endpoints** | Approved external API URLs |
-| **HTTP Methods** | Permitted methods (GET, POST, etc.) |
-| **Authentication** | Expected auth patterns |
+> **Note:** The detection flows compare accessed resources against these aggregate allowed-list columns. Sub-resource controls (blocked connectors, row-level scope, column restrictions, HTTP method filtering) are not currently implemented.
 
 ## Prerequisites
 
@@ -86,14 +66,14 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
 | **Power Platform Premium** | Power Automate flows |
 | **Dataverse capacity** | Scope and violation storage |
 | **Microsoft 365 E5** or **E5 Compliance** | Unified Audit Log access |
-| **Defender for Cloud Apps** | CloudAppEvents access |
+| ~~**Defender for Cloud Apps**~~ | ~~CloudAppEvents access~~ *(not currently used — future roadmap)* |
 
 ### Permissions
 
 | Role | Required For |
 |------|--------------|
 | **Purview Compliance Admin** | Audit log queries |
-| **Security Reader** | Defender CloudAppEvents |
+| ~~**Security Reader**~~ | ~~Defender CloudAppEvents~~ *(not currently used — future roadmap)* |
 | **System Administrator** | Dataverse table creation |
 
 ## Quick Start
@@ -120,10 +100,10 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
 | `fsi_SDM_ClientId` | Azure AD application client ID (used by scripts; flows use connection references) |
-| `fsi_SDM_ClientSecret` | Azure AD application client secret (used by scripts; flows use connection references) |
+| `fsi_SDM_ClientSecret` | Azure AD application client secret — uses **Secret** type (Azure Key Vault-backed); used by scripts only, flows use connection references |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on fsi_agentscope (default: 10002) |
-| `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.protection.outlook.com` for DoD) |
+| `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.office.eaglex.ic.gov` for GCC IC, `https://manage.protection.outlook.com` for DoD) |
 
 ### 3. Configure Connection References
 
@@ -180,16 +160,19 @@ Connect each connection reference to an appropriate connection:
 | **New SharePoint Site** | Medium | Agent accesses HR site outside scope |
 | **New Dataverse Table** | Medium | Agent queries Contacts when only Accounts allowed |
 | **New External API** | High | Agent calls undeclared third-party API |
-| **Scope Expansion** | Low | Agent scope was formally expanded |
+| **Expired Scope Item** | Medium | A scope entry's validity period has lapsed |
+| **No Baseline Defined** | High | Agent has no baseline record in Dataverse |
 
 ### Detection Sources
 
-| Source | Data Captured |
-|--------|---------------|
-| **Unified Audit Log** | CopilotInteraction events with connector details |
-| **CloudAppEvents** | Defender detections including shadow IT |
-| **SharePoint Audit** | Site/library access events |
-| **Dataverse Audit** | Table read/write operations |
+| Source | Data Captured | Status |
+|--------|---------------|--------|
+| **Unified Audit Log** | CopilotInteraction events (RecordType 261) with connector, site, table, and API details | **Active** |
+| **CloudAppEvents** | Defender detections including shadow IT | *Future roadmap* |
+| **SharePoint Audit** | Site/library access events | *Future roadmap* |
+| **Dataverse Audit** | Table read/write operations | *Future roadmap* |
+
+> **Note:** The SDM-DriftDetector flow currently queries only the Office 365 Management API (`Audit.General` content type filtered to RecordType 261 — CopilotInteraction). CloudAppEvents, SharePoint Audit, and Dataverse Audit are planned for future releases.
 
 ### Detection Frequency
 
@@ -250,6 +233,10 @@ If Denied: Remediate Access → Close Violation
 | [1.4 - Advanced Connector Policies](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-for-copilot-studio.md) | DLP connector classification |
 | [1.5 - DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) | Sensitive data protection |
 | [1.8 - Runtime Protection](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.8-runtime-protection-with-defender-for-cloud-apps.md) | Defender integration |
+
+## Known Limitations
+
+- **Detection telemetry not persisted:** The `Compose_Detection_Summary` action builds operational telemetry (events processed, violations created, source availability) each cycle but does not persist it to Dataverse. Detection metrics are only available through Power Automate's 28-day run history. Organizations with FSI audit retention requirements should export flow run data to a long-term store (see [Flow Configuration > Known Limitations](docs/flow-configuration.md)).
 
 ## Version History
 

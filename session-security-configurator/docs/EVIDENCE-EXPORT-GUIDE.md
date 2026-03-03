@@ -117,7 +117,7 @@ session-security-evidence-Zone3-20260209-143022.json.sha256
   "metadata": {
     "exportedAt": "2026-02-09T14:30:22Z",
     "scope": "SessionSecurity",
-    "zone": "Zone 3",
+    "zone": "Zone3",
     "fromDate": "2026-01-10T00:00:00Z",
     "toDate": "2026-02-09T23:59:59Z",
     "exportVersion": "1.0.0",
@@ -135,14 +135,15 @@ session-security-evidence-Zone3-20260209-143022.json.sha256
     {
       "name": "Zone 3 Session Controls",
       "runId": "run-20260209-060000",
-      "zone": "Zone 3",
+      "zone": "Zone3",
       "severity": "Passed",
       "validationType": "SessionControls",
-      "signInFrequencyMinutes": 60,
-      "authStrength": "Phishing-resistant MFA",
-      "requireCompliantDevice": true,
+      "rawValue": "SignInFrequency=60min",
       "reason": "Session controls match baseline configuration",
-      "timestamp": "2026-02-09T06:00:00Z"
+      "remediationHint": null,
+      "timestamp": "2026-02-09T06:00:00Z",
+      "checkCount": 1,
+      "baselineId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     }
   ]
 }

@@ -76,7 +76,7 @@
     {
       "schemaName": "fsi_SDM_ManagementApiEndpoint",
       "displayName": "Management API Endpoint",
-      "description": "Office 365 Management API base URL. Use https://manage.office.com for commercial, https://manage.office365.us for GCC High, or https://manage.protection.outlook.com for DoD.",
+      "description": "Office 365 Management API base URL. Use https://manage.office.com for commercial, https://manage.office365.us for GCC High, https://manage.office.eaglex.ic.gov for GCC IC, or https://manage.protection.outlook.com for DoD.",
       "type": "String",
       "defaultValue": "https://manage.office.com",
       "isRequired": false,

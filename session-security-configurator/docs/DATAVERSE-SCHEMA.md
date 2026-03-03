@@ -52,7 +52,7 @@ Immutable audit log of all validation runs.
 | fsi_remediationhint | String (2000) | Suggested fix for alerting |
 | fsi_timestamp | DateTime | Validation execution timestamp |
 | fsi_checkcount | Integer | Number of individual checks |
-| fsi_baselineid | String (200) | Reference to baseline used for comparison |
+| fsi_baselineid | String (200) | Timestamp of the baseline validation run used for drift comparison (populated from Parse_Results Drift.BaselineDate) |
 | createdby | Lookup (User) | System account that created the record |
 | createdon | DateTime | Record creation timestamp |
 
@@ -179,7 +179,7 @@ After deployment, configure the security role for `fsi_ValidationHistory` to rem
 
 - **SessionBaseline** → Referenced by validation scripts for baseline comparison
 - **ValidationHistory** → Written by validation flow, read by evidence export
-- **DriftViolation** → Created when validation detects threshold breach
+- **DriftViolation** → Schema is provisioned for operator acknowledgment workflows. **Note:** No script or flow currently writes records to this table; it is reserved for future drift violation tracking and manual operator workflows.
 
 ## Related Documentation
 

@@ -327,8 +327,8 @@ Environment Variables (optional):
         parser.error("--client-id is required (used for app registration in both interactive and service principal modes)")
 
     if not args.interactive and not args.client_secret:
-        if not os.environ.get("AZURE_CLIENT_SECRET"):
-            parser.error("Must specify either --interactive or provide --client-secret / AZURE_CLIENT_SECRET for service principal authentication")
+        if not os.environ.get("SSC_CLIENT_SECRET"):
+            parser.error("Must specify either --interactive or provide --client-secret / SSC_CLIENT_SECRET for service principal authentication")
 
     # Validate mutual exclusivity of selective deployment flags
     selective_flags = [args.tables_only, args.vars_only, args.refs_only]

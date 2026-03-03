@@ -11,7 +11,6 @@ Requirements for deploying the Scope Drift Monitor.
 | **Power Platform Premium** | Power Automate detection flows |
 | **Dataverse capacity** | Scope and violation storage |
 | **Microsoft 365 E5** or **E5 Compliance** | Unified Audit Log access |
-| **Defender for Cloud Apps** | CloudAppEvents for shadow access detection |
 
 ---
 
@@ -22,7 +21,6 @@ Requirements for deploying the Scope Drift Monitor.
 | Role | Required For |
 |------|--------------|
 | **Purview Compliance Admin** | Audit log queries |
-| **Security Reader** | Defender CloudAppEvents |
 
 ### Power Platform Roles
 

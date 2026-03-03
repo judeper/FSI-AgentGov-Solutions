@@ -188,7 +188,7 @@ Write-Host ""
 # Dot-source required helper scripts
 $scriptRoot = $PSScriptRoot
 try {
-    . "$scriptRoot/private/Get-SSCValidationResults.ps1"
+    . "$scriptRoot\private\Get-SSCValidationResults.ps1"
     Write-Verbose "Loaded Get-SSCValidationResults helper."
 }
 catch {
