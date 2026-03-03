@@ -9,7 +9,7 @@ Cloud Flow template for daily compliance detection of inactivity timeout setting
 
 This solution provides a Power Automate cloud flow that performs daily scans of Power Platform environments to detect non-compliant inactivity timeout configurations. The flow identifies environments where timeout settings do not meet governance zone requirements and generates compliance reports.
 
-> **Note:** PowerShell remediation scripts remain in FSI-AgentGov under `scripts/governance/`.
+> **Note:** PowerShell remediation scripts are maintained separately in the FSI-AgentGov repository and are not included in this solution package. The primary remediation script is [`Set-InactivityTimeout.ps1`](https://github.com/judeper/FSI-AgentGov/blob/main/scripts/governance/Set-InactivityTimeout.ps1) located at `scripts/governance/` in FSI-AgentGov.
 
 ## Related Controls
 

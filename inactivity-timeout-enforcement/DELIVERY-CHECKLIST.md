@@ -152,6 +152,7 @@ Offer these follow-up services:
 
 2. **Managed Service Identity Setup:**
    - MSI must have **Power Platform Administrator** role
+   - To assign the role: In the **Microsoft 365 Admin Center**, open **Roles → Power Platform Administrator → Members**, and add the MSI service principal as a member
    - BAP Admin API access is critical for privacy settings retrieval
    - Without proper MSI permissions, all environments will show **Unknown** status with Unauthorized errors
 
@@ -179,6 +180,8 @@ Provide this checklist to customer for post-deployment validation:
 □ Environment policies populated for all production environments
 
 □ Managed Service Identity configured with Power Platform Administrator role
+  □ MSI enabled in Azure Portal → Managed Identities
+  □ MSI service principal added as member in Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members
 
 □ Flow imported successfully and connection references configured
 
@@ -193,6 +196,7 @@ Provide this checklist to customer for post-deployment validation:
   □ No API errors in error log table
 
 □ Remediation process documented for IT team
+  □ IT team aware of Set-InactivityTimeout.ps1 script in FSI-AgentGov (scripts/governance/) for automated remediation
 
 □ Monthly compliance review scheduled
 ```
