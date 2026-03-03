@@ -21,6 +21,7 @@ Stores captured access configuration snapshots for each Power Platform environme
 | `fsi_captured_by` | String | UPN or service principal that captured the baseline |
 | `fsi_captured_at` | DateTime | Timestamp of baseline capture (UTC) |
 | `fsi_is_active` | Boolean | Whether this is the current active baseline |
+| `fsi_raw_json` | Memo | Full JSON payload of access settings at capture time |
 
 ### fsi_accessvalidationhistory
 
@@ -30,6 +31,8 @@ Immutable audit trail of validation run results. Each record represents one comp
 |--------|------|-------------|
 | `fsi_name` | String | Run display name (auto-generated) |
 | `fsi_run_id` | String | Unique GUID identifying the validation run |
+| `fsi_zone` | OptionSet | Governance zone at time of validation |
+| `fsi_severity` | OptionSet | Overall validation result severity |
 | `fsi_validation_time` | DateTime | Timestamp of validation execution (UTC) |
 | `fsi_total_environments` | Integer | Number of environments scanned |
 | `fsi_compliant_count` | Integer | Environments meeting zone requirements |
@@ -55,6 +58,11 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_regulatory_context` | String | Applicable regulations (e.g., FINRA 4511, SOX 404) |
 | `fsi_detected_at` | DateTime | Timestamp of violation detection (UTC) |
 | `fsi_run_id` | String | Links to fsi_accessvalidationhistory run |
+| `fsi_acknowledged` | Boolean | Whether an administrator has acknowledged this violation |
+| `fsi_acknowledged_by` | String | Identity that acknowledged the violation |
+| `fsi_acknowledged_on` | DateTime | When the violation was acknowledged (UTC) |
+| `fsi_resolved_at` | DateTime | When the violation was resolved (UTC) |
+| `fsi_notes` | Memo | Administrator notes on this violation |
 
 ## Option Sets (Shared with ACV)
 

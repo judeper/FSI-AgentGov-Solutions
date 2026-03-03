@@ -156,11 +156,25 @@ function Get-AAMValidationResults {
         while ($nextLink) {
             Write-Verbose "Fetching page: $nextLink"
 
-            $response = Invoke-RestMethod `
-                -Uri $nextLink `
-                -Method Get `
-                -Headers $headers `
-                -ErrorAction Stop
+            $retryCount = 0
+            $maxRetries = 3
+            do {
+                try {
+                    $response = Invoke-RestMethod `
+                        -Uri $nextLink `
+                        -Method Get `
+                        -Headers $headers `
+                        -ErrorAction Stop
+                    break
+                }
+                catch {
+                    $retryCount++
+                    if ($retryCount -ge $maxRetries) { throw }
+                    $backoffSeconds = [math]::Pow(2, $retryCount)
+                    Write-Verbose "Transient error fetching validations (attempt $retryCount/$maxRetries). Retrying in ${backoffSeconds}s: $_"
+                    Start-Sleep -Seconds $backoffSeconds
+                }
+            } while ($retryCount -lt $maxRetries)
 
             if ($response.value) {
                 $allValidations += $response.value
@@ -213,11 +227,25 @@ function Get-AAMValidationResults {
             while ($nextLink) {
                 Write-Verbose "Fetching violations page: $nextLink"
 
-                $response = Invoke-RestMethod `
-                    -Uri $nextLink `
-                    -Method Get `
-                    -Headers $headers `
-                    -ErrorAction Stop
+                $vRetryCount = 0
+                $vMaxRetries = 3
+                do {
+                    try {
+                        $response = Invoke-RestMethod `
+                            -Uri $nextLink `
+                            -Method Get `
+                            -Headers $headers `
+                            -ErrorAction Stop
+                        break
+                    }
+                    catch {
+                        $vRetryCount++
+                        if ($vRetryCount -ge $vMaxRetries) { throw }
+                        $backoffSeconds = [math]::Pow(2, $vRetryCount)
+                        Write-Verbose "Transient error fetching violations (attempt $vRetryCount/$vMaxRetries). Retrying in ${backoffSeconds}s: $_"
+                        Start-Sleep -Seconds $backoffSeconds
+                    }
+                } while ($vRetryCount -lt $vMaxRetries)
 
                 if ($response.value) {
                     $allViolations += $response.value

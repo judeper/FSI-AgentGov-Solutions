@@ -339,21 +339,22 @@ try {
                 }
 
                 # Compare 3 key settings
+                # Normalize null to empty string so null-vs-'' from Dataverse vs API does not produce false drift
                 $settingsToCheck = @(
                     @{
                         Name     = 'bot-limitSharingMode'
-                        Baseline = $bl.fsi_bot_limit_sharing_mode
-                        Current  = $env.BotLimitSharingMode
+                        Baseline = if ($null -eq $bl.fsi_bot_limit_sharing_mode) { '' } else { [string]$bl.fsi_bot_limit_sharing_mode }
+                        Current  = if ($null -eq $env.BotLimitSharingMode) { '' } else { [string]$env.BotLimitSharingMode }
                     },
                     @{
                         Name     = 'bot-authoringSharingDisabled'
-                        Baseline = [string]$bl.fsi_bot_authoring_sharing_disabled
-                        Current  = [string]$env.BotAuthoringSharingDisabled
+                        Baseline = if ($null -eq $bl.fsi_bot_authoring_sharing_disabled) { '' } else { [string]$bl.fsi_bot_authoring_sharing_disabled }
+                        Current  = if ($null -eq $env.BotAuthoringSharingDisabled) { '' } else { [string]$env.BotAuthoringSharingDisabled }
                     },
                     @{
                         Name     = 'bot-publishedBotLimitSharingMode'
-                        Baseline = $bl.fsi_bot_published_bot_limit_sharing_mode
-                        Current  = $env.BotPublishedLimitSharingMode
+                        Baseline = if ($null -eq $bl.fsi_bot_published_bot_limit_sharing_mode) { '' } else { [string]$bl.fsi_bot_published_bot_limit_sharing_mode }
+                        Current  = if ($null -eq $env.BotPublishedLimitSharingMode) { '' } else { [string]$env.BotPublishedLimitSharingMode }
                     }
                 )
 
