@@ -1,0 +1,8 @@
+{
+  "domainFacts": [
+    "Null-to-empty-string normalization in the drift comparison (Start-AccessValidationRunbook.ps1) is intentional design to handle the Dataverse null vs API empty-string discrepancy. Dataverse returns null for unset option-set fields; the external API returns empty string. Normalizing both sides to empty string before comparison prevents false drift alerts on fields that have never been set.",
+    "The $script:TokenExpiry is set to 55 minutes from now when an AccessToken is provided to Connect-AAMDataverse. This is a conservative estimate of a caller-supplied token's remaining validity, not a freshly issued token. The 55-minute value is intentional — it provides a safety margin without requiring the caller to specify expiry.",
+    "The AAM solution uses Dataverse for persistent storage (baselines, history, violations tables). Direct OData REST calls to Dataverse endpoints with pagination are the correct and expected pattern — this is not legacy code.",
+    "The fsi_accessbaselines, fsi_accessviolations, and fsi_accessvalidationhistory are all Dataverse tables belonging to this solution. Schema columns for these tables are documented in docs/SCHEMA.md."
+  ]
+}
