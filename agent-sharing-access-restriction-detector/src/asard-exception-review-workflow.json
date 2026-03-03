@@ -61,7 +61,12 @@
             },
             "timeZone": "UTC"
           },
-          "description": "Daily scheduled trigger at 08:00 UTC to review exception expiration dates"
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "description": "Daily scheduled trigger at 08:00 UTC to review exception expiration dates. concurrency=1 prevents overlapping daily runs."
         }
       },
       "actions": {
