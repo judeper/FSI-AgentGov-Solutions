@@ -53,6 +53,8 @@ Registry of all RAG knowledge sources.
 | 4 | Stale |
 | 5 | Archived |
 
+> **Note:** Status 2 ("Pending Validation") is defined but not currently set by any code path. It could be used to mark sources at validation start and transition to Active (1) or Validation Failed (3) on completion, providing observability for in-progress validations and preventing concurrent validation of the same source. This is reserved for a future release.
+
 ### Choice: fsi_validationfrequency
 
 | Value | Label |

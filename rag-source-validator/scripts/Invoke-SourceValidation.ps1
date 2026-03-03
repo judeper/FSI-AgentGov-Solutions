@@ -183,8 +183,12 @@ function Get-SharePointContent {
         # charset-decoded to a string, which would produce incorrect hashes on PS 7.0–7.3.
         $response.RawContentStream.Position = 0
         $memStream = [System.IO.MemoryStream]::new()
-        $response.RawContentStream.CopyTo($memStream)
-        return ,[byte[]]$memStream.ToArray()
+        try {
+            $response.RawContentStream.CopyTo($memStream)
+            return ,[byte[]]$memStream.ToArray()
+        } finally {
+            $memStream.Dispose()
+        }
     } catch [System.Net.Http.HttpRequestException], [Microsoft.PowerShell.Commands.HttpResponseException] {
         throw
     } catch {
@@ -210,11 +214,11 @@ function Get-KnowledgeSources {
         $filter = "fsi_knowledgesourceid eq $SourceId and fsi_status eq 1"
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$filter=$filter"
     while ($nextLink) {
         $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
-        $results += $response.value
+        $results.AddRange([object[]]$response.value)
         $nextLink = $response.'@odata.nextLink'
     }
     return $results
@@ -353,6 +357,18 @@ Write-Host "Loading knowledge sources..." -ForegroundColor Gray
 $sources = Get-KnowledgeSources -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $SourceId
 Write-Host "  Found $($sources.Count) sources to validate"
 
+if ($sources.Count -eq 0) {
+    if ($SourceId) {
+        Write-Warning "Source '$SourceId' not found or not in Active status. Sources transition to non-Active status (Validation Failed, Stale) after failures and must be manually reset to Active (1) before they are included in validation runs."
+        Write-Log "WARNING: No active source found for SourceId '$SourceId'. Source may have non-Active status from a prior validation failure." -Level "WARN"
+        exit 2
+    } else {
+        Write-Warning "No active sources found. Sources with non-Active status (Validation Failed=3, Stale=4) are excluded from validation. Reset source status to Active (1) in the Dataverse model-driven app to re-include them."
+        Write-Log "WARNING: No active sources found. Check for sources with non-Active status that may need to be reset." -Level "WARN"
+        exit 2
+    }
+}
+
 # Validate each source
 $passed = 0
 $failed = 0
@@ -380,7 +396,7 @@ foreach ($source in $sources) {
                 $content = Get-SharePointContent -Token (Get-ValidToken -Scope $graphScope) -Uri $source.fsi_sourceuri
             }
             4 { # Dataverse Table
-                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Marking as 'RequiresManualReview'."
+                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Marking as 'Not Implemented'."
                 $result.fsi_result = 7  # Skipped - Not Implemented
                 $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
@@ -391,12 +407,12 @@ foreach ($source in $sources) {
                 $content = $null
             }
             default {
-                Write-Warning "Source type $($source.fsi_sourcetype) not yet implemented for source '$($source.fsi_name)'. Marking as 'Not Implemented'."
-                $result.fsi_result = 7  # Skipped - Not Implemented
+                Write-Warning "Source type $($source.fsi_sourcetype) is unsupported for source '$($source.fsi_name)'. Marking as 'Unsupported Type'."
+                $result.fsi_result = 8  # Skipped - Unsupported Type
                 $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
-                Write-Host "  SKIPPED - Source type not yet implemented" -ForegroundColor Yellow
-                Write-Log "SKIPPED: $($source.fsi_name) - source type $($source.fsi_sourcetype) not yet implemented" -Level "WARN"
+                Write-Host "  SKIPPED - Unsupported source type" -ForegroundColor Yellow
+                Write-Log "SKIPPED: $($source.fsi_name) - unsupported source type $($source.fsi_sourcetype)" -Level "WARN"
                 $skipped++
                 $content = $null
             }
@@ -516,7 +532,7 @@ foreach ($source in $sources) {
     $result.fsi_duration = [int]((Get-Date) - $startTime).TotalMilliseconds
 
     # Update fsi_knowledgesource.fsi_status to reflect validation outcome
-    $statusMap = @{ 1 = 1; 2 = 3; 4 = 4; 5 = 3; 6 = 3 }  # result → status: Passed→Active, Mismatch/Unavail/Error→Failed, Stale→Stale
+    $statusMap = @{ 1 = 1; 2 = 3; 3 = 3; 4 = 4; 5 = 3; 6 = 3 }  # result → status: Passed→Active, Mismatch/SchemaDrift/Unavail/Error→Failed, Stale→Stale
     $newStatus = $statusMap[[int]$result.fsi_result]
     if ($newStatus) {
         try {

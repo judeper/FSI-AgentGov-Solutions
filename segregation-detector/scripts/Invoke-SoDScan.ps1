@@ -157,6 +157,7 @@ function Get-PowerPlatformRoleAssignments {
         $envUri = $envResponse.nextLink
     } while ($envUri)
 
+    $skippedCount = 0
     foreach ($env in $environments) {
         $envId = $env.name
         $envDisplayName = $env.properties.displayName
@@ -179,9 +180,13 @@ function Get-PowerPlatformRoleAssignments {
                 $roleUri = $roleResponse.nextLink
             } catch {
                 Write-Verbose "  Skipping environment $envDisplayName role query: $($_.Exception.Message)"
+                $skippedCount++
                 $roleUri = $null
             }
         } while ($roleUri)
+    }
+    if ($skippedCount -gt 0) {
+        Write-Warning "$skippedCount of $($environments.Count) environment(s) failed Power Platform role queries — results may be incomplete"
     }
 
     return $assignments
@@ -569,8 +574,8 @@ foreach ($userId in $userRoleMap.Keys) {
                     fsi_userid = $user.UserPrincipalName
                     fsi_userobjectid = $userId
                     fsi_userdisplayname = $user.DisplayName
-                    fsi_roleaassignment = $match.RoleA.RoleName
-                    fsi_rolebassignment = $match.RoleB.RoleName
+                    fsi_roleaassignment = $(if ($match.RoleA.Context -eq 3) { $match.RoleA.Assignment } else { $match.RoleA.RoleName })
+                    fsi_rolebassignment = $(if ($match.RoleB.Context -eq 3) { $match.RoleB.Assignment } else { $match.RoleB.RoleName })
                     fsi_status = 1  # Open
                     fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
                 }

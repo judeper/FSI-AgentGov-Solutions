@@ -241,6 +241,27 @@ For documents with references, validates all links are accessible.
 | Hash mismatch on first run | No baseline captured for the source | Run `Invoke-SourceValidation.ps1` — baselines are captured automatically on first run |
 | Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register via the model-driven app or Dataverse API |
 | Stale content alerts | Source not updated within freshness threshold | Review source update schedule; adjust threshold if appropriate |
+| Source excluded from validation | Source status changed to Validation Failed (3) or Stale (4) by a prior run | Reset source status to Active (1) in the model-driven app or via Dataverse API. See [Source Status Lifecycle](#source-status-lifecycle) below. |
+
+### Source Status Lifecycle
+
+When validation detects a failure (hash mismatch, source unavailable, unexpected error) or staleness, the script updates the source's `fsi_status` to **Validation Failed** (3) or **Stale** (4). On subsequent runs, the OData query filters to `fsi_status eq 1` (Active only), so **non-Active sources are silently excluded from all future validation runs** until an operator manually resets their status to Active (1).
+
+This design prevents repeated alerts for known-broken sources but has compliance implications:
+
+| Concern | Detail |
+|---------|--------|
+| **Transient failures** | A temporary SharePoint outage permanently removes the source from automated validation with no automatic retry. |
+| **SEC 17a-4 / FINRA 4511** | Sources that drop out of monitoring create compliance gaps if not promptly re-activated. |
+| **`-SourceId` targeting** | If a specific source is targeted with `-SourceId` but has non-Active status, the script exits with code 2 and a warning instead of silently reporting success. |
+
+**Recommended mitigations:**
+
+1. **Monitor exit codes** — exit code 2 indicates no sources were validated (distinct from exit code 1 for validation failures)
+2. **Scheduled status audit** — periodically query Dataverse for sources with `fsi_status ne 1` and alert on sources that have been non-Active for more than a defined period
+3. **Review validation logs** — the script logs `WARNING` entries when zero sources are found, including guidance on status resets
+
+> **Note:** Automatic retry or re-validation of non-Active sources is not currently implemented. This requires policy decisions (retry count, backoff strategy, whether to include non-Active sources in a secondary pass) and is planned for a future release.
 
 ### Logs
 

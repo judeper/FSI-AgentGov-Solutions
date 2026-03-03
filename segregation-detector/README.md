@@ -299,6 +299,7 @@ For supervision queue assignments:
 | **Unsupported role contexts** | Entra ID App Role assignments (context 2) and Custom Application Roles (context 5) are not queried. Rules targeting these contexts will not match. |
 | **Group-based role assignments** | Entra ID role assignments through security groups are not expanded. Only direct user assignments are evaluated. Users who inherit conflicting roles via group membership will not be detected. |
 | **No auto-reconciliation** | Violations are not automatically closed when the underlying role conflict is removed. Stale violations accumulate with status "Open" until manually resolved. |
+| **Expired exception blindness** | Violations with approved exceptions (status 4) are not re-flagged after the exception's expiration date passes. Periodically query `fsi_sodexception` for records where `fsi_expirationdate < today` and `fsi_status = 4` to identify stale exceptions requiring review. |
 
 ## Version History
 

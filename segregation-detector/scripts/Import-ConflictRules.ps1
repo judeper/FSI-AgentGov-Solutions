@@ -379,11 +379,19 @@ $skipped = 0
 foreach ($rule in $rulesToImport) {
     # Check for duplicates by role pair and category
     $isDuplicate = $existingRules | Where-Object {
-        $_.fsi_rolea -eq $rule.fsi_rolea -and
-        $_.fsi_roleb -eq $rule.fsi_roleb -and
-        $_.fsi_category -eq $rule.fsi_category -and
-        $_.fsi_roleacontext -eq $rule.fsi_roleacontext -and
-        $_.fsi_rolebcontext -eq $rule.fsi_rolebcontext
+        (
+            $_.fsi_rolea -eq $rule.fsi_rolea -and
+            $_.fsi_roleb -eq $rule.fsi_roleb -and
+            $_.fsi_category -eq $rule.fsi_category -and
+            $_.fsi_roleacontext -eq $rule.fsi_roleacontext -and
+            $_.fsi_rolebcontext -eq $rule.fsi_rolebcontext
+        ) -or (
+            $_.fsi_rolea -eq $rule.fsi_roleb -and
+            $_.fsi_roleb -eq $rule.fsi_rolea -and
+            $_.fsi_category -eq $rule.fsi_category -and
+            $_.fsi_roleacontext -eq $rule.fsi_rolebcontext -and
+            $_.fsi_rolebcontext -eq $rule.fsi_roleacontext
+        )
     }
     if ($isDuplicate) {
         $skipped++
