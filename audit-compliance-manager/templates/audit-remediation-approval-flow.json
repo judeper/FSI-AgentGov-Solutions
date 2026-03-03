@@ -90,7 +90,7 @@
           {
             "name": "GovernanceLeadEmail",
             "type": "string",
-            "value": "governance-lead@contoso.com"
+            "value": "governance-lead@example.com"
           }
         ]
       },
@@ -162,7 +162,7 @@
           {
             "name": "NotificationRecipients",
             "type": "string",
-            "value": "governance-lead@contoso.com;compliance-team@contoso.com"
+            "value": "governance-lead@example.com;compliance-team@example.com"
           }
         ]
       },
