@@ -216,6 +216,9 @@ SSC validates six session security dimensions:
 | Script | Purpose |
 |--------|---------|
 | ssc_client.py | Dataverse Web API client used by deployment scripts |
+| create_dataverse_schema.py | Creates Dataverse tables, columns, and option sets for SSC |
+| create_environment_variables.py | Provisions Dataverse environment variables for SSC |
+| create_connection_references.py | Creates connection references for SSC connectors |
 
 ## Documentation
 

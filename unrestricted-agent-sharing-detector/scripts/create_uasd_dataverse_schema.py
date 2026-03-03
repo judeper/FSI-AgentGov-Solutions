@@ -49,6 +49,7 @@ OPTIONSETS = {
             {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "UNAPPROVED_GROUP", "LanguageCode": 1033}]}},
             {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "EXCESSIVE_INDIVIDUAL", "LanguageCode": 1033}]}},
             {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "CROSS_TENANT_ACCESS", "LanguageCode": 1033}]}},
+            {"Value": 100000005, "Label": {"LocalizedLabels": [{"Label": "POLICY_VIOLATION", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_violationstatus": {

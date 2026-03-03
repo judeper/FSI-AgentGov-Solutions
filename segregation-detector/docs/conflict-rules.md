@@ -15,16 +15,16 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 | MC-001 | Agent Developer | Pipeline Approver | Critical | Prevents self-approval of agent changes |
 | MC-002 | Solution Developer | Solution Promoter | Critical | Requires independent promotion review |
 | MC-003 | Flow Creator | Flow Approver | High | Enforces flow change review |
-| MC-004 | Connection Creator | Connection Approver | High | Ensures connection review |
-| MC-005 | DLP Policy Author | DLP Policy Approver | Critical | Prevents self-exemption |
+| MC-004 | DLP Policy Author | DLP Policy Approver | Critical | Prevents self-exemption |
+| MC-005 | Connection Creator | Connection Approver | High | Ensures connection review |
 
 ### Segregation Rules (Category 2)
 
 | Rule ID | Role A | Role B | Severity | Description |
 |---------|--------|--------|----------|-------------|
-| SG-001 | Environment Admin | Agent Publisher (same env) | Critical | Admin shouldn't publish own work |
-| SG-002 | Security Admin | Agent Developer | High | Security role separation |
-| SG-003 | Compliance Admin | Agent Developer | High | Compliance role separation |
+| SG-001 | System Administrator | Agent Publisher (same env) | Critical | Admin shouldn't publish own work |
+| SG-002 | Security Administrator | Agent Developer | High | Security role separation |
+| SG-003 | Compliance Administrator | Agent Developer | High | Compliance role separation |
 | SG-004 | Environment Creator | Environment Approver | High | Environment lifecycle separation |
 | SG-005 | Data Steward | Data Consumer (sensitive) | Medium | Data access separation |
 
@@ -32,10 +32,12 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 
 | Rule ID | Role A | Role B | Severity | Description |
 |---------|--------|--------|----------|-------------|
-| PA-001 | Global Administrator | Any Maker Role | Critical | Global admin shouldn't be maker |
-| PA-002 | Power Platform Admin | Regular User (any env) | High | Admin/user separation |
+| PA-001 | Global Administrator | Agent Developer | Critical | Global admin shouldn't be maker |
+| PA-002 | Power Platform Admin | Basic User | High | Admin/user separation |
 | PA-003 | Privileged Role Admin | Application Admin | Critical | Privilege escalation prevention |
-| PA-004 | Break-Glass Account | Any Non-Emergency Use | Critical | Emergency access only |
+| PA-004 | Break-Glass Account | Basic User | Critical | Emergency access only |
+
+> **Note:** "Break-Glass Account" is not a built-in Entra ID directory role. Organizations must create a custom directory role with this exact display name for this rule to match.
 
 ---
 
@@ -43,27 +45,23 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 
 ### Rule Structure
 
+Each rule uses the `fsi_*` Dataverse field names. When importing via `-RuleFile`, provide a JSON array of rule objects:
+
 ```json
-{
-  "ruleId": "MC-001",
-  "name": "Agent Developer cannot be Pipeline Approver",
-  "category": "Maker/Checker",
-  "roleA": {
-    "name": "Agent Developer",
-    "context": "Dataverse Security Role",
-    "scope": "Environment"
-  },
-  "roleB": {
-    "name": "Pipeline Approver",
-    "context": "Dataverse Security Role",
-    "scope": "Same Environment"
-  },
-  "severity": "Critical",
-  "autoBlock": true,
-  "allowException": true,
-  "exceptionRequires": ["Manager", "Compliance"],
-  "description": "Prevents self-approval of agent changes in deployment pipelines"
-}
+[
+  {
+    "fsi_name": "Agent Developer cannot be Pipeline Approver",
+    "fsi_category": 1,
+    "fsi_rolea": "Agent Developer",
+    "fsi_roleacontext": 4,
+    "fsi_roleb": "Pipeline Approver",
+    "fsi_rolebcontext": 4,
+    "fsi_severity": 1,
+    "fsi_enabled": true,
+    "fsi_allowexception": true,
+    "fsi_description": "Prevents self-approval of agent changes in deployment pipelines"
+  }
+]
 ```
 
 ### Scope Definitions
@@ -158,7 +156,7 @@ To disable a rule, update it directly in the Dataverse `fsi_conflictrule` table 
 Test rules without creating violations:
 
 ```powershell
-.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -DryRun -Verbose
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -DryRun
 ```
 
 ### Verbose Dry Run

@@ -8,13 +8,17 @@
     1. Enumerates Power Platform environments
     2. Queries each environment's Dataverse for Copilot Studio agents (bot table)
     3. Evaluates each agent's sharing configuration against zone-based policy
-    4. Detects: public sharing, org-wide access, external sharing, policy violations
+    4. Detects: public sharing, org-wide access, unapproved group access, policy violations
     5. Reports violations with severity classification and regulatory context
     6. Optionally remediates by restricting sharing to compliant levels
 
     This is the primary validation script for the Unrestricted Agent Sharing
     Detector (UASD) solution. It validates per-agent sharing posture against
     zone-based governance policies defined by Controls 1.1 and 3.8.
+
+    Note: External sharing (cross-tenant) detection requires role assignment
+    data not available from the Dataverse bot table; use Invoke-SharingAudit.ps1
+    for cross-tenant detection.
 
     Zone-based severity:
     - Zone 3: Critical for any unrestricted/org-wide/external sharing
@@ -51,14 +55,14 @@
 
 .PARAMETER DataverseUrl
     ELM Dataverse URL for zone classification lookup. When provided with
-    -PersistResults, also writes scan results to fsi_agentsharingaudit.
+    -PersistResults, also writes scan results to fsi_sharingviolations.
 
 .PARAMETER DataverseToken
     Pre-obtained access token for Dataverse authentication.
 
 .PARAMETER PersistResults
     When specified with -DataverseUrl, writes each violation to
-    fsi_agentsharingaudit in Dataverse for evidence and dashboard reporting.
+    fsi_sharingviolations in Dataverse for evidence and dashboard reporting.
 
 .PARAMETER AutoRemediate
     When specified, restricts sharing for agents with violations to
@@ -181,14 +185,10 @@ function Test-AgentSharingCompliance {
     #region Import Companion Scripts
 
     $policyScript = Join-Path $scriptRoot 'Get-ExpectedSharingPolicy.ps1'
-    $zoneScript   = Join-Path (Split-Path $scriptRoot -Parent | Join-Path -ChildPath '..') 'scripts\shared\Get-ZoneClassification.ps1'
 
     if (-not (Test-Path $policyScript)) {
         throw "Required script not found: $policyScript"
     }
-
-    Write-Verbose "Loading Get-ExpectedSharingPolicy from: $policyScript"
-    . $policyScript
 
     #endregion
 
@@ -275,11 +275,14 @@ function Test-AgentSharingCompliance {
         param([string]$ViolationType)
 
         switch ($ViolationType) {
-            'UnrestrictedSharing'    { return 100000000 }
-            'OrgWideAccess'          { return 100000001 }
-            'ExternalSharing'        { return 100000002 }
-            'SharingPolicyViolation' { return 100000003 }
-            default                  { return 100000003 }
+            'UnrestrictedSharing'    { return 100000001 }
+            'OrgWideAccess'          { return 100000000 }
+            'ExternalSharing'        { return 100000004 }
+            'SharingPolicyViolation' { return 100000005 }
+            default {
+                Write-Warning "Unknown violation type '$ViolationType' — defaulting to EXCESSIVE_INDIVIDUAL (100000003). Add a mapping for this type."
+                return 100000003
+            }
         }
     }
 
@@ -297,8 +300,8 @@ function Test-AgentSharingCompliance {
             'High'          { return 100000001 }
             'Medium'        { return 100000002 }
             'Low'           { return 100000003 }
-            'Informational' { return 100000004 }
-            default         { return 100000004 }
+            'Informational' { return 100000003 }
+            default         { return 100000003 }
         }
     }
 
@@ -312,10 +315,10 @@ function Test-AgentSharingCompliance {
         param([string]$Zone)
 
         switch ($Zone) {
-            'Zone1' { return 1 }
-            'Zone2' { return 2 }
-            'Zone3' { return 3 }
-            default { return 1 }  # Default to Zone1 for unknown
+            'Zone1' { return 100000000 }
+            'Zone2' { return 100000001 }
+            'Zone3' { return 100000002 }
+            default { return 100000000 }  # Default to Zone1 for unknown
         }
     }
 
@@ -338,7 +341,7 @@ function Test-AgentSharingCompliance {
         )
 
         # Try shared zone classification script if available
-        $sharedZoneScript = Join-Path (Split-Path $scriptRoot -Parent | Join-Path -ChildPath '..') 'scripts\shared\Get-ZoneClassification.ps1'
+        $sharedZoneScript = Join-Path (Split-Path (Split-Path $scriptRoot -Parent) -Parent | Join-Path -ChildPath '..') 'scripts\shared\Get-ZoneClassification.ps1'
 
         if (Test-Path $sharedZoneScript) {
             try {
@@ -611,28 +614,43 @@ function Test-AgentSharingCompliance {
 
     if ($PersistResults -and $DataverseUrl -and $DataverseToken) {
         foreach ($violation in $violations) {
-            if ($PSCmdlet.ShouldProcess("fsi_agentsharingaudits", "CreateViolationRecord")) {
+            if ($PSCmdlet.ShouldProcess("fsi_sharingviolations", "CreateViolationRecord")) {
                 try {
+                    # Dedup: check for existing Open violation with same agent + violation type
+                    $violationTypeCode = Get-ViolationTypeCode -ViolationType $violation.ViolationType
+                    $dedupFilter = "fsi_agentid eq '$($violation.AgentId)' and fsi_violationtype eq $violationTypeCode and fsi_violationstatus eq 100000000"
+                    $dedupUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_sharingviolations?`$filter=$dedupFilter&`$top=1&`$select=fsi_sharingviolationid"
+                    $dedupHeaders = @{
+                        'Authorization'    = "Bearer $DataverseToken"
+                        'OData-MaxVersion' = '4.0'
+                        'OData-Version'    = '4.0'
+                    }
+                    $existing = Invoke-RestMethod -Uri $dedupUrl -Headers $dedupHeaders -Method Get -ErrorAction Stop
+                    if ($existing.value -and $existing.value.Count -gt 0) {
+                        Write-Verbose "  Skipped duplicate violation for $($violation.AgentName) ($($violation.ViolationType)) — existing Open record found"
+                        continue
+                    }
+
                     $evidencePayload = $violation | ConvertTo-Json -Depth 5 -Compress
 
                     $record = @{
-                        'fsi_name'               = "UASD-$($violation.AgentName)-$runId".Substring(0, [Math]::Min(200, "UASD-$($violation.AgentName)-$runId".Length))
+                        'fsi_name'               = "UASD-$($violation.AgentName)-$runId".Substring(0, [Math]::Min(100, "UASD-$($violation.AgentName)-$runId".Length))
                         'fsi_agentid'            = $violation.AgentId
                         'fsi_agentname'          = $violation.AgentName
                         'fsi_environmentid'      = $violation.EnvironmentId
                         'fsi_environmentname'    = $violation.EnvironmentName
                         'fsi_violationtype'      = Get-ViolationTypeCode -ViolationType $violation.ViolationType
-                        'fsi_sharingscope'       = $violation.SharingScope
+                        'fsi_violationstatus'    = 100000000  # Open
                         'fsi_severity'           = Get-SeverityCode -Severity $violation.Severity
-                        'fsi_zoneclassification' = Get-ZoneCode -Zone $violation.Zone
                         'fsi_detectedat'         = $violation.DetectedAt
-                        'fsi_details'            = $violation.Details
+                        'fsi_description'        = $violation.Details
                         'fsi_evidencejson'       = $evidencePayload
+                        'fsi_scanrunid'          = $runId
                     }
 
                     if ($violation.RemediatedAt) {
-                        $record['fsi_remediatedat']      = $violation.RemediatedAt
-                        $record['fsi_remediationaction'] = $violation.RemediationAction
+                        $record['fsi_remediatedat']        = $violation.RemediatedAt
+                        $record['fsi_remediationresult'] = $violation.RemediationAction
                     }
 
                     $recordJson = $record | ConvertTo-Json -Compress
@@ -642,7 +660,7 @@ function Test-AgentSharingCompliance {
                         'OData-MaxVersion' = '4.0'
                         'OData-Version'    = '4.0'
                     }
-                    $createUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_agentsharingaudits"
+                    $createUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_sharingviolations"
                     Invoke-RestMethod -Uri $createUrl -Headers $headers -Method Post -Body $recordJson -ErrorAction Stop
                     Write-Verbose "  Persisted violation record for: $($violation.AgentName)"
                 } catch {
@@ -650,7 +668,7 @@ function Test-AgentSharingCompliance {
                 }
             }
         }
-        Write-Host "  Persisted $($violations.Count) violation record(s) to fsi_agentsharingaudits"
+        Write-Host "  Persisted $($violations.Count) violation record(s) to fsi_sharingviolations"
     } elseif ($PersistResults) {
         Write-Warning "  PersistResults requires -DataverseUrl and -DataverseToken"
     } else {
@@ -718,7 +736,7 @@ function Test-AgentSharingCompliance {
                 return
             }
 
-            $violations | Sort-Object @{e='Severity'; a=$true}, EnvironmentName, AgentName |
+            $violations | Sort-Object @{e={switch ($_.Severity) { 'Critical' {0} 'High' {1} 'Medium' {2} 'Low' {3} default {4} }}}, EnvironmentName, AgentName |
             Format-Table -AutoSize -Property @(
                 @{Label='Agent'; Expression={$_.AgentName}; Width=35},
                 @{Label='Environment'; Expression={$_.EnvironmentName}; Width=30},

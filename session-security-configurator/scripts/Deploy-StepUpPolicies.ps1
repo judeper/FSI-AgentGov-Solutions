@@ -351,6 +351,7 @@ if ($EnablePolicies) {
 }
 
 # --- PRE-DEPLOYMENT CA POLICY CONFLICT AUDIT ---
+$conflicts = @()
 if (-not $SkipConflictAudit) {
     Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
     Write-Host "Pre-Deployment Conflict Audit" -ForegroundColor Cyan

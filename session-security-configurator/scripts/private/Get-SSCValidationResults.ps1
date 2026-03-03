@@ -157,8 +157,13 @@ function Get-SSCValidationResults {
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
                 if ($context -and $context.AccessToken) {
+                    # Graph SDK v1: AccessToken is directly available on context
                     $token = $context.AccessToken
                     Write-Verbose "Using access token from current Microsoft Graph session."
+                }
+                elseif ($context) {
+                    # Graph SDK v2+: AccessToken property is not exposed on context object
+                    Write-Verbose "Graph SDK v2+ detected. AccessToken not available on context object. Use -AccessToken parameter or MSAL.PS module."
                 }
             }
             catch {

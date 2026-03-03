@@ -6,6 +6,17 @@ Common issues and solutions for the Segregation of Duties Detector.
 
 ## Authentication Issues
 
+### Token expires during long-running scans
+
+**Cause:** Access tokens expire after ~60 minutes. In large tenants with thousands of users, the scan may exceed this duration.
+
+**Symptoms:** `401 Unauthorized` errors partway through a scan that initially authenticates successfully.
+
+**Solutions:**
+1. Run scans during off-peak hours to reduce API latency
+2. Filter to specific user groups to reduce scan duration
+3. Implement an external token refresh wrapper that re-invokes the script in segments
+
 ### "Access Denied" when querying Graph API
 
 **Cause:** Service principal lacks required permissions.
@@ -39,7 +50,7 @@ Common issues and solutions for the Segregation of Duties Detector.
 3. Scope mismatch
 
 **Solutions:**
-1. Verify rules: `Get-ConflictRules` returns active rules
+1. Verify rules exist in Dataverse: query `fsi_conflictrules?$filter=fsi_enabled eq true` or run `.\Invoke-SoDScan.ps1 -DryRun -Verbose` and check the "Found N active rules" output
 2. Import default rules: `.\Import-ConflictRules.ps1 -RuleSet Default`
 3. Check role context matches actual assignments
 
@@ -82,7 +93,9 @@ Common issues and solutions for the Segregation of Duties Detector.
 
 ---
 
-## Flow Issues
+## Flow Issues (Planned)
+
+> **Note:** Power Automate flows are not yet implemented. The current solution uses PowerShell scripts for detection. This section documents planned flow-based capabilities.
 
 ### Detection flow not triggering
 

@@ -137,6 +137,10 @@ try {
                 $individualShares = @()
 
                 # Check app permissions/sharing
+                # LIMITATION: Get-AdminPowerAppRoleAssignment is designed for Canvas/Model-driven apps
+                # and may not return Copilot Studio chatbot-specific sharing data. This can produce
+                # false negatives. Consider using the Dataverse bot table API (api/data/v9.2/bots)
+                # with sharingtype field for more reliable chatbot sharing detection.
                 try {
                     $permissions = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -AppName $agentId -ErrorAction Stop
                     
@@ -185,7 +189,7 @@ try {
                         agent_name       = $agentName
                         environment_id   = $envId
                         environment_name = $envDisplayName
-                        violation_type   = "SCAN_COVERAGE_GAP"
+                        violation_type   = "SCAN_COVERAGE_GAP"  # Local-only sentinel; not in fsi_UASD_violationtype Dataverse option set
                         severity         = "Warning"
                         description      = "Could not read permissions for agent: $($_.Exception.Message)"
                         detected_at      = $scanTimestamp
@@ -196,7 +200,7 @@ try {
                 if ($securityGroups.Count -gt 0 -and $sharingScope -ne "organization") { $sharingScope = "securityGroups" }
                 if ($individualShares.Count -gt 0 -and $sharingScope -eq "unknown") { $sharingScope = "individuals" }
 
-                # --- Rule Engine: Check 5 violation types ---
+                # --- Rule Engine: Check 5 of 6 violation types (POLICY_VIOLATION requires zone classification - see Test-AgentSharingCompliance.ps1) ---
 
                 # Rule 1: ORG_WIDE_SHARING
                 if ($sharingScope -eq "organization") {
@@ -336,7 +340,7 @@ try {
                 agent_name       = ""
                 environment_id   = $envId
                 environment_name = $envDisplayName
-                violation_type   = "SCAN_COVERAGE_GAP"
+                violation_type   = "SCAN_COVERAGE_GAP"  # Local-only sentinel; not in fsi_UASD_violationtype Dataverse option set
                 severity         = "Warning"
                 description      = "Failed to scan environment: $($_.Exception.Message)"
                 detected_at      = $scanTimestamp

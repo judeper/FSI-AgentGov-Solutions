@@ -37,6 +37,8 @@ param(
     [string]$Zone
 )
 
+$ErrorActionPreference = "Stop"
+
 $zonePolicies = @{
     'Zone1' = [PSCustomObject]@{
         Zone                            = 'Zone1'

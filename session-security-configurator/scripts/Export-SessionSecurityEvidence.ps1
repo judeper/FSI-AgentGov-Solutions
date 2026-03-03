@@ -28,8 +28,8 @@
 .PARAMETER Zone
     Governance zone filter. Valid values: 'All', '1', '2', '3'. Defaults to 'All'.
     - Zone 1 (Personal Productivity): 8-hour sign-in frequency, standard MFA
-    - Zone 2 (Team Collaboration): 4-hour sign-in frequency, passwordless MFA
-    - Zone 3 (Enterprise Managed): 1-hour sign-in frequency, phishing-resistant MFA
+    - Zone 2 (Team Collaboration): 4-hour sign-in frequency, Passwordless MFA
+    - Zone 3 (Enterprise Managed): 1-hour sign-in frequency, Phishing-resistant MFA
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it doesn't exist. Required.
@@ -215,6 +215,9 @@ if ($Interactive) {
     try {
         # Attempt to use MSAL.PS if available
         if (Get-Module -ListAvailable -Name MSAL.PS) {
+            if (-not $ClientId) {
+                throw "ClientId is required for MSAL.PS interactive authentication. Provide -ClientId with your Azure AD application ID."
+            }
             Import-Module MSAL.PS -ErrorAction Stop
 
             $msalParams = @{
@@ -233,8 +236,13 @@ if ($Interactive) {
             Write-Warning "MSAL.PS module not found. Attempting to use existing authentication context."
             $context = Get-MgContext -ErrorAction SilentlyContinue
             if ($context -and $context.AccessToken) {
+                # Graph SDK v1: AccessToken is directly available on context
                 $accessToken = $context.AccessToken
                 Write-Host "Using existing authentication context." -ForegroundColor Green
+            }
+            elseif ($context) {
+                # Graph SDK v2+: AccessToken property is not exposed on context object
+                throw "Graph SDK v2+ detected. AccessToken not available on context object. Install MSAL.PS module: Install-Module MSAL.PS -Scope CurrentUser"
             }
             else {
                 throw "No authentication context available. Install MSAL.PS module: Install-Module MSAL.PS -Scope CurrentUser"

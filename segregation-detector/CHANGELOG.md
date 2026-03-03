@@ -21,6 +21,7 @@ All notable changes to the Segregation of Duties Detector.
 - **PowerShell Scripts:**
   - `Invoke-SoDScan.ps1` - Full directory scan for violations
   - `Import-ConflictRules.ps1` - Rule set import
+  - `SoDShared.ps1` - Shared helper module (Invoke-WithRetry, Get-AccessToken, Get-LoginEndpoint, Get-GraphEndpoint, Get-BapApiBaseUrl)
 - **Default Rule Sets:**
   - Maker/Checker rules (5 rules)
   - Segregation rules (5 rules)

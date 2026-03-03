@@ -94,6 +94,8 @@ class UASDClient:
             accounts = self.app.get_accounts()
             if accounts:
                 result = self.app.acquire_token_silent(self.scopes, account=accounts[0])
+                if result is None:
+                    result = self.app.acquire_token_interactive(self.scopes)
             else:
                 result = self.app.acquire_token_interactive(self.scopes)
         else:

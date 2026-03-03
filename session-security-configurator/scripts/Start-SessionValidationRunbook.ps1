@@ -348,6 +348,20 @@ catch {
         Zone          = $Zone
         OverallStatus = "Error"
         Reason        = $_.Exception.Message
+        Validators    = @{
+            SessionControls        = @{ Status = "Error"; Reason = "Runbook execution failed" }
+            AuthenticationStrength = @{ Status = "Error"; Reason = "Runbook execution failed" }
+            PimRoleSettings        = @{ Status = "Error"; Reason = "Runbook execution failed" }
+            BreakGlassExclusions   = @{ Status = "Error"; Reason = "Runbook execution failed" }
+        }
+        Drift         = @{
+            DriftDetected  = $true
+            CurrentStatus  = "Error"
+            BaselineStatus = $null
+            BaselineDate   = $null
+            IsFirstRun     = $null
+            Error          = $_.Exception.Message
+        }
         AlertRequired = $true
         AlertSeverity = "Error"
     }

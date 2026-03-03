@@ -10,7 +10,7 @@ Complete requirements for deploying the Segregation of Duties Detector.
 
 | License | Quantity | Purpose |
 |---------|----------|---------|
-| **Power Platform Premium** | Per flow creator | Power Automate detection flows |
+| **Power Platform Premium** | Per flow creator | PowerShell detection scripts; Power Automate flows (planned) |
 | **Dataverse capacity** | 500 MB minimum | Violation and rule storage |
 | **Microsoft Entra ID P1** | Included with M365 E3+ | Role assignment queries |
 
@@ -46,7 +46,6 @@ Complete requirements for deploying the Segregation of Duties Detector.
 | `RoleManagement.Read.Directory` | Application | Read Entra ID role assignments |
 | `User.Read.All` | Application | Read user details |
 | `Directory.Read.All` | Application | Read directory information |
-| `Application.Read.All` | Application | Read app role assignments |
 
 ---
 
@@ -71,7 +70,6 @@ Complete requirements for deploying the Segregation of Duties Detector.
    - `RoleManagement.Read.Directory`
    - `User.Read.All`
    - `Directory.Read.All`
-   - `Application.Read.All`
 5. Click **Grant admin consent**
 
 ### 3. Create Client Secret
@@ -117,10 +115,14 @@ az keyvault secret set --vault-name "your-vault" --name "SoD-ClientSecret" --val
 
 | Endpoint | Purpose |
 |----------|---------|
-| `graph.microsoft.com` | Microsoft Graph API |
+| `graph.microsoft.com` | Microsoft Graph API (commercial) |
+| `graph.microsoft.us` | Microsoft Graph API (GCC High) |
+| `microsoftgraph.chinacloudapi.cn` | Microsoft Graph API (China / 21Vianet) |
 | `*.crm.dynamics.com` | Dataverse |
 | `*.api.powerplatform.com` | Power Platform API |
-| `api.bap.microsoft.com` | Power Platform BAP API |
+| `api.bap.microsoft.com` | Power Platform BAP API (commercial) |
+| `api.bap.appsplatform.us` | Power Platform BAP API (US sovereign / GCC High) |
+| `api.bap.partner.microsoftonline.cn` | Power Platform BAP API (China sovereign / 21Vianet) |
 | `login.microsoftonline.com` | Authentication |
 
 ---

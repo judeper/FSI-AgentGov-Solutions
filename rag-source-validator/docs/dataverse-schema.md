@@ -95,7 +95,7 @@ History of validation executions.
 | 3 | Failed - Schema Drift |
 | 4 | Failed - Stale Content |
 | 5 | Failed - Source Unavailable |
-| 6 | Warning - Minor Changes |
+| 6 | Failed - Unexpected Error |
 | 7 | Skipped - Not Implemented |
 | 8 | Skipped - Unsupported Type |
 
@@ -170,4 +170,4 @@ Tracked changes to knowledge sources.
 
 ---
 
-*RAG Source Validator v1.0.0*
+*RAG Source Validator v1.0.1*

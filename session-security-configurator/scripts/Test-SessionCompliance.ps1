@@ -445,21 +445,22 @@ try {
     switch ($Zone) {
         "Zone1" {
             # Zone 1: Standard MFA (no custom requirement)
-            if ($baseline.authenticationStrength -eq $null) {
+            # A null value or "standard" both indicate standard MFA (Dataverse env var default is "standard")
+            if ($baseline.authenticationStrength -eq $null -or $baseline.authenticationStrength -ieq "standard") {
                 $authStrengthStatus = "Passed"
                 $authStrengthReason = "Zone 1 uses standard MFA (no custom authentication strength required)."
                 $methodsFound += "Standard MFA"
             }
             else {
                 $authStrengthStatus = "Failed"
-                $authStrengthReason = "Zone 1 baseline expects null authentication strength but baseline specifies: $($baseline.authenticationStrength)"
+                $authStrengthReason = "Zone 1 baseline expects standard authentication strength but baseline specifies: $($baseline.authenticationStrength)"
             }
         }
 
         "Zone2" {
             # Zone 2: Passwordless MFA
             if ($baseline.authenticationStrength) {
-                # Compare by display name since baseline stores names (e.g. "passwordless"), not GUIDs
+                # Compare by display name since baseline stores names (e.g. "Passwordless MFA"), not GUIDs
                 $sscPoliciesWithAuth = $sscPolicies | Where-Object {
                     $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
@@ -483,7 +484,7 @@ try {
         "Zone3" {
             # Zone 3: Phishing-resistant MFA
             if ($baseline.authenticationStrength) {
-                # Compare by display name since baseline stores names (e.g. "phishing-resistant"), not GUIDs
+                # Compare by display name since baseline stores names (e.g. "Phishing-resistant MFA"), not GUIDs
                 $sscPoliciesWithAuth = $sscPolicies | Where-Object {
                     $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
@@ -565,23 +566,106 @@ else {
 
         Write-Host "Target roles: $($targetRoles -join ', ')" -ForegroundColor Cyan
 
-        # PIM validation logic would go here
-        # This requires Microsoft.Graph.Identity.Governance module and RoleManagement.Read.All permission
-        # For now, return informational status
+        # PIM validation requires Microsoft.Graph.Identity.Governance module
+        $governanceModule = Get-Module -Name Microsoft.Graph.Identity.Governance -ListAvailable -ErrorAction SilentlyContinue
 
-        Write-Warning "PIM role settings validation requires Microsoft.Graph.Identity.Governance module and RoleManagement.Read.All permission."
-        Write-Warning "Full implementation requires querying role assignment schedules and settings."
-
-        $results.Validators.PimRoleSettings = @{
-            Status = "Warning"
-            Confidence = "LOW"
-            Reason = "PIM validation not fully implemented. Manual verification required."
-            TargetRoles = $targetRoles
-            Timestamp = Get-Date -Format "o"
+        if (-not $governanceModule) {
+            Write-Warning "Microsoft.Graph.Identity.Governance module not installed. Install with: Install-Module Microsoft.Graph.Identity.Governance"
+            $results.Validators.PimRoleSettings = @{
+                Status      = "Warning"
+                Confidence  = "LOW"
+                Reason      = "Microsoft.Graph.Identity.Governance module not installed. Cannot query PIM role settings."
+                TargetRoles = $targetRoles
+                Timestamp   = Get-Date -Format "o"
+            }
+            Write-Host "`nResult: WARNING (LOW confidence)" -ForegroundColor Yellow
+            Write-Host "Reason: Governance module not installed." -ForegroundColor Yellow
         }
+        else {
+            # Query PIM role assignment schedules and settings for target roles
+            $roleDefinitions = Invoke-MgGraphRequest -Method GET `
+                -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?`$filter=displayName eq 'Power Platform Administrator' or displayName eq 'Global Administrator'&`$select=id,displayName" `
+                -ErrorAction Stop
 
-        Write-Host "`nResult: WARNING (LOW confidence)" -ForegroundColor Yellow
-        Write-Host "Reason: PIM validation requires manual verification." -ForegroundColor Yellow
+            $pimFindings = @()
+            $allCompliant = $true
+
+            foreach ($roleDef in $roleDefinitions.value) {
+                $roleId = $roleDef.id
+                $roleName = $roleDef.displayName
+                Write-Host "  Checking PIM settings for: $roleName" -ForegroundColor Cyan
+
+                # Query role management policy assignments for this role
+                $policyAssignments = Invoke-MgGraphRequest -Method GET `
+                    -Uri "https://graph.microsoft.com/v1.0/policies/roleManagementPolicyAssignments?`$filter=scopeId eq '/' and scopeType eq 'DirectoryRole' and roleDefinitionId eq '$roleId'" `
+                    -ErrorAction Stop
+
+                # Query eligible role assignments
+                $eligibleAssignments = Invoke-MgGraphRequest -Method GET `
+                    -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleEligibilitySchedules?`$filter=roleDefinitionId eq '$roleId'" `
+                    -ErrorAction Stop
+
+                $eligibleCount = if ($eligibleAssignments.value) { $eligibleAssignments.value.Count } else { 0 }
+
+                # Query active (permanent) role assignments
+                $activeAssignments = Invoke-MgGraphRequest -Method GET `
+                    -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentSchedules?`$filter=roleDefinitionId eq '$roleId'" `
+                    -ErrorAction Stop
+
+                $permanentCount = 0
+                if ($activeAssignments.value) {
+                    foreach ($assignment in $activeAssignments.value) {
+                        if (-not $assignment.scheduleInfo.expiration.endDateTime) {
+                            $permanentCount++
+                        }
+                    }
+                }
+
+                $hasPermanent = $permanentCount -gt 0
+                if ($hasPermanent) { $allCompliant = $false }
+
+                $finding = @{
+                    Role                = $roleName
+                    RoleDefinitionId    = $roleId
+                    EligibleAssignments = $eligibleCount
+                    PermanentAssignments = $permanentCount
+                    PolicyAssignments   = if ($policyAssignments.value) { $policyAssignments.value.Count } else { 0 }
+                    Compliant           = -not $hasPermanent
+                }
+                $pimFindings += $finding
+
+                if ($hasPermanent) {
+                    Write-Host "    ⚠ $permanentCount permanent assignment(s) found (should use eligible/time-bound)" -ForegroundColor Yellow
+                }
+                else {
+                    Write-Host "    ✓ No permanent assignments ($eligibleCount eligible)" -ForegroundColor Green
+                }
+            }
+
+            if ($allCompliant) {
+                $results.Validators.PimRoleSettings = @{
+                    Status      = "Passed"
+                    Confidence  = "HIGH"
+                    Reason      = "All target roles use PIM-eligible assignments with no permanent active assignments."
+                    TargetRoles = $targetRoles
+                    Findings    = $pimFindings
+                    Timestamp   = Get-Date -Format "o"
+                }
+                Write-Host "`nResult: PASSED (HIGH confidence)" -ForegroundColor Green
+            }
+            else {
+                $results.Validators.PimRoleSettings = @{
+                    Status      = "Failed"
+                    Confidence  = "HIGH"
+                    Reason      = "One or more target roles have permanent active assignments. Use PIM eligible assignments with time-bound activation."
+                    TargetRoles = $targetRoles
+                    Findings    = $pimFindings
+                    Timestamp   = Get-Date -Format "o"
+                }
+                Write-Host "`nResult: FAILED (HIGH confidence)" -ForegroundColor Red
+                Write-Host "Reason: Permanent role assignments detected. Use PIM eligible assignments." -ForegroundColor Red
+            }
+        }
     }
     catch {
         $results.Validators.PimRoleSettings = @{

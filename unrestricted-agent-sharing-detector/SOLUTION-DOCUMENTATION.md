@@ -1,7 +1,7 @@
 # Securing Copilot Studio AI Agent Access
 ## Unrestricted Agent Sharing Detector (UASD)
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Solution Type:** Automated Detection, Remediation, and Exception Management
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -22,7 +22,7 @@ Copilot Studio agents configured with unrestricted access create significant sec
 
 ### Solution Overview
 
-The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated monitoring and remediation of Copilot Studio agent sharing configurations across your Power Platform environments. The solution detects five categories of sharing violations, automatically enforces approved security policies, and supports time-bound exception management with dual approval workflows.
+The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated monitoring and remediation of Copilot Studio agent sharing configurations across your Power Platform environments. The solution detects six categories of sharing violations, automatically enforces approved security policies, and supports time-bound exception management with dual approval workflows.
 
 **Key Capabilities:**
 - **Continuous Detection:** Daily automated scans across all Power Platform environments
@@ -46,35 +46,33 @@ The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated
 UASD operates as an integrated solution of Power Automate cloud flows, Dataverse data storage, and a Canvas app for exception management. The architecture follows a detect-alert-remediate-audit pattern with centralized policy enforcement.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Unrestricted Agent Sharing Detector               │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-        ┌───────────────────────────┼───────────────────────────┐
-        │                           │                           │
-        ▼                           ▼                           ▼
-┌───────────────┐          ┌─────────────────┐        ┌─────────────────┐
-│   Detector    │          │   Remediation   │        │    Exception    │
-│  Scan Flow    │──────────▶│      Flow       │        │ Approval Flow   │
-│  (Daily)      │          │  (Event-Driven) │        │ (Event-Driven)  │
-└───────┬───────┘          └────────┬────────┘        └────────┬────────┘
-        │                           │                          │
-        │                           │                          │
-        ▼                           ▼                          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Dataverse Tables                             │
-├──────────────────────┬──────────────────────┬────────────────────────┤
-│ fsi_SharingViolation │ fsi_SharingException │ fsi_ApprovedSecurity   │
-│                      │                      │         Group          │
-└──────────────────────┴──────────────────────┴────────────────────────┘
-                                    │
-        ┌───────────────────────────┼───────────────────────────┐
-        │                           │                           │
-        ▼                           ▼                           ▼
-┌───────────────┐          ┌─────────────────┐        ┌─────────────────┐
-│  Teams Alert  │          │    Exception    │        │   Audit &       │
-│     Card      │          │  Manager App    │        │   Evidence      │
-└───────────────┘          └─────────────────┘        └─────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                         Unrestricted Agent Sharing Detector                            │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                            │
+        ┌──────────────────┬────────────────┼────────────────┬──────────────────┐
+        │                  │                │                │                  │
+        ▼                  ▼                ▼                ▼                  ▼
+┌───────────────┐  ┌─────────────────┐ ┌─────────────────┐ ┌──────────────────────┐
+│   Detector    │  │   Remediation   │ │    Exception    │ │     Exception        │
+│  Scan Flow    │─▶│      Flow       │ │ Approval Flow   │ │  Expiration Monitor  │
+│  (Daily)      │  │  (Event-Driven) │ │ (Event-Driven)  │ │     (Daily)          │
+└───────┬───────┘  └────────┬────────┘ └────────┬────────┘ └──────────┬───────────┘
+        │                   │                   │                     │
+        ▼                   ▼                   ▼                     ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                                  Dataverse Tables                                     │
+├──────────────────────┬──────────────────────┬────────────────────────────────────────┤
+│ fsi_SharingViolation │ fsi_SharingException │ fsi_ApprovedSecurityGroup              │
+└──────────────────────┴──────────────────────┴────────────────────────────────────────┘
+                                            │
+        ┌───────────────────────────────────┼───────────────────────────┐
+        │                                   │                           │
+        ▼                                   ▼                           ▼
+┌───────────────┐                  ┌─────────────────┐        ┌─────────────────┐
+│  Teams Alert  │                  │    Exception    │        │   Audit &       │
+│     Card      │                  │  Manager App    │        │   Evidence      │
+└───────────────┘                  └─────────────────┘        └─────────────────┘
 ```
 
 ### Solution Components
@@ -90,7 +88,7 @@ UASD operates as an integrated solution of Power Automate cloud flows, Dataverse
 
 **Detection Logic:**
 
-The flow implements five violation detection rules:
+The flow implements six violation detection rules:
 
 | Violation Type | Code | Detection Criteria | Severity |
 |----------------|------|-------------------|----------|
@@ -99,6 +97,7 @@ The flow implements five violation detection rules:
 | **UNAPPROVED_GROUP** | 100000002 | Agent shared with security groups not in approved registry | High |
 | **EXCESSIVE_INDIVIDUAL** | 100000003 | Agent shared with individual users rather than security groups | Medium |
 | **CROSS_TENANT_ACCESS** | 100000004 | Agent accessible from external tenants without authorization | Critical |
+| **POLICY_VIOLATION** | 100000005 | Agent sharing configuration violates environment-specific sharing policy | High |
 
 **Process Flow:**
 1. Connect to Power Platform admin APIs
@@ -136,6 +135,7 @@ The flow implements five violation detection rules:
 | **UNAPPROVED_GROUP** | Remove unapproved groups, add approved groups for environment tier |
 | **EXCESSIVE_INDIVIDUAL** | Remove individual shares, add approved security groups |
 | **CROSS_TENANT_ACCESS** | Disable cross-tenant access, restrict to home tenant only |
+| **POLICY_VIOLATION** | Restrict sharing to zone-permitted scopes, add approved security groups for zone |
 
 **Process Flow:**
 1. Receive violation record from Dataverse webhook
@@ -189,22 +189,12 @@ The flow implements five violation detection rules:
 
 **Expiration Handling:**
 
-!!! warning "Operational Gap — Active Monitoring Not Yet Implemented"
-    Exception expiration monitoring (7-day warning alerts and automated status change to `Expired`) is **planned but not yet implemented** in the current flows. The three existing flows (Detector, Remediation, Exception Approval) do not check for approaching or past expiration dates. Expired exceptions are effectively handled passively: on the next Detector scan, a violation previously covered by an expired exception will no longer match an active exception (the `fsi_expiresat gt utcNow()` filter in Flow 2 Step 4b will exclude it), and a new violation record will be created.
+Exception expiration is actively monitored by Flow 4 (`UASD-Exception-Expiration-Monitor`), which runs daily to:
 
-    **Impact:** Between exception expiry and the next scheduled Detector scan, expired exceptions remain effectively active. With a 24-hour scan interval, this creates up to a 24-hour enforcement gap.
+1. Transition expired exceptions (`fsi_expiresat lt utcNow()`) from Approved to Expired status
+2. Send Teams warning alerts for exceptions expiring within the configurable threshold (`fsi_UASD_ExpirationWarningDays`, default: 7 days)
 
-    **Interim mitigation:** Until the `UASD-Exception-Expiration-Monitor` flow is implemented, operators should run a daily Dataverse query to identify exceptions expiring within 7 days:
-
-    ```
-    fsi_sharingexceptions?$filter=fsi_exceptionstatus eq 100000001 and fsi_expiresat lt @{addDays(utcNow(), 7)}&$orderby=fsi_expiresat asc
-    ```
-
-    **To implement active expiration handling**, create a fourth scheduled flow (`UASD-Exception-Expiration-Monitor`) that:
-
-    1. Runs daily and queries `fsi_SharingException` for records where `fsi_exceptionstatus eq 100000001` (Approved) and `fsi_expiresat lt utcNow()`
-    2. Updates matched records to `fsi_exceptionstatus = 100000003` (Expired)
-    3. Sends Teams warning alerts for exceptions expiring within 7 days (`fsi_expiresat lt addDays(utcNow(), 7)`)
+See [docs/flow-configuration.md](docs/flow-configuration.md#flow-4-uasd-exception-expiration-monitor) for build instructions.
 
 - **Renewal:** Users can submit new exception requests via Exception Manager app
 
@@ -314,7 +304,7 @@ Stores detected sharing policy violations with remediation status.
 | `fsi_agentname` | String(200) | Agent display name |
 | `fsi_environmentid` | String(50) | Power Platform environment GUID |
 | `fsi_environmentname` | String(200) | Environment display name |
-| `fsi_violationtype` | Choice | 100000000=ORG_WIDE, 100000001=PUBLIC_LINK, 100000002=UNAPPROVED_GROUP, 100000003=EXCESSIVE_INDIVIDUAL, 100000004=CROSS_TENANT |
+| `fsi_violationtype` | Choice | 100000000=ORG_WIDE_SHARING, 100000001=PUBLIC_INTERNET_LINK, 100000002=UNAPPROVED_GROUP, 100000003=EXCESSIVE_INDIVIDUAL, 100000004=CROSS_TENANT_ACCESS, 100000005=POLICY_VIOLATION |
 | `fsi_violationstatus` | Choice | 100000000=Open, 100000001=Remediated, 100000002=Exception Approved, 100000003=False Positive |
 | `fsi_severity` | Choice | 100000000=Critical, 100000001=High, 100000002=Medium, 100000003=Low |
 | `fsi_description` | Memo | Human-readable violation description |
@@ -473,6 +463,7 @@ Then configure values in Power Platform:
 | `fsi_UASD_SecurityApproverEmail` | String | `security@contoso.com` | Security team approver |
 | `fsi_UASD_DataOwnerApproverEmail` | String | `dataowner@contoso.com` | Data owner approver |
 | `fsi_UASD_ComplianceApproverEmail` | String | `compliance@contoso.com` | Compliance approver (required for Restricted data) |
+| `fsi_UASD_ExpirationWarningDays` | Number | `7` | Days before exception expiry to send warning (Flow 4) |
 
 **Step 3: Configure Connection References**
 
@@ -500,6 +491,7 @@ Follow the step-by-step instructions in [docs/flow-configuration.md](docs/flow-c
    - UASD-Detector-Scan-Agents → Scheduled Cloud Flow
    - UASD-Remediation-Apply-Sharing-Policy → Automated Cloud Flow
    - UASD-Exception-Approval-Workflow → Automated Cloud Flow
+   - UASD-Exception-Expiration-Monitor → Scheduled Cloud Flow (v1.0.2+)
    - UASD-Exception-Manager → Canvas App
 
 **Step 5: Populate Approved Security Groups**
@@ -521,12 +513,13 @@ Example Records:
 
 **Step 6: Activate Flows**
 
-1. Open each flow (Detector, Remediation, Exception Approval)
+1. Open each flow (Detector, Remediation, Exception Approval, Exception Expiration Monitor)
 2. Click "Turn on" to activate
 3. Verify trigger configuration:
    - Detector: Confirm recurrence schedule (daily 06:00 UTC)
    - Remediation: Confirm Dataverse webhook on `fsi_SharingViolation`
    - Exception Approval: Confirm Dataverse webhook on `fsi_SharingException`
+   - Exception Expiration Monitor: Confirm recurrence schedule (daily, v1.0.2+)
 
 **Step 7: Share Exception Manager App**
 
@@ -636,6 +629,15 @@ Example Records:
    - Extract threadId from URL (channel ID): `threadId=...`
 3. Update environment variables with correct values
 4. Re-run Detector flow to test
+
+**Issue: `Invoke-SharingAudit.ps1` may produce false negatives for Copilot Studio agents**
+
+**Cause:** The script uses `Get-AdminPowerAppRoleAssignment`, which is designed for Canvas/Model-driven apps and may not return Copilot Studio chatbot-specific sharing data.
+
+**Resolution:**
+1. Be aware that sharing violations for Copilot Studio chatbots may not be detected by the audit script
+2. For more reliable chatbot sharing detection, use the Dataverse bot table API (`api/data/v9.2/bots`) with the `sharingtype` field
+3. Cross-reference audit results with the Flow 1 Detector scan, which queries the Copilot Studio agent management API directly
 
 #### Audit and Evidence Export
 
@@ -791,11 +793,32 @@ Evidence files should include:
 }
 ```
 
+### POLICY_VIOLATION (Code: 100000005)
+
+**Description:** Agent sharing configuration violates environment-specific zone policy.
+
+**Risk:** Sharing scope exceeds zone-permitted level, undermining environment-tier governance controls.
+
+**Detection:** `sharingScope` exceeds zone-permitted level per `Get-ExpectedSharingPolicy` zone classification.
+
+**Remediation:** Restrict sharing to zone-permitted scopes, add approved security groups.
+
+**Example Violation:**
+```json
+{
+  "agent_id": "12345678-abcd-1234-abcd-123456789012",
+  "environment_zone": "Zone3",
+  "current_sharing_scope": "ORG_WIDE_SHARING",
+  "permitted_sharing_scope": "NONE",
+  "violation_type": "POLICY_VIOLATION"
+}
+```
+
 ---
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.1
+**Solution Version:** 1.0.2
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -806,8 +829,9 @@ Evidence files should include:
 - Coordinate exception expiration renewals with business owners 2 weeks in advance
 
 **Version History:**
+- **v1.0.2 (February 2026):** Added Flow 4 exception expiration monitor; resolved Known Limitation #1
 - **v1.0.1 (February 2026):** Replaced exported flow JSON with step-by-step documentation; fixed setup scripts
-- **v1.0.0 (February 2026):** Initial release with 5 violation types, automated remediation, and exception management
+- **v1.0.0 (February 2026):** Initial release with 6 violation types, automated remediation, and exception management
 
 ---
 

@@ -8,7 +8,8 @@ This guide provides step-by-step instructions for manually building the Unrestri
 1. UASD-Detector-Scan-Agents (Scheduled Cloud Flow)
 2. UASD-Remediation-Apply-Sharing-Policy (Automated Cloud Flow)
 3. UASD-Exception-Approval-Workflow (Automated Cloud Flow)
-4. UASD-Exception-Manager (Canvas App)
+4. UASD-Exception-Expiration-Monitor (Scheduled Cloud Flow)
+5. UASD-Exception-Manager (Canvas App)
 
 **Prerequisites:**
 - Power Automate premium license
@@ -58,15 +59,26 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - **UNAPPROVED_GROUP:** Security groups not in approved registry
    - **EXCESSIVE_INDIVIDUAL:** Individual share count exceeds threshold
    - **CROSS_TENANT_ACCESS:** Allowed tenants include non-home tenant
+   - **POLICY_VIOLATION:** Agent sharing scope exceeds zone-permitted level
 
-7. **Create Violation Records**
+   > **Guard:** Before evaluating `CROSS_TENANT_ACCESS`, check that the `homeTenantId` variable (from `fsi_UASD_HomeTenantId`) is not empty. If it is empty, skip the cross-tenant rule for this agent and log a warning to `fsi_remediationresult`: `"Skipped CROSS_TENANT_ACCESS check: fsi_UASD_HomeTenantId not configured"`. This prevents false positives when the environment variable has not been set.
+
+7. **Deduplicate Before Creating Violation Records**
+   - Before creating a new `fsi_SharingViolation` record, query for existing Open violations matching the same `fsi_agentid` and `fsi_violationtype`:
+     ```
+     fsi_sharingviolations?$filter=fsi_agentid eq '{agentId}' and fsi_violationtype eq {typeCode} and fsi_violationstatus eq 100000000&$top=1
+     ```
+   - If a matching Open record exists, skip creation for that violation and update `fsi_detectedat` to the current scan timestamp
+   - This prevents duplicate Open records from accumulating across repeated scans
+
+8. **Create Violation Records**
    - Action: "Create a new record" (Dataverse)
    - Table: `fsi_SharingViolation`
    - Fields:
      - `fsi_agentid`: Agent GUID
      - `fsi_agentname`: Agent display name
      - `fsi_environmentid`: Environment GUID
-     - `fsi_violationtype`: Violation type code (100000000–100000004)
+     - `fsi_violationtype`: Violation type code (100000000–100000005)
      - `fsi_violationstatus`: Open (100000000) — required field, no default
      - `fsi_severity`: Critical/High/Medium
      - `fsi_description`: Violation details
@@ -74,12 +86,12 @@ This guide provides step-by-step instructions for manually building the Unrestri
      - `fsi_detectedat`: Scan timestamp
      - `fsi_scanrunid`: Correlation ID
 
-8. **Send Teams Alert** (if violations found)
+9. **Send Teams Alert** (if violations found)
    - Action: "Post an Adaptive Card to a Teams Channel"
    - Channel: Use `fsi_UASD_TeamsGroupId` and `fsi_UASD_TeamsChannelId`
    - Card: Summary of violations by severity
 
-9. **Update Agent Settings**
+10. **Update Agent Settings**
    - Action: "Create or update a record" (Dataverse)
    - Table: `fsi_AgentSharingSetting`
    - Fields: Store point-in-time sharing configuration snapshot
@@ -127,10 +139,10 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Record ID: Trigger output `fsi_sharingviolationid`
 
 4a. **Check Break-Glass Exclusion**
-   - Action: "Get a record" (Dataverse)
+   - Action: "List records" (Dataverse)
    - Table: `fsi_AgentSharingSetting`
    - Filter: `fsi_agentid eq <violation's fsi_agentid>`
-   - **Condition:** If `fsi_breakglassexclude = true`:
+   - **Condition:** If result count > 0 and first record's `fsi_breakglassexclude = true`:
      - Update violation record `fsi_remediationresult` to `"Skipped: break-glass exclusion active"`
      - Send Teams notification indicating manual review required
      - Terminate flow (do not proceed to remediation)
@@ -144,12 +156,17 @@ This guide provides step-by-step instructions for manually building the Unrestri
      - Update `fsi_remediationresult` to `"Skipped: active exception approved until <fsi_expiresat>"`
      - Terminate flow (do not proceed to remediation)
 
-5. **Get Approved Security Groups for Zone**
+5. **Resolve Environment Zone Classification**
+   - Look up the environment's governance zone from Environment Lifecycle Management (ELM) data or from the `fsi_AgentSharingSetting` record's zone context.
+   - Use `fsi_UASD_zoneclassification` option set values: `100000000` = Zone 1, `100000001` = Zone 2, `100000002` = Zone 3.
+   - **Do NOT** use `fsi_acv_zone` values, which have a different mapping (100000000 = Unclassified, shifting all zone numbers up by one).
+
+6. **Get Approved Security Groups for Zone**
    - Action: "List records" (Dataverse)
    - Table: `fsi_ApprovedSecurityGroup`
    - Filter: `fsi_zoneclassification eq <environment-zone> and fsi_isactive eq true`
 
-6. **Remediate by Violation Type**
+7. **Remediate by Violation Type**
    - Use Switch statement on `fsi_violationtype`:
 
    **Case 100000000: ORG_WIDE_SHARING**
@@ -157,7 +174,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Add all approved security groups for zone
 
    **Case 100000001: PUBLIC_INTERNET_LINK**
-   - **Condition:** If `equals(variables('autoRemediatePublicLink'), 'false')`, skip remediation actions — update `fsi_remediationresult` to `"Skipped: autoRemediatePublicLink is disabled"` and go to step 8
+   - **Condition:** If `equals(variables('autoRemediatePublicLink'), 'false')`, skip remediation actions — update `fsi_remediationresult` to `"Skipped: autoRemediatePublicLink is disabled"` and go to step 9
    - Disable public internet link
    - Require Entra ID authentication
 
@@ -174,13 +191,18 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Remove external tenant access
    - Restrict to home tenant only
 
-7. **Call Agent Sharing API**
+   **Case 100000005: POLICY_VIOLATION**
+   - Generic zone policy scope mismatch
+   - Restrict sharing to zone-permitted scopes
+   - Add approved security groups for zone
+
+8. **Call Agent Sharing API**
    - Endpoint: Copilot Studio agent management
    - Method: PATCH
    - Payload: Updated sharing configuration
    - **Skip if `equals(variables('isDryRun'), 'true')`**
 
-8. **Update Violation Record**
+9. **Update Violation Record**
    - **Condition:** Only update remediation status if `equals(variables('isDryRun'), 'false')` and remediation was actually performed
    - **If `equals(variables('isDryRun'), 'true')`:**
      - Action: "Update a record" (Dataverse)
@@ -197,7 +219,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
        - `fsi_remediationresult`: Success/error message
      - Include operation result
 
-9. **Send Remediation Alert**
+10. **Send Remediation Alert**
    - Action: "Post message in chat or channel" (Teams)
    - Message type: Notification card
    - Include: Agent name, violation type, remediation action
@@ -269,7 +291,7 @@ Trigger filters:
 7. **Process Approval Response**
    - If approved:
      - Update exception status to "Approved"
-     - Calculate expiration: `fsi_requestedat + fsi_requestedduration` (in days). **Note:** If `fsi_requestedat` is null (e.g., records created via API), use `utcNow()` as fallback to prevent the `addDays` expression from failing.
+     - Calculate expiration: `addDays(fsi_requestedat, int(fsi_requestedduration))` (in days). **Note:** `int()` is required because `fsi_requestedduration` is a Decimal column and `addDays()` requires an integer parameter. If `fsi_requestedat` is null (e.g., records created via API), use `utcNow()` as fallback to prevent the `addDays` expression from failing.
      - Set `fsi_expiresat` field to calculated expiration date
      - Update related violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Notify requester (approval granted)
@@ -288,7 +310,68 @@ Trigger filters:
 Entity: fsi_SharingException
 Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 ```
-> **Note:** Since the trigger is Create-only and new records default to Pending (100000000), this filter is functionally equivalent to no filter but is included for consistency with SOLUTION-DOCUMENTATION.md and for clarity of intent.
+> **Note:** The `fsi_exceptionstatus` field has no default value in the schema (`ApplicationRequired`, no `DefaultValue`). The Canvas App and any API callers must explicitly set it to Pending (100000000) when creating records. This trigger filter ensures only Pending records activate the workflow.
+
+---
+
+## Flow 4: UASD-Exception-Expiration-Monitor
+
+**Type:** Scheduled Cloud Flow
+**Trigger:** Recurrence (Daily at 07:00 UTC)
+**Purpose:** Proactive exception expiration handling — transitions expired exceptions to Expired status and sends warning alerts for exceptions expiring soon
+
+### Build Steps
+
+1. **Create New Flow**
+   - Power Automate → Cloud Flows → Scheduled Cloud Flow
+   - Flow name: `UASD-Exception-Expiration-Monitor`
+   - Recurrence: Daily at 07:00 UTC
+
+2. **Initialize Variables**
+   - `timestamp`: Expression `utcNow()`
+   - `warningDays`: Environment variable `fsi_UASD_ExpirationWarningDays` (default: 7)
+   - `warningThreshold`: Expression `addDays(utcNow(), int(variables('warningDays')))` — `int()` is required because the environment variable value is a string and `addDays()` requires an integer parameter
+
+3. **Query Expired Exceptions**
+   - Action: "List records" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Filter: `fsi_exceptionstatus eq 100000001 and fsi_expiresat lt @{variables('timestamp')}`
+   - Purpose: Find approved exceptions that have passed their expiration date
+
+4. **For Each Expired Exception**
+   - Loop through expired records from step 3
+   - Action: "Update a record" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Fields:
+     - `fsi_exceptionstatus`: 100000003 (Expired)
+   - This transitions the exception so the next Detector scan will create a new violation
+
+5. **Query Expiring-Soon Exceptions**
+   - Action: "List records" (Dataverse)
+   - Table: `fsi_SharingException`
+   - Filter: `fsi_exceptionstatus eq 100000001 and fsi_expiresat ge @{variables('timestamp')} and fsi_expiresat lt @{variables('warningThreshold')}`
+   - Purpose: Find approved exceptions expiring within the warning threshold
+
+6. **Send Warning Alerts**
+   - For each expiring-soon exception:
+   - Action: "Post an Adaptive Card to a Teams Channel"
+   - Channel: Use `fsi_UASD_TeamsGroupId` and `fsi_UASD_TeamsChannelId`
+   - Card content:
+     - Agent name (`fsi_agentname`)
+     - Environment (`fsi_environmentname`)
+     - Expiration date (`fsi_expiresat`)
+     - Days remaining (calculated)
+     - Action button: Link to Exception Manager app for renewal
+
+7. **Summary Notification** (if any expirations or warnings)
+   - Action: "Post message in chat or channel" (Teams)
+   - Include: Count of expired exceptions, count of expiring-soon warnings
+
+**Trigger Configuration:**
+- Frequency: Day
+- Interval: 1
+- Time zone: UTC
+- Time: 07:00
 
 ---
 
@@ -340,6 +423,7 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 
    - On submit:
      - Create record in `fsi_SharingException` table
+     - Set `fsi_exceptionstatus` to Pending (100000000) — this field is `ApplicationRequired` with no default value; omitting it causes a `RequiredFieldMissing` error
      - Set `fsi_requestedby` to current user
      - Set `fsi_requestedat` to now
      - Set `fsi_requestedduration` to user input

@@ -26,7 +26,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
-    [ValidatePattern('^https://[\w.-]+\.(crm\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)/?$')]
+    [ValidatePattern('^https://[\w.-]+\.(crm(?!9\b)\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)/?$')]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -49,9 +49,12 @@ param(
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
 )
 
-#Requires -Version 7.0
+#Requires -Version 7.1
 
 $ErrorActionPreference = "Stop"
+
+# Normalize: strip trailing slash to prevent double-slash in API URLs
+$Environment = $Environment.TrimEnd('/')
 
 # Import shared helper functions (Invoke-WithRetry, Get-AccessToken)
 . (Join-Path $PSScriptRoot "SoDShared.ps1")
@@ -230,6 +233,8 @@ $DefaultRules = @{
             fsi_description = "Prevents privilege escalation paths"
         },
         @{
+            # NOTE: "Break-Glass Account" is not a built-in Entra ID directory role.
+            # Organizations must create a custom role with this exact name for this rule to match.
             fsi_name = "Break-Glass Account should not have non-emergency roles"
             fsi_category = 3
             fsi_rolea = "Break-Glass Account"
@@ -257,11 +262,16 @@ function Get-ExistingRules {
         "OData-Version"    = "4.0"
     }
 
-    $results = @()
-    $nextLink = "$Environment/api/data/v9.2/fsi_conflictrules?`$select=fsi_rolea,fsi_roleb,fsi_category"
+    $results = [System.Collections.Generic.List[object]]::new()
+    $nextLink = "$Environment/api/data/v9.2/fsi_conflictrules?`$select=fsi_rolea,fsi_roleb,fsi_category,fsi_roleacontext,fsi_rolebcontext"
     while ($nextLink) {
-        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
-        $results += $response.value
+        try {
+            $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
+        } catch {
+            Write-Warning "Failed to query existing conflict rules: $($_.Exception.Message)"
+            throw
+        }
+        $results.AddRange([object[]]$response.value)
         $nextLink = $response.'@odata.nextLink'
     }
     return $results
@@ -304,9 +314,13 @@ $rulesToImport = @()
 if ($RuleFile) {
     Write-Host "Loading rules from: $RuleFile"
     $rulesToImport = Get-Content $RuleFile -Raw | ConvertFrom-Json -AsHashtable
+    # Wrap single rule object in an array so .Count reports correctly
+    if ($rulesToImport -is [hashtable]) {
+        $rulesToImport = @($rulesToImport)
+    }
 
     # Validate required fields in each rule from the JSON file
-    $requiredFields = @('fsi_name', 'fsi_category', 'fsi_rolea', 'fsi_roleacontext', 'fsi_roleb', 'fsi_rolebcontext', 'fsi_severity', 'fsi_enabled')
+    $requiredFields = @('fsi_name', 'fsi_category', 'fsi_rolea', 'fsi_roleacontext', 'fsi_roleb', 'fsi_rolebcontext', 'fsi_severity', 'fsi_enabled', 'fsi_allowexception')
     $validCategories = 1..3
     $validSeverities = 1..4
     $validContexts = 1..5
@@ -320,6 +334,10 @@ if ($RuleFile) {
         if ($r.fsi_severity -notin $validSeverities) { throw "Rule '$($r.fsi_name)': fsi_severity must be 1-4." }
         if ($r.fsi_roleacontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_roleacontext must be 1-5." }
         if ($r.fsi_rolebcontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_rolebcontext must be 1-5." }
+        $unsupportedContexts = @(2, 5)
+        if ($r.fsi_roleacontext -in $unsupportedContexts -or $r.fsi_rolebcontext -in $unsupportedContexts) {
+            Write-Warning "Rule '$($r.fsi_name)' uses context 2 (Entra ID App Role) or 5 (Custom Application Role) which is not currently scanned by Invoke-SoDScan.ps1. This rule will not match any user until support is added."
+        }
     }
     Write-Host "  Schema validation passed" -ForegroundColor Green
 } else {
@@ -363,7 +381,9 @@ foreach ($rule in $rulesToImport) {
     $isDuplicate = $existingRules | Where-Object {
         $_.fsi_rolea -eq $rule.fsi_rolea -and
         $_.fsi_roleb -eq $rule.fsi_roleb -and
-        $_.fsi_category -eq $rule.fsi_category
+        $_.fsi_category -eq $rule.fsi_category -and
+        $_.fsi_roleacontext -eq $rule.fsi_roleacontext -and
+        $_.fsi_rolebcontext -eq $rule.fsi_rolebcontext
     }
     if ($isDuplicate) {
         $skipped++

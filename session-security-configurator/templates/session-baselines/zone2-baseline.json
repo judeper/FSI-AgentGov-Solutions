@@ -4,7 +4,7 @@
   "signInFrequencyMinutes": 240,
   "signInFrequencyDisplay": "4 hours",
   "persistentBrowser": "never",
-  "authenticationStrength": "passwordless",
+  "authenticationStrength": "Passwordless MFA",
   "authenticationStrengthDescription": "Passwordless MFA (FIDO2 key, Windows Hello, Microsoft Authenticator passwordless)",
   "requireCompliantDevice": false,
   "pimSettings": {

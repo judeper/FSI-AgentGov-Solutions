@@ -99,6 +99,13 @@ ENV_VARIABLES = [
         "type": "String",
         "defaultvalue": "",
     },
+    {
+        "schemaname": "fsi_UASD_ExpirationWarningDays",
+        "displayname": "UASD - Expiration Warning Days",
+        "description": "Number of days before exception expiration to send warning alerts (default: 7)",
+        "type": "Decimal",
+        "defaultvalue": "7",
+    },
 ]
 
 
@@ -201,6 +208,7 @@ Environment variables created:
   - fsi_UASD_TeamsGroupId
   - fsi_UASD_TeamsChannelId
   - fsi_UASD_DataverseUrl
+  - fsi_UASD_ExpirationWarningDays (7 days)
 
 Examples:
   # Interactive authentication

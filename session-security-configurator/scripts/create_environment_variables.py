@@ -45,16 +45,16 @@ ENV_VARIABLES = [
     {
         "schemaname": "fsi_SSC_Zone2AuthStrength",
         "displayname": "SSC - Zone 2 Authentication Strength",
-        "description": "Required authentication strength for Zone 2 (standard, passwordless, phishing-resistant)",
+        "description": "Required authentication strength for Zone 2 (must match Microsoft Graph DisplayName, e.g. 'Passwordless MFA')",
         "type": "String",
-        "defaultvalue": "passwordless",
+        "defaultvalue": "Passwordless MFA",
     },
     {
         "schemaname": "fsi_SSC_Zone3AuthStrength",
         "displayname": "SSC - Zone 3 Authentication Strength",
-        "description": "Required authentication strength for Zone 3 (standard, passwordless, phishing-resistant)",
+        "description": "Required authentication strength for Zone 3 (must match Microsoft Graph DisplayName, e.g. 'Phishing-resistant MFA')",
         "type": "String",
-        "defaultvalue": "phishing-resistant",
+        "defaultvalue": "Phishing-resistant MFA",
     },
 ]
 
@@ -142,8 +142,8 @@ Environment variables created:
   - fsi_SSC_Zone2SignInFrequencyMinutes (240 minutes = 4 hours)
   - fsi_SSC_Zone3SignInFrequencyMinutes (60 minutes = 1 hour)
   - fsi_SSC_Zone1AuthStrength (standard)
-  - fsi_SSC_Zone2AuthStrength (passwordless)
-  - fsi_SSC_Zone3AuthStrength (phishing-resistant)
+  - fsi_SSC_Zone2AuthStrength (Passwordless MFA)
+  - fsi_SSC_Zone3AuthStrength (Phishing-resistant MFA)
 
 Examples:
   # Interactive authentication

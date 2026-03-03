@@ -4,7 +4,7 @@
   "signInFrequencyMinutes": 60,
   "signInFrequencyDisplay": "1 hour",
   "persistentBrowser": "never",
-  "authenticationStrength": "phishing-resistant",
+  "authenticationStrength": "Phishing-resistant MFA",
   "authenticationStrengthDescription": "Phishing-resistant MFA (FIDO2 key, certificate-based auth)",
   "requireCompliantDevice": true,
   "pimSettings": {

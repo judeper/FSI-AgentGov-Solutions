@@ -12,7 +12,7 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 | Feature | Description |
 |---------|-------------|
-| **Hash Validation** | SHA-256 content hash verification |
+| **Hash Validation** | SHA-256 content hash verification (binary-safe) |
 | **Change Detection** | Real-time and scheduled modification tracking |
 | **Source Registry** | Centralized inventory of all knowledge sources |
 | **Freshness Monitoring** | Alert on stale or outdated content |
@@ -46,13 +46,15 @@ The RAG Source Validator ensures AI agents use trusted, verified knowledge sourc
 
 ## Supported Source Types
 
-| Type | Content | Hash Method |
-|------|---------|-------------|
-| **SharePoint** | Documents, lists, pages | File content hash |
-| **Dataverse** | Tables, rows | Row checksum |
-| **Azure Blob** | Files, containers | Blob content hash |
-| **Web API** | JSON responses | Response body hash |
-| **Database** | Queries, tables | Query result hash |
+| Type | Content | Hash Method | Status |
+|------|---------|-------------|--------|
+| **SharePoint Document Library** | Documents | File content hash | ✅ Implemented |
+| **SharePoint List** | Lists | Row checksum | 🔲 Planned |
+| **SharePoint Page** | Pages | Page content hash | 🔲 Planned |
+| **Dataverse** | Tables, rows | Row checksum | 🔲 Planned |
+| **Azure Blob** | Files, containers | Blob content hash | 🔲 Planned |
+| **Web API** | JSON responses | Response body hash | 🔲 Planned |
+| **Database** | Queries, tables | Query result hash | 🔲 Planned |
 
 ## Prerequisites
 
@@ -91,12 +93,24 @@ Register sources directly in the `fsi_knowledgesource` Dataverse table via the m
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
 ```
 
+For sovereign cloud environments (GCC High, China), specify the corresponding Graph and auth endpoints:
+
+```powershell
+# GCC High
+.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.microsoftdynamics.us" `
+    -GraphBaseUrl "https://graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
+
+# 21Vianet China
+.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.cn" `
+    -GraphBaseUrl "https://microsoftgraph.chinacloudapi.cn" -AuthBaseUrl "https://login.chinacloudapi.cn"
+```
+
 The script automatically captures baselines on first run for sources without an existing hash.
 
 ## Deployment
 
 1. Import the Dataverse solution into your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema) for current status)
-2. Set environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` (or configure certificate-based authentication) for service principal access
+2. Set environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` for service principal access (certificate-based authentication and managed identities are recommended for production but not yet supported by the script)
 3. Register knowledge sources via the model-driven app or Dataverse API
 4. Run `Invoke-SourceValidation.ps1` to capture baselines and validate
 5. Configure scheduled execution via Task Scheduler, cron, or Azure Automation to run `Invoke-SourceValidation.ps1` on a recurring basis
@@ -111,13 +125,17 @@ The script automatically captures baselines on first run for sources without an 
 
 ### Content Hash Validation
 
-Computes SHA-256 hash of source content and compares to stored baseline.
+Computes SHA-256 hash of source content and compares to stored baseline. Binary content (PDF, DOCX, XLSX) is hashed directly from the raw byte stream; text content is hashed as UTF-8.
+
+> **Re-baseline required after upgrade from v1.0.0:** Versions prior to v1.0.1 coerced binary file content to a string before hashing, producing non-standard SHA-256 values. After upgrading, all sources with binary content will report hash mismatches on the first validation run. Run a full validation pass and approve the resulting changes to re-establish baselines.
 
 ```
 Source Content → SHA-256 Hash → Compare to Baseline → Pass/Fail
 ```
 
 ### Schema Validation
+
+> **Not yet implemented.** Result code 3 ("Failed - Schema Drift") is defined in the Dataverse schema but no code path currently produces it. This section describes planned functionality.
 
 For structured data sources, validates schema hasn't changed.
 
@@ -132,6 +150,8 @@ For structured data sources, validates schema hasn't changed.
 
 Ensures content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
 
+> **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, or manual updates in the model-driven app).
+
 | Condition | Status |
 |-----------|--------|
 | Within threshold | Fresh |
@@ -139,9 +159,13 @@ Ensures content is current and not stale by comparing `fsi_lastmodified` against
 
 ### Link Validation
 
+> **Not yet implemented.** No result code for link validation exists in the Dataverse schema and no code path currently performs it. This section describes planned functionality.
+
 For documents with references, validates all links are accessible.
 
 ## Alert Configuration
+
+> **Not yet implemented.** The validation script detects alert-enabled sources but alert delivery (email, Teams, Power Automate, webhooks) is not yet functional. This section describes planned functionality.
 
 ### Alert Types
 
@@ -197,9 +221,17 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.1 | March 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
+
+### Known Limitations
+
+| Limitation | Details |
+|------------|---------|
+| **SharePoint direct URLs** | The script acquires a Graph API-scoped token only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
+| **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
 
 ### Common Issues
 
@@ -212,7 +244,15 @@ For documents with references, validates all links are accessible.
 
 ### Logs
 
-Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+Review script output for `FAILED` and `WARNING` entries displayed in the console during validation.
+
+For persistent logging (recommended for scheduled execution via Task Scheduler, cron, or Azure Automation), use the `-LogFile` parameter:
+
+```powershell
+.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com" -LogFile "validation.log"
+```
+
+Log entries are written in `YYYY-MM-DDTHH:mm:ss.fffZ [LEVEL] Message` format (UTC timestamps, UTF-8 encoded).
 
 ## Support
 
@@ -220,4 +260,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.0.0*
+*FSI Agent Governance Framework - RAG Source Validator v1.0.1*

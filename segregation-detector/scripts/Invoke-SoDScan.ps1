@@ -34,7 +34,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^https://[\w.-]+\.(crm\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)/?$')]
+    [ValidatePattern('^https://[\w.-]+\.(crm(?!9\b)\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)/?$')]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
@@ -53,14 +53,17 @@ param(
     [switch]$DryRun
 )
 
-#Requires -Version 7.0
+#Requires -Version 7.1
 
 $ErrorActionPreference = "Stop"
+
+# Normalize: strip trailing slash to prevent double-slash in API URLs
+$Environment = $Environment.TrimEnd('/')
 
 # Import shared helper functions (Invoke-WithRetry, Get-AccessToken, Get-BapApiBaseUrl)
 . (Join-Path $PSScriptRoot "SoDShared.ps1")
 
-# Structured audit logging
+# Structured audit logging (console only; Dataverse fsi_sodauditlog persistence is planned but not yet implemented)
 function Write-AuditLog {
     param(
         [string]$Message,
@@ -68,31 +71,31 @@ function Write-AuditLog {
         [string]$CorrelationId = $script:CorrelationId
     )
     $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
-    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+    Write-Host "[$timestamp] [$Level] [$CorrelationId] $Message"
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
 #region Helper Functions
 
 function Get-EntraDirectoryRoleAssignments {
-    param([string]$Token)
+    param([string]$Token, [string]$GraphEndpoint = "https://graph.microsoft.com")
 
     $headers = @{
         "Authorization" = "Bearer $Token"
         "Content-Type"  = "application/json"
     }
 
-    $assignments = @()
-    $uri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$expand=principal"
+    $assignments = [System.Collections.Generic.List[object]]::new()
+    $uri = "$GraphEndpoint/v1.0/roleManagement/directory/roleAssignments?`$expand=principal"
 
     do {
         try {
             $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Get }
         } catch {
             Write-Warning "Failed to query Entra directory role assignments: $($_.Exception.Message)"
-            return $assignments
+            throw
         }
-        $assignments += $response.value
+        $assignments.AddRange([object[]]$response.value)
         $uri = $response.'@odata.nextLink'
     } while ($uri)
 
@@ -100,21 +103,28 @@ function Get-EntraDirectoryRoleAssignments {
 }
 
 function Get-EntraDirectoryRoles {
-    param([string]$Token)
+    param([string]$Token, [string]$GraphEndpoint = "https://graph.microsoft.com")
 
     $headers = @{
         "Authorization" = "Bearer $Token"
         "Content-Type"  = "application/json"
     }
 
-    $uri = "https://graph.microsoft.com/v1.0/directoryRoles"
-    try {
-        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Get }
-    } catch {
-        Write-Warning "Failed to query Entra directory roles: $($_.Exception.Message)"
-        return @()
-    }
-    return $response.value
+    $roles = [System.Collections.Generic.List[object]]::new()
+    $uri = "$GraphEndpoint/v1.0/roleManagement/directory/roleDefinitions"
+
+    do {
+        try {
+            $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Get }
+        } catch {
+            Write-Warning "Failed to query Entra directory roles: $($_.Exception.Message)"
+            throw
+        }
+        $roles.AddRange([object[]]$response.value)
+        $uri = $response.'@odata.nextLink'
+    } while ($uri)
+
+    return $roles
 }
 
 function Get-PowerPlatformRoleAssignments {
@@ -128,41 +138,50 @@ function Get-PowerPlatformRoleAssignments {
         "Content-Type"  = "application/json"
     }
 
-    $assignments = @()
+    $assignments = [System.Collections.Generic.List[object]]::new()
 
     # Derive BAP API base URL from environment domain (supports sovereign clouds)
     $bapBase = Get-BapApiBaseUrl -EnvironmentUrl $EnvironmentUrl
 
-    # Get all environments
+    # Get all environments (follow nextLink for pagination)
     $envUri = "$bapBase/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2023-06-01"
-    try {
-        $envResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $envUri -Headers $headers -Method Get }
-    } catch {
-        Write-Warning "Unable to query Power Platform environments: $($_.Exception.Message)"
-        return $assignments
-    }
+    $environments = [System.Collections.Generic.List[object]]::new()
+    do {
+        try {
+            $envResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $envUri -Headers $headers -Method Get }
+        } catch {
+            Write-Warning "Unable to query Power Platform environments: $($_.Exception.Message)"
+            throw
+        }
+        $environments.AddRange([object[]]$envResponse.value)
+        $envUri = $envResponse.nextLink
+    } while ($envUri)
 
-    foreach ($env in $envResponse.value) {
+    foreach ($env in $environments) {
         $envId = $env.name
         $envDisplayName = $env.properties.displayName
 
-        # Get role assignments for each environment
+        # Get role assignments for each environment (follow nextLink for pagination)
         $roleUri = "$bapBase/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$envId/roleAssignments?api-version=2023-06-01"
-        try {
-            $roleResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $roleUri -Headers $headers -Method Get }
-            foreach ($ra in $roleResponse.value) {
-                $assignments += @{
-                    PrincipalId     = $ra.properties.principal.id
-                    PrincipalType   = $ra.properties.principal.type
-                    RoleName        = $ra.properties.roleDefinition.displayName
-                    RoleId          = $ra.properties.roleDefinition.id
-                    EnvironmentId   = $envId
-                    EnvironmentName = $envDisplayName
+        do {
+            try {
+                $roleResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $roleUri -Headers $headers -Method Get }
+                foreach ($ra in $roleResponse.value) {
+                    $assignments.Add(@{
+                        PrincipalId     = $ra.properties.principal.id
+                        PrincipalType   = $ra.properties.principal.type
+                        RoleName        = $ra.properties.roleDefinition.displayName
+                        RoleId          = $ra.properties.roleDefinition.id
+                        EnvironmentId   = $envId
+                        EnvironmentName = $envDisplayName
+                    })
                 }
+                $roleUri = $roleResponse.nextLink
+            } catch {
+                Write-Verbose "  Skipping environment $envDisplayName role query: $($_.Exception.Message)"
+                $roleUri = $null
             }
-        } catch {
-            Write-Verbose "  Skipping environment $envDisplayName role query: $($_.Exception.Message)"
-        }
+        } while ($roleUri)
     }
 
     return $assignments
@@ -181,24 +200,24 @@ function Get-DataverseSecurityRoleAssignments {
         "OData-Version" = "4.0"
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[hashtable]]::new()
     $nextLink = "$Environment/api/data/v9.2/systemusers?`$select=systemuserid,azureactivedirectoryobjectid,domainname,fullname&`$expand=systemuserroles_association(`$select=name,roleid)&`$filter=isdisabled eq false"
     while ($nextLink) {
         try {
             $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
         } catch {
             Write-Warning "Failed to query Dataverse security role assignments: $($_.Exception.Message)"
-            return $results
+            throw
         }
         foreach ($user in $response.value) {
             foreach ($role in $user.systemuserroles_association) {
-                $results += @{
+                $results.Add(@{
                     PrincipalId = $user.azureactivedirectoryobjectid
                     DomainName  = $user.domainname
                     DisplayName = $user.fullname
                     RoleName    = $role.name
                     RoleId      = $role.roleid
-                }
+                })
             }
         }
         $nextLink = $response.'@odata.nextLink'
@@ -220,11 +239,16 @@ function Get-ConflictRules {
         "OData-Version" = "4.0"
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $nextLink = "$Environment/api/data/v9.2/fsi_conflictrules?`$filter=fsi_enabled eq true"
     while ($nextLink) {
-        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
-        $results += $response.value
+        try {
+            $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
+        } catch {
+            Write-Warning "Failed to query conflict rules: $($_.Exception.Message)"
+            throw
+        }
+        $results.AddRange([object[]]$response.value)
         $nextLink = $response.'@odata.nextLink'
     }
     return $results
@@ -243,11 +267,16 @@ function Get-ExistingViolations {
         "OData-Version" = "4.0"
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $nextLink = "$Environment/api/data/v9.2/fsi_sodviolations?`$filter=fsi_status lt 5"
     while ($nextLink) {
-        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
-        $results += $response.value
+        try {
+            $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
+        } catch {
+            Write-Warning "Failed to query existing violations (page $([Math]::Floor($results.Count / 50) + 1)): $($_.Exception.Message)"
+            throw
+        }
+        $results.AddRange([object[]]$response.value)
         $nextLink = $response.'@odata.nextLink'
     }
     return $results
@@ -355,7 +384,8 @@ Write-Host ""
 
 # Get tokens
 Write-Host "Acquiring access tokens..." -ForegroundColor Gray
-$graphToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "https://graph.microsoft.com/.default"
+$graphEndpoint = Get-GraphEndpoint -EnvironmentUrl $Environment
+$graphToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$graphEndpoint/.default"
 $dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
 Write-Host "  Tokens acquired successfully" -ForegroundColor Green
 
@@ -364,6 +394,9 @@ Write-Host ""
 Write-Host "Loading conflict rules..." -ForegroundColor Gray
 $rules = Get-ConflictRules -Environment $Environment -Token $dataverseToken
 Write-Host "  Found $($rules.Count) active rules" -ForegroundColor Green
+if ($rules.Count -eq 0) {
+    Write-Warning "No active conflict rules found. Import rules with Import-ConflictRules.ps1 before scanning."
+}
 
 # Get existing violations
 Write-Host ""
@@ -371,12 +404,26 @@ Write-Host "Loading existing violations..." -ForegroundColor Gray
 $existingViolations = Get-ExistingViolations -Environment $Environment -Token $dataverseToken
 Write-Host "  Found $($existingViolations.Count) open violations" -ForegroundColor Green
 
+# Build hashtable index for O(1) violation deduplication
+$violationIndex = @{}
+foreach ($v in $existingViolations) {
+    $baseKey = "$($v.fsi_userobjectid)|$($v._fsi_conflictruleid_value)"
+    $violationIndex[$baseKey] = $true
+    if ($v.fsi_environment) {
+        $violationIndex["$baseKey|$($v.fsi_environment)"] = $true
+    }
+}
+
 # Get Entra ID role assignments
 Write-Host ""
 Write-Host "Querying Entra ID directory roles..." -ForegroundColor Gray
-$directoryRoles = Get-EntraDirectoryRoles -Token $graphToken
-$roleAssignments = Get-EntraDirectoryRoleAssignments -Token $graphToken
+$directoryRoles = Get-EntraDirectoryRoles -Token $graphToken -GraphEndpoint $graphEndpoint
+$roleAssignments = Get-EntraDirectoryRoleAssignments -Token $graphToken -GraphEndpoint $graphEndpoint
 Write-Host "  Found $($roleAssignments.Count) role assignments" -ForegroundColor Green
+
+# Build hashtable for O(1) directory role lookup by ID
+$directoryRoleLookup = @{}
+foreach ($dr in $directoryRoles) { $directoryRoleLookup[$dr.id] = $dr }
 
 # Get Power Platform role assignments
 Write-Host ""
@@ -394,7 +441,7 @@ $userRoleMap = @{}
 foreach ($assignment in $roleAssignments) {
     $userId = $assignment.principalId
     $roleId = $assignment.roleDefinitionId
-    $role = $directoryRoles | Where-Object { $_.roleTemplateId -eq $roleId }
+    $role = $directoryRoleLookup[$roleId]
 
     if ($role -and $assignment.principal.'@odata.type' -eq '#microsoft.graph.user') {
         $userPrincipalName = $assignment.principal.userPrincipalName
@@ -488,7 +535,7 @@ Write-Host "  Merged Dataverse roles ($dvUsersAdded new users added)" -Foregroun
 # Scan for violations
 Write-Host ""
 Write-Host "Scanning for violations..." -ForegroundColor Gray
-$newViolations = @()
+$newViolations = [System.Collections.Generic.List[hashtable]]::new()
 $usersScanned = 0
 $conflictsFound = 0
 
@@ -503,12 +550,12 @@ foreach ($userId in $userRoleMap.Keys) {
             foreach ($match in $result.Matches) {
                 $conflictsFound++
 
-                # Check if violation already exists (include environment for context-3 rules)
+                # Check if violation already exists using hashtable index (O(1) lookup)
                 $matchEnvId = $match.RoleA.EnvironmentId
-                $existingMatch = $existingViolations | Where-Object {
-                    $_.fsi_userobjectid -eq $userId -and
-                    $_._fsi_conflictruleid_value -eq $rule.fsi_conflictruleid -and
-                    (-not $matchEnvId -or $_.fsi_environment -eq $matchEnvId)
+                $existingMatch = if ($matchEnvId) {
+                    $violationIndex.ContainsKey("$userId|$($rule.fsi_conflictruleid)|$matchEnvId")
+                } else {
+                    $violationIndex.ContainsKey("$userId|$($rule.fsi_conflictruleid)")
                 }
 
                 if ($existingMatch) {
@@ -531,7 +578,7 @@ foreach ($userId in $userRoleMap.Keys) {
                     $violation.fsi_environment = $matchEnvId
                 }
 
-                $newViolations += $violation
+                $newViolations.Add($violation)
 
                 if ($DryRun) {
                     Write-Host "  [DRY RUN] Would create: $($violation.fsi_name)" -ForegroundColor Yellow
@@ -548,12 +595,16 @@ foreach ($userId in $userRoleMap.Keys) {
 if (-not $DryRun -and $newViolations.Count -gt 0) {
     Write-Host ""
     Write-Host "Creating violation records..." -ForegroundColor Gray
+    $createdCount = 0
+    $failedCount = 0
 
     foreach ($violation in $newViolations) {
         try {
             New-Violation -Environment $Environment -Token $dataverseToken -Violation $violation | Out-Null
+            $createdCount++
             Write-Host "  Created: $($violation.fsi_name)" -ForegroundColor Green
         } catch {
+            $failedCount++
             Write-Host "  Failed: $($violation.fsi_name) - $($_.Exception.Message)" -ForegroundColor Red
         }
     }
@@ -569,12 +620,22 @@ Write-Host "Users scanned:      $usersScanned"
 Write-Host "Conflicts found:    $conflictsFound"
 Write-Host "Existing violations: $($existingViolations.Count)"
 Write-Host "New violations:     $($newViolations.Count)"
+if (-not $DryRun -and $newViolations.Count -gt 0) {
+    Write-Host "  Created:          $createdCount"
+    Write-Host "  Failed:           $failedCount"
+}
 Write-Host ""
 
 if ($DryRun) {
     Write-Host "[DRY RUN - No changes made]" -ForegroundColor Yellow
 }
 
-Write-AuditLog -Message "SoD scan completed: $usersScanned users scanned, $conflictsFound conflicts found, $($newViolations.Count) new violations"
+$persistedCount = if ($DryRun -or $newViolations.Count -eq 0) { 0 } else { $createdCount }
+Write-AuditLog -Message "SoD scan completed: $usersScanned users scanned, $conflictsFound conflicts found, $($newViolations.Count) new violations ($persistedCount persisted)"
+
+# Exit with non-zero code when new violations are found (for CI/CD pipeline gates)
+if ($newViolations.Count -gt 0) {
+    exit 1
+}
 
 #endregion

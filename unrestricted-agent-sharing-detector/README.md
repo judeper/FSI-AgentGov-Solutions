@@ -31,6 +31,7 @@ unrestricted-agent-sharing-detector/
     ├── create_uasd_environment_variables.py
     ├── create_uasd_connection_references.py
     ├── requirements.txt
+    ├── uasd_client.py               # Deprecated (v1.0.1) — replaced by shared DataverseClient
     └── governance/
         ├── Invoke-SharingAudit.ps1
         ├── Test-AgentSharingCompliance.ps1

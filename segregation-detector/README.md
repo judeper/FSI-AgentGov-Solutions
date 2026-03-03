@@ -51,36 +51,38 @@ The Segregation of Duties (SoD) Detector identifies and prevents conflicts where
 
 Same user cannot both create and approve in the same workflow.
 
-| Maker Role | Checker Role | Risk |
-|------------|--------------|------|
-| Agent Developer | Pipeline Approver | Self-approval of changes |
-| Solution Developer | Solution Promoter | Unreviewed deployments |
-| Flow Creator | Flow Approver | Bypass change management |
-| DLP Policy Author | DLP Policy Approver | Self-exemption from DLP policies |
-| Connection Creator | Connection Approver | Unreviewed connection approval |
+| Maker Role | Context | Checker Role | Context | Risk |
+|------------|---------|--------------|---------|------|
+| Agent Developer | 4 - DV Sec | Pipeline Approver | 4 - DV Sec | Self-approval of changes |
+| Solution Developer | 4 - DV Sec | Solution Promoter | 4 - DV Sec | Unreviewed deployments |
+| Flow Creator | 4 - DV Sec | Flow Approver | 4 - DV Sec | Bypass change management |
+| DLP Policy Author | 3 - PP Env | DLP Policy Approver | 3 - PP Env | Self-exemption from DLP policies |
+| Connection Creator | 4 - DV Sec | Connection Approver | 4 - DV Sec | Unreviewed connection approval |
 
 ### Category 2: Segregation Conflicts
 
 Roles that should never be held by the same person.
 
-| Role A | Role B | Risk |
-|--------|--------|------|
-| Environment Admin | Agent Publisher | Admin promotes own work |
-| Security Administrator | Agent Developer | Security/development overlap |
-| Compliance Administrator | Agent Developer | Compliance/development overlap |
-| Environment Creator | Environment Approver | Environment lifecycle overlap |
-| Data Steward | Data Consumer | Data access separation |
+| Role A | Context | Role B | Context | Risk |
+|--------|---------|--------|---------|------|
+| System Administrator | 4 - DV Sec | Agent Publisher | 4 - DV Sec | Admin promotes own work |
+| Security Administrator | 1 - Entra | Agent Developer | 4 - DV Sec | Security/development overlap |
+| Compliance Administrator | 1 - Entra | Agent Developer | 4 - DV Sec | Compliance/development overlap |
+| Environment Creator | 3 - PP Env | Environment Approver | 3 - PP Env | Environment lifecycle overlap |
+| Data Steward | 4 - DV Sec | Data Consumer | 4 - DV Sec | Data access separation |
 
 ### Category 3: Privileged Access Conflicts
 
 High-privilege roles that require additional controls.
 
-| Privileged Role | Incompatible With | Risk |
-|-----------------|-------------------|------|
-| Global Administrator | Agent Developer | God mode abuse |
-| Power Platform Administrator | Basic User | Admin as user |
-| Privileged Role Administrator | Application Administrator | Privilege escalation |
-| Break-Glass Account | Basic User | Emergency access misuse |
+| Privileged Role | Context | Incompatible With | Context | Risk |
+|-----------------|---------|-------------------|---------|------|
+| Global Administrator | 1 - Entra | Agent Developer | 4 - DV Sec | God mode abuse |
+| Power Platform Administrator | 1 - Entra | Basic User | 4 - DV Sec | Admin as user |
+| Privileged Role Administrator | 1 - Entra | Application Administrator | 1 - Entra | Privilege escalation |
+| Break-Glass Account | 1 - Entra | Basic User | 4 - DV Sec | Emergency access misuse |
+
+> **Context values:** 1 = Entra ID Directory Role, 3 = Power Platform Environment Role, 4 = Dataverse Security Role. See [conflict-rules.md](docs/conflict-rules.md) for all context codes.
 
 ## Prerequisites
 
@@ -88,7 +90,7 @@ High-privilege roles that require additional controls.
 
 | Requirement | Purpose |
 |-------------|---------|
-| Power Platform Premium | Power Automate flows |
+| Power Platform Premium | PowerShell detection scripts; Power Automate flows (planned) |
 | Dataverse capacity | Conflict tracking storage |
 | Microsoft Entra ID P1+ | Role assignment queries |
 
@@ -138,6 +140,14 @@ Review scan output for detected conflicts. A Power Apps dashboard for visual rev
 | [Dataverse Schema](docs/dataverse-schema.md) | Table definitions |
 | [Conflict Rules](docs/conflict-rules.md) | Rule configuration guide |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+
+### Scripts
+
+| Script | Description |
+|--------|-------------|
+| `scripts/Invoke-SoDScan.ps1` | Scans for SoD violations across Entra ID, Power Platform, and Dataverse |
+| `scripts/Import-ConflictRules.ps1` | Imports conflict rule sets into Dataverse |
+| `scripts/SoDShared.ps1` | Shared helper module (`Invoke-WithRetry`, `Get-AccessToken`, `Get-LoginEndpoint`, `Get-GraphEndpoint`, `Get-BapApiBaseUrl`) dot-sourced by both scripts |
 
 ## Detection Process
 
@@ -281,8 +291,14 @@ For supervision queue assignments:
 | Limitation | Description |
 |------------|-------------|
 | **No solution package** | No managed/unmanaged ZIP or `solution.xml` is included. Dataverse tables must be created manually per [dataverse-schema.md](docs/dataverse-schema.md). |
-| **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` and `-WhatIf` before production use. |
+| **GCC environments** | GCC environments (`crm9.dynamics.com`) are not supported because the BAP API endpoint for GCC is undetermined. Commercial (`crm.dynamics.com`), GCC High (`crm.microsoftdynamics.us`), EMEA (`crm4`), APAC (`crm5`), and other commercial regions are supported. |
+| **No token refresh** | Access tokens expire after ~60 minutes. In large tenants, scans may exceed this duration, causing 401 failures partway through. `Invoke-WithRetry` does not retry 401 errors and no re-authentication is attempted. For large environments, consider splitting scans or refreshing tokens externally. |
+| **No batch violation creation** | `New-Violation` creates individual Dataverse records via separate POST calls. Using the Dataverse `$batch` endpoint would reduce API round-trips and allow atomic creation. For environments with many new violations, this may cause throttling. |
+| **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` before production use. Contributions welcome. |
+| **Console-only audit log** | `Write-AuditLog` outputs structured logs to the console but does not persist records to the `fsi_sodauditlog` Dataverse table. A persistent audit trail requires manual log forwarding (e.g., to Azure Monitor or a SIEM). |
 | **Unsupported role contexts** | Entra ID App Role assignments (context 2) and Custom Application Roles (context 5) are not queried. Rules targeting these contexts will not match. |
+| **Group-based role assignments** | Entra ID role assignments through security groups are not expanded. Only direct user assignments are evaluated. Users who inherit conflicting roles via group membership will not be detected. |
+| **No auto-reconciliation** | Violations are not automatically closed when the underlying role conflict is removed. Stale violations accumulate with status "Open" until manually resolved. |
 
 ## Version History
 
