@@ -290,7 +290,7 @@ try {
             # Look up environment details from Power Platform
             $env = Get-AdminPowerAppEnvironment -EnvironmentName $EnvironmentId -ErrorAction SilentlyContinue
             if ($env) {
-                $envUrl = $env.Internal.Properties.linkedEnvironmentMetadata.instanceUrl
+                $envUrl = $env.Internal.Properties.linkedEnvironmentMetadata.InstanceApiUrl
                 $targetEnvironments = @([PSCustomObject]@{
                     EnvironmentId   = $EnvironmentId
                     EnvironmentName = $env.DisplayName
@@ -330,7 +330,7 @@ try {
                 foreach ($record in $nonCompliant.value) {
                     # Look up environment URL from Power Platform
                     $env = Get-AdminPowerAppEnvironment -EnvironmentName $record.fsi_environmentid -ErrorAction SilentlyContinue
-                    $envUrl = if ($env) { $env.Internal.Properties.linkedEnvironmentMetadata.instanceUrl } else { $null }
+                    $envUrl = if ($env) { $env.Internal.Properties.linkedEnvironmentMetadata.InstanceApiUrl } else { $null }
 
                     $targetEnvironments += [PSCustomObject]@{
                         EnvironmentId   = $record.fsi_environmentid

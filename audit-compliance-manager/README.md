@@ -232,7 +232,7 @@ Compliance tracking with upsert by environment ID:
 | Key Column | Type | Purpose |
 |------------|------|---------|
 | `fsi_environmentid` | Text | Power Platform environment GUID (alternate key) |
-| `fsi_status` | Choice | Compliant, Non-Compliant, Remediation Pending |
+| `fsi_compliancestatus` | Choice | Compliant, Non-Compliant, Remediation Pending |
 
 ## Components
 

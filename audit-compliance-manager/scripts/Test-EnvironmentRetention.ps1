@@ -198,11 +198,11 @@ function Test-EnvironmentRetention {
 
             if ($valueResponse.value -and $valueResponse.value.Count -gt 0) {
                 # Instance-specific value exists
-                $threshold = [int]$valueResponse.value[0].value
+                $threshold = [math]::Round([decimal]$valueResponse.value[0].value)
                 Write-Verbose "Using instance-specific environment variable value: $threshold days"
             } else {
                 # Use default value
-                $threshold = [int]$envVarDef.defaultvalue
+                $threshold = [math]::Round([decimal]$envVarDef.defaultvalue)
                 Write-Verbose "Using default environment variable value: $threshold days"
             }
 

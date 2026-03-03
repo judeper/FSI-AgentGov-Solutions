@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "The AuditEnvironmentCatalog (ACV) table uses 'fsi_status' (integer: 1=Active, 2=Inactive) to track whether an environment is actively monitored. The AuditEnvironmentCompliance (ALCA) table uses 'fsi_compliancestatus' (choice: Compliant/Non-Compliant/Remediation Pending/Error) — these are two distinct columns in two distinct tables.",
+    "Environment URL lookups via Get-AdminPowerAppEnvironment return the URL under '$env.Internal.Properties.linkedEnvironmentMetadata.InstanceApiUrl' (PascalCase). Do not use 'instanceUrl' (camelCase) — that property does not exist on the returned object.",
+    "Environment variable values fetched from Dataverse are returned as strings and may represent decimal numbers (e.g. '30.0'). Always cast using [math]::Round([decimal]$value) rather than [int]$value to avoid silent truncation of fractional values.",
+    "Email placeholder defaults in flow templates must use 'example.com' (RFC 2606 reserved) rather than 'contoso.com' (a real Microsoft demo domain). Variable initializers for GovernanceLeadEmail and NotificationRecipients carry 'CONFIGURE:' metadata notes to signal they require tenant-specific values before deployment.",
+    "Apply 'runtimeConfiguration.concurrency.repetitions = 1' to all Foreach loop actions to prevent concurrent iteration, which can cause race conditions on shared variables (NonCompliantCount, EnvironmentList). Until loops do not support this property and should not have it added."
+  ]
+}

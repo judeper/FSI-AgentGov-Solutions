@@ -427,6 +427,11 @@
           },
           "type": "Foreach",
           "foreach": "@body('Parse_Results')?['AlertsRequired']",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          },
           "actions": {
             "Check_Severity_For_Teams": {
               "runAfter": {},
