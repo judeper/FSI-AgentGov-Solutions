@@ -47,9 +47,11 @@ function Connect-AAMDataverse {
     $script:DataverseUrl = $DataverseUrl.TrimEnd('/')
     $script:ClientId = $ClientId
     $script:TenantId = $TenantId
-    
+
     if ($AccessToken) {
         $script:AccessToken = $AccessToken
+        # Assume caller-supplied tokens are valid for 55 minutes (conservative vs typical 60m expiry)
+        $script:TokenExpiry = (Get-Date).AddMinutes(55)
     } else {
         # Attempt to get token from Graph context
         try {
