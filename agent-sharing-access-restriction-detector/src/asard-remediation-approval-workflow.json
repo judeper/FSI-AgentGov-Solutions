@@ -69,7 +69,12 @@
             "startTime": "2026-02-13T09:00:00Z",
             "timeZone": "UTC"
           },
-          "description": "Scheduled trigger: runs daily at 09:00 UTC to process non-compliant agents for remediation approval"
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "description": "Scheduled trigger: runs daily at 09:00 UTC to process non-compliant agents for remediation approval. concurrency=1 prevents overlapping runs when prior instance is still awaiting approval."
         }
       },
       "actions": {
@@ -650,7 +655,7 @@
                     "Parse_Current_Principals": {
                       "type": "ParseJson",
                       "inputs": {
-                        "content": "@coalesce(items('Apply_to_each_Agent')?['fsi_sharing_principals'], '[]')",
+                        "content": "@if(or(equals(items('Apply_to_each_Agent')?['fsi_sharing_principals'], null), empty(string(coalesce(items('Apply_to_each_Agent')?['fsi_sharing_principals'], '')))), '[]', string(items('Apply_to_each_Agent')?['fsi_sharing_principals']))",
                         "schema": {
                           "type": "array",
                           "items": {
@@ -750,7 +755,7 @@
                         "member_count_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), join(body('Select_Proposed_Member_Counts'), ' + '), '0')}",
                         "access_scope_proposed": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), 'Approved security groups only', concat('No group access (Zone ', string(variables('CurrentZone')), ')'))}",
                         "impact_summary": "@{concat('Access change: ', length(body('Parse_Current_Principals')), ' principals removed, ', length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups added')}",
-                        "approved_groups_policy": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), concat(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups configured for this zone'), 'No approved groups (Zone 1 — no group sharing allowed)')}",
+                        "approved_groups_policy": "@{if(greater(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), 0), concat(length(outputs('Query_Approved_Groups_For_Zone')?['body/value']), ' approved groups configured for this zone'), concat('No approved groups (Zone ', string(variables('CurrentZone')), ' — no group sharing allowed)'))}",
                         "scan_run_id": "@{items('Apply_to_each_Agent')?['fsi_scan_run_id']}",
                         "last_checked": "@{items('Apply_to_each_Agent')?['fsi_last_checked']}"
                       },
