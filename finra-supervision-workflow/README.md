@@ -48,7 +48,7 @@ Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 c
 
 | Capability | Status | Alternative |
 |------------|--------|-------------|
-| Retrieve Communication Compliance alerts | **API** | Graph API with Compliance Admin permissions |
+| Retrieve Communication Compliance alerts | **API** | Purview Communication Compliance API with Compliance Admin permissions |
 | Create Dataverse tables | **Automated** | `deploy.py` |
 | Create security roles | **Manual** | See `docs/security-roles.md`; `deploy.py` prints privilege matrix |
 | Configure Communication Compliance | **Manual** | Purview compliance portal |
@@ -82,7 +82,7 @@ Primary queue table for items requiring supervisory review.
 | `fsi_tier` | Choice | Tier 1/2/3 agent classification |
 | `fsi_contentpreview` | Multiline Text | Truncated content preview (500 chars) |
 | `fsi_flaggedreason` | Text | Why item was flagged |
-| `fsi_state` | Choice | Pending, InReview, Approved, Escalated, Rejected |
+| `fsi_state` | Choice | Pending, In Review, Approved, Escalated, Rejected |
 | `fsi_assignedprincipal` | Lookup (User) | Assigned supervisory principal |
 | `fsi_queueddate` | DateTime | When item entered queue |
 | `fsi_sladue` | DateTime | SLA deadline |
@@ -257,6 +257,8 @@ Random Sample   |
 ```bash
 python scripts/export_supervision_evidence.py \
     --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --interactive \
     --output-path ./exports \
     --start-date 2026-01-20 \
     --end-date 2026-01-26
@@ -266,7 +268,7 @@ Exports include:
 - `SupervisionQueue-Week04-2026.json` - All queue items with outcomes
 - `SupervisionLog-Week04-2026.json` - Complete audit trail
 - `SLACompliance-Week04-2026.json` - SLA metrics
-- `manifest.json` - SHA-256 hashes for integrity
+- `manifest-{period}.json` - SHA-256 hashes for integrity (e.g., `manifest-Week04-2026.json`)
 
 ### FINRA 3120 Testing Evidence
 

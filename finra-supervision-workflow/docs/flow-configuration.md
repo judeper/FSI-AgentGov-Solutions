@@ -23,41 +23,50 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 - Frequency: Minute
 - Interval: 15
 - Time zone: UTC
+- Concurrency Control: On (Degree of Parallelism: 1) — prevents duplicate queue entries if a run exceeds 15 minutes
 
 ### Actions
 
 ```
 1. Initialize variable: lastRunTime (from secure storage)
+   - First-run guard: If the Key Vault secret does not exist, initialize lastRunTime
+     to addHours(utcNow(), -1) so the first poll retrieves only the last hour of alerts
+     instead of failing with HTTP 400 or returning the entire backlog.
 
 2. HTTP - Get Communication Compliance Alerts
    Method: GET
-   URI: https://graph.microsoft.com/v1.0/security/alerts_v2
+   URI: https://compliance.microsoft.com/api/SupervisoryReview/alerts
    Headers:
      Authorization: Bearer @{outputs('Get_Token')}
    Queries:
-     $filter: createdDateTime gt @{variables('lastRunTime')} and alertType eq 'CommunicationCompliance'
+     $filter: createdDateTime gt @{variables('lastRunTime')}
+   Note: Uses Purview Communication Compliance API, NOT Graph security/alerts_v2
+         (see docs/communication-compliance-setup.md for API access configuration)
 
-3. Apply to each: Alert
-   3.1 Parse JSON - Extract alert details
+3. Get SupervisionConfig (all active rows)
+   Cache outside loop to avoid N+1 queries (matches EscalationFlow pattern at step 2.1)
 
-   3.2 Condition: Is AI Agent Related?
+4. Apply to each: Alert
+   4.1 Parse JSON - Extract alert details
+
+   4.2 Condition: Is AI Agent Related?
        - Check if alert source contains 'CopilotStudio' or 'AgentBuilder'
 
-   3.3 If Yes:
-       3.3.1 HTTP - Get Agent Details
+   4.3 If Yes:
+       4.3.1 HTTP - Get Agent Details
              URI: https://api.powerplatform.com/...
 
-       3.3.2 Get SupervisionConfig
-             Filter: fsi_zone eq @{agent.zone} and fsi_tier eq @{agent.tier}
+       4.3.2 Look up matching config from cached SupervisionConfig
+             Filter (in-memory): fsi_zone eq @{agent.zone} and fsi_tier eq @{agent.tier}
 
-       3.3.3 Condition: Random sampling (Zone 1-2)
-             - If Zone 3 OR random() < reviewPercent/100
+       4.3.3 Condition: Random sampling (Zone 1-2)
+             - If Zone 3 OR rand(1, 100) <= reviewPercent
 
-       3.3.4 Condition: Duplicate check
+       4.3.4 Condition: Duplicate check
               - Filter SupervisionQueue: fsi_sourceid eq @{alert.id}
               - If count > 0, skip creation
 
-        3.3.5 Create SupervisionQueue row
+        4.3.5 Create SupervisionQueue row
              - Queue Number: Auto
              - Source Type: Communication Compliance
              - Source ID: @{alert.id}
@@ -65,13 +74,13 @@ Polls Communication Compliance API for new flagged items and creates Supervision
              - Agent Name: @{agent.displayName}
              - Zone: @{agent.zone}
              - Tier: @{agent.tier}
-             - Content Preview: @{substring(alert.content, 0, 500)}
+             - Content Preview: @{if(empty(alert.content), '', substring(alert.content, 0, min(length(alert.content), 500)))}
              - Flagged Reason: @{alert.policyName}
              - State: Pending
              - Queued Date: @{utcNow()}
              - SLA Due: @{addHours(utcNow(), config.slaHours)}
 
-4. Update lastRunTime in secure storage
+5. Update lastRunTime in secure storage
 ```
 
 ### Connection References
@@ -79,7 +88,7 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 | Connection | Type | Purpose |
 |------------|------|---------|
 | Dataverse | Premium | Create queue records |
-| HTTP with Azure AD | Premium | Communication Compliance API |
+| HTTP with Azure AD | Premium | Purview Communication Compliance API |
 | Azure Key Vault | Premium | Store lastRunTime, credentials |
 
 ### Error Handling
@@ -117,6 +126,8 @@ Triggered when a new SupervisionQueue row is created. Assigns to appropriate sup
 
 3. Update SupervisionQueue
    - Assigned Principal: @{assignedPrincipal}
+   - Owner: @{assignedPrincipal} (Dataverse Assign action — transfers record ownership
+     from the service principal so User-level privileges grant the supervisor access)
    - State: Pending (unchanged — transitions to InReview when the supervisor opens the item; see note below)
 
 4. Create SupervisionLog
@@ -171,6 +182,7 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
 - Frequency: Hour
 - Interval: 1
 - Time zone: UTC
+- Concurrency Control: On (Degree of Parallelism: 1) — prevents double-escalation notifications if a run exceeds 1 hour
 
 ### Actions
 
@@ -188,13 +200,15 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
    Filter: fsi_state in (1, 2)
            and fsi_sladue lt @{utcNow()}
 
-   2.1 Apply to each: Check escalation threshold
-       2.1.1 Get SupervisionConfig
+   2.1 Get SupervisionConfig (all rows, cached outside loop)
 
-       2.1.2 Calculate hours overdue
-             hoursOverdue = dateDiff(queuedDate, utcNow(), 'Hour')
+   2.2 Apply to each: Check escalation threshold
+       2.2.1 Look up config from cached SupervisionConfig
 
-       2.1.3 Condition: hoursOverdue >= escalationHours?
+       2.2.2 Calculate hours overdue
+             hoursOverdue = dateDiff(slaDue, utcNow(), 'Hour')
+
+       2.2.3 Condition: hoursOverdue >= escalationHours?
 
              If Yes:
                - Update SupervisionQueue: State = Escalated
@@ -285,7 +299,8 @@ All flows should use a dedicated service principal:
 
 1. Create app registration: `FSW-Automation-SP`
 2. Grant API permissions:
-   - Microsoft Graph: `SecurityEvents.Read.All`
+   - Microsoft Purview: Compliance Administrator role (see docs/communication-compliance-setup.md)
+   - Microsoft Graph: `User.Read.All`
    - Dataverse: `user_impersonation`
 3. Create client secret, store in Key Vault
 4. Use "HTTP with Azure AD" connector
@@ -294,7 +309,7 @@ All flows should use a dedicated service principal:
 
 | Flow | Required Permissions |
 |------|---------------------|
-| IngestFlaggedItems | Graph: SecurityEvents.Read.All |
+| IngestFlaggedItems | Purview: Compliance Administrator, Graph: User.Read.All |
 | AssignmentFlow | Dataverse: FSW Admin role |
 | EscalationFlow | Dataverse: FSW Admin role |
 | ReviewComplete | Dataverse: FSW Admin role |

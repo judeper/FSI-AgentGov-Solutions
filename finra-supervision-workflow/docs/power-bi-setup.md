@@ -157,15 +157,15 @@ DIVIDE(
 Items This Week =
 CALCULATE(
     COUNTROWS(SupervisionQueue),
-    SupervisionQueue[fsi_queueddate] >= TODAY() - WEEKDAY(TODAY()) + 1
+    SupervisionQueue[fsi_queueddate] >= TODAY() - WEEKDAY(TODAY(), 2) + 1
 )
 
 WoW Change =
 VAR ThisWeek = [Items This Week]
 VAR LastWeek = CALCULATE(
     COUNTROWS(SupervisionQueue),
-    SupervisionQueue[fsi_queueddate] >= TODAY() - WEEKDAY(TODAY()) + 1 - 7,
-    SupervisionQueue[fsi_queueddate] < TODAY() - WEEKDAY(TODAY()) + 1
+    SupervisionQueue[fsi_queueddate] >= TODAY() - WEEKDAY(TODAY(), 2) + 1 - 7,
+    SupervisionQueue[fsi_queueddate] < TODAY() - WEEKDAY(TODAY(), 2) + 1
 )
 RETURN DIVIDE(ThisWeek - LastWeek, LastWeek, 0)
 ```

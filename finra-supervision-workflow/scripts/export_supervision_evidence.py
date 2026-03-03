@@ -19,41 +19,22 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 try:
     import requests
-    from msal import PublicClientApplication, ConfidentialClientApplication
+    import msal  # noqa: F401 — validate msal is installed (used by auth.py)
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
     sys.exit(1)
 
-
-def get_access_token(tenant_id: str, client_id: str = None, client_secret: str = None,
-                     interactive: bool = False, environment_url: str = None) -> str:
-    """Acquire access token for Dataverse."""
-    scope = [f"{environment_url}/.default"]
-
-    if interactive:
-        app = PublicClientApplication(
-            client_id="51f81489-12ee-4a9e-aaae-a2591f45987d",
-            authority=f"https://login.microsoftonline.com/{tenant_id}"
-        )
-        result = app.acquire_token_interactive(scopes=scope)
-    else:
-        app = ConfidentialClientApplication(
-            client_id=client_id,
-            client_credential=client_secret,
-            authority=f"https://login.microsoftonline.com/{tenant_id}"
-        )
-        result = app.acquire_token_for_client(scopes=scope)
-
-    if "access_token" in result:
-        return result["access_token"]
-    else:
-        print(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
-        sys.exit(1)
+# Import shared authentication module
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+from auth import get_access_token
 
 
 def fetch_records(environment_url: str, access_token: str, entity_set: str,
@@ -81,7 +62,28 @@ def fetch_records(environment_url: str, access_token: str, entity_set: str,
     all_records = []
     had_error = False
     while url:
-        response = requests.get(url, headers=headers)
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries + 1):
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+                if attempt < max_retries:
+                    retry_after = 2 ** attempt * 5
+                    print(f"  Connection error: {exc}, retrying in {retry_after}s (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(retry_after)
+                    continue
+                raise SystemExit(f"Request failed after {max_retries} retries: {exc}") from exc
+            if response.status_code in (429, 503) and attempt < max_retries:
+                raw_retry = response.headers.get("Retry-After")
+                try:
+                    retry_after = int(raw_retry) if raw_retry is not None else 2 ** attempt * 5
+                except (ValueError, TypeError):
+                    retry_after = 2 ** attempt * 5
+                print(f"  Received {response.status_code}, retrying in {retry_after}s (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(retry_after)
+                continue
+            break
 
         if response.status_code != 200:
             print(f"WARNING: API error fetching records: {response.status_code}")

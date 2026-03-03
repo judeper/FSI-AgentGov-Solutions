@@ -64,17 +64,14 @@ Error: User does not have Dataverse System Administrator role
 **Resolution Checklist:**
 1. Verify flow is turned on
 2. Check flow run history for errors
-3. Verify Graph API permissions (`SecurityEvents.Read.All`)
+3. Verify Purview Compliance Administrator role is granted (see docs/communication-compliance-setup.md)
 4. Check `lastRunTime` in Key Vault isn't in the future
 5. Verify alert `alertType` matches filter condition
 
 **Quick Fix:**
 ```powershell
 # Reset lastRunTime to 1 hour ago
-az keyvault secret set \
-    --vault-name fsw-credentials-kv \
-    --name FSW-LastRunTime \
-    --value (Get-Date).AddHours(-1).ToString("o")
+az keyvault secret set --vault-name fsw-credentials-kv --name FSW-LastRunTime --value ((Get-Date).AddHours(-1).ToString("o"))
 ```
 
 ---
@@ -203,7 +200,7 @@ Error: Action 'Apply_to_each' exceeded maximum duration
 **Cause:** Too many alerts to process in single run.
 
 **Resolution:**
-1. Add `$top=100` to Graph API query
+1. Add `$top=100` to the Purview Communication Compliance API query
 2. Process in batches
 3. Reduce polling interval (process more frequently, fewer items)
 4. Enable concurrency in Apply to each (Degree of Parallelism: 20)

@@ -2,8 +2,8 @@
 """
 FINRA Supervision Workflow - Deployment Script
 
-Creates Dataverse tables, security roles, and initial configuration
-for the FINRA Supervision Workflow solution.
+Deploys Dataverse table shells and seeds default configuration.
+Column creation and security roles require manual setup (see docs/).
 
 Usage:
     python deploy.py --environment-url https://org.crm.dynamics.com --tenant-id <id> --interactive
@@ -15,15 +15,22 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 
 try:
     import requests
-    from msal import PublicClientApplication, ConfidentialClientApplication
+    import msal  # noqa: F401 — validate msal is installed (used by auth.py)
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
     sys.exit(1)
+
+# Import shared authentication module
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+from auth import get_access_token
 
 
 # Dataverse schema definitions
@@ -94,7 +101,7 @@ SECURITY_ROLES = {
         "description": "Review assigned queue items",
         "privileges": {
             "fsi_supervisionqueue": {"create": "none", "read": "user", "write": "user", "delete": "none", "append": "user", "appendto": "user"},
-            "fsi_supervisionlog": {"create": "none", "read": "user", "write": "none", "delete": "none"},
+            "fsi_supervisionlog": {"create": "none", "read": "organization", "write": "none", "delete": "none"},
             "fsi_supervisionconfig": {"create": "none", "read": "organization", "write": "none", "delete": "none"},
         }
     },
@@ -150,9 +157,29 @@ class DataverseClient:
         }
 
     def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """Make HTTP request to Dataverse API."""
+        """Make HTTP request to Dataverse API with retry for transient failures."""
         url = f"{self.base_url}/{endpoint}"
-        response = requests.request(method, url, headers=self.headers, json=data)
+        max_retries = 3
+        for attempt in range(max_retries + 1):
+            try:
+                response = requests.request(method, url, headers=self.headers, json=data, timeout=30)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+                if attempt < max_retries:
+                    retry_after = 2 ** attempt * 5
+                    print(f"  Connection error: {exc}, retrying in {retry_after}s (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(retry_after)
+                    continue
+                raise SystemExit(f"Request failed after {max_retries} retries: {exc}") from exc
+            if response.status_code in (429, 503) and attempt < max_retries:
+                raw_retry = response.headers.get("Retry-After")
+                try:
+                    retry_after = int(raw_retry) if raw_retry is not None else 2 ** attempt * 5
+                except (ValueError, TypeError):
+                    retry_after = 2 ** attempt * 5
+                print(f"  Received {response.status_code}, retrying in {retry_after}s (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(retry_after)
+                continue
+            break
 
         if response.status_code >= 400:
             status = response.status_code
@@ -186,34 +213,6 @@ class DataverseClient:
     def create_record(self, entity_set: str, data: dict) -> dict:
         """Create a new record."""
         return self._request("POST", entity_set, data)
-
-
-def get_access_token(tenant_id: str, client_id: str = None, client_secret: str = None,
-                     interactive: bool = False, environment_url: str = None) -> str:
-    """Acquire access token for Dataverse."""
-    scope = [f"{environment_url}/.default"]
-
-    if interactive:
-        # Interactive authentication
-        app = PublicClientApplication(
-            client_id="51f81489-12ee-4a9e-aaae-a2591f45987d",  # Power Apps CLI client ID
-            authority=f"https://login.microsoftonline.com/{tenant_id}"
-        )
-        result = app.acquire_token_interactive(scopes=scope)
-    else:
-        # Service principal authentication
-        app = ConfidentialClientApplication(
-            client_id=client_id,
-            client_credential=client_secret,
-            authority=f"https://login.microsoftonline.com/{tenant_id}"
-        )
-        result = app.acquire_token_for_client(scopes=scope)
-
-    if "access_token" in result:
-        return result["access_token"]
-    else:
-        print(f"Authentication failed: {result.get('error_description', 'Unknown error')}")
-        sys.exit(1)
 
 
 def deploy_tables(client: DataverseClient, dry_run: bool = False) -> int:
@@ -298,6 +297,12 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> in
     failures = 0
     for config in DEFAULT_CONFIGS:
         print(f"\nProcessing config: {config['name']}")
+
+        review_percent = config["review_percent"]
+        if not (0 <= review_percent <= 100):
+            print(f"  Error: review_percent must be 0-100, got {review_percent}")
+            failures += 1
+            continue
 
         if dry_run:
             print(f"  [DRY RUN] Would create config: {config['name']}")

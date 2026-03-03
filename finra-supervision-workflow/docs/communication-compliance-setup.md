@@ -80,7 +80,7 @@ Create a custom classifier for firm-specific content:
 |---------|-------|
 | Reviewer | FSW Queue Manager security group |
 | Escalation | CCO or Senior Compliance Officer |
-| Retention | 7 years (FINRA 4511) |
+| Retention | 7 years (firm policy; FINRA 4511 requires minimum 6 years) |
 
 ---
 

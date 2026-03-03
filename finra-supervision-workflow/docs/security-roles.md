@@ -33,7 +33,7 @@ Supervisory principals who review flagged AI agent outputs.
 | Privilege | Access Level |
 |-----------|--------------|
 | Create | None (log entries created by FSW Admin service account via automation) |
-| Read | User (related to assigned items) |
+| Read | Organization (Organization-owned table; User-level not supported by Dataverse — use views to scope visibility to assigned items) |
 | Write | None |
 | Delete | None |
 

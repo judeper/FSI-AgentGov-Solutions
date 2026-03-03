@@ -32,7 +32,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 | Tier | `fsi_tier` | Choice | Yes | Tier 1, Tier 2, Tier 3 |
 | Content Preview | `fsi_contentpreview` | Multiline Text | No | First 500 characters |
 | Flagged Reason | `fsi_flaggedreason` | Text (500) | Yes | Policy or rule that flagged item |
-| State | `fsi_state` | Choice | Yes | Pending, InReview, Approved, Escalated, Rejected |
+| State | `fsi_state` | Choice | Yes | Pending, In Review, Approved, Escalated, Rejected |
 | Assigned Principal | `fsi_assignedprincipal` | Lookup (User) | No | Supervisory principal |
 | Queued Date | `fsi_queueddate` | DateTime | Yes | When item entered queue |
 | SLA Due | `fsi_sladue` | DateTime | Yes | SLA deadline |
@@ -184,9 +184,9 @@ No business rules - append-only via automation.
 
 | View | Filter | Columns |
 |------|--------|---------|
-| My Queue | Assigned Principal = Current User, State = Pending/InReview | Queue Number, Agent Name, Flagged Reason, SLA Due |
+| My Queue | Assigned Principal = Current User, State = Pending/In Review | Queue Number, Agent Name, Flagged Reason, SLA Due |
 | Pending Review | State = Pending | Queue Number, Agent Name, Zone, Tier, Queued Date |
-| Overdue Items | SLA Due < Now, State in (Pending, InReview) | Queue Number, Agent Name, Assigned Principal, SLA Due |
+| Overdue Items | SLA Due < Now, State in (Pending, In Review) | Queue Number, Agent Name, Assigned Principal, SLA Due |
 | Escalated Items | State = Escalated | Queue Number, Agent Name, Reviewed By, Escalation Reason |
 | Completed This Week | Reviewed Date >= Week Start | Queue Number, Agent Name, Review Outcome, Reviewed By |
 | All Items | None | All columns |
@@ -215,8 +215,8 @@ To create only specific components:
 
 ```bash
 # Tables only
-python scripts/deploy.py --environment-url ... --tables-only
+python scripts/deploy.py --environment-url ... --tenant-id <tenant-id> --interactive --tables-only
 
 # Security roles only
-python scripts/deploy.py --environment-url ... --roles-only
+python scripts/deploy.py --environment-url ... --tenant-id <tenant-id> --interactive --roles-only
 ```

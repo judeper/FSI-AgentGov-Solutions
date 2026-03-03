@@ -107,8 +107,13 @@ If creating a new environment:
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `SecurityEvents.Read.All` | Application | Read Communication Compliance alerts |
 | `User.Read.All` | Application | Look up supervisor users |
+
+### Microsoft Purview
+
+| Permission | Type | Purpose |
+|------------|------|---------|
+| Compliance Administrator | Role | Read Communication Compliance alerts (see [communication-compliance-setup.md](./communication-compliance-setup.md)) |
 
 ### Power Platform API
 
@@ -167,6 +172,7 @@ az keyvault create \
 | Endpoint | Port | Purpose |
 |----------|------|---------|
 | `graph.microsoft.com` | 443 | Microsoft Graph API |
+| `compliance.microsoft.com` | 443 | Purview Communication Compliance API |
 | `*.crm.dynamics.com` | 443 | Dataverse API |
 | `*.azure-api.net` | 443 | Power Platform connectors |
 | `login.microsoftonline.com` | 443 | Entra ID authentication |
@@ -179,6 +185,7 @@ If using Azure Firewall or third-party firewall, allow:
 *.dynamics.com:443
 *.crm.dynamics.com:443
 graph.microsoft.com:443
+compliance.microsoft.com:443
 login.microsoftonline.com:443
 *.azure-api.net:443
 ```
