@@ -93,9 +93,9 @@
     This function only creates records (append-only). No update or delete operations are supported.
 
     Option set mappings (MUST match Dataverse schema):
-    - fsi_acv_severity: Passed=1, Warning=2, GracePeriod=3, Failed=4, Error=5
+    - fsi_acv_severity: Passed=100000000, Warning=100000001, GracePeriod=100000002, Failed=100000003, Error=100000004
     - fsi_acv_scope: Tenant=100000000, Environment=100000001
-    - fsi_acv_zone: Unclassified=0, Zone1=1, Zone2=2, Zone3=3
+    - fsi_acv_zone: Unclassified=100000000, Zone1=100000001, Zone2=100000002, Zone3=100000003
 
 .OUTPUTS
     String (GUID) - The created record ID on success. Throws on failure.
@@ -200,11 +200,11 @@ function Write-ValidationResult {
 
         # Map string parameters to option set integer values
         $severityMap = @{
-            "Passed"      = 1
-            "Warning"     = 2
-            "GracePeriod" = 3
-            "Failed"      = 4
-            "Error"       = 5
+            "Passed"      = 100000000
+            "Warning"     = 100000001
+            "GracePeriod" = 100000002
+            "Failed"      = 100000003
+            "Error"       = 100000004
         }
 
         $scopeMap = @{
@@ -213,10 +213,10 @@ function Write-ValidationResult {
         }
 
         $zoneMap = @{
-            "Unclassified" = 0
-            "Zone1"        = 1
-            "Zone2"        = 2
-            "Zone3"        = 3
+            "Unclassified" = 100000000
+            "Zone1"        = 100000001
+            "Zone2"        = 100000002
+            "Zone3"        = 100000003
         }
 
         # Build record name

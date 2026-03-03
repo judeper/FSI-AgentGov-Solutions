@@ -169,7 +169,7 @@ Add **Initialize variable** actions for each parameter:
 - `ResourceGroup` (String): `rg-audit-validation` (your resource group)
 - `AutomationAccount` (String): `aa-audit-validator` (your automation account)
 - `TeamsChannelId` (String): Teams channel ID for alerts
-- `ComplianceDistributionList` (String): `compliance-alerts@contoso.com`
+- `ComplianceDistributionList` (String): `compliance-alerts@example.com`
 - `Zone` (String): `Zone3` (or Zone1/Zone2)
 
 **Add Scope - Try:**
@@ -353,7 +353,7 @@ Alternatively, import **templates/environment-validation-flow.json** directly us
 
 1. Create a mail-enabled security group or distribution list:
    - Name: `Compliance Alerts`
-   - Email: `compliance-alerts@contoso.com`
+   - Email: `compliance-alerts@example.com`
 2. Add members: Compliance team, IT admins, governance stakeholders
 3. Update the `ComplianceDistributionList` variable in both flows
 
@@ -449,7 +449,7 @@ Store these values as Power Automate flow variables (initialize at the top of ea
 | ResourceGroup | rg-audit-validation | Resource group containing Automation Account |
 | AutomationAccount | aa-audit-validator | Automation Account name |
 | TeamsChannelId | 19:abcd1234... | Teams channel ID for alerts |
-| ComplianceDistributionList | compliance-alerts@contoso.com | Email distribution list |
+| ComplianceDistributionList | compliance-alerts@example.com | Email distribution list |
 | Zone | Zone3 | Governance zone (tenant flow only) |
 
 **Security best practice:** Consider using Azure Key Vault to store sensitive values (ClientId, CertificateThumbprint) and retrieve them in the flow using the Azure Key Vault connector.

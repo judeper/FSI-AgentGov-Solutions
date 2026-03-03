@@ -51,7 +51,7 @@
     - ValidationType: "MailboxAudit"
     - Checks: Array of check results
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: HIGH
+    - Confidence: High
     - Reason: Summary explanation
 
 .NOTES
@@ -279,8 +279,9 @@ function Test-MailboxAudit {
         ValidationType = "MailboxAudit"
         Checks         = $checks
         OverallStatus  = $overallStatus
-        Confidence     = "HIGH"
+        Confidence     = "High"
         Reason         = $reason
+        RawValue       = "AuditDisabled=$auditDisabled"
     }
 }
 

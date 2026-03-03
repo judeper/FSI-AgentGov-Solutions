@@ -29,11 +29,11 @@
 
 .PARAMETER NotificationFromAddress
     Optional. Shared mailbox email address for sending notifications.
-    Example: powerplatform-governance@contoso.com
+    Example: powerplatform-governance@example.com
 
 .PARAMETER NotificationToAddresses
     Optional. Comma-separated list of notification recipients.
-    Example: "admin@contoso.com,compliance@contoso.com"
+    Example: "admin@example.com,compliance@example.com"
 
 .PARAMETER SendEmail
     Optional switch. When set, sends an HTML email notification with compliance summary
@@ -51,8 +51,8 @@
         -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
         -TenantDomain "contoso.onmicrosoft.com" `
         -SendEmail `
-        -NotificationFromAddress "governance@contoso.com" `
-        -NotificationToAddresses "admin@contoso.com,compliance@contoso.com"
+        -NotificationFromAddress "governance@example.com" `
+        -NotificationToAddresses "admin@example.com,compliance@example.com"
 
     Scans all environments, writes to Dataverse, and sends email with CSV attachment.
 
@@ -156,6 +156,16 @@ $compliantCount = 0
 $nonCompliantCount = 0
 $errorCount = 0
 
+# Retrieve tenant-level audit config once (same for all environments)
+$purviewEnabled = $false
+try {
+    $adminConfig = Get-AdminAuditLogConfig -ErrorAction Stop
+    $purviewEnabled = [bool]$adminConfig.UnifiedAuditLogIngestionEnabled
+}
+catch {
+    Write-Verbose "Could not retrieve admin audit log config: $($_.Exception.Message)"
+}
+
 try {
     foreach ($env in $environments) {
         $envIndex++
@@ -168,14 +178,6 @@ try {
 
         try {
             # --- Check Purview Unified Audit ---
-            $purviewEnabled = $false
-            try {
-                $adminConfig = Get-AdminAuditLogConfig -ErrorAction Stop
-                $purviewEnabled = [bool]$adminConfig.UnifiedAuditLogIngestionEnabled
-            }
-            catch {
-                Write-Verbose "  Could not retrieve admin audit log config: $($_.Exception.Message)"
-            }
             Write-Output "           Purview unified audit: $purviewEnabled"
 
             # --- Check Dataverse Audit (if Dataverse provisioned) ---

@@ -253,7 +253,7 @@
           "Environment ID": "@item()?['fsi_environmentid']",
           "Purview Audit": "@if(equals(item()?['fsi_auditenabled'], true), '✅ Enabled', '❌ Disabled')",
           "Dataverse Audit": "@if(equals(item()?['fsi_dataverseauditenabled'], true), '✅ Enabled', '❌ Disabled')",
-          "Last Checked": "@formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm')"
+          "Last Checked": "@if(equals(item()?['fsi_lastchecked'], null), 'N/A', formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm'))"
         }
       }
     },
@@ -403,26 +403,66 @@
               },
               "description": "Wait until remediation runbook job completes or fails (max 2 hours)"
             },
-            "Step_5_-_Send_Completion_Notification_Approved": {
-              "type": "OpenApiConnection",
+            "Check_Runbook_Outcome": {
+              "type": "If",
               "runAfter": {
                 "Wait_for_Runbook_Completion": ["Succeeded"]
               },
-              "inputs": {
-                "host": {
-                  "connectionName": "shared_office365",
-                  "operationId": "SendEmailV2",
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                },
-                "parameters": {
-                  "emailMessage/To": "@variables('NotificationRecipients')",
-                  "emailMessage/Subject": "ALCA: Remediation Complete — @{variables('NonCompliantCount')} Environment(s) Processed",
-                  "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
-                  "emailMessage/Importance": "Normal"
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Check_Runbook_Job_Status')?['properties']?['status']",
+                      "Completed"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Send_Success_Notification": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@variables('NotificationRecipients')",
+                      "emailMessage/Subject": "ALCA: Remediation Complete — @{variables('NonCompliantCount')} Environment(s) Processed",
+                      "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                      "emailMessage/Importance": "Normal"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "step5-notification-approved-success"
+                  }
                 }
               },
-              "metadata": {
-                "operationMetadataId": "step5-notification-approved"
+              "else": {
+                "actions": {
+                  "Send_Failure_Notification": {
+                    "type": "OpenApiConnection",
+                    "runAfter": {},
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_office365",
+                        "operationId": "SendEmailV2",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      },
+                      "parameters": {
+                        "emailMessage/To": "@variables('NotificationRecipients')",
+                        "emailMessage/Subject": "ALCA: Remediation FAILED — @{variables('NonCompliantCount')} Environment(s) — Status: @{body('Check_Runbook_Job_Status')?['properties']?['status']}",
+                        "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Failed</h2><p>The remediation runbook did <strong>not</strong> complete successfully. Immediate attention required.</p><h3>Summary</h3><ul><li><strong>Environments Targeted:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}</li></ul><p><strong>Action Required:</strong> Check the Azure Automation job output for errors. Environments may remain non-compliant.</p><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>Review the Azure Automation job logs and <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for details.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                        "emailMessage/Importance": "High"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "step5-notification-approved-failure"
+                    }
+                  }
+                }
               }
             }
           },

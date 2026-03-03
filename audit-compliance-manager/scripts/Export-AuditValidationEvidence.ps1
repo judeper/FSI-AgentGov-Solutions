@@ -263,11 +263,11 @@ Write-Host "Building evidence package..." -ForegroundColor Cyan
 
 # Map option set numeric values back to string names for readability
 $severityMap = @{
-    1 = "Passed"
-    2 = "Warning"
-    3 = "GracePeriod"
-    4 = "Failed"
-    5 = "Error"
+    100000000 = "Passed"
+    100000001 = "Warning"
+    100000002 = "GracePeriod"
+    100000003 = "Failed"
+    100000004 = "Error"
 }
 
 $scopeMap = @{
@@ -276,10 +276,10 @@ $scopeMap = @{
 }
 
 $zoneMap = @{
-    0 = "Unclassified"
-    1 = "Zone1"
-    2 = "Zone2"
-    3 = "Zone3"
+    100000000 = "Unclassified"
+    100000001 = "Zone1"
+    100000002 = "Zone2"
+    100000003 = "Zone3"
 }
 
 # Convert option set values to readable strings

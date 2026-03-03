@@ -174,7 +174,7 @@
           {
             "name": "ComplianceDistributionList",
             "type": "string",
-            "value": "compliance-alerts@contoso.com"
+            "value": "compliance-alerts@example.com"
           }
         ]
       },
@@ -373,7 +373,14 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT5S",
+            "maximumInterval": "PT1M"
+          }
         },
         "Parse_Results": {
           "runAfter": {
@@ -527,7 +534,14 @@
                   "Importance": "@if(or(equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
-              "description": "Send email alert to compliance distribution list"
+              "description": "Send email alert to compliance distribution list",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "minimumInterval": "PT5S",
+                "maximumInterval": "PT1M"
+              }
             }
           },
           "description": "Send alerts if drift detected"

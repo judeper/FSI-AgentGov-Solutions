@@ -261,4 +261,9 @@ function Disconnect-AuditServices {
     }
 }
 
+# Execute function if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    Connect-AuditServices @PSBoundParameters
+}
+
 # Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

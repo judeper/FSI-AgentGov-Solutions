@@ -312,11 +312,11 @@ else {
 
     try {
         # Query registry for active, classified environments
-        $registryFilter = "fsi_status eq 1 and fsi_zone ne 0"  # Active and not Unclassified
+        $registryFilter = "fsi_status eq 1 and fsi_zone ne 100000000"  # Active and not Unclassified
 
         if (-not $IncludeTrialDev) {
-            # Exclude Trial (4) and Developer (3) unless override
-            $registryFilter += " and (fsi_overrideinclude eq true or (fsi_environmenttype ne 3 and fsi_environmenttype ne 4))"
+            # Exclude Trial (100000003) and Developer (100000002) unless override
+            $registryFilter += " and (fsi_overrideinclude eq true or (fsi_environmenttype ne 100000002 and fsi_environmenttype ne 100000003))"
         }
 
         $registryUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentregistries?`$filter=$registryFilter&`$select=fsi_environmentid,fsi_name,fsi_environmenturl,fsi_zone,fsi_environmenttype"
@@ -336,9 +336,9 @@ else {
                 EnvironmentName = $env.fsi_name
                 EnvironmentUrl  = $env.fsi_environmenturl
                 Zone            = switch ($env.fsi_zone) {
-                    1 { "Zone1" }
-                    2 { "Zone2" }
-                    3 { "Zone3" }
+                    100000001 { "Zone1" }
+                    100000002 { "Zone2" }
+                    100000003 { "Zone3" }
                     default { "Unclassified" }
                 }
                 EnvironmentType = $env.fsi_environmenttype

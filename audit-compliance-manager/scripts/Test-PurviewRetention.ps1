@@ -64,7 +64,7 @@
     - Checks: Array of check results
     - Gaps: Array of record type coverage gaps
     - OverallStatus: Passed | Failed | Warning
-    - Confidence: HIGH
+    - Confidence: High
     - Reason: Summary explanation
 
 .NOTES
@@ -522,8 +522,9 @@ function Test-PurviewRetention {
         Checks              = $checks
         Gaps                = $gaps
         OverallStatus       = $overallStatus
-        Confidence          = "HIGH"
+        Confidence          = "High"
         Reason              = $reason
+        RawValue            = "RetentionPolicies=$($checks.Count)"
     }
 }
 

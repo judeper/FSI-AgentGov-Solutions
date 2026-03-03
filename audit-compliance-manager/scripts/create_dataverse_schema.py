@@ -59,17 +59,8 @@ OPTIONSETS = {
             {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
         ],
     },
-    "fsi_acv_envstatus": {
-        "Name": "fsi_acv_envstatus",
-        "DisplayName": {"LocalizedLabels": [{"Label": "Environment Status", "LanguageCode": 1033}]},
-        "Description": {"LocalizedLabels": [{"Label": "Environment registry status", "LanguageCode": 1033}]},
-        "OptionSetType": "Picklist",
-        "IsGlobal": True,
-        "Options": [
-            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Active", "LanguageCode": 1033}]}},
-            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Inactive", "LanguageCode": 1033}]}},
-        ],
-    },
+    # Note: fsi_Status uses IntegerAttributeMetadata (1=Active, 2=Inactive) instead of a global option set.
+    # No global option set is needed for binary status values.
     "fsi_acv_environmenttype": {
         "Name": "fsi_acv_environmenttype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Type", "LanguageCode": 1033}]},
@@ -307,11 +298,13 @@ REGISTRY_TABLE_COLUMNS = [
     },
     # Environment Metadata
     {
-        "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
         "SchemaName": "fsi_Status",
         "DisplayName": {"LocalizedLabels": [{"Label": "Status", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
-        "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_envstatus')",
+        "Format": "None",
+        "MinValue": 1,
+        "MaxValue": 2,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",

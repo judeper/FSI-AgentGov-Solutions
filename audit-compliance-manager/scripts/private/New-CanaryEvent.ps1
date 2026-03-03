@@ -160,4 +160,9 @@ function New-CanaryEvent {
     }
 }
 
+# Execute function if script is run directly (not dot-sourced)
+if ($MyInvocation.InvocationName -ne '.') {
+    New-CanaryEvent @PSBoundParameters
+}
+
 # Note: This script is dot-sourced; do not use Export-ModuleMember outside a .psm1 module.

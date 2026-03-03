@@ -9,44 +9,111 @@
 
 All files located in the `scripts/`, `templates/`, and `docs/` directories:
 
-**PowerShell Components:**
+**PowerShell Components (ALCA):**
 - [ ] **AuditComplianceHelpers.psm1** — Shared helper module (MI auth, retry, Dataverse, email)
 - [ ] **AuditComplianceHelpers.psd1** — Module manifest
 - [ ] **Check-AuditLoggingCompliance.ps1** — Detection runbook
 - [ ] **Enable-AuditLogging.ps1** — Remediation runbook
 - [ ] **AuditComplianceHelpers.Tests.ps1** — Pester unit tests (optional, for validation)
 
-**Python Components:**
-- [ ] **create_audit_compliance_schema.py** — Dataverse schema creation script
-- [ ] **alca_client.py** — Dataverse Web API client library
+**PowerShell Components (ACV):**
+- [ ] **Invoke-TenantAuditValidation.ps1** — Tenant-level audit validation orchestrator
+- [ ] **Invoke-EnvironmentAuditValidation.ps1** — Environment-level audit validation orchestrator
+- [ ] **Invoke-EnvironmentDiscovery.ps1** — Power Platform environment discovery and registration
+- [ ] **Start-TenantValidationRunbook.ps1** — Azure Automation runbook wrapper (tenant)
+- [ ] **Start-EnvironmentValidationRunbook.ps1** — Azure Automation runbook wrapper (environment)
+- [ ] **Export-AuditValidationEvidence.ps1** — Compliance evidence export
+- [ ] **Configure-SecurityRoles.ps1** — Security role configuration
+- [ ] **Test-EnvironmentAudit.ps1** — Environment audit validator
+- [ ] **Test-EnvironmentRetention.ps1** — Environment retention validator
+- [ ] **Test-MailboxAudit.ps1** — Mailbox audit validator
+- [ ] **Test-PurviewRetention.ps1** — Purview retention validator
+- [ ] **Test-UnifiedAuditLog.ps1** — Unified audit log validator
+- [ ] **Test-EvidenceIntegrity.ps1** — Evidence integrity validator
+- [ ] **Validators.Tests.ps1** — Pester tests for validators (optional)
+- [ ] **private/Connect-AuditServices.ps1** — Audit service connection helper
+- [ ] **private/Connect-PowerPlatform.ps1** — Power Platform connection helper
+- [ ] **private/Compare-ValidationBaseline.ps1** — Validation baseline comparison helper
+- [ ] **private/Get-ValidationResults.ps1** — Validation results retrieval helper
+- [ ] **private/New-CanaryEvent.ps1** — Canary event creation helper
+- [ ] **private/Write-ValidationResult.ps1** — Validation result output helper
+
+**Python Components (ALCA):**
+- [ ] **create_audit_compliance_schema.py** — ALCA Dataverse schema creation script
+- [ ] **alca_client.py** — ALCA Dataverse Web API client library
+
+**Python Components (ACV):**
+- [ ] **acv_client.py** — ACV Dataverse Web API client library
+- [ ] **create_dataverse_schema.py** — ACV Dataverse schema creation script
+- [ ] **create_environment_variables.py** — Environment variable creation script
+- [ ] **create_connection_references.py** — Connection reference creation script
+- [ ] **deploy.py** — ACV deployment orchestrator
 - [ ] **requirements.txt** — Python dependencies
 
 **Power Automate:**
-- [ ] **audit-remediation-approval-flow.json** — Approval workflow template
+- [ ] **audit-remediation-approval-flow.json** — ALCA approval workflow template
+- [ ] **environment-validation-flow.json** — ACV environment validation flow template
+- [ ] **tenant-validation-flow.json** — ACV tenant validation flow template
+
+**Adaptive Card Templates:**
+- [ ] **adaptive-card-environment-alert.json** — Environment alert adaptive card
+- [ ] **adaptive-card-tenant-alert.json** — Tenant alert adaptive card
 
 **Supporting Documentation:**
 - [ ] **docs/deployment-guide.md** — Azure Automation deployment guide
 - [ ] **docs/scheduling-guide.md** — Runbook scheduling configuration
 - [ ] **docs/testing-scenarios.md** — Test scenarios and troubleshooting
+- [ ] **docs/FLOW_SETUP.md** — Power Automate flow setup guide
+- [ ] **docs/evidence-export-guide.md** — Evidence export guide
 
 ### 3. Packaging Instructions
 
 **Option A: Create ZIP Archive**
 ```bash
-# From the audit-logging-compliance-automation directory:
+# From the audit-compliance-manager directory:
 zip -r ACM-Solution-v1.0.0.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
   scripts/Check-AuditLoggingCompliance.ps1 \
   scripts/Enable-AuditLogging.ps1 \
+  scripts/Invoke-TenantAuditValidation.ps1 \
+  scripts/Invoke-EnvironmentAuditValidation.ps1 \
+  scripts/Invoke-EnvironmentDiscovery.ps1 \
+  scripts/Start-TenantValidationRunbook.ps1 \
+  scripts/Start-EnvironmentValidationRunbook.ps1 \
+  scripts/Export-AuditValidationEvidence.ps1 \
+  scripts/Configure-SecurityRoles.ps1 \
+  scripts/Test-EnvironmentAudit.ps1 \
+  scripts/Test-EnvironmentRetention.ps1 \
+  scripts/Test-MailboxAudit.ps1 \
+  scripts/Test-PurviewRetention.ps1 \
+  scripts/Test-UnifiedAuditLog.ps1 \
+  scripts/Test-EvidenceIntegrity.ps1 \
+  scripts/private/Connect-AuditServices.ps1 \
+  scripts/private/Connect-PowerPlatform.ps1 \
+  scripts/private/Compare-ValidationBaseline.ps1 \
+  scripts/private/Get-ValidationResults.ps1 \
+  scripts/private/New-CanaryEvent.ps1 \
+  scripts/private/Write-ValidationResult.ps1 \
   scripts/create_audit_compliance_schema.py \
   scripts/alca_client.py \
+  scripts/acv_client.py \
+  scripts/create_dataverse_schema.py \
+  scripts/create_environment_variables.py \
+  scripts/create_connection_references.py \
+  scripts/deploy.py \
   scripts/requirements.txt \
   templates/audit-remediation-approval-flow.json \
+  templates/environment-validation-flow.json \
+  templates/tenant-validation-flow.json \
+  templates/adaptive-card-environment-alert.json \
+  templates/adaptive-card-tenant-alert.json \
   docs/deployment-guide.md \
   docs/scheduling-guide.md \
-  docs/testing-scenarios.md
+  docs/testing-scenarios.md \
+  docs/FLOW_SETUP.md \
+  docs/evidence-export-guide.md
 ```
 
 **Option B: Create Structured Folder**
@@ -54,20 +121,53 @@ zip -r ACM-Solution-v1.0.0.zip \
 ACM-Solution-v1.0.0/
 ├── SOLUTION-DOCUMENTATION.md
 ├── PowerShell-Components/
-│   ├── AuditComplianceHelpers.psm1
-│   ├── AuditComplianceHelpers.psd1
-│   ├── Check-AuditLoggingCompliance.ps1
-│   └── Enable-AuditLogging.ps1
+│   ├── ALCA/
+│   │   ├── AuditComplianceHelpers.psm1
+│   │   ├── AuditComplianceHelpers.psd1
+│   │   ├── Check-AuditLoggingCompliance.ps1
+│   │   └── Enable-AuditLogging.ps1
+│   └── ACV/
+│       ├── Invoke-TenantAuditValidation.ps1
+│       ├── Invoke-EnvironmentAuditValidation.ps1
+│       ├── Invoke-EnvironmentDiscovery.ps1
+│       ├── Start-TenantValidationRunbook.ps1
+│       ├── Start-EnvironmentValidationRunbook.ps1
+│       ├── Export-AuditValidationEvidence.ps1
+│       ├── Configure-SecurityRoles.ps1
+│       ├── Test-EnvironmentAudit.ps1
+│       ├── Test-EnvironmentRetention.ps1
+│       ├── Test-MailboxAudit.ps1
+│       ├── Test-PurviewRetention.ps1
+│       ├── Test-UnifiedAuditLog.ps1
+│       ├── Test-EvidenceIntegrity.ps1
+│       └── private/
+│           ├── Connect-AuditServices.ps1
+│           ├── Connect-PowerPlatform.ps1
+│           ├── Compare-ValidationBaseline.ps1
+│           ├── Get-ValidationResults.ps1
+│           ├── New-CanaryEvent.ps1
+│           └── Write-ValidationResult.ps1
 ├── Python-Components/
 │   ├── create_audit_compliance_schema.py
 │   ├── alca_client.py
+│   ├── acv_client.py
+│   ├── create_dataverse_schema.py
+│   ├── create_environment_variables.py
+│   ├── create_connection_references.py
+│   ├── deploy.py
 │   └── requirements.txt
 ├── Power-Automate/
-│   └── audit-remediation-approval-flow.json
+│   ├── audit-remediation-approval-flow.json
+│   ├── environment-validation-flow.json
+│   ├── tenant-validation-flow.json
+│   ├── adaptive-card-environment-alert.json
+│   └── adaptive-card-tenant-alert.json
 └── Deployment-Guides/
     ├── deployment-guide.md
     ├── scheduling-guide.md
-    └── testing-scenarios.md
+    ├── testing-scenarios.md
+    ├── FLOW_SETUP.md
+    └── evidence-export-guide.md
 ```
 
 ### 4. Email Template
@@ -94,17 +194,21 @@ Package Contents:
   • Operational guidance and troubleshooting
   • Regulatory alignment (FINRA 4511, SEC 17a-3/4, SOX 404, GLBA 501(b))
 
-- 8 Solution Component Files:
-  • 2 PowerShell runbooks (detection + remediation)
+- 35 Solution Component Files:
+  • 17 PowerShell scripts (ALCA detection + remediation, ACV validators, orchestrators, runbook wrappers, evidence export)
   • 1 shared helper module with 6 reusable functions
-  • 2 Python scripts (Dataverse schema creation + client library)
-  • 1 Power Automate approval workflow template
+  • 8 Python scripts (Dataverse schema, client libraries, deployment)
+  • 5 Power Automate/adaptive card templates
   • Unit tests for quality assurance
 
 - 3 Deployment Guides:
   • Azure Automation setup (phases 1-5, ~90 minutes total)
   • Runbook scheduling configuration
   • 15 test scenarios with troubleshooting
+
+- 2 Additional Guides:
+  • Power Automate flow setup (FLOW_SETUP.md)
+  • Evidence export guide
 
 Key Capabilities:
 ✓ Automated detection of Purview unified audit and Dataverse audit status
@@ -175,7 +279,7 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 11 files are included (4 PowerShell, 3 Python, 1 JSON, 3 docs)
+- [ ] All files are included (17 PowerShell, 8 Python, 5 templates, 5 docs)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `contoso.onmicrosoft.com`)

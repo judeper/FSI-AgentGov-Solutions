@@ -70,18 +70,18 @@
     for Get-AdminPowerAppEnvironment cmdlet. Users without these roles will receive
     an authorization error.
 
-    Environment type mappings:
-    - Production = 1
-    - Sandbox = 2
-    - Developer = 3
-    - Trial = 4
-    - Default = 5
+    Environment type mappings (Dataverse option set values):
+    - Production = 100000000
+    - Sandbox = 100000001
+    - Developer = 100000002
+    - Trial = 100000003
+    - Default = 100000004
 
-    Zone classifications:
-    - Unclassified = 0 (new environments, requires admin assignment)
-    - Zone1 = 1 (Personal Productivity)
-    - Zone2 = 2 (Team Collaboration)
-    - Zone3 = 3 (Enterprise Managed)
+    Zone classifications (Dataverse option set values):
+    - Unclassified = 100000000 (new environments, requires admin assignment)
+    - Zone1 = 100000001 (Personal Productivity)
+    - Zone2 = 100000002 (Team Collaboration)
+    - Zone3 = 100000003 (Enterprise Managed)
 
 .OUTPUTS
     PSCustomObject with discovery results:
@@ -221,11 +221,11 @@ function Invoke-EnvironmentDiscovery {
 
         # Map environment type strings to integers
         $envTypeMap = @{
-            "Production" = 1
-            "Sandbox"    = 2
-            "Developer"  = 3
-            "Trial"      = 4
-            "Default"    = 5
+            "Production" = 100000000
+            "Sandbox"    = 100000001
+            "Developer"  = 100000002
+            "Trial"      = 100000003
+            "Default"    = 100000004
         }
 
         # Build discovered environment lookup
@@ -233,14 +233,14 @@ function Invoke-EnvironmentDiscovery {
         foreach ($env in $discoveredEnvironments) {
             $envId = $env.EnvironmentName
             $envType = $env.EnvironmentType
-            $envTypeInt = if ($envTypeMap.ContainsKey($envType)) { $envTypeMap[$envType] } else { 2 } # Default to Sandbox if unknown
+            $envTypeInt = if ($envTypeMap.ContainsKey($envType)) { $envTypeMap[$envType] } else { 100000001 } # Default to Sandbox if unknown
 
             $discoveredEnvLookup[$envId] = @{
                 EnvironmentId   = $envId
                 DisplayName     = $env.DisplayName
                 EnvironmentType = $envType
                 EnvironmentTypeInt = $envTypeInt
-                EnvironmentUrl  = $env.LinkedEnvironmentMetadata.InstanceUrl
+                EnvironmentUrl  = $env.Internal.Properties.LinkedEnvironmentMetadata.InstanceApiUrl
             }
         }
 
@@ -307,9 +307,10 @@ function Invoke-EnvironmentDiscovery {
                 $createBody = @{
                     fsi_name            = $env.DisplayName
                     fsi_environmentid   = $envId
-                    fsi_zone            = 0  # Unclassified
+                    fsi_zone            = 100000000  # Unclassified
                     fsi_status          = 1  # Active
                     fsi_environmenttype = $env.EnvironmentTypeInt
+                    fsi_environmenturl  = $env.EnvironmentUrl
                     fsi_discoveredon    = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
                     fsi_overrideinclude = $false
                 } | ConvertTo-Json
@@ -367,14 +368,14 @@ function Invoke-EnvironmentDiscovery {
             $env = $discoveredEnvLookup[$envId]
 
             # Filter 1: Exclude Unclassified environments
-            if ($registryEntry.fsi_zone -eq 0) {
+            if ($registryEntry.fsi_zone -eq 100000000) {
                 $skippedUnclassified += $env.DisplayName
                 Write-Warning "Skipping $($env.DisplayName): zone is Unclassified. Assign zone before validation."
                 continue
             }
 
             # Filter 2: Exclude Trial/Developer environments (unless IncludeTrialDev or OverrideInclude)
-            if (-not $IncludeTrialDev -and ($env.EnvironmentTypeInt -eq 3 -or $env.EnvironmentTypeInt -eq 4)) {
+            if (-not $IncludeTrialDev -and ($env.EnvironmentTypeInt -eq 100000002 -or $env.EnvironmentTypeInt -eq 100000003)) {
                 # Check OverrideInclude flag
                 if (-not $registryEntry.fsi_overrideinclude) {
                     $skippedTrialDev += $env.DisplayName
@@ -387,7 +388,12 @@ function Invoke-EnvironmentDiscovery {
             $validationSet += @{
                 EnvironmentId   = $envId
                 EnvironmentName = $env.DisplayName
-                Zone            = $registryEntry.fsi_zone
+                Zone            = switch ($registryEntry.fsi_zone) {
+                    100000001 { "Zone1" }
+                    100000002 { "Zone2" }
+                    100000003 { "Zone3" }
+                    default { "Unclassified" }
+                }
                 EnvironmentUrl  = $env.EnvironmentUrl
                 EnvironmentType = $env.EnvironmentType
             }

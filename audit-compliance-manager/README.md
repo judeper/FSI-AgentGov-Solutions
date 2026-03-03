@@ -110,10 +110,10 @@ python scripts/create_audit_compliance_schema.py \
 
 ```powershell
 # Validate tenant audit configuration for Zone 3 (730-day retention)
-.\scripts\Invoke-TenantAuditValidation.ps1 -Zone 3 -Verbose
+.\scripts\Invoke-TenantAuditValidation.ps1 -Zone Zone3 -Verbose
 
 # With JSON output for automation
-.\scripts\Invoke-TenantAuditValidation.ps1 -Zone 3 -OutputPath .\results.json
+.\scripts\Invoke-TenantAuditValidation.ps1 -Zone Zone3 -OutputPath .\results.json
 ```
 
 ### Step 4: Register and Validate Environments
@@ -136,17 +136,23 @@ python scripts/create_audit_compliance_schema.py \
 
 ```powershell
 # Detect audit logging compliance gaps across environments
-.\scripts\Check-AuditLoggingCompliance.ps1
+.\scripts\Check-AuditLoggingCompliance.ps1 `
+    -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
+    -TenantDomain "contoso.onmicrosoft.com"
 ```
 
 ### Step 6: Remediate Non-Compliant Environments (ALCA)
 
 ```powershell
 # Dry run remediation
-.\scripts\Enable-AuditLogging.ps1 -WhatIf
+.\scripts\Enable-AuditLogging.ps1 `
+    -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
+    -TenantDomain "contoso.onmicrosoft.com" -WhatIf
 
 # Execute remediation
-.\scripts\Enable-AuditLogging.ps1
+.\scripts\Enable-AuditLogging.ps1 `
+    -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
+    -TenantDomain "contoso.onmicrosoft.com"
 ```
 
 ### Step 7: Export Compliance Evidence
@@ -220,7 +226,7 @@ Administrator-managed environment catalog:
 | `fsi_name` | Text | Environment display name |
 | `fsi_environmentid` | Text | Power Platform environment GUID (unique) |
 | `fsi_zone` | Choice | Assigned governance zone |
-| `fsi_status` | Choice | Active or Inactive |
+| `fsi_status` | Integer | Active (1) or Inactive (2) |
 | `fsi_environmenttype` | Choice | Production, Sandbox, Developer, Trial, Default |
 | `fsi_overrideinclude` | Boolean | Admin override to include Trial/Dev environments |
 | `fsi_lastvalidated` | DateTime | Last successful validation timestamp |
@@ -232,7 +238,7 @@ Compliance tracking with upsert by environment ID:
 | Key Column | Type | Purpose |
 |------------|------|---------|
 | `fsi_environmentid` | Text | Power Platform environment GUID (alternate key) |
-| `fsi_compliancestatus` | Choice | Compliant, Non-Compliant, Remediation Pending |
+| `fsi_compliancestatus` | Choice | Compliant, Non-Compliant, Remediation Pending, Error |
 
 ## Components
 
@@ -258,7 +264,20 @@ Compliance tracking with upsert by environment ID:
 | Module Manifest | `scripts/AuditComplianceHelpers.psd1` | ALCA | Module metadata and exports |
 | Detection Runbook | `scripts/Check-AuditLoggingCompliance.ps1` | ALCA | Scan environments for audit compliance |
 | Remediation Runbook | `scripts/Enable-AuditLogging.ps1` | ALCA | Enable auditing on non-compliant environments |
+| Unified Audit Log Check | `scripts/Test-UnifiedAuditLog.ps1` | ACV | Validates unified audit log configuration |
+| Mailbox Audit Check | `scripts/Test-MailboxAudit.ps1` | ACV | Validates mailbox audit settings |
+| Purview Retention Check | `scripts/Test-PurviewRetention.ps1` | ACV | Validates Purview retention policies |
+| Environment Audit Check | `scripts/Test-EnvironmentAudit.ps1` | ACV | Validates environment audit settings |
+| Environment Retention Check | `scripts/Test-EnvironmentRetention.ps1` | ACV | Validates environment retention policies |
+| Security Role Config | `scripts/Configure-SecurityRoles.ps1` | ACV | Configures required security roles |
+| Validator Tests | `scripts/Validators.Tests.ps1` | ACV | Pester 5 tests for validator scripts |
 | Unit Tests | `scripts/AuditComplianceHelpers.Tests.ps1` | ALCA | Pester 5 tests for helper module |
+| Connect Audit Services | `scripts/private/Connect-AuditServices.ps1` | ACV | Authenticates to M365 audit services |
+| Connect Power Platform | `scripts/private/Connect-PowerPlatform.ps1` | ACV | Authenticates to Power Platform |
+| Compare Baseline | `scripts/private/Compare-ValidationBaseline.ps1` | ACV | Compares results against baseline |
+| Get Validation Results | `scripts/private/Get-ValidationResults.ps1` | ACV | Retrieves validation result records |
+| New Canary Event | `scripts/private/New-CanaryEvent.ps1` | ACV | Creates canary audit events for testing |
+| Write Validation Result | `scripts/private/Write-ValidationResult.ps1` | ACV | Writes validation results to Dataverse |
 
 ### Templates
 
@@ -343,10 +362,10 @@ The following placeholder values in solution files must be replaced with your or
 
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json`, `scripts/Check-AuditLoggingCompliance.ps1`, `scripts/Enable-AuditLogging.ps1` |
-| `compliance-alerts@contoso.com` | Your compliance team email | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json` |
-| `governance-lead@contoso.com` | Your governance lead email | `templates/audit-remediation-approval-flow.json` |
-| `compliance-team@contoso.com` | Your compliance team email | `templates/audit-remediation-approval-flow.json` |
+| `contoso.onmicrosoft.com` | Your tenant domain | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json`, `templates/audit-remediation-approval-flow.json` |
+| `compliance-alerts@example.com` | Your compliance team email | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json` |
+| `governance-lead@example.com` | Your governance lead email | `templates/audit-remediation-approval-flow.json` |
+| `compliance-team@example.com` | Your compliance team email | `templates/audit-remediation-approval-flow.json` |
 | `https://YOUR-ORG.crm.dynamics.com` | Your Dataverse environment URL | `templates/audit-remediation-approval-flow.json` |
 
 ## Security Considerations
