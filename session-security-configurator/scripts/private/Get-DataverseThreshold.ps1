@@ -101,6 +101,7 @@ param(
     [string]$AccessToken
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Get-DataverseThreshold {

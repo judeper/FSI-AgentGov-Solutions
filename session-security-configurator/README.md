@@ -25,12 +25,14 @@ Automated session security baseline management for Microsoft 365 AI agent admini
 
 ### PowerShell Modules
 
-PowerShell **7.1 or later** is required (`#Requires -Version 7.1` is declared by core scripts for `Get-Date -AsUTC` support).
+PowerShell **7.0 or later** is required for most scripts. Invoke-BaselineCapture.ps1 and Start-SessionValidationRunbook.ps1 require **7.1** for `Get-Date -AsUTC` support.
 
 ```powershell
 Install-Module Microsoft.Graph.Authentication, `
     Microsoft.Graph.Identity.SignIns, `
     Microsoft.Graph.Identity.DirectoryManagement, `
+    Microsoft.Graph.Identity.Governance, `
+    Microsoft.Graph.Beta.Identity.SignIns, `
     MSAL.PS -Scope CurrentUser
 ```
 

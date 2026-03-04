@@ -78,6 +78,7 @@
     3. Install required modules: Microsoft.Graph.Identity.SignIns, MSAL.PS
     4. Grant application permissions:
        - Policy.Read.All (for CA policies)
+       - Directory.Read.All (for break-glass group membership resolution)
        - RoleManagement.Read.All (optional, for PIM validation)
     5. Schedule via Schedules or trigger via webhook
 
@@ -114,6 +115,7 @@ param(
     [switch]$SkipPimValidation
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 try {

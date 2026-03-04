@@ -99,7 +99,11 @@ function Write-Log {
         if ($logDir -and -not (Test-Path $logDir)) {
             New-Item -ItemType Directory -Path $logDir -Force | Out-Null
         }
-        $entry | Out-File -FilePath $LogFile -Append -Encoding utf8
+        try {
+            $entry | Out-File -FilePath $LogFile -Append -Encoding utf8
+        } catch {
+            Write-Warning "Write-Log: Failed to write to log file '$LogFile': $($_.Exception.Message)"
+        }
     }
 }
 
@@ -300,7 +304,7 @@ function Update-SourceHash {
     if ($BaselineHash) {
         $update.fsi_baselinehash = $BaselineHash
     }
-    if ($Status) {
+    if ($PSBoundParameters.ContainsKey('Status')) {
         $update.fsi_status = $Status
     }
     $body = $update | ConvertTo-Json
@@ -507,6 +511,7 @@ foreach ($source in $sources) {
                                 -ChangedBy "RAG Source Validator"
                         } catch {
                             Write-Warning "Failed to record source change for '$($source.fsi_name)': $($_.Exception.Message)"
+                            Write-Log "AUDIT GAP: Source change record not created for '$($source.fsi_name)'. Error: $($_.Exception.Message)" -Level "ERROR"
                         }
                     }
 
@@ -560,6 +565,7 @@ foreach ($source in $sources) {
                 $sourceUpdated = $true
             } catch {
                 Write-Warning "Failed to update source hash for '$($source.fsi_name)': $($_.Exception.Message)"
+                Write-Log "AUDIT GAP: Source hash update failed for '$($source.fsi_name)' (hash=$currentHash). Error: $($_.Exception.Message)" -Level "ERROR"
             }
         }
 
@@ -603,6 +609,7 @@ foreach ($source in $sources) {
                 Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
             } catch {
                 Write-Warning "Failed to update source status for '$($source.fsi_name)': $($_.Exception.Message)"
+                Write-Log "AUDIT GAP: Source status update failed for '$($source.fsi_name)' (status=$newStatus). Error: $($_.Exception.Message)" -Level "ERROR"
             }
         }
     }

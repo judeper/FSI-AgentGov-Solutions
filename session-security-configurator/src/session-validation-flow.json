@@ -291,26 +291,12 @@
           },
           "type": "If",
           "expression": {
-            "or": [
-              {
-                "equals": [
-                  "@body('Get_Job_Status')?['properties']?['status']",
-                  "Failed"
-                ]
-              },
-              {
-                "equals": [
-                  "@body('Get_Job_Status')?['properties']?['status']",
-                  "Stopped"
-                ]
-              },
-              {
-                "equals": [
-                  "@body('Get_Job_Status')?['properties']?['status']",
-                  "Suspended"
-                ]
-              }
-            ]
+            "not": {
+              "equals": [
+                "@body('Get_Job_Status')?['properties']?['status']",
+                "Completed"
+              ]
+            }
           },
           "actions": {
             "Send_Job_Failure_Email": {
@@ -376,9 +362,38 @@
               },
               "description": "Write failure record to Dataverse immutable audit trail before terminating"
             },
+            "Notify_Failure_Write_Error": {
+              "runAfter": {
+                "Write_Failure_Validation_History": ["Failed"]
+              },
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['office365']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "/v2/Mail",
+                "body": {
+                  "To": "@variables('ComplianceDistributionList')",
+                  "Subject": "[CRITICAL] Failure Validation History Write Failed - @{variables('Zone')}",
+                  "Body": "<p><strong>Dataverse audit trail write failed (job-failure path)</strong></p><p>The Write_Failure_Validation_History action could not persist the job failure record to fsi_validationhistories.</p><p>Zone: @{variables('Zone')}<br>Timestamp: @{utcNow('o')}</p><p>Manual investigation required to ensure audit trail completeness.</p>",
+                  "Importance": "High"
+                }
+              },
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT10S",
+                "minimumInterval": "PT10S",
+                "maximumInterval": "PT30M"
+              },
+              "description": "Notify compliance team when failure validation history Dataverse write fails"
+            },
             "Terminate_Failed": {
               "runAfter": {
-                "Write_Failure_Validation_History": ["Succeeded", "Failed"]
+                "Notify_Failure_Write_Error": ["Succeeded", "Failed", "Skipped"]
               },
               "type": "Terminate",
               "inputs": {
@@ -511,7 +526,7 @@
               "fsi_rawvalue": "@{string(body('Parse_Results'))}",
               "fsi_reason": "@{body('Parse_Results')?['Reason']}",
               "fsi_timestamp": "@{body('Parse_Results')?['Timestamp']}",
-              "fsi_checkcount": "@if(equals(body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status'], 'Skipped'), 3, 4)",
+              "fsi_checkcount": "@{if(equals(body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status'], 'Skipped'), 3, 4)}",
               "fsi_baselineid": "@{if(equals(body('Parse_Results')?['Drift']?['IsFirstRun'], true), '', body('Parse_Results')?['Drift']?['BaselineDate'])}",
               "fsi_remediationhint": "@{if(equals(body('Parse_Results')?['AlertRequired'], true), body('Parse_Results')?['Reason'], '')}"
             }
@@ -574,7 +589,7 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Session Security Drift\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Session Controls\",\"value\":\"${sessionControlsStatus}\"},{\"title\":\"Auth Strength\",\"value\":\"${authStrengthStatus}\"},{\"title\":\"PIM Settings\",\"value\":\"${pimStatus}\"},{\"title\":\"Break-Glass\",\"value\":\"${breakGlassStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', replace(string(body('Parse_Results')?['OverallStatus']), '\"', '\\\"')), '${timestamp}', replace(string(body('Parse_Results')?['Timestamp']), '\"', '\\\"')), '${zone}', replace(string(body('Parse_Results')?['Zone']), '\"', '\\\"')), '${baselineStatus}', replace(string(body('Parse_Results')?['Drift']?['BaselineStatus']), '\"', '\\\"')), '${currentStatus}', replace(string(body('Parse_Results')?['Drift']?['CurrentStatus']), '\"', '\\\"')), '${baselineDate}', replace(string(body('Parse_Results')?['Drift']?['BaselineDate']), '\"', '\\\"')), '${reason}', replace(replace(string(body('Parse_Results')?['Reason']), '\\', '\\\\'), '\"', '\\\"')), '${sessionControlsStatus}', replace(string(body('Parse_Results')?['Validators']?['SessionControls']?['Status']), '\"', '\\\"')), '${authStrengthStatus}', replace(string(body('Parse_Results')?['Validators']?['AuthenticationStrength']?['Status']), '\"', '\\\"')), '${pimStatus}', replace(string(body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']), '\"', '\\\"')), '${breakGlassStatus}', replace(string(body('Parse_Results')?['Validators']?['BreakGlassExclusions']?['Status']), '\"', '\\\"')), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx'))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] Session Security Drift\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${overallStatus}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Drift Detected\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"wrap\":true,\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Severity\",\"value\":\"${overallStatus}\"},{\"title\":\"Zone\",\"value\":\"${zone}\"},{\"title\":\"Drift From\",\"value\":\"${baselineStatus} → ${currentStatus}\"},{\"title\":\"Baseline Date\",\"value\":\"${baselineDate}\"}],\"spacing\":\"Medium\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Reason\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"${reason}\",\"wrap\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Validator Status\",\"weight\":\"Bolder\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Session Controls\",\"value\":\"${sessionControlsStatus}\"},{\"title\":\"Auth Strength\",\"value\":\"${authStrengthStatus}\"},{\"title\":\"PIM Settings\",\"value\":\"${pimStatus}\"},{\"title\":\"Break-Glass\",\"value\":\"${breakGlassStatus}\"}],\"spacing\":\"Small\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform\",\"url\":\"https://make.powerapps.com\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Validation History\",\"url\":\"${validationHistoryUrl}\"}]}', '${overallStatus}', replace(string(body('Parse_Results')?['OverallStatus']), '\"', '\\\"')), '${timestamp}', replace(string(body('Parse_Results')?['Timestamp']), '\"', '\\\"')), '${zone}', replace(string(body('Parse_Results')?['Zone']), '\"', '\\\"')), '${baselineStatus}', if(equals(body('Parse_Results')?['Drift']?['BaselineStatus'], null), 'N/A (first run)', replace(string(body('Parse_Results')?['Drift']?['BaselineStatus']), '\"', '\\\"'))), '${currentStatus}', replace(string(body('Parse_Results')?['Drift']?['CurrentStatus']), '\"', '\\\"')), '${baselineDate}', if(equals(body('Parse_Results')?['Drift']?['BaselineDate'], null), 'N/A (first run)', replace(string(body('Parse_Results')?['Drift']?['BaselineDate']), '\"', '\\\"'))), '${reason}', replace(replace(string(body('Parse_Results')?['Reason']), '\\', '\\\\'), '\"', '\\\"')), '${sessionControlsStatus}', replace(string(body('Parse_Results')?['Validators']?['SessionControls']?['Status']), '\"', '\\\"')), '${authStrengthStatus}', replace(string(body('Parse_Results')?['Validators']?['AuthenticationStrength']?['Status']), '\"', '\\\"')), '${pimStatus}', replace(string(body('Parse_Results')?['Validators']?['PimRoleSettings']?['Status']), '\"', '\\\"')), '${breakGlassStatus}', replace(string(body('Parse_Results')?['Validators']?['BreakGlassExclusions']?['Status']), '\"', '\\\"')), '${validationHistoryUrl}', concat(variables('DataverseUrl'), '/main.aspx?etn=fsi_validationhistory&pagetype=entitylist'))"
                           }
                         ]
                       }
@@ -640,7 +655,7 @@
             "body": {
               "To": "@variables('ComplianceDistributionList')",
               "Subject": "[CRITICAL] Validation History Write Failed - @{body('Parse_Results')?['Zone']}",
-              "Body": "<p><strong>Dataverse audit trail write failed</strong></p><p>The validation completed but the result could not be persisted to fsi_validationhistories after 4 retry attempts.</p><p>Zone: @{body('Parse_Results')?['Zone']}<br>Status: @{body('Parse_Results')?['OverallStatus']}<br>Timestamp: @{utcNow()}</p><p>Manual investigation required to ensure audit trail completeness.</p>",
+              "Body": "<p><strong>Dataverse audit trail write failed</strong></p><p>The validation completed but the result could not be persisted to fsi_validationhistories after 4 retry attempts.</p><p>Zone: @{body('Parse_Results')?['Zone']}<br>Status: @{body('Parse_Results')?['OverallStatus']}<br>Timestamp: @{utcNow('o')}</p><p>Manual investigation required to ensure audit trail completeness.</p>",
               "Importance": "High"
             }
           },
@@ -681,19 +696,48 @@
               "maximumInterval": "PT30M"
             },
             "body": {
-              "fsi_name": "@{variables('Zone')}-@{utcNow()}-FlowError",
+              "fsi_name": "@{variables('Zone')}-@{utcNow('o')}-FlowError",
               "fsi_runid": "@{guid()}",
               "fsi_zone": "@{if(equals(variables('Zone'), 'Zone1'), 100000001, if(equals(variables('Zone'), 'Zone2'), 100000002, 100000003))}",
               "fsi_severity": 5,
               "fsi_validationtype": 6,
               "fsi_rawvalue": "@{take(string(result('Scope_Try')), 99000)}",
               "fsi_reason": "Flow execution error in Scope_Try. Review flow run history for details.",
-              "fsi_timestamp": "@{utcNow()}",
+              "fsi_timestamp": "@{utcNow('o')}",
               "fsi_checkcount": 0,
               "fsi_remediationhint": "Flow-level error occurred. Check connector configuration, expression evaluation, and timeout settings."
             }
           },
           "description": "Write flow-level error record to Dataverse audit trail to prevent gaps in validation history"
+        },
+        "Notify_Error_Write_Failure": {
+          "runAfter": {
+            "Write_Error_Validation_History": ["Failed"]
+          },
+          "type": "ApiConnection",
+          "inputs": {
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['office365']['connectionId']"
+              }
+            },
+            "method": "post",
+            "path": "/v2/Mail",
+            "body": {
+              "To": "@variables('ComplianceDistributionList')",
+              "Subject": "[CRITICAL] Error Validation History Write Failed - @{variables('Zone')}",
+              "Body": "<p><strong>Dataverse audit trail write failed (error-handling path)</strong></p><p>The Write_Error_Validation_History action in Scope_Catch could not persist the flow error record to fsi_validationhistories.</p><p>Zone: @{variables('Zone')}<br>Timestamp: @{utcNow('o')}</p><p>Manual investigation required to ensure audit trail completeness.</p>",
+              "Importance": "High"
+            }
+          },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT30M"
+          },
+          "description": "Notify compliance team when error validation history Dataverse write fails"
         },
         "Send_Error_Email": {
           "runAfter": {
@@ -711,7 +755,7 @@
             "body": {
               "To": "@variables('ComplianceDistributionList')",
               "Subject": "[CRITICAL] Session Security Validation Flow Error",
-              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: SSC - Session Validation (Daily)<br>Zone: @{variables('Zone')}<br>Timestamp: @{utcNow()}</p><p>Review flow run history for details.</p>",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: SSC - Session Validation (Daily)<br>Zone: @{variables('Zone')}<br>Timestamp: @{utcNow('o')}</p><p>Review flow run history for details.</p>",
               "Importance": "High"
             }
           },

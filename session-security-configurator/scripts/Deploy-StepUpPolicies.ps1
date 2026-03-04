@@ -237,7 +237,8 @@ if ($EnablePolicies) {
 
     # Query existing SSC policies
     Write-Host "`nQuerying existing session security policies..." -ForegroundColor Cyan
-    $sscPolicies = Get-MgIdentityConditionalAccessPolicy -Filter "startswith(displayName, '$($config.policyPrefix)-')" -ErrorAction Stop
+    $safePolicyPrefix = $config.policyPrefix -replace "'", "''"
+    $sscPolicies = Get-MgIdentityConditionalAccessPolicy -Filter "startswith(displayName, '$safePolicyPrefix-')" -ErrorAction Stop
 
     if ($sscPolicies.Count -eq 0) {
         throw "No session security policies found with prefix '$($config.policyPrefix)-'. Deploy policies first before enabling enforcement."
@@ -246,12 +247,12 @@ if ($EnablePolicies) {
     Write-Host "Found $($sscPolicies.Count) existing policies." -ForegroundColor Green
 
     # Check creation timestamps
-    $now = Get-Date
+    $now = (Get-Date).ToUniversalTime()
     $minBakePeriodHours = 72
     $tooYoungPolicies = @()
 
     foreach ($policy in $sscPolicies) {
-        $createdDateTime = [DateTime]$policy.CreatedDateTime
+        $createdDateTime = ([DateTime]$policy.CreatedDateTime).ToUniversalTime()
         $ageHours = ($now - $createdDateTime).TotalHours
 
         if ($ageHours -lt $minBakePeriodHours) {
@@ -346,8 +347,8 @@ if ($EnablePolicies) {
 
     if ($errors.Count -gt 0) {
         Write-Host "`nErrors: $($errors.Count)" -ForegroundColor Red
-        foreach ($error in $errors) {
-            Write-Host "  - $($error.Name): $($error.Error)" -ForegroundColor Red
+        foreach ($err in $errors) {
+            Write-Host "  - $($err.Name): $($err.Error)" -ForegroundColor Red
         }
     }
 
@@ -552,7 +553,8 @@ foreach ($templateFile in $templatesToDeploy) {
 
     # Check if policy exists
     try {
-        $existingPolicy = Get-MgIdentityConditionalAccessPolicy -Filter "displayName eq '$policyName'" -ErrorAction SilentlyContinue
+        $safePolicyName = $policyName -replace "'", "''"
+        $existingPolicy = Get-MgIdentityConditionalAccessPolicy -Filter "displayName eq '$safePolicyName'" -ErrorAction SilentlyContinue
 
         if ($existingPolicy) {
             if ($Force) {
@@ -612,8 +614,8 @@ foreach ($templateFile in $templatesToDeploy) {
                     # Import Beta module
                     Import-Module Microsoft.Graph.Beta.Identity.SignIns -ErrorAction Stop
 
-                    # Create Beta policy template (clone from main policy)
-                    $betaTemplate = $template.Clone()
+                    # Deep-clone to avoid mutating $template via shared nested references
+                    $betaTemplate = $template | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
                     $betaTemplate.displayName = "$($config.policyPrefix)-Zone3-Risky-User-Reauthentication"
 
                     # Set Beta-specific session controls
@@ -673,8 +675,8 @@ foreach ($result in $deployedPolicies) {
 
 if ($errors.Count -gt 0) {
     Write-Host "`nErrors: $($errors.Count)" -ForegroundColor Red
-    foreach ($error in $errors) {
-        Write-Host "  - $($error.Template): $($error.Error)" -ForegroundColor Red
+    foreach ($err in $errors) {
+        Write-Host "  - $($err.Template): $($err.Error)" -ForegroundColor Red
     }
 }
 

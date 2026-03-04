@@ -70,6 +70,7 @@ param(
     [switch]$DryRun
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Test-BreakGlassExclusion {

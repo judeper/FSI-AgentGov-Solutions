@@ -61,7 +61,8 @@ Immutable audit log of all validation runs.
 Threshold violations requiring operator attention.
 
 **Ownership:** User-owned  
-**Purpose:** Alert management with acknowledgment and remediation workflow
+**Purpose:** Alert management with acknowledgment and remediation workflow  
+**Status:** Reserved for future drift violation tracking and manual operator workflows. The table schema is provisioned by the schema deployment but no script or flow currently writes records to it.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -109,7 +110,7 @@ Global option set for validation result severity.
 
 ### fsi_ssc_validationtype (SSC-specific)
 
-Local option set for session security validation dimensions.
+Global option set for session security validation dimensions (SSC-specific, not shared with ACV).
 
 | Value | Label | Description |
 |-------|-------|-------------|

@@ -367,8 +367,8 @@ foreach ($result in $deployedContexts) {
 
 if ($errors.Count -gt 0) {
     Write-Host "`nErrors: $($errors.Count)" -ForegroundColor Red
-    foreach ($error in $errors) {
-        Write-Host "  - $($error.Id): $($error.Error)" -ForegroundColor Red
+    foreach ($err in $errors) {
+        Write-Host "  - $($err.Id): $($err.Error)" -ForegroundColor Red
     }
 }
 

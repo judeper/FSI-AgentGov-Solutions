@@ -239,7 +239,7 @@ For documents with references, validates all links are accessible.
 | **SharePoint direct URLs** | The script acquires a Graph API-scoped token only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
 | **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
 | **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC 17a-4 and FINRA 4511 contexts. |
-| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC 17a-4, FINRA 4511, SOX 404), consider adding unit tests for hash computation, URI validation, freshness threshold arithmetic, and status-transition logic before production use. |
+| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC 17a-4, FINRA 4511, SOX 404), consider adding unit tests for hash computation, SSRF URI validation, sovereign cloud cross-validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
 
 ### Common Issues
 

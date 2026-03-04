@@ -174,6 +174,7 @@ param(
     [SecureString]$ClientSecret
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 #region Initialization
@@ -223,7 +224,7 @@ if ($Interactive) {
             $msalParams = @{
                 ClientId    = $ClientId
                 TenantId    = $TenantId
-                Scopes      = @("$DataverseUrl/.default")
+                Scopes      = @("$($DataverseUrl.TrimEnd('/'))/.default")
                 Interactive = $true
             }
 
@@ -271,7 +272,7 @@ else {
                 TenantId     = $TenantId
                 ClientId     = $ClientId
                 ClientSecret = $ClientSecret
-                Scopes       = @("$DataverseUrl/.default")
+                Scopes       = @("$($DataverseUrl.TrimEnd('/'))/.default")
             }
 
             $authResult = Get-MsalToken @msalParams
@@ -365,9 +366,9 @@ $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
         name              = $_.fsi_name
         runId             = $_.fsi_runid
-        zone              = if ($_.fsi_zone -ne $null -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
-        severity          = if ($_.fsi_severity -ne $null -and $severityMap.ContainsKey($_.fsi_severity)) { $severityMap[$_.fsi_severity] } else { $_.fsi_severity }
-        validationType    = if ($_.fsi_validationtype -ne $null -and $validationTypeMap.ContainsKey($_.fsi_validationtype)) { $validationTypeMap[$_.fsi_validationtype] } else { $_.fsi_validationtype }
+        zone              = if ($null -ne $_.fsi_zone -and $zoneMap.ContainsKey($_.fsi_zone)) { $zoneMap[$_.fsi_zone] } else { $_.fsi_zone }
+        severity          = if ($null -ne $_.fsi_severity -and $severityMap.ContainsKey($_.fsi_severity)) { $severityMap[$_.fsi_severity] } else { $_.fsi_severity }
+        validationType    = if ($null -ne $_.fsi_validationtype -and $validationTypeMap.ContainsKey($_.fsi_validationtype)) { $validationTypeMap[$_.fsi_validationtype] } else { $_.fsi_validationtype }
         rawValue          = $_.fsi_rawvalue
         reason            = $_.fsi_reason
         remediationHint   = $_.fsi_remediationhint

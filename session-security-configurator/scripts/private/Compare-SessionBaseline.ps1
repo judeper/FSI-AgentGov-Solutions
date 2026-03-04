@@ -78,6 +78,7 @@ param(
     [object]$Baseline
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Compare-SessionBaseline {
@@ -177,7 +178,7 @@ function Compare-SessionBaseline {
 
         if ($policyAuthStrength -ne $baselineAuthStrength) {
             # Handle null comparisons (Zone 1 has no auth strength requirement)
-            if ($baselineAuthStrength -eq $null -and $policyAuthStrength -eq $null) {
+            if ($null -eq $baselineAuthStrength -and $null -eq $policyAuthStrength) {
                 Write-Verbose "  ✓ authenticationStrength matches: null (not required)"
             }
             else {

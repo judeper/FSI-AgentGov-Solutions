@@ -27,6 +27,8 @@ The following PowerShell modules are required for SSC scripts:
 - `Microsoft.Graph.Authentication` (v2.0+)
 - `Microsoft.Graph.Identity.SignIns`
 - `Microsoft.Graph.Identity.DirectoryManagement`
+- `Microsoft.Graph.Identity.Governance` (optional — required for PIM validation in Test-SessionCompliance.ps1)
+- `Microsoft.Graph.Beta.Identity.SignIns` (optional — required for Zone 3 risky-user policy in Deploy-StepUpPolicies.ps1)
 - `MSAL.PS` (for evidence export with service principal)
 
 Install all required modules:
@@ -35,6 +37,8 @@ Install all required modules:
 Install-Module Microsoft.Graph.Authentication, `
     Microsoft.Graph.Identity.SignIns, `
     Microsoft.Graph.Identity.DirectoryManagement, `
+    Microsoft.Graph.Identity.Governance, `
+    Microsoft.Graph.Beta.Identity.SignIns, `
     MSAL.PS -Scope CurrentUser
 ```
 
@@ -80,7 +84,8 @@ For scheduled validation via Azure Automation:
 - Modules installed: `Microsoft.Graph.Identity.SignIns`, `MSAL.PS`
 - App registration with:
   - `Policy.Read.All` (read CA policies)
-  - `Directory.Read.All` (read group memberships)
+  - `Directory.Read.All` (read group memberships for break-glass exclusion)
+  - `RoleManagement.Read.All` (optional — for PIM validation)
 
 ## Governance Zone Alignment
 

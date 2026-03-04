@@ -95,6 +95,7 @@ param(
     [switch]$Quiet
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 try {

@@ -96,7 +96,7 @@
     Requires:
     - Microsoft.Graph.Identity.SignIns module v2.35.1 or later
     - MSAL.PS module v4.37.0 or later
-    - PowerShell 7.0 or later
+    - PowerShell 7.1 or later
     - Policy.Read.All permission for Microsoft Graph
     - Dataverse write permissions for fsi_sessionbaselines table
 
@@ -134,6 +134,7 @@ param(
 
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 try {
@@ -209,7 +210,14 @@ try {
     }
 
     # Extract actual settings from first policy with session controls
-    # (Assumes consistent settings across zone policies)
+    # Warn if multiple policies have inconsistent session control values
+    if ($sessionSettings.Count -gt 1) {
+        $freqValues = $sessionSettings | ForEach-Object { "$($_.SignInFrequencyValue) $($_.SignInFrequencyType)" } | Sort-Object -Unique
+        $authValues = $sessionSettings | ForEach-Object { $_.AuthenticationStrengthId } | Sort-Object -Unique
+        if ($freqValues.Count -gt 1 -or $authValues.Count -gt 1) {
+            Write-Warning "Multiple CA policies for $Zone have inconsistent session control values. Using first policy: $($sessionSettings[0].PolicyName). Policies: $($sessionSettings | ForEach-Object { $_.PolicyName } | Join-String -Separator ', ')"
+        }
+    }
     $firstPolicy = $sessionSettings | Select-Object -First 1
 
     $signInFrequencyMinutes = if ($firstPolicy.SignInFrequencyType -eq "hours") {
@@ -406,6 +414,6 @@ catch {
     throw
 }
 finally {
-    # Disconnect from Graph using shared helper
-    Disconnect-GraphSession
+    # Disconnect from Graph using shared helper (guard against dot-source failure)
+    try { Disconnect-GraphSession } catch { }
 }

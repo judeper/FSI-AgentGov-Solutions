@@ -68,6 +68,7 @@ param(
     [string[]]$Scopes = @("Policy.ReadWrite.ConditionalAccess", "Policy.Read.All")
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Connect-GraphSession {

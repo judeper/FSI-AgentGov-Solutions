@@ -177,6 +177,7 @@ param(
     [string]$DataverseToken
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 #region Initialization
@@ -297,7 +298,9 @@ catch {
 
 # Query CA policies before validators so all validators can access them
 $policyPrefix = if ($config.policyPrefix) { $config.policyPrefix } else { "SSC" }
+$policyPrefix = $policyPrefix -replace "'", "''"
 $sscPolicies = @()
+$zonePolicies = @()
 
 #region Validator 1: Session Controls
 
@@ -327,9 +330,8 @@ try {
     else {
         Write-Host "Found $($sscPolicies.Count) $policyPrefix-prefixed policy(ies)." -ForegroundColor Cyan
 
-        # Filter policies for specified zone by checking includeGroups
-        # (Zone matching requires checking config group membership - for now check all SSC policies)
-        $zonePolicies = $sscPolicies | Where-Object { $_.DisplayName -like "*$Zone*" }
+        # Filter policies for specified zone using anchored pattern to prevent partial matches (e.g., Zone1 matching Zone12)
+        $zonePolicies = $sscPolicies | Where-Object { $_.DisplayName -like "*-$Zone-*" -or $_.DisplayName -like "*-$Zone" }
 
         if (-not $zonePolicies -or $zonePolicies.Count -eq 0) {
             Write-Warning "No SSC policies found matching zone '$Zone'. Only found: $($sscPolicies | ForEach-Object { $_.DisplayName } | Join-String -Separator ', ')"
@@ -341,8 +343,8 @@ try {
                 Mismatches = @()
                 Timestamp = Get-Date -Format "o"
             }
-            return $results
         }
+        else {
 
         Write-Host "Validating $($zonePolicies.Count) policy(ies) for zone: $Zone" -ForegroundColor Cyan
 
@@ -414,6 +416,7 @@ try {
         }
 
         Write-Host "Reason: $($results.Validators.SessionControls.Reason)" -ForegroundColor Cyan
+        }
     }
 }
 catch {
@@ -454,7 +457,7 @@ try {
         "Zone1" {
             # Zone 1: Standard MFA (no custom requirement)
             # A null value or "standard" both indicate standard MFA (Dataverse env var default is "standard")
-            if ($baseline.authenticationStrength -eq $null -or $baseline.authenticationStrength -ieq "standard") {
+            if ($null -eq $baseline.authenticationStrength -or $baseline.authenticationStrength -ieq "standard") {
                 $authStrengthStatus = "Passed"
                 $authStrengthReason = "Zone 1 uses standard MFA (no custom authentication strength required)."
                 $methodsFound += "Standard MFA"
@@ -469,7 +472,8 @@ try {
             # Zone 2: Passwordless MFA
             if ($baseline.authenticationStrength) {
                 # Compare by display name since baseline stores names (e.g. "Passwordless MFA"), not GUIDs
-                $sscPoliciesWithAuth = $sscPolicies | Where-Object {
+                $policiesToCheck = if ($zonePolicies) { $zonePolicies } else { $sscPolicies }
+                $sscPoliciesWithAuth = $policiesToCheck | Where-Object {
                     $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
 
@@ -493,7 +497,8 @@ try {
             # Zone 3: Phishing-resistant MFA
             if ($baseline.authenticationStrength) {
                 # Compare by display name since baseline stores names (e.g. "Phishing-resistant MFA"), not GUIDs
-                $sscPoliciesWithAuth = $sscPolicies | Where-Object {
+                $policiesToCheck = if ($zonePolicies) { $zonePolicies } else { $sscPolicies }
+                $sscPoliciesWithAuth = $policiesToCheck | Where-Object {
                     $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
                 }
 
@@ -721,8 +726,8 @@ try {
                 displayName = $policy.DisplayName
                 conditions = @{
                     users = @{
-                        excludeUsers = $policy.Conditions.Users.ExcludeUsers
-                        excludeGroups = $policy.Conditions.Users.ExcludeGroups
+                        excludeUsers = if ($policy.Conditions.Users.ExcludeUsers) { $policy.Conditions.Users.ExcludeUsers } else { @() }
+                        excludeGroups = if ($policy.Conditions.Users.ExcludeGroups) { $policy.Conditions.Users.ExcludeGroups } else { @() }
                     }
                 }
             }

@@ -116,6 +116,7 @@ param(
     [string]$RunId
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Get-SSCValidationResults {
@@ -199,7 +200,8 @@ function Get-SSCValidationResults {
 
         # Optional RunId filter
         if ($RunId) {
-            $filters += "fsi_runid eq '$RunId'"
+            $escapedRunId = $RunId -replace "'", "''"
+            $filters += "fsi_runid eq '$escapedRunId'"
         }
 
         # Combine filters with 'and'

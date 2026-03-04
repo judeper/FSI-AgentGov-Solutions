@@ -169,8 +169,8 @@ session-security-evidence-Zone3-20260209-143022.json.sha256
 | overallStatus | Aggregate status (Error > Failed > GracePeriod > Warning > Passed) |
 | validationsRun | Total validation records in export |
 | validationsPassed | Count of Passed severity results |
-| validationsFailed | Count of Failed severity results |
-| validationsWarning | Count of Warning severity results |
+| validationsFailed | Count of Failed and Error severity results |
+| validationsWarning | Count of Warning and GracePeriod severity results |
 
 ## Verifying Evidence Integrity
 

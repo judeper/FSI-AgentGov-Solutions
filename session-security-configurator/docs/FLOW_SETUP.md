@@ -34,6 +34,7 @@ Before creating the flow, ensure you have:
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Connection references** bound in Power Automate:
+  - fsi_cr_dataverse_sessionvalidation (Dataverse / Common Data Service)
   - fsi_cr_teams_sessionvalidation (Microsoft Teams)
   - fsi_cr_office365_sessionvalidation (Office 365 Outlook)
   - Azure Automation connection to your subscription
@@ -47,6 +48,7 @@ Before creating the flow, ensure you have:
 3. Click **My flows** > **Import** > **Import Package (Legacy)**
 4. Upload `src/session-validation-flow.json` from this repository
 5. Map connection references:
+   - **Dataverse** → fsi_cr_dataverse_sessionvalidation
    - **Azure Automation** → Create new connection or select existing
    - **Microsoft Teams** → fsi_cr_teams_sessionvalidation
    - **Office 365 Outlook** → fsi_cr_office365_sessionvalidation

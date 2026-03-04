@@ -1,0 +1,5 @@
+{
+  "domainFacts": [
+    "Inconsistent utcNow() format in Write_Error_Validation_History action. Both fsi_name (line 670) and fsi_timestamp (line 677) use @{utcNow()} (producing Z suffix), while the corresponding fields in Write_Failure_Validation_History (lines 350, 357) use @{utcNow('o')} (producing +00:00 suffix). Both are valid UTC but the format inconsistency complicates log filtering/querying across error types. (suppress: WARN-730f-01)"
+  ]
+}
