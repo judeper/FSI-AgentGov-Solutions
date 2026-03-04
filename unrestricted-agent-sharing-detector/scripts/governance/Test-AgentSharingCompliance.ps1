@@ -8,7 +8,7 @@
     1. Enumerates Power Platform environments
     2. Queries each environment's Dataverse for Copilot Studio agents (bot table)
     3. Evaluates each agent's sharing configuration against zone-based policy
-    4. Detects: public sharing, org-wide access, unapproved group access, policy violations
+    4. Detects: public sharing, org-wide access, policy violations
     5. Reports violations with severity classification and regulatory context
     6. Optionally remediates by restricting sharing to compliant levels
 

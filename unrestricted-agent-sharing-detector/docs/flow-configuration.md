@@ -124,6 +124,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Trigger filters:
      - `fsi_violationstatus eq 100000000` (Open violations only)
      - `fsi_remediatedat eq null` (Not yet remediated)
+   - **Concurrency Control:** In the trigger settings, set **Degree of Parallelism** to `1` (sequential processing). The Dataverse trigger defaults to concurrency degree 50. If a Detector scan creates multiple violation types for the same agent (e.g., ORG_WIDE_SHARING + EXCESSIVE_INDIVIDUAL), parallel flow instances could race on the same agent's sharing configuration, causing inconsistent remediation. Sequential processing ensures each violation is fully remediated before the next begins.
 
 3. **Initialize Dry-Run Mode**
    - Get environment variable: `fsi_UASD_RemediationDryRun`
@@ -150,7 +151,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
 4b. **Check for Active Exception**
    - Action: "List records" (Dataverse)
    - Table: `fsi_SharingException`
-   - Filter: `fsi_agentid eq <violation's fsi_agentid> and fsi_exceptionstatus eq 100000001 and fsi_expiresat gt utcNow()`
+   - Filter: `fsi_agentid eq <violation's fsi_agentid> and fsi_violationtype eq <violation's fsi_violationtype> and fsi_exceptionstatus eq 100000001 and fsi_expiresat gt utcNow()`
    - **Condition:** If an active approved exception exists:
      - Update violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Update `fsi_remediationresult` to `"Skipped: active exception approved until <fsi_expiresat>"`
@@ -373,6 +374,8 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 - Time zone: UTC
 - Time: 07:00
 
+> **Error Handling:** Apply the same Scope-based try/catch pattern described in the Error Handling section below. Wrap steps 3–7 in a Scope action, with a Catch scope for logging failures and sending a Teams alert if the expiration monitor encounters errors.
+
 ---
 
 ## Canvas App: UASD-Exception-Manager
@@ -471,7 +474,7 @@ Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 
 ## Error Handling
 
-All three flows make API calls (Power Platform, Dataverse, Teams) that can fail transiently. Apply these patterns to each flow:
+All four flows make API calls (Power Platform, Dataverse, Teams) that can fail transiently. Apply these patterns to each flow:
 
 ### Scope-Based Try/Catch Pattern
 
@@ -493,7 +496,7 @@ For critical actions (API calls, Dataverse writes, Teams posts), configure **Run
 
 ### Retry Policies
 
-For HTTP actions (Power Platform API calls in Flow 1 Step 5, Flow 2 Step 7):
+For HTTP actions (Power Platform API calls in Flow 1 Step 5, Flow 2 Step 8):
 
 - **Policy:** Exponential interval
 - **Count:** 3 retries

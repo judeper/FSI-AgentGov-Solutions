@@ -31,7 +31,7 @@ unrestricted-agent-sharing-detector/
     ├── create_uasd_environment_variables.py
     ├── create_uasd_connection_references.py
     ├── requirements.txt
-    ├── uasd_client.py               # Deprecated (v1.0.1) — replaced by shared DataverseClient
+    ├── uasd_client.py               # Deprecated stub (v1.0.1) — raises ImportError, use shared DataverseClient
     └── governance/
         ├── Invoke-SharingAudit.ps1
         ├── Test-AgentSharingCompliance.ps1
@@ -39,7 +39,9 @@ unrestricted-agent-sharing-detector/
         ├── Export-ViolationReport.ps1
         ├── Import-ApprovedSecurityGroups.ps1
         ├── Deploy-DetectionFlow.ps1
-        └── Deploy-RemediationFlow.ps1
+        ├── Deploy-RemediationFlow.ps1
+        ├── Deploy-ExceptionApprovalFlow.ps1
+        └── Deploy-ExpirationMonitorFlow.ps1
 ```
 
 Power Automate flows and Canvas apps are built manually using the instructions in `docs/flow-configuration.md`.

@@ -109,6 +109,13 @@ $customRule = @{
 .\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com" -RuleFile "custom-rules.json"
 ```
 
+### Updating Existing Rules
+
+The import script does not update existing rules. Duplicate detection skips any rule whose role pair, category, and context already exist in Dataverse. To modify an existing rule's severity, description, or enabled status:
+
+1. **Edit directly in Dataverse** — update the `fsi_conflictrule` record via the Power Apps maker portal or Dataverse API.
+2. **Delete and re-import** — remove the existing rule from Dataverse, then re-run `Import-ConflictRules.ps1` with the updated JSON.
+
 ### Disabling Rules
 
 To disable a rule, update it directly in the Dataverse `fsi_conflictrule` table by setting `fsi_enabled` to `false`, or re-import with the field set accordingly.

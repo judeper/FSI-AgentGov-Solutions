@@ -118,12 +118,17 @@ az keyvault secret set --vault-name "your-vault" --name "SoD-ClientSecret" --val
 | `graph.microsoft.com` | Microsoft Graph API (commercial) |
 | `graph.microsoft.us` | Microsoft Graph API (GCC High) |
 | `microsoftgraph.chinacloudapi.cn` | Microsoft Graph API (China / 21Vianet) |
-| `*.crm.dynamics.com` | Dataverse |
+| `*.crm.dynamics.com` | Dataverse (commercial) |
+| `*.crm.microsoftdynamics.us` | Dataverse (GCC High) |
+| `*.crm.appsplatform.us` | Dataverse (DoD) |
+| `*.crm.dynamics.cn` | Dataverse (China / 21Vianet) |
 | `*.api.powerplatform.com` | Power Platform API |
 | `api.bap.microsoft.com` | Power Platform BAP API (commercial) |
 | `api.bap.appsplatform.us` | Power Platform BAP API (US sovereign / GCC High) |
 | `api.bap.partner.microsoftonline.cn` | Power Platform BAP API (China sovereign / 21Vianet) |
-| `login.microsoftonline.com` | Authentication |
+| `login.microsoftonline.com` | Authentication (commercial) |
+| `login.microsoftonline.us` | Authentication (GCC High) |
+| `login.partner.microsoftonline.cn` | Authentication (China / 21Vianet) |
 
 ---
 

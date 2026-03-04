@@ -522,6 +522,10 @@ foreach ($dvAssignment in $dvRoleAssignments) {
             Roles = @()
         }
         $dvUsersAdded++
+    } elseif ($userRoleMap[$userId].UserPrincipalName -eq $userId) {
+        # Update fallback identity (GUID) with richer Dataverse data
+        $userRoleMap[$userId].UserPrincipalName = $dvAssignment.DomainName
+        $userRoleMap[$userId].DisplayName = $dvAssignment.DisplayName
     }
 
     $userRoleMap[$userId].Roles += @{

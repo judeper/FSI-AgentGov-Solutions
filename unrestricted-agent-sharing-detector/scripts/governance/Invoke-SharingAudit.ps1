@@ -100,6 +100,12 @@ if ($ApprovedGroupsPath -and (Test-Path $ApprovedGroupsPath)) {
     Write-Host "  Approved groups loaded: $($approvedGroups.Count)" -ForegroundColor Gray
 }
 
+# --- Prerequisite Check ---
+if (-not (Get-Command Get-AdminPowerAppChatBot -ErrorAction SilentlyContinue)) {
+    Write-Error "Get-AdminPowerAppChatBot not available. Install the latest Microsoft.PowerApps.Administration.PowerShell module or use Test-AgentSharingCompliance.ps1 for Dataverse-based scanning."
+    exit 1
+}
+
 # --- Scan Environments ---
 Write-Host "`n  Scanning environments..." -ForegroundColor Cyan
 
@@ -141,6 +147,7 @@ try {
                 # and may not return Copilot Studio chatbot-specific sharing data. This can produce
                 # false negatives. Consider using the Dataverse bot table API (api/data/v9.2/bots)
                 # with sharingtype field for more reliable chatbot sharing detection.
+                Write-Warning "Agent '$agentName': Permission data retrieved via Get-AdminPowerAppRoleAssignment may be incomplete for chatbot-type agents. For higher-confidence results, use Test-AgentSharingCompliance.ps1 which queries the Dataverse bot table directly."
                 try {
                     $permissions = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -AppName $agentId -ErrorAction Stop
                     

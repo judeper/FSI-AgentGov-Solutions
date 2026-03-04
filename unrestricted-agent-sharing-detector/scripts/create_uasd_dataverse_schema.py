@@ -948,6 +948,19 @@ def generate_schema_docs() -> str:
             lines.append(f"| {opt['Value']} | {_label(opt['Label'])} |")
         lines.append("")
 
+        if name == "fsi_acv_zone":
+            lines.append(
+                '> **⚠️ Important:** `fsi_acv_zone` and `fsi_UASD_zoneclassification` '
+                'use **incompatible value mappings** for zones. `fsi_acv_zone` starts '
+                'with Unclassified at 100000000, shifting zone numbers up by one '
+                '(Zone 1 = 100000001). UASD tables bind exclusively to '
+                '`fsi_UASD_zoneclassification` (Zone 1 = 100000000). When building '
+                'flows, always use `fsi_UASD_zoneclassification` values for UASD '
+                'tables — do **not** substitute `fsi_acv_zone` values from ELM lookups '
+                'without remapping.'
+            )
+            lines.append("")
+
     lines.append("### UASD Option Sets")
     lines.append("")
     for name, osdef in OPTIONSETS.items():

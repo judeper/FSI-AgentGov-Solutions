@@ -104,10 +104,9 @@ The flow implements six violation detection rules:
 2. Enumerate all Copilot Studio agents across environments
 3. Retrieve sharing configuration for each agent
 4. Compare against approved security group registry (Dataverse)
-5. Check for active exceptions (Dataverse lookup)
-6. Create violation records for policy breaches
-7. Send Teams alert with violation summary
-8. Update agent sharing settings table for audit trail
+5. Create violation records for policy breaches
+6. Send Teams alert with violation summary
+7. Update agent sharing settings table for audit trail
 
 **Configuration Parameters:**
 - `fsi_UASD_DataverseUrl` — Dataverse environment URL
@@ -528,6 +527,7 @@ Example Records:
 3. Share with security groups or users who should submit exceptions
 4. Assign Dataverse security role with:
    - Read/Write on `fsi_SharingException`
+   - Read on `fsi_SharingViolation`
    - Read on `fsi_AgentSharingSetting`
    - Read on `fsi_ApprovedSecurityGroup`
 
@@ -671,6 +671,43 @@ Evidence files should include:
 - Exception approvals: Retain for 7 years (audit trail requirement)
 - Remediation logs: Retain for 3 years (operational history)
 - Agent sharing settings: Retain for 1 year (point-in-time audit capability)
+
+---
+
+## Detection Matrix: Coverage by Mechanism
+
+The solution provides three detection mechanisms, each with different violation-type coverage due to
+the data sources they access. Only the Detection Flow (Flow 1) covers all six violation types.
+
+| Violation Type | Detection Flow (Flow 1) | `Invoke-SharingAudit.ps1` | `Test-AgentSharingCompliance.ps1` |
+|----------------|:-----------------------:|:-------------------------:|:---------------------------------:|
+| **PUBLIC_INTERNET_LINK** | ✅ | ✅ | ✅ |
+| **ORG_WIDE_SHARING** | ✅ | ✅ | ✅ |
+| **UNAPPROVED_GROUP** | ✅ | ✅ | ❌ ¹ |
+| **EXCESSIVE_INDIVIDUAL** | ✅ | ✅ | ❌ ² |
+| **CROSS_TENANT_ACCESS** | ✅ | ✅ | ❌ ³ |
+| **POLICY_VIOLATION** | ✅ | ❌ | ✅ |
+
+**Notes:**
+
+1. The Dataverse bot table `sharingtype` field cannot distinguish individual from security-group
+   sharing (both map to `sharingtype=0` → `SpecificUsers`). `Test-AgentSharingCompliance.ps1`
+   therefore cannot detect unapproved group access.
+2. The bot table does not expose per-agent share-count data, so excessive individual shares
+   cannot be detected from Dataverse alone.
+3. `AllowExternalUsers` is derived from the bot table's `sharingScope`, which only yields
+   `SpecificUsers`, `OrgWide`, or `Public`. Cross-tenant detection requires role assignment
+   data available via `Get-AdminPowerAppRoleAssignment` (used by `Invoke-SharingAudit.ps1`)
+   or the Power Platform admin APIs (used by the Detection Flow).
+
+**Recommendations:**
+
+- For **comprehensive detection**, use the Detection Flow (Flow 1), which runs as a scheduled
+  cloud flow and covers all six violation types.
+- `Invoke-SharingAudit.ps1` is suitable for ad-hoc audits covering 5 of 6 types (all except
+  POLICY_VIOLATION). Provide `-ApprovedGroupsPath` to enable UNAPPROVED_GROUP detection.
+- `Test-AgentSharingCompliance.ps1` is lightweight and uses only Dataverse bot table queries;
+  it covers 3 of 6 types and is best for quick compliance checks.
 
 ---
 
