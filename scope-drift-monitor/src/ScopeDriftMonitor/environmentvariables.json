@@ -53,7 +53,7 @@
       "type": "Decimal",
       "defaultValue": "15",
       "isRequired": false,
-      "hint": "Default: 15 minutes (aligns with scheduled flow frequency)"
+      "hint": "Default: 15 minutes (aligns with scheduled flow frequency). Fractional values are truncated to whole minutes."
     },
     {
       "schemaName": "fsi_SDM_ClientId",

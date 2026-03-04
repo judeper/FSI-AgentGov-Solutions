@@ -1,5 +1,4 @@
 #Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Users.Actions
 
 <#
 .SYNOPSIS
@@ -348,6 +347,15 @@ if ($Channel -eq "Email" -or $Channel -eq "Both") {
         $results.Email = @{
             Success = $false
             Message = "From email not provided"
+        }
+        $hasFailure = $true
+    }
+    elseif (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Users.Actions)) {
+        Write-Host "  ERROR: Microsoft.Graph.Users.Actions module not installed" -ForegroundColor Red
+        Write-Host "  Install with: Install-Module Microsoft.Graph.Users.Actions -Scope CurrentUser" -ForegroundColor Red
+        $results.Email = @{
+            Success = $false
+            Message = "Microsoft.Graph.Users.Actions module not installed"
         }
         $hasFailure = $true
     }

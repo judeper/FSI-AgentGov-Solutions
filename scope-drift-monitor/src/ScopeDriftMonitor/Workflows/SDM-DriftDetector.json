@@ -36,7 +36,7 @@
           {
             "name": "LastCheckTime",
             "type": "string",
-            "value": "@{addMinutes(utcNow(), mul(-1, int(parameters('fsi_SDM_DetectionWindowMinutes'))))}"
+            "value": "@{addMinutes(utcNow(), mul(-1, int(float(parameters('fsi_SDM_DetectionWindowMinutes')))))}"
           }
         ]
       }
@@ -393,7 +393,7 @@
         "parameters": {
           "entityName": "fsi_scopeviolations",
           "$filter": "fsi_auditrecordid ne null and createdon ge @{addDays(utcNow(), -7)}",
-          "$select": "fsi_auditrecordid",
+          "$select": "fsi_auditrecordid,fsi_resourcename,fsi_violationtype",
           "$orderby": "createdon desc"
         },
         "authentication": "@parameters('$authentication')",
@@ -419,7 +419,7 @@
       "type": "Select",
       "inputs": {
         "from": "@coalesce(outputs('List_Recent_Violations')?['body/value'], json('[]'))",
-        "select": "@item()?['fsi_auditrecordid']"
+        "select": "@concat(item()?['fsi_auditrecordid'], '|', coalesce(item()?['fsi_resourcename'], ''), '|', string(coalesce(item()?['fsi_violationtype'], '')))"
       }
     },
     "For_Each_Audit_Event": {
@@ -431,16 +431,23 @@
       "type": "Foreach",
       "foreach": "@variables('AuditEvents')",
       "actions": {
-        "Condition_Event_Not_Processed": {
+        "Note_Process_Event_Is_Error_Boundary": {
           "runAfter": {},
+          "type": "Compose",
+          "inputs": "This If condition uses equals(1,1) (always-true) as an error-boundary scope so that individual event processing failures are caught without terminating the ForEach loop."
+        },
+        "Process_Event": {
+          "runAfter": {
+            "Note_Process_Event_Is_Error_Boundary": [
+              "Succeeded"
+            ]
+          },
           "type": "If",
           "expression": {
-            "not": {
-              "contains": [
-                "@body('Build_Processed_Audit_Ids')",
-                "@items('For_Each_Audit_Event')?['Id']"
-              ]
-            }
+            "equals": [
+              1,
+              1
+            ]
           },
           "actions": {
             "Parse_Event_Agent_Id": {
@@ -521,6 +528,14 @@
                             "@toLower(items('For_Each_Accessed_Resource')?['SiteUrl'])"
                           ]
                         }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Build_Processed_Audit_Ids')",
+                            "@concat(items('For_Each_Audit_Event')?['Id'], '|', coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '|', '10002')"
+                          ]
+                        }
                       }
                     ]
                   },
@@ -540,7 +555,7 @@
                             "fsi_name": "@{take(concat('Unauthorized SharePoint Site - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
                             "fsi_violationtype": 10002,
-                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourcename": "@{take(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), 200)}",
                             "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['SiteUrl']}",
                             "fsi_severity": 10003,
                             "fsi_status": 10001,
@@ -596,6 +611,14 @@
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Build_Processed_Audit_Ids')",
+                            "@concat(items('For_Each_Audit_Event')?['Id'], '|', coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '|', '10001')"
+                          ]
+                        }
                       }
                     ]
                   },
@@ -615,7 +638,7 @@
                             "fsi_name": "@{take(concat('Unauthorized Connector - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
                             "fsi_violationtype": 10001,
-                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourcename": "@{take(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), 200)}",
                             "fsi_severity": 10002,
                             "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
@@ -670,6 +693,14 @@
                             "@toLower(items('For_Each_Accessed_Resource')?['Url'])"
                           ]
                         }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Build_Processed_Audit_Ids')",
+                            "@concat(items('For_Each_Audit_Event')?['Id'], '|', coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '|', '10004')"
+                          ]
+                        }
                       }
                     ]
                   },
@@ -689,7 +720,7 @@
                             "fsi_name": "@{take(concat('Unauthorized External API - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
                             "fsi_violationtype": 10004,
-                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourcename": "@{take(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), 200)}",
                             "fsi_resourceurl": "@{items('For_Each_Accessed_Resource')?['Url']}",
                             "fsi_severity": 10002,
                             "fsi_status": 10001,
@@ -755,6 +786,14 @@
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Build_Processed_Audit_Ids')",
+                            "@concat(items('For_Each_Audit_Event')?['Id'], '|', coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), '|', '10003')"
+                          ]
+                        }
                       }
                     ]
                   },
@@ -774,7 +813,7 @@
                             "fsi_name": "@{take(concat('Unauthorized Dataverse Table - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
                             "fsi_violationtype": 10003,
-                            "fsi_resourcename": "@{items('For_Each_Accessed_Resource')?['Name']}",
+                            "fsi_resourcename": "@{take(coalesce(items('For_Each_Accessed_Resource')?['Name'], ''), 200)}",
                             "fsi_severity": 10003,
                             "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
@@ -869,6 +908,14 @@
                             "@toLower(items('For_Each_AISystemPlugin')?['Name'])"
                           ]
                         }
+                      },
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Build_Processed_Audit_Ids')",
+                            "@concat(items('For_Each_Audit_Event')?['Id'], '|', coalesce(items('For_Each_AISystemPlugin')?['Name'], ''), '|', '10001')"
+                          ]
+                        }
                       }
                     ]
                   },
@@ -888,7 +935,7 @@
                             "fsi_name": "@{take(concat('Unauthorized Connector (Plugin) - ', outputs('Get_Matched_Scope')?['fsi_name']), 200)}",
                             "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{outputs('Get_Matched_Scope')?['fsi_agentscopeid']})",
                             "fsi_violationtype": 10001,
-                            "fsi_resourcename": "@{items('For_Each_AISystemPlugin')?['Name']}",
+                            "fsi_resourcename": "@{take(coalesce(items('For_Each_AISystemPlugin')?['Name'], ''), 200)}",
                             "fsi_severity": 10002,
                             "fsi_status": 10001,
                             "fsi_detectedon": "@{utcNow()}",
@@ -933,12 +980,24 @@
                 "runAfter": {},
                 "type": "If",
                 "expression": {
-                  "not": {
-                    "equals": [
-                      "@outputs('Parse_Event_Agent_Id')",
-                      null
-                    ]
-                  }
+                  "and": [
+                    {
+                      "not": {
+                        "equals": [
+                          "@outputs('Parse_Event_Agent_Id')",
+                          null
+                        ]
+                      }
+                    },
+                    {
+                      "not": {
+                        "contains": [
+                          "@body('Build_Processed_Audit_Ids')",
+                          "@concat(items('For_Each_Audit_Event')?['Id'], '|', 'Agent activity detected without scope definition', '|', '10006')"
+                        ]
+                      }
+                    }
+                  ]
                 },
                 "actions": {
                   "Create_No_Baseline_Violation": {
@@ -1111,7 +1170,7 @@
                     "fsi_name": "@{take(concat('Expired Scope Item - ', items('For_Each_Expired_Item')?['fsi_resourcename']), 200)}",
                     "fsi_agentscopeid@odata.bind": "/fsi_agentscopes(@{items('For_Each_Expired_Item')?['fsi_agentscopeid/fsi_agentscopeid']})",
                     "fsi_violationtype": 10005,
-                    "fsi_resourcename": "@{items('For_Each_Expired_Item')?['fsi_resourcename']}",
+                    "fsi_resourcename": "@{take(coalesce(items('For_Each_Expired_Item')?['fsi_resourcename'], ''), 200)}",
                     "fsi_resourceurl": "@{coalesce(items('For_Each_Expired_Item')?['fsi_resourceurl'], '')}",
                     "fsi_severity": 10003,
                     "fsi_status": 10001,

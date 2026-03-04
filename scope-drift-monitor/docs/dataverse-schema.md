@@ -246,6 +246,7 @@ Requests to expand agent scope.
 | 10004 | Approved |
 | 10005 | Denied |
 | 10006 | Cancelled |
+| 10007 | Timed Out |
 
 ### Choice: fsi_dataownerapproval / fsi_securityapproval
 

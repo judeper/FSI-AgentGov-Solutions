@@ -805,6 +805,11 @@
                     <label description="Cancelled" languagecode="1033" />
                   </labels>
                 </option>
+                <option value="10007">
+                  <labels>
+                    <label description="Timed Out" languagecode="1033" />
+                  </labels>
+                </option>
               </optionset>
             </attribute>
             <attribute PhysicalName="fsi_dataownerapproval">

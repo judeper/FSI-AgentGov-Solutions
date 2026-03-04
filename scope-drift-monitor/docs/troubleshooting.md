@@ -159,7 +159,7 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 **Resolution:**
 
 - Default timeout is 7 days
-- After timeout, the flow automatically cancels the request and notifies the requestor
+- After timeout, the flow automatically sets the request to Timed Out and notifies the requestor
 - To resubmit, create a new expansion request
 
 **To change timeout:**

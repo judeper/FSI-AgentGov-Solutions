@@ -78,7 +78,11 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("https://manage.office.com", "https://manage.office365.us", "https://manage.office.eaglex.ic.gov", "https://manage.protection.outlook.com")]
-    [string]$ManagementApiEndpoint = "https://manage.office.com"
+    [string]$ManagementApiEndpoint = "https://manage.office.com",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(10001,10003)]
+    [int]$Zone = 10002
 )
 
 $ErrorActionPreference = "Stop"
@@ -241,7 +245,7 @@ function Get-CopilotAuditEvents {
     return $events
 }
 
-function Analyze-AccessedResources {
+function Get-AccessedResources {
     <#
     .SYNOPSIS
         Parses CopilotInteraction AccessedResources into categorized resources.
@@ -278,7 +282,7 @@ function Analyze-AccessedResources {
             foreach ($context in $eventData.Contexts) {
                 if ($context.Id -match "sharepoint\.com") {
                     # Extract site URL from full document path
-                    if ($context.Id -match "(https://[^/]+\.sharepoint\.com/sites/[^/]+)") {
+                    if ($context.Id -match "(https://[^/]+\.sharepoint\.com/(?:sites|teams)/[^/]+)") {
                         $siteUrl = $Matches[1]
                         if ($siteUrl -notin $resources.Sites) {
                             $resources.Sites += $siteUrl
@@ -318,7 +322,7 @@ function Analyze-AccessedResources {
     return $resources
 }
 
-function Build-ScopeFromHistory {
+function New-ScopeFromHistory {
     <#
     .SYNOPSIS
         Aggregates unique resources from analysis window into scope definition.
@@ -334,7 +338,10 @@ function Build-ScopeFromHistory {
         [string]$EnvironmentId,
 
         [Parameter(Mandatory = $true)]
-        [string]$OwnerId
+        [string]$OwnerId,
+
+        [ValidateRange(10001,10003)]
+        [int]$Zone = 10002
     )
 
     $scope = @{
@@ -342,7 +349,7 @@ function Build-ScopeFromHistory {
         fsi_agentid                 = $AgentId
         fsi_environmentid           = $EnvironmentId
         "fsi_owner@odata.bind"      = "/systemusers($OwnerId)"
-        fsi_zone                    = 10002  # Default to Zone 2
+        fsi_zone                    = $Zone
         fsi_status                  = 10002  # Active (auto-generated baseline goes active immediately per CONTEXT.md)
         fsi_purpose                 = "Auto-generated baseline from $Days-day audit history analysis"
         fsi_allowedconnectors = (ConvertTo-Json -InputObject @($Resources.Connectors) -Compress)
@@ -361,7 +368,7 @@ function Build-ScopeFromHistory {
     return $scope
 }
 
-function Create-ScopeDefinition {
+function New-ScopeDefinition {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Environment,
@@ -443,7 +450,7 @@ Write-Host "  Found $($events.Count) CopilotInteraction events (RecordType 261)"
 # Analyze accessed resources
 Write-Host ""
 Write-Host "Analyzing accessed resources..." -ForegroundColor Gray
-$resources = Analyze-AccessedResources -Events $events
+$resources = Get-AccessedResources -Events $events
 
 Write-Host "  Connectors: $($resources.Connectors.Count) unique ($($resources.Connectors -join ', '))"
 Write-Host "  SharePoint Sites: $($resources.Sites.Count) unique"
@@ -453,7 +460,7 @@ Write-Host "  External APIs: $($resources.APIs.Count) unique"
 # Build scope definition
 Write-Host ""
 Write-Host "Building scope definition..." -ForegroundColor Gray
-$scopeDefinition = Build-ScopeFromHistory -Resources $resources -AgentId $AgentId -EnvironmentId $EnvironmentId -OwnerId $OwnerId
+$scopeDefinition = New-ScopeFromHistory -Resources $resources -AgentId $AgentId -EnvironmentId $EnvironmentId -OwnerId $OwnerId -Zone $Zone
 
 if ($events.Count -eq 0) {
     Write-Host "  No audit events found - creating empty baseline" -ForegroundColor Yellow
@@ -468,7 +475,7 @@ Write-Host ""
 Write-Host "Creating scope definition in Dataverse..." -ForegroundColor Gray
 
 try {
-    $result = Create-ScopeDefinition -Environment $Environment -Token $dataverseToken -Scope $scopeDefinition
+    $result = New-ScopeDefinition -Environment $Environment -Token $dataverseToken -Scope $scopeDefinition
     Write-Host "  Scope created successfully" -ForegroundColor Green
     Write-Host "  Scope ID: $($result.fsi_agentscopeid)"
     Write-Host "  Status: Active (monitoring enabled)" -ForegroundColor Green

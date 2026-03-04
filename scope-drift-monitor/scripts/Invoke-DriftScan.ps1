@@ -51,6 +51,7 @@ param(
     [string]$AgentId,
 
     [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 1440)]
     [int]$Minutes = 15,
 
     [Parameter(Mandatory = $false)]
@@ -154,8 +155,9 @@ function Get-ActiveScopes {
         "Prefer"           = "odata.include-annotations=*"
     }
 
-    # Query for Active status (fsi_status eq 10002)
-    $filter = "fsi_status eq 10002"
+    # Query for Active status using configurable environment variable with fallback
+    $activeStatusValue = if ($env:fsi_SDM_ActiveScopeStatus) { $env:fsi_SDM_ActiveScopeStatus } else { "10002" }
+    $filter = "fsi_status eq $activeStatusValue"
     if ($AgentId) {
         $sanitizedAgentId = $AgentId -replace "'", "''"
         $filter = "$filter and fsi_agentid eq '$sanitizedAgentId'"
@@ -333,7 +335,7 @@ function Compare-ScopeVsActual {
 
     if ($eventData.Contexts) {
         foreach ($context in $eventData.Contexts) {
-            if ($context.Id -match "(https://[^/]+\.sharepoint\.com/sites/[^/]+)") {
+            if ($context.Id -match "(https://[^/]+\.sharepoint\.com/(?:sites|teams)/[^/]+)") {
                 $siteUrl = $Matches[1]
                 if ($siteUrl -notin $accessedSites) {
                     $accessedSites += $siteUrl
@@ -364,6 +366,19 @@ function Compare-ScopeVsActual {
     # Check Dataverse tables and external APIs from AccessedResources
     if ($eventData.AccessedResources) {
         foreach ($resource in $eventData.AccessedResources) {
+            # Connectors from AccessedResources
+            if ($resource.Type -eq "Connector") {
+                $connectorName = $resource.Name
+                if ($connectorName -and $connectorName -notin $allowedConnectors) {
+                    $violations += @{
+                        Type        = "Unauthorized Connector"
+                        Resource    = $connectorName
+                        Severity    = 10002  # High
+                        Details     = "Connector '$connectorName' not in allowed list"
+                    }
+                }
+            }
+
             # Dataverse tables
             if ($resource.Type -eq "DataverseTable" -or $resource.Type -eq "Table") {
                 if ($resource.Name -notin $allowedTables) {
@@ -451,10 +466,12 @@ function Create-ViolationRecord {
         "OData-Version"    = "4.0"
     }
 
-    # Deduplication: skip if a violation for this audit record already exists
+    # Deduplication: skip if a violation for this audit record, resource, and type already exists
     if ($AuditRecordId) {
         $sanitizedAuditId = $AuditRecordId -replace "'", "''"
-        $checkUri = "$Environment/api/data/v9.2/fsi_scopeviolations?`$filter=fsi_auditrecordid eq '$sanitizedAuditId'&`$select=fsi_scopeviolationid&`$top=1"
+        $sanitizedResource = ($Violation.Resource -replace "'", "''")
+        $violationTypeCode = Get-ViolationTypeCode -TypeName $Violation.Type
+        $checkUri = "$Environment/api/data/v9.2/fsi_scopeviolations?`$filter=fsi_auditrecordid eq '$sanitizedAuditId' and fsi_resourcename eq '$sanitizedResource' and fsi_violationtype eq $violationTypeCode&`$select=fsi_scopeviolationid&`$top=1"
         try {
             $existing = Invoke-RestMethod -Uri $checkUri -Headers $headers -Method Get
             if ($existing.value.Count -gt 0) {
@@ -557,10 +574,11 @@ catch {
     exit 1
 }
 
-# Build scope lookup by agent ID
+# Build scope lookup by agent ID and environment ID (composite key)
 $scopeLookup = @{}
 foreach ($scope in $scopes) {
-    $scopeLookup[$scope.fsi_agentid] = $scope
+    $envId = if ($scope.fsi_environmentid) { $scope.fsi_environmentid } else { "" }
+    $scopeLookup["$($scope.fsi_agentid)|$envId"] = $scope
 }
 
 # Get audit events
@@ -582,15 +600,12 @@ foreach ($event in $events) {
     $eventAgentId = $null
 
     # Check EventData for agent identification
-    if ($event.EventData.AppHost -eq "CopilotStudio") {
-        # For Copilot Studio agents, try to extract agent ID from various fields
-        if ($event.EventData.AgentId) {
-            $eventAgentId = $event.EventData.AgentId
-        }
-        elseif ($event.EventData.Contexts -and $event.EventData.Contexts[0].Id) {
-            # Use first context as agent identifier if explicit ID not present
-            $eventAgentId = $event.EventData.Contexts[0].Id
-        }
+    if ($event.EventData.AgentId) {
+        $eventAgentId = $event.EventData.AgentId
+    }
+    elseif ($event.EventData.Contexts -and $event.EventData.Contexts[0].Id) {
+        # Use first context as agent identifier if explicit ID not present
+        $eventAgentId = $event.EventData.Contexts[0].Id
     }
 
     # Skip if we're filtering for a specific agent and this isn't it
@@ -603,8 +618,14 @@ foreach ($event in $events) {
         $agentsScanned[$eventAgentId] = $true
     }
 
-    # Get scope for this agent (may be null)
-    $scope = if ($eventAgentId) { $scopeLookup[$eventAgentId] } else { $null }
+    # Get scope for this agent (may be null); uses composite key with environment ID
+    $eventEnvId = if ($event.EventData.EnvironmentId) { $event.EventData.EnvironmentId } else { "" }
+    $scope = if ($eventAgentId) { $scopeLookup["$eventAgentId|$eventEnvId"] } else { $null }
+
+    # Skip events with no identifiable agent — avoids false "No Baseline" violations
+    if (-not $eventAgentId) {
+        continue
+    }
 
     # Compare scope vs actual access
     $violations = Compare-ScopeVsActual -Event $event -Scope $scope

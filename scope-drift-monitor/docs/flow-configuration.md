@@ -184,7 +184,7 @@ Configure environment variables for your organization.
 |---------|---------|
 | **Approved** | Update agent scope, close violation (if linked), notify requestor |
 | **Rejected** | Update request status, notify requestor with comments |
-| **Timeout** | Update request to cancelled, notify requestor |
+| **Timeout** | Update request to timed out, notify requestor |
 
 > **Known limitation:** Expansion requests of type 10005 (Increase Access Level) are approved through the workflow but require **manual scope configuration** by an administrator. The flow skips automatic scope list updates for this request type because access level changes cannot be expressed as list-append operations. The approval notification email instructs the requestor to contact the security team for manual configuration.
 
@@ -208,7 +208,7 @@ Configure environment variables for your organization.
 **Alternative:** Use `Test-AlertDelivery.ps1`:
 
 ```powershell
-.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://your-webhook-url" -EmailRecipient "security@contoso.com"
+.\scripts\Test-AlertDelivery.ps1 -Channel Both -TeamsWebhook "https://your-webhook-url" -EmailRecipient "security@contoso.com" -FromEmail "alerts@contoso.com"
 ```
 
 ### Test SDM-ExpansionProcessor
