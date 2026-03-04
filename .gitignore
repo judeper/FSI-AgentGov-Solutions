@@ -32,6 +32,8 @@ GAP_ANALYSIS_REPORT.md
 site/
 
 # Auto-generated docs (built by scripts/build-docs.py)
-site-docs/solutions/
+# Ignore generated solution subdirectories but keep the hand-authored catalog
+site-docs/solutions/*/
+!site-docs/solutions/index.md
 site-docs/getting-started/deployment-guide.md
 site-docs/reference/changelog.md
