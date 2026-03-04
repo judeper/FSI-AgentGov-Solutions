@@ -27,3 +27,11 @@ Thumbs.db
 
 # Working documents
 GAP_ANALYSIS_REPORT.md
+
+# MkDocs build output
+site/
+
+# Auto-generated docs (built by scripts/build-docs.py)
+site-docs/solutions/
+site-docs/getting-started/deployment-guide.md
+site-docs/reference/changelog.md

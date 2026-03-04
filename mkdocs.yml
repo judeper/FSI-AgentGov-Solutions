@@ -1,0 +1,233 @@
+site_name: FSI Agent Governance Solutions
+site_url: "https://judeper.github.io/FSI-AgentGov-Solutions/"
+site_description: Reference implementations for the FSI Agent Governance Framework
+repo_url: https://github.com/judeper/FSI-AgentGov-Solutions
+repo_name: judeper/FSI-AgentGov-Solutions
+copyright: 'Copyright 2026 FSI Agent Governance Team | <a href="/FSI-AgentGov-Solutions/disclaimer/">Disclaimer</a>'
+docs_dir: site-docs
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.indexes
+    - navigation.footer
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.path
+    - navigation.prune
+    - search.suggest
+    - search.highlight
+    - announce.dismiss
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue grey
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search:
+      separator: '[\s\-\.]+'
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+      clickable_checkbox: false
+  - attr_list
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Deployment Guide: getting-started/deployment-guide.md
+    - Common Prerequisites: getting-started/prerequisites.md
+  - Solutions:
+    - solutions/index.md
+    - Access & Identity:
+      - Agent Access Monitor:
+        - solutions/agent-access-monitor/index.md
+        - Prerequisites: solutions/agent-access-monitor/prerequisites.md
+        - Schema: solutions/agent-access-monitor/schema.md
+        - Flow Setup: solutions/agent-access-monitor/flow-setup.md
+        - Evidence Export: solutions/agent-access-monitor/evidence-export.md
+        - Troubleshooting: solutions/agent-access-monitor/troubleshooting.md
+      - Conditional Access Automation:
+        - solutions/conditional-access-automation/index.md
+        - Prerequisites: solutions/conditional-access-automation/prerequisites.md
+        - Schema: solutions/conditional-access-automation/schema.md
+        - Policy Templates: solutions/conditional-access-automation/policy-templates.md
+        - Deployment Guide: solutions/conditional-access-automation/deployment-guide.md
+        - Compliance Monitoring: solutions/conditional-access-automation/compliance-monitoring.md
+        - Evidence Export: solutions/conditional-access-automation/evidence-export.md
+        - Troubleshooting: solutions/conditional-access-automation/troubleshooting.md
+      - Inactivity Timeout Enforcement: solutions/inactivity-timeout-enforcement/index.md
+      - Agent Sharing Access Restriction Detector: solutions/agent-sharing-access-restriction-detector/index.md
+      - Unrestricted Agent Sharing Detector:
+        - solutions/unrestricted-agent-sharing-detector/index.md
+        - Dataverse Schema: solutions/unrestricted-agent-sharing-detector/dataverse-schema.md
+        - Flow Configuration: solutions/unrestricted-agent-sharing-detector/flow-configuration.md
+    - Content & Data Protection:
+      - Content Moderation Monitor:
+        - solutions/content-moderation-monitor/index.md
+        - Prerequisites: solutions/content-moderation-monitor/prerequisites.md
+        - Schema: solutions/content-moderation-monitor/schema.md
+        - Flow Setup: solutions/content-moderation-monitor/flow-setup.md
+        - Evidence Export: solutions/content-moderation-monitor/evidence-export.md
+        - Troubleshooting: solutions/content-moderation-monitor/troubleshooting.md
+      - File Upload Security:
+        - solutions/file-upload-security/index.md
+        - Prerequisites: solutions/file-upload-security/prerequisites.md
+        - Schema: solutions/file-upload-security/schema.md
+        - Flow Setup: solutions/file-upload-security/flow-setup.md
+        - Evidence Export: solutions/file-upload-security/evidence-export.md
+        - Troubleshooting: solutions/file-upload-security/troubleshooting.md
+      - MIME Type Restrictions: solutions/mime-type-restrictions/index.md
+      - RAG Source Validator:
+        - solutions/rag-source-validator/index.md
+        - Dataverse Schema: solutions/rag-source-validator/dataverse-schema.md
+    - Compliance & Audit:
+      - Audit Compliance Manager:
+        - solutions/audit-compliance-manager/index.md
+        - Flow Setup: solutions/audit-compliance-manager/flow-setup.md
+        - Deployment Guide: solutions/audit-compliance-manager/deployment-guide.md
+        - Evidence Export: solutions/audit-compliance-manager/evidence-export-guide.md
+        - Scheduling: solutions/audit-compliance-manager/scheduling-guide.md
+        - Testing Scenarios: solutions/audit-compliance-manager/testing-scenarios.md
+      - Compliance Dashboard:
+        - solutions/compliance-dashboard/index.md
+        - Prerequisites: solutions/compliance-dashboard/prerequisites.md
+        - Dataverse Schema: solutions/compliance-dashboard/dataverse-schema.md
+        - Flow Configuration: solutions/compliance-dashboard/flow-configuration.md
+        - Power BI Setup: solutions/compliance-dashboard/power-bi-setup.md
+        - Power BI Template Spec: solutions/compliance-dashboard/power-bi-template-spec.md
+        - DAX Measures: solutions/compliance-dashboard/dax-measures.md
+        - Deployment Checklist: solutions/compliance-dashboard/deployment-checklist.md
+        - Troubleshooting: solutions/compliance-dashboard/troubleshooting.md
+      - Cross-Solution Integration:
+        - solutions/cross-solution-integration/index.md
+        - Configuration: solutions/cross-solution-integration/configuration.md
+        - Schema Contract: solutions/cross-solution-integration/schema-contract.md
+        - Status Mapping: solutions/cross-solution-integration/status-mapping.md
+        - ELM Integration: solutions/cross-solution-integration/elm-integration.md
+        - Score Calculator: solutions/cross-solution-integration/score-calculator-update.md
+        - Evidence Export: solutions/cross-solution-integration/evidence-export.md
+        - Troubleshooting: solutions/cross-solution-integration/troubleshooting.md
+      - FINRA Supervision Workflow:
+        - solutions/finra-supervision-workflow/index.md
+        - Prerequisites: solutions/finra-supervision-workflow/prerequisites.md
+        - Dataverse Schema: solutions/finra-supervision-workflow/dataverse-schema.md
+        - Flow Configuration: solutions/finra-supervision-workflow/flow-configuration.md
+        - Security Roles: solutions/finra-supervision-workflow/security-roles.md
+        - Power BI Setup: solutions/finra-supervision-workflow/power-bi-setup.md
+        - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
+        - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
+      - Segregation Detector:
+        - solutions/segregation-detector/index.md
+        - Prerequisites: solutions/segregation-detector/prerequisites.md
+        - Dataverse Schema: solutions/segregation-detector/dataverse-schema.md
+        - Conflict Rules: solutions/segregation-detector/conflict-rules.md
+        - Troubleshooting: solutions/segregation-detector/troubleshooting.md
+    - Monitoring & Analytics:
+      - Agent Observability Foundation:
+        - solutions/agent-observability-foundation/index.md
+        - Alert Tuning: solutions/agent-observability-foundation/alert-tuning-guide.md
+        - Cost Tuning: solutions/agent-observability-foundation/cost-tuning-guide.md
+        - PII Sanitization: solutions/agent-observability-foundation/pii-sanitization-guide.md
+        - WORM Configuration: solutions/agent-observability-foundation/worm-configuration.md
+      - Copilot Studio Analytics:
+        - solutions/copilot-studio-analytics/index.md
+        - Dataverse Schema: solutions/copilot-studio-analytics/dataverse-schema.md
+        - Data Sources: solutions/copilot-studio-analytics/dataverse-data-sources.md
+        - Agent-Assisted Hours: solutions/copilot-studio-analytics/agent-assisted-hours-methodology.md
+        - Cost Tuning: solutions/copilot-studio-analytics/cost-tuning-guide.md
+        - Viva Insights Parity: solutions/copilot-studio-analytics/viva-insights-parity-matrix.md
+      - Deny Event Correlation Report:
+        - solutions/deny-event-correlation-report/index.md
+        - Architecture: solutions/deny-event-correlation-report/architecture.md
+        - Prerequisites: solutions/deny-event-correlation-report/prerequisites.md
+        - Troubleshooting: solutions/deny-event-correlation-report/troubleshooting.md
+      - Scope Drift Monitor:
+        - solutions/scope-drift-monitor/index.md
+        - Prerequisites: solutions/scope-drift-monitor/prerequisites.md
+        - Dataverse Schema: solutions/scope-drift-monitor/dataverse-schema.md
+        - Baseline Configuration: solutions/scope-drift-monitor/baseline-configuration.md
+        - Flow Configuration: solutions/scope-drift-monitor/flow-configuration.md
+        - Troubleshooting: solutions/scope-drift-monitor/troubleshooting.md
+      - Hallucination Tracker:
+        - solutions/hallucination-tracker/index.md
+        - Prerequisites: solutions/hallucination-tracker/prerequisites.md
+        - Dataverse Schema: solutions/hallucination-tracker/dataverse-schema.md
+        - Pattern Analysis: solutions/hallucination-tracker/pattern-analysis.md
+        - Source Configuration: solutions/hallucination-tracker/source-configuration.md
+        - Troubleshooting: solutions/hallucination-tracker/troubleshooting.md
+    - Agent Configuration:
+      - Generative AI Config Auditor:
+        - solutions/generative-ai-config-auditor/index.md
+        - Prerequisites: solutions/generative-ai-config-auditor/prerequisites.md
+        - Dataverse Schema: solutions/generative-ai-config-auditor/dataverse-schema.md
+        - Flow Configuration: solutions/generative-ai-config-auditor/flow-configuration.md
+      - Session Security Configurator:
+        - solutions/session-security-configurator/index.md
+        - Prerequisites: solutions/session-security-configurator/prerequisites.md
+        - Dataverse Schema: solutions/session-security-configurator/dataverse-schema.md
+        - Flow Setup: solutions/session-security-configurator/flow-setup.md
+        - Evidence Export: solutions/session-security-configurator/evidence-export-guide.md
+        - Troubleshooting: solutions/session-security-configurator/troubleshooting.md
+      - Agent Communication Restriction Detector:
+        - solutions/agent-communication-restriction-detector/index.md
+        - Prerequisites: solutions/agent-communication-restriction-detector/prerequisites.md
+        - Dataverse Schema: solutions/agent-communication-restriction-detector/dataverse-schema.md
+        - Flow Configuration: solutions/agent-communication-restriction-detector/flow-configuration.md
+      - Action Confirmation Auditor:
+        - solutions/action-confirmation-auditor/index.md
+        - Prerequisites: solutions/action-confirmation-auditor/prerequisites.md
+        - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
+        - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
+    - Lifecycle & Operations:
+      - Environment Lifecycle Management:
+        - solutions/environment-lifecycle-management/index.md
+        - Prerequisites: solutions/environment-lifecycle-management/prerequisites.md
+        - Dataverse Schema: solutions/environment-lifecycle-management/dataverse-schema.md
+        - Flow Configuration: solutions/environment-lifecycle-management/flow-configuration.md
+        - Security Roles: solutions/environment-lifecycle-management/security-roles.md
+        - Service Principal Setup: solutions/environment-lifecycle-management/service-principal-setup.md
+        - Copilot Agent Setup: solutions/environment-lifecycle-management/copilot-agent-setup.md
+        - Troubleshooting: solutions/environment-lifecycle-management/troubleshooting.md
+      - Pipeline Governance Cleanup: solutions/pipeline-governance-cleanup/index.md
+      - DR Testing Framework: solutions/dr-testing-framework/index.md
+      - Message Center Monitor: solutions/message-center-monitor/index.md
+      - COI Testing: solutions/coi-testing/index.md
+  - Reference:
+    - reference/index.md
+    - Changelog: reference/changelog.md
+    - Control Mapping: reference/control-mapping.md
+    - Shared Utilities: reference/shared-utilities.md
+    - Architecture: reference/architecture.md
+  - Disclaimer: disclaimer.md

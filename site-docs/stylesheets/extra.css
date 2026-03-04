@@ -1,0 +1,24 @@
+/* Print-friendly checkbox styles */
+@media print {
+  .md-typeset .task-list-indicator::before {
+    border: 1px solid #999;
+  }
+  .md-typeset [type="checkbox"]:checked + .task-list-indicator::before {
+    background-color: #999;
+  }
+}
+
+/* Solution metadata badges */
+.solution-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* Domain grouping headers */
+.md-typeset .domain-header {
+  border-bottom: 2px solid var(--md-primary-fg-color);
+  padding-bottom: 0.25rem;
+  margin-top: 1.5rem;
+}
