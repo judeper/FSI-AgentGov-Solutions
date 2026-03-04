@@ -350,7 +350,7 @@ function New-ScopeFromHistory {
         fsi_environmentid           = $EnvironmentId
         "fsi_owner@odata.bind"      = "/systemusers($OwnerId)"
         fsi_zone                    = $Zone
-        fsi_status                  = 10002  # Active (auto-generated baseline goes active immediately per CONTEXT.md)
+        fsi_status                  = [int]$(if ($env:fsi_SDM_ActiveScopeStatus) { $env:fsi_SDM_ActiveScopeStatus } else { 10002 })
         fsi_purpose                 = "Auto-generated baseline from $Days-day audit history analysis"
         fsi_allowedconnectors = (ConvertTo-Json -InputObject @($Resources.Connectors) -Compress)
         fsi_allowedsites      = (ConvertTo-Json -InputObject @($Resources.Sites) -Compress)
@@ -468,6 +468,35 @@ if ($events.Count -eq 0) {
 }
 else {
     Write-Host "  Scope built from $($events.Count) events" -ForegroundColor Green
+}
+
+# Check for existing active baseline (prevent duplicate scope records)
+Write-Host ""
+Write-Host "Checking for existing active baseline..." -ForegroundColor Gray
+
+$existingCheckHeaders = @{
+    "Authorization"    = "Bearer $dataverseToken"
+    "Content-Type"     = "application/json"
+    "OData-MaxVersion" = "4.0"
+    "OData-Version"    = "4.0"
+}
+$sanitizedAgentId = $AgentId -replace "'", "''"
+$sanitizedEnvironmentId = $EnvironmentId -replace "'", "''"
+$activeStatus = if ($env:fsi_SDM_ActiveScopeStatus) { $env:fsi_SDM_ActiveScopeStatus } else { "10002" }
+$filterQuery = "`$filter=fsi_agentid eq '$sanitizedAgentId' and fsi_environmentid eq '$sanitizedEnvironmentId' and fsi_status eq $activeStatus&`$select=fsi_agentscopeid,fsi_name&`$top=1"
+$existingUri = "$Environment/api/data/v9.2/fsi_agentscopes?$filterQuery"
+
+try {
+    $existingScopes = Invoke-RestMethod -Uri $existingUri -Headers $existingCheckHeaders -Method Get
+    if ($existingScopes.value -and $existingScopes.value.Count -gt 0) {
+        $existingId = $existingScopes.value[0].fsi_agentscopeid
+        Write-Error "An active baseline already exists for agent '$AgentId' in environment '$EnvironmentId' (Scope ID: $existingId). Deactivate or archive the existing baseline before creating a new one."
+        exit 1
+    }
+    Write-Host "  No existing active baseline found" -ForegroundColor Green
+}
+catch {
+    Write-Warning "Could not check for existing baselines: $($_.Exception.Message). Proceeding with creation."
 }
 
 # Create scope in Dataverse

@@ -1,0 +1,7 @@
+{
+  "domainFacts": [
+    "`Disable_Expired_Item` runs after `Create_Expired_Violation` on [\"Succeeded\", \"Failed\"] (lines 1269-1274). If `Create_Expired_Violation` **fails**, `Disable_Expired_Item` still executes and sets `fsi_enabled=false`, removing the item from the `fsi_enabled eq true` filter on subsequent cycles. The violation is silently lost with no record created and no retry possible. Conversely, if `Create_Expired_Violation` succeeds but `Disable_Expired_Item` fails, the item remains enabled and generates a duplicate violation every 15-minute cycle (no dedup covers expired-item violations). (suppress: WARN-8579-01)",
+    "Dataverse trigger `scope` is `2` (Business Unit) instead of `4` (Organization). Expansion requests created by users outside the flow owner's BU will not trigger the approval workflow, leaving requests in Pending status indefinitely. (suppress: WARN-7f17-01)",
+    "Dataverse trigger `scope` is `2` (Business Unit) instead of `4` (Organization). In multi-business-unit FSI environments, violations created by service principals or users outside the flow owner's BU will not fire the trigger, causing missed alert notifications. (suppress: WARN-390f-01)"
+  ]
+}

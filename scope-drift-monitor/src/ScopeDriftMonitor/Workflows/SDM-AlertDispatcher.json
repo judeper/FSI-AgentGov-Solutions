@@ -123,7 +123,7 @@
               },
               {
                 "title": "Resource:",
-                "value": "@{replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}"
+                "value": "@{coalesce(outputs('Get_Violation_Details')?['body/fsi_resourcename'], '')}"
               },
               {
                 "title": "Severity:",
@@ -172,7 +172,7 @@
           {
             "not": {
               "equals": [
-                "@parameters('fsi_SDM_TeamsGroupId')",
+                "@coalesce(parameters('fsi_SDM_TeamsGroupId'), '')",
                 ""
               ]
             }
@@ -180,7 +180,7 @@
           {
             "not": {
               "equals": [
-                "@parameters('fsi_SDM_TeamsChannelId')",
+                "@coalesce(parameters('fsi_SDM_TeamsChannelId'), '')",
                 ""
               ]
             }
@@ -226,7 +226,7 @@
         ]
       },
       "type": "Compose",
-      "inputs": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.alert-header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}.details-table{width:100%;border-collapse:collapse;margin-top:20px;}.details-table td{padding:10px;border:1px solid #ddd;}.details-table tr:nth-child(odd){background-color:#f9f9f9;}.label{font-weight:bold;width:150px;}.severity-critical{color:#8b0000;font-weight:bold;}.severity-high{color:#d13438;font-weight:bold;}.severity-medium{color:#ff8c00;font-weight:bold;}.severity-low{color:#107c10;font-weight:bold;}</style></head><body><div class=\"alert-header\">Scope Drift Violation Detected</div><table class=\"details-table\"><tr><td class=\"label\">Agent</td><td>@{replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_name'], 'Unknown Agent'), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Violation Type</td><td>@{outputs('Get_Violation_Type_Label')}</td></tr><tr><td class=\"label\">Resource</td><td>@{replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_resourcename'], ''), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Resource URL</td><td>@{replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_resourceurl'], 'N/A'), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Severity</td><td class=\"severity-@{toLower(outputs('Get_Severity_Label'))}\">@{outputs('Get_Severity_Label')}</td></tr><tr><td class=\"label\">Zone</td><td>@{outputs('Get_Zone_Label')}</td></tr><tr><td class=\"label\">Detected On</td><td>@{formatDateTime(outputs('Get_Violation_Details')?['body/fsi_detectedon'], 'MMMM dd, yyyy HH:mm:ss')} UTC</td></tr><tr><td class=\"label\">Audit Record ID</td><td>@{coalesce(outputs('Get_Violation_Details')?['body/fsi_auditrecordid'], 'N/A')}</td></tr></table><p style=\"margin-top:20px;\"><strong>Action Required:</strong> Please review this violation and determine the appropriate resolution:</p><ul><li>If this access is legitimate, create a scope expansion request</li><li>If this is a security concern, investigate and remediate the agent</li><li>If this is a false positive, close the violation with appropriate documentation</li></ul><p><a href=\"@{if(not(empty(parameters('fsi_SDM_DataverseEnvironment'))), concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_scopeviolation&id=', outputs('Get_Violation_Details')?['body/fsi_scopeviolationid']), '#')}\">View Violation in Dataverse</a></p></body></html>"
+      "inputs": "<html><head><style>body{font-family:Segoe UI,Arial,sans-serif;}.alert-header{background-color:#d13438;color:white;padding:15px;font-size:18px;font-weight:bold;}.details-table{width:100%;border-collapse:collapse;margin-top:20px;}.details-table td{padding:10px;border:1px solid #ddd;}.details-table tr:nth-child(odd){background-color:#f9f9f9;}.label{font-weight:bold;width:150px;}.severity-critical{color:#8b0000;font-weight:bold;}.severity-high{color:#d13438;font-weight:bold;}.severity-medium{color:#ff8c00;font-weight:bold;}.severity-low{color:#107c10;font-weight:bold;}</style></head><body><div class=\"alert-header\">Scope Drift Violation Detected</div><table class=\"details-table\"><tr><td class=\"label\">Agent</td><td>@{replace(replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_agentscopeid/fsi_name'], 'Unknown Agent'), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Violation Type</td><td>@{outputs('Get_Violation_Type_Label')}</td></tr><tr><td class=\"label\">Resource</td><td>@{replace(replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_resourcename'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Resource URL</td><td>@{replace(replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_resourceurl'], 'N/A'), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr><tr><td class=\"label\">Severity</td><td class=\"severity-@{toLower(outputs('Get_Severity_Label'))}\">@{outputs('Get_Severity_Label')}</td></tr><tr><td class=\"label\">Zone</td><td>@{outputs('Get_Zone_Label')}</td></tr><tr><td class=\"label\">Detected On</td><td>@{formatDateTime(outputs('Get_Violation_Details')?['body/fsi_detectedon'], 'MMMM dd, yyyy HH:mm:ss')} UTC</td></tr><tr><td class=\"label\">Audit Record ID</td><td>@{replace(replace(replace(coalesce(outputs('Get_Violation_Details')?['body/fsi_auditrecordid'], 'N/A'), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr></table><p style=\"margin-top:20px;\"><strong>Action Required:</strong> Please review this violation and determine the appropriate resolution:</p><ul><li>If this access is legitimate, create a scope expansion request</li><li>If this is a security concern, investigate and remediate the agent</li><li>If this is a false positive, close the violation with appropriate documentation</li></ul><p><a href=\"@{if(not(empty(parameters('fsi_SDM_DataverseEnvironment'))), concat(parameters('fsi_SDM_DataverseEnvironment'), '/main.aspx?pagetype=entityrecord&etn=fsi_scopeviolation&id=', outputs('Get_Violation_Details')?['body/fsi_scopeviolationid']), '#')}\">View Violation in Dataverse</a></p></body></html>"
     },
     "Determine_Email_Recipients": {
       "runAfter": {

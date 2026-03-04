@@ -36,7 +36,7 @@
           {
             "name": "LastCheckTime",
             "type": "string",
-            "value": "@{addMinutes(utcNow(), mul(-1, int(float(parameters('fsi_SDM_DetectionWindowMinutes')))))}"
+            "value": "@{addMinutes(utcNow(), mul(-1, max(int(float(parameters('fsi_SDM_DetectionWindowMinutes'))), 1)))}"
           }
         ]
       }
@@ -143,9 +143,26 @@
         ]
       }
     },
-    "List_Active_Agent_Scopes": {
+    "Initialize_NoBaselineAgentIds": {
       "runAfter": {
         "Initialize_ContentPageUri": [
+          "Succeeded"
+        ]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "NoBaselineAgentIds",
+            "type": "string",
+            "value": "|"
+          }
+        ]
+      }
+    },
+    "List_Active_Agent_Scopes": {
+      "runAfter": {
+        "Initialize_NoBaselineAgentIds": [
           "Succeeded"
         ]
       },
@@ -159,8 +176,7 @@
         "parameters": {
           "entityName": "fsi_agentscopes",
           "$filter": "fsi_status eq @{int(coalesce(parameters('fsi_SDM_ActiveScopeStatus'), '10002'))}",
-          "$select": "fsi_agentscopeid,fsi_name,fsi_agentid,fsi_environmentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis",
-          "$expand": "fsi_owner($select=internalemailaddress,fullname)"
+          "$select": "fsi_agentscopeid,fsi_name,fsi_agentid,fsi_environmentid,fsi_zone,fsi_allowedconnectors,fsi_allowedsites,fsi_allowedtables,fsi_allowedapis"
         },
         "authentication": "@parameters('$authentication')",
         "retryPolicy": {
@@ -176,10 +192,57 @@
         }
       }
     },
-    "Scope_Query_Unified_Audit_Log": {
+    "Filter_Invalid_Scope_JSON": {
       "runAfter": {
         "List_Active_Agent_Scopes": [
           "Succeeded"
+        ]
+      },
+      "type": "Query",
+      "inputs": {
+        "from": "@coalesce(outputs('List_Active_Agent_Scopes')?['body/value'], json('[]'))",
+        "where": "@or(and(not(empty(coalesce(item()?['fsi_allowedconnectors'], ''))), not(startsWith(trim(coalesce(item()?['fsi_allowedconnectors'], '[]')), '['))), and(not(empty(coalesce(item()?['fsi_allowedsites'], ''))), not(startsWith(trim(coalesce(item()?['fsi_allowedsites'], '[]')), '['))), and(not(empty(coalesce(item()?['fsi_allowedtables'], ''))), not(startsWith(trim(coalesce(item()?['fsi_allowedtables'], '[]')), '['))), and(not(empty(coalesce(item()?['fsi_allowedapis'], ''))), not(startsWith(trim(coalesce(item()?['fsi_allowedapis'], '[]')), '['))))"
+      }
+    },
+    "Log_Invalid_Scope_JSON": {
+      "runAfter": {
+        "Filter_Invalid_Scope_JSON": [
+          "Succeeded"
+        ]
+      },
+      "type": "If",
+      "expression": {
+        "greater": [
+          "@length(body('Filter_Invalid_Scope_JSON'))",
+          0
+        ]
+      },
+      "actions": {
+        "Append_Invalid_Scope_Warning": {
+          "runAfter": {},
+          "type": "AppendToArrayVariable",
+          "inputs": {
+            "name": "SourceStatus",
+            "value": {
+              "source": "Scope JSON Validation",
+              "status": "warning",
+              "reason": "@{concat('Found ', string(length(body('Filter_Invalid_Scope_JSON'))), ' scope(s) with malformed JSON in allowed resource fields. Detection for affected categories will use empty allowlists. Fix by setting scope fields to valid JSON arrays, e.g. [\"SharePoint\"].')}",
+              "affectedScopes": "@{body('Filter_Invalid_Scope_JSON')}",
+              "timestamp": "@{utcNow()}"
+            }
+          }
+        }
+      },
+      "else": {
+        "actions": {}
+      }
+    },
+    "Scope_Query_Unified_Audit_Log": {
+      "runAfter": {
+        "Log_Invalid_Scope_JSON": [
+          "Succeeded",
+          "Skipped",
+          "Failed"
         ]
       },
       "type": "Scope",
@@ -524,7 +587,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@json(toLower(if(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '')), '[]', outputs('Get_Matched_Scope')?['fsi_allowedsites'])))",
+                            "@json(toLower(if(or(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '')), not(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedsites'], '')), '['))), '[]', outputs('Get_Matched_Scope')?['fsi_allowedsites'])))",
                             "@toLower(items('For_Each_Accessed_Resource')?['SiteUrl'])"
                           ]
                         }
@@ -607,7 +670,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@json(toLower(if(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), '[]', outputs('Get_Matched_Scope')?['fsi_allowedconnectors'])))",
+                            "@json(toLower(if(or(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), not(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), '['))), '[]', outputs('Get_Matched_Scope')?['fsi_allowedconnectors'])))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
@@ -689,7 +752,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@json(toLower(if(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '')), '[]', outputs('Get_Matched_Scope')?['fsi_allowedapis'])))",
+                            "@json(toLower(if(or(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '')), not(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedapis'], '')), '['))), '[]', outputs('Get_Matched_Scope')?['fsi_allowedapis'])))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Url'])"
                           ]
                         }
@@ -782,7 +845,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@json(toLower(if(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '')), '[]', outputs('Get_Matched_Scope')?['fsi_allowedtables'])))",
+                            "@json(toLower(if(or(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '')), not(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedtables'], '')), '['))), '[]', outputs('Get_Matched_Scope')?['fsi_allowedtables'])))",
                             "@toLower(items('For_Each_Accessed_Resource')?['Name'])"
                           ]
                         }
@@ -896,7 +959,7 @@
                       {
                         "not": {
                           "contains": [
-                            "@json(toLower(if(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), '[]', outputs('Get_Matched_Scope')?['fsi_allowedconnectors'])))",
+                            "@json(toLower(if(or(empty(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), not(startsWith(trim(coalesce(outputs('Get_Matched_Scope')?['fsi_allowedconnectors'], '')), '['))), '[]', outputs('Get_Matched_Scope')?['fsi_allowedconnectors'])))",
                             "@toLower(items('For_Each_AISystemPlugin')?['Name'])"
                           ]
                         }
@@ -996,6 +1059,14 @@
                           "@concat(items('For_Each_Audit_Event')?['Id'], '|', 'Agent activity detected without scope definition', '|', '10006')"
                         ]
                       }
+                    },
+                    {
+                      "not": {
+                        "contains": [
+                          "@variables('NoBaselineAgentIds')",
+                          "@concat('|', outputs('Parse_Event_Agent_Id'), '|')"
+                        ]
+                      }
                     }
                   ]
                 },
@@ -1041,6 +1112,18 @@
                     "inputs": {
                       "name": "ViolationsFound",
                       "value": 1
+                    }
+                  },
+                  "Append_NoBaseline_AgentId": {
+                    "runAfter": {
+                      "Increment_Violations_NoBaseline": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "AppendToStringVariable",
+                    "inputs": {
+                      "name": "NoBaselineAgentIds",
+                      "value": "@{outputs('Parse_Event_Agent_Id')}|"
                     }
                   }
                 },
@@ -1152,11 +1235,7 @@
           "foreach": "@coalesce(outputs('List_Expired_Scope_Items')?['body/value'], json('[]'))",
           "actions": {
             "Create_Expired_Violation": {
-              "runAfter": {
-                "Disable_Expired_Item": [
-                  "Succeeded"
-                ]
-              },
+              "runAfter": {},
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {
@@ -1188,7 +1267,12 @@
               }
             },
             "Disable_Expired_Item": {
-              "runAfter": {},
+              "runAfter": {
+                "Create_Expired_Violation": [
+                  "Succeeded",
+                  "Failed"
+                ]
+              },
               "type": "OpenApiConnection",
               "inputs": {
                 "host": {

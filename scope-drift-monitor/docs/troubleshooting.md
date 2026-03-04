@@ -190,6 +190,31 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 
 ---
 
+## Approver Lookup Fails
+
+**Symptoms:** Expansion request approved or denied, but the request status remains "Under Review" and an admin notification email is sent.
+
+**Background:**
+
+The SDM-ExpansionProcessor flow binds `fsi_securityapprovedby` using `/systemusers(@{responder/id})` from the Approvals connector response. The `responder/id` value is the Azure AD Object ID of the approver. In most modern Power Platform online environments, `systemuserid` equals the Azure AD Object ID, so the lookup succeeds. However, in migrated or on-premises-derived environments, these IDs may differ, causing a 404 or 400 error on the UpdateRecord call.
+
+**Resolution:**
+
+- The error handlers (`Handle_Request_Approved_Failure`, `Handle_Denial_Update_Failure`) catch the failure and send admin notification emails via Outlook
+- The core scope update still succeeds — only the request status update fails
+- Manually update the request status in Dataverse after receiving the admin notification
+- If this occurs frequently, consider customizing the flow to look up the system user by Azure AD Object ID instead of using a direct bind
+
+**Affected environments:**
+
+| Environment Type | Impact |
+|-----------------|--------|
+| Cloud-native (standard) | No issue — `systemuserid` equals AAD OID |
+| Migrated from on-premises | May fail — IDs may differ |
+| On-premises-derived | May fail — IDs may differ |
+
+---
+
 ## Data Issues
 
 ### Duplicate Violation Records
@@ -206,7 +231,17 @@ The SDM-DriftDetector includes event-level deduplication based on `fsi_auditreco
 
 ### Invalid JSON in Scope Fields
 
-**Symptoms:** Errors parsing `fsi_allowedconnectors` or similar fields.
+**Symptoms:** Errors parsing `fsi_allowedconnectors` or similar fields, or detection silently skipping certain resource categories.
+
+**Background:**
+
+The SDM-DriftDetector flow validates scope JSON fields on each run. If a scope field contains malformed JSON (e.g., `"SharePoint"` instead of `["SharePoint"]`), the flow:
+
+1. Logs a warning to the detection summary identifying affected scopes
+2. Falls back to an empty allowlist (`[]`) for that field, meaning **all** access of that resource type is treated as a violation
+3. Continues processing remaining resource categories normally
+
+This prevents silent suppression of detection but may generate false positives until the data is corrected.
 
 **Resolution:**
 
@@ -270,6 +305,14 @@ null
 1. Add retry logic to HTTP actions
 2. Reduce concurrent flow runs
 3. Spread detection across time windows
+
+---
+
+## Shared Code
+
+### Duplicate `Get-AccessToken` Function
+
+`Get-AccessToken` is defined identically in both `Invoke-DriftScan.ps1` and `New-AgentBaseline.ps1`. When modifying token acquisition logic (e.g., adding token caching, changing credential handling), apply the change to both files. A future release may extract this into a shared module.
 
 ---
 

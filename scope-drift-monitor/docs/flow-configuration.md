@@ -79,6 +79,7 @@ Configure environment variables for your organization.
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes | `15` (minutes) |
 | `fsi_SDM_ClientId` | Azure AD application client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `fsi_SDM_ClientSecret` | Azure AD application client secret | *(stored securely)* |
+| `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on `fsi_agentscope` (default: `10002`) | `10002` |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL | `https://manage.office.com` (commercial) |
 
 > **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against known Microsoft Management API endpoints (`manage.office.com`, `manage.office365.us`, `manage.office.eaglex.ic.gov`, `manage.protection.outlook.com`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints.

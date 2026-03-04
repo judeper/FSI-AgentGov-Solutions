@@ -434,7 +434,7 @@ function Get-ViolationTypeCode {
     }
 }
 
-function Create-ViolationRecord {
+function New-ViolationRecord {
     <#
     .SYNOPSIS
         Creates a violation record in Dataverse.
@@ -485,7 +485,7 @@ function Create-ViolationRecord {
     }
 
     $violationRecord = @{
-        fsi_name          = "$($Violation.Type) - $($Violation.Resource)"
+        fsi_name          = & { $n = "$($Violation.Type) - $($Violation.Resource)"; if ($n.Length -gt 200) { $n.Substring(0, 200) } else { $n } }
         fsi_violationtype = Get-ViolationTypeCode -TypeName $Violation.Type
         fsi_resourcename  = $Violation.Resource
         fsi_resourceurl   = if ($Violation.Resource -match "^https?://") { $Violation.Resource } else { $null }
@@ -618,9 +618,18 @@ foreach ($event in $events) {
         $agentsScanned[$eventAgentId] = $true
     }
 
-    # Get scope for this agent (may be null); uses composite key with environment ID
-    $eventEnvId = if ($event.EventData.EnvironmentId) { $event.EventData.EnvironmentId } else { "" }
-    $scope = if ($eventAgentId) { $scopeLookup["$eventAgentId|$eventEnvId"] } else { $null }
+    # Get scope for this agent; null EnvironmentId acts as wildcard (matches any scope for this agent)
+    $eventEnvId = if ($event.EventData.EnvironmentId) { $event.EventData.EnvironmentId } else { $null }
+    $scope = $null
+    if ($eventAgentId) {
+        if ($eventEnvId) {
+            $scope = $scopeLookup["$eventAgentId|$eventEnvId"]
+        }
+        if (-not $scope) {
+            # Wildcard: match first scope for this agent (consistent with flow's or(equals(EnvironmentId, null), ...) logic)
+            $scope = $scopeLookup.GetEnumerator() | Where-Object { $_.Key.StartsWith("$eventAgentId|") } | Select-Object -First 1 -ExpandProperty Value
+        }
+    }
 
     # Skip events with no identifiable agent — avoids false "No Baseline" violations
     if (-not $eventAgentId) {
@@ -635,7 +644,7 @@ foreach ($event in $events) {
         $scopeId = if ($scope) { $scope.fsi_agentscopeid } else { $null }
         $auditRecordId = $event.Id
 
-        $result = Create-ViolationRecord `
+        $result = New-ViolationRecord `
             -Environment $Environment `
             -Token $dataverseToken `
             -Violation $violation `

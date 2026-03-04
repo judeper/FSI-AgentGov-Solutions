@@ -99,6 +99,7 @@ Individual scope items with detailed configuration.
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `fsi_scopeitemid` | Uniqueidentifier | Yes | Primary key |
+| `fsi_name` | String (200) | Yes | Scope item display name |
 | `fsi_agentscopeid` | Lookup | Yes | Parent scope |
 | `fsi_itemtype` | Choice | Yes | Type of resource |
 | `fsi_resourcename` | String (200) | Yes | Resource identifier |
@@ -304,6 +305,22 @@ All four tables use custom `fsi_status` choice fields instead of Dataverse's bui
 - **Flow compatibility**: Power Automate expressions reference `fsi_status` directly with numeric comparisons. Built-in state transitions add complexity to flow logic without proportional benefit for this use case.
 
 Deployers who prefer built-in state management may map `fsi_status` transitions to `statecode`/`statuscode` via business rules or plugins.
+
+---
+
+## Violation Record Lifecycle
+
+Resolved `fsi_scopeviolation` records (status 10004 Resolved - Scope Expanded, 10005 Resolved - Access Removed, 10006 Closed - False Positive) accumulate indefinitely. For high-volume FSI environments, implement periodic archival or purge to maintain query performance and manage Dataverse capacity.
+
+**Recommended approach:**
+
+| Strategy | Implementation |
+|----------|----------------|
+| Bulk Delete Job | Create a Dataverse bulk delete job targeting `fsi_scopeviolation` records where `fsi_status` is in (10004, 10005, 10006) and `modifiedon` is older than retention period (e.g., 90 days) |
+| Power Automate Scheduled Flow | Run weekly to move resolved violations older than retention period to an archive table or export to Azure Data Lake |
+| Dataverse Retention Policy | Use Dataverse long-term retention (preview) to automatically archive old records while keeping them queryable |
+
+Retention period should align with your organization's audit requirements (e.g., FINRA Rule 3110 requires 3-year retention, GDPR requires purpose-limited retention).
 
 ---
 
