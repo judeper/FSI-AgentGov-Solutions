@@ -29,6 +29,7 @@ Usage:
 
 import argparse
 import os
+import re
 import sys
 from typing import Optional
 
@@ -61,6 +62,8 @@ def deploy(
     vars_only: bool = False,
     refs_only: bool = False,
     verbose: bool = False,
+    include_alca: bool = False,
+    alca_client=None,
 ) -> bool:
     """
     Deploy all ACV components to Dataverse.
@@ -72,6 +75,8 @@ def deploy(
         vars_only: If True, only deploy environment variables
         refs_only: If True, only deploy connection references
         verbose: If True, show additional output
+        include_alca: If True, also deploy ALCA schema
+        alca_client: Authenticated ALCAClient (required when include_alca=True)
 
     Returns:
         True if deployment succeeded, False otherwise
@@ -117,6 +122,14 @@ def deploy(
             print("  STEP 3: Connection References")
             print("=" * 70)
             create_connection_references(client, dry_run=dry_run)
+
+            # Step 4 (optional): ALCA Schema
+            if include_alca and alca_client:
+                from create_audit_compliance_schema import create_schema as create_alca_schema
+                print("\n" + "=" * 70)
+                print("  STEP 4: ALCA Schema (Audit Logging Compliance Automation)")
+                print("=" * 70)
+                create_alca_schema(alca_client, dry_run=dry_run)
 
         # Final summary
         print("\n" + "=" * 70)
@@ -226,8 +239,36 @@ Examples:
         action="store_true",
         help="Show additional output",
     )
+    parser.add_argument(
+        "--include-alca",
+        action="store_true",
+        help="Also deploy ALCA (Audit Logging Compliance Automation) schema",
+    )
+    parser.add_argument(
+        "--solution-name",
+        default="AuditComplianceManager",
+        help="Solution unique name for component registration (default: AuditComplianceManager)",
+    )
 
     args = parser.parse_args()
+
+    # Validate tenant-id is a valid UUID
+    uuid_pattern = re.compile(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        re.IGNORECASE,
+    )
+    if not uuid_pattern.match(args.tenant_id or ""):
+        parser.error(
+            f"--tenant-id must be a valid UUID (e.g., 12345678-1234-1234-1234-123456789abc), "
+            f"got: {args.tenant_id!r}"
+        )
+
+    # Always require --client-id
+    if not args.client_id:
+        parser.error(
+            "--client-id is required for all authentication modes.\n"
+            "Register an app in Entra ID and provide --client-id."
+        )
 
     # Validate auth mode
     if not args.interactive and not args.client_id:
@@ -267,7 +308,22 @@ Examples:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            solution_name=args.solution_name,
         )
+
+        # Initialize ALCA client if needed
+        alca_client = None
+        if args.include_alca:
+            from alca_client import ALCAClient
+            alca_client = ALCAClient(
+                tenant_id=args.tenant_id,
+                environment_url=args.environment_url,
+                client_id=args.client_id,
+                client_secret=client_secret,
+                interactive=args.interactive,
+                dry_run=args.dry_run,
+                solution_name=args.solution_name,
+            )
 
         # Run deployment
         success = deploy(
@@ -277,6 +333,8 @@ Examples:
             vars_only=args.vars_only,
             refs_only=args.refs_only,
             verbose=args.verbose,
+            include_alca=args.include_alca,
+            alca_client=alca_client,
         )
 
         sys.exit(0 if success else 1)

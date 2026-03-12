@@ -602,6 +602,11 @@ Environment variables:
         action="store_true",
         help="Show what would be created without making changes",
     )
+    parser.add_argument(
+        "--solution-name",
+        default="AuditComplianceManager",
+        help="Solution unique name for component registration (default: AuditComplianceManager)",
+    )
 
     args = parser.parse_args()
 
@@ -635,6 +640,7 @@ Environment variables:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            solution_name=args.solution_name,
         )
 
         create_schema(client, dry_run=args.dry_run)

@@ -10,7 +10,7 @@ import json
 import os
 import sys
 from typing import Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import msal
 import requests
@@ -30,6 +30,7 @@ class ALCAClient:
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        solution_name: str = "AuditComplianceManager",
     ):
         """
         Initialize ALCA client.
@@ -41,12 +42,27 @@ class ALCAClient:
             client_secret: Client secret value (required for SP auth)
             interactive: Use interactive browser auth instead of SP
             dry_run: If True, log API calls without executing them
+            solution_name: Solution unique name for MSCRM.SolutionUniqueName header
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
         self.environment_url = environment_url.rstrip("/")
+
+        # Validate URL scheme and path
+        parsed = urlparse(self.environment_url)
+        if parsed.scheme != "https":
+            raise ValueError(
+                f"environment_url must use https:// scheme, got: {environment_url!r}"
+            )
+        if parsed.path and parsed.path != "/":
+            raise ValueError(
+                f"environment_url must not include a path, got: {environment_url!r}. "
+                "Use the base URL, e.g. https://org.crm.dynamics.com"
+            )
+
         self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}/"
+        self.solution_name = solution_name
         self.interactive = interactive
         self.dry_run = dry_run
 
@@ -85,17 +101,18 @@ class ALCAClient:
 
     def _get_token(self) -> str:
         """Acquire access token with caching."""
-        accounts = self._app.get_accounts() if self.interactive else None
-        result = self._app.acquire_token_silent(
-            scopes=self._scope,
-            account=accounts[0] if accounts else None,
-        )
-
-        if not result:
-            if self.interactive:
+        if self.interactive:
+            # Try cached token first for interactive flow
+            accounts = self._app.get_accounts()
+            result = self._app.acquire_token_silent(
+                scopes=self._scope,
+                account=accounts[0] if accounts else None,
+            )
+            if not result:
                 result = self._app.acquire_token_interactive(scopes=self._scope)
-            else:
-                result = self._app.acquire_token_for_client(scopes=self._scope)
+        else:
+            # Client credentials: acquire_token_for_client has built-in caching
+            result = self._app.acquire_token_for_client(scopes=self._scope)
 
         if "access_token" not in result:
             error = result.get("error_description", result.get("error", "Unknown error"))
@@ -116,12 +133,15 @@ class ALCAClient:
             "Prefer": "odata.include-annotations=*",
         }
 
+    def _get_write_headers(self) -> dict:
+        """Get HTTP headers for write operations, including solution context."""
+        headers = self._get_headers()
+        if self.solution_name:
+            headers["MSCRM.SolutionUniqueName"] = self.solution_name
+        return headers
+
     def test_connection(self) -> dict:
         """Test connection to Dataverse."""
-        if self.dry_run:
-            print("  [DRY RUN] Would test connection to Dataverse")
-            return {"name": "DRY-RUN-ORG"}
-
         response = self._session.get(
             urljoin(self.api_url, "organizations"),
             headers=self._get_headers(),
@@ -138,10 +158,6 @@ class ALCAClient:
 
     def get_entity_metadata(self, logical_name: str) -> Optional[dict]:
         """Get entity metadata by logical name. Returns None if not found."""
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check entity: {logical_name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
@@ -165,7 +181,7 @@ class ALCAClient:
 
         response = self._session.post(
             urljoin(self.api_url, "EntityDefinitions"),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=entity_metadata,
         )
         response.raise_for_status()
@@ -189,7 +205,7 @@ class ALCAClient:
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
             ),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=attribute_metadata,
         )
         response.raise_for_status()
@@ -199,10 +215,6 @@ class ALCAClient:
         self, entity_logical_name: str, attribute_logical_name: str
     ) -> Optional[dict]:
         """Get attribute metadata. Returns None if not found."""
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check column: {entity_logical_name}.{attribute_logical_name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(
@@ -230,7 +242,7 @@ class ALCAClient:
 
         response = self._session.post(
             urljoin(self.api_url, "GlobalOptionSetDefinitions"),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=optionset_metadata,
         )
         response.raise_for_status()
@@ -238,10 +250,6 @@ class ALCAClient:
 
     def get_global_optionset(self, name: str) -> Optional[dict]:
         """Get global option set by name. Returns None if not found."""
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check option set: {name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"),
@@ -280,7 +288,7 @@ class ALCAClient:
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys",
             ),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=key_metadata,
         )
         response.raise_for_status()
@@ -288,10 +296,6 @@ class ALCAClient:
 
     def get_alternate_keys(self, entity_logical_name: str) -> list[dict]:
         """Get all alternate keys for an entity."""
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check alternate keys: {entity_logical_name}")
-            return []
-
         try:
             results = []
             url = urljoin(

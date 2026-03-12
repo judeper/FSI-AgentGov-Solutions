@@ -75,18 +75,14 @@ def create_environment_variables(client: ACVClient, dry_run: bool = False) -> di
 
         # Check if environment variable already exists
         try:
-            if not dry_run and not client.dry_run:
-                # Query existing environment variable definitions
-                existing = client.query(
-                    "environmentvariabledefinitions",
-                    filter_expr=f"schemaname eq '{schemaname}'",
-                )
-                if existing:
-                    print(f"  {schemaname}: already exists, skipping")
-                    results["skipped"] += 1
-                    continue
-            elif dry_run or client.dry_run:
-                print(f"  [DRY RUN] {schemaname}: would check if exists")
+            existing = client.query(
+                "environmentvariabledefinitions",
+                filter_expr=f"schemaname eq '{schemaname}'",
+            )
+            if existing:
+                print(f"  {schemaname}: already exists, skipping")
+                results["skipped"] += 1
+                continue
 
             if dry_run or client.dry_run:
                 print(f"  [DRY RUN] {schemaname}: would create")
@@ -106,12 +102,21 @@ def create_environment_variables(client: ACVClient, dry_run: bool = False) -> di
                 )
 
                 # Create environment variable value (current value)
-                value_data = {
-                    "value": var["defaultvalue"],
-                    "environmentvariabledefinitionid@odata.bind": f"/environmentvariabledefinitions({definition_id})",
-                }
+                # If value creation fails, clean up the orphaned definition
+                try:
+                    value_data = {
+                        "value": var["defaultvalue"],
+                        "environmentvariabledefinitionid@odata.bind": f"/environmentvariabledefinitions({definition_id})",
+                    }
 
-                client.create_record("environmentvariablevalues", value_data)
+                    client.create_record("environmentvariablevalues", value_data)
+                except Exception:
+                    # Clean up orphaned definition
+                    try:
+                        client.delete_record("environmentvariabledefinitions", definition_id)
+                    except Exception:
+                        pass
+                    raise
 
                 print(f"  {schemaname}: created")
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
@@ -163,6 +168,11 @@ def main():
         action="store_true",
         help="Show what would be created without making changes",
     )
+    parser.add_argument(
+        "--solution-name",
+        default="AuditComplianceManager",
+        help="Solution unique name for component registration (default: AuditComplianceManager)",
+    )
 
     args = parser.parse_args()
 
@@ -196,6 +206,7 @@ def main():
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            solution_name=args.solution_name,
         )
 
         results = create_environment_variables(client, dry_run=args.dry_run)

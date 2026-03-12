@@ -53,18 +53,14 @@ def create_connection_references(client: ACVClient, dry_run: bool = False) -> di
 
         # Check if connection reference already exists
         try:
-            if not dry_run and not client.dry_run:
-                # Query existing connection references
-                existing = client.query(
-                    "connectionreferences",
-                    filter_expr=f"connectionreferencelogicalname eq '{logical_name}'",
-                )
-                if existing:
-                    print(f"  {logical_name}: already exists, skipping")
-                    results["skipped"] += 1
-                    continue
-            elif dry_run or client.dry_run:
-                print(f"  [DRY RUN] {logical_name}: would check if exists")
+            existing = client.query(
+                "connectionreferences",
+                filter_expr=f"connectionreferencelogicalname eq '{logical_name}'",
+            )
+            if existing:
+                print(f"  {logical_name}: already exists, skipping")
+                results["skipped"] += 1
+                continue
 
             if dry_run or client.dry_run:
                 print(f"  [DRY RUN] {logical_name}: would create")
@@ -135,6 +131,11 @@ def main():
         action="store_true",
         help="Show what would be created without making changes",
     )
+    parser.add_argument(
+        "--solution-name",
+        default="AuditComplianceManager",
+        help="Solution unique name for component registration (default: AuditComplianceManager)",
+    )
 
     args = parser.parse_args()
 
@@ -168,6 +169,7 @@ def main():
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            solution_name=args.solution_name,
         )
 
         results = create_connection_references(client, dry_run=args.dry_run)

@@ -11,7 +11,7 @@ import json
 import os
 import sys
 from typing import Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import msal
 import requests
@@ -31,6 +31,7 @@ class ACVClient:
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        solution_name: str = "AuditComplianceManager",
     ):
         """
         Initialize ACV client.
@@ -42,12 +43,27 @@ class ACVClient:
             client_secret: Client secret value (required for SP auth)
             interactive: Use interactive browser auth instead of SP
             dry_run: If True, log API calls without executing them
+            solution_name: Solution unique name for MSCRM.SolutionUniqueName header
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
         self.environment_url = environment_url.rstrip("/")
+
+        # Validate URL scheme and path
+        parsed = urlparse(self.environment_url)
+        if parsed.scheme != "https":
+            raise ValueError(
+                f"environment_url must use https:// scheme, got: {environment_url!r}"
+            )
+        if parsed.path and parsed.path != "/":
+            raise ValueError(
+                f"environment_url must not include a path, got: {environment_url!r}. "
+                "Use the base URL, e.g. https://org.crm.dynamics.com"
+            )
+
         self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}/"
+        self.solution_name = solution_name
         self.interactive = interactive
         self.dry_run = dry_run
 
@@ -89,20 +105,18 @@ class ACVClient:
 
     def _get_token(self) -> str:
         """Acquire access token with caching."""
-        # Try to get cached token first
-        accounts = self._app.get_accounts() if self.interactive else None
-        result = self._app.acquire_token_silent(
-            scopes=self._scope,
-            account=accounts[0] if accounts else None,
-        )
-
-        if not result:
-            if self.interactive:
-                # Interactive browser flow
+        if self.interactive:
+            # Try cached token first for interactive flow
+            accounts = self._app.get_accounts()
+            result = self._app.acquire_token_silent(
+                scopes=self._scope,
+                account=accounts[0] if accounts else None,
+            )
+            if not result:
                 result = self._app.acquire_token_interactive(scopes=self._scope)
-            else:
-                # Client credentials flow
-                result = self._app.acquire_token_for_client(scopes=self._scope)
+        else:
+            # Client credentials: acquire_token_for_client has built-in caching
+            result = self._app.acquire_token_for_client(scopes=self._scope)
 
         if "access_token" not in result:
             error = result.get("error_description", result.get("error", "Unknown error"))
@@ -123,6 +137,13 @@ class ACVClient:
             "Prefer": "odata.include-annotations=*",
         }
 
+    def _get_write_headers(self) -> dict:
+        """Get HTTP headers for write operations, including solution context."""
+        headers = self._get_headers()
+        if self.solution_name:
+            headers["MSCRM.SolutionUniqueName"] = self.solution_name
+        return headers
+
     def test_connection(self) -> dict:
         """
         Test connection to Dataverse.
@@ -130,10 +151,6 @@ class ACVClient:
         Returns:
             Organization information if successful
         """
-        if self.dry_run:
-            print("  [DRY RUN] Would test connection to Dataverse")
-            return {"name": "DRY-RUN-ORG"}
-
         response = self._session.get(
             urljoin(self.api_url, "organizations"),
             headers=self._get_headers(),
@@ -165,10 +182,6 @@ class ACVClient:
         Returns:
             List of records
         """
-        if self.dry_run:
-            print(f"  [DRY RUN] Would query: {entity_set}")
-            return []
-
         params = {}
         if select:
             params["$select"] = ",".join(select)
@@ -219,7 +232,7 @@ class ACVClient:
 
         response = self._session.post(
             urljoin(self.api_url, entity_set),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=data,
         )
         response.raise_for_status()
@@ -228,7 +241,10 @@ class ACVClient:
         entity_id = response.headers.get("OData-EntityId", "")
         if "(" in entity_id and ")" in entity_id:
             return entity_id.split("(")[1].split(")")[0]
-        return ""
+        raise RuntimeError(
+            f"Could not parse entity ID from response for {entity_set}. "
+            f"OData-EntityId header: {entity_id!r}"
+        )
 
     # =========================================================================
     # Metadata Operations (for schema deployment)
@@ -244,10 +260,6 @@ class ACVClient:
         Returns:
             Entity metadata dict or None if not found
         """
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check entity: {logical_name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
@@ -279,7 +291,7 @@ class ACVClient:
 
         response = self._session.post(
             urljoin(self.api_url, "EntityDefinitions"),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=entity_metadata,
         )
         response.raise_for_status()
@@ -313,7 +325,7 @@ class ACVClient:
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
             ),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=attribute_metadata,
         )
         response.raise_for_status()
@@ -332,10 +344,6 @@ class ACVClient:
         Returns:
             Attribute metadata or None if not found
         """
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check column: {entity_logical_name}.{attribute_logical_name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(
@@ -371,7 +379,7 @@ class ACVClient:
 
         response = self._session.post(
             urljoin(self.api_url, "GlobalOptionSetDefinitions"),
-            headers=self._get_headers(),
+            headers=self._get_write_headers(),
             json=optionset_metadata,
         )
         response.raise_for_status()
@@ -387,10 +395,6 @@ class ACVClient:
         Returns:
             OptionSet metadata or None if not found
         """
-        if self.dry_run:
-            print(f"  [DRY RUN] Would check option set: {name}")
-            return None
-
         try:
             response = self._session.get(
                 urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"),
@@ -478,6 +482,24 @@ class ACVClient:
 
         return self.create_attribute(entity_logical_name, column_metadata)
 
+    def delete_record(self, entity_set: str, record_id: str) -> None:
+        """
+        Delete a record from Dataverse.
+
+        Args:
+            entity_set: Entity set name
+            record_id: Record GUID to delete
+        """
+        if self.dry_run:
+            print(f"  [DRY RUN] Would delete record from: {entity_set}")
+            return
+
+        response = self._session.delete(
+            urljoin(self.api_url, f"{entity_set}({record_id})"),
+            headers=self._get_headers(),
+        )
+        response.raise_for_status()
+
 
 def main():
     """CLI entry point."""
@@ -552,11 +574,10 @@ def main():
         if args.test_connection:
             print("Testing Dataverse connection...")
             org = client.test_connection()
-            if not args.dry_run:
-                print(f"  Token acquired: ✓")
-                print(f"  API accessible: ✓")
-                print(f"  Organization: {org.get('name', 'Unknown')}")
-                print("\nConnection test: PASSED")
+            print(f"  Token acquired: ✓")
+            print(f"  API accessible: ✓")
+            print(f"  Organization: {org.get('name', 'Unknown')}")
+            print("\nConnection test: PASSED")
             sys.exit(0)
 
     except requests.HTTPError as e:
