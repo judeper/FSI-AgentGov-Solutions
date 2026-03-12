@@ -107,9 +107,9 @@
 - All environments benefit from tenant-level change
 
 **Verification:**
-1. Verify current state: `(Get-AdminConfig).UnifiedAuditLogIngestionEnabled`
+1. Verify current state: `(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled`
 2. Run remediation with `-EnableTenantUnifiedAudit`
-3. Verify post-state: `(Get-AdminConfig).UnifiedAuditLogIngestionEnabled -eq $true`
+3. Verify post-state: `(Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled -eq $true`
 
 ### Scenario 8: Validation Failure After Remediation
 

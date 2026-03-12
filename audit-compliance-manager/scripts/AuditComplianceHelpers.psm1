@@ -304,7 +304,7 @@ function Invoke-DataverseRequest {
     }
 
     $result = Invoke-WithRetry -ScriptBlock {
-        Invoke-RestMethod @params
+        Invoke-RestMethod @params -Verbose:$false
     } -OperationName "Dataverse $Method $RelativeUri" -MaxRetries $MaxRetries
 
     return $result

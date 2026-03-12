@@ -191,9 +191,8 @@ function Test-PurviewRetention {
         # Step 1: Connect to Security & Compliance PowerShell
         Write-Host "[1/4] Connecting to Security & Compliance PowerShell..." -ForegroundColor Yellow
 
-        $connectParams = @{
-            Interactive = $Interactive.IsPresent
-        }
+        $connectParams = @{}
+        if ($Interactive) { $connectParams.Interactive = $true }
         if ($TenantId) { $connectParams.TenantId = $TenantId }
         if ($ClientId) { $connectParams.ClientId = $ClientId }
         if ($CertificateThumbprint) { $connectParams.CertificateThumbprint = $CertificateThumbprint }

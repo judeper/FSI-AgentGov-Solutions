@@ -233,6 +233,25 @@ function Test-EntityAuditEnabled {
 $startTime = Get-Date
 $isWhatIf = $WhatIfPreference
 
+# Token management — track acquisition time for refresh before expiry
+$script:dvTokenAcquiredAt = $null
+
+function Get-FreshDataverseToken {
+    <#
+    .SYNOPSIS
+        Returns a valid Dataverse token, refreshing if within 5 minutes of expiry.
+    #>
+    param([string]$Url)
+    $now = Get-Date
+    if ($script:dvTokenAcquiredAt -and ($now - $script:dvTokenAcquiredAt).TotalMinutes -lt 50) {
+        return $script:dvToken
+    }
+    Write-Verbose "Refreshing Dataverse token (acquired $($script:dvTokenAcquiredAt))"
+    $script:dvToken = Get-DataverseToken -DataverseEnvironmentUrl $Url
+    $script:dvTokenAcquiredAt = $now
+    return $script:dvToken
+}
+
 # Results tracking
 $results = [System.Collections.Generic.List[PSObject]]::new()
 
@@ -243,6 +262,29 @@ $envNoChanges = 0
 $envFailed = 0
 
 try {
+    # =========================================================================
+    # Step 0: Concurrency Guard
+    # =========================================================================
+    if (-not $isWhatIf -and (Get-Command Get-AzAutomationJob -ErrorAction SilentlyContinue)) {
+        try {
+            $runbookName = "Enable-AuditLogging"
+            $automationAccount = $env:AUTOMATION_ACCOUNT_NAME
+            $resourceGroup = $env:AUTOMATION_RESOURCE_GROUP
+            if ($automationAccount -and $resourceGroup) {
+                $runningJobs = Get-AzAutomationJob -ResourceGroupName $resourceGroup `
+                    -AutomationAccountName $automationAccount -RunbookName $runbookName `
+                    -Status "Running" -ErrorAction SilentlyContinue |
+                    Where-Object { $_.JobId -ne $PSPrivateMetadata.JobId }
+                if ($runningJobs) {
+                    throw "Another instance of $runbookName is already running (Job ID: $($runningJobs[0].JobId)). Aborting to prevent concurrent state corruption."
+                }
+            }
+        }
+        catch [System.Management.Automation.CommandNotFoundException] {
+            Write-Verbose "Az.Automation module not available — skipping concurrency check"
+        }
+    }
+
     # =========================================================================
     # Step 1: Authentication
     # =========================================================================
@@ -262,8 +304,9 @@ try {
         Write-Output "  Exchange Online: Connected"
     }
 
-    # Dataverse token for compliance table operations
+    # Dataverse token for compliance table operations (with expiry tracking)
     $dvToken = if (-not $isWhatIf) {
+        $script:dvTokenAcquiredAt = Get-Date
         Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
     } else { "WHATIF-TOKEN" }
     Write-Output "  Dataverse: $(if ($isWhatIf) { '[WHATIF] Would connect' } else { 'Connected' })"
@@ -320,7 +363,24 @@ try {
 
         if ($isWhatIf) {
             Write-Output "  [WHATIF] Would query Dataverse for non-compliant environments"
-            $targetEnvironments = @()
+            # In WhatIf mode, still query Dataverse to show what would be remediated
+            try {
+                $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_compliancestatus eq 100000001&`$select=fsi_environmentid,fsi_environmentname"
+                $nonCompliant = Invoke-DataverseRequest -EnvironmentUrl $DataverseEnvironmentUrl -RelativeUri $filterUri -Token $dvToken -Method GET
+
+                if ($nonCompliant.value -and $nonCompliant.value.Count -gt 0) {
+                    foreach ($record in $nonCompliant.value) {
+                        $targetEnvironments += [PSCustomObject]@{
+                            EnvironmentId   = $record.fsi_environmentid
+                            EnvironmentName = $record.fsi_environmentname
+                            EnvironmentUrl  = $null
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Warning "  [WHATIF] Could not query Dataverse: $($_.Exception.Message)"
+            }
         }
         else {
             $filterUri = "/api/data/v9.2/fsi_auditenvironmentcompliances?`$filter=fsi_compliancestatus eq 100000001&`$select=fsi_environmentid,fsi_environmentname"
@@ -452,6 +512,7 @@ try {
                 if ($alreadyEnabled) {
                     Write-Output "      Org-level audit: Already enabled"
                     $envResult.OrgAudit = "Already Enabled"
+                    $envNoChanges++
                 }
                 else {
                     if ($PSCmdlet.ShouldProcess("Environment: $envName ($envId)", "Enable org-level Dataverse auditing")) {
@@ -665,8 +726,9 @@ finally {
         }
 
         try {
-            Remove-PowerAppsAccount -ErrorAction SilentlyContinue
-            Write-Verbose "Power Platform: Disconnected"
+            # Note: Remove-PowerAppsAccount does not exist in the PowerApps module.
+            # Power Platform session cleanup is handled automatically when the runbook ends.
+            Write-Verbose "Power Platform: Session ended"
         }
         catch {
             Write-Verbose "Power Platform disconnect: $($_.Exception.Message)"

@@ -131,9 +131,8 @@ function Test-MailboxAudit {
         # Step 1: Connect to Exchange Online
         Write-Host "[1/3] Connecting to Exchange Online..." -ForegroundColor Yellow
 
-        $connectParams = @{
-            Interactive = $Interactive.IsPresent
-        }
+        $connectParams = @{}
+        if ($Interactive) { $connectParams.Interactive = $true }
         if ($TenantId) { $connectParams.TenantId = $TenantId }
         if ($ClientId) { $connectParams.ClientId = $ClientId }
         if ($CertificateThumbprint) { $connectParams.CertificateThumbprint = $CertificateThumbprint }

@@ -119,12 +119,25 @@ catch {
 
 try {
     # Get Dataverse token for compliance record writes
+    # Token refreshed periodically for long-running scans (50+ environments)
+    $script:dvTokenAcquiredAt = Get-Date
     $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
     Write-Output "  [OK] Dataverse authentication successful"
 }
 catch {
     Write-Output "  [FATAL] Dataverse authentication failed: $($_.Exception.Message)"
     throw
+}
+
+function Get-FreshDvToken {
+    $now = Get-Date
+    if ($script:dvTokenAcquiredAt -and ($now - $script:dvTokenAcquiredAt).TotalMinutes -lt 50) {
+        return $script:dvToken
+    }
+    Write-Verbose "Refreshing Dataverse token (acquired $($script:dvTokenAcquiredAt))"
+    $script:dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+    $script:dvTokenAcquiredAt = $now
+    return $script:dvToken
 }
 
 Write-Output ""
@@ -214,7 +227,7 @@ try {
                 $auditResults = Search-UnifiedAuditLog `
                     -StartDate $startDate `
                     -EndDate $endDate `
-                    -RecordType "PowerAppsApp" `
+                    -RecordType "PowerPlatformAdminActivity" `
                     -ResultSize 1 `
                     -ErrorAction SilentlyContinue
 
@@ -249,7 +262,8 @@ try {
             if ($complianceStatus -eq "Compliant") { $compliantCount++ }
             else { $nonCompliantCount++ }
 
-            # --- Write to Dataverse ---
+            # --- Write to Dataverse (refresh token if near expiry) ---
+            $dvToken = Get-FreshDvToken
             $writeParams = @{
                 EnvironmentUrl       = $DataverseEnvironmentUrl
                 Token                = $dvToken
@@ -391,7 +405,8 @@ $(
             default { '' }
         }
         $lastEvt = if ($_.LastAuditEvent) { ([datetime]$_.LastAuditEvent).ToString('yyyy-MM-dd HH:mm') } else { 'N/A' }
-        "<tr><td>$($_.EnvironmentName)</td><td>$($_.DataverseProvisioned)</td><td>$($_.PurviewAuditEnabled)</td><td>$($_.DataverseAuditEnabled)</td><td>$lastEvt</td><td class='$statusClass'>$($_.ComplianceStatus)</td></tr>"
+        $safeName = [System.Net.WebUtility]::HtmlEncode($_.EnvironmentName)
+        "<tr><td>$safeName</td><td>$($_.DataverseProvisioned)</td><td>$($_.PurviewAuditEnabled)</td><td>$($_.DataverseAuditEnabled)</td><td>$lastEvt</td><td class='$statusClass'>$($_.ComplianceStatus)</td></tr>"
     }
 )
 </table>
@@ -435,13 +450,9 @@ finally {
         Write-Verbose "Exchange Online disconnect failed: $($_.Exception.Message)"
     }
 
-    try {
-        Remove-PowerAppsAccount -ErrorAction SilentlyContinue
-        Write-Output "  [OK] Power Platform disconnected"
-    }
-    catch {
-        Write-Verbose "Power Platform disconnect failed: $($_.Exception.Message)"
-    }
+    # Note: Remove-PowerAppsAccount does not exist in the PowerApps module.
+    # Power Platform session cleanup is handled automatically when the runbook ends.
+    Write-Output "  [OK] Power Platform session ended"
 
     Write-Output ""
     Write-Output "Audit compliance check complete."
