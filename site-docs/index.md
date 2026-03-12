@@ -1,62 +1,134 @@
-# FSI Agent Governance Solutions
-
-[![Solutions](https://img.shields.io/badge/solutions-28-blue)](solutions/index.md)
-[![Framework](https://img.shields.io/badge/framework-FSI--AgentGov-546E7A)](https://judeper.github.io/FSI-AgentGov/)
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/LICENSE)
-
-Reference implementations for the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents built with Microsoft Copilot Studio and Power Platform.
-
 ---
+hide:
+  - navigation
+  - toc
+---
+
+<div class="hero" markdown>
+
+# AI Agent Governance **Solutions**
+
+Reference implementations for the FSI Agent Governance Framework.
+Deploy operational controls and monitoring for AI agents built with
+Microsoft Copilot Studio and Power Platform.
+
+[Get Started](getting-started/deployment-guide.md){ .md-button .md-button--primary }
+[Solutions Catalog](solutions/index.md){ .md-button }
+
+</div>
+
+<div class="metrics-strip">
+  <div class="metric">
+    <span class="metric-number">28</span>
+    <span class="metric-label">Solutions</span>
+  </div>
+  <div class="metric">
+    <span class="metric-number">71</span>
+    <span class="metric-label">Controls Mapped</span>
+  </div>
+  <div class="metric">
+    <span class="metric-number">6</span>
+    <span class="metric-label">Solution Domains</span>
+  </div>
+  <div class="metric">
+    <span class="metric-number">3</span>
+    <span class="metric-label">Deployment Tiers</span>
+  </div>
+</div>
+<p class="metrics-regulations">
+  Access & Identity · Content & Data · Compliance & Audit · Monitoring · Agent Config · Lifecycle
+</p>
 
 ## Quick Start by Role
 
-=== "First Deployment"
+<div class="grid cards" markdown>
 
-    1. Review [Common Prerequisites](getting-started/prerequisites.md)
-    2. Deploy the [Agent Observability Foundation](solutions/agent-observability-foundation/index.md) (foundational layer)
-    3. Follow the [Deployment Guide](getting-started/deployment-guide.md) for sequencing
-    4. Pick your first Tier 2 solution from the [Solutions Catalog](solutions/index.md)
+-   :material-rocket-launch:{ .lg .middle } **First Deployment**
 
-=== "Implementing a Control"
+    ---
 
-    1. Find your control number in the [Control Mapping](reference/control-mapping.md)
-    2. Navigate to the corresponding solution
-    3. Follow the solution's prerequisites and deployment steps
-    4. Validate using the solution's test scenarios
+    Deploy the foundational observability layer,
+    then add solutions based on your control priorities.
 
-=== "Auditing Existing Deployment"
+    [:material-arrow-right: Deployment Guide](getting-started/deployment-guide.md)
 
-    1. Review the [Compliance Dashboard](solutions/compliance-dashboard/index.md) for aggregate status
-    2. Use [Cross-Solution Integration](solutions/cross-solution-integration/index.md) for evidence export
-    3. Check the [Control Mapping](reference/control-mapping.md) for coverage gaps
+-   :material-shield-check:{ .lg .middle } **Implementing a Control**
 
-## Solution Domains
+    ---
 
-| Domain | Solutions | Description |
-|--------|-----------|-------------|
-| [Access & Identity](solutions/index.md#access-identity) | 5 | Agent access controls, conditional access, sharing restrictions |
-| [Content & Data Protection](solutions/index.md#content-data-protection) | 4 | Content moderation, file security, MIME types, RAG validation |
-| [Compliance & Audit](solutions/index.md#compliance-audit) | 5 | Audit management, compliance dashboards, FINRA supervision |
-| [Monitoring & Analytics](solutions/index.md#monitoring-analytics) | 5 | Observability, analytics, deny events, scope drift, hallucinations |
-| [Agent Configuration](solutions/index.md#agent-configuration) | 4 | GenAI config, session security, communication, confirmations |
-| [Lifecycle & Operations](solutions/index.md#lifecycle-operations) | 5 | Environment management, pipelines, DR, message center, COI |
+    Find your control number in the mapping and
+    navigate to the corresponding solution.
 
-## Deployment Layers
+    [:material-arrow-right: Control Mapping](reference/control-mapping.md)
 
-Solutions are designed to be deployed in sequence:
+-   :material-clipboard-check:{ .lg .middle } **Auditing Deployment**
 
-```mermaid
-graph LR
-    A[Agent Observability<br/>Foundation] --> B[Tier 2 Solutions]
-    B --> C[Compliance Dashboard]
-    C --> D[Cross-Solution<br/>Integration]
-    style A fill:#546E7A,color:#fff
-    style D fill:#546E7A,color:#fff
-```
+    ---
 
-1. **Foundation** — Deploy [Agent Observability Foundation](solutions/agent-observability-foundation/index.md) first for shared logging and alerting
-2. **Tier 2** — Deploy individual solutions based on your control priorities
-3. **Integration** — Wire solutions into the [Compliance Dashboard](solutions/compliance-dashboard/index.md) via [Cross-Solution Integration](solutions/cross-solution-integration/index.md)
+    Review aggregate compliance status and
+    export evidence for examination readiness.
+
+    [:material-arrow-right: Compliance Dashboard](solutions/compliance-dashboard/index.md)
+
+</div>
+
+## Deployment Architecture
+
+<div class="arch-diagram" markdown>
+<div class="arch-layer">
+<div class="arch-label">Foundation Layer</div>
+<div class="arch-row">
+<div class="arch-card arch-zone">
+<strong>Agent Observability</strong>
+Shared logging & alerting
+</div>
+</div>
+</div>
+<div class="arch-arrow">▼</div>
+<div class="arch-layer">
+<div class="arch-label">Tier 2 — Domain Solutions</div>
+<div class="arch-row">
+<div class="arch-card arch-pillar">
+<strong>Access</strong>
+5 Solutions
+</div>
+<div class="arch-card arch-pillar">
+<strong>Content</strong>
+4 Solutions
+</div>
+<div class="arch-card arch-pillar">
+<strong>Compliance</strong>
+5 Solutions
+</div>
+<div class="arch-card arch-pillar">
+<strong>Monitoring</strong>
+5 Solutions
+</div>
+<div class="arch-card arch-pillar">
+<strong>Config</strong>
+4 Solutions
+</div>
+<div class="arch-card arch-pillar">
+<strong>Lifecycle</strong>
+5 Solutions
+</div>
+</div>
+</div>
+<div class="arch-arrow">▼</div>
+<div class="arch-layer">
+<div class="arch-label">Integration Layer</div>
+<div class="arch-row">
+<div class="arch-card arch-reg">
+<strong>Compliance Dashboard</strong>
+Aggregate status
+</div>
+<div class="arch-card arch-reg">
+<strong>Cross-Solution Integration</strong>
+Evidence export
+</div>
+</div>
+</div>
+</div>
 
 ## Companion Sites
 
@@ -64,6 +136,8 @@ graph LR
 |------|-------------|
 | [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/) | Governance principles, 71 control specifications, playbooks |
 | [FSI Agent Governance Solutions](https://judeper.github.io/FSI-AgentGov-Solutions/) | This site — deployable reference implementations |
+
+---
 
 !!! warning "Disclaimer"
     These solutions are reference implementations provided for educational and informational purposes. They do not constitute legal, regulatory, or compliance advice. Organizations are responsible for validating implementations against their specific regulatory requirements. See the full [Disclaimer](disclaimer.md).
