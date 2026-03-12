@@ -33,9 +33,15 @@
         "frequency": "Week",
         "interval": 1,
         "schedule": {
-          "weekDays": ["Monday"],
-          "hours": ["7"],
-          "minutes": ["0"]
+          "weekDays": [
+            "Monday"
+          ],
+          "hours": [
+            "7"
+          ],
+          "minutes": [
+            "0"
+          ]
         },
         "timeZone": "Eastern Standard Time"
       },
@@ -65,7 +71,9 @@
     "Initialize_Variable_-_TenantDomain": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_DataverseEnvironmentUrl": ["Succeeded"]
+        "Initialize_Variable_-_DataverseEnvironmentUrl": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -83,7 +91,9 @@
     "Initialize_Variable_-_GovernanceLeadEmail": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_TenantDomain": ["Succeeded"]
+        "Initialize_Variable_-_TenantDomain": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -101,7 +111,9 @@
     "Initialize_Variable_-_AutomationAccountName": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_GovernanceLeadEmail": ["Succeeded"]
+        "Initialize_Variable_-_GovernanceLeadEmail": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -119,7 +131,9 @@
     "Initialize_Variable_-_ResourceGroupName": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_AutomationAccountName": ["Succeeded"]
+        "Initialize_Variable_-_AutomationAccountName": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -137,7 +151,9 @@
     "Initialize_Variable_-_SubscriptionId": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_ResourceGroupName": ["Succeeded"]
+        "Initialize_Variable_-_ResourceGroupName": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -155,7 +171,9 @@
     "Initialize_Variable_-_NotificationRecipients": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_SubscriptionId": ["Succeeded"]
+        "Initialize_Variable_-_SubscriptionId": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -173,7 +191,9 @@
     "Initialize_Variable_-_NonCompliantCount": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_NotificationRecipients": ["Succeeded"]
+        "Initialize_Variable_-_NotificationRecipients": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -188,7 +208,9 @@
     "Initialize_Variable_-_EnvironmentList": {
       "type": "InitializeVariable",
       "runAfter": {
-        "Initialize_Variable_-_NonCompliantCount": ["Succeeded"]
+        "Initialize_Variable_-_NonCompliantCount": [
+          "Succeeded"
+        ]
       },
       "inputs": {
         "variables": [
@@ -200,182 +222,167 @@
         ]
       }
     },
-    "Step_1_-_Query_Non-Compliant_Environments": {
-      "type": "Http",
+    "Scope_Try": {
+      "type": "Scope",
       "runAfter": {
-        "Initialize_Variable_-_EnvironmentList": ["Succeeded"]
-      },
-      "inputs": {
-        "method": "GET",
-        "uri": "@{variables('DataverseEnvironmentUrl')}/api/data/v9.2/fsi_auditenvironmentcompliances?$filter=fsi_compliancestatus eq 100000001&$select=fsi_environmentid,fsi_environmentname,fsi_lastchecked,fsi_auditenabled,fsi_dataverseauditenabled,fsi_errormessage&$orderby=fsi_environmentname asc",
-        "headers": {
-          "OData-MaxVersion": "4.0",
-          "OData-Version": "4.0",
-          "Accept": "application/json",
-          "Prefer": "odata.include-annotations=*"
-        },
-        "authentication": {
-          "type": "ManagedServiceIdentity",
-          "audience": "@{variables('DataverseEnvironmentUrl')}"
-        },
-        "retryPolicy": {
-          "type": "exponential",
-          "count": 3,
-          "interval": "PT10S",
-          "minimumInterval": "PT5S",
-          "maximumInterval": "PT1M"
-        }
-      },
-      "metadata": {
-        "operationMetadataId": "step1-query-dataverse",
-        "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication."
-      }
-    },
-    "Set_NonCompliantCount": {
-      "type": "SetVariable",
-      "runAfter": {
-        "Step_1_-_Query_Non-Compliant_Environments": ["Succeeded"]
-      },
-      "inputs": {
-        "name": "NonCompliantCount",
-        "value": "@length(body('Step_1_-_Query_Non-Compliant_Environments')?['value'])"
-      }
-    },
-    "Build_Environment_List_HTML": {
-      "type": "Select",
-      "runAfter": {
-        "Set_NonCompliantCount": ["Succeeded"]
-      },
-      "inputs": {
-        "from": "@body('Step_1_-_Query_Non-Compliant_Environments')?['value']",
-        "select": {
-          "Environment Name": "@item()?['fsi_environmentname']",
-          "Environment ID": "@item()?['fsi_environmentid']",
-          "Purview Audit": "@if(equals(item()?['fsi_auditenabled'], true), '✅ Enabled', '❌ Disabled')",
-          "Dataverse Audit": "@if(equals(item()?['fsi_dataverseauditenabled'], true), '✅ Enabled', '❌ Disabled')",
-          "Last Checked": "@if(equals(item()?['fsi_lastchecked'], null), 'N/A', formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm'))"
-        }
-      }
-    },
-    "Create_HTML_Table": {
-      "type": "Table",
-      "runAfter": {
-        "Build_Environment_List_HTML": ["Succeeded"]
-      },
-      "inputs": {
-        "from": "@body('Build_Environment_List_HTML')",
-        "format": "HTML"
-      }
-    },
-    "Step_2_-_Check_Non-Compliant_Count": {
-      "type": "If",
-      "runAfter": {
-        "Create_HTML_Table": ["Succeeded"]
-      },
-      "expression": {
-        "and": [
-          {
-            "greater": ["@variables('NonCompliantCount')", 0]
-          }
+        "Initialize_Variable_-_EnvironmentList": [
+          "Succeeded"
         ]
       },
       "actions": {
-        "Step_3_-_Start_Approval": {
-          "type": "OpenApiConnection",
+        "Step_1_-_Query_Non-Compliant_Environments": {
+          "type": "Http",
           "runAfter": {},
           "inputs": {
-            "host": {
-              "connectionName": "shared_approvals",
-              "operationId": "StartAndWaitForAnApproval",
-              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+            "method": "GET",
+            "uri": "@{variables('DataverseEnvironmentUrl')}/api/data/v9.2/fsi_auditenvironmentcompliances?$filter=fsi_compliancestatus eq 100000001&$select=fsi_environmentid,fsi_environmentname,fsi_lastchecked,fsi_auditenabled,fsi_dataverseauditenabled,fsi_errormessage&$orderby=fsi_environmentname asc",
+            "headers": {
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0",
+              "Accept": "application/json",
+              "Prefer": "odata.include-annotations=*"
             },
-            "parameters": {
-              "approvalType": "Basic",
-              "ApprovalCreationInput/title": "ALCA: Audit Remediation Required — @{variables('NonCompliantCount')} Non-Compliant Environment(s)",
-              "ApprovalCreationInput/assignedTo": "@variables('GovernanceLeadEmail')",
-              "ApprovalCreationInput/details": "## Audit Logging Compliance Automation\n\n**@{variables('NonCompliantCount')} environment(s)** were detected as non-compliant with audit logging requirements during the weekly scan.\n\n### Non-Compliant Environments\n\n@{body('Create_HTML_Table')}\n\n### Remediation Actions\n\nIf approved, the **Enable-AuditLogging** runbook will:\n1. Enable Dataverse org-level auditing on each environment\n2. Enable entity-level auditing on 6 Copilot Studio entities (bot, botcomponent, connectionreference, environmentvariablevalue, workflow, systemuser)\n3. Validate changes after a 5-second propagation wait\n4. Update compliance records in Dataverse\n\n### Decision Required\n- **Approve** — Execute remediation on all non-compliant environments\n- **Reject** — Skip remediation (environments remain non-compliant until next review)",
-              "ApprovalCreationInput/enableNotifications": true,
-              "ApprovalCreationInput/enableReassignment": true
+            "authentication": {
+              "type": "ManagedServiceIdentity",
+              "audience": "@{variables('DataverseEnvironmentUrl')}"
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "minimumInterval": "PT5S",
+              "maximumInterval": "PT1M"
             }
           },
           "metadata": {
-            "operationMetadataId": "step3-approval",
-            "notes": "Sends approval request to governance lead via Teams. Includes environment list and remediation description."
+            "operationMetadataId": "step1-query-dataverse",
+            "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication."
           }
         },
-        "Step_4_-_Check_Approval_Outcome": {
+        "Set_NonCompliantCount": {
+          "type": "SetVariable",
+          "runAfter": {
+            "Step_1_-_Query_Non-Compliant_Environments": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "name": "NonCompliantCount",
+            "value": "@length(body('Step_1_-_Query_Non-Compliant_Environments')?['value'])"
+          }
+        },
+        "Build_Environment_List_HTML": {
+          "type": "Select",
+          "runAfter": {
+            "Set_NonCompliantCount": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@body('Step_1_-_Query_Non-Compliant_Environments')?['value']",
+            "select": {
+              "Environment Name": "@item()?['fsi_environmentname']",
+              "Environment ID": "@item()?['fsi_environmentid']",
+              "Purview Audit": "@if(equals(item()?['fsi_auditenabled'], true), '✅ Enabled', '❌ Disabled')",
+              "Dataverse Audit": "@if(equals(item()?['fsi_dataverseauditenabled'], true), '✅ Enabled', '❌ Disabled')",
+              "Last Checked": "@if(equals(item()?['fsi_lastchecked'], null), 'Never', formatDateTime(item()?['fsi_lastchecked'], 'yyyy-MM-dd HH:mm'))"
+            }
+          }
+        },
+        "Create_HTML_Table": {
+          "type": "Table",
+          "runAfter": {
+            "Build_Environment_List_HTML": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "from": "@body('Build_Environment_List_HTML')",
+            "format": "HTML"
+          }
+        },
+        "Step_2_-_Check_Non-Compliant_Count": {
           "type": "If",
           "runAfter": {
-            "Step_3_-_Start_Approval": ["Succeeded"]
+            "Create_HTML_Table": [
+              "Succeeded"
+            ]
           },
           "expression": {
             "and": [
               {
-                "equals": [
-                  "@body('Step_3_-_Start_Approval')?['outcome']",
-                  "Approve"
+                "greater": [
+                  "@variables('NonCompliantCount')",
+                  0
                 ]
               }
             ]
           },
           "actions": {
-            "Step_4a_-_Trigger_Remediation_Runbook": {
-              "type": "Http",
+            "Step_3_-_Start_Approval": {
+              "type": "OpenApiConnection",
               "runAfter": {},
               "inputs": {
-                "method": "PUT",
-                "uri": "https://management.azure.com/subscriptions/@{variables('SubscriptionId')}/resourceGroups/@{variables('ResourceGroupName')}/providers/Microsoft.Automation/automationAccounts/@{variables('AutomationAccountName')}/jobs/@{guid()}?api-version=2023-11-01",
-                "headers": {
-                  "Content-Type": "application/json"
+                "host": {
+                  "connectionName": "shared_approvals",
+                  "operationId": "StartAndWaitForAnApproval",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
                 },
-                "body": {
-                  "properties": {
-                    "runbook": {
-                      "name": "Enable-AuditLogging"
-                    },
-                    "parameters": {
-                      "DataverseEnvironmentUrl": "@{variables('DataverseEnvironmentUrl')}",
-                      "TenantDomain": "@{variables('TenantDomain')}"
-                    },
-                    "runOn": ""
-                  }
-                },
-                "authentication": {
-                  "type": "ManagedServiceIdentity",
-                  "audience": "https://management.azure.com"
-                },
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "minimumInterval": "PT5S",
-                  "maximumInterval": "PT1M"
+                "parameters": {
+                  "approvalType": "Basic",
+                  "ApprovalCreationInput/title": "ALCA: Audit Remediation Required — @{variables('NonCompliantCount')} Non-Compliant Environment(s)",
+                  "ApprovalCreationInput/assignedTo": "@variables('GovernanceLeadEmail')",
+                  "ApprovalCreationInput/details": "## Audit Logging Compliance Automation\n\n**@{variables('NonCompliantCount')} environment(s)** were detected as non-compliant with audit logging requirements during the weekly scan.\n\n### Non-Compliant Environments\n\n@{body('Create_HTML_Table')}\n\n### Remediation Actions\n\nIf approved, the **Enable-AuditLogging** runbook will:\n1. Enable Dataverse org-level auditing on each environment\n2. Enable entity-level auditing on 6 Copilot Studio entities (bot, botcomponent, connectionreference, environmentvariablevalue, workflow, systemuser)\n3. Validate changes after a 5-second propagation wait\n4. Update compliance records in Dataverse\n\n### Decision Required\n- **Approve** — Execute remediation on all non-compliant environments\n- **Reject** — Skip remediation (environments remain non-compliant until next review)",
+                  "ApprovalCreationInput/enableNotifications": true,
+                  "ApprovalCreationInput/enableReassignment": true
                 }
               },
               "metadata": {
-                "operationMetadataId": "step4a-trigger-runbook",
-                "notes": "Creates an Azure Automation job to run Enable-AuditLogging.ps1. Uses Managed Identity for Azure Management API authentication. The runbook will remediate ALL non-compliant environments."
-              }
-            },
-            "Wait_for_Runbook_Completion": {
-              "type": "Until",
-              "runAfter": {
-                "Step_4a_-_Trigger_Remediation_Runbook": ["Succeeded"]
+                "operationMetadataId": "step3-approval",
+                "notes": "Sends approval request to governance lead via Teams. Includes environment list and remediation description."
               },
-              "expression": "@or(equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Suspended'))",
-              "limit": {
-                "count": 240,
-                "timeout": "PT2H"
+              "timeout": "P5D"
+            },
+            "Step_4_-_Check_Approval_Outcome": {
+              "type": "If",
+              "runAfter": {
+                "Step_3_-_Start_Approval": [
+                  "Succeeded"
+                ]
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Step_3_-_Start_Approval')?['outcome']",
+                      "Approve"
+                    ]
+                  }
+                ]
               },
               "actions": {
-                "Check_Runbook_Job_Status": {
-                  "runAfter": {
-                    "Delay_Before_Status_Check": ["Succeeded"]
-                  },
+                "Step_4a_-_Trigger_Remediation_Runbook": {
                   "type": "Http",
+                  "runAfter": {},
                   "inputs": {
-                    "method": "GET",
-                    "uri": "https://management.azure.com/subscriptions/@{variables('SubscriptionId')}/resourceGroups/@{variables('ResourceGroupName')}/providers/Microsoft.Automation/automationAccounts/@{variables('AutomationAccountName')}/jobs/@{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}?api-version=2023-11-01",
+                    "method": "PUT",
+                    "uri": "https://management.azure.com/subscriptions/@{variables('SubscriptionId')}/resourceGroups/@{variables('ResourceGroupName')}/providers/Microsoft.Automation/automationAccounts/@{variables('AutomationAccountName')}/jobs/@{guid()}?api-version=2023-11-01",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "properties": {
+                        "runbook": {
+                          "name": "Enable-AuditLogging"
+                        },
+                        "parameters": {
+                          "DataverseEnvironmentUrl": "@{variables('DataverseEnvironmentUrl')}",
+                          "TenantDomain": "@{variables('TenantDomain')}",
+                          "NonCompliantEnvironmentIds": "@{string(body('Step_1_-_Query_Non-Compliant_Environments')?['value'])}"
+                        },
+                        "runOn": ""
+                      }
+                    },
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
@@ -387,62 +394,130 @@
                       "minimumInterval": "PT5S",
                       "maximumInterval": "PT1M"
                     }
-                  }
-                },
-                "Delay_Before_Status_Check": {
-                  "runAfter": {},
-                  "type": "Wait",
-                  "inputs": {
-                    "interval": {
-                      "count": 30,
-                      "unit": "Second"
-                    }
-                  },
-                  "description": "Wait 30 seconds before checking job status"
-                }
-              },
-              "description": "Wait until remediation runbook job completes or fails (max 2 hours)"
-            },
-            "Check_Runbook_Outcome": {
-              "type": "If",
-              "runAfter": {
-                "Wait_for_Runbook_Completion": ["Succeeded"]
-              },
-              "expression": {
-                "and": [
-                  {
-                    "equals": [
-                      "@body('Check_Runbook_Job_Status')?['properties']?['status']",
-                      "Completed"
-                    ]
-                  }
-                ]
-              },
-              "actions": {
-                "Send_Success_Notification": {
-                  "type": "OpenApiConnection",
-                  "runAfter": {},
-                  "inputs": {
-                    "host": {
-                      "connectionName": "shared_office365",
-                      "operationId": "SendEmailV2",
-                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                    },
-                    "parameters": {
-                      "emailMessage/To": "@variables('NotificationRecipients')",
-                      "emailMessage/Subject": "ALCA: Remediation Complete — @{variables('NonCompliantCount')} Environment(s) Processed",
-                      "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
-                      "emailMessage/Importance": "Normal"
-                    }
                   },
                   "metadata": {
-                    "operationMetadataId": "step5-notification-approved-success"
+                    "operationMetadataId": "step4a-trigger-runbook",
+                    "notes": "Creates an Azure Automation job to run Enable-AuditLogging.ps1. Uses Managed Identity for Azure Management API authentication. The runbook will remediate ALL non-compliant environments."
+                  }
+                },
+                "Wait_for_Runbook_Completion": {
+                  "type": "Until",
+                  "runAfter": {
+                    "Step_4a_-_Trigger_Remediation_Runbook": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": "@or(equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Completed'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Failed'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Stopped'), equals(body('Check_Runbook_Job_Status')?['properties']?['status'], 'Suspended'))",
+                  "limit": {
+                    "count": 240,
+                    "timeout": "PT2H"
+                  },
+                  "actions": {
+                    "Check_Runbook_Job_Status": {
+                      "runAfter": {
+                        "Delay_Before_Status_Check": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Http",
+                      "inputs": {
+                        "method": "GET",
+                        "uri": "https://management.azure.com/subscriptions/@{variables('SubscriptionId')}/resourceGroups/@{variables('ResourceGroupName')}/providers/Microsoft.Automation/automationAccounts/@{variables('AutomationAccountName')}/jobs/@{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}?api-version=2023-11-01",
+                        "authentication": {
+                          "type": "ManagedServiceIdentity",
+                          "audience": "https://management.azure.com"
+                        },
+                        "retryPolicy": {
+                          "type": "exponential",
+                          "count": 3,
+                          "interval": "PT10S",
+                          "minimumInterval": "PT5S",
+                          "maximumInterval": "PT1M"
+                        }
+                      }
+                    },
+                    "Delay_Before_Status_Check": {
+                      "runAfter": {},
+                      "type": "Wait",
+                      "inputs": {
+                        "interval": {
+                          "count": 30,
+                          "unit": "Second"
+                        }
+                      },
+                      "description": "Wait 30 seconds before checking job status"
+                    }
+                  },
+                  "description": "Wait until remediation runbook job completes or fails (max 2 hours)"
+                },
+                "Check_Runbook_Outcome": {
+                  "type": "If",
+                  "runAfter": {
+                    "Wait_for_Runbook_Completion": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@body('Check_Runbook_Job_Status')?['properties']?['status']",
+                          "Completed"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Send_Success_Notification": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {},
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_office365",
+                          "operationId": "SendEmailV2",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                        },
+                        "parameters": {
+                          "emailMessage/To": "@variables('NotificationRecipients')",
+                          "emailMessage/Subject": "ALCA: Remediation Complete — @{variables('NonCompliantCount')} Environment(s) Processed",
+                          "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                          "emailMessage/Importance": "Normal"
+                        }
+                      },
+                      "metadata": {
+                        "operationMetadataId": "step5-notification-approved-success"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Send_Failure_Notification": {
+                        "type": "OpenApiConnection",
+                        "runAfter": {},
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_office365",
+                            "operationId": "SendEmailV2",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                          },
+                          "parameters": {
+                            "emailMessage/To": "@variables('NotificationRecipients')",
+                            "emailMessage/Subject": "ALCA: Remediation FAILED — @{variables('NonCompliantCount')} Environment(s) — Status: @{body('Check_Runbook_Job_Status')?['properties']?['status']}",
+                            "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Failed</h2><p>The remediation runbook did <strong>not</strong> complete successfully. Immediate attention required.</p><h3>Summary</h3><ul><li><strong>Environments Targeted:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><p><strong>Action Required:</strong> Check the Azure Automation job output for errors. Environments may remain non-compliant.</p><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>Review the Azure Automation job logs and <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for details.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                            "emailMessage/Importance": "High"
+                          }
+                        },
+                        "metadata": {
+                          "operationMetadataId": "step5-notification-approved-failure"
+                        }
+                      }
+                    }
                   }
                 }
               },
               "else": {
                 "actions": {
-                  "Send_Failure_Notification": {
+                  "Step_5_-_Send_Rejection_Notification": {
                     "type": "OpenApiConnection",
                     "runAfter": {},
                     "inputs": {
@@ -453,13 +528,13 @@
                       },
                       "parameters": {
                         "emailMessage/To": "@variables('NotificationRecipients')",
-                        "emailMessage/Subject": "ALCA: Remediation FAILED — @{variables('NonCompliantCount')} Environment(s) — Status: @{body('Check_Runbook_Job_Status')?['properties']?['status']}",
-                        "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Failed</h2><p>The remediation runbook did <strong>not</strong> complete successfully. Immediate attention required.</p><h3>Summary</h3><ul><li><strong>Environments Targeted:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['properties']?['jobId']}</li></ul><p><strong>Action Required:</strong> Check the Azure Automation job output for errors. Environments may remain non-compliant.</p><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>Review the Azure Automation job logs and <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for details.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                        "emailMessage/Subject": "ALCA: Remediation Rejected — @{variables('NonCompliantCount')} Environment(s) Remain Non-Compliant",
+                        "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Rejected</h2><p>The remediation request was <strong>rejected</strong> by the governance lead.</p><h3>Summary</h3><ul><li><strong>Non-Compliant Environments:</strong> @{variables('NonCompliantCount')}</li><li><strong>Rejected By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Comments:</strong> @{body('Step_3_-_Start_Approval')?['comments']}</li></ul><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>These environments will remain non-compliant until the next approval cycle. Manual remediation can be performed using the Enable-AuditLogging.ps1 runbook directly.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
                         "emailMessage/Importance": "High"
                       }
                     },
                     "metadata": {
-                      "operationMetadataId": "step5-notification-approved-failure"
+                      "operationMetadataId": "step5-notification-rejected"
                     }
                   }
                 }
@@ -468,47 +543,27 @@
           },
           "else": {
             "actions": {
-              "Step_5_-_Send_Rejection_Notification": {
-                "type": "OpenApiConnection",
+              "No_Non-Compliant_Environments": {
+                "type": "Compose",
                 "runAfter": {},
-                "inputs": {
-                  "host": {
-                    "connectionName": "shared_office365",
-                    "operationId": "SendEmailV2",
-                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                  },
-                  "parameters": {
-                    "emailMessage/To": "@variables('NotificationRecipients')",
-                    "emailMessage/Subject": "ALCA: Remediation Rejected — @{variables('NonCompliantCount')} Environment(s) Remain Non-Compliant",
-                    "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Rejected</h2><p>The remediation request was <strong>rejected</strong> by the governance lead.</p><h3>Summary</h3><ul><li><strong>Non-Compliant Environments:</strong> @{variables('NonCompliantCount')}</li><li><strong>Rejected By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Comments:</strong> @{body('Step_3_-_Start_Approval')?['comments']}</li></ul><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>These environments will remain non-compliant until the next approval cycle. Manual remediation can be performed using the Enable-AuditLogging.ps1 runbook directly.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
-                    "emailMessage/Importance": "High"
-                  }
-                },
+                "inputs": "No non-compliant environments found. All environments are audit-compliant. No action required.",
                 "metadata": {
-                  "operationMetadataId": "step5-notification-rejected"
+                  "notes": "Flow terminates silently when all environments are compliant. No approval or notification is sent."
                 }
               }
             }
           }
         }
       },
-      "else": {
-        "actions": {
-          "No_Non-Compliant_Environments": {
-            "type": "Compose",
-            "runAfter": {},
-            "inputs": "No non-compliant environments found. All environments are audit-compliant. No action required.",
-            "metadata": {
-              "notes": "Flow terminates silently when all environments are compliant. No approval or notification is sent."
-            }
-          }
-        }
-      }
+      "description": "Main workflow scope wrapping all steps for error handling"
     },
-    "Error_Handling_-_Runbook_Failure": {
+    "Scope_Catch": {
       "type": "Scope",
       "runAfter": {
-        "Step_2_-_Check_Non-Compliant_Count": ["Failed", "TimedOut", "Skipped"]
+        "Scope_Try": [
+          "Failed",
+          "TimedOut"
+        ]
       },
       "actions": {
         "Send_Error_Notification": {
@@ -523,12 +578,13 @@
             "parameters": {
               "emailMessage/To": "@variables('NotificationRecipients')",
               "emailMessage/Subject": "ALCA: Approval Flow Error — Action Required",
-              "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Flow Error</h2><p>The ALCA approval flow encountered an error during execution.</p><h3>Error Details</h3><p>The flow failed at the approval or remediation stage. Please review the flow run history in Power Automate for detailed error information.</p><h3>Recommended Actions</h3><ol><li>Open the <a href=\"https://make.powerautomate.com\">Power Automate portal</a></li><li>Navigate to the ALCA Approval Flow run history</li><li>Review the failed run for error details</li><li>If the issue is transient, re-run the flow manually</li><li>If the issue persists, check Azure Automation runbook logs</li></ol><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
+              "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Flow Error</h2><p>The ALCA approval flow encountered an error during execution.</p><h3>Error Details</h3><p>The flow failed during the query, approval, or remediation stage. Please review the flow run history in Power Automate for detailed error information.</p><h3>Recommended Actions</h3><ol><li>Open the <a href=\"https://make.powerautomate.com\">Power Automate portal</a></li><li>Navigate to the ALCA Approval Flow run history</li><li>Review the failed run for error details</li><li>If the issue is transient, re-run the flow manually</li><li>If the issue persists, check Azure Automation runbook logs and Dataverse connectivity</li></ol><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
               "emailMessage/Importance": "High"
             }
           }
         }
-      }
+      },
+      "description": "Error handling scope - catches failures from any step in Scope_Try"
     }
   },
   "outputs": {}
