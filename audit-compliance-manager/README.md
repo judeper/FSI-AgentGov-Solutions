@@ -79,6 +79,7 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-app-client-id> \
     --interactive \
     --dry-run
 
@@ -86,6 +87,7 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-app-client-id> \
     --interactive
 ```
 
@@ -103,6 +105,7 @@ The deployment script creates:
 python scripts/create_audit_compliance_schema.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-app-client-id> \
     --interactive
 ```
 
@@ -131,6 +134,24 @@ python scripts/create_audit_compliance_schema.py \
     -TenantId "<your-tenant-id>" `
     -Interactive
 ```
+
+### Step 4a: Transition to Azure Automation
+
+Steps 1–4 run interactively for initial setup and validation. For ongoing automated compliance monitoring (Steps 5–7), deploy the scripts to Azure Automation with Managed Identity authentication:
+
+1. **Create an Azure Automation Account** with System-Assigned Managed Identity enabled
+2. **Assign the Managed Identity** the required roles:
+   - Power Platform Administrator (Entra ID role)
+   - Exchange Administrator (Entra ID role)
+   - Mail.Send (Microsoft Graph API permission — admin consent required)
+   - Dataverse Application User with System Administrator role (per environment)
+3. **Import PowerShell modules** into the Automation Account:
+   - `Microsoft.PowerApps.Administration.PowerShell` (2.0+)
+   - `ExchangeOnlineManagement` (3.0+)
+   - `AuditComplianceHelpers` (custom module — ZIP and upload `.psm1` + `.psd1`)
+4. **Create and publish runbooks** from the ALCA scripts (see [docs/deployment-guide.md](./docs/deployment-guide.md) for detailed steps)
+
+> **Note:** ALCA scripts use Managed Identity authentication automatically when running inside Azure Automation. No certificates or client secrets are needed for the ALCA detection/remediation runbooks.
 
 ### Step 5: Run Compliance Detection (ALCA)
 
@@ -392,6 +413,7 @@ The following placeholder values in solution files must be replaced with your or
 
 | Guide | Description |
 |-------|-------------|
+| [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) | Entra ID app registration, API permissions, certificate and MI authentication |
 | [docs/FLOW_SETUP.md](./docs/FLOW_SETUP.md) | Power Automate flow creation and configuration (ACV) |
 | [docs/evidence-export-guide.md](./docs/evidence-export-guide.md) | Compliance evidence collection and verification (ACV) |
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Azure Automation deployment, MI permissions (ALCA) |

@@ -102,7 +102,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 ### Solution Components
 
 #### 1. Helper Module — AuditComplianceHelpers.psm1
-**File:** `src/AuditComplianceHelpers.psm1`
+**File:** `scripts/AuditComplianceHelpers.psm1`
 
 **Purpose:** Shared PowerShell module providing reusable functions for authentication, retry logic, Dataverse operations, and email notifications.
 
@@ -117,18 +117,18 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 | `Write-DataverseComplianceRecord` | Upsert compliance record | Upsert by environment ID, option set mapping |
 | `Send-ComplianceNotification` | Send email via Graph sendMail | Shared mailbox support, CSV attachments, HTML body |
 
-**Module Manifest:** `src/AuditComplianceHelpers.psd1`
+**Module Manifest:** `scripts/AuditComplianceHelpers.psd1`
 - Version: 1.0.0
-- PowerShell Version: 5.1+
+- PowerShell Version: 7.2+
 - Exported Functions: 6 functions listed above
 
-**Unit Tests:** `src/AuditComplianceHelpers.Tests.ps1`
+**Unit Tests:** `scripts/AuditComplianceHelpers.Tests.ps1`
 - Pester 5 test suite with 15+ test scenarios
 - Mock-based testing for MI authentication
 - Retry logic validation with simulated failures
 
 #### 2. Detection Runbook — Check-AuditLoggingCompliance.ps1
-**File:** `src/Check-AuditLoggingCompliance.ps1`
+**File:** `scripts/Check-AuditLoggingCompliance.ps1`
 
 **Purpose:** Azure Automation runbook that scans all Power Platform environments for audit logging compliance and writes results to Dataverse.
 
@@ -198,7 +198,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 ```
 
 #### 3. Remediation Runbook — Enable-AuditLogging.ps1
-**File:** `src/Enable-AuditLogging.ps1`
+**File:** `scripts/Enable-AuditLogging.ps1`
 
 **Purpose:** Azure Automation runbook that enables audit logging on non-compliant environments with WhatIf simulation support.
 
@@ -289,7 +289,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 ```
 
 #### 4. Dataverse Schema Script — create_audit_compliance_schema.py
-**File:** `src/create_audit_compliance_schema.py`
+**File:** `scripts/create_audit_compliance_schema.py`
 
 **Purpose:** Python script to create the Dataverse schema (table, columns, choice field, alternate key) for audit compliance tracking.
 
@@ -347,7 +347,7 @@ python create_audit_compliance_schema.py \
 ```
 
 #### 5. Power Automate Approval Flow — audit-remediation-approval-flow.json
-**File:** `src/audit-remediation-approval-flow.json`
+**File:** `templates/audit-remediation-approval-flow.json`
 
 **Purpose:** Power Automate cloud flow template for approval-gated remediation workflow.
 
@@ -557,14 +557,14 @@ For each Power Platform environment with Dataverse:
 
 1. Package `AuditComplianceHelpers.psm1` and `AuditComplianceHelpers.psd1` as ZIP
 2. Navigate to **Azure Automation Account** → **Modules** → **+ Add a module**
-3. **Upload:** Select ZIP file → **Runtime version:** 5.1 → **Import**
+3. **Upload:** Select ZIP file → **Runtime version:** 7.2 → **Import**
 
 **Step 5: Create Detection Runbook**
 
 1. Navigate to **Azure Automation Account** → **Runbooks** → **+ Create a runbook**
 2. **Name:** `ALCA-Check-AuditLoggingCompliance`
 3. **Runbook type:** PowerShell
-4. **Runtime version:** 5.1
+4. **Runtime version:** 7.2
 5. Click **Create**
 6. **Edit PowerShell Runbook:** Paste contents of `Check-AuditLoggingCompliance.ps1`
 7. Click **Save** → **Publish**
@@ -574,7 +574,7 @@ For each Power Platform environment with Dataverse:
 1. Navigate to **Runbooks** → **+ Create a runbook**
 2. **Name:** `ALCA-Enable-AuditLogging`
 3. **Runbook type:** PowerShell
-4. **Runtime version:** 5.1
+4. **Runtime version:** 7.2
 5. Click **Create**
 6. **Edit PowerShell Runbook:** Paste contents of `Enable-AuditLogging.ps1`
 7. Click **Save** → **Publish**
