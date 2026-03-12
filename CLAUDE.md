@@ -163,3 +163,17 @@ python -m py_compile scripts/hooks/*.py
 # Validate PowerShell scripts (requires PowerShell)
 pwsh -Command "Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [System.Management.Automation.Language.Parser]::ParseFile(\$_.FullName, [ref]\$null, [ref]\$null) }"
 ```
+
+## Site Design System
+
+The documentation site (`site-docs/`) uses a unified FSI design system shared across all FSI-AgentGov and FSI-CopilotGov repositories.
+
+- **Theme:** MkDocs Material with `primary: custom` / `accent: custom`
+- **Colors:** Microsoft Blue (`#0078D4`) primary, WCAG AA teal (`#007A7E`) accent — defined in `site-docs/stylesheets/extra.css`
+- **Logo:** Shield + circuit motif SVG in `site-docs/assets/`
+- **Homepage:** Hero → metrics strip → role cards → architecture diagram (uses `hide: navigation, toc`, `md_in_html`, `attr_list`)
+- **Navigation:** `navigation.sections` intentionally removed (sidebar collapses by default)
+- **Font:** `font: false` (avoids Google Fonts CDN blocked in FSI environments)
+- **Extensions:** `pymdownx.emoji`, `md_in_html`, `pymdownx.highlight`
+
+Do not change `primary`/`accent` in `mkdocs.yml` — they must stay `custom`. Modify colors in `extra.css`.
