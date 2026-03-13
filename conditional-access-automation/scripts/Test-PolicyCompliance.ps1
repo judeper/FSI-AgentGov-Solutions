@@ -209,6 +209,7 @@ $complianceResults = @{
         zone1 = @{ status = "Unknown"; policies = @() }
         zone2 = @{ status = "Unknown"; policies = @() }
         zone3 = @{ status = "Unknown"; policies = @() }
+        common = @{ status = "Unknown"; policies = @() }
     }
     gaps = @()
     details = @()
@@ -486,7 +487,7 @@ else {
 }
 
 # Determine zone coverage status
-foreach ($zone in @("zone1", "zone2", "zone3")) {
+foreach ($zone in @("zone1", "zone2", "zone3", "common")) {
     if ($complianceResults.coverage.$zone.policies.Count -gt 0) {
         $complianceResults.coverage.$zone.status = "Covered"
     }
@@ -529,7 +530,7 @@ Write-Host "Overall Status: $($complianceResults.overallCompliance)" -Foreground
 )
 
 Write-Host "`nZone Coverage:"
-foreach ($zone in @("zone1", "zone2", "zone3")) {
+foreach ($zone in @("zone1", "zone2", "zone3", "common")) {
     $status = $complianceResults.coverage.$zone.status
     $color = if ($status -eq "Covered") { "Green" } else { "Red" }
     Write-Host "  $($zone.ToUpper()): $status ($($complianceResults.coverage.$zone.policies.Count) policies)" -ForegroundColor $color

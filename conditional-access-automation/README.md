@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v1.1.0
+> **Status:** Completed | **Version:** v1.1.1
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
@@ -280,7 +280,8 @@ Monitors for unauthorized policy changes.
 ```powershell
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline"
+    -BaselinePath "./baselines/baseline.json" `
+    [-ConfigPath "./config.json"]
 ```
 
 **Detects:**
@@ -349,7 +350,7 @@ See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete comman
 | Regulation | Requirement | How This Helps |
 |------------|-------------|----------------|
 | **SOX 404** | IT general controls | Consistent access policies |
-| **GLBA 501(b)** | Safeguards rule | Multi-factor authentication |
+| **GLBA 501(b)** | Safeguards rule (FTC 16 CFR Part 314) | Multi-factor authentication |
 | **Zero Trust Principles** | Verify explicitly | Risk-based authentication |
 
 ## Troubleshooting
@@ -371,7 +372,7 @@ See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete comman
 
 ### Dataverse Client Module (Phase 2)
 
-`scripts/private/CAAClient.psm1` has all 8 Dataverse functions unimplemented (each throws "Not implemented — requires Phase 2 Dataverse infrastructure"). `Export-CAAComplianceEvidence.ps1` gracefully falls back to `Get-AzAccessToken`, but the Dataverse integration layer is non-functional. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) when Dataverse schema creation scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are also delivered. Track progress via the repository issue tracker.
+`scripts/private/CAAClient.psm1` has all 8 Dataverse functions unimplemented (each throws "Not implemented — requires Phase 2 Dataverse infrastructure"). `Export-CAAComplianceEvidence.ps1` gracefully falls back to `Get-AzAccessToken -AsSecureString`, but the Dataverse integration layer is non-functional. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) when Dataverse schema creation scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are also delivered. Track progress via the repository issue tracker.
 
 ### Break-Glass Accounts
 

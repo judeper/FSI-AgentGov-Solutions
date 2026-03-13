@@ -182,8 +182,9 @@ $accessToken = $script:AccessToken
 if (-not $accessToken) {
     Write-Verbose 'Acquiring access token for Dataverse...'
     try {
-        $tokenResponse = Get-AzAccessToken -ResourceUrl $DataverseUrl
-        $accessToken = $tokenResponse.Token
+        # Use -AsSecureString to avoid deprecated plaintext .Token (Az module 12+)
+        $tokenResponse = Get-AzAccessToken -ResourceUrl $DataverseUrl -AsSecureString
+        $accessToken = [System.Net.NetworkCredential]::new('', $tokenResponse.Token).Password
     }
     catch {
         Write-Error "Failed to acquire Dataverse access token. Ensure you are authenticated (Connect-AzAccount) or CAAClient is configured: $_"
@@ -293,7 +294,7 @@ $evidence = [ordered]@{
         toDate         = $ToDate.ToUniversalTime().ToString('o')
         runId          = if ($RunId) { $RunId } else { $null }
         exportVersion  = '1.0.0'
-        solutionVersion = '1.1.0'
+        solutionVersion = '1.1.1'
         recordCount    = $validations.Count
         violationCount = $violations.Count
         baselineCount  = $baselines.Count

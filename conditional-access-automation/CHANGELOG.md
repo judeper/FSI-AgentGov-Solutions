@@ -2,6 +2,14 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.1.1] - 2026-03-13
+
+### Fixed
+- Updated `Get-AzAccessToken` fallback in Export-CAAComplianceEvidence.ps1 to use `-AsSecureString` pattern (Az module 12+ compatibility)
+- Added Common zone (M365Copilot, BlockLegacyAuth) to coverage tracking in Test-PolicyCompliance.ps1
+- Fixed Watch-PolicyDrift.ps1 `-BaselinePath` examples across README and docs to show file path instead of directory
+- Updated GLBA regulatory citation to reference FTC Safeguards Rule (16 CFR Part 314)
+
 ## [1.1.0] - 2026-02-10
 
 ### Added

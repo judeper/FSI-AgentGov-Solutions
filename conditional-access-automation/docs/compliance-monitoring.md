@@ -88,7 +88,7 @@ First, export a known-good baseline:
 ```powershell
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline"
+    -BaselinePath "./baselines/baseline.json"
 ```
 
 ### Detected Changes

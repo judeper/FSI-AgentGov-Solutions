@@ -335,7 +335,7 @@ All policies should show `State: enabled`.
 # Schedule drift detection (run daily)
 .\scripts\Watch-PolicyDrift.ps1 `
     -TenantId "<tenant-id>" `
-    -BaselinePath "./baseline"
+    -BaselinePath "./baselines/baseline.json"
 ```
 
 ### 7.2 Regular Compliance Checks
