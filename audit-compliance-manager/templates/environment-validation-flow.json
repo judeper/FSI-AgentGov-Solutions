@@ -30,11 +30,14 @@
           {
             "name": "DataverseUrl",
             "type": "string",
-            "value": "https://governance.crm.dynamics.com"
+            "value": "https://YOUR-ORG.crm.dynamics.com"
           }
         ]
       },
-      "description": "Central Dataverse organization URL for validation history storage"
+      "description": "Central Dataverse organization URL for validation history storage",
+      "metadata": {
+        "notes": "CONFIGURE: Replace with your Dataverse environment URL hosting the audit validation tables"
+      }
     },
     "Initialize_TenantId": {
       "runAfter": {
@@ -44,13 +47,16 @@
       "inputs": {
         "variables": [
           {
-            "name": "TenantId",
+            "name": "TenantDomain",
             "type": "string",
             "value": "contoso.onmicrosoft.com"
           }
         ]
       },
-      "description": "Azure AD tenant ID"
+      "description": "Microsoft Entra ID tenant domain",
+      "metadata": {
+        "notes": "CONFIGURE: Replace with your tenant domain (e.g., yourtenant.onmicrosoft.com)"
+      }
     },
     "Initialize_ClientId": {
       "runAfter": {
@@ -66,7 +72,10 @@
           }
         ]
       },
-      "description": "Azure AD application client ID"
+      "description": "Microsoft Entra ID application client ID",
+      "metadata": {
+        "notes": "CONFIGURE: Replace with your Entra ID application (service principal) client ID for Dataverse and Azure authentication"
+      }
     },
     "Initialize_CertificateThumbprint": {
       "runAfter": {
@@ -82,7 +91,10 @@
           }
         ]
       },
-      "description": "Certificate thumbprint for service principal authentication"
+      "description": "Certificate thumbprint for service principal authentication",
+      "metadata": {
+        "notes": "CONFIGURE: Replace with the certificate thumbprint used for service principal authentication"
+      }
     },
     "Initialize_SubscriptionId": {
       "runAfter": {
@@ -201,7 +213,7 @@
             "body": {
               "properties": {
                 "parameters": {
-                  "TenantId": "@{variables('TenantId')}",
+                  "TenantId": "@{variables('TenantDomain')}",
                   "DataverseUrl": "@{variables('DataverseUrl')}",
                   "ClientId": "@{variables('ClientId')}",
                   "CertificateThumbprint": "@{variables('CertificateThumbprint')}"
@@ -511,7 +523,7 @@
                   "Importance": "@if(or(equals(items('Apply_To_Each_Alert')?['OverallStatus'], 'Failed'), equals(items('Apply_To_Each_Alert')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
-              "description": "Send email alert to compliance distribution list",
+              "description": "Send email alert to compliance distribution list. NOTE: Environment names and status values are interpolated directly into HTML — these are admin-controlled Dataverse values but are not HTML-entity-encoded. For defense-in-depth, consider wrapping interpolated values with replace(replace(value, '&', '&amp;'), '<', '&lt;') if user-supplied data may reach these fields.",
               "retryPolicy": {
                 "type": "exponential",
                 "count": 3,

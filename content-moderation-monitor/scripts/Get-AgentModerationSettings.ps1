@@ -14,7 +14,7 @@
 
 .NOTES
     File: Get-AgentModerationSettings.ps1
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Content Moderation Monitor (v7)
 #>
 
@@ -381,6 +381,17 @@ function Get-AgentModerationSettings {
     Write-Progress -Activity "Scanning environments for agents" -Completed
 
     Write-Verbose "Total agents retrieved: $($results.Count)"
+
+    # Runtime assertion: if all agents returned 'Unknown' moderation level,
+    # the bot.configuration JSON key may have changed — warn about potential false-negatives
+    if ($results.Count -gt 0) {
+        $unknownCount = ($results | Where-Object { $_.ContentModerationLevel -eq 'Unknown' }).Count
+        if ($unknownCount -eq $results.Count) {
+            Write-Warning ("All $($results.Count) agent(s) returned 'Unknown' content moderation level. " +
+                "The bot.configuration JSON key for content moderation may have changed. " +
+                "Results may contain false-negatives. See TROUBLESHOOTING.md for guidance.")
+        }
+    }
 
     return $results.ToArray()
 

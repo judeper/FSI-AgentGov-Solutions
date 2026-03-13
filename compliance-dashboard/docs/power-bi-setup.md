@@ -43,7 +43,7 @@ Download the Power BI template file:
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `DataverseEnvironmentUrl` | Your Dataverse environment URL | `https://contoso.crm.dynamics.com` |
-| `TenantId` | Your Azure AD tenant ID | `12345678-1234-1234-1234-123456789abc` |
+| `TenantId` | Your Microsoft Entra ID tenant ID | `12345678-1234-1234-1234-123456789abc` |
 
 ### Step 4: Authenticate
 

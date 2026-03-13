@@ -136,10 +136,18 @@ Add these permissions:
 
 | API | Permission | Type |
 |-----|------------|------|
-| Microsoft Purview | Compliance Administrator role | Application |
 | Microsoft Graph | `User.Read.All` | Application |
 
 Grant admin consent after adding permissions.
+
+### Directory Role Assignment
+
+The Compliance Administrator role is an **Entra ID directory role**, not an API permission.
+Assign it separately:
+
+1. Go to **Entra ID** > **Enterprise applications** > select `FSW-CommunicationCompliance-Reader`
+2. Navigate to **Roles and administrators**
+3. Assign the **Compliance Administrator** role to the service principal
 
 ### Client Secret
 

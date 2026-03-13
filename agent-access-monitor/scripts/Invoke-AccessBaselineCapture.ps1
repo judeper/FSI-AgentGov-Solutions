@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 7.1
 
 <#
 .SYNOPSIS
@@ -22,10 +22,10 @@
     - WhatIf mode for safe preview without writing to Dataverse
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required.
+    Microsoft Entra ID tenant ID. Required.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required.
+    Microsoft Entra ID application (client) ID. Required.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -102,7 +102,7 @@
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module
     - MSAL.PS module v4.37.0 or later (for Dataverse token)
-    - PowerShell 5.1 or later
+    - PowerShell 7.1 or later
     - Power Platform admin permissions
 
     Baseline management:
@@ -166,7 +166,7 @@ try {
     # Default CapturedBy to current user UPN
     if (-not $CapturedBy) {
         try {
-            $CapturedBy = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $CapturedBy = [System.Environment]::UserName
         } catch {
             $CapturedBy = "Operator"
         }

@@ -1024,9 +1024,9 @@ Resolution: Add FSI-AgentGov-Automation as Application User with System Administ
 
 The Audit Logging Compliance Automation solution supports compliance with the following regulatory requirements:
 
-### FINRA 4511 — Supervision
+### FINRA 4511 — Books and Records
 
-**Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including technology controls for audit logging and change tracking.
+**Requirement:** Member firms must make and preserve books and records as required under FINRA rules and the Exchange Act, including electronic records of system configurations and audit trails.
 
 **ALCA Support:**
 - Continuous monitoring ensures audit logging remains enabled across all environments

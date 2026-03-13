@@ -243,7 +243,7 @@ Dataverse (Optional):
 
 Baseline Capture (Optional):
 □ Initial baseline captured: Invoke-ModerationBaselineCapture.ps1
-□ Baseline records created in fsi_moderationbaseline table
+□ Baseline records created in fsi_moderationbaselines table
 □ Active baseline flag verified
 
 Power Automate Flow (Optional):

@@ -8,16 +8,16 @@ import unittest
 # Add scripts directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
-from analyze_patterns import PatternAnalyzer, CATEGORIES, SEVERITIES, SEVERITY_WEIGHTS
+from analyze_patterns import PatternAnalyzer, CATEGORIES, SEVERITY_LABELS, SEVERITY_WEIGHTS, SOURCES, main
 
 
 # Sample feedback matching the dry-run data structure
 SAMPLE_FEEDBACK = [
-    {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001"},
-    {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001"},
-    {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002"},
-    {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001"},
-    {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003"},
+    {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001", "fsi_source": 100000000},
+    {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001", "fsi_source": 100000001},
+    {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002", "fsi_source": 100000002},
+    {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001", "fsi_source": 100000001},
+    {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003", "fsi_source": 100000003},
 ]
 
 
@@ -47,14 +47,35 @@ class TestAnalyzeSeverity(unittest.TestCase):
 
     def test_counts_severities(self):
         result = self.analyzer.analyze_severity(SAMPLE_FEEDBACK)
-        self.assertEqual(result[100000002], 2)  # High
-        self.assertEqual(result[100000001], 1)  # Medium
-        self.assertEqual(result[100000003], 1)  # Critical
-        self.assertEqual(result[100000000], 1)  # Low
+        self.assertEqual(result["high"], 2)
+        self.assertEqual(result["medium"], 1)
+        self.assertEqual(result["critical"], 1)
+        self.assertEqual(result["low"], 1)
 
     def test_empty_feedback(self):
         result = self.analyzer.analyze_severity([])
         self.assertEqual(result, {})
+
+
+class TestAnalyzeBySource(unittest.TestCase):
+    def setUp(self):
+        self.analyzer = PatternAnalyzer("https://example.crm.dynamics.com", "t", "c", "s")
+
+    def test_counts_sources(self):
+        result = self.analyzer.analyze_by_source(SAMPLE_FEEDBACK)
+        self.assertEqual(result["user"], 1)
+        self.assertEqual(result["supervisor"], 2)
+        self.assertEqual(result["automated"], 1)
+        self.assertEqual(result["customer"], 1)
+
+    def test_empty_feedback(self):
+        result = self.analyzer.analyze_by_source([])
+        self.assertEqual(result, {})
+
+    def test_unknown_source(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "a", "fsi_source": 999999}]
+        result = self.analyzer.analyze_by_source(feedback)
+        self.assertEqual(result["unknown"], 1)
 
 
 class TestCalculateAgentScores(unittest.TestCase):
@@ -122,12 +143,13 @@ class TestNullFieldValues(unittest.TestCase):
     def test_null_category_analyze_by_category(self):
         feedback = [{"fsi_category": None, "fsi_severity": 100000000, "fsi_agentid": "a"}]
         result = self.analyzer.analyze_by_category(feedback)
-        self.assertIn("unknown", result)  # None coalesces to 0, not in CATEGORIES -> "unknown"
+        # None key exists so .get() returns None (not default 0); CATEGORIES.get(None, "unknown") maps it to "unknown"
+        self.assertIn("unknown", result)
 
     def test_null_severity_analyze_severity(self):
         feedback = [{"fsi_category": 100000000, "fsi_severity": None, "fsi_agentid": "a"}]
         result = self.analyzer.analyze_severity(feedback)
-        self.assertIn(100000000, result)  # defaults to Low
+        self.assertIn("unknown", result)
 
     def test_null_agentid_calculate_scores(self):
         feedback = [{"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": None}]
@@ -144,6 +166,110 @@ class TestNullFieldValues(unittest.TestCase):
         report = self.analyzer.generate_report(feedback)
         self.assertIn("unknown", report)
         self.assertIn("Total Reports: 1", report)
+
+
+class TestGenerateReportPartialData(unittest.TestCase):
+    """Test generate_report with is_complete=False."""
+
+    def setUp(self):
+        self.analyzer = PatternAnalyzer("https://example.crm.dynamics.com", "t", "c", "s")
+
+    def test_partial_data_warning_present(self):
+        report = self.analyzer.generate_report(SAMPLE_FEEDBACK, is_complete=False)
+        self.assertIn("PARTIAL DATA", report)
+        self.assertIn("WARNING", report)
+
+    def test_partial_data_warning_absent_when_complete(self):
+        report = self.analyzer.generate_report(SAMPLE_FEEDBACK, is_complete=True)
+        self.assertNotIn("PARTIAL DATA", report)
+
+    def test_partial_data_still_includes_report_content(self):
+        report = self.analyzer.generate_report(SAMPLE_FEEDBACK, is_complete=False)
+        self.assertIn("Total Reports:", report)
+        self.assertIn("Category Distribution:", report)
+        self.assertIn("Agent Scores:", report)
+
+
+class TestAgentIdDisplayTruncation(unittest.TestCase):
+    """Test that agent IDs are displayed correctly in reports."""
+
+    def setUp(self):
+        self.analyzer = PatternAnalyzer("https://example.crm.dynamics.com", "t", "c", "s")
+
+    def test_short_agent_id_not_truncated(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "short"}]
+        report = self.analyzer.generate_report(feedback)
+        self.assertIn("short:", report)
+        self.assertNotIn("short...:", report)
+
+    def test_long_agent_id_truncated(self):
+        feedback = [{"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "very-long-agent-identifier"}]
+        report = self.analyzer.generate_report(feedback)
+        self.assertIn("very-lon...:", report)
+
+
+class TestMainErrorPaths(unittest.TestCase):
+    """Test main() argument validation and error paths."""
+
+    def test_negative_days_exits(self):
+        sys.argv = ["analyze_patterns.py", "--environment", "https://test.crm.dynamics.com", "--days", "-5"]
+        with self.assertRaises(SystemExit) as ctx:
+            main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_zero_days_exits(self):
+        sys.argv = ["analyze_patterns.py", "--environment", "https://test.crm.dynamics.com", "--days", "0"]
+        with self.assertRaises(SystemExit) as ctx:
+            main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_http_url_rejected(self):
+        sys.argv = ["analyze_patterns.py", "--environment", "http://test.crm.dynamics.com", "--days", "7"]
+        with self.assertRaises(SystemExit) as ctx:
+            main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_invalid_domain_rejected(self):
+        sys.argv = ["analyze_patterns.py", "--environment", "https://evil.example.com", "--days", "7"]
+        with self.assertRaises(SystemExit) as ctx:
+            main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_gcc_high_domain_accepted(self):
+        """GCC High / DoD domains should pass URL validation."""
+        sys.argv = ["analyze_patterns.py", "--environment", "https://org.crm.microsoftdynamics.us",
+                     "--days", "7", "--dry-run"]
+        # Should not raise on URL validation; dry-run bypasses auth
+        try:
+            main()
+        except SystemExit as e:
+            # Exit code 0 is acceptable (dry-run completes normally)
+            self.assertEqual(e.code, 0)
+
+    def test_dod_domain_accepted(self):
+        """DoD (appsplatform.us) domains should pass URL validation."""
+        sys.argv = ["analyze_patterns.py", "--environment", "https://org.crm.appsplatform.us",
+                     "--days", "7", "--dry-run"]
+        try:
+            main()
+        except SystemExit as e:
+            self.assertEqual(e.code, 0)
+
+    def test_missing_env_vars_exits(self):
+        """Missing auth env vars should exit with code 1 (non-dry-run)."""
+        # Ensure env vars are unset
+        env_backup = {}
+        for var in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET"):
+            env_backup[var] = os.environ.pop(var, None)
+        try:
+            sys.argv = ["analyze_patterns.py", "--environment", "https://test.crm.dynamics.com", "--days", "7"]
+            with self.assertRaises(SystemExit) as ctx:
+                main()
+            self.assertEqual(ctx.exception.code, 1)
+        finally:
+            for var, val in env_backup.items():
+                if val is not None:
+                    os.environ[var] = val
 
 
 if __name__ == "__main__":

@@ -106,23 +106,39 @@ First, export a known-good baseline:
 
 ```json
 {
-  "@type": "MessageCard",
-  "themeColor": "FF0000",
-  "title": "CA Policy Drift Detected",
-  "text": "Unauthorized change to Conditional Access policy",
-  "sections": [{
-    "facts": [
-      { "name": "Policy", "value": "CA-FSI-CopilotStudio-Zone3-MFA-CompliantDevice" },
-      { "name": "Change", "value": "Policy disabled" },
-      { "name": "Changed By", "value": "admin@contoso.com" },
-      { "name": "Time", "value": "2026-02-15 10:30:00 UTC" }
-    ]
-  }],
-  "potentialAction": [{
-    "@type": "OpenUri",
-    "name": "View in Entra ID",
-    "targets": [{ "os": "default", "uri": "https://entra.microsoft.com/..." }]
-  }]
+  "type": "AdaptiveCard",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "Container",
+      "style": "attention",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "[ALERT] CA Policy Drift Detected",
+          "weight": "Bolder",
+          "size": "Large",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Policy", "value": "CA-FSI-CopilotStudio-Zone3-MFA-CompliantDevice" },
+        { "title": "Change", "value": "Policy disabled" },
+        { "title": "Changed By", "value": "admin@contoso.com" },
+        { "title": "Time", "value": "2026-02-15 10:30:00 UTC" }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View in Entra ID",
+      "url": "https://entra.microsoft.com/..."
+    }
+  ]
 }
 ```
 
@@ -359,11 +375,13 @@ For supervision and access control:
 
 ## Alerting Configuration
 
-### Teams Webhook Setup
+### Teams Alert Setup
 
-1. Create incoming webhook in Teams channel
-2. Copy webhook URL
-3. Add to drift detection configuration
+Both Power Automate flows use the **Teams connector** (`PostCardToConversation` / `PostMessageToChannelV3`) with the `fsi_cr_teams_conditionalaccessautomation` connection reference — not incoming webhooks. To configure:
+
+1. Set the `fsi_CAA_TeamsGroupId` environment variable to the target Teams group GUID
+2. Set the `fsi_CAA_TeamsChannelId` environment variable to the target channel GUID
+3. Ensure the Teams connection reference is authenticated in the Power Platform solution
 
 ### Alert Thresholds
 

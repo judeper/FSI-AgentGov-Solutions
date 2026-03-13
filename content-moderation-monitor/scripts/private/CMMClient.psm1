@@ -8,7 +8,7 @@
 
 .NOTES
     Module: CMMClient.psm1
-    Version: 1.0.0
+    Version: 1.0.1
     Author: FSI Agent Governance Team
 #>
 
@@ -66,6 +66,12 @@ function Invoke-DataverseRequest {
             # Retry on throttle (429) or server errors (5xx)
             if ($statusCode -in @(429, 500, 502, 503, 504) -and $i -lt ($MaxRetries - 1)) {
                 $delay = [math]::Pow(2, $i)
+                if ($statusCode -eq 429) {
+                    $retryAfter = $_.Exception.Response.Headers['Retry-After']
+                    if ($retryAfter -and [double]::TryParse($retryAfter, [ref]$null)) {
+                        $delay = [math]::Ceiling([double]$retryAfter)
+                    }
+                }
                 Write-Verbose "Dataverse request failed ($statusCode), retrying in ${delay}s..."
                 Start-Sleep -Seconds $delay
                 continue
@@ -159,7 +165,7 @@ function Get-CMMEnvironmentVariable {
     }
 
     try {
-        $schemaName = "fsi_CMM_$Name"
+        $schemaName = ("fsi_CMM_$Name") -replace "'", "''"
         $uri = "$script:DataverseUrl/api/data/v9.2/environmentvariabledefinitions?" +
                "`$filter=schemaname eq '$schemaName'&" +
                "`$expand=environmentvariablevalues"
@@ -211,11 +217,11 @@ function Get-ModerationBaseline {
     [CmdletBinding()]
     param(
         [Parameter()]
-        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
         [string]$EnvironmentId,
 
         [Parameter()]
-        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
         [string]$AgentId,
 
         [Parameter()]
@@ -527,9 +533,11 @@ function Get-BotModerationLevel {
     )
 
     # Normalization map for various moderation level names
+    # Note: Copilot Studio uses "Moderate" at the prompt level, not "Medium"
     $levelMap = @{
         'low'      = 'Low'
         'medium'   = 'Medium'
+        'moderate' = 'Medium'
         'high'     = 'High'
         'strict'   = 'High'
         'none'     = 'Low'
@@ -619,7 +627,7 @@ function Save-CMMBaseline {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
-        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
         [string]$EnvironmentGuid,
 
         [Parameter(Mandatory)]
@@ -629,7 +637,7 @@ function Save-CMMBaseline {
         [string]$Zone,
 
         [Parameter(Mandatory)]
-        [ValidatePattern('^[0-9a-fA-F\-]{36}$')]
+        [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
         [string]$AgentId,
 
         [Parameter(Mandatory)]
@@ -772,6 +780,7 @@ function Get-CMMLastValidation {
 
 # Export functions
 Export-ModuleMember -Function @(
+    'Invoke-DataverseRequest',
     'Connect-CMMDataverse',
     'Get-CMMConnection',
     'Get-CMMEnvironmentVariable',

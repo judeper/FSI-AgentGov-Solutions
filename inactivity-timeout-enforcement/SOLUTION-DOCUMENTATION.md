@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -121,7 +121,7 @@ The flow implements three-state compliance classification:
 |-------------------|------|-------------------|--------|
 | **Compliant** | 0 | Timeout enabled AND duration ≤ required maximum for zone | Pass |
 | **Non-Compliant** | 1 | Timeout disabled OR duration > required maximum for zone | Fail |
-| **Unknown** | 2 | Missing policy for environment OR BAP API error | Unknown |
+| **Unknown** | 2 | Missing policy for environment OR BAP API error OR timeout enabled but duration null (indeterminate) | Unknown |
 
 **Zone-Based Policy Enforcement:**
 
@@ -163,6 +163,7 @@ Environments are classified into governance zones with tailored maximum timeout 
        - Convert ISO 8601 duration to minutes (handles `PT60M`, `PT2H`, `PT1H30M` formats)
        - **Evaluate compliance:**
          - If timeout not explicitly enabled (disabled or null) → **Non-Compliant**
+         - If timeout enabled but duration is null (indeterminate) → **Unknown**
          - If timeout duration > required max → **Non-Compliant**
          - Otherwise → **Compliant**
        - Write immutable compliance record to `fsi_inactivitytimeoutcompliances` table
@@ -195,7 +196,7 @@ Environments are classified into governance zones with tailored maximum timeout 
 |---------------|------|---------------|-------------|
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses for compliance alerts |
 
-> **Note:** The flow reads environment variables using Power Automate's `@environmentVariables()` function at initialization. The Dataverse connection uses the connection reference — no separate URL variable is needed. Email send actions are guarded: if `fsi_ITE_NotificationRecipients` is empty, emails are silently skipped rather than causing a flow error. Loop concurrency is hardcoded to 5 in the flow's `runtimeConfiguration`.
+> **Note:** The flow reads environment variables using Power Automate's `@environmentVariables()` function at initialization. The BAP Admin API base URL is sourced from the `fsi_ITE_BapApiBaseUrl` environment variable (defaults to `https://api.bap.microsoft.com` for commercial cloud); it is not shown in the table above because it is optional with a built-in default. The Dataverse connection uses the connection reference. Email send actions are guarded: if `fsi_ITE_NotificationRecipients` is empty, emails are silently skipped rather than causing a flow error. Loop concurrency is hardcoded to 5 in the flow's `runtimeConfiguration`.
 
 **Email Alert Format:**
 
@@ -278,7 +279,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 **Compliance Status Mapping:**
 - **0 (Compliant):** Timeout enabled and duration ≤ required max
 - **1 (Non-Compliant):** Timeout disabled OR duration > required max
-- **2 (Unknown):** Missing policy OR BAP API error
+- **2 (Unknown):** Missing policy OR BAP API error OR timeout enabled but duration null (indeterminate state)
 
 **3. fsi_inactivitytimeouterrorlogs (Error Logs)**
 
@@ -603,6 +604,16 @@ Evidence files should include:
 - Error logs: Retain for 3 years (operational history)
 - Email notifications: Retain for 3 years (compliance evidence)
 
+**Automated Data Retention / Cleanup:**
+
+This solution does not include an automated retention or cleanup mechanism. The `fsi_inactivitytimeoutcompliances` and `fsi_inactivitytimeouterrorlogs` tables accumulate immutable records from each daily scan. Organizations must implement their own retention automation to enforce the periods listed above. Recommended approaches:
+
+1. **Scheduled Power Automate flow**: Create a companion flow that runs weekly or monthly. Use a Dataverse `ListRecords` action filtered by `fsi_lastscandate lt <cutoff_date>` and delete records exceeding the retention period (7 years for compliance records, 3 years for error logs).
+2. **Dataverse bulk delete jobs**: Configure recurring bulk delete jobs in the Power Platform Admin Center targeting records older than the retention threshold. Schedule during off-peak hours to minimize Dataverse API impact.
+3. **Azure Data Factory / Synapse pipeline**: For tenants already exporting Dataverse data to a data lake, implement retention policies at the lake layer and use truncation jobs for the source Dataverse tables.
+
+Whichever approach is chosen, ensure deleted records have already been exported to long-term archival storage (see Export Format above) before purging, to maintain SEC 17a-4 compliance.
+
 ---
 
 ## Appendix: Compliance Status Reference
@@ -667,6 +678,7 @@ Notes: Duration 240m exceeds maximum 60m
 **Criteria:**
 - No `fsi_environmentpolicies` record exists for environment
 - OR BAP Privacy Settings API call failed
+- OR `inactivityTimeoutEnabled = true` but `inactivityTimeoutDuration` is null (indeterminate state — API reports timeout as enabled but provides no duration)
 
 **Example 1 (Missing Policy):**
 ```
@@ -692,9 +704,21 @@ Notes: BAP API call failed: Forbidden
 Error Log: Forbidden (403) - Access denied to privacy settings for environment
 ```
 
+**Example 3 (Null Duration):**
+```
+Environment: Finance Staging
+Zone: 3 (Enterprise)
+Timeout Enabled: true
+Actual Duration: 0 minutes
+Required Max: 60 minutes
+Status: Unknown
+Notes: Inactivity timeout is enabled but duration is null — indeterminate state classified as Unknown
+```
+
 **Remediation:**
 - **Missing Policy:** Add policy record to `fsi_environmentpolicies` table with appropriate zone and required max
 - **API Error:** Investigate error type in `fsi_inactivitytimeouterrorlogs` and resolve permissions or API issues
+- **Null Duration:** Re-save the inactivity timeout settings in Power Platform Admin Center to ensure the duration value is populated, or investigate BAP API data inconsistency
 
 ---
 
@@ -725,7 +749,7 @@ Input: "PT60M"   → Output: 60 minutes  (1 hour)
 Input: "PT120M"  → Output: 120 minutes (2 hours)
 Input: "PT2H"    → Output: 120 minutes (2 hours)
 Input: "PT1H30M" → Output: 90 minutes  (1.5 hours)
-Input: "PT0M"    → Output: 0 minutes   (disabled or zero)
+Input: "PT0M"    → Output: 0 minutes   (disabled or zero; if timeout is enabled and raw duration was null, classified as Unknown before parsing)
 ```
 
 ---
@@ -752,9 +776,9 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Immutable compliance records provide audit trail for internal control effectiveness
 - Daily monitoring enables timely detection of control deficiencies
 
-### FINRA 4511 — Supervision
+### FINRA 4511 — General Requirements (Books and Records)
 
-**Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including technology controls for unauthorized access prevention.
+**Requirement:** Member firms must make and preserve books and records as required under FINRA rules, the Exchange Act, and applicable SEC rules, including records of technology controls and compliance monitoring.
 
 **ITE Support:**
 - Continuous monitoring ensures inactivity timeout controls remain effective
@@ -781,10 +805,20 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ---
 
+## Known Limitations
+
+1. **BAP Admin API version (List_Environments):** The `List_Environments` action uses `api-version=2016-11-01`. This is the original API version and has been stable for years. Upgrading to a newer version (e.g., `2021-04-01`) may unlock additional response fields but carries runtime regression risk. Test thoroughly in a non-production environment before upgrading.
+
+2. **Condition_Has_Issues run-after configuration:** The `Condition_Has_Issues` action runs after `Query_NonCompliant_Records`, `Query_Unknown_Records`, and `Query_Compliant_Count` with `["Succeeded", "Failed"]` run-after condition. All expressions that reference query result bodies use `coalesce(..., json('[]'))` to return an empty array when a query fails, ensuring graceful handling of partial query failures without crashing the flow.
+
+3. **List_Environments pagination:** The `List_Environments` HTTP action retrieves only the first page of environments from the BAP Admin API. Tenants with environments exceeding the default API page size (~500) should implement `nextLink` pagination or partition environment scanning across multiple flow runs.
+
+---
+
 ## Support and Maintenance
 
-**Solution Version:** 1.0.1
-**Release Date:** February 2026
+**Solution Version:** 1.0.2
+**Release Date:** March 2026
 **License:** MIT License
 
 **Change Management:**
@@ -794,6 +828,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Coordinate timeout policy updates with user communication (advance notice recommended)
 
 **Version History:**
+- **v1.0.2 (March 2026):** Fix false-compliant classification when timeout enabled but duration null (indeterminate → Unknown); add pagination to all Dataverse ListRecords operations; update Map_Compliance_Status_Value to handle Unknown; document known limitations (API version, Condition_Has_Issues run-after, List_Environments pagination)
 - **v1.0.1 (February 2026):** Fix null `inactivityTimeoutEnabled` false-compliant bug; remove unused ConcurrencyLimit variable; HTML-escape environment names in emails; align Zone 2 timeout to ≤120min; version bump
 - **v1.0.0 (February 2026):** Initial release with zone-based policy enforcement, daily compliance detection, and guarded email alerting
 

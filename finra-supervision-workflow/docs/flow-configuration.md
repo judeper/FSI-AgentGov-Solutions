@@ -39,9 +39,15 @@ Polls Communication Compliance API for new flagged items and creates Supervision
    Headers:
      Authorization: Bearer @{outputs('Get_Token')}
    Queries:
-     $filter: createdDateTime gt @{variables('lastRunTime')}
+     $filter: createdDateTime gt @{variables('lastRunTime')} and status eq 'Active'
+     $top: 100
    Note: Uses Purview Communication Compliance API, NOT Graph security/alerts_v2
          (see docs/communication-compliance-setup.md for API access configuration)
+   Note: The $top=100 parameter prevents action execution limit errors when a
+         large alert backlog exists (e.g., post-outage or first run). Remaining
+         alerts are picked up in subsequent polling cycles.
+   Note: The status filter excludes dismissed or resolved alerts so that only
+         actionable items enter the supervision queue.
 
 3. Get SupervisionConfig (all active rows)
    Cache outside loop to avoid N+1 queries (matches EscalationFlow pattern at step 2.1)
@@ -88,12 +94,15 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 | Connection | Type | Purpose |
 |------------|------|---------|
 | Dataverse | Premium | Create queue records |
-| HTTP with Azure AD | Premium | Purview Communication Compliance API |
+| HTTP with Microsoft Entra ID (preauthorized) | Premium | Purview Communication Compliance API |
 | Azure Key Vault | Premium | Store lastRunTime, credentials |
 
 ### Error Handling
 
-- On HTTP failure: Log to SupervisionLog with action "IngestError"
+- On HTTP failure: Log to SupervisionLog with action "IngestError" **and** send
+  real-time notification (Teams/Email) to Queue Managers so that persistent API
+  unavailability is detected within minutes rather than waiting for the daily SLA
+  report to surface the volume drop
 - On Dataverse failure: Retry 3 times, then alert Queue Manager
 - All errors: Continue processing remaining alerts
 
@@ -143,6 +152,12 @@ Triggered when a new SupervisionQueue row is created. Assigns to appropriate sup
    - Body: Agent @{agentName}, Flagged for @{flaggedReason}
    - Include: Deep link to queue item
 ```
+
+### Error Handling
+
+- On Dataverse failure (SupervisionLog creation at step 4): Retry 3 times, then send notification to Queue Managers — a missing audit log entry compromises the FINRA 3110 evidence trail
+- On notification failure (step 5): Log to SupervisionLog with action "NotificationError" and continue — assignment is still valid even if notification fails
+- All errors: Log error details to SupervisionLog for auditability
 
 ### Round-Robin Assignment Logic
 
@@ -205,10 +220,10 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
    2.2 Apply to each: Check escalation threshold
        2.2.1 Look up config from cached SupervisionConfig
 
-       2.2.2 Calculate hours overdue
-             hoursOverdue = dateDiff(slaDue, utcNow(), 'Hour')
+       2.2.2 Calculate hours since queued
+             hoursSinceQueued = dateDiff('Hour', queuedDate, utcNow())
 
-       2.2.3 Condition: hoursOverdue >= escalationHours?
+       2.2.3 Condition: hoursSinceQueued >= escalationHours?
 
              If Yes:
                - Update SupervisionQueue: State = Escalated
@@ -226,6 +241,12 @@ Scheduled flow that monitors SLA compliance and escalates overdue items.
    - Calculate SLA compliance %
    - Send to Queue Managers
 ```
+
+### Error Handling
+
+- On Dataverse failure (SupervisionLog creation at steps 2.2.3): Retry 3 times, then send alert to Queue Managers — missing escalation audit entries compromise the FINRA 3110 evidence trail
+- On notification failure: Log to SupervisionLog with action "NotificationError" and continue — the state change and audit log are the critical path
+- On SLA report generation failure (step 3): Send error notification to Queue Managers so the daily compliance summary is not silently lost
 
 ### Escalation Notification Template
 
@@ -289,6 +310,12 @@ Triggered when a supervisor completes a review (State changes to Approved/Reject
 4. Update metrics (increment counters for dashboard)
 ```
 
+### Error Handling
+
+- On Dataverse failure (SupervisionLog creation at step 1): Retry 3 times, then send alert to Queue Managers — a missing review-completion audit entry is a critical gap in the FINRA 3110 supervision evidence trail
+- On reassignment failure (step 2.1): Log to SupervisionLog with action "ReassignmentError", notify Queue Managers, and leave item in current state for manual intervention
+- On notification failure (step 3): Log to SupervisionLog with action "NotificationError" and continue — the audit log is the critical path
+
 ---
 
 ## Connection Security
@@ -299,11 +326,11 @@ All flows should use a dedicated service principal:
 
 1. Create app registration: `FSW-Automation-SP`
 2. Grant API permissions:
-   - Microsoft Purview: Compliance Administrator role (see docs/communication-compliance-setup.md)
    - Microsoft Graph: `User.Read.All`
    - Dataverse: `user_impersonation`
-3. Create client secret, store in Key Vault
-4. Use "HTTP with Azure AD" connector
+3. Assign directory role: **Compliance Administrator** via Entra ID > Enterprise applications > `FSW-Automation-SP` > Roles and administrators (this is an Entra ID directory role, not an API permission — see docs/communication-compliance-setup.md)
+4. Create client secret, store in Key Vault
+5. Use "HTTP with Microsoft Entra ID (preauthorized)" connector
 
 ### Least Privilege
 
@@ -313,6 +340,20 @@ All flows should use a dedicated service principal:
 | AssignmentFlow | Dataverse: FSW Admin role |
 | EscalationFlow | Dataverse: FSW Admin role |
 | ReviewComplete | Dataverse: FSW Admin role |
+
+---
+
+## Environment Variables for Configurable Values
+
+The following values are specified inline in the flow definitions above for clarity, but should be configured using **Power Platform environment variables** to support ALM promotion across dev/test/prod environments:
+
+| Variable Name | Flow | Default | Description |
+|--------------|------|---------|-------------|
+| `FSW_IngestPollingMinutes` | IngestFlaggedItems | 15 | Polling interval for Communication Compliance API |
+| `FSW_EscalationCheckHours` | EscalationFlow | 1 | Interval for escalation threshold checks |
+| `FSW_PowerPlatformApiBase` | IngestFlaggedItems | `https://api.powerplatform.com` | Power Platform API base URL |
+
+When deploying to a new environment, create these environment variables in the Power Platform admin center or include them in the solution's `environmentvariabledefinition` table. Flows should reference these variables instead of hardcoded values.
 
 ---
 

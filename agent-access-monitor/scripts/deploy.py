@@ -22,9 +22,9 @@ Usage:
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --interactive --tables-only
 
-    # With Service Principal (for CI/CD)
+    # With Service Principal (for CI/CD — set AAM_CLIENT_SECRET env var)
     python deploy.py --environment-url https://org.crm.dynamics.com \\
-        --tenant-id <tenant-id> --client-id <app-id> --client-secret <secret>
+        --tenant-id <tenant-id> --client-id <app-id>
 """
 
 import argparse
@@ -180,9 +180,9 @@ Examples:
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --interactive --vars-only
 
-  # With Service Principal (for CI/CD)
+  # With Service Principal (for CI/CD — set AAM_CLIENT_SECRET env var)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
-      --tenant-id <tenant-id> --client-id <app-id> --client-secret <secret>
+      --tenant-id <tenant-id> --client-id <app-id>
         """,
     )
 
@@ -203,11 +203,6 @@ Examples:
         "--client-id",
         default=os.environ.get("AAM_CLIENT_ID"),
         help="Application (client) ID for Service Principal auth",
-    )
-    parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret for Service Principal auth (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
     )
     parser.add_argument(
         "--interactive",
@@ -257,7 +252,7 @@ Examples:
         parser.error("Cannot use multiple selective deployment flags together")
 
     # Get client secret if needed for SP auth
-    client_secret = args.client_secret
+    client_secret = os.environ.get("AAM_CLIENT_SECRET")
     if not args.interactive and args.client_id and not client_secret:
         import getpass
 

@@ -97,7 +97,7 @@ Add these trigger phrases:
     |-- Yes --> [Question 10] Security group
     |
     v
-[Condition] Zone = 3?
+[Condition] Zone >= 2?
     |-- Yes --> [Question 11] Zone rationale
     |
     v
@@ -350,6 +350,7 @@ Select the Power Automate flow that creates the EnvironmentRequest record.
 | businessPurpose | `Topic.businessPurpose` |
 | expectedUsers | `Topic.expectedUsers` |
 | securityGroupName | `Topic.securityGroupName` |
+| securityGroupId | `Topic.securityGroupId` |
 | zoneRationale | `Topic.zoneRationale` |
 
 #### Confirmation Message

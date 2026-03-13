@@ -96,7 +96,7 @@
     {
       "type": "Action.OpenUrl",
       "title": "View in Admin Center",
-      "url": "https://admin.microsoft.com/Adminportal/Home#/MessageCenter/{id}"
+      "url": "https://admin.microsoft.com/Adminportal/Home#/MessageCenter/:/messages/{id}"
     },
     {
       "type": "Action.OpenUrl",
@@ -106,7 +106,7 @@
     {
       "type": "Action.OpenUrl",
       "title": "Assess Record",
-      "url": "https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=entityrecord&etn=cr123_messagecenterlog&id={recordId}"
+      "url": "https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=entityrecord&etn=[publisher-prefix]_messagecenterlog&id={recordId}"
     }
   ]
 }

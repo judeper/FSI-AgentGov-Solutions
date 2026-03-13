@@ -33,7 +33,7 @@ All notable changes to the Conditional Access Automation solution are documented
 ### Added
 
 - Initial release
-- 8 Conditional Access policy templates for AI workloads
+- 9 Conditional Access policy templates for AI workloads
 - PowerShell deployment scripts with Graph API integration
 - Compliance verification and gap analysis
 - Policy drift detection with Teams alerting
@@ -46,6 +46,7 @@ All notable changes to the Conditional Access Automation solution are documented
 | Template | Target Application | Zone |
 |----------|-------------------|------|
 | CA-CopilotStudio-Zone1 | Copilot Studio | Zone 1 |
+| CA-AgentBuilder-Zone1 | Agent Builder | Zone 1 |
 | CA-CopilotStudio-Zone2 | Copilot Studio | Zone 2 |
 | CA-CopilotStudio-Zone3 | Copilot Studio | Zone 3 |
 | CA-AgentBuilder-Zone2 | Agent Builder | Zone 2 |

@@ -12,6 +12,10 @@
 // identify anomalous upload patterns that may require compliance review.
 // Organizations should verify results against their exception approval
 // records and specific regulatory obligations.
+//
+// Note:       This query uses the PowerPlatformDlpActivity_CL custom log table.
+//             If your environment ingests DLP events via the standard connector,
+//             substitute PowerPlatformAdminActivity as the source table.
 // ============================================================================
 
 // ----------------------------------------------------------------------------

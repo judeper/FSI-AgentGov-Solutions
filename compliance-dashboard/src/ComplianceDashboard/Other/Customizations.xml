@@ -808,6 +808,7 @@
   </Entities>
   <roles>
     <role name="CD Viewer">
+      <LocalizedName description="CD Viewer" languagecode="1033" />
       <Description description="Read-only access to Compliance Dashboard data" languagecode="1033" />
       <privileges>
         <privilege name="prvReadfsi_controlmaster" level="BusinessUnit" />
@@ -818,6 +819,7 @@
       </privileges>
     </role>
     <role name="CD Assessor">
+      <LocalizedName description="CD Assessor" languagecode="1033" />
       <Description description="Assessment entry and exception management for Compliance Dashboard" languagecode="1033" />
       <privileges>
         <privilege name="prvReadfsi_controlmaster" level="BusinessUnit" />
@@ -839,6 +841,7 @@
       </privileges>
     </role>
     <role name="CD Admin">
+      <LocalizedName description="CD Admin" languagecode="1033" />
       <Description description="Full administrative access to Compliance Dashboard" languagecode="1033" />
       <privileges>
         <privilege name="prvReadfsi_controlmaster" level="Organization" />

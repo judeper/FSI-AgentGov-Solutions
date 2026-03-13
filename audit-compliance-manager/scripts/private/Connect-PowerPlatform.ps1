@@ -15,15 +15,15 @@
     table operations (environment registry, validation history).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for all authentication methods.
+    Microsoft Entra ID tenant ID. Required for all authentication methods.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com). Required for
     Dataverse Web API token acquisition.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required for service principal authentication.
-    Optional for interactive authentication (uses well-known Power Apps client ID if not provided).
+    Microsoft Entra ID application (client) ID. Required for service principal authentication.
+    Optional for interactive authentication(uses well-known Power Apps client ID if not provided).
 
 .PARAMETER ClientSecret
     Client secret for service principal authentication. Must be provided as SecureString.
@@ -65,7 +65,7 @@
     - PowerAppsAuthenticated (bool): True if Power Platform Admin API connection succeeded
     - DataverseAccessToken (string): Bearer token for Dataverse Web API
     - DataverseUrl (string): Dataverse organization URL
-    - TenantId (string): Azure AD tenant ID
+    - TenantId (string): Microsoft Entra ID tenant ID
     - AuthMethod (string): "Interactive", "ServicePrincipal-Secret", or "ServicePrincipal-Certificate"
 #>
 

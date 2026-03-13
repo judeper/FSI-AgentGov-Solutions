@@ -62,7 +62,7 @@ For non-interactive automation:
 ## Environment Lifecycle Management (ELM) Integration
 
 For zone classification via ELM, the ELM solution must be deployed with:
-- `fsi_environment` table containing zone classifications
+- `fsi_environmentlifecycles` table containing zone classifications
 - Environment records linked to Power Platform environment GUIDs
 
 Without ELM, zone classification falls back to naming convention matching (e.g., `-Z3-` in environment name maps to Zone 3).

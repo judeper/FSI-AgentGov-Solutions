@@ -16,6 +16,7 @@ if (Test-Path $sharedZoneScript) {
         if ($EnvironmentDisplayName -match '(?i)enterprise|prod|production') { return 'Zone 3' }
         if ($EnvironmentDisplayName -match '(?i)team|shared|collab') { return 'Zone 2' }
         if ($EnvironmentDisplayName -match '(?i)personal|dev|sandbox') { return 'Zone 1' }
-        return 'Unknown'
+        # Fail-safe: unclassifiable environments default to Zone 3 (most restrictive)
+        return 'Zone 3'
     }
 }

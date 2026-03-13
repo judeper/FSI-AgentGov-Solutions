@@ -204,7 +204,7 @@ Get-MgUserRegisteredDevice -UserId $user.Id |
    - Check compliance policy assignments
 
 3. **Temporary workaround:**
-   - Use hybrid Azure AD joined as alternative
+   - Use Microsoft Entra hybrid joined as alternative
    - Check if device just needs to sync
 
 ---
@@ -370,7 +370,7 @@ Update-MgIdentityConditionalAccessPolicy `
 
 2. **If break-glass account also blocked:**
    - Contact Microsoft Support
-   - Use Azure AD emergency access procedures
+   - Use Microsoft Entra ID emergency access procedures
 
 ### Rollback All Policies
 

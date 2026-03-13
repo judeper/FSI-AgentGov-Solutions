@@ -5,19 +5,22 @@
       "connectionReferenceLogicalName": "fsi_cr_dataverse",
       "connectionReferenceDisplayName": "Dataverse Connection",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-      "description": "Dataverse connection for reading and writing compliance data to custom tables"
+      "connectionType": "perUser",
+      "description": "Dataverse connection for reading and writing compliance data to custom tables. Per-user connection type ensures audit trails reflect individual identities in FSI governance zones."
     },
     {
       "connectionReferenceLogicalName": "fsi_cr_outlook",
       "connectionReferenceDisplayName": "Office 365 Outlook Connection",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_office365",
-      "description": "Office 365 Outlook connection for sending email notifications"
+      "connectionType": "perUser",
+      "description": "Office 365 Outlook connection for sending email notifications. Per-user connection recommended for individual accountability."
     },
     {
       "connectionReferenceLogicalName": "fsi_cr_teams",
       "connectionReferenceDisplayName": "Microsoft Teams Connection",
       "connectorId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-      "description": "Microsoft Teams connection for posting alerts to Teams channels"
+      "connectionType": "perUser",
+      "description": "Microsoft Teams connection for posting alerts to Teams channels. Per-user connection recommended for FSI Zone 3 compliance."
     }
   ]
 }

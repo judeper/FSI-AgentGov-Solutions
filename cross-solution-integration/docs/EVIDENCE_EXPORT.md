@@ -134,7 +134,7 @@ This approach is consistent with the per-solution evidence export pattern used b
     -StartDate "2026-01-01" `
     -EndDate "2026-01-31" `
     -ClientId "app-guid" `
-    -ClientSecret (ConvertTo-SecureString "secret" -AsPlainText)
+    -ClientSecret (Get-AzKeyVaultSecret -VaultName "MyVault" -Name "IntClientSecret").SecretValue
 ```
 
 ### Dry Run

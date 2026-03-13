@@ -98,7 +98,7 @@ All notable changes to the Environment Lifecycle Management solution.
 - Initial release of Environment Lifecycle Management solution
 - **Data Layer:**
   - EnvironmentRequest table schema (22 columns)
-  - ProvisioningLog table schema (12 columns, immutable)
+  - ProvisioningLog table schema (11 columns, immutable)
   - Four security roles (Requester, Approver, Admin, Auditor)
   - Business rules for conditional required fields
 - **Python Scripts:**

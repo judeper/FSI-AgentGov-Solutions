@@ -24,7 +24,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -54,7 +54,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-AgentAccessEvidence.ps1 `
@@ -371,7 +371,7 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
             zone                           = $_.fsi_zone
             botLimitSharingMode            = $_.fsi_bot_limit_sharing_mode
             botAuthoringSharingDisabled     = $_.fsi_bot_authoring_sharing_disabled
-            botPublishedLimitSharingMode   = $_.fsi_bot_published_limit_sharing_mode
+            botPublishedLimitSharingMode   = $_.fsi_bot_published_bot_limit_sharing_mode
             capturedBy                     = $_.fsi_captured_by
             capturedAt                     = $_.fsi_captured_at
             isActive                       = $_.fsi_is_active

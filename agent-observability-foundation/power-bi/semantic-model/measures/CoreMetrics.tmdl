@@ -89,12 +89,10 @@ table _Measures
 			SUMX(
 				FILTER(
 					DimControl,
-					NOT(ISBLANK(
-						CALCULATE(
-							COUNTROWS(FactAgentEvents),
-							ALLEXCEPT(DimControl, DimControl[ControlId])
-						)
-					))
+					CALCULATE(
+						COUNTROWS(FactAgentEvents),
+						ALLEXCEPT(DimControl, DimControl[ControlId])
+					) > 0
 				),
 				DimControl[PillarWeight]
 			)
@@ -109,16 +107,14 @@ table _Measures
 			COUNTROWS(
 				FILTER(
 					DimControl,
-					NOT(ISBLANK(
-						CALCULATE(
-							COUNTROWS(FactAgentEvents),
-							ALLEXCEPT(DimControl, DimControl[ControlId])
-						)
-					))
+					CALCULATE(
+						COUNTROWS(FactAgentEvents),
+						ALLEXCEPT(DimControl, DimControl[ControlId])
+					) > 0
 				)
 			),
 			COUNTROWS(DimControl)
-		) * 100
+		)
 		formatString: 0.0%
 		displayFolder: "Compliance"
 		lineageTag: c2c3c4c5-c6c7-4c8c-9c0c-1c2c3c4c5c6c
@@ -127,12 +123,18 @@ table _Measures
 		COUNTROWS(
 			FILTER(
 				DimRegulation,
-				ISBLANK(
+				VAR RegId = DimRegulation[RegulationId]
+				VAR LinkedControlIds =
+					SELECTCOLUMNS(
+						FILTER(ControlRegulation, ControlRegulation[RegulationId] = RegId),
+						"ControlId", ControlRegulation[ControlId]
+					)
+				VAR EventsForReg =
 					CALCULATE(
 						COUNTROWS(FactAgentEvents),
-						ALLEXCEPT(DimRegulation, DimRegulation[RegulationId])
+						TREATAS(LinkedControlIds, DimControl[ControlId])
 					)
-				)
+				RETURN EventsForReg = 0
 			)
 		)
 		formatString: #,0

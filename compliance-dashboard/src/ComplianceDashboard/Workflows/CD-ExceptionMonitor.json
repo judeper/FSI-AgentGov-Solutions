@@ -125,9 +125,10 @@
       },
       "runtimeConfiguration": {
         "paginationPolicy": {
-          "minimumItemCount": 5000
+          "minimumItemCount": 100000
         }
-      }
+      },
+      "description": "Pagination set to 100,000 (Power Automate maximum). TRUNCATION GUARD: If length(outputs('List_Open_Exceptions')?['body/value']) equals 100,000, results are truncated — enable Dataverse archival or add date-range filters to reduce result set."
     },
     "Apply_to_each_Exception": {
       "foreach": "@outputs('List_Open_Exceptions')?['body/value']",
@@ -163,7 +164,7 @@
             ]
           },
           "type": "Compose",
-          "inputs": "@if(greater(outputs('Calculate_Days_Open'), outputs('Get_SLA_Days')), 3, if(greater(outputs('Calculate_Days_Open'), outputs('Calculate_SLA_Threshold')), 2, 1))",
+          "inputs": "@if(greaterOrEquals(outputs('Calculate_Days_Open'), outputs('Get_SLA_Days')), 3, if(greater(outputs('Calculate_Days_Open'), outputs('Calculate_SLA_Threshold')), 2, 1))",
           "description": "1=On Track, 2=At Risk, 3=Breached"
         },
         "Get_Previous_SLA_Status": {
@@ -179,7 +180,8 @@
           "runAfter": {
             "Condition_Status_Changed_to_At_Risk": [
               "Succeeded",
-              "Skipped"
+              "Skipped",
+              "Failed"
             ]
           },
           "type": "OpenApiConnection",
@@ -204,7 +206,8 @@
               "interval": "PT10S",
               "maximumInterval": "PT1M"
             }
-          }
+          },
+          "description": "N+1 pattern: individual UpdateRecord per exception. For large volumes, consider migrating to Dataverse batch changeset ($batch endpoint) to reduce API calls and improve throughput."
         },
         "Condition_Status_Changed_to_Breached": {
           "actions": {
@@ -224,66 +227,107 @@
                 }
               }
             },
-            "Send_Breach_Email": {
+            "Resolve_Breach_Recipient": {
               "runAfter": {
                 "Append_to_Breached_List": [
                   "Succeeded"
                 ]
               },
-              "type": "OpenApiConnection",
-              "inputs": {
-                "host": {
-                  "connectionName": "shared_office365",
-                  "operationId": "SendEmailV2",
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                },
-                "parameters": {
-                  "emailMessage": {
-                    "To": "@{coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress'], variables('CD_NotificationEmail'))}",
-                    "Cc": "@{variables('CD_NotificationEmail')}",
-                    "Subject": "URGENT: SLA Breached - @{items('Apply_to_each_Exception')?['fsi_name']}",
-                    "Body": "<p><strong style='color:red;'>SLA BREACHED</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Overdue:</strong> @{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>Immediate action is required. Please update the remediation plan and status.</p>",
-                    "Importance": "High"
-                  }
-                },
-                "authentication": "@parameters('$authentication')",
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "maximumInterval": "PT1M"
-                }
-              }
+              "type": "Compose",
+              "inputs": "@coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress'], variables('CD_NotificationEmail'))",
+              "description": "Resolve email recipient; used by guard condition to prevent empty-To failures"
             },
-            "Post_Teams_Alert": {
+            "Condition_Breach_Recipient_Valid": {
               "runAfter": {
-                "Send_Breach_Email": [
-                  "Succeeded",
-                  "Failed"
+                "Resolve_Breach_Recipient": [
+                  "Succeeded"
                 ]
               },
-              "type": "OpenApiConnection",
-              "inputs": {
-                "host": {
-                  "connectionName": "shared_teams",
-                  "operationId": "PostMessageToConversation",
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Resolve_Breach_Recipient')",
+                        ""
+                      ]
+                    }
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Resolve_Breach_Recipient')",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Send_Breach_Email": {
+                  "runAfter": {},
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage": {
+                        "To": "@{outputs('Resolve_Breach_Recipient')}",
+                        "Cc": "@{variables('CD_NotificationEmail')}",
+                        "Subject": "URGENT: SLA Breached - @{items('Apply_to_each_Exception')?['fsi_name']}",
+                        "Body": "<p><strong style='color:red;'>SLA BREACHED</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Overdue:</strong> @{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>Immediate action is required. Please update the remediation plan and status.</p>",
+                        "Importance": "High"
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')",
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1M"
+                    }
+                  }
                 },
-                "parameters": {
-                  "poster": "Flow bot",
-                  "location": "Chat with Flow bot",
-                  "body/recipient": "@{variables('CD_NotificationEmail')}",
-                  "body/messageBody": "<p><strong style='color:red;'>🚨 SLA BREACHED</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Owner:</strong> @{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Overdue:</strong> @{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</p>",
-                  "body/isAlert": true
-                },
-                "authentication": "@parameters('$authentication')",
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "maximumInterval": "PT1M"
+                "Post_Teams_Alert": {
+                  "runAfter": {
+                    "Send_Breach_Email": [
+                      "Succeeded",
+                      "Failed"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient": "@{outputs('Resolve_Breach_Recipient')}",
+                      "body/messageBody": "<p><strong style='color:red;'>🚨 SLA BREACHED</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Owner:</strong> @{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Overdue:</strong> @{sub(int(outputs('Calculate_Days_Open')), outputs('Get_SLA_Days'))}</p>",
+                      "body/isAlert": true
+                    },
+                    "authentication": "@parameters('$authentication')",
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1M"
+                    }
+                  },
+                  "description": "Teams notification for SLA breach — guarded by recipient validity check"
                 }
-              }
+              },
+              "else": {
+                "actions": {}
+              },
+              "description": "Guard: only send notifications if resolved recipient is not empty/null — prevents SendEmailV2 and Teams connector failure on empty To/recipient field"
             }
           },
           "runAfter": {
@@ -314,37 +358,109 @@
         },
         "Condition_Status_Changed_to_At_Risk": {
           "actions": {
-            "Send_Warning_Email": {
+            "Resolve_Warning_Recipient": {
               "runAfter": {},
-              "type": "OpenApiConnection",
-              "inputs": {
-                "host": {
-                  "connectionName": "shared_office365",
-                  "operationId": "SendEmailV2",
-                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
-                },
-                "parameters": {
-                  "emailMessage": {
-                    "To": "@{coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress'], variables('CD_NotificationEmail'))}",
-                    "Subject": "WARNING: Exception At Risk - @{items('Apply_to_each_Exception')?['fsi_name']}",
-                    "Body": "<p><strong style='color:orange;'>SLA AT RISK</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Remaining:</strong> @{sub(outputs('Get_SLA_Days'), int(outputs('Calculate_Days_Open')))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>This exception is approaching SLA breach. Please prioritize remediation efforts.</p>",
-                    "Importance": "Normal"
+              "type": "Compose",
+              "inputs": "@coalesce(items('Apply_to_each_Exception')?['fsi_owner']?['internalemailaddress'], variables('CD_NotificationEmail'))",
+              "description": "Resolve email recipient for at-risk warning; used by guard condition to prevent empty-To failures"
+            },
+            "Condition_Warning_Recipient_Valid": {
+              "runAfter": {
+                "Resolve_Warning_Recipient": [
+                  "Succeeded"
+                ]
+              },
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Resolve_Warning_Recipient')",
+                        ""
+                      ]
+                    }
+                  },
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Resolve_Warning_Recipient')",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Send_Warning_Email": {
+                  "runAfter": {},
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage": {
+                        "To": "@{outputs('Resolve_Warning_Recipient')}",
+                        "Subject": "WARNING: Exception At Risk - @{items('Apply_to_each_Exception')?['fsi_name']}",
+                        "Body": "<p><strong style='color:orange;'>SLA AT RISK</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Remaining:</strong> @{sub(outputs('Get_SLA_Days'), int(outputs('Calculate_Days_Open')))}</p><p><strong>Target Remediation Date:</strong> @{items('Apply_to_each_Exception')?['fsi_targetdate']}</p><p>This exception is approaching SLA breach. Please prioritize remediation efforts.</p>",
+                        "Importance": "Normal"
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')",
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1M"
+                    }
                   }
                 },
-                "authentication": "@parameters('$authentication')",
-                "retryPolicy": {
-                  "type": "exponential",
-                  "count": 3,
-                  "interval": "PT10S",
-                  "maximumInterval": "PT1M"
+                "Post_Teams_Warning": {
+                  "runAfter": {
+                    "Send_Warning_Email": [
+                      "Succeeded",
+                      "Failed"
+                    ]
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_teams",
+                      "operationId": "PostMessageToConversation",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams"
+                    },
+                    "parameters": {
+                      "poster": "Flow bot",
+                      "location": "Chat with Flow bot",
+                      "body/recipient": "@{outputs('Resolve_Warning_Recipient')}",
+                      "body/messageBody": "<p><strong style='color:orange;'>⚠️ SLA AT RISK</strong></p><p><strong>Exception:</strong> @{items('Apply_to_each_Exception')?['fsi_name']}</p><p><strong>Control:</strong> @{items('Apply_to_each_Exception')?['fsi_controlassessmentid']?['fsi_name']}</p><p><strong>Owner:</strong> @{items('Apply_to_each_Exception')?['fsi_owner']?['fullname']}</p><p><strong>Days Open:</strong> @{int(outputs('Calculate_Days_Open'))} (SLA: @{outputs('Get_SLA_Days')} days)</p><p><strong>Days Remaining:</strong> @{sub(outputs('Get_SLA_Days'), int(outputs('Calculate_Days_Open')))}</p>",
+                      "body/isAlert": false
+                    },
+                    "authentication": "@parameters('$authentication')",
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1M"
+                    }
+                  },
+                  "description": "Teams notification for At Risk — guarded by recipient validity check"
                 }
-              }
+              },
+              "else": {
+                "actions": {}
+              },
+              "description": "Guard: only send notifications if resolved recipient is not empty/null — prevents SendEmailV2 and Teams connector failure on empty To/recipient field"
             }
           },
           "runAfter": {
             "Condition_Status_Changed_to_Breached": [
               "Succeeded",
-              "Skipped"
+              "Skipped",
+              "Failed"
             ]
           },
           "expression": {
@@ -403,7 +519,13 @@
               "interval": "PT10S",
               "maximumInterval": "PT1M"
             }
-          }
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 100000
+            }
+          },
+          "description": "Pagination set to 100,000 (Power Automate maximum). TRUNCATION GUARD: If length(outputs('List_All_Breached_Exceptions')?['body/value']) equals 100,000, results are truncated — enable Dataverse archival or add date-range filters to reduce result set."
         },
         "Send_Daily_Summary_Email": {
           "runAfter": {
@@ -438,7 +560,8 @@
       },
       "runAfter": {
         "Apply_to_each_Exception": [
-          "Succeeded"
+          "Succeeded",
+          "Failed"
         ]
       },
       "expression": {
@@ -456,11 +579,19 @@
                 ""
               ]
             }
+          },
+          {
+            "not": {
+              "equals": [
+                "@variables('CD_NotificationEmail')",
+                "@null"
+              ]
+            }
           }
         ]
       },
       "type": "If",
-      "description": "Send daily summary at 9 AM UTC with all breached exceptions"
+      "description": "Send daily summary at 9 AM UTC with all breached exceptions. Runs after Apply_to_each_Exception on both Succeeded and Failed so that partial loop failures do not skip the summary. Note: 'Newly Breached This Cycle' count may be understated if some exceptions failed to process."
     }
     }
     },

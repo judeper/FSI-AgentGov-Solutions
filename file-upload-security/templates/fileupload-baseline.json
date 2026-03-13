@@ -52,7 +52,7 @@
             "regulations": ["FINRA 4511"]
         },
         "Zone1_NoModeration": {
-            "severity": "Low",
+            "severity": "Warning",
             "description": "File upload enabled in Zone 1 without content moderation configured",
             "regulations": ["FINRA 25-07"]
         }

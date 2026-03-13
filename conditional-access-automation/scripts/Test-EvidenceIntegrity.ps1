@@ -65,6 +65,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# WARNING: This script uses 'exit' statements for CI/CD exit codes. These are correct
+# for standalone/CI usage but will terminate the calling PowerShell session if invoked
+# in-process. Replace with 'return' if this script is ever refactored into a module function.
+
 # Resolve full path
 $resolvedPath = Resolve-Path -Path $EvidencePath -ErrorAction Stop | Select-Object -ExpandProperty Path
 

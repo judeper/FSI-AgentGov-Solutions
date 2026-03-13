@@ -27,10 +27,10 @@
     environment level. Each agent has its own baseline record.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required.
+    Microsoft Entra ID (formerly Azure AD) tenant ID. Required.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required.
+    Microsoft Entra ID (formerly Azure AD) application (client) ID. Required.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -213,6 +213,7 @@ try {
             -Interactive `
             -ErrorAction Stop
     } else {
+        # CurrentUser store: baseline capture runs interactively or as logged-in user
         $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
         $tokenResult = Get-MsalToken `
             -ClientId $ClientId `
@@ -318,19 +319,20 @@ try {
     #region WhatIf preview
 
     if ($WhatIfPreference) {
-        Write-Verbose "WhatIf mode - previewing baseline capture"
-        Write-Verbose "Total agents to capture: $($agentSettings.Count)"
-        Write-Verbose "Captured by: $CapturedBy"
+        Write-Host "WhatIf mode - previewing baseline capture"
+        Write-Host "Total agents to capture: $($agentSettings.Count)"
+        Write-Host "Captured by: $CapturedBy"
 
         foreach ($agent in $agentSettings) {
-            Write-Verbose "  Agent: $($agent.AgentName)"
-            Write-Verbose "    ID:           $($agent.AgentId)"
-            Write-Verbose "    Environment:  $($agent.EnvironmentDisplayName)"
-            Write-Verbose "    Zone:         $($agent.Zone)"
-            Write-Verbose "    Moderation:   $($agent.ContentModerationLevel)"
+            Write-Host "  Agent: $($agent.AgentName)"
+            Write-Host "    ID:           $($agent.AgentId)"
+            Write-Host "    Environment:  $($agent.EnvironmentDisplayName)"
+            Write-Host "    Zone:         $($agent.Zone)"
+            Write-Host "    Moderation:   $($agent.ContentModerationLevel)"
         }
 
-        Write-Verbose "No changes written (WhatIf mode)"
+        Write-Host "No changes written (WhatIf mode)"
+        return
     }
 
     #endregion

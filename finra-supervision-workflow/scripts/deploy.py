@@ -257,11 +257,13 @@ def deploy_tables(client: DataverseClient, dry_run: bool = False) -> int:
             failures += 1
             continue
 
-        # Create columns
+        # Column creation is intentionally skipped — the Dataverse Web API requires
+        # type-specific attribute definitions (PicklistAttributeMetadata, LookupAttributeMetadata,
+        # etc.) with global option set references that vary per environment.  Create columns
+        # manually in Power Apps maker portal or via solution import.
+        # See docs/dataverse-schema.md for the full column specification.
         for col in table_def["columns"]:
-            print(f"    [SKIPPED] Column: {col['name']} (manual creation required)")
-            # Note: Actual column creation would require more complex attribute definitions
-            # This is simplified for illustration
+            print(f"    [SKIPPED] Column: {col['name']} (manual creation required — see docs/dataverse-schema.md)")
 
     return failures
 
@@ -304,6 +306,17 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> in
             failures += 1
             continue
 
+        sla_hours = config["sla_hours"]
+        escalation_hours = config["escalation_hours"]
+        if sla_hours <= 0 or escalation_hours <= 0:
+            print(f"  Error: sla_hours and escalation_hours must be positive, got sla_hours={sla_hours}, escalation_hours={escalation_hours}")
+            failures += 1
+            continue
+        if escalation_hours <= sla_hours:
+            print(f"  Error: escalation_hours ({escalation_hours}) must be greater than sla_hours ({sla_hours})")
+            failures += 1
+            continue
+
         if dry_run:
             print(f"  [DRY RUN] Would create config: {config['name']}")
             print(f"    Zone: {config['zone']}, Tier: {config['tier']}")
@@ -334,7 +347,7 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> in
 def main():
     parser = argparse.ArgumentParser(description="Deploy FINRA Supervision Workflow solution")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
-    parser.add_argument("--tenant-id", required=True, help="Azure AD tenant ID")
+    parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID")
     parser.add_argument("--client-id", help="Service principal client ID")
     parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive authentication")

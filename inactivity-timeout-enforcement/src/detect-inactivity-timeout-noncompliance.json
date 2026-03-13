@@ -18,7 +18,7 @@
     },
     "definition": {
       "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-      "contentVersion": "1.0.1.0",
+      "contentVersion": "1.0.2.0",
       "parameters": {
         "$connections": {
           "defaultValue": {},
@@ -101,7 +101,12 @@
                 }
               },
               "runAfter": {},
-              "description": "Retrieve all environment policy rows from Dataverse. Each row maps an EnvironmentName to its zone and required maximum inactivity timeout duration."
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "description": "Retrieve all environment policy rows from Dataverse. Each row maps an EnvironmentName to its zone and required maximum inactivity timeout duration. Pagination enabled to handle tenants with >5000 policy rows."
             },
             "Compose_Policy_Array": {
               "type": "Compose",
@@ -117,13 +122,13 @@
               "type": "Http",
               "inputs": {
                 "method": "GET",
-                "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2016-11-01",
+                "uri": "@{coalesce(environmentVariables('fsi_ITE_BapApiBaseUrl'), 'https://api.bap.microsoft.com')}/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2016-11-01",
                 "headers": {
                   "Content-Type": "application/json"
                 },
                 "authentication": {
                   "type": "ManagedServiceIdentity",
-                  "audience": "https://api.bap.microsoft.com"
+                  "audience": "@{coalesce(environmentVariables('fsi_ITE_BapApiBaseUrl'), 'https://api.bap.microsoft.com')}"
                 },
                 "retryPolicy": {
                   "type": "exponential",
@@ -137,7 +142,46 @@
                   "Succeeded"
                 ]
               },
-              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication. Retries on transient failures with exponential backoff. NOTE: This action retrieves the first page of results only (default API page size). Tenants with environments exceeding the API page size (~500) should implement nextLink pagination or partition environment scanning."
+              "description": "Enumerate all Power Platform environments via BAP Admin API using MSI authentication. BAP base URL sourced from fsi_ITE_BapApiBaseUrl environment variable (defaults to commercial cloud). Retries on transient failures with exponential backoff. NOTE: This action retrieves the first page of results only (default API page size). Tenants with environments exceeding the API page size (~500) should implement nextLink pagination or partition environment scanning."
+            },
+            "Capture_NextLink": {
+              "type": "Compose",
+              "inputs": "@body('List_Environments')?['nextLink']",
+              "runAfter": {
+                "List_Environments": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Capture the nextLink property from the BAP Admin API response. A non-null value indicates additional pages of environments exist beyond the first page."
+            },
+            "Check_Pagination_Overflow": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@outputs('Capture_NextLink')",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "actions": {
+                "Compose_Pagination_Warning": {
+                  "type": "Compose",
+                  "inputs": "BAP Admin API returned a nextLink indicating additional environment pages exist. The current scan will process the first page only. Implement nextLink pagination or partition environment scanning to cover all environments.",
+                  "runAfter": {},
+                  "description": "Log pagination overflow warning without terminating the flow. The first page of environments will still be scanned."
+                }
+              },
+              "runAfter": {
+                "Capture_NextLink": [
+                  "Succeeded"
+                ]
+              },
+              "description": "If the BAP Admin API response includes a nextLink, log a warning that not all environments were scanned. The first page will still be processed. This is a safety guard until full Do Until pagination is implemented."
             },
             "Apply_to_Each_Environment": {
               "type": "Foreach",
@@ -204,13 +248,13 @@
                           "type": "Http",
                           "inputs": {
                             "method": "GET",
-                            "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/@{outputs('Set_EnvironmentName')}/settings/privacy?api-version=2021-04-01",
+                            "uri": "@{coalesce(environmentVariables('fsi_ITE_BapApiBaseUrl'), 'https://api.bap.microsoft.com')}/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/@{outputs('Set_EnvironmentName')}/settings/privacy?api-version=2021-04-01",
                             "headers": {
                               "Content-Type": "application/json"
                             },
                             "authentication": {
                               "type": "ManagedServiceIdentity",
-                              "audience": "https://api.bap.microsoft.com"
+                              "audience": "@{coalesce(environmentVariables('fsi_ITE_BapApiBaseUrl'), 'https://api.bap.microsoft.com')}"
                             },
                             "retryPolicy": {
                               "type": "exponential",
@@ -263,15 +307,25 @@
                           },
                           "description": "Extract whether inactivity timeout is enabled for this environment."
                         },
-                        "Sanitize_Duration": {
+                        "Check_Duration_Is_Null": {
                           "type": "Compose",
-                          "inputs": "@if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'S'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M')), 'M'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H')), 'H'), 'PT0M')), coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'))",
+                          "inputs": "@equals(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], null)",
                           "runAfter": {
                             "Set_TimeoutEnabled": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Sanitize ISO 8601 duration by stripping seconds component (nS). Handles PTnHnMnS, PTnMnS, PTnHnS, and PTnS formats. Seconds-only durations (PTnS) are treated as 0 minutes."
+                          "description": "Check whether the raw inactivityTimeoutDuration from BAP API is null. When timeout is enabled but duration is null, this is an indeterminate state that must be classified as Unknown — not Compliant."
+                        },
+                        "Sanitize_Duration": {
+                          "type": "Compose",
+                          "inputs": "@if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'S'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'M')), 'M'), if(contains(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H'), concat(first(split(coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'), 'H')), 'H'), 'PT0M')), coalesce(body('Parse_Privacy_Response')?['properties']?['inactivityTimeoutDuration'], 'PT0M'))",
+                          "runAfter": {
+                            "Check_Duration_Is_Null": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Sanitize ISO 8601 duration by stripping seconds component (nS). Handles PTnHnMnS, PTnMnS, PTnHnS, and PTnS formats. Seconds-only durations (PTnS) are treated as 0 minutes. Coalesces null to PT0M — the null case is handled upstream by Check_Duration_Is_Null."
                         },
                         "Parse_Duration_Minutes": {
                           "type": "Compose",
@@ -285,17 +339,17 @@
                         },
                         "Evaluate_Compliance": {
                           "type": "Compose",
-                          "inputs": "@if(not(equals(outputs('Set_TimeoutEnabled'), true)), 'Non-Compliant', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant'))",
+                          "inputs": "@if(not(equals(outputs('Set_TimeoutEnabled'), true)), 'Non-Compliant', if(equals(outputs('Check_Duration_Is_Null'), true), 'Unknown', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), 'Non-Compliant', 'Compliant')))",
                           "runAfter": {
                             "Parse_Duration_Minutes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Determine compliance status: not enabled (disabled or null) → Non-Compliant; duration exceeds required maximum → Non-Compliant; otherwise → Compliant."
+                          "description": "Determine compliance status: not enabled (disabled or null) → Non-Compliant; enabled but duration is null (indeterminate) → Unknown; duration exceeds required maximum → Non-Compliant; otherwise → Compliant."
                         },
                         "Set_Compliance_Notes": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout enabled status is null — non-compliant', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum'))))",
+                          "inputs": "@if(equals(outputs('Set_TimeoutEnabled'), null), 'Inactivity timeout enabled status is null — non-compliant', if(equals(outputs('Set_TimeoutEnabled'), false), 'Inactivity timeout is disabled', if(equals(outputs('Check_Duration_Is_Null'), true), 'Inactivity timeout is enabled but duration is null — indeterminate state classified as Unknown', if(greater(outputs('Parse_Duration_Minutes'), outputs('Set_RequiredMaxDuration')), concat('Duration ', outputs('Parse_Duration_Minutes'), 'm exceeds maximum ', outputs('Set_RequiredMaxDuration'), 'm'), concat('Compliant: ', outputs('Parse_Duration_Minutes'), 'm within ', outputs('Set_RequiredMaxDuration'), 'm maximum')))))",
                           "runAfter": {
                             "Evaluate_Compliance": [
                               "Succeeded"
@@ -305,13 +359,13 @@
                         },
                         "Map_Compliance_Status_Value": {
                           "type": "Compose",
-                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, 0)",
+                          "inputs": "@if(equals(outputs('Evaluate_Compliance'), 'Non-Compliant'), 1, if(equals(outputs('Evaluate_Compliance'), 'Unknown'), 2, 0))",
                           "runAfter": {
                             "Set_Compliance_Notes": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant."
+                          "description": "Map compliance status string to Dataverse Choice value: 0 = Compliant, 1 = Non-Compliant, 2 = Unknown."
                         },
                         "Create_Compliance_Record": {
                           "type": "OpenApiConnection",
@@ -441,6 +495,7 @@
                             "item/fsi_inactivitytimeoutenabled": null,
                             "item/fsi_timeoutduration": null,
                             "item/fsi_requiredmaxduration": 0,
+                            "item/fsi_zone": null,
                             "item/fsi_compliancestatus": 2,
                             "item/fsi_lastscandate": "@utcNow()",
                             "item/fsi_scanrunid": "@variables('ScanRunId')",
@@ -493,8 +548,10 @@
                 }
               },
               "runAfter": {
-                "List_Environments": [
-                  "Succeeded"
+                "Check_Pagination_Overflow": [
+                  "Succeeded",
+                  "Skipped",
+                  "Failed"
                 ]
               },
               "runtimeConfiguration": {
@@ -524,7 +581,12 @@
                   "Failed"
                 ]
               },
-              "description": "Query all Non-Compliant records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results."
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "description": "Query all Non-Compliant records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results. Pagination enabled as defensive measure."
             },
             "Query_Unknown_Records": {
               "type": "OpenApiConnection",
@@ -546,7 +608,12 @@
                   "Failed"
                 ]
               },
-              "description": "Query all Unknown records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results."
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "description": "Query all Unknown records from the current scan run for notification. Uses ScanRunId to isolate this execution's results. Runs after both Succeeded and Failed to capture partial results. Pagination enabled as defensive measure."
             },
             "Query_Compliant_Count": {
               "type": "OpenApiConnection",
@@ -568,7 +635,12 @@
                   "Failed"
                 ]
               },
-              "description": "Count Compliant records from the current scan run for summary statistics in the notification email. Runs after both Succeeded and Failed to capture partial results."
+              "runtimeConfiguration": {
+                "paginationPolicy": {
+                  "minimumItemCount": 100000
+                }
+              },
+              "description": "Count Compliant records from the current scan run for summary statistics in the notification email. Runs after both Succeeded and Failed to capture partial results. Pagination enabled as defensive measure."
             },
             "Condition_Has_Issues": {
               "type": "If",
@@ -576,13 +648,13 @@
                 "or": [
                   {
                     "greater": [
-                      "@length(body('Query_NonCompliant_Records')?['value'])",
+                      "@length(coalesce(body('Query_NonCompliant_Records')?['value'], json('[]')))",
                       0
                     ]
                   },
                   {
                     "greater": [
-                      "@length(body('Query_Unknown_Records')?['value'])",
+                      "@length(coalesce(body('Query_Unknown_Records')?['value'], json('[]')))",
                       0
                     ]
                   }
@@ -592,21 +664,21 @@
                 "Build_Issue_Rows": {
                   "type": "Select",
                   "inputs": {
-                    "from": "@union(body('Query_NonCompliant_Records')?['value'], body('Query_Unknown_Records')?['value'])",
-                    "select": "<tr><td>@{replace(replace(replace(coalesce(item()?['fsi_environmentname'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td><td>@{if(equals(item()?['fsi_zone'], 1), 'Personal', if(equals(item()?['fsi_zone'], 2), 'Team', if(equals(item()?['fsi_zone'], 3), 'Enterprise', string(item()?['fsi_zone']))))}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{replace(replace(replace(coalesce(item()?['fsi_notes'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr>"
+                    "from": "@union(coalesce(body('Query_NonCompliant_Records')?['value'], json('[]')), coalesce(body('Query_Unknown_Records')?['value'], json('[]')))",
+                    "select": "<tr><td>@{replace(replace(replace(coalesce(item()?['fsi_environmentname'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td><td>@{if(equals(item()?['fsi_zone'], null), 'N/A', if(equals(item()?['fsi_zone'], 1), 'Personal', if(equals(item()?['fsi_zone'], 2), 'Team', if(equals(item()?['fsi_zone'], 3), 'Enterprise', string(item()?['fsi_zone'])))))}</td><td>@{if(equals(item()?['fsi_compliancestatus'], 1), 'Non-Compliant', 'Unknown')}</td><td>@{item()?['fsi_inactivitytimeoutenabled']}</td><td>@{item()?['fsi_timeoutduration']}</td><td>@{item()?['fsi_requiredmaxduration']}</td><td>@{replace(replace(replace(coalesce(item()?['fsi_notes'], ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')}</td></tr>"
                   },
                   "runAfter": {},
                   "description": "Transform Non-Compliant and Unknown records into HTML table rows for the notification email."
                 },
                 "Compose_Email_Subject": {
                   "type": "Compose",
-                  "inputs": "@{concat(if(greater(length(body('Query_NonCompliant_Records')?['value']), 0), '[NON-COMPLIANT]', '[UNKNOWN]'), ' Inactivity Timeout Compliance Scan — ', string(add(length(body('Query_NonCompliant_Records')?['value']), length(body('Query_Unknown_Records')?['value']))), ' issue(s) detected')}",
+                  "inputs": "@{concat(if(greater(length(coalesce(body('Query_NonCompliant_Records')?['value'], json('[]'))), 0), '[NON-COMPLIANT]', '[UNKNOWN]'), ' Inactivity Timeout Compliance Scan — ', string(add(length(coalesce(body('Query_NonCompliant_Records')?['value'], json('[]'))), length(coalesce(body('Query_Unknown_Records')?['value'], json('[]'))))), ' issue(s) detected')}",
                   "runAfter": {},
                   "description": "Build email subject line with total issue count (Non-Compliant + Unknown)."
                 },
                 "Compose_Email_Body": {
                   "type": "Compose",
-                  "inputs": "<html><body><h2>Inactivity Timeout Compliance Scan Results</h2><p><strong>Scan Date:</strong> @{utcNow()}</p><p><strong>Scan Run ID:</strong> @{variables('ScanRunId')}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Compliant</strong></td><td>@{length(body('Query_Compliant_Count')?['value'])}</td></tr><tr><td><strong>Non-Compliant</strong></td><td>@{length(body('Query_NonCompliant_Records')?['value'])}</td></tr><tr><td><strong>Unknown</strong></td><td>@{length(body('Query_Unknown_Records')?['value'])}</td></tr></table><hr/><h3>Issues Requiring Attention</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr style='background-color:#f0f0f0;'><th>Environment</th><th>Zone</th><th>Status</th><th>Timeout Enabled</th><th>Actual Duration (min)</th><th>Required Max (min)</th><th>Notes</th></tr>@{join(body('Build_Issue_Rows'), '')}</table><hr/><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow. Part of the FSI Agent Governance — Inactivity Timeout Enforcement solution. Supports compliance with GLBA 501(b), SOX 302, FINRA 4511.</em></p></body></html>",
+                  "inputs": "<html><body><h2>Inactivity Timeout Compliance Scan Results</h2><p><strong>Scan Date:</strong> @{utcNow()}</p><p><strong>Scan Run ID:</strong> @{variables('ScanRunId')}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Compliant</strong></td><td>@{length(coalesce(body('Query_Compliant_Count')?['value'], json('[]')))}</td></tr><tr><td><strong>Non-Compliant</strong></td><td>@{length(coalesce(body('Query_NonCompliant_Records')?['value'], json('[]')))}</td></tr><tr><td><strong>Unknown</strong></td><td>@{length(coalesce(body('Query_Unknown_Records')?['value'], json('[]')))}</td></tr></table><hr/><h3>Issues Requiring Attention</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr style='background-color:#f0f0f0;'><th>Environment</th><th>Zone</th><th>Status</th><th>Timeout Enabled</th><th>Actual Duration (min)</th><th>Required Max (min)</th><th>Notes</th></tr>@{join(body('Build_Issue_Rows'), '')}</table><hr/><p><em>This alert was generated by the ITE - Detect Inactivity Timeout Non-Compliance flow. Part of the FSI Agent Governance — Inactivity Timeout Enforcement solution. Supports compliance with GLBA 501(b), SOX 302, FINRA 4511.</em></p></body></html>",
                   "runAfter": {
                     "Build_Issue_Rows": [
                       "Succeeded"
@@ -665,13 +737,16 @@
               },
               "runAfter": {
                 "Query_NonCompliant_Records": [
-                  "Succeeded"
+                  "Succeeded",
+                  "Failed"
                 ],
                 "Query_Unknown_Records": [
-                  "Succeeded"
+                  "Succeeded",
+                  "Failed"
                 ],
                 "Query_Compliant_Count": [
-                  "Succeeded"
+                  "Succeeded",
+                  "Failed"
                 ]
               },
               "description": "Guard condition: only send notification when Non-Compliant count > 0 OR Unknown count > 0. If all environments are compliant, no email is sent."

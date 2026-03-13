@@ -1,6 +1,6 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
@@ -89,6 +89,12 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 - **30-day runtime limit**: The sequential approval loop (concurrency=1) with 7-day timeouts means >4 agents will exceed Power Automate's 30-day maximum runtime limit, silently dropping later agents. For environments with >4 non-compliant agents, consider batch approval or a child flow pattern.
 - **Sovereign cloud deployment**: The BAP Admin API base URL is configurable via the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. Override for GCC, GCC-High, or DoD deployments.
+- **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to prevent repeated approval requests to the same approver. Override by manually resetting `fsi_approval_status` in Dataverse.
+- **Adaptive card templates (remediation)**: `adaptive-card-asard-remediation-approval.json` and `adaptive-card-asard-remediation-result.json` are reference templates for external integrations (e.g., custom Power Apps, third-party dashboards). The remediation approval workflow uses inline Markdown for approval and notification messages — these templates are not loaded by the workflow at runtime.
+- **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Ensure the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).
+- **Exception query pagination**: The exception review workflow retrieves up to 5,000 records per query (Dataverse maximum per request). Environments with >5,000 active exceptions should use Dataverse views or custom reporting for complete visibility.
+- **Per-agent approved groups query (N+1 pattern)**: The remediation workflow queries approved security groups per-agent inside the sequential loop. Agents in the same zone redundantly fetch the same approved groups. Pre-fetching approved groups for all 3 zones before the loop would eliminate redundant Dataverse API calls. This is a performance optimization — correctness is unaffected.
+- **Dataverse pagination (remediation)**: The remediation workflow uses `$skip`-based pagination with `@odata.nextLink` absence detection. For deployments with >5,000 non-compliant agents, `$skip` offsets may produce inconsistent results due to server-side cursor resets. Consider reducing the query window or using Dataverse views for large-scale environments.
 
 ## License
 

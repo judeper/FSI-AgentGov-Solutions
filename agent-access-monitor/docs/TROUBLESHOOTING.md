@@ -18,7 +18,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 |-------|-------|------------|
 | MSAL.PS module not found | Module not installed | Run `Install-Module MSAL.PS -Scope CurrentUser -Force` |
 | Interactive auth popup not appearing | Browser block or policy restriction | Try a different browser; check Conditional Access policies |
-| Certificate auth fails with 401 | Certificate not uploaded or expired | Verify certificate in Azure AD app registration; check expiration date |
+| Certificate auth fails with 401 | Certificate not uploaded or expired | Verify certificate in Microsoft Entra ID app registration; check expiration date |
 | Insufficient privileges | Missing Dataverse role | Assign Dataverse User role (minimum) or System Administrator for schema deployment |
 | Token expired during long export | Access token TTL exceeded | Re-run the export; token lifetime is typically 60 minutes |
 

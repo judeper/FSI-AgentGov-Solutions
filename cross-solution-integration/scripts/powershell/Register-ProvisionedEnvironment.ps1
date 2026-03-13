@@ -43,7 +43,7 @@
 .EXAMPLE
     .\Register-ProvisionedEnvironment.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "guid" -EnvironmentId "env-guid" -EnvironmentName "TRADING-Ops-PROD" `
-        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 2 -Interactive
+        -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
 
 .NOTES
     Version: 1.0.0
@@ -116,8 +116,28 @@ $canonicalZone = Get-CanonicalZoneValue -ZoneValue $Zone
 
 # Check if environment already registered
 Write-Host "Checking ACV environment registry..." -ForegroundColor Gray
-$checkUrl = "$($connection.BaseUrl)/fsi_environmentregistrys?`$filter=fsi_environmentid eq '$EnvironmentId'&`$top=1"
-$existing = (Invoke-RestMethod -Uri $checkUrl -Headers $connection.Headers -Method Get).value
+$sanitizedEnvId = $EnvironmentId -replace "[^0-9a-fA-F\-]", ''
+$checkUrl = "$($connection.BaseUrl)/fsi_environmentregistrys?`$filter=fsi_environmentid eq '$sanitizedEnvId'&`$top=1"
+
+$maxRetries = 3
+$retryCount = 0
+$existing = $null
+while ($true) {
+    try {
+        $existing = (Invoke-RestMethod -Uri $checkUrl -Headers $connection.Headers -Method Get).value
+        break
+    } catch {
+        $retryCount++
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+            $delay = [math]::Pow(2, $retryCount) * 5
+            Write-Warning "Transient error ($statusCode) checking registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+            Start-Sleep -Seconds $delay
+        } else {
+            throw
+        }
+    }
+}
 
 $record = @{
     'fsi_name'            = $EnvironmentName
@@ -125,7 +145,7 @@ $record = @{
     'fsi_zone'            = $canonicalZone
     'fsi_status'          = 1  # Active
     'fsi_environmenttype' = $EnvironmentType
-    'fsi_discoveredon'    = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    'fsi_discoveredon'    = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
     'fsi_notes'           = "Auto-registered via ELM provisioning$(if ($RequestNumber) { ". Request: $RequestNumber" })"
 }
 
@@ -141,7 +161,23 @@ if ($existing.Count -gt 0) {
     } else {
         $updateUrl = "$($connection.BaseUrl)/fsi_environmentregistrys($existingId)"
         $body = $record | ConvertTo-Json -Depth 5
-        Invoke-RestMethod -Uri $updateUrl -Headers $connection.Headers -Method Patch -Body $body
+        $retryCount = 0
+        while ($true) {
+            try {
+                Invoke-RestMethod -Uri $updateUrl -Headers $connection.Headers -Method Patch -Body $body
+                break
+            } catch {
+                $retryCount++
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+                    $delay = [math]::Pow(2, $retryCount) * 5
+                    Write-Warning "Transient error ($statusCode) updating registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+                    Start-Sleep -Seconds $delay
+                } else {
+                    throw
+                }
+            }
+        }
         Write-Host "[Updated] Environment registry: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
     }
 } else {
@@ -150,8 +186,41 @@ if ($existing.Count -gt 0) {
     } else {
         $createUrl = "$($connection.BaseUrl)/fsi_environmentregistrys"
         $body = $record | ConvertTo-Json -Depth 5
-        $created = Invoke-RestMethod -Uri $createUrl -Headers $connection.Headers -Method Post -Body $body
-        Write-Host "[Created] Environment registry: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+        $retryCount = 0
+        $created = $null
+        $confirmedViaRecheck = $false
+        while ($true) {
+            try {
+                $created = Invoke-RestMethod -Uri $createUrl -Headers $connection.Headers -Method Post -Body $body
+                break
+            } catch {
+                $retryCount++
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+                    # Re-query before retry to avoid duplicate creation
+                    try {
+                        $recheck = (Invoke-RestMethod -Uri $checkUrl -Headers $connection.Headers -Method Get).value
+                        if ($recheck.Count -gt 0) {
+                            $created = $recheck[0]
+                            $confirmedViaRecheck = $true
+                            break
+                        }
+                    } catch {
+                        Write-Warning "Duplicate-avoidance recheck also failed — proceeding with retry"
+                    }
+                    $delay = [math]::Pow(2, $retryCount) * 5
+                    Write-Warning "Transient error ($statusCode) creating registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+                    Start-Sleep -Seconds $delay
+                } else {
+                    throw
+                }
+            }
+        }
+        if ($confirmedViaRecheck) {
+            Write-Host "[Created] Environment registry (confirmed on re-check): $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+        } else {
+            Write-Host "[Created] Environment registry: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+        }
         Write-Host "  Registry ID: $($created.fsi_environmentregistryid)" -ForegroundColor Gray
     }
 }

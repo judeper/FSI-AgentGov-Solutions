@@ -11,6 +11,7 @@ All files located in the `src/` directory:
 
 **Server-Side Validation:**
 - [ ] **ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
+- [ ] **BUILD-INSTRUCTIONS.md** — Step-by-step guide to build the plugin DLL from source
 - [ ] **MimeConfig.json** — MIME type allowlist/blocklist configuration
 
 **DLP Policy:**
@@ -28,6 +29,7 @@ All files located in the `src/` directory:
 # From the mime-type-restrictions directory:
 zip -r MIME-Type-Restrictions-v1.0.1.zip \
   SOLUTION-DOCUMENTATION.md \
+  src/BUILD-INSTRUCTIONS.md \
   src/ValidateMimeTypePlugin.cs \
   src/MimeConfig.json \
   src/dlp-policy-template.json \
@@ -41,6 +43,7 @@ zip -r MIME-Type-Restrictions-v1.0.1.zip \
 MIME-Type-Restrictions-v1.0.1/
 ├── SOLUTION-DOCUMENTATION.md
 ├── Dataverse-Plugin/
+│   ├── BUILD-INSTRUCTIONS.md
 │   ├── ValidateMimeTypePlugin.cs
 │   └── MimeConfig.json
 ├── DLP-Policy/
@@ -101,7 +104,7 @@ Business Value:
 
 Regulatory Support:
 • NIST 800-53 SI-3 — Malicious Code Protection
-• FINRA 4511 — Supervision
+• FINRA 3110 — Supervision
 • SEC 17a-4 — Recordkeeping
 
 Next Steps:
@@ -155,7 +158,7 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 7 files are included (1 doc, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
+- [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)

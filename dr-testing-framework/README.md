@@ -15,7 +15,7 @@ The DR Testing Framework validates that AI agents and supporting infrastructure 
 | **Automated Testing** | Scheduled and on-demand DR test execution |
 | **RTO/RPO Measurement** | Track actual recovery times vs. targets (Note: RPO measurement is not yet implemented — requires backup timestamp comparison) |
 | **Validation Checks** | Verify agent functionality post-recovery |
-| **Evidence Collection** | Generate compliance artifacts (planned) |
+| **Evidence Collection** | Generate compliance artifacts (stub — `Export-DREvidence.ps1` packages audit logs; full Dataverse export planned) |
 | **Gap Tracking** | Identify and monitor recovery gaps (planned) |
 
 ## Architecture
@@ -104,7 +104,7 @@ Complete infrastructure recovery.
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.1.0+ | Environment context |
+| Environment Lifecycle Management | v1.1.0+ | Environment context (informational — not imported or validated at runtime) |
 
 ## Quick Start
 
@@ -127,17 +127,19 @@ Complete infrastructure recovery.
 
 Check test results in Dataverse.
 
-**Planned:** `New-DRTestSchedule.ps1` and `Export-DREvidence.ps1` are under development.
+**Planned:** `New-DRTestSchedule.ps1` is under development. `Export-DREvidence.ps1` is available as a stub — it packages audit log files into an evidence directory and generates a JSON metadata file. Full Dataverse query and attestation support is planned.
 
 > **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
 
 ## Deployment
 
-> **Planned** — Deployment instructions will be added when implementation is complete.
+> **Planned** — A deployable Power Platform solution package (solution.xml, customizations.xml) for automated Dataverse schema deployment is planned to reduce deployment errors and support ALM pipelines. Until then, create the table manually as described below.
 
-### Dataverse Schema: `fsi_drtestresults`
+### Dataverse Schema: `fsi_drtestresult`
 
-The `Save-TestResult` function writes to a custom Dataverse table `fsi_drtestresults`. Create this table manually with the following columns:
+The `Save-TestResult` function writes to a custom Dataverse table with **logical name** `fsi_drtestresult` (singular). Dataverse will auto-generate the entity set name `fsi_drtestresults` used by the API. Create this table manually with the following columns:
+
+> **Verification:** Confirm the entity set name by calling `GET {env}/api/data/v9.2/EntityDefinitions(LogicalName='fsi_drtestresult')?$select=EntitySetName`.
 
 | Column (Logical Name) | Type | Description |
 |------------------------|------|-------------|
@@ -148,6 +150,7 @@ The `Save-TestResult` function writes to a custom Dataverse table `fsi_drtestres
 | `fsi_rtomet` | Yes/No (Boolean) | Whether actual RTO met the target |
 | `fsi_status` | Choice (Option Set) | 1 = Pass, 2 = Fail |
 | `fsi_validationchecks` | Multiple Lines of Text | JSON array of validation check results |
+| `fsi_correlationid` | Single Line of Text (8) | Short correlation ID linking the Dataverse record to its audit log file |
 
 ## Documentation
 
@@ -274,13 +277,13 @@ The framework generates compliance evidence:
 
 > Financial institutions must test business continuity plans.
 
-**Coverage:** Automated testing with documented results.
+**Coverage:** Automated testing with documented results. (Note: RPO measurement is not yet implemented — actual RPO validation requires backup timestamp comparison.)
 
 ### SEC Rule 17a-4
 
 > Records must be recoverable.
 
-**Coverage:** Data recovery validation with RPO measurement.
+**Coverage:** Data recovery validation with RPO measurement. (Note: RPO measurement is not yet implemented — currently tracks targets only. Actual RPO validation requires backup timestamp comparison.)
 
 ### FINRA Rule 4370
 
@@ -301,6 +304,8 @@ The framework generates compliance evidence:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.2 | March 2026 | Sovereign cloud auth endpoint mapping, ClientId validation, exit code 2 for persistence failures |
+| 1.0.1 | March 2026 | Write-AuditLog stream fix, Retry-After support, SSRF validation, verbose diagnostics |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
@@ -309,14 +314,22 @@ The framework generates compliance evidence:
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Authentication failure | Expired token or insufficient permissions | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles |
+| Authentication failure | Expired token, insufficient permissions, or wrong auth endpoint for sovereign clouds | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles. For sovereign tenants, the script auto-selects the correct Entra ID endpoint (China: `login.chinacloudapi.cn`, GCC High: `login.microsoftonline.us`). |
 | RTO target exceeded | Recovery steps slower than expected | Review environment size; pre-stage backups closer to target region |
 | Validation checks fail | Agent or connectors not restored correctly | Verify backup integrity; re-run individual test scenario with `-Verbose` |
 | Dataverse save error | Missing schema or insufficient Dataverse capacity | Import solution package; check storage quota |
 
 ### Logs
 
-Review script output for `[ERROR]` entries. Enable verbose output with `-Verbose` flag.
+Review script output for `[ERROR]` and `[WARN]` audit log entries. Enable verbose output with `-Verbose` for diagnostic details on token acquisition, retry attempts, and Dataverse saves.
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| **0** | Test passed, results saved (or DryRun / no credentials) |
+| **1** | Test failed (RTO exceeded or validation check failed) |
+| **2** | Test passed but Dataverse persistence failed (auth error or save error) |
 
 ## Support
 
@@ -324,4 +337,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v1.0.0*
+*FSI Agent Governance Framework - DR Testing Framework v1.0.2*

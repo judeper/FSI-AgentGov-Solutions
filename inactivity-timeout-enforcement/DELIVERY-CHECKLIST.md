@@ -16,14 +16,14 @@ File located in the `src/` directory:
 **Option A: Create ZIP Archive**
 ```bash
 # From the inactivity-timeout-enforcement directory:
-zip -r ITE-Solution-v1.0.1.zip \
+zip -r ITE-Solution-v1.0.2.zip \
   SOLUTION-DOCUMENTATION.md \
   src/detect-inactivity-timeout-noncompliance.json
 ```
 
 **Option B: Create Structured Folder**
 ```
-ITE-Solution-v1.0.1/
+ITE-Solution-v1.0.2/
 ├── SOLUTION-DOCUMENTATION.md
 └── solution-components/
     └── detect-inactivity-timeout-noncompliance.json
@@ -31,14 +31,14 @@ ITE-Solution-v1.0.1/
 
 ### 4. Email Template
 
-**Subject:** Inactivity Timeout Enforcement (ITE) - Solution Delivery v1.0.1
+**Subject:** Inactivity Timeout Enforcement (ITE) - Solution Delivery v1.0.2
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Inactivity Timeout Enforcement (ITE) solution package, version 1.0.1.
+Please find attached the Inactivity Timeout Enforcement (ITE) solution package, version 1.0.2.
 
 This solution provides continuous automated monitoring of Power Platform environment inactivity
 timeout configurations with zone-based policy enforcement.
@@ -72,7 +72,7 @@ Business Value:
 Regulatory Support:
 • GLBA 501(b) — Safeguards Rule
 • SOX 302 — Internal Controls over Financial Reporting
-• FINRA 4511 — Supervision
+• FINRA 4511 — General Requirements (Books and Records)
 • NIST 800-53 AC-11 (Session Lock) and AC-12 (Session Termination)
 
 Next Steps:
@@ -101,7 +101,7 @@ Before sending to customer, verify:
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File size is reasonable (JSON file should be < 100KB)
 - [ ] No sensitive data in JSON file (tenant IDs, email addresses should be placeholders)
-- [ ] Version numbers are consistent (v1.0.1) across all files
+- [ ] Version numbers are consistent (v1.0.2) across all files
 
 ### 6. Files NOT to Include
 
@@ -203,6 +203,6 @@ Provide this checklist to customer for post-deployment validation:
 
 ---
 
-**Package Version:** v1.0.1
-**Release Date:** February 2026
+**Package Version:** v1.0.2
+**Release Date:** March 2026
 **Solution:** Inactivity Timeout Enforcement (ITE)

@@ -47,6 +47,19 @@
 
 > ⚠️ **Deprecation Warning:** API key authentication (`x-api-key`) is deprecated and will be removed **March 31, 2026**. See [Authentication Migration](#authentication-migration) for Entra ID setup.
 
+### Defender for Cloud Apps (Optional)
+
+| Permission | Scope | Required |
+|------------|-------|----------|
+| **ThreatHunting.Read.All** | Microsoft Graph | Run Advanced Hunting queries |
+
+**Module required:** `Microsoft.Graph.Security`
+
+```powershell
+Install-Module Microsoft.Graph.Security -Force
+Connect-MgGraph -Scopes "ThreatHunting.Read.All"
+```
+
 ### Azure Automation (Optional)
 
 | Role | Scope | Capabilities |
@@ -156,6 +169,7 @@ az keyvault secret set `
 | `compliance.microsoft.com` | 443 | Purview audit search |
 | `api.applicationinsights.io` | 443 | App Insights REST API |
 | `*.blob.core.windows.net` | 443 | Azure Blob Storage |
+| `graph.microsoft.com` | 443 | Defender Advanced Hunting (Graph API) |
 | `*.vault.azure.net` | 443 | Azure Key Vault |
 
 ### Firewall Rules
@@ -252,8 +266,14 @@ customEvents
 
    # New (Entra ID)
    Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
-   $token = (Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io").Token
-   $headers = @{ "Authorization" = "Bearer $token" }
+   $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+   # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+   $tokenString = if ($tokenResult.Token -is [System.Security.SecureString]) {
+       $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+   } else {
+       $tokenResult.Token
+   }
+   $headers = @{ "Authorization" = "Bearer $tokenString" }
    ```
 
 5. **Test Before Deadline**

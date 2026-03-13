@@ -58,7 +58,8 @@ Each governance zone has a minimum required content moderation level:
 | Zone 2 | Low | High | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | Medium | Best practice uplift recommended for team agents |
 | Zone 1 | Low | High | Governance gap — Below minimum content moderation threshold |
-| Unknown | Any non-compliant | Warning | Governance gap — Environment not assigned to zone |
+| Unknown | Low | High | Governance gap — Unclassified environment with minimal content moderation |
+| Unknown | Medium | Warning | Governance gap — Environment not assigned to zone |
 
 ## Features
 
@@ -134,7 +135,9 @@ The following placeholder values in solution files must be replaced with your or
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/moderation-validation-flow.json` |
+| `your-dataverse-url-here` | Your Dataverse environment URL | `src/moderation-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/moderation-validation-flow.json` |
+| `https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/` | Your organization's documentation URL for Control 1.27 | `src/moderation-validation-flow.json` (inline adaptive card in `Post_Teams_Card`) |
 
 > **Note:** The flow JSON contains 10 configuration placeholders in total (including `ClientId`, `CertificateThumbprint`, `SubscriptionId`, `ResourceGroup`, `AutomationAccount`, `TeamsGroupId`, `TeamsChannelId`, `DataverseUrl`). See [Flow Setup Guide](docs/FLOW_SETUP.md#step-2-configure-variables) for the complete list with descriptions.
 

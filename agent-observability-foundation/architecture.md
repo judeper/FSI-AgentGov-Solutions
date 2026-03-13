@@ -18,7 +18,7 @@ graph LR
     end
 
     subgraph "Long-Term Storage"
-        D[ADLS Gen2<br/>Storage Account]
+        D[StorageV2<br/>Storage Account]
         E[SEC 17a-4<br/>Compliance Archive]
     end
 
@@ -87,7 +87,7 @@ The Log Analytics workspace serves as the unified query surface for telemetry da
 
 **Framework Control Reference:** Supports Control 3.2 (Usage Analytics and Activity Monitoring) by providing real-time query capability for session metrics, message volumes, and interaction patterns.
 
-### ADLS Gen2 Storage Account
+### Long-Term Storage Account
 
 **Type:** StorageV2 (general-purpose v2)
 **Hierarchical Namespace:** DISABLED (required for Diagnostic Settings export)
@@ -104,9 +104,11 @@ The storage account receives telemetry exports via Azure Monitor Diagnostic Sett
 
 ### Diagnostic Settings
 
-**Export Categories:**
+**Export Categories (Python / default):**
 - `AppTraces`: Application trace logs
 - `AppEvents`: Custom events including CopilotInteraction
+
+The ARM template (`templates/diagnostic-settings.json`) additionally exports `AppRequests` and `AppExceptions` for environments that need full request-level and error telemetry. The Python provisioning path (`scripts/provision.py`) defaults to the two categories above but can be extended via the `log_categories` config key.
 
 **Retention Policy:** Configured at storage account level (separate from Log Analytics retention)
 

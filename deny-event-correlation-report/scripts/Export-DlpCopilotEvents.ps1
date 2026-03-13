@@ -61,31 +61,9 @@ param(
 
 #region Functions
 
-function Connect-ToExchangeOnline {
-    <#
-    .SYNOPSIS
-        Connects to Exchange Online if not already connected.
-    #>
-    # Check for an active EXO session (not just module presence)
-    $exoSession = Get-ConnectionInformation -ErrorAction SilentlyContinue |
-        Where-Object { $_.State -eq 'Connected' }
-    if (-not $exoSession) {
-        Write-Verbose "Connecting to Exchange Online..."
-        try {
-            # Interactive auth is used here for manual/dev runs. For Azure Automation
-            # (unattended), pass -CertificateThumbprint, -AppId, and -Organization
-            # parameters instead. See docs/troubleshooting.md for certificate auth setup.
-            Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
-            Write-Verbose "Connected to Exchange Online."
-        }
-        catch {
-            throw "Failed to connect to Exchange Online: $_"
-        }
-    }
-    else {
-        Write-Verbose "Already connected to Exchange Online."
-    }
-}
+# Dot-source shared Exchange Online connection helper to avoid duplicate definitions
+# when the orchestrator runs multiple scripts in-process.
+. "$PSScriptRoot\Connect-ExchangeOnlineHelper.ps1"
 
 function Get-DlpAuditEvents {
     <#
@@ -114,7 +92,26 @@ function Get-DlpAuditEvents {
             ResultSize     = 5000
         }
 
-        $results = Search-UnifiedAuditLog @params -ErrorAction Stop
+        # Retry loop for Search-UnifiedAuditLog throttling (HTTP 429)
+        $results = $null
+        $retryCount = 0
+        $maxRetries = 3
+        $baseDelay = 60
+        while ($true) {
+            try {
+                $results = Search-UnifiedAuditLog @params -ErrorAction Stop
+                break
+            }
+            catch {
+                $retryCount++
+                if ($retryCount -ge $maxRetries -or $_.Exception.Message -notmatch '429|throttl|Too Many Requests') {
+                    throw
+                }
+                $delay = $baseDelay * [math]::Pow(2, $retryCount - 1)
+                Write-Warning "Search-UnifiedAuditLog throttled. Retrying in ${delay}s (attempt $retryCount of $maxRetries)..."
+                Start-Sleep -Seconds $delay
+            }
+        }
 
         if ($results) {
             $allEvents.AddRange($results)
@@ -148,12 +145,11 @@ function ConvertTo-CopilotDlpEvent {
         try {
             $auditData = $AuditRecord.AuditData | ConvertFrom-Json
 
-            # Check if this is a Copilot-related DLP event
+            # Check if this is a Copilot-related DLP event (workload or policy name only)
             $isCopilotRelated = (
                 $auditData.Workload -eq "MicrosoftCopilot" -or
                 $auditData.Workload -match "Copilot" -or
-                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" }) -or
-                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter -and $PolicyFilter -ne "*" })
+                ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" })
             )
 
             if (-not $isCopilotRelated -and $PolicyFilter -eq "*") {
@@ -163,7 +159,9 @@ function ConvertTo-CopilotDlpEvent {
             }
 
             if ($isCopilotRelated -or $PolicyFilter -ne "*") {
-                # Apply PolicyNameFilter: skip events that don't match when a filter is specified
+                # When a PolicyNameFilter is specified, non-Copilot DLP events matching
+                # the filter are intentionally included to support cross-workload policy
+                # analysis (e.g., a DLP policy that spans Copilot and Exchange).
                 if ($PolicyFilter -and $PolicyFilter -ne "*") {
                     $matchesFilter = $auditData.PolicyDetails | Where-Object { $_.PolicyName -like $PolicyFilter }
                     if (-not $matchesFilter) {
@@ -206,7 +204,7 @@ function ConvertTo-CopilotDlpEvent {
                     SensitiveInfoTypes  = $sitNames
                     SitMatchDetails     = $sitMatches
                     HasOverride         = $hasOverride
-                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo } else { "" }
+                    OverrideJustification = if ($hasOverride) { $auditData.ExceptionInfo | ConvertTo-Json -Compress -Depth 5 } else { "" }
                     RecordType          = $auditData.RecordType
                 }
             }
@@ -270,6 +268,12 @@ try {
 
     foreach ($key in $summary.Keys) {
         Write-Host "  $key`: $($summary[$key])" -ForegroundColor Gray
+    }
+
+    # Ensure output directory exists
+    $outputDir = Split-Path -Path $OutputPath -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
 
     # Export to CSV

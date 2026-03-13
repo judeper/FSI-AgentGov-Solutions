@@ -139,12 +139,14 @@ Install-Module Az.KeyVault -Scope CurrentUser
 # Dry run first to preview changes
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
     -DryRun
 
 # Deploy policies
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
     -EnablePolicies $false  # Deploy in report-only mode first
 ```
@@ -155,6 +157,7 @@ Install-Module Az.KeyVault -Scope CurrentUser
 # Check policy coverage
 .\scripts\Test-PolicyCompliance.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -OutputPath "./reports"
 ```
 
@@ -166,6 +169,7 @@ After testing in report-only mode:
 # Enable policies
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -TemplateSet "Zone3" `
     -EnablePolicies $true
 ```
@@ -232,6 +236,7 @@ Creates and configures a service principal for CA policy automation.
 - `Policy.ReadWrite.ConditionalAccess` - Manage CA policies
 - `Application.Read.All` - Read application registrations
 - `Directory.Read.All` - Read directory data
+- `AuditLog.Read.All` - Read sign-in and audit logs
 
 ### Deploy-CAPolicies.ps1
 
@@ -240,6 +245,7 @@ Deploys Conditional Access policy templates.
 ```powershell
 .\scripts\Deploy-CAPolicies.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -TemplateSet "<All|Zone1|Zone2|Zone3>" `
     [-TemplatePath "./templates"] `
     [-EnablePolicies <$true|$false>] `
@@ -258,6 +264,7 @@ Verifies policy coverage and identifies gaps.
 ```powershell
 .\scripts\Test-PolicyCompliance.ps1 `
     -TenantId "<tenant-id>" `
+    -ConfigPath "./config.json" `
     -OutputPath "./reports" `
     [-IncludeReportOnly]
 ```
@@ -356,6 +363,16 @@ See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete comman
 | Users blocked unexpectedly | Missing exclusion | Add break-glass accounts to exclusions |
 | MFA prompt loops | Session controls conflict | Check for overlapping policies |
 
+## Known Limitations & Roadmap
+
+### Validation Runbook (Stub)
+
+`scripts/Start-CAAValidationRunbook.ps1` is a placeholder that returns `OverallStatus: 'NotImplemented'` with zero compliance data. Both flows (daily and provisioning hook) depend on this runbook for actual compliance validation. Flows will not crash (the runbook returns a valid JSON structure), but all compliance results are meaningless until implemented. Full implementation requires Entra ID policy enumeration, zone classification, and drift detection — a multi-sprint development effort. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) alongside Dataverse infrastructure. Track progress via the repository issue tracker.
+
+### Dataverse Client Module (Phase 2)
+
+`scripts/private/CAAClient.psm1` has all 8 Dataverse functions unimplemented (each throws "Not implemented — requires Phase 2 Dataverse infrastructure"). `Export-CAAComplianceEvidence.ps1` gracefully falls back to `Get-AzAccessToken`, but the Dataverse integration layer is non-functional. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) when Dataverse schema creation scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are also delivered. Track progress via the repository issue tracker.
+
 ### Break-Glass Accounts
 
 Always exclude emergency access accounts from CA policies:
@@ -405,7 +422,7 @@ Implementation guidance in FSI-AgentGov:
 
 | Component | File | Purpose |
 |-----------|------|--------|
-| Policy Templates | `templates/*.json` | 8 CA policy templates for AI workloads |
+| Policy Templates | `templates/*.json` | 9 CA policy templates for AI workloads |
 | Deploy Policies | `scripts/Deploy-CAPolicies.ps1` | Template deployment with WhatIf support |
 | Service Principal | `scripts/Register-ServicePrincipal.ps1` | App registration with Key Vault integration |
 | Compliance Check | `scripts/Test-PolicyCompliance.ps1` | Coverage verification with Dataverse persistence |
@@ -444,6 +461,48 @@ The following placeholder values in solution flow files must be replaced with yo
 | `TeamsChannelId` (empty) | Your Teams channel ID for alerts | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
 | `ComplianceDistributionList` (empty) | Your compliance team distribution list | `src/caa-daily-compliance-flow.json` |
 | `your-org` | Your GitHub organization name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+
+## Known Issues and Operational Notes
+
+### Module Architecture
+
+The `conditional-access-automation` module (`scripts/conditional-access-automation.psd1`) exports reusable helper functions from `scripts/private/` (e.g., `Connect-CAAGraphSession`, `Get-CAAPolicyBaseline`, `Compare-CAAPolicyBaseline`) and the Dataverse client stubs from `scripts/private/CAAClient.psm1`.
+
+The top-level scripts (`Deploy-CAPolicies.ps1`, `Test-PolicyCompliance.ps1`, `Register-ServicePrincipal.ps1`, `Watch-PolicyDrift.ps1`, `Export-PolicyBaseline.ps1`, `Export-CAAComplianceEvidence.ps1`, `Test-EvidenceIntegrity.ps1`) are **standalone entry points** with their own `param()` blocks and `#Requires` directives. Run them directly:
+
+```powershell
+.\scripts\Test-PolicyCompliance.ps1 -TenantId $tenantId -ConfigPath .\config.json
+.\scripts\Watch-PolicyDrift.ps1 -TenantId $tenantId -BaselinePath .\baseline.json
+```
+
+Do **not** expect these scripts to be available as functions via `Import-Module conditional-access-automation`. The module provides the internal helper functions only.
+
+### PowerShell Script Considerations
+
+| Script | Note | Mitigation |
+|--------|------|------------|
+| `Register-ServicePrincipal.ps1` | Uses `ConvertTo-SecureString -AsPlainText` to convert credential values before storing in Key Vault. This is the required pattern for `Set-AzKeyVaultSecret` — the plaintext value exists only in process memory during the call and is not persisted outside Key Vault. | Ensure the script is run from a secure workstation. Do not pass credentials via command-line arguments (they appear in process lists). |
+| `Register-ServicePrincipal.ps1` | Has `#Requires -Modules Az.KeyVault` — users who only need compliance checking or drift detection do not need Az.KeyVault installed. Run `Test-PolicyCompliance.ps1` or `Watch-PolicyDrift.ps1` directly as standalone scripts. | Only install Az.KeyVault when running `Register-ServicePrincipal.ps1`. |
+| `Deploy-CAPolicies.ps1` | Placeholder substitution (e.g., `<zone-3-users-group-id>`) does not validate that substituted values are well-formed GUIDs before calling the Graph API. | Always run with `-WhatIf` first. Graph API will reject malformed GUIDs, but the error message may be unclear. A future enhancement will add GUID format validation pre-deployment. |
+| `Watch-PolicyDrift.ps1` | Uses `exit 0`/`exit 1` for CI/CD exit codes. These are correct for standalone/CI usage but will terminate the calling PowerShell session if invoked in-process. | Run as a standalone script. If refactored into a module function, replace `exit` with `return`. |
+| `Test-EvidenceIntegrity.ps1` | Uses `exit 1` for CI/CD error signaling (same caveat as Watch-PolicyDrift). | Run as a standalone script. If refactored into a module function, replace `exit` with `return`. |
+| `Export-CAAComplianceEvidence.ps1` | The `-DataverseUrl` org name extraction (`$tenantHint`) passes an org name where a tenant GUID is expected by `Connect-CAADataverse`. The fallback `Get-MgContext` resolution defaults to `'unknown'` since the script never connects to Graph directly. | Both issues should be addressed when Phase 2 Dataverse integration is built — accept an explicit `-TenantId` parameter or extract from an existing Graph context. |
+
+### Adaptive Card Template Variables
+
+The `src/adaptive-card-caa-alert.json` template uses `${...}` variables (e.g., `${DocsBaseUrl}`, `${OverallStatus}`, `${SeverityStyle}`). These are **design-time references only** — the Power Automate flows build the adaptive card inline using `@{outputs(...)}` and `@{body(...)}` expressions in Compose actions. The template file documents the expected card structure and variable catalog in its `_metadata.templateVariables` section but is not loaded at runtime.
+
+The `${DocsBaseUrl}` variable should resolve to the organization's FSI-AgentGov documentation site root URL. Set this as an environment variable or configure it in the flow's Compose action.
+
+### Provisioning Hook Concurrency
+
+The provisioning hook flow (`caa-provisioning-hook-flow.json`) uses a `manual` (HTTP Request) trigger with `concurrency.runs` set to `1`, which serializes all incoming ELM `ProvisioningCompleted` calls. If multiple environments are provisioned simultaneously, each zone verification queues behind the previous one, potentially violating ELM SLA expectations.
+
+**Recommendation:** Evaluate with stakeholders whether serialized execution is acceptable. If provisioning volume is low (< 5 environments/day), serialization is acceptable. For high-volume provisioning, consider removing the concurrency limit, partitioning by zone, or accepting concurrent runs with idempotent Dataverse writes.
+
+### Dataverse Pagination
+
+The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve a single record, which avoids the Dataverse 5000-record page limit. If the OData filter is ever broadened to return multiple records, implement `@odata.nextLink` pagination handling to avoid silent result truncation.
 
 ## Version
 

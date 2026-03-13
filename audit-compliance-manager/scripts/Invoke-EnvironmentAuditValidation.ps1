@@ -28,15 +28,15 @@
     verifying per-environment audit configuration and retention compliance.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER DataverseUrl
-    Central Dataverse organization URL where the environment registry and validation
+    Central Dataverse organization URL where the environment registryand validation
     history tables are stored. This is typically a dedicated governance environment.
     Example: https://governance.crm.dynamics.com
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication. Optional
+    Microsoft Entra ID application (client) ID for service principal authentication. Optional
     when using interactive authentication.
 
 .PARAMETER ClientSecret

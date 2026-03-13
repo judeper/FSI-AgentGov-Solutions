@@ -70,7 +70,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-### ADLS Gen2 Storage Export
+### StorageV2 Storage Export
 
 **Description:** StorageV2 storage account (hierarchical namespace disabled) receiving Diagnostic Settings exports with WORM policy capability for immutable archival.
 
@@ -203,6 +203,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | **SOX 302/404** | Internal controls evidence | RBAC separation + immutable storage | Phase 2: Control evidence collection |
 | **SR 11-7** | Model risk management and ongoing monitoring | Performance telemetry foundation | Phase 2: Risk monitoring KQL queries |
 | **GLBA 501(b)** | Customer data protection | PII sanitization guidance | N/A (complete) |
+| **FINRA Annual Oversight Report (2026)** | Agentic AI risk monitoring and governance | Telemetry foundation + zone-based alerting | Phase 2: Agentic AI-specific risk dashboards |
 
 ---
 

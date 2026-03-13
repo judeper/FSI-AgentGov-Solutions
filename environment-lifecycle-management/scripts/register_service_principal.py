@@ -68,7 +68,7 @@ def create_app_registration(
     search_response = _get_graph_session().get(
         "https://graph.microsoft.com/v1.0/applications",
         headers=headers,
-        params={"$filter": f"displayName eq '{app_name}'"},
+        params={"$filter": f"displayName eq '{app_name.replace(chr(39), chr(39)*2)}'"},
     )
     search_response.raise_for_status()
     existing = search_response.json().get("value", [])

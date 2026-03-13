@@ -27,10 +27,10 @@
     results and route alerts based on severity and drift status.
 
 .PARAMETER TenantId
-    Azure AD tenant ID for authentication.
+    Microsoft Entra ID (formerly Azure AD) tenant ID. Required for authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for certificate-based authentication.
+    Microsoft Entra ID (formerly Azure AD) application (client) ID for certificate-based authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
@@ -185,6 +185,7 @@ try {
 
     Import-Module MSAL.PS -ErrorAction Stop
 
+    # LocalMachine store: runbook executes as SYSTEM in Azure Automation
     $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
     Write-Verbose "Certificate found: $($cert.Subject)"
 
@@ -214,8 +215,8 @@ try {
     }
 
     $dvIncludeSandbox = Get-CMMEnvironmentVariable -Name "IncludeSandbox" -DefaultValue "false"
-    if ($dvIncludeSandbox -eq "true" -and $ExcludeSandbox) {
-        Write-Verbose "Dataverse override: IncludeSandbox=true, overriding -ExcludeSandbox switch"
+    if (-not $PSBoundParameters.ContainsKey('ExcludeSandbox') -and $dvIncludeSandbox -eq "true") {
+        Write-Verbose "Dataverse override: IncludeSandbox=true, setting ExcludeSandbox to false"
         $ExcludeSandbox = [switch]::new($false)
     }
 

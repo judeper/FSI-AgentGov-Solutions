@@ -58,6 +58,14 @@
             "schemaName": "fsi_ASARD_BAPAdminAPIBaseUrl",
             "description": "BAP Admin API base URL. Default: https://api.bap.microsoft.com. Override for sovereign clouds: GCC (https://api.gov.bap.microsoft.us), GCC-High (https://api.high.bap.microsoft.us), DoD (https://api.appsplatform.us)"
           }
+        },
+        "fsi_ASARD_ApprovalTimeoutDays": {
+          "defaultValue": 7,
+          "type": "Integer",
+          "metadata": {
+            "schemaName": "fsi_ASARD_ApprovalTimeoutDays",
+            "description": "Approval timeout in days. Default: 7. Determines how long the workflow waits for governance lead approval before auto-rejecting. Override via environment variable."
+          }
         }
       },
       "triggers": {
@@ -85,7 +93,7 @@
               {
                 "name": "ApprovalTimeoutDays",
                 "type": "integer",
-                "value": "@{if(and(not(equals(parameters('fsi_ASARD_ApprovalTimeoutDays'), null)), greater(parameters('fsi_ASARD_ApprovalTimeoutDays'), 0)), int(parameters('fsi_ASARD_ApprovalTimeoutDays')), 7)}"
+                "value": "@{if(greater(coalesce(parameters('fsi_ASARD_ApprovalTimeoutDays'), 7), 0), coalesce(parameters('fsi_ASARD_ApprovalTimeoutDays'), 7), 7)}"
               }
             ]
           },
@@ -208,7 +216,41 @@
               "Succeeded"
             ]
           },
-          "description": "BAP Admin API base URL for permission PATCH operations.Override for sovereign clouds: GCC (https://api.gov.bap.microsoft.us), GCC-High (https://api.high.bap.microsoft.us), DoD (https://api.appsplatform.us). Configure via environment variable fsi_ASARD_BAPAdminAPIBaseUrl."
+          "description": "BAP Admin API base URL for permission PATCH operations. Override for sovereign clouds: GCC (https://api.gov.bap.microsoft.us), GCC-High (https://api.high.bap.microsoft.us), DoD (https://api.appsplatform.us). Configure via environment variable fsi_ASARD_BAPAdminAPIBaseUrl."
+        },
+        "Validate_BAPAdminAPIBaseUrl_Https": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "startsWith": [
+                    "@toLower(variables('BAPAdminAPIBaseUrl'))",
+                    "https://"
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Terminate_Invalid_BAPAdminAPIBaseUrl": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "ConfigurationError",
+                  "message": "Environment variable fsi_ASARD_BAPAdminAPIBaseUrl does not use HTTPS scheme. Managed Identity tokens must only be sent to trusted HTTPS endpoints. Configure with a valid HTTPS URL (e.g., https://api.bap.microsoft.com for commercial, https://api.gov.bap.microsoft.us for GCC)."
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "runAfter": {
+            "Initialize_BAPAdminAPIBaseUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Pre-flight validation: ensure BAPAdminAPIBaseUrl uses HTTPS scheme. Prevents Managed Identity token leakage to untrusted HTTP endpoints."
         },
         "Initialize_TotalAgents": {
           "type": "InitializeVariable",
@@ -222,7 +264,7 @@
             ]
           },
           "runAfter": {
-            "Initialize_BAPAdminAPIBaseUrl": [
+            "Validate_BAPAdminAPIBaseUrl_Https": [
               "Succeeded"
             ]
           },
@@ -442,7 +484,7 @@
                   "inputs": {
                     "parameters": {
                       "entityName": "fsi_agentsharingcompliances",
-                      "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)}",
+                      "$filter": "fsi_compliance_status eq 914430001 and fsi_last_checked ge @{addDays(utcNow(), -1)} and not(fsi_approval_status eq 914430002 and fsi_approval_date ge @{addDays(utcNow(), -7)})",
                       "$select": "fsi_agentsharingcomplianceid,fsi_name,fsi_agent_id,fsi_agent_name,fsi_environment_id,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_sharing_principals,fsi_last_checked,fsi_scan_run_id",
                       "$orderby": "fsi_last_checked desc",
                       "$top": 100,
@@ -456,7 +498,7 @@
                     "authentication": "@parameters('$authentication')"
                   },
                   "runAfter": {},
-                  "description": "Query Dataverse for non-compliant agents with pagination ($skip offset). WARNING: $skip-based pagination may return inconsistent pages for large datasets (>5000 records). For large-scale deployments, consider cursor-based pagination via @odata.nextLink."
+                  "description": "Query Dataverse for non-compliant agents with pagination ($skip offset, $top 100). Includes 7-day rejection cooldown to prevent repeated approval requests for recently-rejected agents. NOTE: $skip-based pagination may return inconsistent pages for datasets >5000 records. The pagination loop also checks for @odata.nextLink absence as a termination signal."
                 },
                 "Append_Page_To_AllAgents": {
                   "type": "Compose",
@@ -484,11 +526,17 @@
                 "Check_More_Records": {
                   "type": "If",
                   "expression": {
-                    "and": [
+                    "or": [
                       {
                         "less": [
                           "@length(outputs('List_NonCompliant_Agents_Page')?['body/value'])",
                           100
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@coalesce(outputs('List_NonCompliant_Agents_Page')?['body/@odata.nextLink'], '')",
+                          ""
                         ]
                       }
                     ]
@@ -522,7 +570,7 @@
                       "Succeeded"
                     ]
                   },
-                  "description": "If page returned fewer than 100 records, stop pagination. Otherwise increment skip."
+                  "description": "Stop pagination if page returned fewer than 100 records OR @odata.nextLink is absent (server signals no more pages). Otherwise increment skip offset. The @odata.nextLink check provides a safety net for large datasets where $skip-based pagination may become unreliable beyond 5000 records."
                 }
               },
               "runAfter": {},
@@ -575,7 +623,7 @@
                             "channelId": "@variables('TeamsChannelId')"
                           },
                           "subject": "⚠️ ASARD — High Agent Count Warning",
-                          "messageBody": "## ⚠️ ASARD — High Agent Count Warning\n\n**Non-Compliant Agents:** @{variables('TotalAgents')}\n\nWith sequential approval processing and a @{variables('ApprovalTimeoutDays')}-day timeout per agent, processing @{variables('TotalAgents')} agents could take up to @{mul(variables('TotalAgents'), variables('ApprovalTimeoutDays'))} days. Power Automate enforces a 30-day maximum flow duration — agents beyond the 30-day limit will be silently dropped.\n\n**Recommendation:** Approve or reject pending approvals promptly to avoid timeout.\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.0*"
+                          "messageBody": "## ⚠️ ASARD — High Agent Count Warning\n\n**Non-Compliant Agents:** @{variables('TotalAgents')}\n\nWith sequential approval processing and a @{variables('ApprovalTimeoutDays')}-day timeout per agent, processing @{variables('TotalAgents')} agents could take up to @{mul(variables('TotalAgents'), variables('ApprovalTimeoutDays'))} days. Power Automate enforces a 30-day maximum flow duration — agents beyond the 30-day limit will be silently dropped.\n\n**Recommendation:** Approve or reject pending approvals promptly to avoid timeout.\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.1*"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -650,7 +698,7 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Retrieve approved security groups for the agent's governance zone from policy table."
+                      "description": "Retrieve approved security groups for the agent's governance zone from policy table. OPTIMIZATION NOTE: This query runs per-agent inside the sequential loop. Agents in the same zone redundantly query the same approved groups. Pre-fetching approved groups per distinct zone before the loop would reduce Dataverse API calls."
                     },
                     "Parse_Current_Principals": {
                       "type": "ParseJson",
@@ -741,8 +789,8 @@
                         "environment_name": "@{items('Apply_to_each_Agent')?['fsi_environment_name']}",
                         "environment_id": "@{variables('CurrentEnvironmentId')}",
                         "zone": "@{variables('CurrentZone')}",
-                        "zone_name": "@{if(equals(variables('CurrentZone'), 1), 'Zone 1 (High Sensitivity)', if(equals(variables('CurrentZone'), 2), 'Zone 2 (Moderate Sensitivity)', 'Zone 3 (Enterprise Managed)'))}",
-                        "zone_rules": "@{if(equals(variables('CurrentZone'), 1), 'No group sharing allowed', if(equals(variables('CurrentZone'), 2), 'Named groups only (no Everyone/Public)', 'Approved groups only'))}",
+                        "zone_name": "@{if(equals(variables('CurrentZone'), 1), 'Zone 1 (High Sensitivity)', if(equals(variables('CurrentZone'), 2), 'Zone 2 (Moderate Sensitivity)', if(equals(variables('CurrentZone'), 3), 'Zone 3 (Enterprise Managed)', concat('UNKNOWN ZONE (', string(variables('CurrentZone')), ') — defaulting to Zone 1 restrictions (most restrictive)'))))}",
+                        "zone_rules": "@{if(equals(variables('CurrentZone'), 1), 'No group sharing allowed', if(equals(variables('CurrentZone'), 2), 'Named groups only (no Everyone/Public)', if(equals(variables('CurrentZone'), 3), 'Approved groups only', concat('UNKNOWN ZONE (', string(variables('CurrentZone')), ') — applying Zone 1 restrictions (no group sharing allowed)'))))}",
                         "violation_type": "@{items('Apply_to_each_Agent')?['fsi_violation_type']}",
                         "detection_date": "@{items('Apply_to_each_Agent')?['fsi_last_checked']}",
                         "current_principals_list": "@{join(body('Select_Current_Principals_Display'), '\n')}",
@@ -766,55 +814,105 @@
                       },
                       "description": "Build adaptive card template variables from agent data and approved groups query."
                     },
-                    "Start_Approval": {
-                      "type": "OpenApiConnection",
-                      "inputs": {
-                        "parameters": {
-                          "approvalType": "Basic",
-                          "WebhookApprovalCreationInput/title": "ASARD Remediation Approval — @{outputs('Build_Approval_Card_Data')?['agent_name']}",
-                          "WebhookApprovalCreationInput/assignedTo": "@{variables('ApproverEmail')}",
-                          "WebhookApprovalCreationInput/details": "## 🔐 Agent Sharing Remediation Approval\n\n### Agent Summary\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n**Violation:** @{outputs('Build_Approval_Card_Data')?['violation_type']}\n\n### Current Sharing\n@{outputs('Build_Approval_Card_Data')?['current_principals_list']}\n\n### Proposed Changes\n**REMOVE:**\n@{outputs('Build_Approval_Card_Data')?['remove_principals_list']}\n\n**ADD:**\n@{outputs('Build_Approval_Card_Data')?['add_principals_list']}\n\n### Impact\n@{outputs('Build_Approval_Card_Data')?['impact_summary']}\n\n### Zone Policy\n@{outputs('Build_Approval_Card_Data')?['zone_rules']}\n\nApproving this request will apply sharing restrictions to align with zone governance policy.",
-                          "WebhookApprovalCreationInput/itemLink": "https://admin.powerplatform.microsoft.com/environments/@{variables('CurrentEnvironmentId')}/agents/@{variables('CurrentAgentId')}",
-                          "WebhookApprovalCreationInput/itemLinkDescription": "View Agent in Power Platform Admin Center",
-                          "WebhookApprovalCreationInput/enableNotifications": true,
-                          "WebhookApprovalCreationInput/enableReassignment": true,
-                          "WebhookApprovalCreationInput/requestor": "@{variables('ApproverEmail')}"
+                    "Scope_Approval": {
+                      "type": "Scope",
+                      "actions": {
+                        "Start_Approval": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "approvalType": "Basic",
+                              "WebhookApprovalCreationInput/title": "ASARD Remediation Approval — @{outputs('Build_Approval_Card_Data')?['agent_name']}",
+                              "WebhookApprovalCreationInput/assignedTo": "@{variables('ApproverEmail')}",
+                              "WebhookApprovalCreationInput/details": "## 🔐 Agent Sharing Remediation Approval\n\n### Agent Summary\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n**Violation:** @{outputs('Build_Approval_Card_Data')?['violation_type']}\n\n### Current Sharing\n@{outputs('Build_Approval_Card_Data')?['current_principals_list']}\n\n### Proposed Changes\n**REMOVE:**\n@{outputs('Build_Approval_Card_Data')?['remove_principals_list']}\n\n**ADD:**\n@{outputs('Build_Approval_Card_Data')?['add_principals_list']}\n\n### Impact\n@{outputs('Build_Approval_Card_Data')?['impact_summary']}\n\n### Zone Policy\n@{outputs('Build_Approval_Card_Data')?['zone_rules']}\n\nApproving this request will apply sharing restrictions to align with zone governance policy.",
+                              "WebhookApprovalCreationInput/itemLink": "https://admin.powerplatform.microsoft.com/environments/@{variables('CurrentEnvironmentId')}/agents/@{variables('CurrentAgentId')}",
+                              "WebhookApprovalCreationInput/itemLinkDescription": "View Agent in Power Platform Admin Center",
+                              "WebhookApprovalCreationInput/enableNotifications": true,
+                              "WebhookApprovalCreationInput/enableReassignment": true,
+                              "WebhookApprovalCreationInput/requestor": "@{variables('ApproverEmail')}"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+                              "connectionName": "shared_approvals",
+                              "operationId": "CreateApproval"
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          },
+                          "runAfter": {},
+                          "description": "Create approval request with agent details, current sharing, proposed changes, and zone context. Timeout: configurable via ApprovalTimeoutDays parameter."
                         },
-                        "host": {
-                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
-                          "connectionName": "shared_approvals",
-                          "operationId": "CreateApproval"
-                        },
-                        "authentication": "@parameters('$authentication')"
+                        "Wait_For_Approval": {
+                          "type": "ApiConnectionWebhook",
+                          "inputs": {
+                            "parameters": {
+                              "id": "@outputs('Start_Approval')?['body/name']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+                              "connectionName": "shared_approvals",
+                              "operationId": "WaitForApproval"
+                            }
+                          },
+                          "limit": {
+                            "timeout": "@{concat('P', string(variables('ApprovalTimeoutDays')), 'D')}"
+                          },
+                          "runAfter": {
+                            "Start_Approval": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Wait for approval decision (Approve/Reject). Blocks until decision made or timeout."
+                        }
                       },
                       "runAfter": {
                         "Build_Approval_Card_Data": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Create approval request with agent details, current sharing, proposed changes, and zone context. Timeout: 7 days (configurable)."
+                      "description": "Scope wrapping approval creation and wait actions. Provides error boundary so connector failures are caught and the agent's Dataverse record is updated to Error status instead of leaving it in NonCompliant with no audit trail."
                     },
-                    "Wait_For_Approval": {
-                      "type": "ApiConnectionWebhook",
-                      "inputs": {
-                        "parameters": {
-                          "id": "@outputs('Start_Approval')?['body/name']"
+                    "Handle_Approval_Scope_Failure": {
+                      "type": "Scope",
+                      "actions": {
+                        "Increment_FailedCount_Approval_Error": {
+                          "type": "IncrementVariable",
+                          "inputs": {
+                            "name": "FailedCount",
+                            "value": 1
+                          },
+                          "runAfter": {},
+                          "description": "Increment failed counter on approval connector error."
                         },
-                        "host": {
-                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
-                          "connectionName": "shared_approvals",
-                          "operationId": "WaitForApproval"
+                        "Update_Dataverse_Approval_Error": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "fsi_agentsharingcompliances",
+                              "recordId": "@items('Apply_to_each_Agent')?['fsi_agentsharingcomplianceid']",
+                              "item/fsi_compliance_status": 914430003,
+                              "item/fsi_error_message": "Approval connector failure — unable to create or process approval request. Verify Approvals connector configuration and retry."
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateRecord"
+                            },
+                            "authentication": "@parameters('$authentication')"
+                          },
+                          "runAfter": {
+                            "Increment_FailedCount_Approval_Error": [
+                              "Succeeded"
+                            ]
+                          },
+                          "description": "Update Dataverse: compliance_status=Error when approval connector fails, providing error audit trail."
                         }
                       },
-                      "limit": {
-                        "timeout": "@{concat('P', string(variables('ApprovalTimeoutDays')), 'D')}"
-                      },
                       "runAfter": {
-                        "Start_Approval": [
-                          "Succeeded"
+                        "Scope_Approval": [
+                          "Failed"
                         ]
                       },
-                      "description": "Wait for approval decision (Approve/Reject). Blocks until decision made or timeout (7 days)."
+                      "description": "Error handler for approval connector failures. Updates Dataverse record to Error status with error message when Start_Approval or Wait_For_Approval fails due to connector issues."
                     },
                     "Condition_Approval_Decision": {
                       "type": "If",
@@ -897,13 +995,13 @@
                         },
                         "Build_Permission_Objects": {
                           "type": "Compose",
-                          "inputs": "@if(equals(variables('CurrentZone'), 1), json('[]'), if(equals(variables('CurrentZone'), 2), body('Select_Zone2_Permissions'), body('Select_Zone3_Permissions')))",
+                          "inputs": "@if(equals(variables('CurrentZone'), 2), body('Select_Zone2_Permissions'), if(equals(variables('CurrentZone'), 3), body('Select_Zone3_Permissions'), json('[]')))",
                           "runAfter": {
                             "Select_Zone3_Permissions": [
                               "Succeeded"
                             ]
                           },
-                          "description": "Build zone-specific permission objects: Zone 1 (empty), Zone 2 (filter Everyone/Public), Zone 3 (approved groups)."
+                          "description": "Build zone-specific permission objects: Zone 2 (named groups), Zone 3 (approved groups), all other zones including Zone 1 and unknown values default to empty array (most restrictive — remove all access)."
                         },
                         "Scope_Execute_Remediation": {
                           "type": "Scope",
@@ -1022,7 +1120,7 @@
                                   "recordId": "@items('Apply_to_each_Agent')?['fsi_agentsharingcomplianceid']",
                                   "item/fsi_compliance_status": 914430003,
                                   "item/fsi_approval_status": 914430001,
-                                  "item/fsi_approver_email": "@{outputs('Wait_For_Approval')?['body/responder']}",
+                                  "item/fsi_approver_email": "@{coalesce(outputs('Wait_For_Approval')?['body/responder'], 'N/A (approval timed out)')}",
                                   "item/fsi_approval_date": "@{utcNow()}",
                                   "item/fsi_error_message": "@{outputs('HTTP_PATCH_BAP_Permissions')?['statusCode']}: @{outputs('HTTP_PATCH_BAP_Permissions')?['body']}"
                                 },
@@ -1092,9 +1190,9 @@
                                 "entityName": "fsi_agentsharingcompliances",
                                 "recordId": "@items('Apply_to_each_Agent')?['fsi_agentsharingcomplianceid']",
                                 "item/fsi_approval_status": 914430002,
-                                "item/fsi_approver_email": "@{outputs('Wait_For_Approval')?['body/responder']}",
+                                "item/fsi_approver_email": "@{coalesce(outputs('Wait_For_Approval')?['body/responder'], 'N/A (approval timed out)')}",
                                 "item/fsi_approval_date": "@{utcNow()}",
-                                "item/fsi_rejection_reason": "@{coalesce(outputs('Wait_For_Approval')?['body/comments'], 'Approval timed out (exceeded P7D timeout)')}"
+                                "item/fsi_rejection_reason": "@{coalesce(outputs('Wait_For_Approval')?['body/comments'], concat('Approval timed out (exceeded P', string(variables('ApprovalTimeoutDays')), 'D timeout)'))}"
                               },
                               "host": {
                                 "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -1118,7 +1216,7 @@
                                   "channelId": "@variables('TeamsChannelId')"
                                 },
                                 "subject": "❌ Agent Remediation — REJECTED",
-                                "messageBody": "## ❌ Agent Sharing Remediation — REJECTED\n\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n\n**Approval Decision:** REJECTED\n**Approver:** @{outputs('Wait_For_Approval')?['body/responder']}\n**Rejection Reason:** @{outputs('Wait_For_Approval')?['body/comments']}\n\n**Next Steps:**\n- Agent remains non-compliant\n- Will appear in next scheduled approval run (24 hours)\n- Consider granting time-bound exception if remediation not feasible\n\n**Compliance Status:** NON-COMPLIANT"
+                                "messageBody": "## ❌ Agent Sharing Remediation — REJECTED\n\n**Agent:** @{outputs('Build_Approval_Card_Data')?['agent_name']}\n**Environment:** @{outputs('Build_Approval_Card_Data')?['environment_name']}\n**Zone:** @{outputs('Build_Approval_Card_Data')?['zone_name']}\n\n**Approval Decision:** REJECTED\n**Approver:** @{coalesce(outputs('Wait_For_Approval')?['body/responder'], 'N/A (approval timed out)')}\n**Rejection Reason:** @{coalesce(outputs('Wait_For_Approval')?['body/comments'], 'Approval timed out (exceeded timeout period)')}\n\n**Next Steps:**\n- Agent remains non-compliant\n- Will appear in next scheduled approval run (24 hours)\n- Consider granting time-bound exception if remediation not feasible\n\n**Compliance Status:** NON-COMPLIANT"
                               },
                               "host": {
                                 "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -1137,7 +1235,7 @@
                         }
                       },
                       "runAfter": {
-                        "Wait_For_Approval": [
+                        "Scope_Approval": [
                           "Succeeded",
                           "TimedOut"
                         ]
@@ -1147,7 +1245,9 @@
                   },
                   "runAfter": {
                     "Condition_Agent_Count_Warning": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "TimedOut"
                     ]
                   },
                   "runtimeConfiguration": {
@@ -1165,7 +1265,7 @@
                         "channelId": "@variables('TeamsChannelId')"
                       },
                       "subject": "📊 ASARD Approval Run Summary",
-                      "messageBody": "## 📊 ASARD Approval Run Summary\n\n**Run Date:** @{variables('RunStartTime')}\n**Duration:** @{div(sub(ticks(utcNow()), ticks(variables('RunStartTime'))), 10000000)} seconds\n\n### Statistics\n- **Total Agents Queried:** @{variables('TotalAgents')} non-compliant\n- **Approvals Sent:** @{variables('TotalAgents')}\n- **Approved:** @{variables('ApprovedCount')}\n- **Rejected:** @{variables('RejectedCount')}\n- **Remediation Succeeded:** @{variables('RemediatedCount')}\n- **Remediation Failed:** @{variables('FailedCount')}\n\n### Next Run\nScheduled for tomorrow at 09:00 UTC (daily recurrence)\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.0*"
+                      "messageBody": "## 📊 ASARD Approval Run Summary\n\n**Run Date:** @{variables('RunStartTime')}\n**Duration:** @{div(sub(ticks(utcNow()), ticks(variables('RunStartTime'))), 10000000)} seconds\n\n### Statistics\n- **Total Agents Queried:** @{variables('TotalAgents')} non-compliant\n- **Approvals Sent:** @{variables('TotalAgents')}\n- **Approved:** @{variables('ApprovedCount')}\n- **Rejected:** @{variables('RejectedCount')}\n- **Remediation Succeeded:** @{variables('RemediatedCount')}\n- **Remediation Failed:** @{variables('FailedCount')}\n\n### Next Run\nScheduled for tomorrow at 09:00 UTC (daily recurrence)\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.1*"
                     },
                     "host": {
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -1195,7 +1295,7 @@
                           "channelId": "@variables('TeamsChannelId')"
                         },
                         "subject": "✅ ASARD Approval Run — No Non-Compliant Agents",
-                        "messageBody": "## ✅ ASARD Approval Run — No Non-Compliant Agents\n\n**Run Date:** @{variables('RunStartTime')}\n\nNo non-compliant agents found in last 24 hours. All agents are compliant with sharing policies.\n\n**Next Run:** Tomorrow at 09:00 UTC (daily recurrence)\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.0*"
+                        "messageBody": "## ✅ ASARD Approval Run — No Non-Compliant Agents\n\n**Run Date:** @{variables('RunStartTime')}\n\nNo non-compliant agents found in last 24 hours. All agents are compliant with sharing policies.\n\n**Next Run:** Tomorrow at 09:00 UTC (daily recurrence)\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.1*"
                       },
                       "host": {
                         "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -1231,10 +1331,10 @@
               "inputs": {
                 "parameters": {
                   "recipient": {
-                    "channelId": "@variables('TeamsChannelId')"
+                    "channelId": "@parameters('fsi_ASARD_TeamsChannelId')"
                   },
                   "subject": "🚨 ASARD Approval Workflow — CRITICAL ERROR",
-                  "messageBody": "## 🚨 ASARD Approval Workflow — CRITICAL ERROR\n\n**Run Date:** @{variables('RunStartTime')}\n**Error:** Flow execution failed\n\n**Details:**\nThe approval workflow encountered a critical error and could not complete. Check flow run history for detailed error information.\n\n**Next Steps:**\n- Review flow run history in Power Automate portal\n- Check connection references (Dataverse, Approvals, Teams)\n- Verify environment variables configured\n- Contact governance team if issue persists\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.0*"
+                  "messageBody": "## 🚨 ASARD Approval Workflow — CRITICAL ERROR\n\n**Run Date:** @{utcNow()}\n**Error:** Flow execution failed\n\n**Details:**\nThe approval workflow encountered a critical error and could not complete. One or more variable initialization actions may have failed, preventing normal execution. Check flow run history for detailed error information.\n\n**Next Steps:**\n- Review flow run history in Power Automate portal\n- Check connection references (Dataverse, Approvals, Teams)\n- Verify environment variables configured (fsi_ASARD_ApprovalEmail, fsi_ASARD_TeamsChannelId, fsi_ASARD_BAPAdminAPIBaseUrl)\n- Contact governance team if issue persists\n\n---\n*Agent Sharing Access Restriction Detector (ASARD) v1.0.1*"
                 },
                 "host": {
                   "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -1244,7 +1344,7 @@
                 "authentication": "@parameters('$authentication')"
               },
               "runAfter": {},
-              "description": "Post critical error notification if flow fails unexpectedly."
+              "description": "Post critical error notification if flow fails unexpectedly.Uses parameters() directly instead of variables() to remain resilient when variable initialization actions fail or are skipped."
             }
           },
           "runAfter": {
@@ -1268,7 +1368,7 @@
   "tags": {
     "solution": "FSI-AgentGov",
     "component": "ASARD",
-    "version": "v1.0.0",
+    "version": "v1.0.1",
     "phase": "enforcement-and-remediation",
     "requirement": "ENF-03"
   },

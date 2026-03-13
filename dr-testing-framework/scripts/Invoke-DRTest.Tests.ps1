@@ -33,10 +33,9 @@ Describe 'Environment URL Validation' {
         }
 
         It 'Accepts sovereign cloud URL: <url>' -ForEach @(
-            @{ url = 'https://contoso.crm.dynamics.us' }
             @{ url = 'https://contoso.crm.dynamics.cn' }
-            @{ url = 'https://contoso.crm.dynamics.de' }
-            @{ url = 'https://contoso.crm9.dynamics.de' }
+            @{ url = 'https://contoso.crm9.dynamics.com' }
+            @{ url = 'https://contoso.crm.appsplatform.us' }
         ) {
             $url | Should -Match $script:EnvUrlPattern
         }
@@ -85,9 +84,9 @@ Describe 'Environment URL Validation' {
 }
 
 Describe 'Save-TestResult failure warning' {
-    It 'Script contains else branch for failed save' {
+    It 'Script contains catch block for failed save' {
         $scriptContent = Get-Content -Path (Join-Path $PSScriptRoot 'Invoke-DRTest.ps1') -Raw
-        $scriptContent | Should -Match 'else\s*\{\s*Write-Warning\s+.Failed to save test result'
+        $scriptContent | Should -Match '(?s)catch\s*\{.*Write-Warning\s+.Failed to save result:'
     }
 }
 
@@ -108,8 +107,8 @@ Describe 'Script structure' {
         $script:scriptContent | Should -Match 'fsi_status\s*=\s*if\s*\(\$Result\.Success\)\s*\{\s*1\s*\}\s*else\s*\{\s*2\s*\}'
     }
 
-    It 'Serializes fsi_validationchecks as JSON string' {
-        $script:scriptContent | Should -Match 'fsi_validationchecks\s*=\s*\(ConvertTo-Json'
+    It 'Serializes fsi_validationchecks as JSON' {
+        $script:scriptContent | Should -Match 'fsi_validationchecks\s*=.*ConvertTo-Json'
     }
 }
 
@@ -122,6 +121,10 @@ Describe 'Get-AccessToken retry logic' {
         $functionBlock = [regex]::Match($scriptContent, '(?s)(function Get-AccessToken\s*\{.+?\n\})')
         if (-not $functionBlock.Success) { throw 'Could not extract Get-AccessToken function' }
         Invoke-Expression $functionBlock.Value
+        # Provide Write-AuditLog dependency (called in retry catch blocks)
+        function script:Write-AuditLog { param([string]$Message, [string]$Level = "INFO", [string]$CorrelationId) }
+        $script:CorrelationId = 'test'
+        $script:TestSecret = 'secret' | ConvertTo-SecureString -AsPlainText -Force
     }
 
     It 'Retries on 429 and succeeds on second attempt' {
@@ -139,7 +142,7 @@ Describe 'Get-AccessToken retry logic' {
 
         $token = Get-AccessToken -TenantId '00000000-0000-0000-0000-000000000000' `
             -ClientId '00000000-0000-0000-0000-000000000001' `
-            -ClientSecret 'secret' -Scope 'https://contoso.crm.dynamics.com/.default'
+            -ClientSecret $script:TestSecret -Scope 'https://contoso.crm.dynamics.com/.default'
 
         $token | Should -Be 'mock-token'
         $script:callCount | Should -Be 2
@@ -161,7 +164,7 @@ Describe 'Get-AccessToken retry logic' {
 
         $token = Get-AccessToken -TenantId '00000000-0000-0000-0000-000000000000' `
             -ClientId '00000000-0000-0000-0000-000000000001' `
-            -ClientSecret 'secret' -Scope 'https://contoso.crm.dynamics.com/.default'
+            -ClientSecret $script:TestSecret -Scope 'https://contoso.crm.dynamics.com/.default'
 
         $token | Should -Be 'mock-token-3'
         $script:callCount | Should -Be 3
@@ -178,7 +181,7 @@ Describe 'Get-AccessToken retry logic' {
 
         { Get-AccessToken -TenantId '00000000-0000-0000-0000-000000000000' `
             -ClientId '00000000-0000-0000-0000-000000000001' `
-            -ClientSecret 'secret' -Scope 'https://contoso.crm.dynamics.com/.default' } | Should -Throw
+            -ClientSecret $script:TestSecret -Scope 'https://contoso.crm.dynamics.com/.default' } | Should -Throw
 
         Should -Invoke Invoke-RestMethod -Times 3 -Exactly
         Should -Invoke Start-Sleep -Times 2 -Exactly
@@ -192,6 +195,9 @@ Describe 'Save-TestResult retry logic' {
         $functionBlock = [regex]::Match($scriptContent, '(?s)(function Save-TestResult\s*\{.+?\n\})')
         if (-not $functionBlock.Success) { throw 'Could not extract Save-TestResult function' }
         Invoke-Expression $functionBlock.Value
+        # Provide Write-AuditLog dependency (called in retry catch blocks)
+        function script:Write-AuditLog { param([string]$Message, [string]$Level = "INFO", [string]$CorrelationId) }
+        $script:CorrelationId = 'test'
     }
 
     BeforeEach {
@@ -246,7 +252,7 @@ Describe 'Save-TestResult retry logic' {
         $warnings = $result | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
 
         $returnValue | Should -BeFalse
-        $warnings.Count | Should -BeGreaterOrEqual 2
+        $warnings.Count | Should -BeGreaterOrEqual 1
         Should -Invoke Invoke-RestMethod -Times 3 -Exactly
         Should -Invoke Start-Sleep -Times 2 -Exactly
     }
@@ -287,9 +293,9 @@ Describe 'FullDR test type aggregation' {
         Mock Write-Host {}
         Mock Write-Warning {}
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
-        $envResult = Test-EnvironmentFailover -DryRun $true
-        $dataResult = Test-DataRecovery -DryRun $true
+        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentFailover -DryRun $false
+        $dataResult = Test-DataRecovery -DryRun $false
 
         $combined = @{
             ValidationChecks = $agentResult.ValidationChecks + $envResult.ValidationChecks + $dataResult.ValidationChecks
@@ -306,9 +312,9 @@ Describe 'FullDR test type aggregation' {
         Mock Write-Host {}
         Mock Write-Warning {}
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
-        $envResult = Test-EnvironmentFailover -DryRun $true
-        $dataResult = Test-DataRecovery -DryRun $true
+        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentFailover -DryRun $false
+        $dataResult = Test-DataRecovery -DryRun $false
 
         $combined = $agentResult.Success -and $envResult.Success -and $dataResult.Success
         $combined | Should -BeTrue
@@ -319,14 +325,112 @@ Describe 'FullDR test type aggregation' {
         Mock Write-Host {}
         Mock Write-Warning {}
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
-        $envResult = Test-EnvironmentFailover -DryRun $true
-        $dataResult = Test-DataRecovery -DryRun $true
+        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentFailover -DryRun $false
+        $dataResult = Test-DataRecovery -DryRun $false
 
         # Simulate one sub-test failing
         $envResult.Success = $false
 
         $combined = $agentResult.Success -and $envResult.Success -and $dataResult.Success
         $combined | Should -BeFalse
+    }
+}
+
+Describe 'DryRun mode' {
+    BeforeAll {
+        $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+        foreach ($funcName in @('Test-AgentRestore', 'Test-EnvironmentFailover', 'Test-DataRecovery')) {
+            $block = [regex]::Match($scriptContent, "(?s)(function $funcName\s*\{.+?\n\})")
+            if (-not $block.Success) { throw "Could not extract $funcName function" }
+            Invoke-Expression $block.Value
+        }
+    }
+
+    It 'Test-AgentRestore DryRun returns empty ValidationChecks' {
+        Mock Write-Host {}
+        Mock Write-Warning {}
+        $result = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
+        $result.ValidationChecks.Count | Should -Be 0
+    }
+
+    It 'Test-EnvironmentFailover DryRun returns empty ValidationChecks' {
+        Mock Write-Host {}
+        Mock Write-Warning {}
+        $result = Test-EnvironmentFailover -DryRun $true
+        $result.ValidationChecks.Count | Should -Be 0
+    }
+
+    It 'Test-DataRecovery DryRun returns empty ValidationChecks' {
+        Mock Write-Host {}
+        Mock Write-Warning {}
+        $result = Test-DataRecovery -DryRun $true
+        $result.ValidationChecks.Count | Should -Be 0
+    }
+}
+
+Describe 'Write-AuditLog stream isolation' {
+    BeforeAll {
+        $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+        $functionBlock = [regex]::Match($scriptContent, '(?s)(function Write-AuditLog\s*\{.+?\n\})')
+        if (-not $functionBlock.Success) { throw 'Could not extract Write-AuditLog function' }
+        Invoke-Expression $functionBlock.Value
+        $script:AuditLogPath = $null
+        $script:CorrelationId = 'test'
+    }
+
+    It 'Does not write to the success output stream' {
+        # Write-AuditLog must use Write-Information, not Write-Output,
+        # to avoid contaminating function return values when called inside
+        # functions like Get-AccessToken.
+        $output = Write-AuditLog "test message" -Level "INFO"
+        $output | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-AuthEndpoint sovereign cloud mapping' {
+    BeforeAll {
+        $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+        $functionBlock = [regex]::Match($scriptContent, '(?s)(function Get-AuthEndpoint\s*\{.+?\n\})')
+        if (-not $functionBlock.Success) { throw 'Could not extract Get-AuthEndpoint function' }
+        Invoke-Expression $functionBlock.Value
+    }
+
+    It 'Returns commercial endpoint for .dynamics.com' {
+        Get-AuthEndpoint -EnvironmentUrl 'https://contoso.crm.dynamics.com' | Should -Be 'https://login.microsoftonline.com'
+    }
+
+    It 'Returns China endpoint for .dynamics.cn' {
+        Get-AuthEndpoint -EnvironmentUrl 'https://contoso.crm.dynamics.cn' | Should -Be 'https://login.chinacloudapi.cn'
+    }
+
+    It 'Returns GCC High endpoint for .microsoftdynamics.us' {
+        Get-AuthEndpoint -EnvironmentUrl 'https://contoso.crm.microsoftdynamics.us' | Should -Be 'https://login.microsoftonline.us'
+    }
+
+    It 'Returns GCC High endpoint for .appsplatform.us' {
+        Get-AuthEndpoint -EnvironmentUrl 'https://contoso.crm.appsplatform.us' | Should -Be 'https://login.microsoftonline.us'
+    }
+}
+
+Describe 'ClientId parameter validation' {
+    BeforeAll {
+        $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
+        $scriptContent = Get-Content -Path $scriptPath -Raw
+    }
+
+    It 'Has ValidatePattern on ClientId parameter' {
+        $scriptContent | Should -Match '\[ValidatePattern\(.+\]\s*\[string\]\$ClientId'
+    }
+
+    It 'Uses same GUID pattern as TenantId' {
+        # Extract ValidatePattern values for both parameters
+        $tenantPattern = [regex]::Match($scriptContent, "(?s)ValidatePattern\('([^']+)'\)\]\s*\[string\]\\\$TenantId").Groups[1].Value
+        $clientPattern = [regex]::Match($scriptContent, "(?s)ValidatePattern\('([^']+)'\)\]\s*\[string\]\\\$ClientId").Groups[1].Value
+        $tenantPattern | Should -Not -BeNullOrEmpty
+        $clientPattern | Should -Be $tenantPattern
     }
 }

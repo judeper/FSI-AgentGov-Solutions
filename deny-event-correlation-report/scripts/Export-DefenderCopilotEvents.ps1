@@ -45,7 +45,7 @@ param(
     [DateTime]$EndDate = (Get-Date).Date,
 
     [Parameter()]
-    [string]$OutputPath = ".\DefenderCopilotEvents-$((Get-Date).AddDays(-1).ToString('yyyy-MM-dd')).csv"
+    [string]$OutputPath = ".\DefenderCopilotEvents-$(Get-Date -Format 'yyyy-MM-dd').csv"
 )
 
 #Requires -Version 7.0
@@ -76,6 +76,9 @@ try {
     Write-Host "Authenticated as: $($context.Account)" -ForegroundColor Green
 
     # Build KQL query for Advanced Hunting
+    # Note: This query uses broad string matching (RawEventData has "PromptInjection")
+    # while the standalone KQL (cloud-app-events.kql) uses precise boolean field checks
+    # (parsedFields.XPIADetected == true). See cloud-app-events.kql lines 15-19 for details.
     $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
     $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
 
@@ -183,6 +186,12 @@ CloudAppEvents
         Write-Host "  $key`: $($summary[$key])" -ForegroundColor Gray
     }
 
+    # Ensure output directory exists
+    $outputDir = Split-Path -Path $OutputPath -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+
     # Export to CSV
     Write-Host "`nExporting to: $OutputPath" -ForegroundColor Cyan
     $exportEvents | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
@@ -190,7 +199,7 @@ CloudAppEvents
     Write-Host "`nExport complete!" -ForegroundColor Green
 }
 catch {
-    Write-Warning "Script execution failed: $_"
+    Write-Error "Script execution failed: $_"
     exit 1
 }
 finally {

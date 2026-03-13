@@ -53,6 +53,11 @@
               ]
             }
           },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
           "metadata": {
             "operationMetadataId": "recurrence-daily-0600"
           }
@@ -71,7 +76,7 @@
             ]
           },
           "runAfter": {},
-          "description": "Dataverse environment URL (e.g., https://org.crm.dynamics.com). Set via environment variable fsi_CAA_DataverseUrl."
+          "description": "Dataverse environment URL. Set via environment variable fsi_CAA_DataverseUrl."
         },
         "Initialize_TenantId": {
           "type": "InitializeVariable",
@@ -235,6 +240,120 @@
           },
           "description": "Email distribution list for compliance alert routing. Set via environment variable fsi_CAA_ComplianceDistributionList."
         },
+        "Initialize_DocsBaseUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DocsBaseUrl",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_ComplianceDistributionList": [
+              "Succeeded"
+            ]
+          },
+          "description": "Documentation site base URL for adaptive card links. Set via environment variable fsi_CAA_DocsBaseUrl."
+        },
+        "Initialize_EntraPortalUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "EntraPortalUrl",
+                "type": "string",
+                "value": "https://entra.microsoft.com"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_DocsBaseUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Entra admin center base URL. Defaults to commercial cloud. Override via environment variable fsi_CAA_EntraPortalUrl for sovereign clouds (e.g., https://entra.microsoft.us)."
+        },
+        "Initialize_AzurePortalUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AzurePortalUrl",
+                "type": "string",
+                "value": "https://portal.azure.com"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_EntraPortalUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Azure portal base URL. Defaults to commercial cloud. Override via environment variable fsi_CAA_AzurePortalUrl for sovereign clouds (e.g., https://portal.azure.us)."
+        },
+        "Validate_Configuration": {
+          "type": "Scope",
+          "actions": {
+            "Check_Empty_Variables": {
+              "type": "Compose",
+              "inputs": "@concat(if(empty(variables('DataverseUrl')), 'DataverseUrl,', ''), if(empty(variables('TenantId')), 'TenantId,', ''), if(empty(variables('ClientId')), 'ClientId,', ''), if(empty(variables('CertificateThumbprint')), 'CertificateThumbprint,', ''), if(empty(variables('SubscriptionId')), 'SubscriptionId,', ''), if(empty(variables('ResourceGroup')), 'ResourceGroup,', ''), if(empty(variables('AutomationAccount')), 'AutomationAccount,', ''), if(empty(variables('TeamsGroupId')), 'TeamsGroupId,', ''), if(empty(variables('TeamsChannelId')), 'TeamsChannelId,', ''), if(empty(variables('ComplianceDistributionList')), 'ComplianceDistributionList,', ''), if(empty(variables('DocsBaseUrl')), 'DocsBaseUrl,', ''))",
+              "runAfter": {},
+              "description": "Build comma-separated list of configuration variables that are empty (unbound at solution import time)."
+            },
+            "Trim_Trailing_Comma": {
+              "type": "Compose",
+              "inputs": "@if(endsWith(outputs('Check_Empty_Variables'), ','), substring(outputs('Check_Empty_Variables'), 0, sub(length(outputs('Check_Empty_Variables')), 1)), outputs('Check_Empty_Variables'))",
+              "runAfter": {
+                "Check_Empty_Variables": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Remove trailing comma from the unbound variable list produced by Check_Empty_Variables."
+            },
+            "Terminate_If_Unbound": {
+              "type": "If",
+              "expression": {
+                "not": {
+                  "equals": [
+                    "@outputs('Trim_Trailing_Comma')",
+                    ""
+                  ]
+                }
+              },
+              "actions": {
+                "Terminate_Missing_Config": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Failed",
+                    "runError": {
+                      "code": "ConfigurationError",
+                      "message": "Required environment variables are not bound. Unbound variables: @{outputs('Trim_Trailing_Comma')}. Bind these variables in the Power Platform solution environment variable settings before enabling this flow."
+                    }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Trim_Trailing_Comma": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Terminate with descriptive error if any configuration variables are empty."
+            }
+          },
+          "runAfter": {
+            "Initialize_AzurePortalUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Validate that all 11 configuration environment variables are bound. Terminates with a descriptive error naming unbound variable(s) if any are empty."
+        },
         "Initialize_ViolationCards": {
           "type": "InitializeVariable",
           "inputs": {
@@ -247,7 +366,7 @@
             ]
           },
           "runAfter": {
-            "Initialize_ComplianceDistributionList": [
+            "Validate_Configuration": [
               "Succeeded"
             ]
           },
@@ -387,6 +506,13 @@
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "minimumInterval": "PT5S",
+                      "maximumInterval": "PT1M"
                     }
                   },
                   "runAfter": {},
@@ -433,6 +559,9 @@
                           "type": "boolean"
                         },
                         "AlertSeverity": {
+                          "type": "string"
+                        },
+                        "RunId": {
                           "type": "string"
                         },
                         "ZoneSummary": {
@@ -819,7 +948,7 @@
                       "inputs": {
                         "parameters": {
                           "entityName": "fsi_capolicyvalidationhistories",
-                          "$filter": "fsi_validation_time ge @{body('Parse_Results')?['CheckedAt']}",
+                          "$filter": "fsi_run_id eq '@{body('Parse_Results')?['RunId']}'",
                           "$top": 1
                         },
                         "host": {
@@ -829,7 +958,7 @@
                         }
                       },
                       "runAfter": {},
-                      "description": "Query Dataverse to verify the runbook wrote the validation history record (audit-first pattern)."
+                      "description": "Query Dataverse to verify the runbook wrote the validation history record (audit-first pattern). NOTE: Uses $top=1; if filter is broadened beyond 5000 records, implement @odata.nextLink pagination to avoid silent truncation."
                     },
                     "Check_Record_Missing": {
                       "type": "If",
@@ -846,6 +975,7 @@
                             "parameters": {
                               "entityName": "fsi_capolicyvalidationhistories",
                               "item/fsi_name": "CAA Validation - @{body('Parse_Results')?['CheckedAt']}",
+                              "item/fsi_run_id": "@{body('Parse_Results')?['RunId']}",
                               "item/fsi_validation_time": "@body('Parse_Results')?['CheckedAt']",
                               "item/fsi_tenant_id": "@body('Parse_Results')?['TenantId']",
                               "item/fsi_total_policies": "@body('Parse_Results')?['TotalPolicies']",
@@ -1185,17 +1315,17 @@
                           {
                             "type": "Action.OpenUrl",
                             "title": "View in Entra Portal",
-                            "url": "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies"
+                            "url": "@{variables('EntraPortalUrl')}/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies"
                           },
                           {
                             "type": "Action.OpenUrl",
                             "title": "Run Manual Check",
-                            "url": "https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts"
+                            "url": "@{variables('AzurePortalUrl')}/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts"
                           },
                           {
                             "type": "Action.OpenUrl",
                             "title": "View Documentation",
-                            "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/"
+                            "url": "@{variables('DocsBaseUrl')}/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/"
                           }
                         ],
                         "msteams": {
@@ -1238,7 +1368,7 @@
                         "parameters": {
                           "emailMessage/To": "@variables('ComplianceDistributionList')",
                           "emailMessage/Subject": "[@{body('Parse_Results')?['AlertSeverity']}] CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}",
-                          "emailMessage/Body": "<html><body><h2>CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}</h2><p><strong>Severity:</strong> @{body('Parse_Results')?['AlertSeverity']}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Warnings</strong></td><td>@{body('Parse_Results')?['WarningCount']}</td></tr><tr><td><strong>Drift Count</strong></td><td>@{body('Parse_Results')?['DriftCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr></table><h3>Zone Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><th>Zone</th><th>Passed</th><th>Total</th><th>Severity</th></tr><tr><td>Zone 1 — Personal Productivity</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 2 — Team Collaboration</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 3 — Enterprise Managed</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Severity'], 'N/A')}</td></tr></table><br/><p>Review detailed results in the <a href='https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
+                          "emailMessage/Body": "<html><body><h2>CA Policy Compliance Alert — @{body('Parse_Results')?['OverallStatus']}</h2><p><strong>Severity:</strong> @{body('Parse_Results')?['AlertSeverity']}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Warnings</strong></td><td>@{body('Parse_Results')?['WarningCount']}</td></tr><tr><td><strong>Drift Count</strong></td><td>@{body('Parse_Results')?['DriftCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr></table><h3>Zone Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><th>Zone</th><th>Passed</th><th>Total</th><th>Severity</th></tr><tr><td>Zone 1 — Personal Productivity</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_1'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 2 — Team Collaboration</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_2'))?['Severity'], 'N/A')}</td></tr><tr><td>Zone 3 — Enterprise Managed</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Passed'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Total'], 0)}</td><td>@{coalesce(first(body('Filter_Zone_3'))?['Severity'], 'N/A')}</td></tr></table><br/><p>Review detailed results in the <a href='@{variables('EntraPortalUrl')}/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
                           "emailMessage/Importance": "High"
                         },
                         "host": {
@@ -1260,22 +1390,32 @@
                   },
                   "runAfter": {
                     "Apply_to_Each_Drift": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Verify_Dataverse_Record": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Compute_Severity_Badge": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Compute_Severity_Color": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Compute_Severity_Style": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ]
                   },
-                  "description": "Route alerts only when AlertRequired is true — violations or drift detected."
+                  "description": "Route alerts only when AlertRequired is true — violations or drift detected. Runs even if upstream Dataverse/compute steps fail to ensure compliance alerts are never silently suppressed (FINRA 4511, SOX 404)."
                 }
               },
               "else": {
@@ -1286,7 +1426,7 @@
                       "parameters": {
                         "emailMessage/To": "@variables('ComplianceDistributionList')",
                         "emailMessage/Subject": "[CRITICAL] Azure Automation Job Failed — CAA Daily Compliance Scan",
-                        "emailMessage/Body": "<html><body><h2>[CRITICAL] Azure Automation Job Failed</h2><p>The CAA daily compliance scan automation job did not complete successfully.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Job ID</strong></td><td>@{outputs('Generate_Job_Id')}</td></tr><tr><td><strong>Job Status</strong></td><td>@{body('Get_Job_Status')?['properties']?['status']}</td></tr><tr><td><strong>Automation Account</strong></td><td>@{variables('AutomationAccount')}</td></tr><tr><td><strong>Resource Group</strong></td><td>@{variables('ResourceGroup')}</td></tr></table><br/><p>Please check the <a href='https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts'>Azure Automation account</a> for detailed error information.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
+                        "emailMessage/Body": "<html><body><h2>[CRITICAL] Azure Automation Job Failed</h2><p>The CAA daily compliance scan automation job did not complete successfully.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Job ID</strong></td><td>@{outputs('Generate_Job_Id')}</td></tr><tr><td><strong>Job Status</strong></td><td>@{body('Get_Job_Status')?['properties']?['status']}</td></tr><tr><td><strong>Automation Account</strong></td><td>@{variables('AutomationAccount')}</td></tr><tr><td><strong>Resource Group</strong></td><td>@{variables('ResourceGroup')}</td></tr></table><br/><p>Please check the <a href='@{variables('AzurePortalUrl')}/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts'>Azure Automation account</a> for detailed error information.</p><p><em>This alert was generated by the CAA Daily Compliance Scan flow.</em></p></body></html>",
                         "emailMessage/Importance": "High"
                       },
                       "host": {

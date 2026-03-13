@@ -104,7 +104,8 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 | Zone 2 | Low | **High** | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | **Medium** | Best practice uplift recommended for team agents |
 | Zone 1 | Low | **High** | Governance gap — Below minimum content moderation threshold |
-| Unknown | Any non-compliant | **Warning** | Governance gap — Environment not assigned to zone |
+| Unknown | Low | **High** | Governance gap — Unclassified environment with minimal content moderation |
+| Unknown | Medium | **Warning** | Governance gap — Environment not assigned to zone |
 
 ### Solution Components
 
@@ -190,6 +191,8 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 
 **Purpose:** Daily scheduled orchestration of content moderation validation with Dataverse persistence and conditional alerting.
 
+> **Known Limitation:** Flow configuration values (DataverseUrl, TenantId, ClientId, etc.) are stored as `InitializeVariable` actions requiring manual editing per environment. The solution deploys `fsi_CMM_*` Dataverse environment variables for these values, but the flow does not yet consume them. Migrating to `Get Environment Variable Value` lookups would enable multi-environment portability. See [FLOW_SETUP.md](docs/FLOW_SETUP.md#known-limitations) for details.
+
 **Trigger:**
 - **Schedule:** Daily at 06:00 UTC
 - **Type:** Recurrence trigger
@@ -211,7 +214,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
    - Correlates via `RunId` (single GUID per scan for both history and violations)
 
 4. **Detect Drift:**
-   - Query `fsi_moderationbaseline` for active baselines
+   - Query `fsi_moderationbaselines` for active baselines
    - Compare current moderation levels against baseline
    - Identify downgrades (High → Medium, High → Low, Medium → Low)
    - Add drift violations to alert payload
@@ -264,57 +267,74 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 
 ```json
 {
-  "evidenceType": "ContentModerationValidation",
-  "exportTimestamp": "2026-02-14T15:30:00Z",
-  "exportedBy": "admin@contoso.com",
-  "dateRange": {
-    "startDate": "2025-11-14T00:00:00Z",
-    "endDate": "2026-02-14T23:59:59Z"
+  "metadata": {
+    "exportedAt": "2026-02-14T15:30:00Z",
+    "solution": "Content Moderation Governance Monitor",
+    "solutionVersion": "1.0.1",
+    "fromDate": "2025-11-14T00:00:00Z",
+    "toDate": "2026-02-14T15:30:00Z",
+    "runId": null,
+    "zoneFilter": "All",
+    "exportVersion": "1.0.0",
+    "recordCount": 45,
+    "violationCount": 3,
+    "organizationUrl": "https://org.crm.dynamics.com"
   },
-  "filters": {
-    "zones": ["Zone3"],
-    "severities": ["Critical", "High"]
+  "summary": {
+    "overallStatus": "Failed",
+    "totalScans": 30,
+    "scansCompliant": 27,
+    "scansWithViolations": 3,
+    "totalAgents": 147,
+    "totalViolations": 3,
+    "criticalViolations": 1,
+    "highViolations": 2,
+    "mediumViolations": 0,
+    "warningViolations": 0
   },
-  "validationHistory": [
+  "validations": [
     {
+      "name": "Passed-2026-02-14T06:15:32Z",
       "runId": "abc-123-def",
-      "runTimestamp": "2026-02-14T06:15:32Z",
-      "totalAgentsScanned": 147,
+      "validationTime": "2026-02-14T06:15:32Z",
+      "totalAgents": 147,
+      "compliantCount": 144,
       "violationCount": 3,
-      "criticalCount": 1,
-      "highCount": 2
+      "overallStatus": "Failed",
+      "environmentsScanned": "env-abc-123",
+      "summaryJson": "..."
     }
   ],
   "violations": [
     {
+      "name": "CustomerSupportBot-3-2026-02-14",
+      "environmentGuid": "env-abc-123",
+      "environmentName": "Finance Production-Z3",
       "agentId": "12345678-abcd-1234-abcd-123456789012",
       "agentName": "Customer Support Bot",
-      "environmentId": "env-abc-123",
-      "environmentName": "Finance Production",
-      "zone": "Zone3",
+      "zone": 3,
+      "expectedLevel": "High",
       "actualLevel": "Low",
-      "requiredLevel": "High",
       "severity": "Critical",
-      "regulatory": "FINRA 3110 — Unmoderated customer-facing AI agent",
-      "detectedAt": "2026-02-14T06:15:45Z"
+      "regulatoryContext": "FINRA 3110 — Unmoderated customer-facing AI agent",
+      "detectedAt": "2026-02-14T06:15:45Z",
+      "runId": "abc-123-def"
     }
   ],
-  "baseline": {
-    "included": true,
-    "baselineTimestamp": "2026-01-15T10:00:00Z",
-    "baselineAgents": [
-      {
-        "agentId": "12345678-abcd-1234-abcd-123456789012",
-        "agentName": "Customer Support Bot",
-        "baselineLevel": "High"
-      }
-    ]
-  },
-  "metadata": {
-    "framework": "FSI Agent Governance",
-    "solution": "Content Moderation Monitor v1.0.0",
-    "controlReference": "1.27"
-  }
+  "baselines": [
+    {
+      "baselineId": "baseline-guid-001",
+      "agentId": "12345678-abcd-1234-abcd-123456789012",
+      "agentName": "Customer Support Bot",
+      "environmentGuid": "env-abc-123",
+      "environmentName": "Finance Production-Z3",
+      "zone": 3,
+      "moderationLevel": "High",
+      "capturedBy": "admin@contoso.com",
+      "capturedAt": "2026-01-15T10:00:00Z",
+      "isActive": true
+    }
+  ]
 }
 ```
 
@@ -589,7 +609,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.1
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -600,6 +620,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 - Coordinate moderation policy updates with business stakeholders
 
 **Version History:**
+- **v1.0.1 (February 2026):** Corrected primary control reference from 1.14 to 1.27, fixed Related Controls URL slug, added `src/` path prefix to flow file reference, fixed FSI language compliance, removed empty `flows/` directory
 - **v1.0.0 (February 2026):** Initial release with per-agent validation, drift detection, and evidence export
 
 ---

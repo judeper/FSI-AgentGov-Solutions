@@ -1,5 +1,5 @@
 {
-  "_deployment_note": "Replace all placeholder values (contoso.onmicrosoft.com, your-client-id-here, your-certificate-thumbprint-here, your-subscription-id-here, your-teams-group-id-here, your-teams-channel-id-here, compliance-alerts@contoso.com) with your tenant-specific values before importing.",
+  "_deployment_note": "Replace all placeholder values (governance.crm.dynamics.com, your-org.github.io, contoso.onmicrosoft.com, your-client-id-here, your-certificate-thumbprint-here, your-subscription-id-here, your-teams-group-id-here, your-teams-channel-id-here, compliance-alerts@contoso.com) with your tenant-specific values before importing.",
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -19,7 +19,8 @@
         },
         "timeZone": "UTC"
       },
-      "type": "Recurrence"
+      "type": "Recurrence",
+      "operationOptions": "SingleInstance"
     }
   },
   "actions": {
@@ -31,7 +32,7 @@
           {
             "name": "DataverseUrl",
             "type": "string",
-            "value": "https://governance.crm.dynamics.com"
+            "value": ""
           }
         ]
       },
@@ -51,7 +52,7 @@
           }
         ]
       },
-      "description": "Azure AD tenant ID"
+      "description": "Microsoft Entra ID tenant ID"
     },
     "Initialize_ClientId": {
       "runAfter": {
@@ -67,7 +68,7 @@
           }
         ]
       },
-      "description": "Azure AD application client ID for certificate-based authentication"
+      "description": "Microsoft Entra ID application client ID for certificate-based authentication"
     },
     "Initialize_CertificateThumbprint": {
       "runAfter": {
@@ -197,7 +198,7 @@
             "queries": {
               "runbookName": "Start-AccessValidationRunbook",
               "wait": false,
-              "x-ms-api-version": "2015-10-31"
+              "x-ms-api-version": "2023-11-01"
             },
             "body": {
               "properties": {
@@ -209,6 +210,13 @@
                 }
               }
             }
+          },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT5M"
           },
           "description": "Start Azure Automation runbook for agent access compliance validation"
         },
@@ -248,7 +256,7 @@
                 "method": "get",
                 "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}",
                 "queries": {
-                  "x-ms-api-version": "2015-10-31"
+                  "x-ms-api-version": "2023-11-01"
                 }
               },
               "retryPolicy": {
@@ -307,6 +315,13 @@
                   "Subject": "[CRITICAL] Agent Access Validation Job Failed",
                   "Body": "<p><strong>Azure Automation job failed</strong></p><p>Runbook: Start-AccessValidationRunbook<br>Status: @{body('Get_Job_Status')?['properties']?['status']}<br>Job ID: @{body('Create_Automation_Job')?['properties']?['jobId']}</p><p>Review job output in Azure Portal.</p>",
                   "Importance": "High"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT5M"
                 }
               },
               "description": "Send email notification on job failure"
@@ -340,8 +355,15 @@
             "method": "get",
             "path": "/subscriptions/@{encodeURIComponent(variables('SubscriptionId'))}/resourceGroups/@{encodeURIComponent(variables('ResourceGroup'))}/providers/Microsoft.Automation/automationAccounts/@{encodeURIComponent(variables('AutomationAccount'))}/jobs/@{encodeURIComponent(body('Create_Automation_Job')?['properties']?['jobId'])}/output",
             "queries": {
-              "x-ms-api-version": "2015-10-31"
+              "x-ms-api-version": "2023-11-01"
             }
+          },
+          "retryPolicy": {
+            "type": "exponential",
+            "count": 3,
+            "interval": "PT10S",
+            "minimumInterval": "PT10S",
+            "maximumInterval": "PT5M"
           },
           "description": "Retrieve runbook job output (JSON string)"
         },
@@ -506,7 +528,14 @@
                       }
                     }
                   },
-                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity"
+                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity",
+                  "retryPolicy": {
+                    "type": "exponential",
+                    "count": 3,
+                    "interval": "PT10S",
+                    "minimumInterval": "PT10S",
+                    "maximumInterval": "PT5M"
+                  }
                 }
               },
               "else": {
@@ -532,6 +561,13 @@
                   "Subject": "[ALERT] Agent Access Governance - @{body('Parse_Results')?['OverallStatus']} - @{body('Parse_Results')?['AlertSeverity']}",
                   "Body": "<h3>Agent Access Governance Monitor Alert</h3><table><tr><td><strong>Status:</strong></td><td>@{body('Parse_Results')?['OverallStatus']}</td></tr><tr><td><strong>Severity:</strong></td><td>@{body('Parse_Results')?['AlertSeverity']}</td></tr><tr><td><strong>Total Environments:</strong></td><td>@{body('Parse_Results')?['TotalEnvironments']}</td></tr><tr><td><strong>Violations:</strong></td><td>@{length(body('Parse_Results')?['Violations'])}</td></tr><tr><td><strong>Reason:</strong></td><td>@{body('Parse_Results')?['Reason']}</td></tr><tr><td><strong>Timestamp:</strong></td><td>@{body('Parse_Results')?['Timestamp']}</td></tr></table><h4>Zone Summary</h4><ul><li><strong>Zone 1:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone1']?['Total']}</li><li><strong>Zone 2:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone2']?['Total']}</li><li><strong>Zone 3:</strong> @{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Compliant']}/@{body('Parse_Results')?['ZoneSummary']?['Zone3']?['Total']}</li></ul><p><a href=\"https://admin.powerplatform.microsoft.com/environments\">View in Power Platform Admin Center</a></p>",
                   "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT5M"
                 }
               },
               "description": "Send email alert to compliance distribution list for all alert-required results"
@@ -567,6 +603,13 @@
               "Subject": "[CRITICAL] AAM Flow Execution Failed",
               "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: AAM - Agent Access Validation (Daily)<br>Timestamp: @{utcNow()}</p><p>Review flow run history in Power Automate for details.</p>",
               "Importance": "High"
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "minimumInterval": "PT10S",
+              "maximumInterval": "PT5M"
             }
           },
           "description": "Send CRITICAL error notification when the flow itself fails"

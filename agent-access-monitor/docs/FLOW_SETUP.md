@@ -16,6 +16,8 @@ This flow provides automated orchestration and alerting for the Agent Access Gov
 - Sends email to distribution list for all drift alerts
 - Handles errors with CRITICAL email notification
 
+> **Maintenance Note:** The flow JSON (`access-validation-flow.json`) embeds adaptive card templates as inline strings. The standalone adaptive card JSON files (`adaptive-card-access-alert.json`, `adaptive-card-zone-access-alert.json`) duplicate this content for design-time editing. Changes to one must be manually synchronized with the other to avoid template drift.
+
 ## Prerequisites
 
 Before creating the flow, ensure you have:
@@ -74,7 +76,7 @@ Update these variables in the flow designer (Initialize Variable actions):
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
 | `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL (where AAM schema is deployed) |
-| `TenantId` | String | `contoso.onmicrosoft.com` | Azure AD tenant identifier |
+| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID tenant identifier |
 | `ClientId` | String | `your-client-id-here` | App registration client ID (same one used for certificate auth) |
 | `CertificateThumbprint` | String | `your-thumbprint` | Certificate thumbprint uploaded to Azure Automation |
 | `SubscriptionId` | String | `your-subscription-id-here` | Azure subscription containing Automation Account |

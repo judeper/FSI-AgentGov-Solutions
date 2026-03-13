@@ -52,7 +52,7 @@ python deploy.py \
 The deployment creates:
 - 8 global option sets (State, Zone, Region, etc.)
 - EnvironmentRequest table (22 columns, user-owned)
-- ProvisioningLog table (12 columns, org-owned, immutable)
+- ProvisioningLog table (11 columns, org-owned, immutable)
 - 4 security roles (Requester, Approver, Admin, Auditor)
 - 3 business rules (conditional required fields)
 - 8 model-driven app views

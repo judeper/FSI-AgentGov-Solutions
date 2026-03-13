@@ -89,5 +89,12 @@ The JSON schema for the Copilot Studio agent output when submitting to Power Aut
 | `classification.dataSensitivity` | `fsi_datasensitivity` |
 | `classification.zoneRationale` | `fsi_zonerationale` |
 | `access.securityGroupId` | `fsi_securitygroupid` |
-| `businessContext.purpose` | `fsi_businessjustification` |
+| `access.securityGroupName` | `fsi_securitygroupname` |
+| `access.expectedUserCount` | `fsi_expectedusers` (mapped to choice) |
 | `requester.upn` | `fsi_requester` (lookup) |
+| `requester.displayName` | Stored in system user record (not persisted separately) |
+| `requester.department` | Stored in system user record (not persisted separately) |
+| `approvalRequired.manager` | Evaluated by approval routing logic (not persisted as column) |
+| `approvalRequired.compliance` | Evaluated by approval routing logic (not persisted as column) |
+| `approvalRequired.zoneReviewRequired` | Evaluated by approval routing logic (not persisted as column) |
+| `businessContext.purpose` | `fsi_businessjustification` |

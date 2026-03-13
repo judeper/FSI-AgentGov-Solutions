@@ -152,7 +152,7 @@ Updates exception SLA status and sends alerts for at-risk items.
 
 **At Risk Warning**
 - Recipients: Exception owner
-- Channel: Email
+- Channel: Email + Teams
 - Content: Exception details, days remaining, action required
 
 ---
@@ -173,7 +173,7 @@ Collects compliance evidence from configured sources.
 |--------|-----|---------------|
 | Purview Compliance Manager | Graph API | Assessment scores |
 | Power Platform Admin Center | Power Platform API | Environment status |
-| Azure AD | Graph API | Conditional Access policy status |
+| Microsoft Entra ID | Graph API | Conditional Access policy status |
 | Purview Audit Log | Office 365 Management API | Compliance events |
 
 ### Logic
@@ -199,7 +199,7 @@ Collects compliance evidence from configured sources.
 
 **Purview Compliance Manager**
 ```http
-GET https://graph.microsoft.com/v1.0/compliance/ediscovery/cases
+GET https://graph.microsoft.com/v1.0/compliance/complianceManager/assessments
 Authorization: Bearer {token}
 ```
 
@@ -226,7 +226,8 @@ Authorization: Bearer {token}
 | **Dataverse** | Read/write compliance tables |
 | **Office 365 Outlook** | Send email notifications |
 | **Microsoft Teams** | Send Teams notifications |
-| **HTTP with Azure AD** | Call Graph API and Power Platform API |
+
+> **Note:** The **HTTP with Microsoft Entra ID** connection is only required for the planned CD-EvidenceCollector flow (not yet implemented). The current solution package (`connectionreferences.json`) does not include it. Do not create this connection unless CD-EvidenceCollector is deployed.
 
 ### Service Principal Connection
 
@@ -252,8 +253,8 @@ For Graph API and Power Platform API calls:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CD_NotificationEmail` | Email for compliance notifications | (none — required during import) |
-| `CD_TeamsWebhook` | Teams webhook URL for alerts | (none) |
-| `CD_DataverseEnvironment` | Dataverse environment URL | (current) |
+| `CD_TeamsWebhook` | Not currently used — Teams alerts use the shared\_teams connector directly (PostMessageToConversation). Setting this value has no effect. | (none) |
+| `CD_DataverseEnvironment` | Deprecated — will be removed in next major release. Not referenced by any flow (flows use connection reference). Safe to skip during import. | (current) |
 | `CD_SLAMultiplier` | Reserved for future SLA configurability (not yet referenced by flows) | 1.0 |
 
 ---
@@ -262,12 +263,14 @@ For Graph API and Power Platform API calls:
 
 ### Import Flows
 
-1. Navigate to Power Automate
-2. Click **Import** > **Import Package**
-3. Upload `templates/ComplianceDashboard-Flows.zip`
-4. Configure connection references
-5. Set environment variables
-6. Turn on flows
+The flows are deployed as part of the Power Apps solution package (not as a standalone Power Automate import package).
+
+1. Navigate to [Power Apps maker portal](https://make.powerapps.com)
+2. Select **Solutions** > **Import solution**
+3. Upload the exported solution zip (see `templates/README.md` for how to create `ComplianceDashboard_1_0_0.zip` from a dev environment)
+4. Configure connection references when prompted
+5. Set environment variables when prompted
+6. After import, navigate to **Power Automate** and turn on the flows
 
 ### Post-Import Configuration
 
@@ -293,6 +296,44 @@ Daily validation checks:
 - Score records created for each day
 - Exception SLA status updated
 - No orphaned records
+
+---
+
+## Known Limitations
+
+### No Self-Audit Logging
+
+The solution monitors external compliance controls but does not currently log its own operations (flow executions, SLA transitions, notification outcomes) to a Dataverse audit table. Organizations requiring auditable records of dashboard operations should enable Power Automate flow run logging via the Center of Excellence toolkit or implement a custom `fsi_flowauditlog` table.
+
+### Pagination Limits
+
+All `ListRecords` actions use `minimumItemCount: 100000` (Power Automate maximum). Environments exceeding 100,000 open exceptions or control assessments will experience silent result truncation.
+
+**Truncation detection:** In the flow run history, check the output of each `ListRecords` action. If the returned array length equals exactly 100,000, results are likely truncated. Specifically:
+- `CD-ExceptionMonitor`: Check `length(outputs('List_Open_Exceptions')?['body/value'])` and `length(outputs('List_All_Breached_Exceptions')?['body/value'])`
+- `CD-ScoreCalculator`: Check `length(outputs('List_Control_Assessments')?['body/value'])` and `length(outputs('Get_Open_Exception_Count')?['body/value'])`
+
+**Mitigation:** Enable Dataverse table archival or add date-range filters to reduce result sets below the 100,000 ceiling.
+
+### N+1 Update Pattern
+
+`CD-ExceptionMonitor` issues individual `UpdateRecord` calls per exception inside `Apply_to_each`. For large exception volumes, migrating to Dataverse batch changeset operations (`$batch` endpoint) would reduce API calls and improve throughput.
+
+### SLA Multiplier Not Yet Referenced
+
+The `fsi_CD_SLAMultiplier` environment variable is reserved for future SLA configurability but is not yet referenced by any flow. SLA periods are currently hardcoded in `Initialize_SLA_Days` (Critical=7, High=14, Medium=30, Low=90).
+
+### Bracket Characters in Package Filenames
+
+The `[Content_Types].xml` file in the solution package contains bracket characters that require `-LiteralPath` or backtick escaping in PowerShell. Deployment scripts should use `Get-Content -LiteralPath` or escape as `` `[Content_Types`].xml `` to avoid glob expansion errors.
+
+### Dead Variable: CD_TeamsWebhook
+
+The `Initialize_CD_TeamsWebhook` action (CD-ExceptionMonitor) reads the `fsi_CD_TeamsWebhook` environment variable into a flow variable, but no subsequent action references `CD_TeamsWebhook`. Teams notifications use the `shared_teams` connector directly (`PostMessageToConversation`). Removing this initialization requires adjusting the `Scope_Main` runAfter chain (which depends on `Initialize_CD_TeamsWebhook`), so this is an architectural cleanup rather than a simple deletion. The action is annotated with a description documenting this status.
+
+### Daily Summary Fixed to 09:00 UTC
+
+The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'HH') == "09"`, restricting the daily breach summary email to the 09:00 UTC hourly run. Organizations in time zones far from UTC may prefer to adjust this value. Changing the hour requires editing the condition expression in `CD-ExceptionMonitor.json` (the `"09"` literal in `Condition_Send_Daily_Summary`).
 
 ---
 

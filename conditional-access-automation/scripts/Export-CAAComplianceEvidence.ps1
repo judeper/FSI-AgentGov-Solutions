@@ -99,7 +99,10 @@ param(
     [switch]$IncludeBaselines,
 
     [Parameter()]
-    [switch]$IncludeViolations
+    [switch]$IncludeViolations,
+
+    [Parameter()]
+    [string]$TenantId
 )
 
 Set-StrictMode -Version Latest
@@ -159,10 +162,18 @@ if (-not (Test-Path $OutputPath)) {
 # --- Authenticate ---
 Write-Verbose 'Connecting to Dataverse...'
 try {
-    $tenantHint = ([Uri]$DataverseUrl).Host.Split('.')[0]
+    # Resolve tenant identifier: prefer explicit -TenantId parameter, fall back to org name extraction.
+    # The org name fallback (e.g., "contoso" from https://contoso.crm.dynamics.com) is NOT a valid
+    # tenant GUID and will cause auth failures when Phase 2 Dataverse integration ships.
+    if ($TenantId) {
+        $tenantHint = $TenantId
+    } else {
+        Write-Warning "No -TenantId provided. Extracting org name from DataverseUrl as tenant hint — this is not a valid tenant GUID and will fail when Phase 2 Dataverse integration ships."
+        $tenantHint = ([Uri]$DataverseUrl).Host.Split('.')[0]
+    }
     Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $tenantHint
 } catch {
-    Write-Verbose "CAAClient not available: $_"
+    Write-Warning "Connect-CAADataverse failed: $_. Falling back to Get-AzAccessToken."
 }
 $accessToken = $script:AccessToken
 

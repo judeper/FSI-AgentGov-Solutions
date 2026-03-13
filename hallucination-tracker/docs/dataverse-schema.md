@@ -27,6 +27,15 @@ Primary table for storing hallucination feedback reports.
 | 100000003 | Outdated Info |
 | 100000004 | Confidence Overstatement |
 
+### Source Option Set (`fsi_source`)
+
+| Value | Label |
+|-------|-------|
+| 100000000 | User |
+| 100000001 | Supervisor |
+| 100000002 | Automated |
+| 100000003 | Customer |
+
 ### Severity Option Set (`fsi_severity`)
 
 | Value | Label | Weight |

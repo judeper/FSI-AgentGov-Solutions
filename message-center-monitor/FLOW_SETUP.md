@@ -31,6 +31,8 @@ Before starting, ensure you have:
    - At: 9:00 AM (or your preferred time)
 5. Click **Create**
 
+> **Concurrency Control:** To prevent duplicate processing when a manual test run overlaps with a scheduled run, configure the Recurrence trigger's concurrency setting. Click the trigger's **...** menu > **Settings** > enable **Concurrency Control** and set **Degree of Parallelism** to `1`. This ensures only one instance of the flow runs at a time — if a second run is triggered while one is in progress, it queues instead of running in parallel.
+
 ## Step 2: Get Client Secret from Key Vault (Recommended)
 
 If using Azure Key Vault:
@@ -49,7 +51,7 @@ Add action: **HTTP**
 
 Configure:
 - **Method:** GET
-- **URI:** `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
+- **URI:** `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$select=id,title,category,severity,services,startDateTime,endDateTime,lastModifiedDateTime,isMajorChange,actionRequiredByDateTime,body,tags,hasAttachments`
 - **Authentication:** Active Directory OAuth
   - **Authority:** `https://login.microsoftonline.com`
   - **Tenant:** Your tenant ID (GUID)
@@ -124,15 +126,19 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 
 ### Pattern: Do Until Loop
 
-1. **Initialize variable** `nextLink` (String) = `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
+1. **Initialize variable** `nextLink` (String) = `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$select=id,title,category,severity,services,startDateTime,endDateTime,lastModifiedDateTime,isMajorChange,actionRequiredByDateTime,body,tags,hasAttachments`
 2. **Initialize variable** `allMessages` (Array) = `[]`
 3. **Do Until** `@empty(variables('nextLink'))`:
-   - HTTP GET to `@{variables('nextLink')}` (with same authentication)
-   - **Set variable** `allMessages` = `@{union(variables('allMessages'), body('HTTP')?['value'])}`
+   - HTTP GET to `@{variables('nextLink')}` (with same authentication and **retry policy: Fixed interval, Count: 3, Interval: PT30S** — same as the Step 3 HTTP action, to handle transient 429/503 errors during pagination)
+   - **Set variable** `allMessages` = `@{union(variables('allMessages'), body('HTTP_2')?['value'])}`
 
 > **Warning:** Do NOT use "Append to array" here. `Append to array` adds a single element, so it would create a nested array `[[page1_msgs], [page2_msgs]]` instead of a flat list. Use `Set variable` with `union()` to merge page results correctly.
 
-   - **Set variable** `nextLink` = `@{coalesce(body('HTTP')?['@odata.nextLink'], '')}`
+> **Action naming:** If you already added an HTTP action in Step 3, Power Automate auto-renames this second HTTP action to `HTTP_2`. The expressions above use `body('HTTP_2')` to reflect this. If you delete the Step 3 HTTP action and use only the Do Until pattern, rename references back to `body('HTTP')`. Always verify the action name in your flow matches the expressions.
+
+> **Loop Limits:** Configure the Do Until's **Limits** settings (click the **…** menu > **Settings** on the Do Until action). Set **Count** to `60` (maximum iterations) and **Timeout** to `PT1H` (1 hour). While these are Power Automate's defaults, setting them explicitly prevents runaway execution if the API returns malformed `@odata.nextLink` values that never resolve to empty.
+
+   - **Set variable** `nextLink` = `@{coalesce(body('HTTP_2')?['@odata.nextLink'], '')}`
 4. Process `allMessages` in the Apply to each loop
 
 ### Simplified Flow Diagram
@@ -152,11 +158,49 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 
 > **Note:** For new deployments, this pattern is recommended. However, if you're processing daily and your tenant has fewer than 100 active posts, the basic single-request approach will work.
 
+### Parse JSON with Pagination
+
+When using the pagination pattern above, the `allMessages` variable is a flat array of message objects (not wrapped in a `{ "value": [...] }` envelope). If you want to validate the flat array with Parse JSON, use this schema instead:
+
+```json
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string" },
+      "title": { "type": "string" },
+      "category": { "type": "string" },
+      "severity": { "type": "string" },
+      "services": { "type": "array", "items": { "type": "string" } },
+      "startDateTime": { "type": "string" },
+      "endDateTime": { "type": ["string", "null"] },
+      "lastModifiedDateTime": { "type": "string" },
+      "isMajorChange": { "type": "boolean" },
+      "actionRequiredByDateTime": { "type": ["string", "null"] },
+      "body": {
+        "type": "object",
+        "properties": {
+          "contentType": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      },
+      "tags": { "type": "array", "items": { "type": "string" } },
+      "hasAttachments": { "type": "boolean" }
+    }
+  }
+}
+```
+
+> **Tip:** Parse JSON is optional when using pagination—the `Apply to each` loop can directly iterate over `allMessages`. Use Parse JSON only if you want schema validation or IntelliSense for field names in subsequent actions.
+
 ---
 
 ## Step 6: Loop Through Messages
 
 Add action: **Apply to each**
+
+> **⚠️ Keep execution sequential (default).** Do not enable parallel execution ("Concurrency Control") on this Apply to each loop. The loop uses a non-atomic read-then-update pattern: it reads `notifiedOn` from the upsert response, checks if null, then sends a Teams notification and updates `notifiedOn`. If parallel execution is enabled, two iterations could both read `notifiedOn == null` for the same post before either writes the update, causing duplicate Teams notifications.
 
 - **Select an output from previous steps:** `@{variables('allMessages')}` (if using pagination) or `@{body('Parse_JSON')?['value']}` (basic)
 
@@ -213,6 +257,8 @@ If you cannot modify the table schema, use this pattern:
    - If yes: **Update a row**
    - If no: **Add a row**
 
+> **Duplicate prevention with List rows:** When using this pattern instead of upsert, check the `notifiedOn` field from the List rows response in your notification condition: `equals(first(outputs('List_rows')?['body/value'])?['cr123_notifiedon'], null)`. Replace `cr123_` with your publisher prefix. If no row exists yet (new post), `first()` returns null and the condition is satisfied, allowing the first notification.
+
 **Field mappings for Add/Update:**
 
 | Dataverse Column | Expression |
@@ -221,7 +267,7 @@ If you cannot modify the table schema, use this pattern:
 | title | `@{items('Apply_to_each')?['title']}` |
 | category | Map to choice value (see below) |
 | severity | Map to choice value (see below) |
-| services | `@{join(items('Apply_to_each')?['services'], ', ')}` |
+| services | `@{join(coalesce(items('Apply_to_each')?['services'], json('[]')), ', ')}` |
 | startDateTime | `@{items('Apply_to_each')?['startDateTime']}` |
 | actionRequiredByDateTime | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
 | lastModifiedDateTime | `@{items('Apply_to_each')?['lastModifiedDateTime']}` |
@@ -270,57 +316,76 @@ Inside the Apply to each loop, after the Dataverse action:
 
 Add **Condition** to notify when action is truly needed:
 
+**Notification Condition (includes duplicate prevention):**
+
+> **Important:** The flow runs daily and re-evaluates ALL posts. Without duplicate prevention, previously notified posts trigger alerts again on every run. The `notifiedOn` column (added in Step 1) tracks which posts have already been notified.
+
 **Option A: Basic Check**
 ```
-@or(
-  equals(items('Apply_to_each')?['severity'], 'high'),
-  equals(items('Apply_to_each')?['severity'], 'critical')
+@and(
+  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  or(
+    equals(items('Apply_to_each')?['severity'], 'high'),
+    equals(items('Apply_to_each')?['severity'], 'critical')
+  )
 )
 ```
 
-OR
+> **Note:** Replace `cr123_` with your environment's publisher prefix (see [TEAMS_INTEGRATION.md § Finding Your Publisher Prefix](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix)). The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
 
-- `@{items('Apply_to_each')?['actionRequiredByDateTime']}` is not equal to `null`
+OR (visual editor equivalent):
+
+In the condition editor, create the following structure:
+- Row 1: `@{outputs('Upsert_a_row')?['body/cr123_notifiedon']}` **is equal to** `null`
+- **AND** (click "Add group" → **OR group**):
+  - Row 2a: `@{items('Apply_to_each')?['severity']}` **is equal to** `high`
+  - **OR**
+  - Row 2b: `@{items('Apply_to_each')?['severity']}` **is equal to** `critical`
+
+> **Grouping matters:** You must nest the two severity rows inside an OR group, then AND that group with the null check. Without explicit grouping, the default evaluation would be `(notifiedOn == null AND severity == 'high') OR severity == 'critical'`, which bypasses duplicate prevention for critical-severity posts.
 
 **Option B: Refined Check (Recommended)**
 
 Use an expression to only notify when `actionRequiredByDateTime` is in the future:
 
 ```
-@or(
-  equals(items('Apply_to_each')?['severity'], 'high'),
-  equals(items('Apply_to_each')?['severity'], 'critical'),
-  and(
-    not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
-    greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+@and(
+  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  or(
+    equals(items('Apply_to_each')?['severity'], 'high'),
+    equals(items('Apply_to_each')?['severity'], 'critical'),
+    and(
+      not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
+      greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+    )
   )
 )
 ```
 
-This prevents notifications for posts with past deadlines.
+> **Note:** Replace `cr123_` with your publisher prefix. See the Option A note above for details.
 
-**Preventing Duplicate Notifications:**
+This prevents notifications for posts with past deadlines and ensures each post triggers at most one notification.
 
-The conditions above evaluate ALL posts on every run, which means previously notified posts will trigger alerts again. To prevent duplicates, add a custom Dataverse column (e.g., `notifiedOn`, DateTime) and include an additional check:
-
-1. After sending a Teams notification, add a **Dataverse - Update a row** action to set `notifiedOn` to `@{utcNow()}`
-2. Add this check to your notification condition: `notifiedOn` **is equal to** `null`
-
-This ensures each post triggers at most one notification. If you later want to re-notify (e.g., deadline approaching), you can reset `notifiedOn` or add a separate reminder condition.
+**After sending a Teams notification**, add a **Dataverse - Update a row** action to set `notifiedOn` to `@{utcNow()}`. This marks the post as notified so it won't trigger again on the next run. If you later want to re-notify (e.g., deadline approaching), reset `notifiedOn` to null or add a separate reminder condition.
 
 **Optional Enhancement:** Also check `isMajorChange`:
 
 ```
-@or(
-  equals(items('Apply_to_each')?['severity'], 'high'),
-  equals(items('Apply_to_each')?['severity'], 'critical'),
-  equals(items('Apply_to_each')?['isMajorChange'], true),
-  and(
-    not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
-    greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+@and(
+  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  or(
+    equals(items('Apply_to_each')?['severity'], 'high'),
+    equals(items('Apply_to_each')?['severity'], 'critical'),
+    equals(items('Apply_to_each')?['isMajorChange'], true),
+    and(
+      not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
+      greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
+    )
   )
 )
 ```
+
+> **Note:** Replace `cr123_` with your publisher prefix.
 
 **If yes:**
 
@@ -338,8 +403,9 @@ Replace placeholders in the card with dynamic content:
 - `{title}` → `@{items('Apply_to_each')?['title']}`
 - `{severity}` → `@{items('Apply_to_each')?['severity']}`
 - `{category}` → `@{items('Apply_to_each')?['category']}`
-- `{services}` → `@{join(items('Apply_to_each')?['services'], ', ')}`
-- `{actionRequiredByDateTime}` → `@{coalesce(items('Apply_to_each')?['actionRequiredByDateTime'], 'None')}`
+- `{services}` → `@{join(coalesce(items('Apply_to_each')?['services'], json('[]')), ', ')}`
+- `{startDateTime}` → `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}`
+- `{actionRequiredByDateTime}` → `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}`
 - `{id}` → `@{items('Apply_to_each')?['id']}`
 - `{recordId}` → `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` (replace `cr123_` with your publisher prefix — see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix))
 
@@ -363,7 +429,13 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 3. Add another **Scope** after (call it "Catch")
 4. Configure "Catch" to run after "Try" has failed
 5. In "Catch", add a Teams notification for errors:
-   - Post a message: "Message Center Monitor flow failed. Check run history."
+   - Post a message using this expression to include the error details and timestamp:
+     ```
+     Message Center Monitor flow failed at @{utcNow()}.
+     Error: @{result('Try')?[0]?['error']?['message']}
+     Check run history for details.
+     ```
+   - This enables faster operational triage without requiring manual navigation to flow run history.
 
 > **Why include Apply to each in Try?** If a single message fails to process (e.g., malformed data), the entire loop stops. Wrapping it in Try ensures you get notified of partial failures. For even more granular handling, you can add a nested Try/Catch inside the Apply to each loop to handle individual message failures without stopping the entire run.
 
@@ -398,8 +470,9 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 │       │   ├─ List rows (check if exists)
 │       │   └─ Condition → Add or Update
 │       │
-│       └─ Condition (high severity OR future action required?)
+│       └─ Condition (high severity OR future action required? AND not yet notified)
 │           └─ Yes: Post adaptive card to Teams
+│                   Update notifiedOn = utcNow()
 │
 └─ [Scope: Catch] (runs on failure)
     └─ Post error notification to Teams
@@ -444,6 +517,25 @@ Microsoft Graph API has rate limits:
 - Per-tenant: 150,000 requests per 5 minutes
 
 Daily polling is well within these limits. Even hourly polling (not recommended) would only use ~24 requests/day.
+
+---
+
+## Environment Variables for ALM Portability
+
+The steps above hardcode the polling schedule, severity thresholds, and Teams channel ID directly in the flow. For single-environment use this is fine, but when promoting the solution across environments (dev → test → prod), use [Dataverse environment variables](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/environmentvariables) so values can be updated per-environment without editing the flow definition.
+
+**Recommended environment variables:**
+
+| Display Name | Schema Name | Type | Example Value |
+|-------------|-------------|------|---------------|
+| Polling Interval (days) | `cr123_PollingIntervalDays` | Integer | `1` |
+| Notification Severity Threshold | `cr123_NotifySeverities` | Text | `high,critical` |
+| Teams Channel ID | `cr123_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
+| Teams Team ID | `cr123_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+
+> **Note:** Replace `cr123_` with your publisher prefix. Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**.
+
+To reference an environment variable in the flow, use the **Dataverse - List rows** action to query the `Environment Variable Values` table, or use the `@{outputs('Get_Environment_Variable')?['body/value']}` pattern after adding a dedicated lookup action. This aligns with ALM best practices and simplifies managed solution deployments.
 
 ---
 

@@ -56,8 +56,8 @@
 | `fsi_zone` | Picklist | No | Governance zone |
 | `fsi_severity` | Picklist | No | Violation severity (fsi_acv_severity) |
 | `fsi_violation_type` | String(100) | No | Type: Zone3_FileUploadEnabled_NoApproval, Zone3_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_InsufficientModeration, Zone2_FileUploadEnabled_NoApproval, Unknown_Zone_FileUploadEnabled, Zone1_NoModeration, EvaluationFailed |
-| `fsi_file_upload_expected` | Boolean | No | Expected file upload status per zone |
-| `fsi_file_upload_actual` | Boolean | No | Actual file upload status |
+| `fsi_file_upload_expected` | String(50) | No | Expected file upload status per zone (e.g., "Enabled", "Disabled", "Indeterminate") |
+| `fsi_file_upload_actual` | String(50) | No | Actual file upload status (e.g., "Enabled", "Disabled", "Indeterminate") |
 | `fsi_content_moderation_level` | String(50) | No | Current moderation level |
 | `fsi_content_moderation_minimum` | String(50) | No | Minimum required moderation |
 | `fsi_detected_on` | DateTime | No | When violation was detected |

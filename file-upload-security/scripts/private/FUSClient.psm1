@@ -424,6 +424,7 @@ function ConvertTo-SeverityOptionValue {
     switch ($Severity) {
         'Info'     { return 0 }
         'Low'      { return 1 }
+        'Warning'  { return 5 }
         'Medium'   { return 2 }
         'High'     { return 3 }
         'Critical' { return 4 }
@@ -798,5 +799,6 @@ Export-ModuleMember -Function @(
     'Save-FUSBaseline',
     'Write-FileUploadValidationHistory',
     'Write-FileUploadViolation',
-    'Get-FUSLastValidation'
+    'Get-FUSLastValidation',
+    'Invoke-DataverseRequest'
 )

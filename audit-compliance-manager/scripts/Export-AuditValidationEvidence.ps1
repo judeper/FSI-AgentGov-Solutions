@@ -23,7 +23,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER Scope
     Evidence export scope: Tenant-level or Environment-level validations.
@@ -47,7 +47,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-AuditValidationEvidence.ps1 `

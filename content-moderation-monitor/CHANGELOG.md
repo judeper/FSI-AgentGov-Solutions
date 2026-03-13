@@ -82,7 +82,7 @@ All notable changes to the Content Moderation Monitor.
 - **CMMClient.psm1** — Dataverse client module (10 exported functions)
   - `Connect-CMMDataverse`, `Get-CMMConnection` — Connection management
   - `Get-CMMEnvironmentVariable` — Environment variable lookup (`CMM_` prefix)
-  - `Get-ModerationBaseline` — Queries `fsi_moderationbaseline` table
+  - `Get-ModerationBaseline` — Queries `fsi_moderationbaselines` table
   - `Write-ModerationValidationHistory` — Writes to `fsi_moderationvalidationhistory`
   - `Write-ModerationViolation` — Writes to `fsi_moderationviolations`
   - `Get-AgentBots` — Queries `bot` table with pagination support

@@ -30,18 +30,19 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
-!!! danger "Warning: x-api-key Deprecated - March 31, 2026"
-    If you are troubleshooting API key authentication issues, note that this authentication method is **deprecated** and will **stop working on March 31, 2026**. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
-
-    **Migration Path:**
-
-    1. Register an App in Entra ID with Monitoring Reader role
-    2. Replace `-ApiKey` parameter with `Connect-AzAccount` authentication
-    3. Use bearer token authentication via `Get-AzAccessToken`
-
-    See [Authentication Migration](prerequisites.md#authentication-migration) for complete migration steps.
-
-    *Last verified: February 2, 2026*
+> **⚠️ Warning: x-api-key Deprecated - March 31, 2026**
+>
+> If you are troubleshooting API key authentication issues, note that this authentication method is **deprecated** and will **stop working on March 31, 2026**. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
+>
+> **Migration Path:**
+>
+> 1. Register an App in Entra ID with Monitoring Reader role
+> 2. Replace `-ApiKey` parameter with `Connect-AzAccount` authentication
+> 3. Use bearer token authentication via `Get-AzAccessToken`
+>
+> See [Authentication Migration](prerequisites.md#authentication-migration) for complete migration steps.
+>
+> *Last verified: February 2, 2026*
 
 **Symptoms:**
 - REST API returns 401/403 error
@@ -259,4 +260,4 @@ When reporting issues, include:
 
 ---
 
-*FSI Agent Governance Framework v2.0.0 - February 2026*
+*FSI Agent Governance Framework v1.2 - January 2026*

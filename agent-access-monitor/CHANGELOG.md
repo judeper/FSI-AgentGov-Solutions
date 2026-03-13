@@ -44,7 +44,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Get-AAMLastValidation function in AAMClient.psm1 for querying validation history (drift detection support)
 
 ### Changed
-- AAMClient.psm1 now exports 10 functions (was 6): added Save-AAMBaseline, Get-AAMLastValidation, Get-ValidToken, and Invoke-DataverseRequest
+- AAMClient.psm1 now exports 9 functions (was 6): added Save-AAMBaseline, Get-AAMLastValidation, and Get-ValidToken
 - Start-AccessValidationRunbook.ps1 enriches ZoneSummary to per-zone objects with Total/Compliant/Violations for flow and adaptive card consumption
 
 ## [0.2.0] - 2026-02-09

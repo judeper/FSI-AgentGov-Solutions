@@ -28,7 +28,7 @@ The **MIME Type Restrictions for File Uploads** solution provides defense-in-dep
 - **Server-Side Validation:** Dataverse pre-validation plugin inspects file content (magic bytes) to verify actual file type matches declared MIME type
 - **Magic Byte Inspection:** Validates file signatures (headers) against known patterns (PDF: %PDF, PNG: 89 50 4E 47, etc.)
 - **Blocked Signature Detection:** Automatically blocks executable signatures (PE/DOS, ELF, Mach-O, Java class files)
-- **DLP Policy Enforcement:** Power Platform DLP policy restricts file upload connectors to approved MIME types
+- **DLP Policy Enforcement:** Power Platform DLP policy restricts file upload connectors by blocking dangerous file extensions
 - **OpenXML Deep Inspection:** Validates Office documents (DOCX, XLSX, PPTX) by inspecting internal ZIP structure and [Content_Types].xml
 - **Sentinel Monitoring:** KQL queries aggregate blocked upload attempts for security operations review
 
@@ -62,7 +62,7 @@ The MIME Type Restrictions solution operates across three enforcement layers wit
 │  (Connector)      │     │  Plugin          │      │  Monitoring      │
 │                   │     │  (Pre-Validation)│      │  (Detection)     │
 │  - Policy scope   │     │                  │      │                  │
-│  - MIME whitelist │     │  1. File size    │      │  - KQL queries   │
+│  - Extension      │     │  1. File size    │      │  - KQL queries   │
 │  - Audit/Block    │     │     guard        │      │  - Block events  │
 │    mode           │     │  2. Blocked sig  │      │  - Exception     │
 │                   │     │     scan         │      │    tracking      │
@@ -199,7 +199,7 @@ Plugin writes detailed trace logs for troubleshooting:
 #### 2. DLP Policy Template — dlp-policy-template.json
 **File:** `src/dlp-policy-template.json`
 
-**Purpose:** Power Platform DLP policy template that restricts file upload connectors to approved MIME types at the connector level (Layer 1 enforcement).
+**Purpose:** Power Platform DLP policy template that restricts file upload connectors by blocking dangerous file extensions at the connector level (Layer 1 enforcement).
 
 **Policy Configuration:**
 
@@ -251,8 +251,7 @@ Organizations should customize the template based on business requirements:
 **Deployment:**
 
 ```powershell
-# Import DLP policy template
-Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -EnvironmentName "all"
+# See "Step 3: Import DLP Policy Template" under Configuration Steps below for deployment commands
 ```
 
 #### 3. MIME Configuration — MimeConfig.json
@@ -531,12 +530,18 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 1. Customize `dlp-policy-template.json` with organization-specific MIME types
 2. Import via PowerShell:
    ```powershell
-   Connect-MgGraph -Scopes "Policy.ReadWrite.All"
-   Import-PowerPlatformDlpPolicy -PolicyDefinitionPath ./dlp-policy-template.json -EnvironmentName "all"
+   # Install the Power Platform admin module if not already installed
+   Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force
+   Add-PowerAppsAccount
+   # Create the DLP policy — see official documentation for connector classification:
+   # https://learn.microsoft.com/en-us/power-platform/admin/create-dlp-policy
+   New-AdminDlpPolicy -DisplayName "MIME Type Restrictions" -EnvironmentName "all"
+   # After creation, classify connectors using Set-AdminDlpPolicy as needed.
+   # Refer to dlp-policy-template.json for the intended connector configuration.
    ```
 3. Verify policy:
    ```powershell
-   Get-PowerPlatformDlpPolicy | Where-Object { $_.DisplayName -like "*MIME*" }
+   Get-AdminDlpPolicy | Where-Object { $_.DisplayName -like "*MIME*" }
    ```
 
 **Step 4: Deploy Sentinel Queries**
@@ -561,7 +566,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 8. **Event grouping:** Group all events into a single alert
 9. **Incident settings:**
    - **Create incidents:** Enabled
-   - **Alert grouping:** Disabled (create separate incident per alert)
+   - **Alert grouping:** Enabled (group by Account entity, 5-hour lookback)
 10. Click **Create**
 
 ### Deployment Validation
@@ -580,7 +585,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 1. Attempt to upload Windows executable (e.g., `notepad.exe`)
 2. **Expected Result:**
    - Upload fails with error: "File 'notepad.exe' matches blocked signature 'PE/MS-DOS Executable'"
-   - Plugin trace log shows: `[FSI-MIME] Blocked signature detected: PE/MS-DOS Executable`
+   - Plugin trace log shows: `[FSI-MIME] VIOLATION: File 'notepad.exe' matches blocked signature 'PE/MS-DOS Executable'. This file type is not permitted in Zone 3 environments. Contact your administrator if you believe this is in error. (CorrelationId=<guid>)`
 3. Verify no annotation record created
 
 **Test 3: MIME Type Not in Allowlist (ZIP)**
@@ -588,7 +593,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 1. Attempt to upload ZIP archive (e.g., `archive.zip`)
 2. **Expected Result:**
    - Upload fails with error: "File type 'application/zip' is not in the allowed list for Zone 3 environments"
-   - Plugin trace log shows: `[FSI-MIME] MIME type not in allowlist: application/zip`
+   - Plugin trace log shows: `[FSI-MIME] VIOLATION: MIME type 'application/zip' for file 'archive.zip' is not in the Zone 3 allowed list. Review the allowed types configuration or contact your administrator. (CorrelationId=<guid>)`
 
 **Test 4: Magic Byte Mismatch (Disguised GIF as PDF)**
 
@@ -610,7 +615,7 @@ If you prefer command-line deployment over the Plugin Registration Tool:
 **Test 6: Sentinel Alert Trigger**
 
 1. Simulate high-volume attack: Attempt to upload EXE file 15 times in 10 minutes
-2. Wait 5 minutes for alert rule execution
+2. Wait up to 1 hour for alert rule execution (query frequency is PT1H)
 3. **Expected Result:**
    - Sentinel incident created: "High-Volume MIME Type Block Attempts"
    - Incident details show user, block count, file extension
@@ -764,7 +769,7 @@ For regulatory examinations, export blocked upload evidence:
 ```powershell
 # Export plugin trace logs (last 90 days)
 $traces = Get-CrmRecords -EntityLogicalName "plugintracelog" -FilterAttribute "createdon" -FilterOperator "last-x-days" -FilterValue 90
-Export-Csv -Path "./plugin-trace-logs.csv" -InputObject $traces
+$traces.CrmRecords | Export-Csv -Path "./plugin-trace-logs.csv" -NoTypeInformation
 ```
 
 **Sentinel Blocked Upload Events:**
@@ -798,7 +803,7 @@ Export to CSV via Sentinel portal → **Export** → **CSV**
 | File Type | MIME Type | Magic Bytes (Hex) | ASCII Representation |
 |-----------|-----------|-------------------|----------------------|
 | **PDF** | `application/pdf` | `25 50 44 46` | `%PDF` |
-| **PNG** | `image/png` | `89 50 4E 47 0D 0A 1A 0A` | `.PNG....` |
+| **PNG** | `image/png` | `89 50 4E 47` | `.PNG` (4-byte prefix; full signature is `89 50 4E 47 0D 0A 1A 0A` but the 4-byte prefix is sufficient for unique identification) |
 | **JPEG** | `image/jpeg` | `FF D8 FF` | `ÿØÿ` |
 | **GIF (87a)** | `image/gif` | `47 49 46 38 37 61` | `GIF87a` |
 | **GIF (89a)** | `image/gif` | `47 49 46 38 39 61` | `GIF89a` |
@@ -839,7 +844,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 - Blocked signature scan detects known executable file types (PE, ELF, Mach-O, Java)
 - Magic byte inspection prevents disguised malicious files (EXE renamed to PDF)
 
-### FINRA 4511 — Supervision
+### FINRA 3110 — Supervision
 
 **Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including technology controls for data uploads and transfers.
 

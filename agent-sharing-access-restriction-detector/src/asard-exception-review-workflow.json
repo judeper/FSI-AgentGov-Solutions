@@ -196,11 +196,12 @@
                       "entityName": "fsi_agentsharingcompliances",
                       "$select": "fsi_agent_name,fsi_environment_name,fsi_exception_expires_at,fsi_exception_approved_by,fsi_exception_justification",
                       "$filter": "fsi_compliance_status eq 914430002 and fsi_exception_expires_at ge @{variables('Today')} and fsi_exception_expires_at le @{variables('ExpiringThreshold')}",
-                      "$orderby": "fsi_exception_expires_at asc"
+                      "$orderby": "fsi_exception_expires_at asc",
+                      "$top": 5000
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for exceptions expiring within 14 days (compliance_status=914430002, expires_at between today and today+14)"
+                  "description": "Query for exceptions expiring within 14 days (compliance_status=914430002, expires_at between today and today+14). Returns up to 5,000 records (Dataverse maximum per request). LIMITATION: No pagination loop — environments with more than 5,000 expiring exceptions will only process the first page. Consider adding a Do_Until pagination loop with @odata.nextLink for very large-scale deployments."
                 },
                 "Condition_Check_Expiring_Exceptions_Exist": {
                   "type": "If",
@@ -253,13 +254,13 @@
                     },
                     "Build_Expiring_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(join(body('Build_Expiring_List'), '\\n'), '\\', '\\\\'), '\"', '\\\"')), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expiring_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expiring_Exceptions')?['body/value']))), '{{review_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'), '{{exception_list}}', replace(replace(replace(join(body('Build_Expiring_List'), '<<NEWLINE>>'), '\\', '\\\\'), '\"', '\\\"'), '<<NEWLINE>>', '\\n')))",
                       "runAfter": {
                         "Load_Expiring_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expiring exception data"
+                      "description": "Populate adaptive card template with expiring exception data. Exception list substituted last to prevent template placeholder injection from Dataverse field values. Newlines joined via <<NEWLINE>> placeholder to avoid double-escaping during backslash sanitization."
                     },
                     "Load_Expiring_Card_Template": {
                       "type": "Http",
@@ -277,7 +278,7 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template from source control or blob storage. WARNING: Ensure fsi_ASARD_AdaptiveCardTemplateUrl is configured with a trusted HTTPS URL. No URL scheme validation or content integrity check is performed — misconfiguration could load templates from untrusted sources."
+                      "description": "Load adaptive card template from source control or blob storage. HTTPS scheme validation is performed upstream by Validate_TemplateUrl_Configured. KNOWN LIMITATION: No content integrity validation (hash/signature check) is performed — a compromised or substituted template URL could inject arbitrary card content into governance notifications. Mitigate by restricting fsi_ASARD_AdaptiveCardTemplateUrl to trusted, access-controlled hosting (e.g., private Azure Blob Storage with SAS tokens or GitHub repo with branch protection)."
                     }
                   }
                 }
@@ -285,7 +286,7 @@
             },
             {
               "actions": {
-                "Query_Expired_Exceptions": {
+                "Query_Expired_Exceptions":{
                   "type": "OpenApiConnection",
                   "inputs": {
                     "host": {
@@ -297,11 +298,12 @@
                       "entityName": "fsi_agentsharingcompliances",
                       "$select": "fsi_agentsharingcomplianceid,fsi_agent_name,fsi_environment_name,fsi_exception_expires_at,fsi_exception_justification",
                       "$filter": "fsi_compliance_status eq 914430002 and fsi_exception_expires_at lt @{variables('Today')}",
-                      "$orderby": "fsi_exception_expires_at desc"
+                      "$orderby": "fsi_exception_expires_at desc",
+                      "$top": 5000
                     },
                     "authentication": "@parameters('$authentication')"
                   },
-                  "description": "Query for expired exceptions (compliance_status=914430002, expires_at < today)"
+                  "description": "Query for expired exceptions (compliance_status=914430002, expires_at < today). Returns up to 5,000 records (Dataverse maximum per request). LIMITATION: No pagination loop — environments with more than 5,000 expired exceptions will only process the first page. Consider adding a Do_Until pagination loop with @odata.nextLink for very large-scale deployments."
                 },
                 "Condition_Check_Expired_Exceptions_Exist": {
                   "type": "If",
@@ -392,10 +394,11 @@
                       },
                       "runAfter": {
                         "Apply_To_Each_Expired_Exception": [
-                          "Succeeded"
+                          "Succeeded",
+                          "Failed"
                         ]
                       },
-                      "description": "Transform expired records to list for notification"
+                      "description": "Transform expired records to list for notification. Runs on Failed too so governance leads receive the expired list even when individual updates fail."
                     },
                     "Post_Expired_Notification": {
                       "type": "OpenApiConnection",
@@ -422,13 +425,13 @@
                     },
                     "Build_Expired_Adaptive_Card": {
                       "type": "Compose",
-                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{exception_list}}', replace(replace(join(body('Build_Expired_List'), '\\n'), '\\', '\\\\'), '\"', '\\\"')), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'))",
+                      "inputs": "@json(replace(replace(replace(replace(replace(string(body('Load_Expired_Card_Template')), '{{exception_count}}', string(length(outputs('Query_Expired_Exceptions')?['body/value']))), '{{reset_date}}', formatDateTime(utcNow(), 'yyyy-MM-dd')), '{{timestamp}}', formatDateTime(utcNow(), 'yyyy-MM-dd HH:mm:ss')), '{{playbook_url}}', 'https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/'), '{{exception_list}}', replace(replace(replace(join(body('Build_Expired_List'), '<<NEWLINE>>'), '\\', '\\\\'), '\"', '\\\"'), '<<NEWLINE>>', '\\n')))",
                       "runAfter": {
                         "Load_Expired_Card_Template": [
                           "Succeeded"
                         ]
                       },
-                      "description": "Populate adaptive card template with expired exception data"
+                      "description": "Populate adaptive card template with expired exception data. Exception list substituted last to prevent template placeholder injection from Dataverse field values. Newlines joined via <<NEWLINE>> placeholder to avoid double-escaping during backslash sanitization."
                     },
                     "Load_Expired_Card_Template": {
                       "type": "Http",
@@ -446,7 +449,7 @@
                           "Succeeded"
                         ]
                       },
-                      "description": "Load adaptive card template from source control or blob storage. WARNING: Ensure fsi_ASARD_AdaptiveCardTemplateUrl is configured with a trusted HTTPS URL. No URL scheme validation or content integrity check is performed — misconfiguration could load templates from untrusted sources."
+                      "description": "Load adaptive card template from source control or blob storage. HTTPS scheme validation is performed upstream by Validate_TemplateUrl_Configured. KNOWN LIMITATION: No content integrity validation (hash/signature check) is performed — a compromised or substituted template URL could inject arbitrary card content into governance notifications. Mitigate by restricting fsi_ASARD_AdaptiveCardTemplateUrl to trusted, access-controlled hosting (e.g., private Azure Blob Storage with SAS tokens or GitHub repo with branch protection)."
                     }
                   }
                 }
@@ -499,13 +502,13 @@
   "tags": {
     "solution": "FSI-AgentGov",
     "component": "ASARD",
-    "version": "v1.0.0",
+    "version": "v1.0.1",
     "phase": "exception-management",
     "requirement": "ENF-03"
   },
   "_metadata": {
     "workflowName": "ASARD Exception Review Workflow",
-    "workflowVersion": "1.0.0",
+    "workflowVersion": "1.0.1",
     "solution": "Agent Sharing Access Restriction Detector (ASARD)",
     "description": "Daily scheduled workflow to review agent sharing exceptions. Sends Teams notifications for expiring exceptions (within 14 days) and auto-resets expired exceptions to NonCompliant status.",
     "trigger": "Recurrence (daily at 08:00 UTC)",
@@ -536,6 +539,10 @@
       "adaptive-card-asard-exception-expiring.json template",
       "adaptive-card-asard-exception-expired.json template",
       "Teams channel for governance notifications"
+    ],
+    "knownLimitations": [
+      "No pagination: Queries return a maximum of 5,000 records per branch (Dataverse maximum per request). Environments with more than 5,000 expiring or expired exceptions will only process the first page. Add a Do_Until pagination loop with @odata.nextLink for very large-scale deployments.",
+      "No template integrity validation: HTTP-loaded adaptive card templates are not verified via hash or signature. A compromised template URL could inject arbitrary card content. Mitigate by restricting fsi_ASARD_AdaptiveCardTemplateUrl to trusted, access-controlled hosting."
     ]
   }
 }

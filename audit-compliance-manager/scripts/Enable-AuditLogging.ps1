@@ -463,6 +463,11 @@ try {
 
         Write-Output "`n  --- Environment $envIndex/$($targetEnvironments.Count): $envName ($envId) ---"
 
+        # Refresh Dataverse token before each iteration to prevent 401 on long runs
+        if (-not $isWhatIf) {
+            $dvToken = Get-FreshDataverseToken -Url $DataverseEnvironmentUrl
+        }
+
         $envResult = [PSCustomObject]@{
             EnvironmentId   = $envId
             EnvironmentName = $envName

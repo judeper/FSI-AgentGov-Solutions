@@ -75,13 +75,14 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | actionRequiredByDateTime | DateTime |
 | lastModifiedDateTime | DateTime |
 | isMajorChange | Yes/No |
-| body | Multiline Text |
+| body | Multiline Text (set max length to 100,000+) |
 | assessmentStatus | Choice |
 | assessment | Multiline Text |
 | impactsAgents | Yes/No |
 | assessedBy | Lookup (User) |
 | assessedDate | DateTime |
 | actionsTaken | Multiline Text |
+| notifiedOn | DateTime |
 
 **Choice Values:**
 | Choice Column | Values |
@@ -99,7 +100,8 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Go to Power Platform Admin Center > Data policies
 - [ ] Find policy for your environment
 - [ ] Verify HTTP connector can access `graph.microsoft.com`
-- [ ] If blocked, add to allowed endpoints or move to "Business" group
+- [ ] Verify Azure Key Vault connector is allowed (if using Key Vault for secrets)
+- [ ] If blocked, add connectors to allowed endpoints or move to "Business" group
 
 ---
 
@@ -111,7 +113,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Add HTTP action for Graph API
 - [ ] Add Parse JSON action
 - [ ] Add Apply to each with Dataverse upsert
-- [ ] Add condition for high-severity posts
+- [ ] Add condition for high-severity and critical-severity posts
 - [ ] Add Teams notification action
 
 **Details:** [FLOW_SETUP.md](./FLOW_SETUP.md)
@@ -131,7 +133,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Add Teams action to your flow
 - [ ] Use adaptive card template from `teams-notification-card.json`
 - [ ] Replace placeholders with dynamic content
-- [ ] Configure to post only on high-severity or action-required
+- [ ] Configure to post only on high-severity, critical-severity, or action-required
 
 **Details:** [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md)
 
@@ -157,7 +159,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 
 ### Optional Enhancements
 
-- [ ] Add error notification flow
+- [ ] Add error notification flow (recommended — see [FLOW_SETUP.md Step 8](./FLOW_SETUP.md#step-8-error-handling) for the Catch scope pattern that sends a Teams alert with error details on flow failure)
 - [ ] Create Dataverse views for filtering
 - [ ] Set up Power BI dashboard for trends
 - [ ] Integrate with ServiceNow or other ITSM

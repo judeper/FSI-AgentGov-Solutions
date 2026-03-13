@@ -91,6 +91,11 @@
           },
           "metadata": {
             "operationMetadataId": "manual-trigger-elm-provisioning"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
           }
         }
       },
@@ -107,7 +112,7 @@
             ]
           },
           "runAfter": {},
-          "description": "Dataverse environment URL (e.g., https://org.crm.dynamics.com). Set via environment variable fsi_CAA_DataverseUrl."
+          "description": "Dataverse environment URL. Set via environment variable fsi_CAA_DataverseUrl."
         },
         "Initialize_TenantId": {
           "type": "InitializeVariable",
@@ -271,6 +276,138 @@
           },
           "description": "Email distribution list for compliance alert routing. Set via environment variable fsi_CAA_ComplianceDistributionList."
         },
+        "Initialize_DocsBaseUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "DocsBaseUrl",
+                "type": "string",
+                "value": ""
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_ComplianceDistributionList": [
+              "Succeeded"
+            ]
+          },
+          "description": "Documentation site base URL for adaptive card links. Set via environment variable fsi_CAA_DocsBaseUrl."
+        },
+        "Initialize_EntraPortalUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "EntraPortalUrl",
+                "type": "string",
+                "value": "https://entra.microsoft.com"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_DocsBaseUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Entra admin center base URL. Defaults to commercial cloud. Override via environment variable fsi_CAA_EntraPortalUrl for sovereign clouds (e.g., https://entra.microsoft.us)."
+        },
+        "Initialize_AzurePortalUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AzurePortalUrl",
+                "type": "string",
+                "value": "https://portal.azure.com"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_EntraPortalUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Azure portal base URL. Defaults to commercial cloud. Override via environment variable fsi_CAA_AzurePortalUrl for sovereign clouds (e.g., https://portal.azure.us)."
+        },
+        "Initialize_PowerPlatformAdminUrl": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "PowerPlatformAdminUrl",
+                "type": "string",
+                "value": "https://admin.powerplatform.microsoft.com"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_AzurePortalUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Power Platform admin center base URL. Defaults to commercial cloud. Override via environment variable fsi_CAA_PowerPlatformAdminUrl for sovereign clouds."
+        },
+        "Validate_Configuration": {
+          "type": "Scope",
+          "actions": {
+            "Check_Empty_Variables": {
+              "type": "Compose",
+              "inputs": "@concat(if(empty(variables('DataverseUrl')), 'DataverseUrl,', ''), if(empty(variables('TenantId')), 'TenantId,', ''), if(empty(variables('ClientId')), 'ClientId,', ''), if(empty(variables('CertificateThumbprint')), 'CertificateThumbprint,', ''), if(empty(variables('SubscriptionId')), 'SubscriptionId,', ''), if(empty(variables('ResourceGroup')), 'ResourceGroup,', ''), if(empty(variables('AutomationAccount')), 'AutomationAccount,', ''), if(empty(variables('TeamsGroupId')), 'TeamsGroupId,', ''), if(empty(variables('TeamsChannelId')), 'TeamsChannelId,', ''), if(empty(variables('ComplianceDistributionList')), 'ComplianceDistributionList,', ''), if(empty(variables('DocsBaseUrl')), 'DocsBaseUrl,', ''))",
+              "runAfter": {},
+              "description": "Build comma-separated list of configuration variables that are empty (unbound at solution import time)."
+            },
+            "Trim_Trailing_Comma": {
+              "type": "Compose",
+              "inputs": "@if(endsWith(outputs('Check_Empty_Variables'), ','), substring(outputs('Check_Empty_Variables'), 0, sub(length(outputs('Check_Empty_Variables')), 1)), outputs('Check_Empty_Variables'))",
+              "runAfter": {
+                "Check_Empty_Variables": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Remove trailing comma from the unbound variable list produced by Check_Empty_Variables."
+            },
+            "Terminate_If_Unbound": {
+              "type": "If",
+              "expression": {
+                "not": {
+                  "equals": [
+                    "@outputs('Trim_Trailing_Comma')",
+                    ""
+                  ]
+                }
+              },
+              "actions": {
+                "Terminate_Missing_Config": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Failed",
+                    "runError": {
+                      "code": "ConfigurationError",
+                      "message": "Required environment variables are not bound. Unbound variables: @{outputs('Trim_Trailing_Comma')}. Bind these variables in the Power Platform solution environment variable settings before enabling this flow."
+                    }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Trim_Trailing_Comma": [
+                  "Succeeded"
+                ]
+              },
+              "description": "Terminate with descriptive error if any configuration variables are empty."
+            }
+          },
+          "runAfter": {
+            "Initialize_PowerPlatformAdminUrl": [
+              "Succeeded"
+            ]
+          },
+          "description": "Validate that all 11 configuration environment variables are bound. Terminates with a descriptive error naming unbound variable(s) if any are empty."
+        },
         "Initialize_VerificationStatus": {
           "type": "InitializeVariable",
           "inputs": {
@@ -283,7 +420,7 @@
             ]
           },
           "runAfter": {
-            "Initialize_ComplianceDistributionList": [
+            "Validate_Configuration": [
               "Succeeded"
             ]
           },
@@ -343,11 +480,58 @@
           },
           "description": "Severity classification: Critical (Zone 3), High (Zone 2), Warning (Zone 1), or Passed."
         },
+        "Validate_Zone": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@triggerBody()?['Zone']",
+                  1
+                ]
+              },
+              {
+                "equals": [
+                  "@triggerBody()?['Zone']",
+                  2
+                ]
+              },
+              {
+                "equals": [
+                  "@triggerBody()?['Zone']",
+                  3
+                ]
+              }
+            ]
+          },
+          "actions": {},
+          "else": {
+            "actions": {
+              "Terminate_Invalid_Zone": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Failed",
+                  "runError": {
+                    "code": "InvalidZone",
+                    "message": "Invalid Zone value '@{triggerBody()?['Zone']}'. Zone must be 1 (Personal Productivity), 2 (Team Collaboration), or 3 (Enterprise Managed). Refusing to proceed — an invalid zone would silently downgrade compliance severity."
+                  }
+                },
+                "runAfter": {}
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_Severity": [
+              "Succeeded"
+            ]
+          },
+          "description": "Validate Zone is 1, 2, or 3. Terminates with error if invalid to prevent silent severity downgrade in compliance pipeline."
+        },
         "Compute_Zone_Severity": {
           "type": "Compose",
           "inputs": "@if(equals(triggerBody()?['Zone'], 3), 'Critical', if(equals(triggerBody()?['Zone'], 2), 'High', 'Warning'))",
           "runAfter": {
-            "Initialize_Severity": [
+            "Validate_Zone": [
               "Succeeded"
             ]
           },
@@ -357,7 +541,7 @@
           "type": "Compose",
           "inputs": "@if(equals(triggerBody()?['Zone'], 3), 'attention', if(equals(triggerBody()?['Zone'], 2), 'warning', 'accent'))",
           "runAfter": {
-            "Initialize_Severity": [
+            "Validate_Zone": [
               "Succeeded"
             ]
           },
@@ -367,7 +551,7 @@
           "type": "Compose",
           "inputs": "@if(equals(triggerBody()?['Zone'], 3), 'Zone 3 — Enterprise Managed', if(equals(triggerBody()?['Zone'], 2), 'Zone 2 — Team Collaboration', 'Zone 1 — Personal Productivity'))",
           "runAfter": {
-            "Initialize_Severity": [
+            "Validate_Zone": [
               "Succeeded"
             ]
           },
@@ -491,6 +675,13 @@
                     "authentication": {
                       "type": "ManagedServiceIdentity",
                       "audience": "https://management.azure.com"
+                    },
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 3,
+                      "interval": "PT10S",
+                      "minimumInterval": "PT5S",
+                      "maximumInterval": "PT1M"
                     }
                   },
                   "runAfter": {},
@@ -537,6 +728,9 @@
                           "type": "boolean"
                         },
                         "AlertSeverity": {
+                          "type": "string"
+                        },
+                        "RunId": {
                           "type": "string"
                         },
                         "ScanScope": {
@@ -770,7 +964,7 @@
                       "inputs": {
                         "parameters": {
                           "entityName": "fsi_capolicyvalidationhistories",
-                          "$filter": "fsi_validation_time ge @{body('Parse_Results')?['CheckedAt']}",
+                          "$filter": "fsi_run_id eq '@{body('Parse_Results')?['RunId']}'",
                           "$top": 1
                         },
                         "host": {
@@ -780,7 +974,7 @@
                         }
                       },
                       "runAfter": {},
-                      "description": "Query Dataverse to verify the runbook wrote the validation history record with Targeted scope tag."
+                      "description": "Query Dataverse to verify the runbook wrote the validation history record with Targeted scope tag. NOTE: Uses $top=1; if filter is broadened beyond 5000 records, implement @odata.nextLink pagination to avoid silent truncation."
                     },
                     "Check_Record_Missing": {
                       "type": "If",
@@ -797,6 +991,7 @@
                             "parameters": {
                               "entityName": "fsi_capolicyvalidationhistories",
                               "item/fsi_name": "CAA Provisioning Verification - @{triggerBody()?['EnvironmentName']} - @{body('Parse_Results')?['CheckedAt']}",
+                              "item/fsi_run_id": "@{body('Parse_Results')?['RunId']}",
                               "item/fsi_validation_time": "@body('Parse_Results')?['CheckedAt']",
                               "item/fsi_tenant_id": "@body('Parse_Results')?['TenantId']",
                               "item/fsi_total_policies": "@body('Parse_Results')?['TotalPolicies']",
@@ -868,12 +1063,29 @@
                               "operationId": "CreateRecord"
                             }
                           },
-                          "description": "Create Dataverse violation record tagged as provisioning-triggered for audit trail."
+                          "description": "Create Dataverse violation record tagged as provisioning-triggered for audit trail.",
+                          "runtimeConfiguration": {
+                            "secureData": {},
+                            "paginationPolicy": {
+                              "minimumItemCount": 5000
+                            }
+                          },
+                          "retryPolicy": {
+                            "type": "exponential",
+                            "count": 3,
+                            "interval": "PT10S",
+                            "minimumInterval": "PT5S",
+                            "maximumInterval": "PT60S"
+                          }
                         }
                       },
                       "runAfter": {},
-                      "operationOptions": "Sequential",
-                      "description": "Write each compliance gap as a fsi_CAPolicyViolation record tagged with provisioning context."
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 5
+                        }
+                      },
+                      "description": "Write each compliance gap as a fsi_CAPolicyViolation record tagged with provisioning context. Uses bounded parallelism (5 concurrent) with exponential retry to mitigate Dataverse 429 rate limits."
                     }
                   },
                   "else": {
@@ -1075,17 +1287,17 @@
                           {
                             "type": "Action.OpenUrl",
                             "title": "View in Entra Portal",
-                            "url": "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies"
+                            "url": "@{variables('EntraPortalUrl')}/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies"
                           },
                           {
                             "type": "Action.OpenUrl",
                             "title": "View Environment",
-                            "url": "https://admin.powerplatform.microsoft.com/environments/@{triggerBody()?['EnvironmentId']}/hub"
+                            "url": "@{variables('PowerPlatformAdminUrl')}/environments/@{triggerBody()?['EnvironmentId']}/hub"
                           },
                           {
                             "type": "Action.OpenUrl",
                             "title": "View Documentation",
-                            "url": "https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/"
+                            "url": "@{variables('DocsBaseUrl')}/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/"
                           }
                         ],
                         "msteams": {
@@ -1124,7 +1336,7 @@
                         "parameters": {
                           "emailMessage/To": "@variables('ComplianceDistributionList')",
                           "emailMessage/Subject": "[@{outputs('Compute_Zone_Severity')}] CA Policy Verification — @{triggerBody()?['EnvironmentName']} (@{outputs('Compute_Zone_Label')})",
-                          "emailMessage/Body": "<html><body><h2>CA Policy Provisioning Verification — @{variables('VerificationStatus')}</h2><p><strong>Severity:</strong> @{outputs('Compute_Zone_Severity')}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Provisioning Context</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Environment</strong></td><td>@{triggerBody()?['EnvironmentName']}</td></tr><tr><td><strong>Environment ID</strong></td><td>@{triggerBody()?['EnvironmentId']}</td></tr><tr><td><strong>Zone</strong></td><td>@{outputs('Compute_Zone_Label')}</td></tr><tr><td><strong>Provisioned By</strong></td><td>@{triggerBody()?['ProvisionedBy']}</td></tr><tr><td><strong>Provisioned At</strong></td><td>@{triggerBody()?['ProvisionedAt']}</td></tr></table><h3>Verification Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr><tr><td><strong>Scan Scope</strong></td><td>Targeted (Provisioning)</td></tr></table><br/><p>Review CA policies in the <a href='https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p>View environment in the <a href='https://admin.powerplatform.microsoft.com/environments/@{triggerBody()?['EnvironmentId']}/hub'>Power Platform Admin Center</a>.</p><p><em>This alert was generated by the CAA Provisioning Hook flow.</em></p></body></html>",
+                          "emailMessage/Body": "<html><body><h2>CA Policy Provisioning Verification — @{variables('VerificationStatus')}</h2><p><strong>Severity:</strong> @{outputs('Compute_Zone_Severity')}</p><p><strong>Checked At:</strong> @{body('Parse_Results')?['CheckedAt']}</p><hr/><h3>Provisioning Context</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Environment</strong></td><td>@{triggerBody()?['EnvironmentName']}</td></tr><tr><td><strong>Environment ID</strong></td><td>@{triggerBody()?['EnvironmentId']}</td></tr><tr><td><strong>Zone</strong></td><td>@{outputs('Compute_Zone_Label')}</td></tr><tr><td><strong>Provisioned By</strong></td><td>@{triggerBody()?['ProvisionedBy']}</td></tr><tr><td><strong>Provisioned At</strong></td><td>@{triggerBody()?['ProvisionedAt']}</td></tr></table><h3>Verification Summary</h3><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Total Policies</strong></td><td>@{body('Parse_Results')?['TotalPolicies']}</td></tr><tr><td><strong>Passed</strong></td><td>@{body('Parse_Results')?['PassedCount']}</td></tr><tr><td><strong>Failed</strong></td><td>@{body('Parse_Results')?['FailedCount']}</td></tr><tr><td><strong>Compliance Rate</strong></td><td>@{body('Parse_Results')?['ComplianceRate']}%</td></tr><tr><td><strong>Scan Scope</strong></td><td>Targeted (Provisioning)</td></tr></table><br/><p>Review CA policies in the <a href='@{variables('EntraPortalUrl')}/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'>Entra Portal</a>.</p><p>View environment in the <a href='@{variables('PowerPlatformAdminUrl')}/environments/@{triggerBody()?['EnvironmentId']}/hub'>Power Platform Admin Center</a>.</p><p><em>This alert was generated by the CAA Provisioning Hook flow.</em></p></body></html>",
                           "emailMessage/Importance": "High"
                         },
                         "host": {
@@ -1161,16 +1373,22 @@
                   },
                   "runAfter": {
                     "Evaluate_Verification_Outcome": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Verify_Dataverse_Record": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ],
                     "Write_Violations_to_Dataverse": [
-                      "Succeeded"
+                      "Succeeded",
+                      "Failed",
+                      "Skipped"
                     ]
                   },
-                  "description": "Route alerts only when AlertRequired is true — gaps found in zone CA policy coverage."
+                  "description": "Route alerts only when AlertRequired is true — gaps found in zone CA policy coverage. Runs even if upstream Dataverse/violation-write steps fail to ensure provisioning alerts are never silently suppressed."
                 }
               },
               "else": {
@@ -1201,7 +1419,7 @@
                       "parameters": {
                         "emailMessage/To": "@variables('ComplianceDistributionList')",
                         "emailMessage/Subject": "[CRITICAL] Provisioning CA Verification Failed — @{triggerBody()?['EnvironmentName']}",
-                        "emailMessage/Body": "<html><body><h2>[CRITICAL] Provisioning CA Verification Job Failed</h2><p>The CA policy verification triggered by environment provisioning did not complete successfully.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Environment</strong></td><td>@{triggerBody()?['EnvironmentName']}</td></tr><tr><td><strong>Environment ID</strong></td><td>@{triggerBody()?['EnvironmentId']}</td></tr><tr><td><strong>Zone</strong></td><td>@{outputs('Compute_Zone_Label')}</td></tr><tr><td><strong>Job ID</strong></td><td>@{outputs('Generate_Job_Id')}</td></tr><tr><td><strong>Job Status</strong></td><td>@{body('Get_Job_Status')?['properties']?['status']}</td></tr><tr><td><strong>Automation Account</strong></td><td>@{variables('AutomationAccount')}</td></tr></table><br/><p>Please check the <a href='https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts'>Azure Automation account</a> for detailed error information.</p><p><em>This alert was generated by the CAA Provisioning Hook flow.</em></p></body></html>",
+                        "emailMessage/Body": "<html><body><h2>[CRITICAL] Provisioning CA Verification Job Failed</h2><p>The CA policy verification triggered by environment provisioning did not complete successfully.</p><table border='1' cellpadding='5' style='border-collapse:collapse;'><tr><td><strong>Environment</strong></td><td>@{triggerBody()?['EnvironmentName']}</td></tr><tr><td><strong>Environment ID</strong></td><td>@{triggerBody()?['EnvironmentId']}</td></tr><tr><td><strong>Zone</strong></td><td>@{outputs('Compute_Zone_Label')}</td></tr><tr><td><strong>Job ID</strong></td><td>@{outputs('Generate_Job_Id')}</td></tr><tr><td><strong>Job Status</strong></td><td>@{body('Get_Job_Status')?['properties']?['status']}</td></tr><tr><td><strong>Automation Account</strong></td><td>@{variables('AutomationAccount')}</td></tr></table><br/><p>Please check the <a href='@{variables('AzurePortalUrl')}/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts'>Azure Automation account</a> for detailed error information.</p><p><em>This alert was generated by the CAA Provisioning Hook flow.</em></p></body></html>",
                         "emailMessage/Importance": "High"
                       },
                       "host": {
@@ -1365,11 +1583,15 @@
           },
           "runAfter": {
             "Scope_Try": [
-              "Succeeded"
+              "Succeeded",
+              "Failed",
+              "TimedOut",
+              "Skipped"
             ],
             "Scope_Catch": [
               "Succeeded",
-              "Skipped"
+              "Skipped",
+              "Failed"
             ]
           },
           "description": "Return verification results to the parent ELM flow: VerificationStatus, GapsFound, AlertSent, Severity."

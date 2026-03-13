@@ -42,6 +42,7 @@ mime-type-restrictions/
 ├── SOLUTION-DOCUMENTATION.md         # Full technical documentation for customer delivery
 ├── DELIVERY-CHECKLIST.md             # Customer delivery packaging checklist
 └── src/
+    ├── BUILD-INSTRUCTIONS.md         # Step-by-step guide to build the plugin DLL
     ├── ValidateMimeTypePlugin.cs     # Dataverse plugin for server-side MIME validation
     ├── dlp-policy-template.json      # DLP policy template for MIME restrictions
     ├── MimeConfig.json               # MIME type allowlist/blocklist configuration

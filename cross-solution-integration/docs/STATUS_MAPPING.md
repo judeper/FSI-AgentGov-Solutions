@@ -125,7 +125,7 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 
 **Source table:** `fsi_capolicyvalidationhistories`
 **Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record ordered by `fsi_timestamp desc`
+**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'`, ordered by `fsi_timestamp desc`
 
 | CAA Severity | CD Status | CD Score | Logic |
 |-------------|-----------|----------|-------|
@@ -146,6 +146,9 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 **Dual-Feed Resolution (Control 1.11):**
 SSC validates session security (inactivity timeouts, persistent browser). CAA validates CA policy compliance (MFA enforcement, break-glass exclusions, policy drift). Both are complementary compliance signals. The Compliance Dashboard uses worst-of-two status: if either solution reports Non-Compliant, Control 1.11 shows Non-Compliant.
 
+**Implementation Note — Dual-Feed Resolution Strategy Differences:**
+The CD-SolutionFeedCollector flow performs inline worst-of-two merge during the CAA upsert action (comparing the incoming CAA status with the existing SSC-written assessment in a single expression). `Sync-SolutionAssessments.ps1` uses a separate post-processing pass: it first writes SSC and CAA assessments independently, then queries all same-day assessments for Controls 1.11 and 1.23 and overwrites them with the worst-of-two result. Both strategies produce the same final state, but the script briefly writes CAA-only assessments before the post-processing overwrite. If the script is interrupted between the individual writes and the post-processing pass, the dashboard may temporarily show a non-worst-of-two value.
+
 ---
 
 ## Assessment Record Structure
@@ -165,8 +168,10 @@ When creating/updating `fsi_controlassessment` records:
 
 ```
 
+> **Note:** The `fsi_evidencecount` field is a placeholder. Neither the CD-SolutionFeedCollector flow nor `Sync-SolutionAssessments.ps1` currently sets this field; the evidence pipeline (`evidence/` directory) is not yet implemented. Remove or update this value once evidence registration is operational.
+
 **Key behaviors:**
-- **Upsert logic:** Match on `fsi_controlmasterid` + `fsi_zone` + date. Create new if no same-day record exists; update if exists.
+- **Upsert logic:** Match on `fsi_controlmasterid` + date. Create new if no same-day record exists; update if exists.
 - **Zone handling:** If a solution validates across all zones, create one assessment per zone.
 - **Notes field:** Include solution name, version, run ID, and raw status for audit trail.
 - **Next review date:** Set to tomorrow (daily feed cadence).

@@ -77,8 +77,8 @@ Admin consent URL: https://login.microsoftonline.com/<tenant-id>/adminconsent?cl
 
 ```powershell
 # Connect using the service principal
-$clientId = (Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientId").SecretValueText
-$clientSecret = (Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientSecret").SecretValueText
+$clientId = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientId" -AsPlainText
+$clientSecret = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientSecret" -AsPlainText
 
 $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)

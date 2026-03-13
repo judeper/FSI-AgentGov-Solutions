@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -22,10 +22,10 @@
     results and route alerts based on severity and drift status.
 
 .PARAMETER TenantId
-    Azure AD tenant ID for authentication.
+    Microsoft Entra ID tenant ID for authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for certificate-based authentication.
+    Microsoft Entra ID application (client) ID for certificate-based authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
@@ -319,6 +319,10 @@ try {
         }
 
         try {
+            # NOTE: Per-environment baseline query (N+1 pattern). A batch approach
+            # would reduce HTTP calls but requires careful pagination handling and
+            # replicating per-environment $orderby=fsi_captured_at desc semantics.
+            # Profile actual environment counts before optimizing.
             $baseline = Get-AAMActiveBaseline -EnvironmentId $envId
 
             if (-not $baseline -or $baseline.Count -eq 0) {
@@ -387,7 +391,7 @@ try {
             }
         } catch {
             # Fail open: on Dataverse query error, treat as first run (no drift)
-            Write-Verbose "Baseline query failed for $envName : $($_.Exception.Message). Failing open."
+            Write-Warning "Baseline query failed for $envName : $($_.Exception.Message). Failing open."
             $driftEntry.HasDrift = $false
             $driftEntry.IsFirstRun = $true
         }

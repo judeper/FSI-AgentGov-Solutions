@@ -8,15 +8,15 @@
 | **Dataverse capacity** | Feedback storage (fsi_hallucinationreports table) |
 | **Power BI Pro** | Dashboard visualization |
 
-## Azure AD App Registration
+## Microsoft Entra ID App Registration
 
-The pattern analysis script authenticates via an Azure AD app registration with client credentials.
+The pattern analysis script authenticates via a Microsoft Entra ID app registration with client credentials.
 
 ### Required Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `AZURE_TENANT_ID` | Microsoft Entra ID tenant ID |
 | `AZURE_CLIENT_ID` | App registration client ID |
 | `AZURE_CLIENT_SECRET` | App registration client secret |
 

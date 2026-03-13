@@ -34,6 +34,7 @@ APPROVER_FIELD_PERMISSIONS = {
     "fsi_datasensitivity": {"canread": 4, "cancreate": 0, "canupdate": 0},
     "fsi_expectedusers": {"canread": 4, "cancreate": 0, "canupdate": 0},
     "fsi_securitygroupid": {"canread": 4, "cancreate": 0, "canupdate": 0},
+    "fsi_securitygroupname": {"canread": 4, "cancreate": 0, "canupdate": 0},
     "fsi_requester": {"canread": 4, "cancreate": 0, "canupdate": 0},
     "fsi_requestedon": {"canread": 4, "cancreate": 0, "canupdate": 0},
     "fsi_environmentid": {"canread": 4, "cancreate": 0, "canupdate": 0},

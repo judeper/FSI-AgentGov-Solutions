@@ -11,7 +11,7 @@ The integration layer uses the following environment variables (set via Datavers
 | `fsi_INT_ClientId` | — | App registration client ID for service principal auth |
 | `fsi_INT_TeamsGroupId` | — | Teams group for alert notifications (optional) |
 | `fsi_INT_TeamsChannelId` | — | Teams channel for alert notifications (optional) |
-| `fsi_INT_IncludeSandbox` | `false` | Include sandbox environments in assessment sync |
+| `fsi_INT_IncludeSandbox` | `false` | Include sandbox environments in assessment sync (**not yet implemented** — reserved for future use; not referenced in any flow or script) |
 | `fsi_INT_DashboardFeedSchedule` | `Daily 6:30 AM UTC` | CD-SolutionFeedCollector schedule |
 
 ## Solution Connection Configuration

@@ -4,7 +4,6 @@
   "enforcementMode": "Block",
   "maxFileSizeBytes": 10485760,
   "zone": 3,
-  "correlationIdHeader": "x-fsi-correlation-id",
   "allowedTypes": [
     {
       "mimeType": "application/pdf",

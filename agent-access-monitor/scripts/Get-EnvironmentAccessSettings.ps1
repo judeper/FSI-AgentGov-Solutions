@@ -262,25 +262,33 @@ if ($DataverseUrl -and $AccessToken) {
         }
         $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_accessbaselines?`$filter=fsi_is_active eq true&`$select=fsi_environment_guid,fsi_zone"
         $maxRetries = 3
-        $response = $null
-        for ($i = 0; $i -lt $maxRetries; $i++) {
-            try {
-                $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
-                break
-            } catch {
-                $statusCode = $_.Exception.Response.StatusCode.value__
-                if (($statusCode -eq 429 -or $statusCode -ge 500) -and $i -lt ($maxRetries - 1)) {
-                    $delay = [math]::Pow(2, $i)
-                    Write-Verbose "Zone batch query failed (HTTP $statusCode), retrying in ${delay}s..."
-                    Start-Sleep -Seconds $delay
-                } else {
-                    throw
+        $allRecords = @()
+        $currentUri = $uri
+        do {
+            $response = $null
+            for ($i = 0; $i -lt $maxRetries; $i++) {
+                try {
+                    $response = Invoke-RestMethod -Uri $currentUri -Method Get -Headers $headers -ErrorAction Stop
+                    break
+                } catch {
+                    $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
+                    if (($statusCode -eq 429 -or $statusCode -ge 500) -and $i -lt ($maxRetries - 1)) {
+                        $delay = [math]::Pow(2, $i)
+                        Write-Verbose "Zone batch query failed (HTTP $statusCode), retrying in ${delay}s..."
+                        Start-Sleep -Seconds $delay
+                    } else {
+                        throw
+                    }
                 }
             }
-        }
+            if ($response.value) {
+                $allRecords += $response.value
+            }
+            $currentUri = $response.'@odata.nextLink'
+        } while ($currentUri)
         $zoneMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
-        if ($response.value) {
-            foreach ($record in $response.value) {
+        if ($allRecords) {
+            foreach ($record in $allRecords) {
                 $envGuid = $record.fsi_environment_guid
                 $zoneValue = $record.fsi_zone
                 if ($envGuid -and $zoneMap.ContainsKey([int]$zoneValue)) {
@@ -290,7 +298,7 @@ if ($DataverseUrl -and $AccessToken) {
         }
         Write-Verbose "Pre-fetched zone classifications for $($zoneLookup.Count) environment(s)"
     } catch {
-        Write-Verbose "Batch zone lookup failed: $($_.Exception.Message). Will fall back to per-environment lookup."
+        Write-Warning "Batch zone lookup failed: $($_.Exception.Message). Will fall back to per-environment lookup."
     }
 }
 
@@ -338,7 +346,7 @@ foreach ($env in $environments) {
         }
     }
     
-    # Determine if environment is managed (has Dataverse/CDS)
+    # Determine if environment is managed (has Microsoft Dataverse)
     $isManaged = $null -ne $env.Internal.properties.linkedEnvironmentMetadata
     
     # Build raw settings for debugging

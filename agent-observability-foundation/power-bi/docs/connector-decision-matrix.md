@@ -98,7 +98,7 @@ In the connection dialog:
 
 - Select **Organizational account**
 - Click **Sign in**
-- Authenticate with Azure AD account that has read access to the workspace
+- Authenticate with Microsoft Entra ID account that has read access to the workspace
 - Click **Connect**
 
 **5. Call KQL Function**
@@ -190,7 +190,7 @@ In the connection dialog:
 
 - Select **Organizational account**
 - Click **Sign in**
-- Authenticate with Azure AD account
+- Authenticate with Microsoft Entra ID account
 - Click **Connect**
 
 **5. Enter KQL Query**

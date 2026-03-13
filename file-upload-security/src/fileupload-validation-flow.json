@@ -35,11 +35,11 @@
           {
             "name": "DataverseUrl",
             "type": "string",
-            "value": "https://governance.crm.dynamics.com"
+            "value": "DEPLOY_PLACEHOLDER_DATAVERSE_URL"
           }
         ]
       },
-      "description": "Central Dataverse organization URL for file upload baselines and validation history"
+      "description": "Central Dataverse organization URL — MUST be updated per-environment during deployment (e.g., https://orgname.crm.dynamics.com). See environment-variables/README.md."
     },
     "Initialize_TenantId": {
       "runAfter": {
@@ -51,11 +51,11 @@
           {
             "name": "TenantId",
             "type": "string",
-            "value": "contoso.onmicrosoft.com"
+            "value": "DEPLOY_PLACEHOLDER_TENANT_ID"
           }
         ]
       },
-      "description": "Azure AD tenant ID"
+      "description": "Microsoft Entra ID tenant ID — MUST be updated per-environment during deployment (e.g., contoso.onmicrosoft.com or a GUID). See environment-variables/README.md."
     },
     "Initialize_ClientId": {
       "runAfter": {
@@ -67,11 +67,11 @@
           {
             "name": "ClientId",
             "type": "string",
-            "value": "your-client-id-here"
+            "value": "DEPLOY_PLACEHOLDER_CLIENT_ID"
           }
         ]
       },
-      "description": "Azure AD application client ID for certificate-based authentication",
+      "description": "Microsoft Entra ID application client ID — MUST be updated per-environment during deployment. See environment-variables/README.md.",
       "runtimeConfiguration": {
         "secureInputs": true,
         "secureOutputs": true
@@ -193,6 +193,22 @@
       },
       "description": "Email distribution list for compliance alerts"
     },
+    "Initialize_DocumentationUrl": {
+      "runAfter": {
+        "Initialize_ComplianceDistributionList": ["Succeeded"]
+      },
+      "type": "InitializeVariable",
+      "inputs": {
+        "variables": [
+          {
+            "name": "DocumentationUrl",
+            "type": "string",
+            "value": "DEPLOY_PLACEHOLDER_DOCUMENTATION_URL"
+          }
+        ]
+      },
+      "description": "Documentation URL for file upload security controls — MUST be updated per-environment during deployment (e.g., https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/). See environment-variables/README.md."
+    },
     "Scope_Try": {
       "actions": {
         "Create_Automation_Job": {
@@ -222,7 +238,16 @@
               }
             }
           },
-          "description": "Start Azure Automation runbook for file upload compliance validation"
+          "description": "Start Azure Automation runbook for file upload compliance validation",
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT10S",
+              "maximumInterval": "PT1H",
+              "minimumInterval": "PT10S"
+            }
+          }
         },
         "Wait_For_Job": {
           "runAfter": {
@@ -263,7 +288,16 @@
                   "x-ms-api-version": "2015-10-31"
                 }
               },
-              "description": "Check runbook job status"
+              "description": "Check runbook job status",
+              "runtimeConfiguration": {
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1H",
+                  "minimumInterval": "PT10S"
+                }
+              }
             }
           },
           "description": "Wait until runbook job completes or fails (max 2 hours)"
@@ -292,6 +326,12 @@
                   "@body('Get_Job_Status')?['properties']?['status']",
                   "Suspended"
                 ]
+              },
+              {
+                "equals": [
+                  "@body('Get_Job_Status')?['properties']?['status']",
+                  "InProgress"
+                ]
               }
             ]
           },
@@ -314,7 +354,16 @@
                   "Importance": "High"
                 }
               },
-              "description": "Send email notification on job failure. Connection: fsi_cr_office365_fileuploadsecurity"
+              "description": "Send email notification on job failure. Connection: fsi_cr_office365_fileuploadsecurity",
+              "runtimeConfiguration": {
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1H",
+                  "minimumInterval": "PT10S"
+                }
+              }
             },
             "Terminate_Failed": {
               "runAfter": {
@@ -348,7 +397,16 @@
               "x-ms-api-version": "2015-10-31"
             }
           },
-          "description": "Retrieve runbook job output (JSON string)"
+          "description": "Retrieve runbook job output (JSON string)",
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT10S",
+              "maximumInterval": "PT1H",
+              "minimumInterval": "PT10S"
+            }
+          }
         },
         "Parse_Results": {
           "runAfter": {
@@ -443,7 +501,8 @@
                   }
                 },
                 "AlertRequired": { "type": "boolean" },
-                "AlertSeverity": { "type": "string" }
+                "AlertSeverity": { "type": "string" },
+                "ScanDurationSeconds": { "type": "integer" }
               }
             }
           },
@@ -478,10 +537,20 @@
               "fsi_compliant_count": "@{sub(body('Parse_Results')?['TotalAgents'], length(body('Parse_Results')?['Violations']))}",
               "fsi_compliance_rate": "@{if(equals(body('Parse_Results')?['TotalAgents'], 0), 0, mul(div(float(sub(body('Parse_Results')?['TotalAgents'], length(body('Parse_Results')?['Violations']))), float(body('Parse_Results')?['TotalAgents'])), 100))}",
               "fsi_summary_json": "@{string(body('Parse_Results'))}",
-              "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}"
+              "fsi_validation_time": "@{body('Parse_Results')?['Timestamp']}",
+              "fsi_scan_duration_seconds": "@{coalesce(body('Parse_Results')?['ScanDurationSeconds'], 0)}"
             }
           },
-          "description": "Write validation results to Dataverse immutable audit trail. Runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_fileuploadsecurity"
+          "description": "Write validation results to Dataverse immutable audit trail. Runs BEFORE alerting to help ensure the audit trail exists even if alert delivery fails. Connection: fsi_cr_dataverse_fileuploadsecurity",
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT10S",
+              "maximumInterval": "PT1H",
+              "minimumInterval": "PT10S"
+            }
+          }
         },
         "Check_Alert_Required": {
           "runAfter": {
@@ -545,13 +614,22 @@
                         "attachments": [
                           {
                             "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": "@replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-data-minimization-agent-scope/\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', replace(replace(body('Parse_Results')?['Reason'], '\\', '\\\\'), '\"', '\\\"'))"
+                            "content": "@replace(replace(replace(replace(replace(replace(replace('{\"type\":\"AdaptiveCard\",\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"version\":\"1.4\",\"fallback\":\"drop\",\"body\":[{\"type\":\"Container\",\"style\":\"attention\",\"items\":[{\"type\":\"ColumnSet\",\"columns\":[{\"type\":\"Column\",\"width\":\"auto\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"[ALERT] File Upload Security Configurator\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"color\":\"Attention\"}]},{\"type\":\"Column\",\"width\":\"stretch\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"${AlertSeverity}\",\"weight\":\"Bolder\",\"horizontalAlignment\":\"Right\",\"color\":\"Attention\"}]}]},{\"type\":\"TextBlock\",\"text\":\"${Timestamp}\",\"size\":\"Small\",\"isSubtle\":true,\"spacing\":\"Small\"}]},{\"type\":\"Container\",\"items\":[{\"type\":\"TextBlock\",\"text\":\"Run Summary\",\"weight\":\"Bolder\",\"size\":\"Medium\",\"spacing\":\"Medium\"},{\"type\":\"FactSet\",\"facts\":[{\"title\":\"Status\",\"value\":\"${OverallStatus}\"},{\"title\":\"Total Agents\",\"value\":\"${TotalAgents}\"},{\"title\":\"File Upload Enabled\",\"value\":\"${FileUploadEnabledCount}\"},{\"title\":\"Severity\",\"value\":\"${AlertSeverity}\"},{\"title\":\"Reason\",\"value\":\"${Reason}\"}],\"spacing\":\"Medium\"}]}],\"actions\":[{\"type\":\"Action.OpenUrl\",\"title\":\"View in Power Platform Admin\",\"url\":\"https://admin.powerplatform.microsoft.com/environments\"},{\"type\":\"Action.OpenUrl\",\"title\":\"View Documentation\",\"url\":\"${DocumentationUrl}\"}]}', '${AlertSeverity}', body('Parse_Results')?['AlertSeverity']), '${Timestamp}', body('Parse_Results')?['Timestamp']), '${OverallStatus}', body('Parse_Results')?['OverallStatus']), '${TotalAgents}', string(body('Parse_Results')?['TotalAgents'])), '${FileUploadEnabledCount}', string(body('Parse_Results')?['FileUploadEnabledCount'])), '${Reason}', replace(replace(body('Parse_Results')?['Reason'], '\\', '\\\\'), '\"', '\\\"')), '${DocumentationUrl}', variables('DocumentationUrl'))"
                           }
                         ]
                       }
                     }
                   },
-                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity. Connection: fsi_cr_teams_fileuploadsecurity"
+                  "description": "Post adaptive card to Teams for Critical/Failed/Error severity. Connection: fsi_cr_teams_fileuploadsecurity",
+                  "runtimeConfiguration": {
+                    "retryPolicy": {
+                      "type": "exponential",
+                      "count": 4,
+                      "interval": "PT10S",
+                      "maximumInterval": "PT1H",
+                      "minimumInterval": "PT10S"
+                    }
+                  }
                 }
               },
               "else": {
@@ -561,7 +639,7 @@
             },
             "Send_Alert_Email": {
               "runAfter": {
-                "Check_Severity_For_Teams": ["Succeeded"]
+                "Check_Severity_For_Teams": ["Succeeded", "Failed"]
               },
               "type": "ApiConnection",
               "inputs": {
@@ -579,7 +657,16 @@
                   "Importance": "@if(or(equals(body('Parse_Results')?['AlertSeverity'], 'Critical'), equals(body('Parse_Results')?['OverallStatus'], 'Failed'), equals(body('Parse_Results')?['OverallStatus'], 'Error')), 'High', 'Normal')"
                 }
               },
-              "description": "Send email alert to compliance distribution list. Connection: fsi_cr_office365_fileuploadsecurity"
+              "description": "Send email alert to compliance distribution list. Connection: fsi_cr_office365_fileuploadsecurity",
+              "runtimeConfiguration": {
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 4,
+                  "interval": "PT10S",
+                  "maximumInterval": "PT1H",
+                  "minimumInterval": "PT10S"
+                }
+              }
             }
           },
           "else": {
@@ -589,7 +676,7 @@
         }
       },
       "runAfter": {
-        "Initialize_ComplianceDistributionList": ["Succeeded"]
+        "Initialize_DocumentationUrl": ["Succeeded"]
       },
       "type": "Scope",
       "description": "Main file upload validation execution scope with error handling"
@@ -610,11 +697,20 @@
             "body": {
               "To": "@variables('ComplianceDistributionList')",
               "Subject": "[CRITICAL] FUS Flow Execution Failed",
-              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: FUS - File Upload Validation (Daily)<br>Timestamp: @{utcNow()}</p><p>Review flow run history in Power Automate for details.</p>",
+              "Body": "<p><strong>Flow execution encountered an error</strong></p><p>Flow Name: FUS - File Upload Validation (Daily)<br>Timestamp: @{utcNow()}<br>Run ID: @{workflow()['run']['name']}<br>Failed Action: @{result('Scope_Try')?[sub(length(result('Scope_Try')),1)]?['name']}<br>Error: @{coalesce(result('Scope_Try')?[sub(length(result('Scope_Try')),1)]?['error']?['message'], result('Scope_Try')?[sub(length(result('Scope_Try')),1)]?['outputs']?['body']?['error']?['message'], 'See flow run history for details')}</p><p>Review flow run history in Power Automate for details.</p>",
               "Importance": "High"
             }
           },
-          "description": "Send CRITICAL error notification when the flow itself fails"
+          "description": "Send CRITICAL error notification when the flow itself fails",
+          "runtimeConfiguration": {
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 4,
+              "interval": "PT10S",
+              "maximumInterval": "PT1H",
+              "minimumInterval": "PT10S"
+            }
+          }
         },
         "Terminate_Flow_Failed": {
           "runAfter": {

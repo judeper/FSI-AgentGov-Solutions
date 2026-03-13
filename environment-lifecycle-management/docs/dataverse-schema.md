@@ -61,6 +61,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Display Name | Logical Name | Type | Required | Description |
 |--------------|--------------|------|----------|-------------|
 | Security Group ID | `fsi_securitygroupid` | Text (100) | Zone 2/3 | Entra security group GUID |
+| Security Group Name | `fsi_securitygroupname` | Text (200) | No | Display name of Entra security group |
 | Requester | `fsi_requester` | Lookup (User) | Auto | Request creator |
 | Requested On | `fsi_requestedon` | DateTime | Auto | Submission timestamp |
 
@@ -84,7 +85,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 ### Choice Field Definitions
 
-#### er_state (Workflow State)
+#### fsi_er_state (Workflow State)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -98,7 +99,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Failed | 8 | Provisioning error |
 | Cancelled | 9 | User cancelled request |
 
-#### er_zone (Governance Zone)
+#### fsi_er_zone (Governance Zone)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -106,7 +107,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Zone 2 | 2 | Team collaboration |
 | Zone 3 | 3 | Enterprise managed |
 
-#### er_environmenttype (Environment Type)
+#### fsi_er_environmenttype (Environment Type)
 
 | Label | Value |
 |-------|-------|
@@ -114,7 +115,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Production | 2 |
 | Developer | 3 |
 
-#### er_region (Geographic Region)
+#### fsi_er_region (Geographic Region)
 
 | Label | Value | API Code |
 |-------|-------|----------|
@@ -123,7 +124,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | United Kingdom | 3 | unitedkingdom |
 | Australia | 4 | australia |
 
-#### er_datasensitivity (Data Sensitivity)
+#### fsi_er_datasensitivity (Data Sensitivity)
 
 | Label | Value |
 |-------|-------|
@@ -132,7 +133,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Confidential | 3 |
 | Restricted | 4 |
 
-#### er_expectedusers (Expected User Count)
+#### fsi_er_expectedusers (Expected User Count)
 
 | Label | Value |
 |-------|-------|
@@ -211,7 +212,7 @@ Action: Set fsi_approvalcomments to Business Required
 
 ### Choice Field Definitions
 
-#### pl_action (Action Type)
+#### fsi_pl_action (Action Type)
 
 | Label | Value | Description |
 |-------|-------|-------------|
@@ -226,13 +227,13 @@ Action: Set fsi_approvalcomments to Business Required
 | GroupAssigned | 9 | Added to Environment Group |
 | SecurityGroupBound | 10 | Security group bound |
 | BaselineConfigApplied | 11 | Baseline settings applied |
-| DLPAssigned | 12 | DLP policy applied |
+| DLPAssigned | 12 | DLP policy applied (reserved — no flow step currently logs this action) |
 | ProvisioningCompleted | 13 | Full provisioning complete |
 | ProvisioningFailed | 14 | Provisioning error |
-| RollbackInitiated | 15 | Rollback started |
-| RollbackCompleted | 16 | Rollback finished |
+| RollbackInitiated | 15 | Rollback started (reserved — no rollback logic currently implemented) |
+| RollbackCompleted | 16 | Rollback finished (reserved — no rollback logic currently implemented) |
 
-#### pl_actortype (Actor Type)
+#### fsi_pl_actortype (Actor Type)
 
 | Label | Value |
 |-------|-------|
@@ -274,7 +275,7 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
   "fsi_businessjustification": "Quarterly SEC 10-Q reporting automation",
   "fsi_state": 7,
   "fsi_environmentid": "87654321-4321-4321-4321-210987654321",
-  "fsi_environmenturl": "https://fin-quarterly-prod.crm.dynamics.com"
+  "fsi_environmenturl": "https://<org>.crm.dynamics.com"
 }
 ```
 
@@ -286,7 +287,7 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
   "fsi_action": 7,
   "fsi_actiondetails": {
     "environmentId": "87654321-4321-4321-4321-210987654321",
-    "environmentUrl": "https://fin-quarterly-prod.crm.dynamics.com",
+    "environmentUrl": "https://<org>.crm.dynamics.com",
     "environmentType": "Production",
     "region": "unitedstates"
   },

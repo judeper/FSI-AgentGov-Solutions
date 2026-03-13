@@ -89,9 +89,10 @@
       <RootComponent type="1" schemaName="fsi_complianceevidence" />
       <RootComponent type="29" schemaName="CD-ScoreCalculator" />
       <RootComponent type="29" schemaName="CD-ExceptionMonitor" />
-      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Viewer" />
-      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Assessor" />
-      <RootComponent type="92" schemaName="fsi_ComplianceDashboard_Admin" />
+      <RootComponent type="92" schemaName="CD Viewer" />
+      <RootComponent type="92" schemaName="CD Assessor" />
+      <RootComponent type="92" schemaName="CD Admin" />
+      <RootComponent type="70" schemaName="CD Sensitive Fields Access" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

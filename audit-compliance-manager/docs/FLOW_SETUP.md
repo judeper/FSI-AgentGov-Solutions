@@ -33,7 +33,7 @@ Before creating the flows, ensure you have:
 - [ ] **Power Platform admin role** (for environment validation)
 - [ ] **Dataverse environment** with ACV schema deployed (see [deployment-guide.md](deployment-guide.md))
 - [ ] **Certificate-based authentication** configured:
-  - Azure AD App Registration with certificate
+  - Microsoft Entra ID App Registration with certificate
   - Exchange.ManageAsApp API permission (tenant validation)
   - SecurityEvents.Read.All API permission (Purview retention)
   - Power Platform Administrator role (environment validation)
@@ -162,8 +162,8 @@ See [deployment-guide.md](deployment-guide.md) for detailed permission configura
 Add **Initialize variable** actions for each parameter:
 
 - `DataverseUrl` (String): `https://governance.crm.dynamics.com` (your central environment)
-- `TenantId` (String): `contoso.onmicrosoft.com` (your tenant ID)
-- `ClientId` (String): Your Azure AD application client ID
+- `TenantDomain` (String): `contoso.onmicrosoft.com` (your tenant domain)
+- `ClientId` (String): Your Microsoft Entra ID application client ID
 - `CertificateThumbprint` (String): Certificate thumbprint from Azure Automation
 - `SubscriptionId` (String): Azure subscription ID
 - `ResourceGroup` (String): `rg-audit-validation` (your resource group)
@@ -442,8 +442,8 @@ Store these values as Power Automate flow variables (initialize at the top of ea
 | Variable | Value | Notes |
 |----------|-------|-------|
 | DataverseUrl | https://governance.crm.dynamics.com | Central Dataverse environment URL |
-| TenantId | contoso.onmicrosoft.com | Azure AD tenant ID |
-| ClientId | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | Azure AD app registration client ID |
+| TenantDomain | contoso.onmicrosoft.com | Microsoft Entra ID tenant domain |
+| ClientId | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | Microsoft Entra ID app registration client ID |
 | CertificateThumbprint | ABCDEF1234567890... | Certificate thumbprint from Azure Automation |
 | SubscriptionId | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | Azure subscription ID |
 | ResourceGroup | rg-audit-validation | Resource group containing Automation Account |

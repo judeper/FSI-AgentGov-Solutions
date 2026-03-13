@@ -145,10 +145,22 @@ Error: No supervisor found for Zone 3, Tier 1
 **Bulk Fix:**
 ```powershell
 # Set default Zone 2, Tier 2 for items missing values
-$items = Get-CrmRecords -EntityLogicalName fsi_supervisionqueue -FilterAttribute fsi_zone -FilterOperator null
+# Uses FetchXML because Get-CrmRecords -FilterOperator null requires a
+# -FilterValue in the same parameter set and will fail on parameter binding.
+$fetchXml = @"
+<fetch>
+  <entity name="fsi_supervisionqueue">
+    <attribute name="fsi_supervisionqueueid" />
+    <filter>
+      <condition attribute="fsi_zone" operator="null" />
+    </filter>
+  </entity>
+</fetch>
+"@
+$items = Get-CrmRecordsByFetch -Fetch $fetchXml
 
-foreach ($item in $items) {
-    Set-CrmRecord -EntityLogicalName fsi_supervisionqueue -Id $item.Id -Fields @{
+foreach ($item in $items.CrmRecords) {
+    Set-CrmRecord -EntityLogicalName fsi_supervisionqueue -Id $item.fsi_supervisionqueueid -Fields @{
         fsi_zone = 2
         fsi_tier = 2
     }
@@ -320,13 +332,13 @@ Error: Interactive authentication required
 
 **Symptom:** Manifest hash doesn't match file hash.
 
-**Cause:** File modified after export or encoding issue.
+**Cause:** File modified after export, encoding issue, or using an older export script that embedded the hash inside the manifest (bootstrapping impossibility — the hash always mismatches because adding it changes the file).
 
 **Resolution:**
-1. Re-run export to regenerate files and manifest
-2. Verify files not modified by antivirus or other process
-3. Check file encoding (should be UTF-8)
-4. Compare hash algorithms (SHA256 vs SHA-256)
+1. Verify you are using the current export script, which writes the hash to a separate sidecar file (`manifest-*.sha256`) instead of embedding it inside the manifest JSON
+2. If using the sidecar file, verify with: `sha256sum -c manifest-<period>.sha256`
+3. If files were modified by antivirus or another process after export, re-run the export to regenerate
+4. Check file encoding (should be UTF-8)
 
 ---
 

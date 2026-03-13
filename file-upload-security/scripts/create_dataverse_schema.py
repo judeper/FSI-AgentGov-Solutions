@@ -209,7 +209,11 @@ def _create_table(
 
     print(f"  Adding columns:")
     for col_name, col_type, col_factory in columns:
-        client.create_column(logical_name, col_name, col_type, col_factory())
+        try:
+            client.create_column(logical_name, col_name, col_type, col_factory())
+        except Exception as exc:
+            print(f"    ERROR creating {col_name}: {exc}")
+            continue
 
 
 def ensure_shared_option_sets(client: FUSClient) -> None:
@@ -228,6 +232,7 @@ def ensure_shared_option_sets(client: FUSClient) -> None:
             ("Medium", 2),
             ("High", 3),
             ("Critical", 4),
+            ("Warning", 5),
         ],
     )
 

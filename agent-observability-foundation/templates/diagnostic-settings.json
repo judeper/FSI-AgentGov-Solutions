@@ -21,26 +21,18 @@
     },
     "settingName": {
       "type": "string",
-      "defaultValue": "export-to-adls",
+      "defaultValue": "export-to-storage",
       "metadata": {
         "description": "Name for the diagnostic settings configuration"
-      }
-    },
-    "retentionDays": {
-      "type": "int",
-      "defaultValue": 0,
-      "minValue": 0,
-      "maxValue": 365000,
-      "metadata": {
-        "description": "DEPRECATED: Azure deprecated retentionPolicy on diagnostic settings (September 2023); these values are silently ignored by current API versions. Retention must be managed via storage account lifecycle management policies or WORM immutability (see docs/worm-configuration.md). Default 0 indicates retention is managed externally."
       }
     }
   },
   "resources": [
     {
-      "type": "Microsoft.Insights/components/providers/diagnosticSettings",
+      "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
-      "name": "[concat(parameters('appInsightsName'), '/Microsoft.Insights/', parameters('settingName'))]",
+      "name": "[parameters('settingName')]",
+      "scope": "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
       "properties": {
         "storageAccountId": "[parameters('storageAccountId')]",
         "logs": [
@@ -49,8 +41,8 @@
             "categoryGroup": null,
             "enabled": true,
             "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
+              "enabled": false,
+              "days": 0
             }
           },
           {
@@ -58,8 +50,8 @@
             "categoryGroup": null,
             "enabled": true,
             "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
+              "enabled": false,
+              "days": 0
             }
           },
           {
@@ -67,8 +59,8 @@
             "categoryGroup": null,
             "enabled": true,
             "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
+              "enabled": false,
+              "days": 0
             }
           },
           {
@@ -76,8 +68,8 @@
             "categoryGroup": null,
             "enabled": true,
             "retentionPolicy": {
-              "enabled": true,
-              "days": "[parameters('retentionDays')]"
+              "enabled": false,
+              "days": 0
             }
           }
         ]
@@ -87,7 +79,7 @@
   "outputs": {
     "diagnosticSettingsId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Insights/components/providers/diagnosticSettings', parameters('appInsightsName'), 'Microsoft.Insights', parameters('settingName'))]",
+      "value": "[extensionResourceId(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), 'Microsoft.Insights/diagnosticSettings', parameters('settingName'))]",
       "metadata": {
         "description": "Resource ID of the created diagnostic settings"
       }

@@ -184,6 +184,7 @@ customEvents
 | where eventType == "ContentFiltered"
 | extend
     agentId = tostring(customDimensions["BotId"]),
+    agentName = tostring(customDimensions["BotName"]),
     sessionId = tostring(customDimensions["ConversationId"]),
     turnId = tostring(customDimensions["TurnId"]),
     filterReason = tostring(customDimensions["FilterReason"]),
@@ -193,6 +194,7 @@ customEvents
 | project
     timestamp,
     agentId,
+    agentName,
     sessionId,
     turnId,
     filterReason,

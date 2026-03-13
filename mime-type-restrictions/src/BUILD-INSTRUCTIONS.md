@@ -16,7 +16,7 @@ Step-by-step guide to build the Dataverse plugin DLL from source.
 3. **Install NuGet packages:**
    ```
    Install-Package Microsoft.CrmSdk.CoreAssemblies -Version 9.0.2
-   Install-Package System.Text.Json -Version 6.0.0
+   Install-Package System.Text.Json -Version 8.0.0
    Install-Package ILRepack -Version 2.0.18
    ```
 

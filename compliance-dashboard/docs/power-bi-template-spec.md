@@ -63,7 +63,7 @@ Parameters allow customers to enter their own Dataverse environment URL and tena
 | Setting | Value |
 |---------|-------|
 | Name | `TenantId` |
-| Description | `Your Azure AD tenant ID (GUID format)` |
+| Description | `Your Microsoft Entra ID tenant ID (GUID format)` |
 | Required | `Yes` (checked) |
 | Type | `Text` |
 | Suggested Values | `Any value` |
@@ -293,11 +293,15 @@ RETURN
 ```dax
 Score Change 30D =
 VAR CurrentScore = [Overall Score]
-VAR PriorDate = MAX(ComplianceScore[fsi_scoredate]) - 30
 VAR PriorScore =
     CALCULATE(
         AVERAGE(ComplianceScore[fsi_overallscore]),
-        ComplianceScore[fsi_scoredate] = PriorDate
+        DATESINPERIOD(
+            DateTable[Date],
+            MAX(ComplianceScore[fsi_scoredate]) - 30,
+            1,
+            DAY
+        )
     )
 RETURN
     CurrentScore - PriorScore
@@ -787,7 +791,7 @@ Provide these instructions in the template:
 
    Required parameters:
    - DataverseEnvironmentUrl: Your Dataverse environment URL
-   - TenantId: Your Azure AD tenant ID
+   - TenantId: Your Microsoft Entra ID tenant ID
 
    For deployment instructions, see: docs/deployment-checklist.md
    ```

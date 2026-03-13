@@ -109,8 +109,8 @@ Workbooks embed KQL queries from the Phase 2 query library (agent-observability-
 | Error Summary | Total errors, error rate | error-trend-analysis.kql |
 | Error Summary | Error distribution donut | error-categorization-by-type.kql |
 | Error Drill-Down | Errors by agent | error-categorization-by-type.kql (aggregated by agent) |
-| Root Cause Analysis | Flow failure correlation | flow-execution-failures.kql |
-| Root Cause Analysis | RAI content filtering | rai-content-filter-detections.kql |
+| Root Cause Analysis | Flow failure correlation | flow-failure-correlation.kql |
+| Root Cause Analysis | RAI content filtering | rai-content-filtering-detection.kql |
 
 **Usage Overview Workbook:**
 | Tab | Visualization | Source Query |

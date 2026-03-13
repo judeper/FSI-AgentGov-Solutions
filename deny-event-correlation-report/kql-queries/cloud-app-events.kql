@@ -12,12 +12,17 @@
 //   - Advanced Hunting access in Microsoft 365 Defender portal
 // ============================================================================
 
+// Note: The PowerShell extraction script (Export-DefenderCopilotEvents.ps1) uses
+// ActionType ("CopilotInteraction", "CopilotMessageCreated") with string-based
+// content matching (RawEventData has "PromptInjection"). This KQL uses boolean
+// field checks (parsedFields.XPIADetected) which may differ depending on Defender
+// schema version. Align ActionType filters with the PS1 script if results diverge.
 // -----------------------------------------------------------------------------
 // Query 1: XPIA and Jailbreak Detections (Last 24 Hours)
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(24h)
-| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
 | extend parsedFields = parse_json(RawEventData)
 | where parsedFields.XPIADetected == true
     or parsedFields.JailbreakDetected == true
@@ -51,7 +56,7 @@ CloudAppEvents
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(7d)
-| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
 | extend parsedFields = parse_json(RawEventData)
 | where parsedFields.XPIADetected == true
     or parsedFields.JailbreakDetected == true
@@ -73,7 +78,7 @@ CloudAppEvents
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(24h)
-| where ActionType in ("CopilotInteraction", "McasAlertGenerated")
+| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
 | extend parsedFields = parse_json(RawEventData)
 | where parsedFields.XPIADetected == true
     or parsedFields.JailbreakDetected == true

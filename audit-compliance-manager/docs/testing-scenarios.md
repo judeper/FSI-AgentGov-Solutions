@@ -36,7 +36,7 @@
 
 ### Scenario 3: Purview Unified Audit Disabled
 
-**Setup:** Disable Purview unified audit log ingestion for a test environment via `Set-AdminConfig`.
+**Setup:** Disable Purview unified audit log ingestion for a test environment via `Set-AdminAuditLogConfig`.
 
 **Expected results:**
 - Affected environment shows `Non-Compliant`
@@ -44,7 +44,7 @@
 - Other environments unaffected
 
 **Verification:**
-1. Disable audit: `Set-AdminConfig -UnifiedAuditLogIngestionEnabled $false`
+1. Disable audit: `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $false`
 2. Run detection runbook
 3. Verify environment shows Non-Compliant with `PurviewAuditEnabled = False`
 
@@ -103,7 +103,7 @@
 
 **Expected results:**
 - Console shows tenant-wide change warning
-- `Set-AdminConfig -UnifiedAuditLogIngestionEnabled $true` is called
+- `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true` is called
 - All environments benefit from tenant-level change
 
 **Verification:**

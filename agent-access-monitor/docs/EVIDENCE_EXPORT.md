@@ -63,7 +63,7 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `-DataverseUrl` | Yes | — | Dataverse organization URL |
-| `-TenantId` | Yes | — | Azure AD tenant ID |
+| `-TenantId` | Yes | — | Microsoft Entra ID tenant ID |
 | `-OutputDirectory` | Yes | — | Output path (created if needed) |
 | `-Zone` | No | All | Zone filter: All, 1, 2, or 3 |
 | `-RunId` | No | — | Export a specific validation run |

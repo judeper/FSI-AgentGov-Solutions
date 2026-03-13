@@ -240,7 +240,7 @@
               "OData-MaxVersion": "4.0",
               "OData-Version": "4.0",
               "Accept": "application/json",
-              "Prefer": "odata.include-annotations=*"
+              "Prefer": "odata.include-annotations=*,odata.maxpagesize=5000"
             },
             "authentication": {
               "type": "ManagedServiceIdentity",
@@ -256,13 +256,26 @@
           },
           "metadata": {
             "operationMetadataId": "step1-query-dataverse",
-            "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication."
+            "notes": "Queries fsi_auditenvironmentcompliance for environments with Non-Compliant status (100000001). Uses Managed Identity for Dataverse authentication. LIMITATION: No @odata.nextLink pagination handling — results exceeding the page size (default 5000) will be truncated. For tenants with >5000 non-compliant environments, implement a Do-Until loop following the @odata.nextLink URL."
+          }
+        },
+        "Check_Pagination_Truncation_Warning": {
+          "type": "Compose",
+          "runAfter": {
+            "Step_1_-_Query_Non-Compliant_Environments": [
+              "Succeeded"
+            ]
+          },
+          "inputs": "@if(contains(string(body('Step_1_-_Query_Non-Compliant_Environments')), '@odata.nextLink'), 'WARNING: Query results were paginated — not all non-compliant environments were returned. The current page contains a maximum of 5000 records. Implement a Do-Until pagination loop to process all environments.', 'All non-compliant environments returned in a single page.')",
+          "metadata": {
+            "operationMetadataId": "check-pagination-warning",
+            "notes": "Logs a warning if the Dataverse query response contains an @odata.nextLink property, indicating results were truncated due to pagination. This is a lightweight mitigation for the known pagination limitation documented in Step 1."
           }
         },
         "Set_NonCompliantCount": {
           "type": "SetVariable",
           "runAfter": {
-            "Step_1_-_Query_Non-Compliant_Environments": [
+            "Check_Pagination_Truncation_Warning": [
               "Succeeded"
             ]
           },
@@ -480,12 +493,13 @@
                         "parameters": {
                           "emailMessage/To": "@variables('NotificationRecipients')",
                           "emailMessage/Subject": "ALCA: Remediation Complete — @{variables('NonCompliantCount')} Environment(s) Processed",
-                          "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                          "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Complete</h2><p>The remediation runbook has been executed following governance approval.</p><h3>Summary</h3><ul><li><strong>Environments Processed:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{replace(replace(body('Step_3_-_Start_Approval')?['responder']?['name'], '&', '&amp;'), '<', '&lt;')}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><h3>Environments Remediated</h3>@{body('Create_HTML_Table')}<p><em>Review the updated compliance records in the <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for detailed results.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
                           "emailMessage/Importance": "Normal"
                         }
                       },
                       "metadata": {
-                        "operationMetadataId": "step5-notification-approved-success"
+                        "operationMetadataId": "step5-notification-approved-success",
+                        "notes": "NOTE: Approver name (responder.name) is HTML-entity-encoded using replace(replace(value, '&', '&amp;'), '<', '&lt;') for defense-in-depth. CONFIGURE: Replace 'https://github.com/YOUR-ORG/FSI-AgentGov-Solutions' in the email footer with your organization's repository URL."
                       }
                     }
                   },
@@ -503,12 +517,13 @@
                           "parameters": {
                             "emailMessage/To": "@variables('NotificationRecipients')",
                             "emailMessage/Subject": "ALCA: Remediation FAILED — @{variables('NonCompliantCount')} Environment(s) — Status: @{body('Check_Runbook_Job_Status')?['properties']?['status']}",
-                            "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Failed</h2><p>The remediation runbook did <strong>not</strong> complete successfully. Immediate attention required.</p><h3>Summary</h3><ul><li><strong>Environments Targeted:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><p><strong>Action Required:</strong> Check the Azure Automation job output for errors. Environments may remain non-compliant.</p><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>Review the Azure Automation job logs and <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for details.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
+                            "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Failed</h2><p>The remediation runbook did <strong>not</strong> complete successfully. Immediate attention required.</p><h3>Summary</h3><ul><li><strong>Environments Targeted:</strong> @{variables('NonCompliantCount')}</li><li><strong>Approved By:</strong> @{replace(replace(body('Step_3_-_Start_Approval')?['responder']?['name'], '&', '&amp;'), '<', '&lt;')}</li><li><strong>Runbook Status:</strong> @{body('Check_Runbook_Job_Status')?['properties']?['status']}</li><li><strong>Job ID:</strong> @{body('Step_4a_-_Trigger_Remediation_Runbook')?['name']}</li></ul><p><strong>Action Required:</strong> Check the Azure Automation job output for errors. Environments may remain non-compliant.</p><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>Review the Azure Automation job logs and <a href=\"@{variables('DataverseEnvironmentUrl')}\">Dataverse compliance table</a> for details.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0 | <a href=\"https://github.com/YOUR-ORG/FSI-AgentGov-Solutions\">FSI-AgentGov-Solutions</a></p>",
                             "emailMessage/Importance": "High"
                           }
                         },
                         "metadata": {
-                          "operationMetadataId": "step5-notification-approved-failure"
+                          "operationMetadataId": "step5-notification-approved-failure",
+                          "notes": "NOTE: Approver name (responder.name) is HTML-entity-encoded using replace(replace(value, '&', '&amp;'), '<', '&lt;') for defense-in-depth. CONFIGURE: Replace 'https://github.com/YOUR-ORG/FSI-AgentGov-Solutions' in the email footer with your organization's repository URL."
                         }
                       }
                     }
@@ -529,12 +544,13 @@
                       "parameters": {
                         "emailMessage/To": "@variables('NotificationRecipients')",
                         "emailMessage/Subject": "ALCA: Remediation Rejected — @{variables('NonCompliantCount')} Environment(s) Remain Non-Compliant",
-                        "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Rejected</h2><p>The remediation request was <strong>rejected</strong> by the governance lead.</p><h3>Summary</h3><ul><li><strong>Non-Compliant Environments:</strong> @{variables('NonCompliantCount')}</li><li><strong>Rejected By:</strong> @{body('Step_3_-_Start_Approval')?['responder']?['name']}</li><li><strong>Comments:</strong> @{body('Step_3_-_Start_Approval')?['comments']}</li></ul><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>These environments will remain non-compliant until the next approval cycle. Manual remediation can be performed using the Enable-AuditLogging.ps1 runbook directly.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
+                        "emailMessage/Body": "<h2>Audit Logging Compliance Automation — Remediation Rejected</h2><p>The remediation request was <strong>rejected</strong> by the governance lead.</p><h3>Summary</h3><ul><li><strong>Non-Compliant Environments:</strong> @{variables('NonCompliantCount')}</li><li><strong>Rejected By:</strong> @{replace(replace(body('Step_3_-_Start_Approval')?['responder']?['name'], '&', '&amp;'), '<', '&lt;')}</li><li><strong>Comments:</strong> @{replace(replace(body('Step_3_-_Start_Approval')?['comments'], '&', '&amp;'), '<', '&lt;')}</li></ul><h3>Affected Environments</h3>@{body('Create_HTML_Table')}<p><em>These environments will remain non-compliant until the next approval cycle. Manual remediation can be performed using the Enable-AuditLogging.ps1 runbook directly.</em></p><hr><p style=\"color: #666; font-size: 12px;\">Sent by ALCA Approval Flow v1.0.0</p>",
                         "emailMessage/Importance": "High"
                       }
                     },
                     "metadata": {
-                      "operationMetadataId": "step5-notification-rejected"
+                      "operationMetadataId": "step5-notification-rejected",
+                      "notes": "NOTE: Approver name (responder.name) and approval comments are HTML-entity-encoded using replace(replace(value, '&', '&amp;'), '<', '&lt;') for defense-in-depth. Comments are free-text user input and the primary injection risk vector."
                     }
                   }
                 }
@@ -562,6 +578,7 @@
       "runAfter": {
         "Scope_Try": [
           "Failed",
+          "Skipped",
           "TimedOut"
         ]
       },

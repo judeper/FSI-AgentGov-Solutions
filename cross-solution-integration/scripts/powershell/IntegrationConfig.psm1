@@ -245,7 +245,7 @@ function Get-SolutionTableConfig {
             RunIdField      = 'fsi_runid'
             FilterLatest    = "`$filter=fsi_validationtype eq 'Orchestrator'&`$orderby=fsi_timestamp desc&`$top=1"
             SolutionName    = 'Conditional Access Automation'
-            SolutionVersion = 'v1.0.0'
+            SolutionVersion = 'v1.1.0'
         }
     }
 }
@@ -336,7 +336,7 @@ function ConvertTo-DashboardStatus {
             # Percentage-based (from compliant count / total agents)
             if ($TotalAgents -ge 0 -and $CompliantCount -ge 0) {
                 if ($TotalAgents -eq 0) {
-                    return @{ Status = 4; Score = 0; StatusLabel = 'Not Applicable' }
+                    return @{ Status = 4; Score = $null; StatusLabel = 'Not Applicable' }
                 }
                 $ComplianceRate = ($CompliantCount / $TotalAgents) * 100
             }

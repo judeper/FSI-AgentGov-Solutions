@@ -81,3 +81,19 @@ relationship UserZone_to_Zone
 	toCardinality: one
 	crossFilteringBehavior: singleDirection
 	isActive: true
+
+relationship ControlRegulation_to_Regulation
+	fromColumn: ControlRegulation.RegulationId
+	toColumn: DimRegulation.RegulationId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true
+
+relationship ControlRegulation_to_Control
+	fromColumn: ControlRegulation.ControlId
+	toColumn: DimControl.ControlId
+	fromCardinality: many
+	toCardinality: one
+	crossFilteringBehavior: singleDirection
+	isActive: true

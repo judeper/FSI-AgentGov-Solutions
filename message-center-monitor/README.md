@@ -77,15 +77,16 @@ Create a table named `MessageCenterLog` with these columns:
 | actionRequiredByDateTime | DateTime | Deadline for action (if any) |
 | lastModifiedDateTime | DateTime | When Microsoft last updated this post |
 | isMajorChange | Yes/No | Microsoft's flag for significant changes |
-| body | Multiline Text | Full post content (HTML) |
+| body | Multiline Text (max length: 100,000+) | Full post content (HTML). Set the maximum length to at least 100,000 characters to avoid silent truncation of long posts (Dataverse defaults to 2,000 in some creation paths). |
 | assessmentStatus | Choice | Not Assessed, Reviewed, Impacts Agents, No Impact |
 | assessment | Multiline Text | Your team's assessment notes |
 | impactsAgents | Yes/No | Does this affect your agents? |
 | assessedBy | Lookup (User) | Who reviewed this post |
 | assessedDate | DateTime | When it was reviewed |
 | actionsTaken | Multiline Text | Notes on response/remediation |
+| notifiedOn | DateTime | When Teams notification was sent (prevents duplicates) |
 
-> **Naming Convention Note:** Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix) for how to find it.
+> **Naming Convention Note:**Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix) for how to find it.
 
 ### Step 2: Create the Power Automate Flow
 
@@ -97,7 +98,7 @@ See [FLOW_SETUP.md](./FLOW_SETUP.md) for complete flow creation instructions.
 2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
 4. For each message: Upsert to Dataverse using messagecenterId
-5. Condition: If severity = high OR actionRequiredByDateTime is set
+5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
 6. Teams notification: Post adaptive card to your channel
 
 ### Step 3: Set Up Teams Notifications
@@ -130,7 +131,7 @@ Daily Polling (9 AM)
 Dataverse MessageCenterLog Table
         │
         ▼
-Alert if severity=high OR action-required
+Alert if severity=high/critical OR action-required
         │
         ▼
 Agent Platform Team Review
@@ -163,7 +164,8 @@ MessageCenterLog
 ├── impactsAgents (boolean)
 ├── assessedBy (User lookup)
 ├── assessedDate
-└── actionsTaken (notes)
+├── actionsTaken (notes)
+└── notifiedOn (duplicate prevention)
 ```
 
 ### Permissions
@@ -206,6 +208,8 @@ This solution is designed to be modified:
 - **Add views:** Filter by service, category, or date
 - **Integrate:** Connect to your change management system
 - **Plain-text body:** The `body` field stores HTML from Microsoft. For search or cleaner display, add a `bodyPlainText` column and use Power Automate's `stripHtml()` expression or a custom function to convert content
+
+> **Environment Promotion Tip:** When moving this solution between environments (dev → test → prod), use [Dataverse environment variables](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/environmentvariables) instead of hardcoding values in the flow. Store the polling schedule (recurrence interval), severity thresholds, and Teams channel ID as environment variables so they can be updated per-environment without editing the flow definition. This aligns with ALM best practices and simplifies managed solution deployments.
 
 ## Troubleshooting
 

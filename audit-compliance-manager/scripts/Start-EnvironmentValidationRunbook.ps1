@@ -22,14 +22,14 @@
     results and route per-environment alerts based on drift status.
 
 .PARAMETER TenantId
-    Azure AD tenant ID for authentication.
+    Microsoft Entra ID tenant ID for authentication.
 
 .PARAMETER DataverseUrl
-    Central Dataverse organization URL where environment registry and validation
+    Central Dataverse organization URL where environment registryand validation
     history are stored. Example: https://governance.crm.dynamics.com
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be

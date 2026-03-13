@@ -122,30 +122,34 @@ def deploy_environment_variables(client: FUSClient) -> None:
     for var_def in ENVIRONMENT_VARIABLES:
         schema = var_def["SchemaName"]
 
-        # Check if already exists
-        result = client.query(
-            "environmentvariabledefinitions",
-            filter=f"schemaname eq '{schema}'",
-            select="schemaname",
-        )
-        if result.get("value"):
-            print(f"  {schema}: already exists")
+        try:
+            # Check if already exists
+            result = client.query(
+                "environmentvariabledefinitions",
+                filter=f"schemaname eq '{schema}'",
+                select="schemaname",
+            )
+            if result.get("value"):
+                print(f"  {schema}: already exists")
+                continue
+
+            if client.dry_run:
+                print(f"  [DRY RUN] Would create: {schema}")
+                continue
+
+            definition = {
+                "schemaname": schema,
+                "displayname": var_def["DisplayName"],
+                "description": var_def["Description"],
+                "type": TYPE_MAP[var_def["Type"]],
+                "defaultvalue": var_def["DefaultValue"],
+            }
+
+            client.create_record("environmentvariabledefinitions", definition)
+            print(f"  {schema}: created ({var_def['Type']})")
+        except Exception as exc:
+            print(f"  ERROR creating {schema}: {exc}")
             continue
-
-        if client.dry_run:
-            print(f"  [DRY RUN] Would create: {schema}")
-            continue
-
-        definition = {
-            "schemaname": schema,
-            "displayname": var_def["DisplayName"],
-            "description": var_def["Description"],
-            "type": TYPE_MAP[var_def["Type"]],
-            "defaultvalue": var_def["DefaultValue"],
-        }
-
-        client.create_record("environmentvariabledefinitions", definition)
-        print(f"  {schema}: created ({var_def['Type']})")
 
     print(f"\n  Total: {len(ENVIRONMENT_VARIABLES)} environment variables")
     print(f"{'='*60}")

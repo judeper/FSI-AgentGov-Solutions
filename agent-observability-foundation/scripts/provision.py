@@ -295,8 +295,9 @@ def create_log_analytics_workspace(
     """
     Create or update Log Analytics workspace with 730-day retention.
 
-    IMPORTANT: Sets BOTH retention_in_days AND total_retention_in_days to
-    ensure full interactive query access for the retention period.
+    IMPORTANT: Sets retention_in_days (interactive/hot retention). When
+    retention_in_days equals total_retention_in_days (the default behavior),
+    only retention_in_days needs to be specified.
     (Pitfall #2 from research: confusing analytics vs total retention)
 
     Args:
@@ -331,8 +332,8 @@ def create_log_analytics_workspace(
     print(f"  Creating Log Analytics workspace {workspace_name}...")
 
     # Build workspace parameters
-    # CRITICAL: Set BOTH retention_in_days (interactive/hot) AND total_retention_in_days
-    # to avoid the pitfall where only 90 days are queryable
+    # Set retention_in_days (interactive/hot); total_retention_in_days defaults to
+    # match retention_in_days when not explicitly specified
     workspace_params = Workspace(
         location=location,
         sku=WorkspaceSku(name=sku),

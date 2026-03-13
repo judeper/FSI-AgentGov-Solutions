@@ -72,7 +72,7 @@ foreach ($entry in $fileHashes) {
         continue
     }
 
-    $actualHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
+    $actualHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
 
     if ($actualHash -eq $entry.ExpectedHash) {
         if ($Detailed) {
@@ -96,7 +96,7 @@ $sortedHashes = ($allHashes | Sort-Object) -join ''
 $hashBytes = [System.Text.Encoding]::UTF8.GetBytes($sortedHashes)
 $sha = [System.Security.Cryptography.SHA256]::Create()
 $masterHashBytes = $sha.ComputeHash($hashBytes)
-$calculatedMaster = ([System.BitConverter]::ToString($masterHashBytes) -replace '-', '').ToLower()
+$calculatedMaster = [System.BitConverter]::ToString($masterHashBytes) -replace '-', ''
 
 if ($calculatedMaster -eq $manifest.masterHash) {
     Write-Host "[PASS] Master hash chain verified" -ForegroundColor Green

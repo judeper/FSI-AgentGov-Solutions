@@ -1,6 +1,6 @@
 {
   "_deploymentNotes": [
-    "FSI Agent Governance Framework — Purview DLP Policy Template",
+    "FSI Agent Governance Framework — Power Platform DLP Policy Template",
     "Control Reference: 1.25 — MIME Type Restrictions",
     "",
     "BEFORE ENABLING:",
@@ -11,12 +11,15 @@
     "5. Coordinate with compliance and business teams to confirm extension lists align with approved file types.",
     "",
     "This template supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12.",
+    "NEEDS_HUMAN_REVIEW: Verify the OCC 2011-12 reference — OCC Bulletin 2011-12 covers model risk",
+    "management, not file upload restrictions. Consider OCC 2023-35 (third-party risk) or omit",
+    "pending compliance team confirmation.",
     "It does not guarantee regulatory compliance on its own — organizations should verify",
     "configuration meets their specific obligations."
   ],
   "name": "fsi-agentgov-mime-upload-restrictions",
   "displayName": "FSI Agent Governance - MIME Type Upload Restrictions",
-  "description": "Purview DLP policy restricting executable and script file uploads in Power Platform environments. Supports compliance with FINRA 4511 and SEC 17a-4 record-keeping requirements by helping prevent unauthorized file type uploads. Part of the FSI Agent Governance Framework, Control 1.25 — MIME Type Restrictions. Implementation requires validation against organization-specific requirements.",
+  "description": "Power Platform DLP policy restricting executable and script file uploads in Power Platform environments. Supports compliance with FINRA 4511 and SEC 17a-4 record-keeping requirements by helping prevent unauthorized file type uploads. Part of the FSI Agent Governance Framework, Control 1.25 — MIME Type Restrictions. Implementation requires validation against organization-specific requirements.",
   "mode": "Block",
   "state": "Enabled",
   "locations": {
@@ -35,6 +38,7 @@
   },
   "rules": [
     {
+      "_schemaNote": "This template uses a conceptual rule schema (fileExtensionMatches/blockAccess) to document the intended DLP behavior. It does NOT match the actual Power Platform DLP Admin API schema, which uses connectorGroups with Business/Non-Business/Blocked classifications. Do not import this JSON directly via New-DlpPolicy — translate the intent into connector classifications using Set-AdminDlpPolicy or the Power Platform admin center.",
       "ruleName": "Block Executable File Uploads",
       "ruleDescription": "Blocks uploads of core executable file types that pose the highest risk in Power Platform environments. Covers 11 dangerous extensions commonly associated with malware delivery and unauthorized code execution.",
       "priority": 1,

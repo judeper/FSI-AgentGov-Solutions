@@ -1,0 +1,31 @@
+{
+  "displayName": "CA-AgentBuilder-Zone1-RiskBasedMFA",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeGroups": ["<zone-1-users-group-id>"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": ["<agent-builder-app-id>"]
+    },
+    "signInRiskLevels": ["medium", "high"],
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 8,
+      "type": "hours",
+      "isEnabled": true
+    }
+  },
+  "_metadata": {
+    "schemaVersion": "v1.0",
+    "lastValidated": "2026-03-13",
+    "targetControl": "1.11"
+  }
+}

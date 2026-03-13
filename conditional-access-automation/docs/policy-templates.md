@@ -9,6 +9,7 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
 | CA-CopilotStudio-Zone1 | 1 | Risk-based | Any | 8 hours | Report-only |
 | CA-CopilotStudio-Zone2 | 2 | Required | Any | 4 hours | Report-only |
 | CA-CopilotStudio-Zone3 | 3 | Required | Compliant | 1 hour | Report-only |
+| CA-AgentBuilder-Zone1 | 1 | Risk-based | Any | 8 hours | Report-only |
 | CA-AgentBuilder-Zone2 | 2 | Required | Any | 4 hours | Report-only |
 | CA-AgentBuilder-Zone3 | 3 | Required | Compliant | 1 hour | Report-only |
 | CA-M365Copilot-AllZones | All | Risk-based | Any | 8 hours | Report-only |
@@ -145,6 +146,47 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
 
 ---
 
+### CA-AgentBuilder-Zone1
+
+**Purpose:** Risk-based MFA for Zone 1 (Personal Productivity) Agent Builder access.
+
+```json
+{
+  "displayName": "CA-AgentBuilder-Zone1-RiskBasedMFA",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeGroups": ["<zone-1-users-group-id>"],
+      "excludeUsers": ["<break-glass-1>", "<break-glass-2>"]
+    },
+    "applications": {
+      "includeApplications": ["<agent-builder-app-id>"]
+    },
+    "signInRiskLevels": ["medium", "high"],
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"]
+  },
+  "sessionControls": {
+    "signInFrequency": {
+      "value": 8,
+      "type": "hours",
+      "isEnabled": true
+    }
+  }
+}
+```
+
+**Key Settings:**
+- MFA only for medium+ risk sign-ins
+- 8-hour session timeout
+- Targets Zone 1 user group
+- Mirrors CA-CopilotStudio-Zone1 controls for Agent Builder
+
+---
+
 ### CA-AgentBuilder-Zone2
 
 **Purpose:** MFA for Zone 2 Agent Builder access.
@@ -230,7 +272,7 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
       }
     },
     "applications": {
-      "includeApplications": ["fb8d773d-7ef8-4ec0-a117-179f88add510"]
+      "includeApplications": ["<m365-copilot-app-id>"]
     },
     "signInRiskLevels": ["low", "medium", "high"],
     "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
@@ -252,7 +294,7 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
 **Key Settings:**
 - Applies to all users (except guests, break-glass)
 - MFA for any risk level
-- Uses global M365 Copilot app ID
+- Uses the M365 Copilot app ID from `config.applications.m365Copilot` (substituted by `Deploy-CAPolicies.ps1` at deploy time)
 
 ---
 
@@ -273,7 +315,7 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
       "includeApplications": [
         "<copilot-studio-app-id>",
         "<agent-builder-app-id>",
-        "fb8d773d-7ef8-4ec0-a117-179f88add510"
+        "<m365-copilot-app-id>"
       ]
     },
     "clientAppTypes": ["exchangeActiveSync", "other"]
@@ -411,3 +453,23 @@ Use the What-If tool in Entra ID:
 3. **Week 3:** Deploy to Zone 1 users
 4. **Week 4:** Deploy to Zone 2 users
 5. **Week 5:** Deploy to Zone 3 users
+
+---
+
+## Default Audit Mode and Placeholder Validation
+
+### Report-Only Default State
+
+All 9 CA policy templates ship with `state: "enabledForReportingButNotEnforced"` (audit/report-only mode). This is intentional — policies should be tested with the What-If tool and Conditional Access insights before enforcement.
+
+To enable policies for enforcement, use `Deploy-CAPolicies.ps1 -EnablePolicies $true` or manually update the `state` field to `"enabled"` in the Entra admin center.
+
+### Placeholder Tokens
+
+Templates contain `<placeholder>` tokens (e.g., `<zone-3-users-group-id>`, `<copilot-studio-app-id>`, `<break-glass-1>`) that must be replaced with tenant-specific values at deploy time. `Deploy-CAPolicies.ps1` performs this substitution using values from the configuration file (`-ConfigPath`).
+
+**Known limitation:** The deployment script does not currently validate that all placeholder tokens were substituted before issuing the Graph API call. If a configuration value is missing, the raw `<placeholder>` token is sent to the Graph API, which will reject it as an invalid GUID. To mitigate:
+
+1. Always run `Deploy-CAPolicies.ps1 -WhatIf` first and review the substituted values in verbose output.
+2. Ensure your `config.json` contains all required fields (see `config.sample.json` for the complete schema).
+3. A future enhancement will add pre-deployment validation to fail fast on unresolved placeholders.

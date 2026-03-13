@@ -2,76 +2,77 @@
 
 ## Solution Overview
 
-The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from three Microsoft data sources, stores them in a centralized location, and provides Power BI visualization for daily operational reporting.
+The Deny Event Correlation Report solution implements a batch processing pipeline that extracts deny events from four Microsoft data sources, stores them in a centralized location, and provides Power BI visualization for daily operational reporting.
 
 ## Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        DATA SOURCES                                     │
-├─────────────────┬─────────────────┬─────────────────────────────────────┤
-│                 │                 │                                     │
-│  Purview Audit  │   Purview DLP   │      Application Insights           │
-│ (CopilotInter-  │  (DlpRuleMatch) │     (ContentFiltered)               │
-│   action)       │                 │                                     │
-│                 │                 │                                     │
-└────────┬────────┴────────┬────────┴──────────────┬──────────────────────┘
-         │                 │                       │
-         │ Search-         │ Search-               │ REST API
-         │ UnifiedAuditLog │ UnifiedAuditLog       │ (KQL)
-         │                 │                       │
-         ▼                 ▼                       ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     EXTRACTION LAYER                                    │
-│                                                                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
-│  │ Export-Copilot  │  │ Export-Dlp      │  │ Export-Rai      │         │
-│  │ DenyEvents.ps1  │  │ CopilotEvents   │  │ Telemetry.ps1   │         │
-│  │                 │  │ .ps1            │  │                 │         │
-│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘         │
-│           │                    │                    │                   │
-│           └────────────────────┼────────────────────┘                   │
-│                                │                                        │
-│                    Invoke-DailyDenyReport.ps1                           │
-│                       (Orchestration)                                   │
-│                                │                                        │
-└────────────────────────────────┼────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    DATA SOURCES                                          │
+├─────────────────┬─────────────────┬─────────────────────────┬───────────────────────────┤
+│                 │                 │                         │                           │
+│  Purview Audit  │   Purview DLP   │  Application Insights   │  Defender CloudAppEvents  │
+│ (CopilotInter-  │  (DlpRuleMatch) │   (ContentFiltered)     │  (XPIA/Jailbreak)         │
+│   action)       │                 │                         │                           │
+│                 │                 │                         │                           │
+└────────┬────────┴────────┬────────┴────────────┬────────────┴──────────────┬────────────┘
+         │                 │                     │                          │
+         │ Search-         │ Search-             │ REST API                 │ Graph API
+         │ UnifiedAuditLog │ UnifiedAuditLog     │ (KQL)                    │ (Advanced
+         │                 │                     │                          │  Hunting)
+         ▼                 ▼                     ▼                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              EXTRACTION LAYER                                            │
+│                                                                                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐     │
+│  │ Export-Copilot  │  │ Export-Dlp      │  │ Export-Rai      │  │ Export-Defender  │     │
+│  │ DenyEvents.ps1  │  │ CopilotEvents   │  │ Telemetry.ps1   │  │ CopilotEvents   │     │
+│  │                 │  │ .ps1            │  │                 │  │ .ps1            │     │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘     │
+│           │                    │                    │                    │               │
+│           └────────────────────┼────────────────────┼────────────────────┘               │
+│                                │                    │                                    │
+│                    Invoke-DailyDenyReport.ps1                                            │
+│                       (Orchestration)                                                    │
+│                                │                                                         │
+└────────────────────────────────┼─────────────────────────────────────────────────────────┘
                                  │
                                  ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       STORAGE LAYER                                     │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                   Azure Blob Storage                             │   │
-│  │                   (or SharePoint)                                │   │
-│  │                                                                  │   │
-│  │  /deny-events/                                                   │   │
-│  │  └── 2026-01-26/                                                 │   │
-│  │      ├── CopilotDenyEvents-2026-01-26.csv                       │   │
-│  │      ├── DlpCopilotEvents-2026-01-26.csv                        │   │
-│  │      └── RaiTelemetry-2026-01-26.csv                            │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-└────────────────────────────────┬────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  STORAGE LAYER                                           │
+│                                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐     │
+│  │                          Azure Blob Storage                                      │     │
+│  │                          (or SharePoint)                                         │     │
+│  │                                                                                  │     │
+│  │  /deny-events/                                                                   │     │
+│  │  └── 2026-01-26/                                                                 │     │
+│  │      ├── CopilotDenyEvents-2026-01-26.csv                                        │     │
+│  │      ├── DlpCopilotEvents-2026-01-26.csv                                         │     │
+│  │      ├── RaiTelemetry-2026-01-26.csv                                             │     │
+│  │      └── DefenderCopilotEvents-2026-01-26.csv                                    │     │
+│  │                                                                                  │     │
+│  └─────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                          │
+└────────────────────────────────┬─────────────────────────────────────────────────────────┘
                                  │
                                  ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    VISUALIZATION LAYER                                  │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                     Power BI Service                             │   │
-│  │                                                                  │   │
-│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐        │   │
-│  │  │ Executive     │  │ Event Details │  │ Correlation   │        │   │
-│  │  │ Summary       │  │ Drill-down    │  │ Analysis      │        │   │
-│  │  └───────────────┘  └───────────────┘  └───────────────┘        │   │
-│  │                                                                  │   │
-│  │           Daily Scheduled Refresh (7 AM)                         │   │
-│  │                                                                  │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              VISUALIZATION LAYER                                         │
+│                                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐     │
+│  │                          Power BI Service                                        │     │
+│  │                                                                                  │     │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                         │     │
+│  │  │ Executive     │  │ Event Details │  │ Correlation   │                         │     │
+│  │  │ Summary       │  │ Drill-down    │  │ Analysis      │                         │     │
+│  │  └───────────────┘  └───────────────┘  └───────────────┘                         │     │
+│  │                                                                                  │     │
+│  │           Daily Scheduled Refresh (7 AM)                                          │     │
+│  │                                                                                  │     │
+│  └─────────────────────────────────────────────────────────────────────────────────┘     │
+│                                                                                          │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Details
@@ -121,7 +122,9 @@ CloudAppEvents
 
 | Script | Purpose | API Used |
 |--------|---------|----------|
+| `Connect-ExchangeOnlineHelper.ps1` | Shared EXO connection helper | ExchangeOnlineManagement |
 | `Export-CopilotDenyEvents.ps1` | Extract CopilotInteraction deny events | Search-UnifiedAuditLog |
+| `Export-DefenderCopilotEvents.ps1` | Extract Defender XPIA/Jailbreak events | Microsoft Graph Advanced Hunting |
 | `Export-DlpCopilotEvents.ps1` | Extract DLP matches for Copilot | Search-UnifiedAuditLog |
 | `Export-RaiTelemetry.ps1` | Extract RAI telemetry | Application Insights REST API |
 | `Invoke-DailyDenyReport.ps1` | Orchestrate all extractions | N/A |
@@ -184,12 +187,13 @@ Power Automate Flow
 
 ### Authentication
 
-!!! success "Authentication Migration Complete: Entra ID (Azure AD)"
-    Application Insights API key authentication was deprecated and `Export-RaiTelemetry.ps1` was migrated to Entra ID authentication on **February 4, 2026**. No `-ApiKey` parameter exists; the script uses `Connect-AzAccount` and `Get-AzAccessToken`.
-
-    See [Authentication Migration](prerequisites.md#authentication-migration) for configuration details.
-
-    *Migration completed: February 4, 2026*
+> **✅ Authentication Migration Complete: Entra ID (Azure AD)**
+>
+> Application Insights API key authentication was deprecated and `Export-RaiTelemetry.ps1` was migrated to Entra ID authentication on **February 4, 2026**. No `-ApiKey` parameter exists; the script uses `Connect-AzAccount` and `Get-AzAccessToken`.
+>
+> See [Authentication Migration](prerequisites.md#authentication-migration) for configuration details.
+>
+> *Migration completed: February 4, 2026*
 
 | Component | Authentication Method | Deprecation Status |
 |-----------|----------------------|-------------------|
@@ -197,7 +201,7 @@ Power Automate Flow
 | Application Insights | ~~API key~~ **Entra ID (OAuth 2.0)** | x-api-key deprecated March 31, 2026 |
 | Defender CloudAppEvents | Entra ID (Defender APIs) | Active |
 | Azure Storage | Managed identity or SAS token | Active |
-| Power BI | Azure AD | Active |
+| Power BI | Microsoft Entra ID | Active |
 
 ### Data Classification
 
@@ -216,10 +220,11 @@ CSV exports contain sensitive compliance data that requires protection:
 
 | Field | Script | Risk |
 |-------|--------|------|
-| `UserId` (UPN) | All three scripts | PII — identifies individual employees |
+| `UserId` (UPN) | All four extraction scripts | PII — identifies individual employees |
 | `SitMatchDetails` | Export-DlpCopilotEvents.ps1 | Reveals sensitive info type match counts and confidence levels |
 | `OverrideJustification` | Export-DlpCopilotEvents.ps1 | Free-text field — may contain sensitive context |
 | `CustomDimensions` | Export-RaiTelemetry.ps1 | May contain conversation metadata |
+| `ThreatCategory` | Export-DefenderCopilotEvents.ps1 | Reveals attack classification details |
 
 **Recommended controls:**
 

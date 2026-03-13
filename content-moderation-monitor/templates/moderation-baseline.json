@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Expected content moderation levels per governance zone",
   "zones": {
     "Zone1": {
@@ -41,7 +41,7 @@
       }
     },
     "Unknown": {
-      "description": "Unclassified environment",
+      "description": "Unclassified environment — fail-safe defaults to High minimum. Low moderation in an unclassified environment is High severity (governance gap + inadequate moderation). Medium is Warning (zone assignment gap only).",
       "minimumModerationLevel": "High",
       "violations": {
         "Low": {

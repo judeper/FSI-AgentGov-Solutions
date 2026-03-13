@@ -72,6 +72,12 @@ param(
     [switch]$DryRun,
 
     [Parameter(Mandatory=$false)]
+    [string]$TeamsTeamId,
+
+    [Parameter(Mandatory=$false)]
+    [string]$TeamsChannelId,
+
+    [Parameter(Mandatory=$false)]
     [switch]$Force
 )
 
@@ -301,7 +307,7 @@ function Deploy-LogicApp {
             --resource-group $ResourceGroup `
             --name $deploymentName `
             --template-file $templatePath `
-            --parameters logicAppName=$logicAppName `
+            --parameters logicAppName=$logicAppName $(if ($TeamsTeamId) { "teamsTeamId=$TeamsTeamId" }) $(if ($TeamsChannelId) { "teamsChannelId=$TeamsChannelId" }) `
             --query "properties.outputs" `
             --output json | Out-Null
 

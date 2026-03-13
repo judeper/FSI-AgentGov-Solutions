@@ -171,12 +171,14 @@ Solution:
 3. Update orphaned ownership records
 ```
 
-**Error: "Teams webhook failed"**
+**Error: "Teams notification failed"**
 ```
 Solution:
-1. Verify webhook URL is valid
-2. Re-create webhook if expired
-3. Check Teams channel permissions
+1. Verify the Microsoft Teams connection reference is valid (the solution uses the
+   shared_teams connector with PostMessageToConversation, not incoming webhooks)
+2. Re-authenticate the Teams connection in Power Automate > Connections
+3. Check that the recipient user has a Teams license and mailbox
+4. Verify the Flow bot is not blocked by the recipient
 ```
 
 ---

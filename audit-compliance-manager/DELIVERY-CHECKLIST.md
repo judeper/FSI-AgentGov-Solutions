@@ -172,14 +172,14 @@ ACM-Solution-v1.0.0/
 
 ### 4. Email Template
 
-**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.0
+**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.1
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.0.
+Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.1.
 
 This solution provides enterprise-grade automated detection and remediation of audit logging
 gaps across Microsoft 365 and Power Platform environments with Azure Automation and Managed
@@ -282,7 +282,7 @@ Before sending to customer, verify:
 - [ ] All files are included (17 PowerShell, 8 Python, 5 templates, 5 docs)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
-- [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `contoso.onmicrosoft.com`)
+- [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `example.com`)
 - [ ] Version numbers are consistent (v1.0.0) across all files
 - [ ] Placeholder values documented clearly (see Configuration Placeholders section in README)
 
@@ -425,6 +425,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.0
+**Package Version:** v1.0.1
 **Release Date:** February 2026
 **Solution:** Audit Compliance Manager (ACM)

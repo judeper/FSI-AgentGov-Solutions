@@ -18,6 +18,9 @@ function Connect-ToExchangeOnline {
     if (-not $exoSession) {
         Write-Verbose "Connecting to Exchange Online..."
         try {
+            # Interactive auth is used here for manual/dev runs. For Azure Automation
+            # (unattended), pass -CertificateThumbprint, -AppId, and -Organization
+            # parameters instead. See docs/troubleshooting.md for certificate auth setup.
             Connect-ExchangeOnline -ShowBanner:$false -ErrorAction Stop
             Write-Verbose "Connected to Exchange Online."
         }

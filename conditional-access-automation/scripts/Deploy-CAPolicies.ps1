@@ -146,10 +146,39 @@ Test-CAAConfigPath -Path $ConfigPath
 $config = Get-Content $ConfigPath | ConvertFrom-Json
 Write-Verbose "Configuration validated."
 
+# Validate break-glass account GUIDs before deployment
+if ($config.breakGlassAccounts -and $config.breakGlassAccounts.Count -gt 0) {
+    Test-CAABreakGlassAccounts -AccountIds @($config.breakGlassAccounts)
+}
+
+# Validate group and application IDs are well-formed GUIDs
+$guidValues = @()
+if ($config.groups) {
+    @('zone1Users', 'zone2Users', 'zone3Users') | ForEach-Object {
+        if ($config.groups.$_) { $guidValues += @{ Name = "groups.$_"; Value = $config.groups.$_ } }
+    }
+}
+if ($config.applications) {
+    @('copilotStudio', 'agentBuilder', 'm365Copilot') | ForEach-Object {
+        if ($config.applications.$_) { $guidValues += @{ Name = "applications.$_"; Value = $config.applications.$_ } }
+    }
+}
+$invalidGuids = @()
+foreach ($gv in $guidValues) {
+    $parsed = [guid]::Empty
+    if (-not [guid]::TryParse($gv.Value, [ref]$parsed)) {
+        $invalidGuids += "$($gv.Name) = '$($gv.Value)'"
+    }
+}
+if ($invalidGuids.Count -gt 0) {
+    throw "Config contains malformed GUIDs: $($invalidGuids -join '; '). All group IDs, application IDs, and break-glass accounts must be valid GUIDs."
+}
+
 # Define template mapping
 $templateMapping = @{
     "Zone1" = @(
-        "CA-CopilotStudio-Zone1.json"
+        "CA-CopilotStudio-Zone1.json",
+        "CA-AgentBuilder-Zone1.json"
     )
     "Zone2" = @(
         "CA-CopilotStudio-Zone2.json",
@@ -235,6 +264,9 @@ foreach ($templateFile in $templatesToDeploy) {
 
     # Substitute break-glass accounts
     if ($template.conditions.users.excludeUsers) {
+        if (-not $config.breakGlassAccounts -or $config.breakGlassAccounts.Count -eq 0) {
+            throw "config.breakGlassAccounts is empty or missing. Refusing to deploy CA policies without break-glass exclusions — this would lock emergency access accounts out of all AI workloads."
+        }
         $template.conditions.users.excludeUsers = $config.breakGlassAccounts
     }
 
@@ -248,6 +280,20 @@ foreach ($templateFile in $templatesToDeploy) {
                 default { $_ }
             }
         }
+    }
+
+    # Validate all placeholder tokens were substituted before calling Graph API
+    $templateJson = $template | ConvertTo-Json -Depth 10
+    $unresolvedTokens = [regex]::Matches($templateJson, '<[a-zA-Z][a-zA-Z0-9-]*>') | ForEach-Object { $_.Value } | Sort-Object -Unique
+    if ($unresolvedTokens) {
+        Write-Error "  Unresolved placeholder tokens in '$templateFile': $($unresolvedTokens -join ', '). Verify config.json contains all required values."
+        $deployedPolicies += @{
+            Name     = $policyName
+            Template = $templateFile
+            State    = 'Error'
+            Status   = "UnresolvedPlaceholders"
+        }
+        continue
     }
 
     # Set policy state

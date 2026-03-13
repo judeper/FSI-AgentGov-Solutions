@@ -66,6 +66,7 @@ python scripts/analyze_patterns.py --environment "https://example.crm.dynamics.c
 | `--environment` | (required) | Dataverse environment URL |
 | `--days` | 30 | Analysis period in days |
 | `--dry-run` | false | Use sample data instead of live API |
+| `--format` | text | Output format (`text` or `json`) |
 | `--verbose` / `-v` | false | Verbose output |
 
 ## Future Enhancements

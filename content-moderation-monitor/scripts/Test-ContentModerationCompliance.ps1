@@ -446,7 +446,7 @@ function Test-ContentModerationCompliance {
     } elseif ($highCount -gt 0) {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $warningCount -gt 0) {
-        $overallStatus = 'Review'
+        $overallStatus = 'Warning'
     }
 
     #endregion
@@ -462,9 +462,8 @@ function Test-ContentModerationCompliance {
 
     # Overall status
     $statusColor = switch ($overallStatus) {
-        'Critical' { 'Red' }
         'Failed'   { 'Red' }
-        'Review'   { 'Yellow' }
+        'Warning'  { 'Yellow' }
         'Passed'   { 'Green' }
         default    { 'White' }
     }

@@ -90,6 +90,40 @@ For issues not covered here, check:
 2. Power Automate flow run history
 3. Dataverse audit log for permission issues
 
+## Known Limitations
+
+### ListRecords pagination not handled
+
+All Dataverse `ListRecords` operations in both `CD-SolutionFeedCollector` and `ELM-SolutionInitializer` lack `@odata.nextLink` pagination handling. This is currently mitigated by `$top: 1` on every query (only the latest record is needed). However, if `$top` is removed or increased in future edits, results will be silently truncated at the Dataverse default page size (5000). When modifying any `ListRecords` operation, verify that `$top` is appropriate or add pagination logic.
+
+### No $select on Dataverse queries (partially resolved)
+
+`$select` parameters have been added to all `ListRecords` and `GetItem` operations in both `CD-SolutionFeedCollector` (15 operations: 6 solution queries + 9 upsert-existence checks) and `ELM-SolutionInitializer` (2 operations: 1 GetItem + 1 ListRecords). Each `$select` includes only the columns referenced by downstream expressions. The actual minimum Dataverse call count per `CD-SolutionFeedCollector` run is 24+ (ACV=3, SSC=5, AAM=3, CMM=3, FUS=3, CAA=7+), so the `$select` optimization reduces payload size significantly across all calls.
+
+### ELM flow null validation on required fields (resolved)
+
+The `ELM-SolutionInitializer` flow now validates that `fsi_environmentid` and `fsi_environmentname` are non-null and non-empty after `Extract_Provisioning_Data`. If either field is empty, the flow logs a validation failure to `fsi_provisioninglogs` and terminates with a `NullRequiredField` error, preventing corrupt ACV registry entries.
+
+### Non-atomic upsert pattern
+
+All assessment upserts (ACV, SSC, AAM, CMM, FUS, CAA) use a non-atomic `ListRecords` → if-exists → `Create`/`Update` sequence. The `SingleInstance` trigger option on `CD-SolutionFeedCollector` mitigates same-flow overlap, but manual re-runs or clock drift could produce duplicate same-day assessments. A Dataverse alternate-key upsert would be the proper fix but requires schema changes (adding an alternate key on `fsi_controlmasterid` + `fsi_assessmentdate`) outside this solution.
+
+### No staleness detection for Tier 2 solution data
+
+If a Tier 2 solution stops producing validation records (e.g., broken flow, expired credentials, decommissioned environment), `CD-SolutionFeedCollector` silently skips it — the `{Solution}_Has_Records` condition evaluates to false and the empty else branch executes. The Compliance Dashboard continues showing the last known assessment with no indication of data age.
+
+**Recommended mitigation:** Compare the `fsi_timestamp` of each solution's latest validation record against a configurable staleness threshold (e.g., 48 hours). If the latest record is older than the threshold, write a `status=2` (Partial) assessment with notes indicating stale data, and send a Teams alert. This can be implemented as an additional check within each Sync scope, after the `Query_{Solution}_Latest` action, or as a separate scheduled flow.
+
+**Monitoring workaround (no code changes):** Create a Dataverse view or Power BI report that shows `MAX(fsi_timestamp)` per solution table. Set a Power Automate alert if any solution's latest timestamp exceeds 48 hours.
+
+### No centralized error aggregation
+
+Each flow logs errors to separate mechanisms: `CD-SolutionFeedCollector` writes per-solution errors to `fsi_integrationerrorlogs`, while `ELM-SolutionInitializer` writes failures to `fsi_provisioninglogs`. There is no single view across all integration errors.
+
+**Current state:** `CD-SolutionFeedCollector` already logs per-solution errors to `fsi_integrationerrorlogs` with `fsi_solution`, `fsi_runid`, `fsi_errormessage`, and `fsi_timestamp` fields. This provides a queryable error history for the feed collector.
+
+**Recommended mitigation:** Create a unified Dataverse view or Power BI dashboard that joins `fsi_integrationerrorlogs` (feed collector errors) and `fsi_provisioninglogs` (ELM initializer errors where `fsi_success = false`) to surface all integration failures in a single pane. Alternatively, add a consolidated error summary to the existing Teams notification in `Send_Summary_Teams`.
+
 ---
 
-*Troubleshooting Guide v1.0.0 — February 2026*
+*Troubleshooting Guide v1.0.1 — March 2026*

@@ -104,7 +104,7 @@ az keyvault set-policy \
 |-------------|---------|
 | `CAA-SP-ClientId` | Service principal application ID |
 | `CAA-SP-ClientSecret` | Service principal client secret |
-| `CAA-TenantId` | Azure AD tenant ID |
+| `CAA-TenantId` | Entra ID tenant ID |
 
 ---
 
@@ -409,7 +409,7 @@ In addition to the Graph API permissions listed above, Dataverse access requires
 - [ ] Service account security role assigned
 - [ ] Schema deployed (3 tables, 2 option sets)
 - [ ] Environment variables deployed (7 variables)
-- [ ] Connection references deployed (4 references)
+- [ ] Connection references deployed (3 references)
 
 ### Power Automate
 - [ ] Daily compliance flow imported (`caa-daily-compliance-flow.json`)

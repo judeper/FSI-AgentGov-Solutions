@@ -10,6 +10,8 @@ The Hallucination Feedback Tracker collects feedback from multiple sources. Each
 
 Configure the Copilot Studio feedback mechanism to capture thumbs-down reactions.
 
+Set `fsi_source` to `100000000` (User) for all records from this source.
+
 | Signal | Weight | `fsi_severity` Value |
 |--------|--------|----------------------|
 | Thumbs down | High | 100000002 |
@@ -25,6 +27,8 @@ Configure the Copilot Studio feedback mechanism to capture thumbs-down reactions
 ### 2. Supervisor Rejections (FINRA Supervision Workflow)
 
 Configure the FINRA Supervision Workflow to forward rejections.
+
+Set `fsi_source` to `100000001` (Supervisor) for all records from this source.
 
 | Signal | Weight | `fsi_severity` Value |
 |--------|--------|----------------------|
@@ -42,6 +46,8 @@ Configure the FINRA Supervision Workflow to forward rejections.
 
 Programmatic verification can be implemented via Power Automate flows or custom connectors.
 
+Set `fsi_source` to `100000002` (Automated) for all records from this source.
+
 | Check | Capability |
 |-------|------------|
 | Citation verification | Verify cited URLs return 200 |
@@ -58,6 +64,8 @@ Programmatic verification can be implemented via Power Automate flows or custom 
 ### 4. Customer Complaints
 
 Feedback derived from customer complaints routed through support channels.
+
+Set `fsi_source` to `100000003` (Customer) for all records from this source.
 
 | Signal | Weight | `fsi_severity` Value |
 |--------|--------|----------------------|

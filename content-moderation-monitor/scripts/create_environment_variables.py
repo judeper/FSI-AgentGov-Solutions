@@ -88,7 +88,7 @@ ENV_VAR_DEFINITIONS = [
         "default_value": "30",
         "description": (
             "Number of days before a baseline is considered stale. "
-            "Stale baselines trigger re-capture alerts."
+            "Reserved for future use by stale-baseline alerting (not yet implemented)."
         ),
     },
     {
@@ -239,7 +239,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("CMM_TENANT_ID"),
-        help="Azure AD tenant ID (or set CMM_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set CMM_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

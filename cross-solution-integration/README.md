@@ -31,6 +31,7 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 | Script | Purpose |
 |--------|---------|
+| `IntegrationConfig.psd1` | Module manifest (metadata, GUID, FunctionsToExport) for IntegrationConfig.psm1 |
 | `IntegrationConfig.psm1` | Shared constants, mappings, and translation functions |
 | `Sync-SolutionAssessments.ps1` | Pull Tier 2 results → CD assessments |
 | `Export-UnifiedComplianceEvidence.ps1` | Aggregate per-solution evidence into master package |

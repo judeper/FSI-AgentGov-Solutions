@@ -73,7 +73,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 1 - Personal Productivity';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "query": "let ZoneFilter = 'Zone 1 - Personal Productivity';\ncustomEvents\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
               "timeAggregation": "Total",
               "metricMeasureColumn": "TotalSessions",
               "criterionType": "DynamicThresholdCriterion",
@@ -118,7 +118,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 2 - Team Collaboration';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "query": "let ZoneFilter = 'Zone 2 - Team Collaboration';\ncustomEvents\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
               "timeAggregation": "Total",
               "metricMeasureColumn": "TotalSessions",
               "criterionType": "DynamicThresholdCriterion",
@@ -163,7 +163,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 3 - Enterprise Managed';\ncustomEvents\n| where timestamp > ago(15m)\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
+              "query": "let ZoneFilter = 'Zone 3 - Enterprise Managed';\ncustomEvents\n| where name in ('BotMessageReceived', 'BotMessageSend')\n| where tostring(customDimensions['DesignMode']) == 'False'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend AgentId = tostring(customDimensions['recipientId'])\n| summarize SessionCount = dcount(session_Id) by AgentId\n| summarize TotalSessions = sum(SessionCount)",
               "timeAggregation": "Total",
               "metricMeasureColumn": "TotalSessions",
               "criterionType": "DynamicThresholdCriterion",

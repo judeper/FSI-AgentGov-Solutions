@@ -294,6 +294,9 @@ if ($OutputPath) {
 Write-Host "Drift detection complete." -ForegroundColor Green
 
 # Exit code: 0 = no drift above threshold, 1 = drift detected above threshold
+# WARNING: These exit statements are correct for standalone/CI usage but will
+# terminate the calling PowerShell session if invoked in-process. Replace with
+# 'return' if this script is ever refactored into a module function.
 if ($driftCount -gt 0) {
     exit 1
 }

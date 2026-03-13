@@ -105,7 +105,7 @@ Export evidence for a specific time period:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `DataverseUrl` | String | Yes | — | Dataverse organization URL |
-| `TenantId` | String | Yes | — | Azure AD tenant ID |
+| `TenantId` | String | Yes | — | Microsoft Entra ID (formerly Azure AD) tenant ID |
 | `OutputDirectory` | String | Yes | — | Directory for evidence files |
 | `Zone` | String | No | All | Zone filter: All, 1, 2, or 3 |
 | `RunId` | String | No | — | Export specific validation run |
@@ -188,7 +188,7 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
     "organizationUrl": "https://org.crm.dynamics.com"
   },
   "summary": {
-    "overallStatus": "NonCompliant",
+    "overallStatus": "Failed",
     "totalScans": 30,
     "scansCompliant": 27,
     "scansWithViolations": 3,

@@ -132,7 +132,7 @@ function Invoke-DataverseRequest {
             if ($Body) { $params['Body'] = $Body }
             return Invoke-RestMethod @params
         } catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
+            $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
             if ($statusCode -eq 429 -or $statusCode -ge 500) {
                 $delay = [math]::Pow(2, $i)
                 Write-Verbose "Dataverse request failed (HTTP $statusCode), retrying in ${delay}s..."
@@ -285,7 +285,16 @@ function Write-AAMValidationHistory {
             fsi_violation_count   = $ValidationResult.ViolationCount
             fsi_overall_status    = $ValidationResult.OverallStatus
             fsi_summary_json      = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
+            fsi_severity          = switch ($ValidationResult.OverallStatus) {
+                'Passed'  { 1 }
+                'Warning' { 2 }
+                'Failed'  { 4 }
+                'Error'   { 5 }
+                default   { 2 }
+            }
         }
+        # fsi_zone is intentionally omitted: aggregate validation records span
+        # multiple zones. Per-zone detail is available in fsi_summary_json.
         
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory"
         

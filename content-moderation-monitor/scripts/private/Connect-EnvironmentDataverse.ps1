@@ -16,7 +16,7 @@
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID for service principal authentication.
+    Microsoft Entra ID (formerly Azure AD) tenant ID for service principal authentication.
 
 .PARAMETER Credential
     PSCredential containing ClientId (UserName) and ClientSecret (Password)
@@ -42,13 +42,13 @@
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
-    Version: 0.1.0
+    Version: 1.0.1
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
     [Parameter(Mandatory)]
-    [ValidatePattern('^https://.*\.crm.*\.dynamics\.com/?$')]
+    [ValidatePattern('^https://.*\.(dynamics\.(com|us|cn|de)|appsplatform\.us)/?$')]
     [string]$DataverseUrl,
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]

@@ -10,13 +10,13 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-Source Collection** | Feedback from users, supervisors, and automated checks |
-| **Auto-Categorization** | Classify hallucination types automatically |
-| **Pattern Detection** | Identify recurring error patterns |
-| **Trend Analysis** | Track hallucination rates over time |
-| **Agent Comparison** | Compare accuracy across agents |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Multi-Source Collection** | Feedback from users, supervisors, and automated checks | Planned |
+| **Pattern Detection** | Identify recurring error patterns | Implemented |
+| **Agent Comparison** | Compare accuracy across agents | Implemented |
+| **Auto-Categorization** | Classify hallucination types automatically | Planned |
+| **Trend Analysis** | Track hallucination rates over time | Planned |
 
 ## Architecture
 
@@ -186,7 +186,7 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 ### Pattern Analysis
 
-Pattern analysis uses frequency counting with configurable thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
+Pattern analysis uses frequency counting with frequency thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
 
 > **Note:** Advanced pattern detection (clustering, semantic similarity) is planned for a future release.
 

@@ -136,9 +136,32 @@ namespace FsiAgentGovernance.Plugins
             }
 
             // ─── Extract file data ─────────────────────────────────────────
+            // IMPORTANT: On Update messages, only attributes included in the update
+            // request are present in Target. If no pre-image is registered for this
+            // step, an Update that sends documentbody without mimetype will result
+            // in a null declaredMimeType, causing the plugin to block the upload
+            // (fail-secure at the allowlist check in Step 3). To avoid unexpected
+            // blocks on legitimate updates, register a pre-image containing
+            // "mimetype" and "filename" and merge it with Target here.
             var documentBody = target.GetAttributeValue<string>("documentbody");
             var declaredMimeType = target.GetAttributeValue<string>("mimetype");
             var fileName = target.GetAttributeValue<string>("filename") ?? "(unknown)";
+
+            // Merge pre-image attributes for Update if pre-image is registered
+            if (context.MessageName == "Update" && context.PreEntityImages.Contains("PreImage"))
+            {
+                var preImage = context.PreEntityImages["PreImage"];
+                if (string.IsNullOrEmpty(declaredMimeType) && preImage.Contains("mimetype"))
+                {
+                    declaredMimeType = preImage.GetAttributeValue<string>("mimetype");
+                    tracingService.Trace("[FSI-MIME] Merged mimetype from pre-image: '{0}'.", declaredMimeType);
+                }
+                if (fileName == "(unknown)" && preImage.Contains("filename"))
+                {
+                    fileName = preImage.GetAttributeValue<string>("filename") ?? "(unknown)";
+                    tracingService.Trace("[FSI-MIME] Merged filename from pre-image: '{0}'.", fileName);
+                }
+            }
 
             if (string.IsNullOrEmpty(documentBody))
             {

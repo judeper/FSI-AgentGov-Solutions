@@ -17,7 +17,7 @@ Stores captured access configuration snapshots for each Power Platform environme
 | `fsi_zone` | Integer | Governance zone (1, 2, or 3) |
 | `fsi_bot_limit_sharing_mode` | String | Agent sharing limit setting at capture time |
 | `fsi_bot_authoring_sharing_disabled` | Boolean | Whether agent authoring sharing is disabled |
-| `fsi_bot_published_limit_sharing_mode` | String | Published agent sharing limit at capture time |
+| `fsi_bot_published_bot_limit_sharing_mode` | String | Published agent sharing limit at capture time |
 | `fsi_captured_by` | String | UPN or service principal that captured the baseline |
 | `fsi_captured_at` | DateTime | Timestamp of baseline capture (UTC) |
 | `fsi_is_active` | Boolean | Whether this is the current active baseline |
@@ -31,8 +31,8 @@ Immutable audit trail of validation run results. Each record represents one comp
 |--------|------|-------------|
 | `fsi_name` | String | Run display name (auto-generated) |
 | `fsi_run_id` | String | Unique GUID identifying the validation run |
-| `fsi_zone` | OptionSet | Governance zone at time of validation |
-| `fsi_severity` | OptionSet | Overall validation result severity |
+| `fsi_zone` | OptionSet | Governance zone at time of validation (null for aggregate cross-zone runs; per-zone detail available in `fsi_summary_json`) |
+| `fsi_severity` | OptionSet | Overall validation result severity (maps OverallStatus via `fsi_acv_severity`: Passed→1, Warning→2, Failed→4, Error→5) |
 | `fsi_validation_time` | DateTime | Timestamp of validation execution (UTC) |
 | `fsi_total_environments` | Integer | Number of environments scanned |
 | `fsi_compliant_count` | Integer | Environments meeting zone requirements |
@@ -96,6 +96,7 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_AAM_BaselineMaxAgeDays` | Decimal | 30 | Alert threshold in days for stale access baselines |
 | `fsi_AAM_TeamsGroupId` | String | *(empty)* | Microsoft Teams group GUID for alert notifications |
 | `fsi_AAM_TeamsChannelId` | String | *(empty)* | Microsoft Teams channel GUID for alert notifications |
+| `fsi_AAM_DataverseUrl` | String | *(empty)* | Dataverse instance URL for API calls (e.g., `https://org.crm.dynamics.com`). Currently initialized as a flow variable in `access-validation-flow.json` (`Initialize_DataverseUrl`); migrating to an environment variable requires flow restructuring and deployment coordination. |
 
 ## Connection References
 

@@ -12,21 +12,21 @@
     },
     {
       "schemaName": "fsi_CD_TeamsWebhook",
-      "displayName": "Teams Webhook URL",
-      "description": "Microsoft Teams incoming webhook URL for posting alerts",
+      "displayName": "Teams Webhook URL (Not Used)",
+      "description": "NOT CURRENTLY USED — Teams notifications are sent via the shared_teams connector (PostMessageToConversation), not an incoming webhook. This variable is initialized in CD-ExceptionMonitor but never referenced by any action. Retained for potential future webhook-based integration.",
       "type": "String",
       "defaultValue": "",
       "isRequired": false,
-      "hint": "Example: https://contoso.webhook.office.com/webhookb2/..."
+      "hint": "Not currently used — Teams alerts use the Teams connector directly. Setting this value has no effect."
     },
     {
       "schemaName": "fsi_CD_DataverseEnvironment",
-      "displayName": "Dataverse Environment URL",
-      "description": "Dataverse environment URL for API calls",
+      "displayName": "Dataverse Environment URL (Deprecated)",
+      "description": "DEPRECATED — Will be removed in the next major release. Not referenced by any flow; flows use the Dataverse connection reference instead. Administrators can safely ignore this variable during solution import.",
       "type": "String",
       "defaultValue": "",
       "isRequired": false,
-      "hint": "Example: https://org.crm.dynamics.com"
+      "hint": "Not used — flows connect via the Dataverse connection reference"
     },
     {
       "schemaName": "fsi_CD_SLAMultiplier",

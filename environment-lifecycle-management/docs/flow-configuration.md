@@ -167,8 +167,8 @@ Wrap in error-handling scope:
 | Location | `@{if(equals(triggerBody()?['fsi_region'], 1), 'unitedstates', if(equals(triggerBody()?['fsi_region'], 2), 'europe', if(equals(triggerBody()?['fsi_region'], 3), 'unitedkingdom', 'australia')))}` |
 | Display Name | `@{triggerBody()?['fsi_environmentname']}` |
 | Environment Type | `@{if(equals(triggerBody()?['fsi_environmenttype'], 1), 'Sandbox', if(equals(triggerBody()?['fsi_environmenttype'], 2), 'Production', 'Developer'))}` |
-| Currency | `USD` |
-| Language | `1033` |
+| Currency | `@{if(equals(triggerBody()?['fsi_region'], 1), 'USD', if(equals(triggerBody()?['fsi_region'], 2), 'EUR', if(equals(triggerBody()?['fsi_region'], 3), 'GBP', 'AUD')))}` |
+| Language | `@{if(equals(triggerBody()?['fsi_region'], 1), '1033', if(equals(triggerBody()?['fsi_region'], 2), '1033', if(equals(triggerBody()?['fsi_region'], 3), '2057', '3081')))}` |
 
 ### Step 5: Poll Until Ready (Do Until)
 
@@ -217,6 +217,18 @@ Wrap in error-handling scope:
 }
 ```
 
+**Retry Policy:**
+
+```json
+{
+  "type": "exponential",
+  "count": 3,
+  "interval": "PT30S",
+  "minimumInterval": "PT10S",
+  "maximumInterval": "PT1H"
+}
+```
+
 ### Step 8: Log Managed Enabled
 
 Log action `8` (ManagedEnabled) to ProvisioningLog.
@@ -229,6 +241,18 @@ Log action `8` (ManagedEnabled) to ProvisioningLog.
 |-----------|-------|
 | Method | `GET` |
 | URI | `/providers/Microsoft.BusinessAppPlatform/environmentGroups?api-version=2021-04-01` |
+
+**Retry Policy:**
+
+```json
+{
+  "type": "exponential",
+  "count": 3,
+  "interval": "PT30S",
+  "minimumInterval": "PT10S",
+  "maximumInterval": "PT1H"
+}
+```
 
 **Post-Action:** Filter array to find group by displayName:
 
@@ -309,6 +333,18 @@ If true, execute the security group binding inline:
 | Method | `GET` |
 | Base Resource URL | `https://graph.microsoft.com` |
 | URI | `/v1.0/groups/@{triggerBody()?['fsi_securitygroupid']}` |
+
+**Retry Policy:**
+
+```json
+{
+  "type": "exponential",
+  "count": 3,
+  "interval": "PT30S",
+  "minimumInterval": "PT10S",
+  "maximumInterval": "PT1H"
+}
+```
 
 **Error Handling:** If 404, log error and set state to Failed.
 
@@ -531,7 +567,8 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 | Parameter | Value |
 |-----------|-------|
 | Method | `PATCH` |
-| URI | `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments/@{triggerBody()?['environmentId']}/governanceConfiguration?api-version=2021-04-01` |
+| Base Resource URL | `https://api.bap.microsoft.com` |
+| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{triggerBody()?['environmentId']}/governanceConfiguration?api-version=2021-04-01` |
 | Body | See below |
 
 ```json
@@ -545,6 +582,18 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 }
 ```
 
+**Retry Policy:**
+
+```json
+{
+  "type": "exponential",
+  "count": 3,
+  "interval": "PT30S",
+  "minimumInterval": "PT10S",
+  "maximumInterval": "PT1H"
+}
+```
+
 ### Step 5: Log Baseline Applied
 
 Log action `11` (BaselineConfigApplied) to ProvisioningLog.
@@ -552,6 +601,134 @@ Log action `11` (BaselineConfigApplied) to ProvisioningLog.
 ### Return Value
 
 Return success/failure status to parent flow.
+
+---
+
+## Flow 4: Approval Routing Flow
+
+### Overview
+
+Routes environment requests through manager and compliance approvals, transitioning the request state from Submitted → PendingApproval → Approved/Rejected.
+
+### Trigger Configuration
+
+| Setting | Value |
+|---------|-------|
+| Type | Dataverse - When a row is added |
+| Table | EnvironmentRequest |
+| Filter rows | `fsi_state eq 1` (Submitted) |
+
+### Step 1: Update State to PendingApproval
+
+**Action:** Dataverse - Update a row
+
+| Parameter | Value |
+|-----------|-------|
+| Table | EnvironmentRequest |
+| Row ID | `triggerBody()?['fsi_environmentrequestid']` |
+| State | `3` (PendingApproval) |
+
+### Step 2: Start Manager Approval
+
+**Action:** Approvals - Start and wait for an approval
+
+| Parameter | Value |
+|-----------|-------|
+| Approval type | Approve/Reject - First to respond |
+| Title | `Environment Request: @{triggerBody()?['fsi_environmentname']}` |
+| Assigned to | Manager of requester (resolved via Office 365 Users connector) |
+| Details | Include business justification, zone, region, data sensitivity |
+| Item link | Deep link to EnvironmentRequest record |
+
+**Timeout:** 5 business days. If no response, escalate to compliance team.
+
+### Step 3: Condition — Manager Approved?
+
+**Condition:** `outcome eq 'Approve'`
+
+**If No (Rejected):**
+
+1. Update EnvironmentRequest state to `5` (Rejected)
+2. Set `fsi_approvalcomments` from rejection response
+3. Notify requester of rejection
+4. Terminate flow
+
+### Step 4: Start Compliance Approval (Zone 2/3 Only)
+
+**Condition:** `triggerBody()?['fsi_zone'] ge 2`
+
+**Action:** Approvals - Start and wait for an approval
+
+| Parameter | Value |
+|-----------|-------|
+| Approval type | Approve/Reject - First to respond |
+| Title | `Compliance Review: @{triggerBody()?['fsi_environmentname']}` |
+| Assigned to | Compliance team distribution list |
+| Details | Include zone rationale, auto flags, data sensitivity |
+
+**Timeout:** 3 business days. If no response, auto-escalate to compliance lead.
+
+### Step 5: Condition — Compliance Approved?
+
+**Condition:** `outcome eq 'Approve'`
+
+**If No (Rejected):** Same as Step 3 rejection path.
+
+### Step 6: Update State to Approved
+
+**Action:** Dataverse - Update a row
+
+| Parameter | Value |
+|-----------|-------|
+| State | `4` (Approved) |
+| Approver | Responding approver's systemuserid |
+| Approved On | `utcNow()` |
+| Approval Comments | Concatenated approval responses |
+
+This state change triggers Flow 1 (Main Provisioning).
+
+### Escalation Timeout Configuration
+
+| Approval Stage | Timeout | Escalation Target |
+|---------------|---------|-------------------|
+| Manager | 5 business days | Compliance team |
+| Compliance | 3 business days | Compliance lead |
+
+---
+
+## Managed Solution Wrapper
+
+All ELM components should be developed inside a Dataverse solution container to enable managed solution transport between dev/test/prod environments and proper ALM dependency tracking.
+
+### Solution Configuration
+
+| Property | Value |
+|----------|-------|
+| Display Name | Environment Lifecycle Management |
+| Unique Name | `fsi_EnvironmentLifecycleManagement` |
+| Publisher | FSI Publisher (`fsi`) |
+| Version | `1.0.0.0` |
+
+### Components to Include
+
+| Component Type | Components |
+|---------------|------------|
+| Tables | EnvironmentRequest, ProvisioningLog |
+| Columns | All `fsi_` prefixed columns on both tables |
+| Choice columns | State, Zone, Region, Environment Type, Data Sensitivity, Expected Users, Action |
+| Security Roles | ELM Administrator, ELM Approver, ELM Requester |
+| Field Security Profiles | ELM Approver Fields |
+| Cloud Flows | Flow 1 (Main Provisioning), Flow 2 (Security Group Binding), Flow 3 (Baseline Configuration), Flow 4 (Approval Routing) |
+| Connection References | Dataverse, HTTP with Entra ID, Power Platform for Admins V2, Azure Key Vault, Office 365 Outlook, Microsoft Teams, Approvals |
+
+### Transport Process
+
+1. **Development:** Build all components in a dev environment inside the unmanaged solution
+2. **Export:** Export as managed solution (`.zip`) from dev
+3. **Test:** Import managed solution into test environment; run validation
+4. **Production:** Import managed solution into prod after test sign-off
+
+> **Note:** The deployment scripts (`scripts/`) operate outside the solution for one-time setup tasks (app registration, Key Vault configuration). They do not need to be included in the managed solution.
 
 ---
 

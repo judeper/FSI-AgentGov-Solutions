@@ -23,14 +23,14 @@
     Unclassified environments are excluded from validation (require zone assignment first).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER DataverseUrl
-    Dataverse organization URL (e.g., https://org.crm.dynamics.com). Required for
+    Dataverse organization URL(e.g., https://org.crm.dynamics.com). Required for
     registry synchronization.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Optional for interactive authentication.
+    Microsoft Entra ID application (client) ID. Optional for interactive authentication.
 
 .PARAMETER ClientSecret
     Client secret for service principal authentication. Must be provided as SecureString.

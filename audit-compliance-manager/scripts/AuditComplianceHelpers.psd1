@@ -3,7 +3,7 @@
     # Audit Logging Compliance Automation (ALCA) - Shared helper module
 
     RootModule        = 'AuditComplianceHelpers.psm1'
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
     GUID              = 'b4e7c3a1-8f2d-4e5b-9c6a-1d3f5e7a9b2c'
     Author            = 'FSI-AgentGov'
     CompanyName       = 'FSI Agent Governance Framework'

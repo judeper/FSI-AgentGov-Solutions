@@ -28,7 +28,7 @@ Exception: Authentication failed: AADSTS7000215: Invalid client secret provided
 
 **Solution:**
 
-1. Verify the client secret has not expired in Azure AD
+1. Verify the client secret has not expired in Microsoft Entra ID
 2. Regenerate the secret if needed
 3. Update `AZURE_CLIENT_SECRET`
 

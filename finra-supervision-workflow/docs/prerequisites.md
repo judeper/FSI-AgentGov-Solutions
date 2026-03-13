@@ -126,7 +126,7 @@ If creating a new environment:
 | Connector | License | Purpose |
 |-----------|---------|---------|
 | Dataverse | Premium | Queue and log tables |
-| HTTP with Azure AD | Premium | Graph API calls |
+| HTTP with Microsoft Entra ID (preauthorized) | Premium | Graph API calls |
 | Office 365 Outlook | Standard | Email notifications |
 | Microsoft Teams | Standard | Teams notifications |
 | Azure Key Vault | Premium | Credential storage |

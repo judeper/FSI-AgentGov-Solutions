@@ -16,7 +16,8 @@
             },
             "parameters": {
               "entityName": "fsi_environmentrequests",
-              "recordId": "@triggerBody()?['_fsi_environmentrequest_value']"
+              "recordId": "@triggerBody()?['_fsi_environmentrequest_value']",
+              "$select": "fsi_environmentid,fsi_environmentname,fsi_environmenturl,fsi_zone,fsi_securitygroupid,fsi_requestnumber,fsi_environmenttype"
             },
             "retryPolicy": {
               "type": "exponential",
@@ -95,15 +96,82 @@
                     },
                     "messageBody": "<p><strong>⚠️ Environment Initialization Failed — Request Lookup</strong></p><p>Could not retrieve ELM environment request record.<br/>Request Value: @{triggerBody()?['_fsi_environmentrequest_value']}<br/><br/>Possible causes: deleted request, permission error, or invalid reference.<br/>Action required: Investigate the triggering provisioning log entry.</p>"
                   }
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
                 }
               },
               "runAfter": {
-                "Log_Request_Failure": ["Succeeded"]
+                "Log_Request_Failure": ["Succeeded", "Failed", "TimedOut"]
               }
             }
           },
           "runAfter": {
             "Get_ELM_Request": ["Failed", "TimedOut"]
+          }
+        },
+        "Validate_Required_Fields": {
+          "type": "If",
+          "expression": {
+            "or": [
+              { "equals": ["@coalesce(outputs('Extract_Provisioning_Data')?['environmentId'], '')", ""] },
+              { "equals": ["@coalesce(outputs('Extract_Provisioning_Data')?['environmentName'], '')", ""] }
+            ]
+          },
+          "actions": {
+            "Log_Validation_Failure": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "fsi_provisioninglogs",
+                  "item": {
+                    "fsi_name": "INT-Init-FAILED-NullFields-@{utcNow('yyyyMMddHHmmss')}",
+                    "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
+                    "fsi_action": 11,
+                    "fsi_actiondetails": "{\"action\":\"SolutionInitializer\",\"error\":\"ELM request has null/empty environmentId or environmentName — aborting to prevent corrupt ACV registry entry\",\"environmentId\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['environmentId'], 'NULL')}\",\"environmentName\":\"@{coalesce(outputs('Extract_Provisioning_Data')?['environmentName'], 'NULL')}\"}",
+                    "fsi_actor": "CrossSolutionIntegration",
+                    "fsi_actortype": 3,
+                    "fsi_success": false
+                  }
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
+                }
+              },
+              "runAfter": {}
+            },
+            "Terminate_Null_Fields": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "NullRequiredField",
+                  "message": "ELM request has null/empty fsi_environmentid or fsi_environmentname. Cannot register in ACV — would create corrupt registry entry."
+                }
+              },
+              "runAfter": {
+                "Log_Validation_Failure": ["Succeeded", "Failed", "TimedOut"]
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Extract_Provisioning_Data": ["Succeeded"]
           }
         },
         "Register_In_ACV": {
@@ -120,6 +188,7 @@
                 "parameters": {
                   "entityName": "fsi_environmentregistrys",
                   "$filter": "fsi_environmentid eq '@{outputs('Extract_Provisioning_Data')?['environmentId']}'",
+                  "$select": "fsi_environmentregistryid",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -207,7 +276,19 @@
             }
           },
           "runAfter": {
-            "Extract_Provisioning_Data": ["Succeeded"]
+            "Validate_Required_Fields": ["Succeeded"]
+          }
+        },
+        "Compose_Init_Details":{
+          "type": "Compose",
+          "inputs": {
+            "action": "SolutionInitializer",
+            "acvRegistered": true,
+            "zone": "@outputs('Extract_Provisioning_Data')?['zone']",
+            "environmentId": "@outputs('Extract_Provisioning_Data')?['environmentId']"
+          },
+          "runAfter": {
+            "Register_In_ACV": ["Succeeded"]
           }
         },
         "Log_Initialization": {
@@ -224,7 +305,7 @@
                 "fsi_name": "INT-Init-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
                 "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
                 "fsi_action": 11,
-                "fsi_actiondetails": "@{json(concat('{\"action\":\"SolutionInitializer\",\"acvRegistered\":true,\"zone\":\"', outputs('Extract_Provisioning_Data')?['zone'], '\",\"environmentId\":\"', outputs('Extract_Provisioning_Data')?['environmentId'], '\"}'))}",
+                "fsi_actiondetails": "@{string(outputs('Compose_Init_Details'))}",
                 "fsi_actor": "CrossSolutionIntegration",
                 "fsi_actortype": 3,
                 "fsi_success": true
@@ -239,12 +320,23 @@
             }
           },
           "runAfter": {
-            "Register_In_ACV": ["Succeeded"]
+            "Compose_Init_Details": ["Succeeded"]
           }
         },
         "Handle_ACV_Registration_Failure": {
           "type": "Scope",
           "actions": {
+            "Compose_Failure_Details": {
+              "type": "Compose",
+              "inputs": {
+                "action": "SolutionInitializer",
+                "acvRegistered": false,
+                "error": "ACV registration failed or timed out",
+                "zone": "@outputs('Extract_Provisioning_Data')?['zone']",
+                "environmentId": "@outputs('Extract_Provisioning_Data')?['environmentId']"
+              },
+              "runAfter": {}
+            },
             "Log_Failure": {
               "type": "OpenApiConnection",
               "inputs": {
@@ -259,7 +351,7 @@
                     "fsi_name": "INT-Init-FAILED-@{outputs('Extract_Provisioning_Data')?['environmentName']}",
                     "fsi_environmentrequest@odata.bind": "/fsi_environmentrequests(@{triggerBody()?['_fsi_environmentrequest_value']})",
                     "fsi_action": 11,
-                    "fsi_actiondetails": "@{json(concat('{\"action\":\"SolutionInitializer\",\"acvRegistered\":false,\"error\":\"ACV registration failed or timed out\",\"zone\":\"', outputs('Extract_Provisioning_Data')?['zone'], '\",\"environmentId\":\"', outputs('Extract_Provisioning_Data')?['environmentId'], '\"}'))}",
+                    "fsi_actiondetails": "@{string(outputs('Compose_Failure_Details'))}",
                     "fsi_actor": "CrossSolutionIntegration",
                     "fsi_actortype": 3,
                     "fsi_success": false
@@ -273,7 +365,9 @@
                   "maximumInterval": "PT1M"
                 }
               },
-              "runAfter": {}
+              "runAfter": {
+                "Compose_Failure_Details": ["Succeeded"]
+              }
             },
             "Notify_Failure_Teams": {
               "type": "OpenApiConnection",
@@ -293,10 +387,17 @@
                     },
                     "messageBody": "<p><strong>⚠️ Environment Initialization Failed</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ❌ Failed<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}<br/><br/>Action required: Manually register environment in ACV.</p>"
                   }
+                },
+                "retryPolicy": {
+                  "type": "exponential",
+                  "count": 3,
+                  "interval": "PT10S",
+                  "minimumInterval": "PT10S",
+                  "maximumInterval": "PT1M"
                 }
               },
               "runAfter": {
-                "Log_Failure": ["Succeeded"]
+                "Log_Failure": ["Succeeded", "Failed", "TimedOut"]
               }
             }
           },
@@ -322,6 +423,13 @@
                 },
                 "messageBody": "<p><strong>🔗 Environment Initialized for Governance</strong></p><p>Environment: @{outputs('Extract_Provisioning_Data')?['environmentName']}<br/>Zone: @{outputs('Extract_Provisioning_Data')?['zone']}<br/>ACV Registry: ✅ Registered<br/>Source: ELM Request @{outputs('Extract_Provisioning_Data')?['requestNumber']}</p>"
               }
+            },
+            "retryPolicy": {
+              "type": "exponential",
+              "count": 3,
+              "interval": "PT10S",
+              "minimumInterval": "PT10S",
+              "maximumInterval": "PT1M"
             }
           },
           "runAfter": {
@@ -351,7 +459,8 @@
               "subscriptionRequest/scope": 4,
               "subscriptionRequest/filterexpression": "fsi_action eq 13 and fsi_success eq true"
             }
-          }
+          },
+          "operationOptions": "SingleInstance"
         }
       },
       "contentVersion": "1.0.0.0",
@@ -385,9 +494,10 @@
   },
   "_metadata": {
     "solution": "Cross-Solution Integration",
-    "version": "1.0.0",
-    "description": "ELM provisioning hook. Triggers when fsi_provisioninglog records ProvisioningCompleted (action=13, success=true). Auto-registers environment in ACV fsi_environmentregistry with zone from ELM request.",
+    "version": "1.0.1",
+    "description": "ELM provisioning hook. Triggers when fsi_provisioninglog records ProvisioningCompleted (action=13, success=true). Validates required fields (environmentId, environmentName) before auto-registering environment in ACV fsi_environmentregistry with zone from ELM request.",
     "trigger": "Dataverse webhook on fsi_provisioninglog create where fsi_action=13 AND fsi_success=true",
-    "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation."
+    "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation.",
+    "pagination_note": "All ListRecords use $top=1 intentionally. If $top is removed, @odata.nextLink pagination handling must be added."
   }
 }

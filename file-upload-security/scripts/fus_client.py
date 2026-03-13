@@ -112,7 +112,7 @@ class FUSClient:
         headers = self._headers()
         response = self._session.request(
             method, url, headers=headers,
-            json=data if data else None, **kwargs,
+            json=data if data else None, timeout=30, **kwargs,
         )
         if response.status_code >= 400:
             msg = f"{method} {url} returned {response.status_code}"

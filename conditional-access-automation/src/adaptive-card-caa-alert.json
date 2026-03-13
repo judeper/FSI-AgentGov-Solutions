@@ -412,13 +412,13 @@
     {
       "type": "Action.OpenUrl",
       "title": "View in Entra Portal",
-      "url": "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies",
+      "url": "${EntraPortalUrl}/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies",
       "iconUrl": "https://learn.microsoft.com/en-us/entra/identity/media/entra-id-icon.png"
     },
     {
       "type": "Action.OpenUrl",
       "title": "Run Manual Check",
-      "url": "https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts"
+      "url": "${AzurePortalUrl}/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Automation%2FAutomationAccounts"
     },
     {
       "type": "Action.OpenUrl",
@@ -466,7 +466,9 @@
         "Zone2Total",
         "Zone3Passed",
         "Zone3Total",
-        "DocsBaseUrl"
+        "DocsBaseUrl",
+        "EntraPortalUrl",
+        "AzurePortalUrl"
       ],
       "perViolation": [
         "ViolationType",
@@ -486,6 +488,7 @@
         "DriftZone"
       ]
     },
-    "flowIntegrationNotes": "The violationsSection and driftSection containers each contain a single template item (violationItem, driftItem). The Power Automate flow should: (1) Replace scalar variables via string substitution, (2) Build violation/drift card elements by iterating the runbook output arrays and replicating the item template per result, (3) Set violationsSection visibility based on ViolationCount > 0, (4) Set driftSection visibility based on DriftCount > 0."
+    "flowIntegrationNotes": "The violationsSection and driftSection containers each contain a single template item (violationItem, driftItem). The Power Automate flow should: (1) Replace scalar variables via string substitution, (2) Build violation/drift card elements by iterating the runbook output arrays and replicating the item template per result, (3) Set violationsSection visibility based on ViolationCount > 0, (4) Set driftSection visibility based on DriftCount > 0.",
+    "templateVariableInjection": "Scalar variables (including ${DocsBaseUrl}) are injected via Power Automate Compose actions that perform string substitution on the card JSON before posting to Teams. ${DocsBaseUrl} should resolve to the organization's FSI-AgentGov documentation site root (e.g., the GitHub Pages or MkDocs URL). The flow's Compose_Adaptive_Card action builds the card inline using @{outputs(...)} expressions; this template file serves as the design reference and is not loaded at runtime."
   }
 }

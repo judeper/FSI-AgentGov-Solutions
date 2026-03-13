@@ -48,7 +48,22 @@
   },
   "resources": [
     {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('teamsConnectionName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "displayName": "Teams Connection for Alert Notifications",
+        "api": {
+          "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'teams')]"
+        }
+      }
+    },
+    {
       "type": "Microsoft.Logic/workflows",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('teamsConnectionName'))]"
+      ],
       "apiVersion": "2019-05-01",
       "name": "[parameters('logicAppName')]",
       "location": "[parameters('location')]",

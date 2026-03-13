@@ -50,6 +50,8 @@ The Compliance Dashboard uses its own status option set for control assessments.
 | 3 | Non-Compliant | 0 | Control not implemented or critical gaps |
 | 4 | Not Applicable | — | Control not relevant for this zone |
 
+**Nullability:** When `fsi_status` = 4 (Not Applicable), `fsi_score` is set to `null`. The `Map_CMM_Status` expression in the CD-SolutionFeedCollector flow produces `score: null` for this case. If the Dataverse schema for `fsi_controlassessment.fsi_score` is changed to non-nullable, the flow's `Upsert_CMM_Assessment` scope will fail; add an error handler or default value (e.g., `-1`) to handle this scenario.
+
 **Owner:** Compliance Dashboard (CD) solution defines this option set.
 
 ---
@@ -70,7 +72,7 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 
 | Solution | Baseline Table | History Table | Violation Table |
 |----------|---------------|---------------|-----------------|
-| ACV | — | `fsi_auditvalidationhistory` | — |
+| ACV | — | `fsi_auditvalidationhistory` | `fsi_auditvalidationviolation` |
 | SSC | — | `fsi_validationhistory` | `fsi_driftviolation` |
 | AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | `fsi_accessviolation` |
 | CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | `fsi_moderationviolation` |

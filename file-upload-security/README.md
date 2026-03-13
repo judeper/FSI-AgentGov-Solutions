@@ -103,7 +103,7 @@ Import-Module ./scripts/private/FUSClient.psm1
 
 | Zone | File Upload | Approval | Min Moderation | Violation Severity |
 |------|------------|----------|----------------|-------------------|
-| Zone 1 (Personal) | Allowed | Not required | Medium | Warning if no moderation |
+| Zone 1 (Personal) | Allowed | Not required | Low | Warning if no moderation |
 | Zone 2 (Team) | Restricted | Required | High | High if enabled without approval/moderation |
 | Zone 3 (Enterprise) | Disabled | Required | Highest | Critical if enabled |
 
@@ -119,16 +119,20 @@ Import-Module ./scripts/private/FUSClient.psm1
 
 The following placeholder values in solution files must be replaced with your organization's values before deployment:
 
+> **Note:** All deployment-specific values are currently stored as `InitializeVariable` actions in the flow JSON. For full environment portability across dev/test/prod, consider migrating these to Dataverse environment variables (see [SCHEMA.md](docs/SCHEMA.md) Environment Variables section). This would allow per-environment configuration without modifying the flow definition, but requires architectural changes to the flow JSON and supporting deployment scripts.
+
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/fileupload-validation-flow.json` |
 | `compliance-alerts@contoso.com` | Your compliance team email | `src/fileupload-validation-flow.json` |
-| `your-client-id-here` | Azure AD application (client) ID | `src/fileupload-validation-flow.json` |
+| `your-client-id-here` | Microsoft Entra ID application (client) ID | `src/fileupload-validation-flow.json` |
 | `your-certificate-thumbprint-here` | Certificate thumbprint for service principal auth | `src/fileupload-validation-flow.json` |
 | `your-subscription-id-here` | Azure subscription ID | `src/fileupload-validation-flow.json` |
 | `your-teams-group-id-here` | Teams group (team) ID for alerts | `src/fileupload-validation-flow.json` |
 | `your-teams-channel-id-here` | Teams channel ID for alerts | `src/fileupload-validation-flow.json` |
 | `https://governance.crm.dynamics.com` | Your Dataverse org URL | `src/fileupload-validation-flow.json` |
+| `rg-file-upload-security` | Azure resource group containing Automation Account | `src/fileupload-validation-flow.json` |
+| `aa-file-upload-security` | Azure Automation Account name | `src/fileupload-validation-flow.json` |
 
 ## Related Controls
 

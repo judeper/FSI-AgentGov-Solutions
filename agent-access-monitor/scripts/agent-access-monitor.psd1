@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '1.0.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -36,6 +36,13 @@
     
     # Script files (.ps1) that are run in the caller's environment prior to importing this module
     # ScriptsToProcess = @()
+    
+    # Nested modules bundled with this module
+    NestedModules     = @(
+        'Test-AgentAccessCompliance.ps1',
+        'Get-EnvironmentAccessSettings.ps1',
+        'Compare-ZoneCompliance.ps1'
+    )
     
     # Functions to export from this module
     FunctionsToExport = @(
@@ -78,17 +85,14 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
-## 0.1.0 - 2026-02-09
+## 1.0.0 - 2026-02-19
 
-### Added
-- Get-EnvironmentAccessSettings: Query Power Platform environments for agent access settings
-- Compare-ZoneCompliance: Compare settings against zone-specific baselines
-- Test-AgentAccessCompliance: Orchestrator with dry-run mode and multiple output formats
-- Zone classification via ELM Dataverse lookup with naming convention fallback
-- Severity classification (Critical/High/Warning/Info) per zone and violation type
-- Regulatory context (FINRA 4511, SOX 404) in violation output
-- Grace period filtering for newly provisioned environments
-- Environment group support for group-level rule visibility
+### Added — Phase 4: Evidence Export & Framework Integration
+- Export-AgentAccessEvidence.ps1 — Zone-based filtering, date range, SHA-256 hashes
+- Get-AAMValidationResults.ps1 — Dataverse query helper with OData pagination
+- Test-EvidenceIntegrity.ps1 — SHA-256 hash verification utility
+- SCHEMA.md, EVIDENCE_EXPORT.md, TROUBLESHOOTING.md documentation
+- Framework integration: Control 3.8 tip, solutions-index.md catalog entry
 
 ### Known Limitations
 - M365 Admin Center agent settings not queryable via API (portal-only)

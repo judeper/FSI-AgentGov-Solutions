@@ -2,6 +2,19 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [1.0.2] — March 2026
+
+### Fixed
+- **CRITICAL:** Fix false-compliant classification when `inactivityTimeoutEnabled=true` but `inactivityTimeoutDuration` is null (BAP API data inconsistency). Added `Check_Duration_Is_Null` guard action; `Evaluate_Compliance` now classifies this indeterminate state as `Unknown` (status=2) instead of `Compliant` (status=0). This aligns with the existing pattern where API errors and missing policies produce Unknown status.
+- **CRITICAL:** `Map_Compliance_Status_Value` now maps `Unknown` → 2 in addition to `Non-Compliant` → 1 and `Compliant` → 0. Previously, Unknown from `Evaluate_Compliance` would have mapped to 0 (Compliant).
+- Add `runtimeConfiguration.paginationPolicy` (minimumItemCount: 100000) to `Load_Environment_Policies` to handle tenants with >5000 policy rows. Without pagination, results were silently truncated at the Dataverse default page size.
+- Add `runtimeConfiguration.paginationPolicy` to `Query_NonCompliant_Records`, `Query_Unknown_Records`, and `Query_Compliant_Count` as defensive measure against large scan result sets.
+- `Set_Compliance_Notes` now generates descriptive note for the null-duration Unknown case: "Inactivity timeout is enabled but duration is null — indeterminate state classified as Unknown"
+
+### Documentation
+- **SOLUTION-DOCUMENTATION:** Add null-duration to Unknown criteria in compliance status tables, appendix, and remediation guidance
+- **SOLUTION-DOCUMENTATION:** Add Known Limitations section documenting BAP API version (2016-11-01), Condition_Has_Issues run-after gap, and List_Environments pagination limitation
+
 ## [1.0.1] — February 2026
 
 ### Fixed

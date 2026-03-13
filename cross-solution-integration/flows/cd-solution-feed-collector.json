@@ -34,8 +34,42 @@
             "Initialize_RunId": ["Succeeded"]
           }
         },
+        "Validate_Parameters": {
+          "type": "If",
+          "expression": {
+            "or": [
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_7')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_23')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_11')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_3_8')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_8')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_14')", ""] },
+              { "equals": ["@parameters('fsi_INT_ControlGuid_1_18')", ""] }
+            ]
+          },
+          "actions": {
+            "Terminate_Missing_Config": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Failed",
+                "runError": {
+                  "code": "MissingConfiguration",
+                  "message": "One or more required control GUID parameters are empty. Configure all fsi_INT_ControlGuid_* parameters before activating this flow."
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Initialize_SyncResults": ["Succeeded"]
+          }
+        },
         "Sync_ACV": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_ACV_Latest": {
               "type": "OpenApiConnection",
@@ -49,6 +83,7 @@
                   "entityName": "fsi_auditvalidationhistories",
                   "$filter": "fsi_validationtype eq 'Orchestrator'",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_severity,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -94,6 +129,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_7')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -193,7 +229,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Validate_Parameters": ["Succeeded"]
           }
         },
         "Append_ACV_Result": {
@@ -231,11 +267,12 @@
             }
           },
           "runAfter": {
-            "Sync_ACV": ["Failed", "TimedOut"]
+            "Sync_ACV": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Sync_SSC": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_SSC_Latest": {
               "type": "OpenApiConnection",
@@ -249,6 +286,7 @@
                   "entityName": "fsi_validationhistories",
                   "$filter": "fsi_validationtype eq 'Orchestrator'",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_severity,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -294,6 +332,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_23')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -397,6 +436,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_11')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -496,7 +536,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Validate_Parameters": ["Succeeded"]
           }
         },
         "Append_SSC_Result": {
@@ -534,11 +574,12 @@
             }
           },
           "runAfter": {
-            "Sync_SSC": ["Failed", "TimedOut"]
+            "Sync_SSC": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Sync_AAM": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_AAM_Latest": {
               "type": "OpenApiConnection",
@@ -551,6 +592,7 @@
                 "parameters": {
                   "entityName": "fsi_accessvalidationhistories",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_overall_status,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -575,11 +617,13 @@
                     "solution": "AAM",
                     "controlId": "3.8",
                     "status": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 1, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 2, 3))",
-                    "score": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 100, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 50, 0))"
+                    "score": "@if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'compliant'), 100, if(equals(toLower(first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']), 'warning'), 50, 0))",
+                    "runId": "@first(body('Query_AAM_Latest')?['value'])?['fsi_runid']",
+                    "timestamp": "@first(body('Query_AAM_Latest')?['value'])?['fsi_timestamp']"
                   },
                   "runAfter": {}
                 },
-                "Upsert_AAM_Assessment": {
+                "Upsert_AAM_Assessment":{
                   "type": "Scope",
                   "actions": {
                     "Check_Existing_AAM": {
@@ -593,6 +637,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_3_8')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -625,7 +670,7 @@
                               "item": {
                                 "fsi_status": "@outputs('Map_AAM_Status')?['status']",
                                 "fsi_score": "@outputs('Map_AAM_Status')?['score']",
-                                "fsi_notes": "Automated: AAM v1.0.0. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
+                                "fsi_notes": "Automated: AAM v1.0.0. Run ID: @{outputs('Map_AAM_Status')?['runId']}. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
                                 "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                               }
                             },
@@ -657,7 +702,7 @@
                                   "fsi_status": "@outputs('Map_AAM_Status')?['status']",
                                   "fsi_score": "@outputs('Map_AAM_Status')?['score']",
                                   "fsi_assessmentdate": "@utcNow()",
-                                  "fsi_notes": "Automated: AAM v1.0.0. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
+                                  "fsi_notes": "Automated: AAM v1.0.0. Run ID: @{outputs('Map_AAM_Status')?['runId']}. Status: @{first(body('Query_AAM_Latest')?['value'])?['fsi_overall_status']}",
                                   "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                                 }
                               },
@@ -692,7 +737,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Validate_Parameters": ["Succeeded"]
           }
         },
         "Append_AAM_Result": {
@@ -730,11 +775,12 @@
             }
           },
           "runAfter": {
-            "Sync_AAM": ["Failed", "TimedOut"]
+            "Sync_AAM": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Sync_CMM": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_CMM_Latest": {
               "type": "OpenApiConnection",
@@ -747,6 +793,7 @@
                 "parameters": {
                   "entityName": "fsi_moderationvalidationhistories",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_compliant_count,fsi_total_agents,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -774,11 +821,13 @@
                     "totalAgents": "@first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents']",
                     "complianceRate": "@if(or(equals(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 0), 0), equals(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], null)), -1, mul(div(float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_compliant_count'], 0)), float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 1))), 100))",
                     "status": "@if(or(equals(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 0), 0), equals(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], null)), 4, if(greaterOrEquals(mul(div(float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_compliant_count'], 0)), float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 1))), 100), 100), 1, if(greaterOrEquals(mul(div(float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_compliant_count'], 0)), float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 1))), 100), 80), 2, 3)))",
-                    "score": "@if(or(equals(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 0), 0), equals(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], null)), 0, int(mul(div(float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_compliant_count'], 0)), float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 1))), 100)))"
+                    "score": "@if(or(equals(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 0), 0), equals(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], null)), null, int(add(mul(div(float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_compliant_count'], 0)), float(coalesce(first(body('Query_CMM_Latest')?['value'])?['fsi_total_agents'], 1))), 100), 0.5)))",
+                    "runId": "@first(body('Query_CMM_Latest')?['value'])?['fsi_runid']",
+                    "timestamp": "@first(body('Query_CMM_Latest')?['value'])?['fsi_timestamp']"
                   },
                   "runAfter": {}
                 },
-                "Upsert_CMM_Assessment": {
+                "Upsert_CMM_Assessment":{
                   "type": "Scope",
                   "actions": {
                     "Check_Existing_CMM": {
@@ -792,6 +841,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_8')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -824,7 +874,7 @@
                               "item": {
                                 "fsi_status": "@outputs('Map_CMM_Status')?['status']",
                                 "fsi_score": "@outputs('Map_CMM_Status')?['score']",
-                                "fsi_notes": "Automated: CMM v1.0.0. Compliance: @{outputs('Map_CMM_Status')?['compliantCount']}/@{outputs('Map_CMM_Status')?['totalAgents']} agents.",
+                                "fsi_notes": "Automated: CMM v1.0.0. Run ID: @{outputs('Map_CMM_Status')?['runId']}. Compliance: @{outputs('Map_CMM_Status')?['compliantCount']}/@{outputs('Map_CMM_Status')?['totalAgents']} agents.",
                                 "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                               }
                             },
@@ -856,7 +906,7 @@
                                   "fsi_status": "@outputs('Map_CMM_Status')?['status']",
                                   "fsi_score": "@outputs('Map_CMM_Status')?['score']",
                                   "fsi_assessmentdate": "@utcNow()",
-                                  "fsi_notes": "Automated: CMM v1.0.0. Compliance: @{outputs('Map_CMM_Status')?['compliantCount']}/@{outputs('Map_CMM_Status')?['totalAgents']} agents.",
+                                  "fsi_notes": "Automated: CMM v1.0.0. Run ID: @{outputs('Map_CMM_Status')?['runId']}. Compliance: @{outputs('Map_CMM_Status')?['compliantCount']}/@{outputs('Map_CMM_Status')?['totalAgents']} agents.",
                                   "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                                 }
                               },
@@ -891,7 +941,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Validate_Parameters": ["Succeeded"]
           }
         },
         "Append_CMM_Result": {
@@ -929,11 +979,12 @@
             }
           },
           "runAfter": {
-            "Sync_CMM": ["Failed", "TimedOut"]
+            "Sync_CMM": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Sync_FUS": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_FUS_Latest": {
               "type": "OpenApiConnection",
@@ -946,6 +997,7 @@
                 "parameters": {
                   "entityName": "fsi_fileupload_validationhistories",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_compliance_rate,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -971,11 +1023,13 @@
                     "controlId": "1.14",
                     "complianceRate": "@first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate']",
                     "status": "@if(equals(first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate'], null), 3, if(greaterOrEquals(first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate'], 100), 1, if(greaterOrEquals(first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate'], 80), 2, 3)))",
-                    "score": "@int(coalesce(first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate'], 0))"
+                    "score": "@int(add(float(coalesce(first(body('Query_FUS_Latest')?['value'])?['fsi_compliance_rate'], 0)), 0.5))",
+                    "runId": "@first(body('Query_FUS_Latest')?['value'])?['fsi_runid']",
+                    "timestamp": "@first(body('Query_FUS_Latest')?['value'])?['fsi_timestamp']"
                   },
                   "runAfter": {}
                 },
-                "Upsert_FUS_Assessment": {
+                "Upsert_FUS_Assessment":{
                   "type": "Scope",
                   "actions": {
                     "Check_Existing_FUS": {
@@ -989,6 +1043,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_14')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -1021,7 +1076,7 @@
                               "item": {
                                 "fsi_status": "@outputs('Map_FUS_Status')?['status']",
                                 "fsi_score": "@outputs('Map_FUS_Status')?['score']",
-                                "fsi_notes": "Automated: FUS v1.0.0. Compliance rate: @{outputs('Map_FUS_Status')?['complianceRate']}%.",
+                                "fsi_notes": "Automated: FUS v1.0.0. Run ID: @{outputs('Map_FUS_Status')?['runId']}. Compliance rate: @{outputs('Map_FUS_Status')?['complianceRate']}%.",
                                 "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                               }
                             },
@@ -1053,7 +1108,7 @@
                                   "fsi_status": "@outputs('Map_FUS_Status')?['status']",
                                   "fsi_score": "@outputs('Map_FUS_Status')?['score']",
                                   "fsi_assessmentdate": "@utcNow()",
-                                  "fsi_notes": "Automated: FUS v1.0.0. Compliance rate: @{outputs('Map_FUS_Status')?['complianceRate']}%.",
+                                  "fsi_notes": "Automated: FUS v1.0.0. Run ID: @{outputs('Map_FUS_Status')?['runId']}. Compliance rate: @{outputs('Map_FUS_Status')?['complianceRate']}%.",
                                   "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                                 }
                               },
@@ -1088,7 +1143,7 @@
             }
           },
           "runAfter": {
-            "Initialize_SyncResults": ["Succeeded"]
+            "Validate_Parameters": ["Succeeded"]
           }
         },
         "Append_FUS_Result": {
@@ -1126,11 +1181,12 @@
             }
           },
           "runAfter": {
-            "Sync_FUS": ["Failed", "TimedOut"]
+            "Sync_FUS": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Sync_CAA": {
           "type": "Scope",
+          "timeout": "PT10M",
           "actions": {
             "Query_CAA_Latest": {
               "type": "OpenApiConnection",
@@ -1144,6 +1200,7 @@
                   "entityName": "fsi_capolicyvalidationhistories",
                   "$filter": "fsi_validationtype eq 'Orchestrator'",
                   "$orderby": "fsi_timestamp desc",
+                  "$select": "fsi_severity,fsi_runid,fsi_timestamp",
                   "$top": 1
                 },
                 "retryPolicy": {
@@ -1189,6 +1246,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_11')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid,fsi_status,fsi_score",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -1219,8 +1277,8 @@
                               "entityName": "fsi_controlassessments",
                               "recordId": "@first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_controlassessmentid']",
                               "item": {
-                                "fsi_status": "@if(greater(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status']), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status'])",
-                                "fsi_score": "@if(less(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score']), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score'])",
+                                "fsi_status": "@if(equals(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], 4), outputs('Map_CAA_Status')?['status'], if(equals(outputs('Map_CAA_Status')?['status'], 4), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], if(greater(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status']), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status'])))",
+                                "fsi_score": "@if(equals(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status'], 4), outputs('Map_CAA_Status')?['score'], if(equals(outputs('Map_CAA_Status')?['status'], 4), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_score'], if(less(first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score']), first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score'])))",
                                 "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.11 (dual-feed worst-of-two: existing status=@{first(body('Check_Existing_CAA_1_11')?['value'])?['fsi_status']}, CAA status=@{outputs('Map_CAA_Status')?['status']}).",
                                 "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                               }
@@ -1292,6 +1350,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_23')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid,fsi_status,fsi_score",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -1322,8 +1381,8 @@
                               "entityName": "fsi_controlassessments",
                               "recordId": "@first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_controlassessmentid']",
                               "item": {
-                                "fsi_status": "@if(greater(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status']), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status'])",
-                                "fsi_score": "@if(less(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score']), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score'])",
+                                "fsi_status": "@if(equals(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], 4), outputs('Map_CAA_Status')?['status'], if(equals(outputs('Map_CAA_Status')?['status'], 4), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], if(greater(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status']), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], outputs('Map_CAA_Status')?['status'])))",
+                                "fsi_score": "@if(equals(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status'], 4), outputs('Map_CAA_Status')?['score'], if(equals(outputs('Map_CAA_Status')?['status'], 4), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_score'], if(less(first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score']), first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_score'], outputs('Map_CAA_Status')?['score'])))",
                                 "fsi_notes": "Automated: CAA v1.1.0. Run: @{outputs('Map_CAA_Status')?['runId']}. Severity: @{outputs('Map_CAA_Status')?['severity']}. Control 1.23 (dual-feed worst-of-two: existing status=@{first(body('Check_Existing_CAA_1_23')?['value'])?['fsi_status']}, CAA status=@{outputs('Map_CAA_Status')?['status']}).",
                                 "fsi_nextreviewdate": "@addDays(utcNow(), 1)"
                               }
@@ -1395,6 +1454,7 @@
                         "parameters": {
                           "entityName": "fsi_controlassessments",
                           "$filter": "_fsi_controlmasterid_value eq @{parameters('fsi_INT_ControlGuid_1_18')} and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='@{utcNow('yyyy-MM-dd')}')",
+                          "$select": "fsi_controlassessmentid",
                           "$top": 1
                         },
                         "retryPolicy": {
@@ -1532,7 +1592,7 @@
             }
           },
           "runAfter": {
-            "Sync_CAA": ["Failed", "TimedOut"]
+            "Sync_CAA": ["Failed", "TimedOut", "Skipped"]
           }
         },
         "Send_Summary_Teams": {
@@ -1570,6 +1630,13 @@
             "Append_FUS_Result": ["Succeeded"],
             "Append_CAA_Result": ["Succeeded"]
           }
+        },
+        "Handle_Summary_Teams_Failure": {
+          "type": "Compose",
+          "inputs": "Teams summary notification failed — all solution syncs completed successfully. Operators should monitor the fsi_integrationerrorlogs table and SyncResults variable for per-solution sync status.",
+          "runAfter": {
+            "Send_Summary_Teams": ["Failed", "TimedOut", "Skipped"]
+          }
         }
       },
       "triggers": {
@@ -1580,7 +1647,8 @@
             "interval": 1,
             "startTime": "2026-02-11T06:30:00Z",
             "timeZone": "UTC"
-          }
+          },
+          "operationOptions": "SingleInstance"
         }
       },
       "contentVersion": "1.0.0.0",
@@ -1652,9 +1720,10 @@
   },
   "_metadata": {
     "solution": "Cross-Solution Integration",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Flow definition with sync scopes for all 6 Tier 2 solutions (ACV, SSC, AAM, CMM, FUS, CAA). Each scope queries the solution's latest validation, maps status, and upserts the corresponding fsi_controlassessment record. Per-solution sync results are collected and reported via Teams.",
     "schedule": "Daily at 6:30 AM UTC (30 min after Tier 2 daily scans)",
-    "note": "This JSON is a flow template. Import into Power Automate and configure connection references before activation."
+    "note": "This JSON is a flow template. Import into Power Automate and configure all fsi_INT_ControlGuid_* and Teams parameters before activation. A Validate_Parameters guard terminates the flow if any required control GUID is empty.",
+    "pagination_note": "All ListRecords use $top=1 intentionally. If $top is removed, @odata.nextLink pagination handling must be added."
   }
 }

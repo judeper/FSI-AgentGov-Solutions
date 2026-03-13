@@ -26,7 +26,7 @@ Before creating the flow, ensure you have:
   - Modules installed: MSAL.PS
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with CMM schema deployed (Phase 2):
-  - 3 tables: `fsi_ModerationValidationHistory`, `fsi_ModerationBaseline`, `fsi_ModerationViolation`
+  - 3 tables: `fsi_moderationvalidationhistory`, `fsi_moderationbaselines`, `fsi_moderationviolations`
   - 7 environment variables configured
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
@@ -76,8 +76,8 @@ Update these variables in the flow designer (Initialize Variable actions):
 
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
-| `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL (where CMM schema is deployed) |
-| `TenantId` | String | `contoso.onmicrosoft.com` | Azure AD tenant identifier |
+| `DataverseUrl` | String | `your-dataverse-url-here` | Your Dataverse environment URL (where CMM schema is deployed). **Must be changed per environment.** |
+| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID (formerly Azure AD) tenant identifier |
 | `ClientId` | String | `your-client-id-here` | App registration client ID (same one used for certificate auth) |
 | `CertificateThumbprint` | String | `your-thumbprint` | Certificate thumbprint uploaded to Azure Automation |
 | `SubscriptionId` | String | `your-subscription-id-here` | Azure subscription containing Automation Account |
@@ -235,14 +235,27 @@ After the flow is running, capture the initial baseline for drift detection:
 
 ## Alert Routing Summary
 
-| Severity | Teams Card | Email | Email Importance |
-|----------|-----------|-------|-----------------|
-| Critical | Yes | Yes | High |
-| Failed | Yes | Yes | High |
-| Error | Yes | Yes | High |
-| High | No | Yes | Normal |
-| Warning | No | Yes | Normal |
-| Passed/Info | No | No | - |
+The flow routes alerts based on the `AlertRequired` flag set by the runbook. Only Critical/High violations or weakened drift set `AlertRequired = true`. Medium-severity violations produce a Warning overall status but do **not** trigger alerts — these are recorded in Dataverse validation history only.
+
+| Severity | Teams Card | Email | Email Importance | Notes |
+|----------|-----------|-------|-----------------|-------|
+| Critical | Yes | Yes | High | |
+| Failed | Yes | Yes | High | |
+| Error | Yes | Yes | High | |
+| High | No | Yes | Normal | |
+| Medium | No | No | — | Recorded in Dataverse only; no active alert |
+| Warning | No | No | — | Recorded in Dataverse only; no active alert |
+| Passed/Info | No | No | — | |
+
+## Known Limitations
+
+### Retry Policies
+
+The seven API connection actions (`Create_Automation_Job`, `Get_Job_Status`, `Get_Job_Output`, `Post_Teams_Card`, `Send_Alert_Email`, `Send_Job_Failure_Email`, `Send_Critical_Error_Email`) have explicit retry policies configured (fixed interval, 3 retries, 30-second delay). These were added to handle transient connector failures (e.g., Teams throttling, temporary Automation API errors) in production governance workflows.
+
+### Environment Variables vs Flow Variables
+
+Flow configuration is currently stored as `InitializeVariable` actions rather than reading from Dataverse environment variables at runtime. The solution deploys environment variables (e.g., `fsi_CMM_TeamsGroupId`, `fsi_CMM_TeamsChannelId`) but the flow does not yet consume them. Migrating to `Get Environment Variable Value` actions would require adding a Dataverse connector reference and rewiring downstream variable references. See [Step 2: Configure Variables](#step-2-configure-variables) for the current approach.
 
 ## Troubleshooting
 
@@ -290,7 +303,7 @@ Additional checks:
 
 ### Adaptive Card Template Updates
 
-> **Note:** The adaptive card template is defined inline within the flow JSON (`src/moderation-validation-flow.json`) in the `Post_Teams_Card` action. A standalone copy also exists at `src/adaptive-card-moderation-alert.json` for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/). Changes to the card design must be applied to **both** locations to keep them in sync.
+> **Note:** The adaptive card exists in two versions: (1) a **standalone template** at `src/adaptive-card-moderation-alert.json` with full features (Violations section, Drift Detection section, `${DocumentationUrl}` placeholder) for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/), and (2) a **simplified inline version** in the flow JSON `Post_Teams_Card` action adapted for Power Automate's `replace()` expression constraints (FactSet-based zone summary, hardcoded documentation URL). The inline version intentionally omits the Violations and Drift Detection sections because per-agent detail binding requires `$data` templating not supported by Power Automate's expression language. When updating the card structure (header, Run Summary, Zone Summary, actions), changes should be applied to both locations where applicable.
 
 ### Flow Errors (Scope_Catch)
 

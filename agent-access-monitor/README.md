@@ -113,6 +113,8 @@ The following placeholder values in solution files must be replaced with your or
 
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
+| `governance.crm.dynamics.com` | Your Dataverse organization URL | `src/access-validation-flow.json` |
+| `your-org.github.io` | Your GitHub Pages domain | `src/access-validation-flow.json`, `src/adaptive-card-zone-access-alert.json` |
 | `contoso.onmicrosoft.com` | Your tenant domain | `src/access-validation-flow.json` |
 | `your-client-id-here` | Your app registration client ID | `src/access-validation-flow.json` |
 | `your-certificate-thumbprint-here` | Your certificate thumbprint | `src/access-validation-flow.json` |

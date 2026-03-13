@@ -170,8 +170,15 @@ if ($filterString) {
     $historyUrl += "?`$filter=$filterString"
 }
 
-$historyResponse = Invoke-RestMethod -Uri $historyUrl -Headers $headers -Method Get
-$validations = $historyResponse.value
+$historyRecords = @()
+$nextLink = $historyUrl
+
+while ($nextLink) {
+    $historyResponse = Invoke-DataverseRequest -Uri $nextLink -Headers $headers -Method Get
+    $historyRecords += $historyResponse.value
+    $nextLink = $historyResponse.'@odata.nextLink'
+}
+$validations = $historyRecords
 Write-Host "  Found $($validations.Count) validation record(s)." -ForegroundColor Green
 
 # ── Query Violations ─────────────────────────────────────────────
@@ -196,8 +203,15 @@ if ($violationFilterString) {
     $violationUrl += "?`$filter=$violationFilterString"
 }
 
-$violationResponse = Invoke-RestMethod -Uri $violationUrl -Headers $headers -Method Get
-$violations = $violationResponse.value
+$violationRecords = @()
+$nextViolationLink = $violationUrl
+
+while ($nextViolationLink) {
+    $violationResponse = Invoke-DataverseRequest -Uri $nextViolationLink -Headers $headers -Method Get
+    $violationRecords += $violationResponse.value
+    $nextViolationLink = $violationResponse.'@odata.nextLink'
+}
+$violations = $violationRecords
 Write-Host "  Found $($violations.Count) violation(s)." -ForegroundColor Green
 
 # ── Query Baselines (Optional) ───────────────────────────────────
@@ -205,8 +219,15 @@ $baselines = @()
 if ($IncludeBaselines) {
     Write-Host 'Querying baselines...' -ForegroundColor Cyan
     $baselineUrl = "$baseUrl/fsi_fileupload_baselines"
-    $baselineResponse = Invoke-RestMethod -Uri $baselineUrl -Headers $headers -Method Get
-    $baselines = $baselineResponse.value
+    $baselineRecords = @()
+    $nextBaselineLink = $baselineUrl
+
+    while ($nextBaselineLink) {
+        $baselineResponse = Invoke-DataverseRequest -Uri $nextBaselineLink -Headers $headers -Method Get
+        $baselineRecords += $baselineResponse.value
+        $nextBaselineLink = $baselineResponse.'@odata.nextLink'
+    }
+    $baselines = $baselineRecords
     Write-Host "  Found $($baselines.Count) baseline(s)." -ForegroundColor Green
 }
 

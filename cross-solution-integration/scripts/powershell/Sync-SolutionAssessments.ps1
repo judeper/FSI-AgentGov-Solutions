@@ -153,8 +153,24 @@ function New-DataverseRecord {
     $body = $Record | ConvertTo-Json -Depth 10
     Write-Verbose "POST $url"
 
-    $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Post -Body $body
-    return $response
+    $maxRetries = 3
+    $retryCount = 0
+    while ($true) {
+        try {
+            $response = Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Post -Body $body
+            return $response
+        } catch {
+            $retryCount++
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+                $delay = [math]::Pow(2, $retryCount) * 5
+                Write-Warning "Transient error ($statusCode) creating record in $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+                Start-Sleep -Seconds $delay
+            } else {
+                throw
+            }
+        }
+    }
 }
 
 function Update-DataverseRecord {
@@ -169,7 +185,24 @@ function Update-DataverseRecord {
     $body = $Record | ConvertTo-Json -Depth 10
     Write-Verbose "PATCH $url"
 
-    Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Patch -Body $body
+    $maxRetries = 3
+    $retryCount = 0
+    while ($true) {
+        try {
+            Invoke-RestMethod -Uri $url -Headers $Connection.Headers -Method Patch -Body $body
+            return
+        } catch {
+            $retryCount++
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
+                $delay = [math]::Pow(2, $retryCount) * 5
+                Write-Warning "Transient error ($statusCode) updating record in $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
+                Start-Sleep -Seconds $delay
+            } else {
+                throw
+            }
+        }
+    }
 }
 
 #endregion
@@ -316,7 +349,8 @@ function Sync-SolutionToAssessment {
             try {
                 # Check for existing same-day assessment
                 $today = (Get-Date).ToString('yyyy-MM-dd')
-                $zoneFilter = if ($null -ne $zone) { " and fsi_zone eq $zone" } else { '' }
+                $sanitizedZone = if ($null -ne $zone) { [int]$zone } else { $null }
+                $zoneFilter = if ($null -ne $sanitizedZone) { " and fsi_zone eq $sanitizedZone" } else { '' }
                 $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')$zoneFilter&`$top=1"
                 $existing = Invoke-DataverseQuery -Connection $Connection `
                     -EntitySet $cdConfig.Assessment.EntitySet `
@@ -399,7 +433,7 @@ function Register-SolutionEvidence {
         $hash = ($hashContent -split '\s+')[0]
     } else {
         # Calculate hash directly
-        $hash = (Get-FileHash -Path $evidenceFile.FullName -Algorithm SHA256).Hash.ToLower()
+        $hash = (Get-FileHash -Path $evidenceFile.FullName -Algorithm SHA256).Hash
     }
 
     $evidenceRecord = @{

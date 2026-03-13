@@ -29,7 +29,7 @@ After import, edit the flow and update these variables:
 | Variable | Value |
 |----------|-------|
 | `DataverseUrl` | Your Dataverse org URL (e.g., `https://governance.crm.dynamics.com`) |
-| `TenantId` | Your Azure AD tenant ID |
+| `TenantId` | Your Microsoft Entra ID tenant ID |
 | `ClientId` | Service principal app ID |
 | `CertificateThumbprint` | Certificate thumbprint uploaded to Automation Account |
 | `SubscriptionId` | Azure subscription containing Automation Account |

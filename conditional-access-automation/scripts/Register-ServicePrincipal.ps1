@@ -137,7 +137,8 @@ Write-Verbose "Connected."
 
 # Check if app already exists
 Write-Verbose "Checking for existing app registration..."
-$existingApp = Get-MgApplication -Filter "displayName eq '$AppName'" -ErrorAction SilentlyContinue
+$sanitizedAppName = $AppName -replace "'", "''"
+$existingApp = Get-MgApplication -Filter "displayName eq '$sanitizedAppName'" -ErrorAction SilentlyContinue
 
 if ($existingApp) {
     Write-Verbose "App registration already exists: $($existingApp.AppId)"
@@ -235,6 +236,6 @@ Write-Host "  https://login.microsoftonline.com/$TenantId/adminconsent?client_id
 Write-Host ""
 
 Write-Host "After granting consent, verify with:" -ForegroundColor Yellow
-Write-Host '  Get-MgServicePrincipal -Filter "appId eq ''$($app.AppId)''" | Select-Object AppRoleAssignments'
+Write-Host "  Get-MgServicePrincipal -Filter `"appId eq '$($app.AppId)'`" | Select-Object AppRoleAssignments"
 
 Write-Host "`nRegistration complete." -ForegroundColor Green

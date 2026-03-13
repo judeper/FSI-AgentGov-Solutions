@@ -1,0 +1,60 @@
+/// Bridge table mapping regulations to controls
+/// Sourced from governance-mapping.md via vw_dim_regulation_control.kql
+/// Enables Regulatory Gaps measure to filter FactAgentEvents by regulation
+
+table ControlRegulation
+	lineageTag: b1b2b3b4-b5b6-4b7b-8b9b-0b1b2b3b4b5b
+
+	column RegulationId
+		dataType: string
+		sourceColumn: RegulationId
+		summarizeBy: none
+		lineageTag: b2b3b4b5-b6b7-4b8b-9b0b-1b2b3b4b5b6b
+
+		annotation SummarizationSetBy = User
+
+	column ControlId
+		dataType: string
+		sourceColumn: ControlId
+		summarizeBy: none
+		lineageTag: b3b4b5b6-b7b8-4b9b-0b1b-2b3b4b5b6b7b
+
+		annotation SummarizationSetBy = User
+
+	partition ControlRegulation = m
+		mode: import
+		source =
+				let
+				    Source = Table.FromRows({
+				        {"FINRA-3110", "1.1"},
+				        {"FINRA-3110", "1.7"},
+				        {"FINRA-3110", "2.3"},
+				        {"FINRA-3110", "2.6"},
+				        {"FINRA-3110", "3.2"},
+				        {"FINRA-4511", "1.7"},
+				        {"FINRA-4511", "1.3"},
+				        {"SEC-17a-3", "1.7"},
+				        {"SEC-17a-3", "3.1"},
+				        {"SEC-17a-4", "1.7"},
+				        {"SEC-17a-4", "1.3"},
+				        {"SOX-302", "2.8"},
+				        {"SOX-302", "1.7"},
+				        {"SOX-404", "2.8"},
+				        {"SOX-404", "2.9"},
+				        {"SOX-404", "3.2"},
+				        {"SR-11-7", "2.5"},
+				        {"SR-11-7", "2.6"},
+				        {"SR-11-7", "2.9"},
+				        {"SR-11-7", "1.7"},
+				        {"OCC-2011-12", "2.5"},
+				        {"OCC-2011-12", "2.6"},
+				        {"GLBA-501b", "1.3"},
+				        {"GLBA-501b", "1.6"},
+				        {"GLBA-501b", "1.4"},
+				        {"CFTC-1.31", "1.7"},
+				        {"CFTC-1.31", "3.1"}
+				    }, type table [RegulationId = text, ControlId = text])
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

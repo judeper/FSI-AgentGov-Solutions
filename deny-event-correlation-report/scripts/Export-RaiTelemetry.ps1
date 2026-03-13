@@ -103,8 +103,15 @@ function Invoke-AppInsightsQuery {
         throw "Authentication failed: $_. Run Connect-AzAccount before executing this script."
     }
 
+    # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+    $tokenString = if ($token.Token -is [System.Security.SecureString]) {
+        $token.Token | ConvertFrom-SecureString -AsPlainText
+    } else {
+        $token.Token
+    }
+
     $headers = @{
-        "Authorization" = "Bearer $($token.Token)"
+        "Authorization" = "Bearer $tokenString"
         "Content-Type" = "application/json"
     }
 
@@ -235,6 +242,7 @@ customEvents
 | where eventType == "ContentFiltered"
 | extend
     agentId = tostring(customDimensions["BotId"]),
+    agentName = tostring(customDimensions["BotName"]),
     sessionId = tostring(customDimensions["ConversationId"]),
     turnId = tostring(customDimensions["TurnId"]),
     filterReason = tostring(customDimensions["FilterReason"]),
@@ -244,6 +252,7 @@ customEvents
 | project
     timestamp,
     agentId,
+    agentName,
     sessionId,
     turnId,
     filterReason,
@@ -283,6 +292,7 @@ customEvents
         [PSCustomObject]@{
             Timestamp       = $_.timestamp
             AgentId         = $_.agentId
+            AgentName       = $_.agentName
             SessionId       = $_.sessionId
             TurnId          = $_.turnId
             FilterReason    = $_.filterReason
@@ -311,6 +321,12 @@ customEvents
 
     foreach ($key in $summary.Keys) {
         Write-Host "  $key`: $($summary[$key])" -ForegroundColor Gray
+    }
+
+    # Ensure output directory exists
+    $outputDir = Split-Path -Path $OutputPath -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
     }
 
     # Export to CSV

@@ -8,7 +8,7 @@ Daily operational reporting solution for correlating "deny/no content returned" 
 
 ## Overview
 
-This solution provides automated extraction, correlation, and visualization of deny events from three Microsoft data sources:
+This solution provides automated extraction, correlation, and visualization of deny events from four Microsoft data sources:
 
 | Source | Event Types | Purpose |
 |--------|-------------|---------|
@@ -21,11 +21,11 @@ This solution provides automated extraction, correlation, and visualization of d
 
 This solution supports compliance evidence for:
 
-- **FINRA Regulatory Notice 24-09** - Generative AI governance guidance
-- **FINRA 4511** - Records retention
-- **SEC 17a-3/4** - Supervision evidence
-- **GLBA 501(b)** - Safeguards evidence
-- **OCC 2011-12** - Model risk controls
+- **FINRA 4511** - Records retention (enforceable rule)
+- **SEC 17a-3/4** - Supervision evidence (enforceable rule)
+- **GLBA 501(b)** - Safeguards evidence (enforceable rule)
+- **FINRA Regulatory Notice 24-09** - Generative AI governance (supervisory guidance, not an enforceable rule)
+- **OCC 2011-12** - Model risk controls (supervisory guidance, not an enforceable rule)
 
 ## Contents
 
@@ -34,7 +34,9 @@ deny-event-correlation-report/
 ├── README.md                          # This file
 ├── CHANGELOG.md                       # Version history
 ├── scripts/
+│   ├── Connect-ExchangeOnlineHelper.ps1  # Shared EXO connection helper
 │   ├── Export-CopilotDenyEvents.ps1   # Purview CopilotInteraction extraction
+│   ├── Export-DefenderCopilotEvents.ps1  # Defender CloudAppEvents extraction
 │   ├── Export-DlpCopilotEvents.ps1    # Purview DLP extraction
 │   ├── Export-RaiTelemetry.ps1        # Application Insights extraction
 │   └── Invoke-DailyDenyReport.ps1     # Orchestration script
@@ -59,7 +61,8 @@ deny-event-correlation-report/
 - Azure subscription (for storage and automation)
 - Required permissions:
   - Purview Audit Reader
-  - Application Insights Reader
+  - Monitoring Reader (on Application Insights resource)
+  - ThreatHunting.Read.All (optional, for Defender CloudAppEvents)
   - Storage Blob Data Contributor (optional, for blob upload)
 
 ### 2. Basic Usage
@@ -110,6 +113,8 @@ For daily automated extraction, deploy to Azure Automation:
 5. Configure Azure Key Vault for credentials
 
 See [docs/architecture.md](docs/architecture.md) for detailed deployment instructions.
+
+> **Note:** No Power BI template (`.pbit`) is included. Build a report in Power BI Desktop by connecting to your CSV exports or Log Analytics workspace using the queries in `kql-queries/correlation-analysis.kql`.
 
 ## Documentation
 

@@ -124,6 +124,7 @@ Write-Verbose "Configuration loaded and validated."
 $expectedPolicies = @{
     "Zone1" = @(
         @{ Pattern = "*CopilotStudio*Zone1*"; Required = $true }
+        @{ Pattern = "*AgentBuilder*Zone1*"; Required = $true }
     )
     "Zone2" = @(
         @{ Pattern = "*CopilotStudio*Zone2*"; Required = $true }
@@ -178,7 +179,7 @@ Write-Verbose "Connected."
 # Get all CA policies
 Write-Verbose "Retrieving Conditional Access policies..."
 try {
-    $allPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
+    $allPolicies = Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop
     $fsiPolicies = $allPolicies | Where-Object {
         $_.DisplayName -like "CA-FSI-*" -or
         $_.DisplayName -like "CA-CopilotStudio-*" -or
@@ -442,8 +443,13 @@ if ($BaselinePath) {
         $baselineContent = Get-Content $BaselinePath -Raw -ErrorAction Stop | ConvertFrom-Json
         $previousPolicies = $baselineContent.policies
 
-        # Build current baseline from the already-retrieved policies
-        $currentBaseline = Get-CAAPolicyBaseline -TenantId $TenantId
+        # Build current baseline from the already-retrieved policies (avoid second Graph API call)
+        # Map raw Graph API objects (.Id) to the .PolicyId property expected by Compare-CAAPolicyBaseline
+        $currentBaseline = $fsiPolicies | ForEach-Object {
+            $p = $_ | Select-Object *
+            $p | Add-Member -NotePropertyName 'PolicyId' -NotePropertyValue $_.Id -Force
+            $p
+        }
 
         $driftResults = Compare-CAAPolicyBaseline -PreviousBaseline @($previousPolicies) -CurrentBaseline @($currentBaseline)
         $driftFindings = @($driftResults | Where-Object { $_.DriftType -ne 'None' })

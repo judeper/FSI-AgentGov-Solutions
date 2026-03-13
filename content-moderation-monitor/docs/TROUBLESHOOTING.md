@@ -24,6 +24,7 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 | MSAL token error | `MSAL.PS` module not installed | Run `Install-Module MSAL.PS -Scope CurrentUser` |
 | Dataverse 401 Unauthorized | Token expired or wrong audience | Re-authenticate; verify token audience matches Dataverse URL |
 | Dataverse 403 Forbidden | Missing security role in target environment | Add executing identity as application user with read access to CMM tables |
+| `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 — the `-AsPlainText` parameter requires PowerShell 7.0+ | Install PowerShell 7.1+ as documented in [PREREQUISITES.md](PREREQUISITES.md). Run scripts with `pwsh` (not `powershell`) |
 | Interactive auth popup blocked | PowerShell session does not support interactive UI | Use `-CertificateThumbprint` and `-ClientId` for non-interactive auth |
 
 ---
@@ -34,10 +35,11 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 |-------|-------|------------|
 | No agents found | Environment has no Copilot Studio bots, or bots are all drafts | Verify bots exist; use `-IncludeDrafts` to scan unpublished agents |
 | Unknown moderation level | Bot `configuration` JSON does not contain content moderation settings | Agent may not have generative AI enabled; Unknown agents receive Warning severity |
-| Zone lookup failure | ELM `fsi_environment` table not deployed or empty | Verify ELM deployment; falls back to naming convention matching (`-Z1-`, `-Z2-`, `-Z3-` in environment name) |
+| **All** agents show Unknown level | The `bot.configuration` JSON key for content moderation may have changed (Microsoft undocumented internal schema) | Verify at least one agent returns a known level (Low/Medium/High). If none do, contact Microsoft support or check Copilot Studio release notes for schema changes. The script emits a warning when this occurs. |
+| Zone lookup failure | ELM `fsi_environmentlifecycles` table not deployed or empty | Verify ELM deployment; falls back to naming convention matching (`-Z1-`, `-Z2-`, `-Z3-` in environment name) |
 | Bot metadata query error | Environment Dataverse not provisioned | Skip environments without Dataverse; these cannot host Copilot Studio bots |
 | Sandbox environments included | `fsi_CMM_IncludeSandbox` set to true | Set environment variable to `false` or use `-ExcludeSandbox` parameter |
-| Moderation level shows "strict" | Older Copilot Studio version uses non-standard labels | `Get-BotModerationLevel` normalizes "strict" → "High" and "standard" → "Medium" |
+| Moderation level shows "strict" | Older Copilot Studio version uses non-standard labels | `Get-BotModerationLevel` normalizes "strict" → "High", "standard" → "Medium", and "moderate" → "Medium" |
 
 ---
 

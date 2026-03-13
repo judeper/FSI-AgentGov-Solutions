@@ -50,6 +50,13 @@ SEVERITY_LABELS = {
     100000000: "low",
 }
 
+SOURCES = {
+    100000000: "user",
+    100000001: "supervisor",
+    100000002: "automated",
+    100000003: "customer",
+}
+
 SEVERITY_LABEL_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unknown": 0}
 
 
@@ -90,7 +97,7 @@ class PatternAnalyzer:
         }
 
         start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
-        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select=fsi_category,fsi_severity,fsi_agentid&$filter=createdon ge {start_date}"
+        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select=fsi_category,fsi_severity,fsi_agentid,fsi_source&$filter=createdon ge {start_date}"
 
         results = []
         is_complete = False
@@ -104,7 +111,11 @@ class PatternAnalyzer:
                     if retry_count >= max_retries:
                         print("Error: Max retries exceeded for rate limiting.")
                         break
-                    retry_after = int(response.headers.get("Retry-After", "60"))
+                    raw = response.headers.get("Retry-After", "60")
+                    try:
+                        retry_after = int(raw)
+                    except ValueError:
+                        retry_after = 60
                     print(f"Warning: Rate limited. Retrying after {retry_after}s (attempt {retry_count}/{max_retries})...")
                     time.sleep(retry_after)
                     continue
@@ -114,6 +125,7 @@ class PatternAnalyzer:
                 data = response.json()
                 results.extend(data.get("value", []))
                 url = data.get("@odata.nextLink")
+                retry_count = 0
             else:
                 is_complete = True
             return results, is_complete
@@ -126,7 +138,7 @@ class PatternAnalyzer:
         """Analyze feedback distribution by category."""
         categories = Counter()
         for item in feedback:
-            cat = item.get("fsi_category", 0)
+            cat = item.get("fsi_category") or 0
             categories[CATEGORIES.get(cat, "unknown")] += 1
         return dict(categories)
 
@@ -134,7 +146,7 @@ class PatternAnalyzer:
         """Analyze feedback distribution by agent."""
         agents = Counter()
         for item in feedback:
-            agent_id = item.get("fsi_agentid", "unknown")
+            agent_id = item.get("fsi_agentid") or "unknown"
             agents[agent_id] += 1
         return dict(agents)
 
@@ -156,7 +168,7 @@ class PatternAnalyzer:
         agent_data = {}
 
         for item in feedback:
-            agent_id = item.get("fsi_agentid", "unknown")
+            agent_id = item.get("fsi_agentid") or "unknown"
             severity = item.get("fsi_severity")
 
             if agent_id not in agent_data:
@@ -176,6 +188,14 @@ class PatternAnalyzer:
                 scores[agent_id] = max(0, round(100 - penalty))
 
         return scores
+
+    def analyze_by_source(self, feedback: List[Dict]) -> Dict:
+        """Analyze feedback distribution by source type."""
+        sources = Counter()
+        for item in feedback:
+            src = item.get("fsi_source")
+            sources[SOURCES.get(src, "unknown")] += 1
+        return dict(sources)
 
     def detect_patterns(self, feedback: List[Dict]) -> List[Dict]:
         """Detect recurring patterns in feedback."""
@@ -209,6 +229,7 @@ class PatternAnalyzer:
         """Generate analysis report."""
         category_analysis = self.analyze_by_category(feedback)
         severity_analysis = self.analyze_severity(feedback)
+        source_analysis = self.analyze_by_source(feedback)
         agent_scores = self.calculate_agent_scores(feedback)
         patterns = self.detect_patterns(feedback)
 
@@ -241,6 +262,11 @@ Category Distribution:
             pct = (count / total * 100) if total > 0 else 0
             report += f"  {cat}: {count} ({pct:.1f}%)\n"
 
+        report += "\nSource Distribution:\n"
+        for src, count in sorted(source_analysis.items(), key=lambda x: -x[1]):
+            pct = (count / total * 100) if total > 0 else 0
+            report += f"  {src}: {count} ({pct:.1f}%)\n"
+
         report += "\nSeverity Distribution:\n"
         for sev, count in sorted(severity_analysis.items(), key=lambda x: -SEVERITY_LABEL_ORDER.get(x[0], 0)):
             pct = (count / total * 100) if total > 0 else 0
@@ -249,7 +275,8 @@ Category Distribution:
         report += "\nAgent Scores:\n"
         for agent_id, score in sorted(agent_scores.items(), key=lambda x: x[1]):
             rating = "Excellent" if score >= 95 else "Good" if score >= 85 else "Needs Improvement" if score >= 70 else "Critical"
-            report += f"  {agent_id[:8]}...: {score} ({rating})\n"
+            display = f"{agent_id[:20]}..." if len(agent_id) > 20 else agent_id
+            report += f"  {display}: {score} ({rating})\n"
 
         if patterns:
             report += "\nDetected Patterns:\n"
@@ -264,9 +291,14 @@ def main():
     parser.add_argument("--environment", required=True, help="Dataverse environment URL")
     parser.add_argument("--days", type=int, default=30, help="Analysis period in days")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed output")
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text)")
     parser.add_argument("--dry-run", action="store_true", help="Use sample data")
 
     args = parser.parse_args()
+
+    if args.days < 1:
+        print("Error: --days must be a positive integer")
+        sys.exit(1)
 
     # Validate environment URL format
     parsed = urlparse(args.environment)
@@ -280,9 +312,10 @@ def main():
                         ".crm7.dynamics.com", ".crm8.dynamics.com", ".crm9.dynamics.com",
                         ".crm11.dynamics.com", ".crm12.dynamics.com", ".crm14.dynamics.com",
                         ".crm15.dynamics.com", ".crm17.dynamics.com", ".crm19.dynamics.com",
-                        ".crm20.dynamics.com", ".crm21.dynamics.com")
+                        ".crm20.dynamics.com", ".crm21.dynamics.com",
+                        ".crm.microsoftdynamics.us", ".crm.appsplatform.us")
     if not any(parsed.netloc.endswith(suffix) for suffix in allowed_suffixes):
-        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com)")
+        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com or *.microsoftdynamics.us or *.appsplatform.us)")
         print(f"  Got: {parsed.netloc}")
         sys.exit(1)
 
@@ -293,9 +326,15 @@ def main():
             print(f"Error: Missing required environment variables: {', '.join(missing)}")
             sys.exit(1)
 
-    print("========================================")
-    print("  Hallucination Pattern Analyzer")
-    print("========================================")
+    is_json = args.format == "json"
+    def status_print(*a, **kw):
+        if is_json:
+            kw["file"] = sys.stderr
+        print(*a, **kw)
+
+    status_print("========================================")
+    status_print("  Hallucination Pattern Analyzer")
+    status_print("========================================")
 
     analyzer = PatternAnalyzer(
         args.environment,
@@ -305,34 +344,53 @@ def main():
     )
 
     if args.dry_run:
-        print("\n[DRY RUN - Using sample data]")
+        status_print("\n[DRY RUN - Using sample data]")
         # Sample data for testing
         feedback = [
-            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001"},
-            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001"},
-            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002"},
-            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001"},
-            {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003"},
+            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001", "fsi_source": 100000000},
+            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001", "fsi_source": 100000001},
+            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002", "fsi_source": 100000002},
+            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001", "fsi_source": 100000001},
+            {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003", "fsi_source": 100000003},
         ]
         is_complete = True
     else:
-        print("\nAuthenticating...")
+        status_print("\nAuthenticating...")
         analyzer.authenticate()
-        print("  Authenticated")
-        print("\nFetching feedback data...")
+        status_print("  Authenticated")
+        status_print("\nFetching feedback data...")
         feedback, is_complete = analyzer.get_feedback(args.days)
-        print(f"  Retrieved {len(feedback)} reports")
+        status_print(f"  Retrieved {len(feedback)} reports")
 
-    report = analyzer.generate_report(feedback, days=args.days, is_complete=is_complete)
-    print(report)
+    if args.format == "json":
+        output = {
+            "report_date": datetime.now(timezone.utc).isoformat(),
+            "analysis_period_days": args.days,
+            "is_complete": is_complete,
+            "total_reports": len(feedback),
+            "critical_issues": sum(1 for f in feedback if f.get("fsi_severity") == 100000003),
+            "category_distribution": analyzer.analyze_by_category(feedback),
+            "severity_distribution": analyzer.analyze_severity(feedback),
+            "agent_scores": analyzer.calculate_agent_scores(feedback),
+            "source_distribution": analyzer.analyze_by_source(feedback),
+            "patterns": analyzer.detect_patterns(feedback),
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        report = analyzer.generate_report(feedback, days=args.days, is_complete=is_complete)
+        print(report)
 
     if args.verbose:
-        print("\nVerbose Details:")
+        status_print("\nVerbose Details:")
         for item in feedback:
             cat = CATEGORIES.get(item.get("fsi_category", 0), "unknown")
             sev = SEVERITY_LABELS.get(item.get("fsi_severity"), "unknown")
+            src = SOURCES.get(item.get("fsi_source"), "unknown")
             agent = item.get("fsi_agentid", "unknown")
-            print(f"  Agent: {agent}, Category: {cat}, Severity: {sev}")
+            status_print(f"  Agent: {agent}, Category: {cat}, Severity: {sev}, Source: {src}")
+
+    if not is_complete:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

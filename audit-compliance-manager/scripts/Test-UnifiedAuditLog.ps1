@@ -41,10 +41,10 @@
     Use interactive browser-based authentication instead of service principal.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for service principal authentication.
+    Microsoft Entra ID tenant ID. Required for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required for service principal authentication.
+    Microsoft Entra ID application (client) ID. Required for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.

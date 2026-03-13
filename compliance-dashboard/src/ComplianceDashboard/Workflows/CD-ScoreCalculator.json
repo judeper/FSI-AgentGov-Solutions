@@ -207,9 +207,10 @@
           },
           "runtimeConfiguration": {
             "paginationPolicy": {
-              "minimumItemCount": 5000
+              "minimumItemCount": 100000
             }
-          }
+          },
+          "description": "Pagination set to 100,000 (Power Automate maximum). TRUNCATION GUARD: If length(outputs('List_Control_Assessments')?['body/value']) equals 100,000, results are truncated — enable Dataverse archival or narrow the date-range filter."
         },
         "Apply_to_each_Assessment": {
       "foreach": "@outputs('List_Control_Assessments')?['body/value']",
@@ -458,9 +459,10 @@
       },
       "runtimeConfiguration": {
         "paginationPolicy": {
-          "minimumItemCount": 5000
+          "minimumItemCount": 100000
         }
-      }
+      },
+      "description": "Pagination set to 100,000 (Power Automate maximum). TRUNCATION GUARD: If length(outputs('Get_Open_Exception_Count')?['body/value']) equals 100,000, results are truncated — enable Dataverse archival or add date-range filters to reduce result set."
     },
     "Check_Existing_Score_Today": {
       "runAfter": {
@@ -535,7 +537,7 @@
                 "fsi_compliantcount": "@variables('StatusCounts')?['compliant']",
                 "fsi_partialcount": "@variables('StatusCounts')?['partial']",
                 "fsi_noncompliantcount": "@variables('StatusCounts')?['noncompliant']",
-                "fsi_exceptioncount": "@length(outputs('Get_Open_Exception_Count')?['body/value'])"
+                "fsi_exceptioncount": "@min(length(outputs('Get_Open_Exception_Count')?['body/value']), 999)"
               }
             },
             "authentication": "@parameters('$authentication')",
@@ -569,11 +571,19 @@
                 ""
               ]
             }
+          },
+          {
+            "not": {
+              "equals": [
+                "@variables('CD_NotificationEmail')",
+                "@null"
+              ]
+            }
           }
         ]
       },
       "type": "If",
-      "description": "Only send success notification if notification email is configured and non-empty",
+      "description": "Only send success notification if notification email is configured, non-empty, and non-null",
       "actions": {
         "Send_Success_Notification": {
           "runAfter": {},

@@ -54,7 +54,7 @@ Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 c
 | Configure Communication Compliance | **Manual** | Purview compliance portal |
 | Deploy Power BI dashboard | **Manual** | Import .pbix template |
 | Configure escalation rules | **Manual** | Model-driven app settings |
-| Solution packaging | **Not implemented** | Components deployed via Web API; no managed/unmanaged solution package for ALM pipelines |
+| Solution packaging | **Not implemented** | Components deployed via Web API; no managed/unmanaged solution package (solution.xml, customizations.xml) for ALM pipelines. Cannot be promoted through dev→test→prod using Power Platform Pipelines or Azure DevOps ALM tooling. |
 
 ## Who Should Use This
 
@@ -284,9 +284,9 @@ Quarterly testing reports per FINRA Rule 3120:
 |------------|-------------|----------------|
 | **FINRA 3110** | Supervision of associated persons | Automated routing to principals, audit trail |
 | **FINRA 3120** | Testing supervisory controls | Quarterly evidence export, SLA metrics |
-| **FINRA 24-09** | Gen AI communication supervision | AI agent output review workflow |
+| **FINRA 24-09** *(Regulatory Notice — guidance)* | Gen AI communication supervision | AI agent output review workflow |
 | **SEC 17a-3** | Recordkeeping | Immutable SupervisionLog |
-| **SEC 17a-4** | Record preservation | 6-year retention via Dataverse |
+| **SEC 17a-4** | Record preservation | 6-year retention via Dataverse; **WORM storage required** — export to compliant archival storage (see `scripts/export_supervision_evidence.py`) |
 
 ## Documentation
 

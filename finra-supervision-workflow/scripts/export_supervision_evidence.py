@@ -192,7 +192,7 @@ def generate_sla_metrics(queue_records: list) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Export FINRA Supervision Workflow evidence")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
-    parser.add_argument("--tenant-id", required=True, help="Azure AD tenant ID (GUID format: 12345678-1234-1234-1234-123456789abc)")
+    parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID (GUID format: 12345678-1234-1234-1234-123456789abc)")
     parser.add_argument("--client-id", help="Service principal client ID")
     parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive authentication")
@@ -366,11 +366,29 @@ def main():
     if has_errors:
         manifest["export_info"]["status"] = "partial"
 
-    # Write manifest
+    # Write manifest and compute a companion hash file for integrity verification.
+    # NOTE: A self-hash embedded inside the manifest cannot match the final file's
+    # SHA-256 (bootstrapping impossibility). Instead, write the manifest first, then
+    # save the hash to a separate sidecar file that can be independently verified.
     manifest_filepath = os.path.join(args.output_path, f"manifest-{period_suffix}.json")
     with open(manifest_filepath, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
+
+    manifest_hash = calculate_sha256(manifest_filepath)
+    hash_filepath = os.path.join(args.output_path, f"manifest-{period_suffix}.sha256")
+    with open(hash_filepath, "w", encoding="utf-8") as f:
+        f.write(f"{manifest_hash}  manifest-{period_suffix}.json\n")
+
     print(f"\nManifest written to: {manifest_filepath}")
+    print(f"  Hash sidecar: {hash_filepath}")
+    print(f"  Manifest SHA-256: {manifest_hash}")
+    print("\n  *** SEC 17a-4 Evidence Integrity Notice ***")
+    print("  The manifest records SHA-256 hashes for each exported file, and a companion")
+    print("  .sha256 sidecar verifies the manifest itself. However, this alone is")
+    print("  insufficient for regulatory evidence. To ensure chain")
+    print("  of custody, store exports on WORM (Write Once Read Many) storage or")
+    print("  generate a detached digital signature for the manifest file.")
+    print("  Example: gpg --detach-sign --armor manifest-{}.json".format(period_suffix))
 
     print("\n" + "=" * 60)
     print("Export Complete")

@@ -41,15 +41,31 @@
     # Script files (.ps1) that are run in the caller's environment prior to importing this module
     # ScriptsToProcess = @()
     
+    # Nested modules bundled with this module
+    NestedModules     = @('private\CAAClient.psm1')
+    
     # Functions to export from this module
+    # NOTE: Top-level scripts (Deploy-CAPolicies.ps1, Test-PolicyCompliance.ps1, etc.)
+    # are standalone entry points — run them directly, not via Import-Module.
+    # The exported functions below are internal helpers from private/*.ps1 and CAAClient.psm1.
     FunctionsToExport = @(
-        'Deploy-CAPolicies',
-        'Test-PolicyCompliance',
-        'Register-ServicePrincipal',
-        'Watch-PolicyDrift',
-        'Export-PolicyBaseline',
-        'Export-CAAComplianceEvidence',
-        'Test-EvidenceIntegrity'
+        'Connect-CAAGraphSession',
+        'Test-CAAGraphConnection',
+        'Get-CAAPolicyBaseline',
+        'Compare-CAAPolicyBaseline',
+        'Get-CAAZoneClassification',
+        'Get-CAAValidationResults',
+        'Test-CAAConfigPath',
+        'Test-CAATemplateSet',
+        'Test-CAABreakGlassAccounts',
+        'Connect-CAADataverse',
+        'Get-CAAConnection',
+        'Get-CAAEnvironmentVariable',
+        'Get-CAAActiveBaseline',
+        'Write-CAAValidationHistory',
+        'Write-CAAViolation',
+        'Save-CAABaseline',
+        'Get-CAALastValidation'
     )
     
     # Cmdlets to export from this module
@@ -118,6 +134,13 @@
             # External dependent modules of this module
             # ExternalModuleDependencies = @()
         }
+
+        # Connection references used by Power Automate flows in this solution:
+        #   - fsi_cr_dataverse_*   (Dataverse)
+        #   - fsi_cr_office365_*   (Office 365 / email alerts)
+        #   - fsi_cr_teams_*       (Teams adaptive card alerts)
+        #   - Microsoft Graph connector: NOT YET ADDED — flows use HTTP actions with MSI auth.
+        #     Planned for Phase 2 when Graph connector support is available.
     }
     
     # HelpInfo URI of this module

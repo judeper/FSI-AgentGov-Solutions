@@ -37,7 +37,7 @@
 
 .NOTES
     File: Get-ExpectedModerationLevel.ps1
-    Version: 0.1.0
+    Version: 1.0.1
 #>
 
 [CmdletBinding()]

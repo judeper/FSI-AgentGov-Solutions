@@ -67,12 +67,12 @@ let vw_dim_regulation_control = () {
         "FINRA-4511", "FINRA 4511", "FINRA", "1.3", "SharePoint Content Governance", "Supporting",
 
         // SEC 17a-3 - Records to be Made
-        "SEC-17a3", "SEC 17a-3", "SEC", "1.7", "Comprehensive Audit Logging", "Primary",
-        "SEC-17a3", "SEC 17a-3", "SEC", "3.1", "Agent Inventory and Metadata Management", "Supporting",
+        "SEC-17a-3", "SEC 17a-3", "SEC", "1.7", "Comprehensive Audit Logging", "Primary",
+        "SEC-17a-3", "SEC 17a-3", "SEC", "3.1", "Agent Inventory and Metadata Management", "Supporting",
 
         // SEC 17a-4 - Records to be Preserved
-        "SEC-17a4", "SEC 17a-4", "SEC", "1.7", "Comprehensive Audit Logging", "Primary",
-        "SEC-17a4", "SEC 17a-4", "SEC", "1.3", "SharePoint Content Governance", "Supporting",
+        "SEC-17a-4", "SEC 17a-4", "SEC", "1.7", "Comprehensive Audit Logging", "Primary",
+        "SEC-17a-4", "SEC 17a-4", "SEC", "1.3", "SharePoint Content Governance", "Supporting",
 
         // SOX 302 - Corporate Responsibility
         "SOX-302", "SOX 302", "SOX", "2.8", "Access Control and Segregation of Duties", "Primary",

@@ -260,6 +260,11 @@ This section documents limitations and design decisions for v1.0.0 deployment.
 | **Single deployment path** | No Quick Start option, full deployment required for all scenarios | Complete all steps in [Deployment Checklist](docs/deployment-checklist.md) |
 | **Upgrade path not documented** | Migration from v1.0.0 to future versions not yet specified | Upgrade documentation will be added in v1.1.0 release |
 | **Unmanaged solution only** | Solution package is unmanaged to allow customer customization | Convert to managed solution post-customization if needed |
+| **Pagination ceiling (100K records)** | All `ListRecords` actions in CD-ExceptionMonitor and CD-ScoreCalculator use `minimumItemCount: 100000`. Results are silently truncated beyond this limit with no runtime detection. | Enable Dataverse archival or add date-range filters to keep active record counts below 100,000 |
+| **Exception count capped at 999** | The `fsi_exceptioncount` column (Customizations.xml) has `MaxValue: 999`. The workflow caps the value with `min(..., 999)` to prevent Dataverse validation errors, but counts above 999 are underreported. | Increase `MaxValue` in Customizations.xml if your organization may exceed 999 open exceptions |
+| **Bracket filename in solution package** | `[Content_Types].xml` contains bracket characters that cause PowerShell `Get-Content` and glob pattern failures without `-LiteralPath` or backtick escaping. | Use `-LiteralPath` or escape brackets when accessing this file in deployment scripts |
+| **Unused environment variables** | Three environment variables (`fsi_CD_TeamsWebhook`, `fsi_CD_DataverseEnvironment`, `fsi_CD_SLAMultiplier`) are unused or deprecated but retained in the package for backward compatibility. | Safely ignore during import; see `environmentvariables.json` for details on each |
+| **N+1 Dataverse update pattern** | `Update_Exception_Record` in CD-ExceptionMonitor issues individual `UpdateRecord` per exception inside a loop, which is inefficient at high volumes. | Migrate to Dataverse batch changeset (`$batch` endpoint) for large exception populations |
 
 **Future Enhancements (planned for v1.1.0+):**
 - Automated deployment validation script

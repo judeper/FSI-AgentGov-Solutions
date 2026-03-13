@@ -82,9 +82,9 @@ Build the card dynamically using expressions:
 | `{title}` | `@{items('Apply_to_each')?['title']}` |
 | `{severity}` | `@{items('Apply_to_each')?['severity']}` |
 | `{category}` | `@{items('Apply_to_each')?['category']}` |
-| `{services}` | `@{join(items('Apply_to_each')?['services'], ', ')}` |
-| `{startDateTime}` | `@{items('Apply_to_each')?['startDateTime']}` |
-| `{actionRequiredByDateTime}` | `@{coalesce(items('Apply_to_each')?['actionRequiredByDateTime'], 'None')}` |
+| `{services}` | `@{join(coalesce(items('Apply_to_each')?['services'], json('[]')), ', ')}` |
+| `{startDateTime}` | `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}` |
+| `{actionRequiredByDateTime}` | `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}` |
 | `{id}` | `@{items('Apply_to_each')?['id']}` |
 | `{recordId}` | `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` — replace `cr123_` with your publisher prefix (see [Dataverse Record Link](#dataverse-record-link-optional)) |
 
@@ -95,22 +95,31 @@ Only send notifications for important posts. In your flow:
 1. Add a **Condition** action before the Teams action
 2. Configure the condition:
 
-**High Severity OR Action Required:**
+**High Severity OR Action Required (with duplicate prevention):**
 
 ```
-@or(
-  equals(items('Apply_to_each')?['severity'], 'high'),
-  equals(items('Apply_to_each')?['severity'], 'critical'),
-  not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null))
+@and(
+  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  or(
+    equals(items('Apply_to_each')?['severity'], 'high'),
+    equals(items('Apply_to_each')?['severity'], 'critical'),
+    not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null))
+  )
 )
 ```
 
+> **Note:** Replace `cr123_` with your environment's publisher prefix. The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [FLOW_SETUP.md Step 7](./FLOW_SETUP.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
+
 Or use the visual editor:
-- Condition 1: `severity` equals `high`
-- OR
-- Condition 2: `severity` equals `critical`
-- OR
-- Condition 3: `actionRequiredByDateTime` is not equal to `null`
+- Condition 1: `@{outputs('Upsert_a_row')?['body/cr123_notifiedon']}` is equal to `null`
+- **AND** (click "Add group" → **OR group** for the conditions below):
+  - Condition 2: `severity` equals `high`
+  - **OR**
+  - Condition 3: `severity` equals `critical`
+  - **OR**
+  - Condition 4: `actionRequiredByDateTime` is not equal to `null`
+
+> **Grouping matters:** You must nest Conditions 2–4 inside an OR group, then AND that group with Condition 1 (the null check). Without explicit grouping, the default evaluation would be `(notifiedOn == null AND severity == 'high') OR severity == 'critical' OR actionRequired != null`, which bypasses duplicate prevention for critical-severity and action-required posts. See [FLOW_SETUP.md Step 7](./FLOW_SETUP.md#step-7-teams-notification-for-high-severity) for full details.
 
 ## Step 5: Add User Mentions (Optional)
 
@@ -181,7 +190,7 @@ Shows just the essentials:
     {
       "type": "Action.OpenUrl",
       "title": "View in Admin Center",
-      "url": "https://admin.microsoft.com/Adminportal/Home#/MessageCenter/{id}"
+      "url": "https://admin.microsoft.com/Adminportal/Home#/MessageCenter/:/messages/{id}"
     }
   ]
 }
@@ -288,7 +297,7 @@ In your Power Automate flow, replace the placeholder URL:
 {
   "type": "Action.OpenUrl",
   "title": "Assess Record",
-  "url": "https://contoso.crm.dynamics.com/main.aspx?appid=12345678-1234-1234-1234-123456789abc&pagetype=entityrecord&etn=cr123_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}"
+  "url": "https://contoso.crm.dynamics.com/main.aspx?appid=12345678-1234-1234-1234-123456789abc&pagetype=entityrecord&etn=[publisher-prefix]_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/[publisher-prefix]_messagecenterlogid']}"
 }
 ```
 

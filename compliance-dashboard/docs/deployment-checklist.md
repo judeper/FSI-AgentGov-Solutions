@@ -26,7 +26,7 @@ Verify all prerequisites are met before starting deployment.
 
 - [ ] Environment Lifecycle Management solution v1.1.0+ deployed (provides zone classification data)
 - [ ] Network access to Dataverse environment confirmed (no firewall blocking)
-- [ ] Azure AD tenant ID and Dataverse environment URL documented
+- [ ] Microsoft Entra ID tenant ID and Dataverse environment URL documented
 
 ---
 
@@ -66,10 +66,10 @@ Verify all prerequisites are met before starting deployment.
   - [ ] Enter compliance administrator email address
   - [ ] Format: `compliance@contoso.com`
   - [ ] This address receives exception SLA notifications
-- [ ] **CD_TeamsWebhook (optional):**
-  - [ ] Enter Teams webhook URL if using Teams notifications
-  - [ ] Format: `https://contoso.webhook.office.com/...`
-  - [ ] Leave blank if not using Teams notifications
+- [ ] **CD_TeamsWebhook (not currently used):**
+  - [ ] This variable is **not referenced by any flow action** — Teams notifications use the `shared_teams` connector (`PostMessageToConversation`), not incoming webhooks
+  - [ ] Leave blank; setting a value has no effect
+  - [ ] Retained in the schema for potential future webhook-based integration
 
 ### Complete Import
 
@@ -213,9 +213,10 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
   - [ ] Enter: `https://your-org.crm.dynamics.com`
   - [ ] No trailing slash
   - [ ] Use actual environment URL from Power Platform admin center
+  - [ ] **Note:** This is a Power BI template parameter, distinct from the deprecated `fsi_CD_DataverseEnvironment` solution environment variable (which is unused by flows). Do not confuse the two.
 - [ ] **TenantId:**
-  - [ ] Enter Azure AD tenant ID (format: `12345678-1234-1234-1234-123456789abc`)
-  - [ ] Find in Azure Portal > Azure Active Directory > Overview
+  - [ ] Enter Microsoft Entra ID tenant ID (format: `12345678-1234-1234-1234-123456789abc`)
+  - [ ] Find in Azure Portal > Microsoft Entra ID > Overview
 - [ ] Click **Load**
 
 ### Authenticate

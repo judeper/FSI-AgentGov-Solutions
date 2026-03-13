@@ -9,7 +9,7 @@ All notable changes to the Hallucination Feedback Tracker.
 ### Added
 
 - Initial release of Hallucination Feedback Tracker
-- **Feedback Sources:**
+- **Feedback Source Schema** (specification only — collection flows not yet implemented):
   - User thumbs-down reactions
   - Supervisor rejections from FSW
   - Automated verification checks
@@ -24,7 +24,6 @@ All notable changes to the Hallucination Feedback Tracker.
   - Category clustering
   - Agent-specific patterns
   - Severity distribution
-  - Trend detection
 - **Python Scripts:**
   - `analyze_patterns.py` - Pattern detection
 - **Agent Scoring:**
