@@ -193,6 +193,13 @@ function Test-AgentSharingCompliance {
     #endregion
 
     #region Sharing Scope Classification Helpers
+    # COUPLING NOTE: Get-SharingScopeType and Get-ViolationTypeCode are tightly coupled.
+    # Get-SharingScopeType returns violation type strings that Get-ViolationTypeCode maps to
+    # Dataverse option set integers. The flow defines six violation types (100000000–100000005)
+    # but only four are detected here (UnrestrictedSharing, OrgWideAccess, ExternalSharing,
+    # SharingPolicyViolation). UNAPPROVED_GROUP (100000002) and EXCESSIVE_INDIVIDUAL (100000003)
+    # are flow-only remediation categories not produced by this script.
+    # When adding a new violation type, update BOTH functions in parallel.
 
     function Get-SharingScopeType {
         <#
@@ -280,8 +287,8 @@ function Test-AgentSharingCompliance {
             'ExternalSharing'        { return 100000004 }
             'SharingPolicyViolation' { return 100000005 }
             default {
-                Write-Warning "Unknown violation type '$ViolationType' — defaulting to EXCESSIVE_INDIVIDUAL (100000003). Add a mapping for this type."
-                return 100000003
+                Write-Warning "Unknown violation type '$ViolationType' — defaulting to POLICY_VIOLATION (100000005). Update Get-ViolationTypeCode and Get-SharingScopeType in parallel when adding new types."
+                return 100000005
             }
         }
     }
@@ -472,13 +479,19 @@ function Test-AgentSharingCompliance {
             }
 
             $queryParams = "`$select=$selectCols&`$filter=statecode eq 0"
-            $response = Invoke-RestMethod `
-                -Uri "$($botApiUrl)?$queryParams" `
-                -Headers $headers `
-                -Method Get `
-                -ErrorAction Stop
-
-            $bots = $response.value
+            $bots = [System.Collections.ArrayList]::new()
+            $nextUrl = "$($botApiUrl)?$queryParams"
+            while ($nextUrl) {
+                $response = Invoke-RestMethod `
+                    -Uri $nextUrl `
+                    -Headers $headers `
+                    -Method Get `
+                    -ErrorAction Stop
+                foreach ($record in $response.value) {
+                    [void]$bots.Add($record)
+                }
+                $nextUrl = $response.'@odata.nextLink'
+            }
         } catch {
             Write-Warning "  Could not query bots in $envName`: $($_.Exception.Message)"
             Write-Warning "  Ensure the service principal has Dataverse read access on the bot table."

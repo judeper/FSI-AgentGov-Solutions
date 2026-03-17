@@ -88,7 +88,7 @@ if (-not $flowJson) {
     exit 1
 }
 
-$flowName = $flowJson.properties.displayName ?? "UASD-Expiration-Monitor-Check-Exceptions"
+$flowName = $flowJson.properties.displayName ?? "UASD-Exception-Expiration-Monitor"
 Write-Host "  Flow: $flowName"
 
 # --- Check Existing ---
