@@ -175,6 +175,7 @@ Collects compliance evidence from configured sources.
 | Power Platform Admin Center | Power Platform API | Environment status |
 | Microsoft Entra ID | Graph API | Conditional Access policy status |
 | Purview Audit Log | Office 365 Management API | Compliance events |
+| Exchange Online | Graph API (via Get-ExchangeComplianceData.ps1) | Forwarding rules, DLP alerts, mailbox access |
 
 ### Logic
 
@@ -214,6 +215,14 @@ Authorization: Bearer {token}
 GET https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies
 Authorization: Bearer {token}
 ```
+
+**Exchange Online — External Forwarding Rules**
+```http
+GET https://graph.microsoft.com/v1.0/users/{id}/mailFolders/inbox/messageRules
+Authorization: Bearer {token}
+```
+
+> **Note:** For comprehensive Exchange evidence collection, use `Get-ExchangeComplianceData.ps1` (in `scripts/`) which handles pagination, retry logic, and multi-signal aggregation. The CD-EvidenceCollector flow can invoke the script output JSON via a scheduled task or import the evidence file directly.
 
 ---
 

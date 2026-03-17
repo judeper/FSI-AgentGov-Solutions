@@ -264,6 +264,31 @@ Evidence items linked to assessments for audit purposes.
 
 ---
 
+## Exchange Online Evidence Integration
+
+The `Get-ExchangeComplianceData.ps1` script produces a JSON evidence file that maps to the existing schema as follows:
+
+### Mapping to fsi_complianceevidence
+
+| Exchange Signal | fsi_evidencetype | Suggested Control Mapping |
+|----------------|------------------|--------------------------|
+| External forwarding rules | 2 (Configuration Export) | 3.3, 1.5 |
+| DLP policy alerts | 3 (Audit Log) | 3.3, 1.8 |
+| Inactive shared mailboxes | 2 (Configuration Export) | 3.1 |
+| External DL membership | 2 (Configuration Export) | 3.3, 3.8 |
+
+### Import Workflow
+
+1. Run `Get-ExchangeComplianceData.ps1` to generate the JSON evidence file
+2. Import evidence records into `fsi_complianceevidence` via:
+   - Power Automate flow (recommended — use CD-EvidenceCollector when implemented)
+   - Dataverse Web API (`POST /api/data/v9.2/fsi_complianceevidences`)
+   - Power Apps manual import
+3. Link each evidence record to the appropriate `fsi_controlassessment` via `fsi_controlassessmentid`
+4. The `fsi_hash` column should be populated with the `contentHash` from the report metadata for integrity verification
+
+---
+
 ## Security Roles
 
 ### CD Viewer

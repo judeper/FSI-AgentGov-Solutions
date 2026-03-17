@@ -11,11 +11,12 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations per zone policy | v1.0.0 | 1.23 |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.0 | 3.8 |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | v1.0.0 | 4.3, 1.4, 1.5 |
 | [Agent Observability Foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.0 | — |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.0 | 1.18, 2.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.0 | 1.7 |
 | [COI Testing Framework](./coi-testing/) | Conflict of interest testing for agent recommendations | v1.0.0 | 2.18, 2.11, 2.5 |
-| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls with zone-based filtering | v1.0.0 | 3.3, 3.1, 3.2 |
+| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls with Exchange coverage | v1.0.0 | 3.3, 3.1, 3.2 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.0 | 1.11, 1.23, 1.18 |
 | [Content Moderation Governance Monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.0 | 1.8, 1.14 |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | v1.0.0 | 3.2 |

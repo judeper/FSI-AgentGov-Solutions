@@ -38,13 +38,16 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 │ Assessment   │ Score        │ Exception     │ Evidence          │
 └──────────────┴──────────────┴───────────────┴───────────────────┘
                               ▲
-                              │ Power Automate Flows
+                              │ Power Automate Flows + Scripts
                               │
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
 │ Purview     │ Power Platform│ Environment   │ Supervision       │
 │ Compliance  │ Admin Center  │ Lifecycle     │ Workflow          │
 │ Manager     │               │ Management    │                   │
-└─────────────┴───────────────┴───────────────┴───────────────────┘
+├─────────────┴───────────────┴───────────────┴───────────────────┤
+│ Exchange Online (Get-ExchangeComplianceData.ps1)                │
+│ → Forwarding rules, DLP alerts, mailbox access, DL membership  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Data Sources
@@ -56,6 +59,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 | **Environment Lifecycle Management** | Zone classification, governance status | Real-time |
 | **FINRA Supervision Workflow** | Queue metrics, review completion rates | Hourly |
 | **Purview Audit Log** | Compliance-relevant events | Daily |
+| **Exchange Online** | External forwarding rules, DLP alerts, shared mailbox access, distribution list risks | Daily |
 
 ## Prerequisites
 
@@ -83,6 +87,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 |----------|---------|---------|
 | Environment Lifecycle Management | v1.1.0+ | Zone classification data |
 | FINRA Supervision Workflow | v1.0.0+ | Supervision metrics (optional) |
+| Get-ExchangeComplianceData.ps1 | v1.0.0 | Exchange compliance signal collection (included) |
 
 ## Quick Start
 
@@ -159,6 +164,33 @@ See [Deployment Checklist](docs/deployment-checklist.md) for complete validation
 | [Power BI Template Spec](docs/power-bi-template-spec.md) | Complete .pbit template creation instructions |
 | [DAX Measures](docs/dax-measures.md) | Calculation logic for compliance metrics |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+
+### Exchange Compliance Data Collection
+
+The `Get-ExchangeComplianceData.ps1` script collects Exchange Online compliance signals via Microsoft Graph API. Run it as a scheduled task or on-demand to feed Exchange evidence into the dashboard.
+
+```powershell
+# Interactive mode
+.\scripts\Get-ExchangeComplianceData.ps1 -Interactive
+
+# Service principal mode
+.\scripts\Get-ExchangeComplianceData.ps1 -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "00000000-0000-0000-0000-000000000001" `
+    -CertificateThumbprint "ABC123DEF456"
+```
+
+**Data collected:**
+
+| Signal | Risk Level | Description |
+|--------|-----------|-------------|
+| External forwarding rules | HIGH | Inbox rules forwarding to external addresses — data exfiltration vector |
+| DLP policy alerts | MEDIUM-HIGH | DLP policy matches on Exchange workload |
+| Inactive shared mailboxes | MEDIUM | Shared mailboxes with broad access and no recent sign-in activity |
+| External distribution list members | MEDIUM | Mail-enabled groups with guest or external members |
+
+**Configuration:** See `templates/exchange-config.sample.json` for scan scope, risk thresholds, and domain allow-list settings.
+
+**Output:** JSON evidence file at `./output/exchange-compliance-report.json` — import into `fsi_complianceevidence` via Power Automate or Dataverse API for dashboard integration.
 
 ## Dashboard Pages
 

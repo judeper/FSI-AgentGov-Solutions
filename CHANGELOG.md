@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Agent Knowledge Source Scanner v1.0.0** — New solution for item-level permission scanning in agent knowledge source SharePoint libraries
+  - `Get-KnowledgeSourceItemPermissions.ps1` — PnP PowerShell script enumerating item-level permissions with agent-context-aware risk scoring (CRITICAL/HIGH/MEDIUM/LOW)
+  - Sensitivity label cross-reference with configurable tier mapping
+  - Agent user scope comparison via security group or UPN list
+  - CSV/JSON input support for multi-library scanning from prior scan output
+  - `item-scope-config.sample.json` configuration template
+- **Compliance Dashboard — Exchange Coverage** — Extended with Exchange Online compliance signal collection
+  - `Get-ExchangeComplianceData.ps1` — Graph API script collecting external forwarding rules, DLP alerts, shared mailbox access, distribution list external membership
+  - `exchange-config.sample.json` configuration template with scan scope, risk thresholds, domain allow-list
+  - Updated architecture diagram, data sources, and documentation to include Exchange as a data source
+  - Updated dataverse-schema.md with Exchange evidence mapping to fsi_complianceevidence
+  - Updated flow-configuration.md with Exchange API calls for CD-EvidenceCollector planned flow
+
 - **Action Confirmation Auditor** — New `Test-UserDefinedActionMessages.ps1` governance script validates the Copilot Studio "User-Defined Action Messages" toggle per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional). Supports Control 1.23.
 - **Generative AI Config Auditor** — Two new compliance rules:
   - Rule 5 (`UnauthorizedModelKnowledge`): Validates "Use AI general knowledge" / Model Knowledge toggle against zone policy (Zone 3 disabled, Zone 2 requires approval, Zone 1 allowed)
