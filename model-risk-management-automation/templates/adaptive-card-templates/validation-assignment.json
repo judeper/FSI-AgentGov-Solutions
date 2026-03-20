@@ -1,0 +1,51 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "📋 Validation Cycle — Assign Independent Validator",
+          "weight": "Bolder",
+          "size": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent:", "value": "${agentName} (${modelId})" },
+        { "title": "MRM Tier:", "value": "${mrmTier}" },
+        { "title": "Risk Rating:", "value": "${riskRating}" },
+        { "title": "Validation Type:", "value": "${validationType}" },
+        { "title": "Assignment SLA:", "value": "${assignmentSLADeadline}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Enter the UPN of the independent validator to assign. The validator must satisfy dual independence: different UPN AND different department from the agent owner (${ownerUpn}, ${ownerDepartment}).",
+      "wrap": true
+    },
+    {
+      "type": "Input.Text",
+      "id": "validatorUPN",
+      "placeholder": "validator@contoso.com",
+      "label": "Validator UPN"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Assign Validator",
+      "data": {
+        "action": "assignValidator",
+        "cycleId": "${cycleId}",
+        "modelId": "${modelId}"
+      }
+    }
+  ]
+}

@@ -156,6 +156,15 @@ nav:
         - Power BI Setup: solutions/finra-supervision-workflow/power-bi-setup.md
         - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
         - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
+      - Model Risk Management Automation:
+        - solutions/model-risk-management-automation/index.md
+        - Prerequisites: solutions/model-risk-management-automation/prerequisites.md
+        - Dataverse Schema: solutions/model-risk-management-automation/dataverse-schema.md
+        - Flow Configuration: solutions/model-risk-management-automation/flow-configuration.md
+        - Power Apps: solutions/model-risk-management-automation/power-apps-configuration.md
+        - Power BI Dashboard: solutions/model-risk-management-automation/powerbi-dashboard.md
+        - SharePoint Setup: solutions/model-risk-management-automation/sharepoint-setup.md
+        - Troubleshooting: solutions/model-risk-management-automation/troubleshooting.md
       - Segregation Detector:
         - solutions/segregation-detector/index.md
         - Prerequisites: solutions/segregation-detector/prerequisites.md
