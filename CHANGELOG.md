@@ -10,7 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- **Agent Knowledge Source Scanner v1.0.0** — New solution for item-level permission scanning in agent knowledge source SharePoint libraries
+- **Model Risk Management Automation v1.0.0** — Automated OCC 2011-12 / SR 11-7 model risk management for AI agents
+  - Dataverse schema: 6 tables — fsi_modelinventory (with alternate key), fsi_mrmriskrating, fsi_validationcycle, fsi_validationfinding, fsi_monitoringrecord, fsi_mrmcomplianceevent (LTR-enabled immutable)
+  - Python deployment: mrm_client.py, create_mrm_dataverse_schema.py, create_mrm_environment_variables.py, create_mrm_connection_references.py, deploy.py
+  - PowerShell scripts: Deploy-MRM-Baseline.ps1, Validate-MRM-Compliance.ps1
+  - Power Automate flows (documentation-only): inventory sync, risk scoring, validation workflow, performance monitoring, Agent Card generation, revalidation trigger
+  - Power Apps (documentation-only): MRM Submission Portal (Canvas, 4 screens), Validation Workbench (Model-Driven)
+  - Power BI dashboard (documentation-only): MRM Compliance Dashboard with 5 report pages
+  - SharePoint: Agent Card Library with Word template + JSON fallback
+  - Templates: 4 Adaptive Card v1.2 templates, sample config, Agent Card content structure
+  - Feature-flagged via IsMRMAutomationEnabled; depends on agent-registry-automation
+  - Supports Controls 2.6 (primary), 2.5, 2.9, 2.11, 2.13, 3.1, 1.2
+- **Agent Knowledge Source Scanner v1.0.0**— New solution for item-level permission scanning in agent knowledge source SharePoint libraries
   - `Get-KnowledgeSourceItemPermissions.ps1` — PnP PowerShell script enumerating item-level permissions with agent-context-aware risk scoring (CRITICAL/HIGH/MEDIUM/LOW)
   - Sensitivity label cross-reference with configurable tier mapping
   - Agent user scope comparison via security group or UPN list

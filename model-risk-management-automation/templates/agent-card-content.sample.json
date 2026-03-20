@@ -1,0 +1,41 @@
+{
+  "agentCardVersion": "v1.0",
+  "agentCardFormat": "Word",
+  "generatedDate": "2026-03-20T05:00:00Z",
+  "modelId": "MRM-2026-00001",
+  "modelName": "Loan Officer Decision Assistant",
+  "mrmTier": "Tier 2 - Enhanced MRM",
+  "riskRating": "Medium",
+  "validationStatus": "Validated",
+  "lastValidatedDate": "2026-02-15T14:30:00Z",
+  "nextValidationDue": "2028-02-15T00:00:00Z",
+  "businessFunction": "Assists licensed loan officers with credit decision recommendations by analyzing applicant financial profiles against institution lending criteria. Does not make autonomous lending decisions — all outputs require human review and approval before submission to the loan origination system.",
+  "underlyingModel": "GPT-5 Chat",
+  "modelProvider": "Microsoft",
+  "decisionOutputType": "Decision Support",
+  "dataInputs": "Applicant financial profiles including income, credit score, employment history, and debt-to-income ratio. Internal lending policy documents. Historical loan performance data (aggregated, no PII). Rate sheets and product eligibility matrices.",
+  "knownLimitations": "1. Model outputs are probabilistic — recommendations may vary across identical inputs. 2. Training data cutoff may not reflect current market conditions. 3. Model has no access to real-time rate feeds. 4. Cannot evaluate non-standard loan products not represented in training data. 5. Model performance may degrade for applicant profiles underrepresented in historical data.",
+  "stochasticBehaviorAcknowledgment": "This agent uses a probabilistic foundation model. Outputs may vary across identical inputs. This is documented per Interagency RFI on AI (2021) confirming OCC 2011-12 applies to LLM-based systems.",
+  "intendedUsers": "Licensed loan officers — Zone 2",
+  "ownerUPN": "jsmith@contoso.com",
+  "ownerDepartment": "Consumer Lending",
+  "governanceZone": "Zone 2",
+  "riskScoring": {
+    "totalScore": 19,
+    "compositeRating": "Medium",
+    "factors": {
+      "decisionImpact": 3,
+      "dataSensitivity": 5,
+      "userPopulation": 3,
+      "modelComplexity": 4,
+      "explainability": 4,
+      "regulatoryExposure": 3,
+      "changeFrequency": 1
+    }
+  },
+  "scoringRationale": "Automated risk scoring on 2026-01-15. Score: 19/35 (Medium). MRM Tier assigned: Tier 2 - Enhanced MRM. Top scoring factors: Data Sensitivity (5/5 — processes applicant PII including credit scores and income) and Model Complexity (4/5 — GPT-5 Chat via Microsoft). Data sensitivity score confirmed by MRM officer review. Tier 2 assignment reflects Decision Support output type with Medium composite rating.",
+  "zoneWeightRationale": "fsi_governancezone drives both fsi_score_userpopulation and fsi_score_regulatoryexposure using identical mappings (Zone 3=5, Zone 2=3, Zone 1=1). This double weighting is intentional: governance zone is the strongest single governance signal available at inventory time, reflecting both the breadth of user exposure and the intensity of regulatory examination applicable to that zone. This design choice is disclosed to examiners in this field on every scoring record.",
+  "sr117Pillar1Evidence": "Agent Card documents model purpose, design rationale, data inputs, and known limitations per SR 11-7 Pillar 1 requirements. Stochastic behavior acknowledged per Interagency RFI on AI (2021).",
+  "sr117Pillar2Evidence": "Validation status: Validated. Last validated: 2026-02-15. Independent validator from Risk Management department confirmed conceptual soundness and ongoing monitoring adequacy.",
+  "sr117Pillar3Evidence": "Risk rating: Medium. MRM Tier: Tier 2. Governance zone: Zone 2. Three-lines-of-defense roles assigned: owner (Consumer Lending), MRM officer (Model Risk Management), auditor (Internal Audit)."
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "metadata": {
+    "solution": "model-risk-management-automation",
+    "version": "1.0.0",
+    "description": "Sample configuration for MRM Automation environment variables"
+  },
+  "featureFlags": {
+    "IsMRMAutomationEnabled": "false",
+    "IsAgent365LifecycleEnabled": "false"
+  },
+  "notificationTargets": {
+    "GovernanceTeamEmail": "mrm-governance@contoso.com",
+    "EscalationApproverUPN": "mrm-escalation@contoso.com",
+    "FlowAdministrators": "flow-admins@contoso.com"
+  },
+  "infrastructure": {
+    "DataverseEnvironmentUrl": "https://contoso.crm.dynamics.com",
+    "MRMSiteUrl": "https://contoso.sharepoint.com/sites/MRM",
+    "MRMAgentCardLibrary": "Agent Cards",
+    "TenantId": "00000000-0000-0000-0000-000000000000",
+    "FSI_FRAMEWORK_VERSION": "FSI-AgentGov-v1.1"
+  },
+  "monitoringThresholds": {
+    "ErrorRate_Warning": 5,
+    "ErrorRate_Revalidation": 15,
+    "EscalationRate_Warning": 20,
+    "EscalationRate_Revalidation": 40,
+    "OutOfScope_Warning": 10,
+    "OutOfScope_Revalidation": 50
+  },
+  "validationSLAs": {
+    "Tier1": {
+      "Assignment_BusinessDays": 5,
+      "Findings_BusinessDays": 30,
+      "Remediation_BusinessDays": 15,
+      "Total_BusinessDays": 60
+    },
+    "Tier2": {
+      "Assignment_BusinessDays": 5,
+      "Findings_BusinessDays": 20,
+      "Remediation_BusinessDays": 10,
+      "Total_BusinessDays": 40
+    },
+    "Tier3": {
+      "Assignment_BusinessDays": 5,
+      "Findings_BusinessDays": 10,
+      "Remediation_BusinessDays": 10,
+      "Total_BusinessDays": 30
+    }
+  },
+  "materialChangeDetection": {
+    "TextDiffThreshold_Percent": 30,
+    "ValidationApproachingDays_Lookahead": 30
+  },
+  "notes": {
+    "1_featureFlags": "Set IsMRMAutomationEnabled to 'true' only after completing DELIVERY-CHECKLIST.md",
+    "2_entitySetNames": "Confirm all Dataverse entity set names post-deployment — see DELIVERY-CHECKLIST.md",
+    "3_optionSetValues": "Confirm OptionSet integer values against deployed solution XML",
+    "4_prerequisite": "agent-registry-automation must be deployed before activating MRM flows"
+  }
+}

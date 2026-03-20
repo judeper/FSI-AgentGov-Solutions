@@ -1,0 +1,65 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🔄 Revalidation Required — Approval Request",
+          "weight": "Bolder",
+          "size": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent:", "value": "${agentName} (${modelId})" },
+        { "title": "Reason:", "value": "${revalidationReason}" },
+        { "title": "Current Risk Rating:", "value": "${currentRiskRating}" },
+        { "title": "MRM Tier:", "value": "${mrmTier}" },
+        { "title": "Last Validated:", "value": "${lastValidatedDate}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Trigger Details:",
+      "weight": "Bolder"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${triggerDetails}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Confirm to open a new Material Change validation cycle. Deferral is logged as a compliance event and does not clear the material change flag.",
+      "wrap": true,
+      "isSubtle": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Approve — Open Validation Cycle",
+      "data": {
+        "action": "approveRevalidation",
+        "modelId": "${modelId}",
+        "reason": "${revalidationReason}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Defer — Monitor Only",
+      "data": {
+        "action": "deferRevalidation",
+        "modelId": "${modelId}",
+        "reason": "${revalidationReason}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🔍 MRM Risk Scoring Complete",
+          "weight": "Bolder",
+          "size": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent:", "value": "${agentName} (${modelId})" },
+        { "title": "Risk Score:", "value": "${totalScore}/35 — ${compositeRating}" },
+        { "title": "MRM Tier:", "value": "${mrmTier}" },
+        { "title": "Validation Cadence:", "value": "${validationCadence}" },
+        { "title": "Next Validation Due:", "value": "${nextValidationDue}" },
+        { "title": "Top Factors:", "value": "${topFactors}" },
+        { "title": "Data Sensitivity Default:", "value": "${dataSensitivityDefaulted}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Review and confirm or override the automated scoring in the MRM Submission Portal.",
+      "wrap": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Open MRM Submission Portal",
+      "data": {
+        "action": "openPortal",
+        "modelId": "${modelId}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Acknowledge",
+      "data": {
+        "action": "acknowledge",
+        "modelId": "${modelId}"
+      }
+    }
+  ]
+}

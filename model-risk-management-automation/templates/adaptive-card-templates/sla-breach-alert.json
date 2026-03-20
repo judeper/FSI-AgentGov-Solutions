@@ -1,0 +1,58 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "Container",
+      "style": "attention",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚠️ Validation SLA Breach Alert",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention"
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent:", "value": "${agentName} (${modelId})" },
+        { "title": "MRM Tier:", "value": "${mrmTier}" },
+        { "title": "Cycle ID:", "value": "${cycleId}" },
+        { "title": "Breached Phase:", "value": "${breachedPhase}" },
+        { "title": "SLA Deadline:", "value": "${slaDeadline}" },
+        { "title": "Current Status:", "value": "${currentStatus}" },
+        { "title": "Days Overdue:", "value": "${daysOverdue}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "This validation cycle has exceeded its SLA deadline. Escalation target: ${escalationTarget}.",
+      "wrap": true,
+      "color": "Attention"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Acknowledge & Investigate",
+      "data": {
+        "action": "acknowledgeBreach",
+        "cycleId": "${cycleId}",
+        "modelId": "${modelId}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Escalate to Senior Management",
+      "data": {
+        "action": "escalate",
+        "cycleId": "${cycleId}",
+        "modelId": "${modelId}"
+      }
+    }
+  ]
+}
