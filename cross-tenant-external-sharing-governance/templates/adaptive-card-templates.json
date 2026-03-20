@@ -1,0 +1,850 @@
+{
+  "_comment": "Adaptive Card v1.2 templates for Cross-Tenant External Sharing Governance Teams notifications. All cards use Action.Submit for compatibility with Power Automate approval flows.",
+
+  "dailyScanSummary": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "ColumnSet",
+        "columns": [
+          {
+            "type": "Column",
+            "width": "auto",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "🛡️",
+                "size": "Large"
+              }
+            ]
+          },
+          {
+            "type": "Column",
+            "width": "stretch",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "Cross-Tenant Sharing — Daily Scan Summary",
+                "weight": "Bolder",
+                "size": "Medium",
+                "wrap": true
+              },
+              {
+                "type": "TextBlock",
+                "text": "${scanDate}",
+                "isSubtle": true,
+                "spacing": "None"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "Container",
+        "style": "${if(criticalCount > 0, 'attention', 'good')}",
+        "items": [
+          {
+            "type": "ColumnSet",
+            "columns": [
+              {
+                "type": "Column",
+                "width": "1",
+                "items": [
+                  {
+                    "type": "TextBlock",
+                    "text": "${totalFindings}",
+                    "size": "ExtraLarge",
+                    "weight": "Bolder",
+                    "horizontalAlignment": "Center"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "Total Findings",
+                    "horizontalAlignment": "Center",
+                    "spacing": "None",
+                    "isSubtle": true
+                  }
+                ]
+              },
+              {
+                "type": "Column",
+                "width": "1",
+                "items": [
+                  {
+                    "type": "TextBlock",
+                    "text": "${criticalCount}",
+                    "size": "ExtraLarge",
+                    "weight": "Bolder",
+                    "horizontalAlignment": "Center",
+                    "color": "${if(criticalCount > 0, 'Attention', 'Default')}"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "Critical",
+                    "horizontalAlignment": "Center",
+                    "spacing": "None",
+                    "isSubtle": true
+                  }
+                ]
+              },
+              {
+                "type": "Column",
+                "width": "1",
+                "items": [
+                  {
+                    "type": "TextBlock",
+                    "text": "${highCount}",
+                    "size": "ExtraLarge",
+                    "weight": "Bolder",
+                    "horizontalAlignment": "Center",
+                    "color": "${if(highCount > 0, 'Warning', 'Default')}"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "High",
+                    "horizontalAlignment": "Center",
+                    "spacing": "None",
+                    "isSubtle": true
+                  }
+                ]
+              },
+              {
+                "type": "Column",
+                "width": "1",
+                "items": [
+                  {
+                    "type": "TextBlock",
+                    "text": "${newTenants}",
+                    "size": "ExtraLarge",
+                    "weight": "Bolder",
+                    "horizontalAlignment": "Center"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "New Tenants",
+                    "horizontalAlignment": "Center",
+                    "spacing": "None",
+                    "isSubtle": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Scan Layers Completed",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "FactSet",
+        "facts": [
+          {
+            "title": "PP Tenant Isolation",
+            "value": "${ppIsolationStatus}"
+          },
+          {
+            "title": "Entra CTA Policies",
+            "value": "${entraCTAStatus}"
+          },
+          {
+            "title": "Agent Sharing Audit",
+            "value": "${agentSharingStatus}"
+          },
+          {
+            "title": "Guest User Audit",
+            "value": "${guestUserStatus}"
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Top Findings",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "Container",
+        "items": [
+          {
+            "type": "TextBlock",
+            "text": "${topFindingsSummary}",
+            "wrap": true,
+            "isSubtle": true
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.OpenUrl",
+        "title": "Open Compliance Dashboard",
+        "url": "${dashboardUrl}"
+      },
+      {
+        "type": "Action.OpenUrl",
+        "title": "View All Findings",
+        "url": "${findingsViewUrl}"
+      }
+    ]
+  },
+
+  "remediationApprovalRequest": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "TextBlock",
+        "text": "⚠️ Remediation Approval Required",
+        "weight": "Bolder",
+        "size": "Medium",
+        "wrap": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "A cross-tenant sharing violation requires remediation approval.",
+        "wrap": true,
+        "spacing": "Small"
+      },
+      {
+        "type": "Container",
+        "style": "${if(severity == 'Critical', 'attention', if(severity == 'High', 'warning', 'emphasis'))}",
+        "items": [
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Finding Type",
+                "value": "${findingType}"
+              },
+              {
+                "title": "Severity",
+                "value": "${severity}"
+              },
+              {
+                "title": "Agent",
+                "value": "${agentName}"
+              },
+              {
+                "title": "Environment",
+                "value": "${environmentName}"
+              },
+              {
+                "title": "External Tenant",
+                "value": "${externalTenantDomain} (${externalTenantId})"
+              },
+              {
+                "title": "Detected",
+                "value": "${detectedAt}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Proposed Remediation",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${remediationAction}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Impact Assessment",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${impactAssessment}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Approver Comments",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "Input.Text",
+        "id": "approverComments",
+        "placeholder": "Enter approval or rejection comments (required for rejection)...",
+        "isMultiline": true
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.Submit",
+        "title": "✅ Approve Remediation",
+        "data": {
+          "action": "approve",
+          "findingId": "${findingId}",
+          "remediationType": "${remediationType}"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "❌ Reject",
+        "data": {
+          "action": "reject",
+          "findingId": "${findingId}",
+          "remediationType": "${remediationType}"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "⏫ Escalate to Committee",
+        "data": {
+          "action": "escalate",
+          "findingId": "${findingId}",
+          "remediationType": "${remediationType}"
+        }
+      }
+    ]
+  },
+
+  "annualReviewReminder": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "TextBlock",
+        "text": "📅 Annual Tenant Review Due",
+        "weight": "Bolder",
+        "size": "Medium",
+        "wrap": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "The following approved external tenant requires annual review. Failure to complete the review by the due date will result in automatic suspension.",
+        "wrap": true,
+        "spacing": "Small"
+      },
+      {
+        "type": "Container",
+        "style": "${if(daysUntilDue <= 7, 'attention', if(daysUntilDue <= 30, 'warning', 'emphasis'))}",
+        "items": [
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Tenant",
+                "value": "${tenantName}"
+              },
+              {
+                "title": "Domain",
+                "value": "${primaryDomain}"
+              },
+              {
+                "title": "Tenant ID",
+                "value": "${tenantId}"
+              },
+              {
+                "title": "Relationship",
+                "value": "${relationshipType}"
+              },
+              {
+                "title": "Risk Tier",
+                "value": "${riskTier}"
+              },
+              {
+                "title": "Review Due",
+                "value": "${annualReviewDue}"
+              },
+              {
+                "title": "Days Remaining",
+                "value": "${daysUntilDue}"
+              },
+              {
+                "title": "Last Review",
+                "value": "${lastReviewDate}"
+              },
+              {
+                "title": "Requesting Team",
+                "value": "${requestingTeam}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Permitted Access Scope",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${permittedAccessScope}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Review Checklist",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "☐ Business justification still valid\n☐ Access scope still appropriate\n☐ Security attestation current\n☐ No unresolved findings for this tenant\n☐ Relationship type unchanged",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Review Notes",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "Input.Text",
+        "id": "reviewNotes",
+        "placeholder": "Document review findings and any scope changes...",
+        "isMultiline": true
+      },
+      {
+        "type": "Input.ChoiceSet",
+        "id": "reviewOutcome",
+        "label": "Review Outcome",
+        "isRequired": true,
+        "choices": [
+          {
+            "title": "Renewed — No Changes",
+            "value": "renewed"
+          },
+          {
+            "title": "Renewed — Scope Modified",
+            "value": "renewed_modified"
+          },
+          {
+            "title": "Suspend — Pending Further Review",
+            "value": "suspend"
+          },
+          {
+            "title": "Revoke — Access No Longer Required",
+            "value": "revoke"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.Submit",
+        "title": "Submit Review",
+        "data": {
+          "action": "submitReview",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}"
+        }
+      }
+    ]
+  },
+
+  "securityAttestationRequest": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "TextBlock",
+        "text": "🔒 Security Attestation Required",
+        "weight": "Bolder",
+        "size": "Medium",
+        "wrap": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "A new external tenant onboarding request requires security team attestation before governance committee review.",
+        "wrap": true,
+        "spacing": "Small"
+      },
+      {
+        "type": "Container",
+        "style": "emphasis",
+        "items": [
+          {
+            "type": "TextBlock",
+            "text": "Tenant Details",
+            "weight": "Bolder"
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Tenant Name",
+                "value": "${tenantName}"
+              },
+              {
+                "title": "Domain",
+                "value": "${primaryDomain}"
+              },
+              {
+                "title": "Tenant ID",
+                "value": "${tenantId}"
+              },
+              {
+                "title": "Relationship Type",
+                "value": "${relationshipType}"
+              },
+              {
+                "title": "Risk Tier",
+                "value": "${riskTier}"
+              },
+              {
+                "title": "Requesting Team",
+                "value": "${requestingTeam}"
+              },
+              {
+                "title": "Requested By",
+                "value": "${requestedBy}"
+              },
+              {
+                "title": "Requested On",
+                "value": "${requestedOn}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Business Justification",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${businessJustification}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Requested Access Scope",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${permittedAccessScope}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Requested Configuration",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "FactSet",
+        "facts": [
+          {
+            "title": "PP Isolation Direction",
+            "value": "${ppIsolationDirection}"
+          },
+          {
+            "title": "Entra B2B Collaboration",
+            "value": "${entraB2BCollaboration}"
+          },
+          {
+            "title": "Entra B2B Direct Connect",
+            "value": "${entraB2BDirectConnect}"
+          },
+          {
+            "title": "Agent Sharing",
+            "value": "${agentSharePermitted}"
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Security Assessment",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Confirm the following before attesting:",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "☐ External tenant identity verified via official channels\n☐ Requested access scope is proportionate to business need\n☐ Risk tier classification reviewed and appropriate\n☐ No active security incidents involving this tenant\n☐ Data classification of shared resources reviewed",
+        "wrap": true,
+        "spacing": "Small"
+      },
+      {
+        "type": "Input.Text",
+        "id": "attestationNotes",
+        "placeholder": "Document security assessment findings...",
+        "isMultiline": true
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.Submit",
+        "title": "✅ Attest — Security Approved",
+        "data": {
+          "action": "attest_approved",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "securityAttestation"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "❌ Attest — Security Denied",
+        "data": {
+          "action": "attest_denied",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "securityAttestation"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "🔄 Request More Information",
+        "data": {
+          "action": "attest_moreinfo",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "securityAttestation"
+        }
+      }
+    ]
+  },
+
+  "governanceCommitteeApproval": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "TextBlock",
+        "text": "🏛️ Governance Committee Approval Required",
+        "weight": "Bolder",
+        "size": "Medium",
+        "wrap": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "An external tenant onboarding request has passed security attestation and requires governance committee approval to proceed.",
+        "wrap": true,
+        "spacing": "Small"
+      },
+      {
+        "type": "Container",
+        "style": "${if(riskTier == 'Critical' || riskTier == 'High', 'attention', 'emphasis')}",
+        "items": [
+          {
+            "type": "TextBlock",
+            "text": "Tenant Summary",
+            "weight": "Bolder"
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              {
+                "title": "Tenant Name",
+                "value": "${tenantName}"
+              },
+              {
+                "title": "Domain",
+                "value": "${primaryDomain}"
+              },
+              {
+                "title": "Tenant ID",
+                "value": "${tenantId}"
+              },
+              {
+                "title": "Relationship Type",
+                "value": "${relationshipType}"
+              },
+              {
+                "title": "Risk Tier",
+                "value": "${riskTier}"
+              },
+              {
+                "title": "Requesting Team",
+                "value": "${requestingTeam}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Security Attestation",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "FactSet",
+        "facts": [
+          {
+            "title": "Attested By",
+            "value": "${securityAttester}"
+          },
+          {
+            "title": "Attested On",
+            "value": "${attestationDate}"
+          },
+          {
+            "title": "Attestation Outcome",
+            "value": "✅ Security Approved"
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Security Notes",
+        "weight": "Bolder",
+        "spacing": "Small"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${attestationNotes}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Requested Configuration",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "FactSet",
+        "facts": [
+          {
+            "title": "Access Scope",
+            "value": "${permittedAccessScope}"
+          },
+          {
+            "title": "PP Isolation Direction",
+            "value": "${ppIsolationDirection}"
+          },
+          {
+            "title": "B2B Collaboration",
+            "value": "${entraB2BCollaboration}"
+          },
+          {
+            "title": "B2B Direct Connect",
+            "value": "${entraB2BDirectConnect}"
+          },
+          {
+            "title": "Agent Sharing",
+            "value": "${agentSharePermitted}"
+          }
+        ]
+      },
+      {
+        "type": "TextBlock",
+        "text": "Business Justification",
+        "weight": "Bolder",
+        "spacing": "Medium"
+      },
+      {
+        "type": "TextBlock",
+        "text": "${businessJustification}",
+        "wrap": true,
+        "isSubtle": true
+      },
+      {
+        "type": "TextBlock",
+        "text": "Committee Decision",
+        "weight": "Bolder",
+        "spacing": "Medium",
+        "separator": true
+      },
+      {
+        "type": "Input.Text",
+        "id": "committeeComments",
+        "placeholder": "Document committee decision rationale (required)...",
+        "isMultiline": true
+      },
+      {
+        "type": "Input.ChoiceSet",
+        "id": "approvalConditions",
+        "label": "Approval Conditions (if approving)",
+        "isMultiSelect": true,
+        "choices": [
+          {
+            "title": "No additional conditions",
+            "value": "none"
+          },
+          {
+            "title": "Quarterly review required (override annual)",
+            "value": "quarterly_review"
+          },
+          {
+            "title": "Scope restricted from request",
+            "value": "scope_restricted"
+          },
+          {
+            "title": "Time-limited approval (6 months)",
+            "value": "time_limited"
+          },
+          {
+            "title": "Enhanced monitoring required",
+            "value": "enhanced_monitoring"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.Submit",
+        "title": "✅ Approve Onboarding",
+        "data": {
+          "action": "committee_approve",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "governanceApproval"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "❌ Reject Onboarding",
+        "data": {
+          "action": "committee_reject",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "governanceApproval"
+        }
+      },
+      {
+        "type": "Action.Submit",
+        "title": "⏸️ Defer Decision",
+        "data": {
+          "action": "committee_defer",
+          "tenantRecordId": "${tenantRecordId}",
+          "tenantId": "${tenantId}",
+          "step": "governanceApproval"
+        }
+      }
+    ]
+  }
+}
