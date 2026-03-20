@@ -6,7 +6,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **28 solutions** covering 40+ controls across all 4 pillars
+- **30 solutions** covering 40+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
@@ -20,6 +20,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | agent-access-monitor | v1.0.0 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
 | agent-knowledge-source-scanner | v1.0.0 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
+| agent-registry-automation | v1.0.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.1.0 | — | Foundational observability infrastructure for agent monitoring |
 | agent-sharing-access-restriction-detector | v1.0.0 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.0 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
@@ -38,7 +39,8 @@ This file provides guidance for autonomous AI agents working on this repository.
 | hallucination-tracker | v1.0.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | inactivity-timeout-enforcement | v1.0.0 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
 | message-center-monitor | v2.1.1 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
-| mime-type-restrictions | v1.0.0 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | Zone-based MIME type configuration with server-side validation |
+| model-risk-management-automation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
+| mime-type-restrictions| v1.0.0 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.0.8 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.0.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.1.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |

@@ -4,7 +4,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-## Available Solutions (29)
+## Available Solutions (30)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|

@@ -10,7 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- **Model Risk Management Automation v1.0.0** — Automated OCC 2011-12 / SR 11-7 model risk management for AI agents
+- **Cross-Tenant External Sharing Governance v1.0.0** — Three-layer cross-tenant access governance for AI agents in FSI environments
+  - Dataverse schema: 5 tables — fsi_approvedexternaltenant (allow list with alternate key), fsi_externalsharefinding (violations with composite dedup key), fsi_tenantisolationrecord (daily Layer 1 audit), fsi_entractarecord (weekly Layer 2 audit), fsi_crosstenantcomplianceevent (LTR-enabled immutable audit log)
+  - Python deployment: create_ctsg_dataverse_schema.py, create_ctsg_environment_variables.py, create_ctsg_connection_references.py, deploy.py
+  - PowerShell scripts: Deploy-CrossTenantBaseline.ps1, Validate-CrossTenantCompliance.ps1
+  - Power Automate flows (documentation-only): tenant isolation validation, external agent share detection (5-value guest detection method), Entra CTA audit, tenant onboarding (dual-approval with Expired timeout), remediation (approval-gated), annual review reminders (90/30/overdue)
+  - Two Managed Identities: MI-CrossTenantReadOnly (Flows 1-3, 6), MI-CrossTenantReadWrite (Flows 4-5)
+  - 12 environment variables including feature flag and CTA baseline configuration
+  - Templates: approved tenant sample, Adaptive Card v1.2 templates
+  - Feature-flagged via IsCrossTenantGovernanceEnabled; depends on agent-registry-automation and unrestricted-agent-sharing-detector
+  - Supports Controls 1.1, 1.18 (primary), 2.1, 2.8, 3.1, 1.11
+- **Model Risk Management Automation v1.0.0**— Automated OCC 2011-12 / SR 11-7 model risk management for AI agents
   - Dataverse schema: 6 tables — fsi_modelinventory (with alternate key), fsi_mrmriskrating, fsi_validationcycle, fsi_validationfinding, fsi_monitoringrecord, fsi_mrmcomplianceevent (LTR-enabled immutable)
   - Python deployment: mrm_client.py, create_mrm_dataverse_schema.py, create_mrm_environment_variables.py, create_mrm_connection_references.py, deploy.py
   - PowerShell scripts: Deploy-MRM-Baseline.ps1, Validate-MRM-Compliance.ps1
@@ -21,7 +31,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Templates: 4 Adaptive Card v1.2 templates, sample config, Agent Card content structure
   - Feature-flagged via IsMRMAutomationEnabled; depends on agent-registry-automation
   - Supports Controls 2.6 (primary), 2.5, 2.9, 2.11, 2.13, 3.1, 1.2
-- **Agent Knowledge Source Scanner v1.0.0**— New solution for item-level permission scanning in agent knowledge source SharePoint libraries
+- **Agent 365 Lifecycle Governance v1.1.0** — Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform
+  - Dataverse schema: 5 tables — fsi_agentlifecyclerecord (with alternate key), fsi_sponsorassignment, fsi_accessreview, fsi_deactivationrequest, fsi_lifecyclecomplianceevent (LTR-enabled immutable)
+  - Python deployment: create_alg_dataverse_schema.py, create_alg_environment_variables.py, create_alg_connection_references.py
+  - PowerShell scripts: Deploy-LifecycleGovernance-Baseline.ps1, Validate-LifecycleCompliance.ps1
+  - Power Automate flows (documentation-only): sponsor enforcement, access reviews, inactivity detection, deactivation, sponsor monitoring, deletion hold
+  - Templates: Adaptive Card v1.2 sponsor assignment notification, sample lifecycle configuration
+  - Feature-flagged via IsAgent365LifecycleEnabled (gates all Agent 365 API calls until GA)
+  - Supports Controls 2.3 (primary), 1.2, 1.11, 2.1, 2.8, 2.12, 3.1
+- **Agent Registry Automation v1.0.0**— Automated discovery, registration, approval, and lifecycle governance of AI agents
+  - Dataverse schema: fsi_agentinventory (with alternate key), fsi_registrationrequest, fsi_agentcomplianceevent (LTR-enabled), fsi_ownershipaudit
+  - Python deployment: ara_client.py, create_dataverse_schema.py, create_environment_variables.py, create_connection_references.py, deploy.py
+  - PowerShell scripts: Deploy-AgentRegistry-Baseline.ps1, Validate-AgentRegistry-Compliance.ps1
+  - Power Automate flows (documentation-only): daily discovery, registration approval, Entra sync, orphan detection
+  - Supports Controls 1.2 (primary), 1.7, 2.1, 2.13
+- **Agent Knowledge Source Scanner v1.0.0** — New solution for item-level permission scanning in agent knowledge source SharePoint libraries
   - `Get-KnowledgeSourceItemPermissions.ps1` — PnP PowerShell script enumerating item-level permissions with agent-context-aware risk scoring (CRITICAL/HIGH/MEDIUM/LOW)
   - Sensitivity label cross-reference with configurable tier mapping
   - Agent user scope comparison via security group or UPN list

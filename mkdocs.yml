@@ -97,6 +97,14 @@ nav:
         - Troubleshooting: solutions/conditional-access-automation/troubleshooting.md
       - Inactivity Timeout Enforcement: solutions/inactivity-timeout-enforcement/index.md
       - Agent Sharing Access Restriction Detector: solutions/agent-sharing-access-restriction-detector/index.md
+      - Cross-Tenant External Sharing Governance:
+        - solutions/cross-tenant-external-sharing-governance/index.md
+        - Prerequisites: solutions/cross-tenant-external-sharing-governance/prerequisites.md
+        - Dataverse Schema: solutions/cross-tenant-external-sharing-governance/dataverse-schema.md
+        - Flow Configuration: solutions/cross-tenant-external-sharing-governance/flow-configuration.md
+        - Power Apps: solutions/cross-tenant-external-sharing-governance/power-apps-configuration.md
+        - Power BI: solutions/cross-tenant-external-sharing-governance/power-bi-setup.md
+        - Troubleshooting: solutions/cross-tenant-external-sharing-governance/troubleshooting.md
       - Unrestricted Agent Sharing Detector:
         - solutions/unrestricted-agent-sharing-detector/index.md
         - Dataverse Schema: solutions/unrestricted-agent-sharing-detector/dataverse-schema.md
@@ -228,6 +236,18 @@ nav:
         - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
         - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
     - Lifecycle & Operations:
+      - Agent 365 Lifecycle Governance:
+        - solutions/agent-365-lifecycle-governance/index.md
+        - Prerequisites: solutions/agent-365-lifecycle-governance/prerequisites.md
+        - Dataverse Schema: solutions/agent-365-lifecycle-governance/dataverse-schema.md
+        - Flow Configuration: solutions/agent-365-lifecycle-governance/flow-configuration.md
+        - Troubleshooting: solutions/agent-365-lifecycle-governance/troubleshooting.md
+      - Agent Registry Automation:
+        - solutions/agent-registry-automation/index.md
+        - Prerequisites: solutions/agent-registry-automation/prerequisites.md
+        - Dataverse Schema: solutions/agent-registry-automation/dataverse-schema.md
+        - Flow Configuration: solutions/agent-registry-automation/flow-configuration.md
+        - Troubleshooting: solutions/agent-registry-automation/troubleshooting.md
       - Environment Lifecycle Management:
         - solutions/environment-lifecycle-management/index.md
         - Prerequisites: solutions/environment-lifecycle-management/prerequisites.md
