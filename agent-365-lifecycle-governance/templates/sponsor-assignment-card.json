@@ -1,0 +1,45 @@
+{
+  "type": "AdaptiveCard",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "AI Agent Sponsor Assignment",
+      "weight": "Bolder",
+      "size": "Large"
+    },
+    {
+      "type": "TextBlock",
+      "text": "You have been assigned as the accountable sponsor for the following AI agent.",
+      "wrap": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent Name:", "value": "${agentName}" },
+        { "title": "Environment:", "value": "${environmentName}" },
+        { "title": "Governance Zone:", "value": "${governanceZone}" },
+        { "title": "Assignment Reason:", "value": "${assignmentReason}" },
+        { "title": "Responsibilities:", "value": "Access oversight, periodic review, decommission decisions" },
+        { "title": "First Review Due:", "value": "${firstReviewDue}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "As sponsor, you are accountable for this agent's access, behavior, and lifecycle governance. Please acknowledge within 2 business days.",
+      "wrap": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Acknowledge Sponsorship",
+      "data": { "agentId": "${agentId}", "action": "acknowledge" }
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Agent in Admin Center",
+      "url": "https://admin.microsoft.com"
+    }
+  ]
+}

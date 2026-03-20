@@ -36,6 +36,7 @@ git rev-parse --show-toplevel
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
 | [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.0 |
+| [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.0 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.0 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.0 |
 | [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.0.0 |
@@ -71,6 +72,7 @@ git rev-parse --show-toplevel
 | Solution | Primary Controls | Description |
 |----------|-----------------|-------------|
 | action-confirmation-auditor | 1.23 | Step-up confirmation for agent operations |
+| agent-365-lifecycle-governance | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Agent lifecycle governance with sponsor enforcement and access reviews |
 | agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
 | agent-knowledge-source-scanner | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source libraries |

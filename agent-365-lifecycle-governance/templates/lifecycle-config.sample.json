@@ -1,0 +1,40 @@
+{
+  "_comment": "Sample configuration values for Agent 365 Lifecycle Governance environment variables",
+  "IsAgent365LifecycleEnabled": "false",
+  "DefaultSponsorUPN": "ai-governance@contoso.com",
+  "GovernanceTeamEmail": "fsi-ai-governance@contoso.com",
+  "GovernanceCommitteeUPN": "fsi-governance-committee@contoso.com",
+  "EscalationApproverUPN": "ciso@contoso.com",
+  "FlowAdministrators": "fsi-flow-admins@contoso.com",
+  "SponsorMoverWorkflowId": "",
+  "SponsorLeaverWorkflowId": "",
+  "FSIAllAgentIdentitiesGroupId": "",
+  "FSIZone3AgentsGroupId": "",
+  "DataverseEnvironmentUrl": "https://org.crm.dynamics.com",
+  "InactivityThreshold_Zone1": 180,
+  "InactivityThreshold_Zone2": 90,
+  "InactivityThreshold_Zone3": 30,
+  "ZoneSettings": {
+    "Zone1": {
+      "inactivityThresholdDays": 180,
+      "reviewCadence": "Annual",
+      "deletionHoldDays": 30,
+      "sponsorRequired": false,
+      "conditionalAccessRequired": false
+    },
+    "Zone2": {
+      "inactivityThresholdDays": 90,
+      "reviewCadence": "Semi-Annual",
+      "deletionHoldDays": 30,
+      "sponsorRequired": true,
+      "conditionalAccessRequired": false
+    },
+    "Zone3": {
+      "inactivityThresholdDays": 30,
+      "reviewCadence": "Quarterly",
+      "deletionHoldDays": 90,
+      "sponsorRequired": true,
+      "conditionalAccessRequired": true
+    }
+  }
+}

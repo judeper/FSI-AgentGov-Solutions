@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **31 solutions** covering 40+ controls across all 4 pillars
+- **32 solutions** covering 40+ controls across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -14,6 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.0.0 | 1.23 | Step-up confirmation validation for agent actions |
+| agent-365-lifecycle-governance | v1.1.0 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.0.0 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
 | agent-knowledge-source-scanner | v1.0.0 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
