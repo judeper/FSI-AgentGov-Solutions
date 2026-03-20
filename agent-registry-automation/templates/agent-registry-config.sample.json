@@ -1,0 +1,62 @@
+{
+  "solutionName": "agent-registry-automation",
+  "version": "1.0.0",
+  "description": "Sample configuration for Agent Registry Automation. Customize values for your environment.",
+  "zonePolicy": {
+    "zone1": {
+      "label": "Personal Productivity",
+      "registrationRequired": false,
+      "approvalRequired": false,
+      "quarantineOnViolation": false,
+      "description": "Inventory only — agents are discovered and tracked but no approval gate is enforced"
+    },
+    "zone2": {
+      "label": "Team/Departmental",
+      "registrationRequired": true,
+      "approvalRequired": false,
+      "quarantineOnViolation": false,
+      "description": "Registration required before sharing — agents must be registered but do not require committee approval"
+    },
+    "zone3": {
+      "label": "Enterprise/Customer-Facing",
+      "registrationRequired": true,
+      "approvalRequired": true,
+      "quarantineOnViolation": true,
+      "description": "Registration and committee approval required — unregistered agents are auto-quarantined"
+    }
+  },
+  "slaConfiguration": {
+    "approvalDeadlineBusinessDays": 5,
+    "escalationEnabled": true,
+    "escalationApproverUPN": "",
+    "timeoutActionOnEscalationFailure": "notify-governance-team",
+    "description": "SLA applies to registration approval requests. Escalation triggers when the deadline is exceeded."
+  },
+  "scanConfiguration": {
+    "discoverySchedule": "daily",
+    "discoveryTimeUTC": "06:00",
+    "orphanDetectionSchedule": "weekly",
+    "orphanDetectionDayOfWeek": "Saturday",
+    "orphanDetectionTimeUTC": "02:00",
+    "includeSandboxEnvironments": false,
+    "excludeEnvironmentSkus": ["Developer"],
+    "inactivityThresholdDays": 90,
+    "description": "Controls how frequently discovery and orphan detection scans run"
+  },
+  "entraSync": {
+    "enabled": false,
+    "frameworkVersion": "FSI-AgentGov-v1.1",
+    "description": "Feature-flagged sync to Entra Agent Registry. Enable only after confirming API availability."
+  },
+  "notifications": {
+    "governanceTeamEmail": "",
+    "flowAdministratorsEmail": "",
+    "teamsChannelId": "",
+    "description": "Configure notification recipients for discovery alerts, approval requests, and orphan reports"
+  },
+  "retention": {
+    "complianceEventRetentionDays": 2555,
+    "enableLongTermRetention": true,
+    "description": "2555 days = approximately 7 years, supporting SEC 17a-3/4 retention requirements"
+  }
+}
