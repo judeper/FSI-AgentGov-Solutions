@@ -1,0 +1,21 @@
+{
+  "_comment": "Sample approved external tenant record. Populate all required fields before activating detection flows.",
+  "fsi_tenantname": "Contoso Financial Services",
+  "fsi_tenantid": "00000000-0000-0000-0000-000000000000",
+  "fsi_primarydomain": "contoso.com",
+  "fsi_relationshiptype": 1,
+  "fsi_approvalstatus": 1,
+  "fsi_approvedby": "governance.admin@yourorg.onmicrosoft.com",
+  "fsi_approvaldate": "2026-01-15T00:00:00Z",
+  "fsi_businessjustification": "Contoso Financial Services is a subsidiary providing shared services including agent development and data analytics. Cross-tenant access is required for joint Copilot Studio agent development in the shared innovation environment.",
+  "fsi_risktier": 1,
+  "fsi_permittedaccessscope": "DEV environment only. Agents: Innovation-CoPilot, Data-Analytics-Bot. Connectors: SharePoint, Dataverse.",
+  "fsi_ppisolationdirection": 2,
+  "fsi_entrab2bcollaboration": true,
+  "fsi_entrab2bdirectconnect": false,
+  "fsi_agentsharepermitted": true,
+  "fsi_annualreviewdue": "2027-01-15T00:00:00Z",
+  "fsi_requestingteam": "Innovation Lab",
+  "fsi_securityattestation": true,
+  "fsi_notes": "Annual review reminder set for 2026-10-15 (90 days prior)."
+}
