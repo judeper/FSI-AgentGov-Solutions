@@ -205,7 +205,7 @@ Wrap in error-handling scope:
 |-----------|-------|
 | Method | `POST` |
 | Base Resource URL | `https://api.bap.microsoft.com` |
-| Azure AD Resource URI | `https://api.bap.microsoft.com` |
+| Microsoft Entra ID Resource URI | `https://api.bap.microsoft.com` |
 | URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{outputs('Create_Environment')?['body']?['name']}/enableGovernanceConfiguration?api-version=2021-04-01` |
 | Body | `{"protectionLevel": "Standard"}` |
 

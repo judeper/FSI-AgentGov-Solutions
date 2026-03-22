@@ -38,9 +38,9 @@ Install-Module -Name Az.Accounts -Force -Scope CurrentUser
 Install-Module -Name MSAL.PS -Force -Scope CurrentUser
 ```
 
-## Azure AD App Registration
+## Microsoft Entra ID App Registration
 
-An Entra ID (Azure AD) app registration is required for both interactive and non-interactive authentication.
+A Microsoft Entra ID app registration is required for both interactive and non-interactive authentication.
 
 ### Registration Steps
 

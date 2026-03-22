@@ -52,7 +52,7 @@ Configure these connection references before building the flows.
 | Connection Reference | Connector | Purpose |
 |---------------------|-----------|---------|
 | `fsi_cr_ara_dataverse` | Dataverse | Read/write agent inventory and compliance events |
-| `fsi_cr_ara_http_azuread` | HTTP with Azure AD | Bots API, Graph API, and Entra Agent Registry calls |
+| `fsi_cr_ara_http_azuread` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Entra Agent Registry calls |
 | `fsi_cr_ara_teams` | Microsoft Teams | Post adaptive cards and notifications |
 | `fsi_cr_ara_approvals` | Approvals | Process registration approvals |
 
@@ -63,7 +63,7 @@ Configure these connection references before building the flows.
 3. For each reference, click **Edit** and select or create an active connection
 4. For `fsi_cr_ara_http_azuread`:
    - **Base Resource URL:** `https://api.powerplatform.com`
-   - **Azure AD Resource URI:** `https://api.powerplatform.com`
+   - **Microsoft Entra ID Resource URI:** `https://api.powerplatform.com`
 
 ---
 
@@ -127,7 +127,7 @@ Add these **Initialize variable** actions:
 
 #### Step 3: Get Environment List
 
-Add **HTTP with Azure AD** action:
+Add **HTTP with Microsoft Entra ID** action:
 
 - **Method:** GET
 - **URI:** `https://api.powerplatform.com/appmanagement/environments?api-version=2022-03-01-preview&$filter=properties/environmentSku ne 'Developer'`
@@ -154,7 +154,7 @@ Inside the loop:
 
 ##### Step 5a: Get Bots for Environment
 
-Add **HTTP with Azure AD** action:
+Add **HTTP with Microsoft Entra ID** action:
 
 - **Method:** GET
 - **URI:** `https://api.powerplatform.com/appmanagement/environments/@{items('Apply_to_each')?['name']}/bots?api-version=2022-03-01-preview`
@@ -414,7 +414,7 @@ Add **Compose** action:
 
 #### Step 5: Call Entra Agent Registry API
 
-Add **HTTP with Azure AD** action:
+Add **HTTP with Microsoft Entra ID** action:
 
 - **Method:** POST (or PUT for upsert)
 - **URI:** `https://graph.microsoft.com/beta/agentRegistrations` *(confirm actual endpoint)*
@@ -485,7 +485,7 @@ Inside the loop:
 
 ##### Step 4a: Check Owner Status via Graph API
 
-Add **HTTP with Azure AD** action:
+Add **HTTP with Microsoft Entra ID** action:
 
 - **Method:** GET
 - **URI:** `https://graph.microsoft.com/v1.0/users/@{items('Apply_to_each')?['fsi_ownerupn']}?$select=accountEnabled,signInActivity,department`
@@ -550,7 +550,7 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 - **BotFrameworkEndpoint field:** The exact field path in the Bots API response needs live API confirmation. The flow includes null-check error handling for this field.
 - **Office 365 Users connector:** Used for time zone lookup in SLA calculations. If blocked by DLP policies, configure `fsi_ARA_DefaultTimeZone` as a fallback.
 - **Entra Agent Registry API:** Flow 3 is disabled by default. The API endpoint and required permissions are subject to change.
-- **Graph signInActivity:** Requires Azure AD Premium P1/P2 license for the `signInActivity` property in the Graph API response. Without this license, the inactive-owner detection in Flow 4 is limited to account-enabled checks only.
+- **Graph signInActivity:** Requires Microsoft Entra ID P1/P2 license for the `signInActivity` property in the Graph API response. Without this license, the inactive-owner detection in Flow 4 is limited to account-enabled checks only.
 - **Alternate key pending status:** The upsert in Flow 1 requires the alternate key to be in **Active** status. New deployments may need to wait up to 30 minutes after schema creation.
 
 ---

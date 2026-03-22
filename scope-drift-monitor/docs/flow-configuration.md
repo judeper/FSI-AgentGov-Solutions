@@ -54,7 +54,7 @@ Before importing the solution, configure connection references in your target en
 | `fsi_cr_outlook` | Office 365 Outlook | Send email notifications |
 | `fsi_cr_teams` | Microsoft Teams | Post adaptive cards to channels |
 | `fsi_cr_approvals` | Approvals | Process expansion approvals |
-| `fsi_cr_http_azuread` | HTTP with Azure AD | Query Office 365 Management API |
+| `fsi_cr_http_azuread` | HTTP with Microsoft Entra ID | Query Office 365 Management API |
 
 ### Creating Connection References
 
@@ -71,14 +71,14 @@ Configure environment variables for your organization.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `fsi_SDM_TenantId` | Azure AD tenant ID | `12345678-1234-1234-1234-123456789012` |
+| `fsi_SDM_TenantId` | Microsoft Entra ID tenant ID | `12345678-1234-1234-1234-123456789012` |
 | `fsi_SDM_DataverseEnvironment` | Dataverse environment URL | `https://contoso.crm.dynamics.com` |
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts | `19:xxxxx@thread.tacv2` |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals | `security@contoso.com` |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes | `15` (minutes) |
-| `fsi_SDM_ClientId` | Azure AD application client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `fsi_SDM_ClientSecret` | Azure AD application client secret | *(stored securely)* |
+| `fsi_SDM_ClientId` | Microsoft Entra ID application client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `fsi_SDM_ClientSecret` | Microsoft Entra ID application client secret | *(stored securely)* |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on `fsi_agentscope` (default: `10002`) | `10002` |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL | `https://manage.office.com` (commercial) |
 

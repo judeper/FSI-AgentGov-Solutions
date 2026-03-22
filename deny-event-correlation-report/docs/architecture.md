@@ -187,7 +187,7 @@ Power Automate Flow
 
 ### Authentication
 
-> **✅ Authentication Migration Complete: Entra ID (Azure AD)**
+> **✅ Authentication Migration Complete: Microsoft Entra ID**
 >
 > Application Insights API key authentication was deprecated and `Export-RaiTelemetry.ps1` was migrated to Entra ID authentication on **February 4, 2026**. No `-ApiKey` parameter exists; the script uses `Connect-AzAccount` and `Get-AzAccessToken`.
 >

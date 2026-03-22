@@ -787,7 +787,7 @@ Provide these instructions in the template:
    ```
    Compliance Dashboard for FSI Agent Governance Framework v1.0.0
 
-   Provides aggregated compliance reporting across all 62 controls with zone-based filtering.
+   Provides aggregated compliance reporting across the validated 78-control framework baseline with zone-based filtering.
 
    Required parameters:
    - DataverseEnvironmentUrl: Your Dataverse environment URL

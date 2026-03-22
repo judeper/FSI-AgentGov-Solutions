@@ -64,7 +64,7 @@ OptionSet integer values are assigned at deployment time. Confirm each value aga
 | fsi_cr_dataverse_mrm | Dataverse | [ ] |
 | fsi_cr_teams_mrm | Microsoft Teams | [ ] |
 | fsi_cr_approvals_mrm | Approvals | [ ] |
-| fsi_cr_http_mrm | HTTP with Azure AD | [ ] |
+| fsi_cr_http_mrm | HTTP with Microsoft Entra ID | [ ] |
 | fsi_cr_sharepoint_mrm | SharePoint | [ ] |
 | fsi_cr_wordonline_mrm | Word Online (Business) | [ ] |
 

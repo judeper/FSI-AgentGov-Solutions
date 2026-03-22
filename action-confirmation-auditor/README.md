@@ -138,7 +138,7 @@ python scripts/create_dataverse_schema.py \
 | Environment Variable | Purpose | Default |
 |---------------------|---------|---------|
 | `fsi_ACA_DataverseUrl` | Target Dataverse organization URL | -- |
-| `fsi_ACA_TenantId` | Azure AD tenant identifier | -- |
+| `fsi_ACA_TenantId` | Microsoft Entra ID tenant identifier | -- |
 | `fsi_ACA_ClientId` | App registration client ID | -- |
 | `fsi_ACA_ScanFrequencyHours` | Hours between scheduled scans | 24 |
 | `fsi_ACA_TeamsGroupId` | Teams group for alert notifications | -- |

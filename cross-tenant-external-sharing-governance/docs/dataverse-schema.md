@@ -59,7 +59,7 @@ LTR = Long-Term Retention
 **Logical Name:** `fsi_approvedexternaltenant`
 **Ownership:** UserOwned
 
-Authoritative allow list of approved external tenants. Each record represents one external Azure AD tenant authorized for cross-tenant interaction with documented business justification and dual approval.
+Authoritative allow list of approved external tenants. Each record represents one external Microsoft Entra ID tenant authorized for cross-tenant interaction with documented business justification and dual approval.
 
 ### Columns
 

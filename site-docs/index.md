@@ -19,12 +19,12 @@ Microsoft Copilot Studio and Power Platform.
 
 <div class="metrics-strip">
   <div class="metric">
-    <span class="metric-number">28</span>
+    <span class="metric-number">33</span>
     <span class="metric-label">Solutions</span>
   </div>
   <div class="metric">
-    <span class="metric-number">71</span>
-    <span class="metric-label">Controls Mapped</span>
+    <span class="metric-number">78</span>
+    <span class="metric-label">Framework Controls</span>
   </div>
   <div class="metric">
     <span class="metric-number">6</span>
@@ -90,15 +90,15 @@ Shared logging & alerting
 <div class="arch-row">
 <div class="arch-card arch-pillar">
 <strong>Access</strong>
-5 Solutions
+6 Solutions
 </div>
 <div class="arch-card arch-pillar">
 <strong>Content</strong>
-4 Solutions
+5 Solutions
 </div>
 <div class="arch-card arch-pillar">
 <strong>Compliance</strong>
-5 Solutions
+7 Solutions
 </div>
 <div class="arch-card arch-pillar">
 <strong>Monitoring</strong>
@@ -110,7 +110,7 @@ Shared logging & alerting
 </div>
 <div class="arch-card arch-pillar">
 <strong>Lifecycle</strong>
-5 Solutions
+6 Solutions
 </div>
 </div>
 </div>
@@ -134,7 +134,7 @@ Evidence export
 
 | Site | Description |
 |------|-------------|
-| [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/) | Governance principles, 71 control specifications, playbooks |
+| [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/) | Governance principles, 78 control specifications, playbooks |
 | [FSI Agent Governance Solutions](https://judeper.github.io/FSI-AgentGov-Solutions/) | This site — deployable reference implementations |
 
 ---

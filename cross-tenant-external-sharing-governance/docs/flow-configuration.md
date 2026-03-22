@@ -85,7 +85,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://api.powerplatform.com` |
-   | Azure AD Resource URI | `https://api.powerplatform.com` |
+   | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
    | URI | `/governance/tenantSettings?api-version=2022-03-01-preview` |
 
    - **Condition:** Response body contains `tenantIsolationEnabled` property
@@ -113,7 +113,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://api.powerplatform.com` |
-   | Azure AD Resource URI | `https://api.powerplatform.com` |
+   | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
    | URI | `/governance/crossTenantPolicies?api-version=2022-03-01-preview` |
 
    - **Condition:** Response body `value` array exists and entries contain `tenantId` and `direction` fields
@@ -228,7 +228,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://graph.microsoft.com` |
-   | Azure AD Resource URI | `https://graph.microsoft.com` |
+   | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
    | URI | `/v1.0/organization?$select=id,displayName,verifiedDomains` |
 
    - Parse response to build `internalDomains` array from `verifiedDomains[].name`
@@ -240,7 +240,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://graph.microsoft.com` |
-   | Azure AD Resource URI | `https://graph.microsoft.com` |
+   | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
    | URI | `/v1.0/users?$filter=userType eq 'Guest'&$select=id,displayName,mail,userPrincipalName,externalUserState,createdDateTime,creationType&$count=true` |
 
    **Headers:**
@@ -327,7 +327,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://api.powerplatform.com` |
-   | Azure AD Resource URI | `https://api.powerplatform.com` |
+   | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
    | URI | `/appmanagement/environments?api-version=2022-03-01-preview` |
 
 9. **For Each Environment**
@@ -404,7 +404,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
     |-----------|-------|
     | Method | `GET` |
     | Base Resource URL | `https://graph.microsoft.com` |
-    | Azure AD Resource URI | `https://graph.microsoft.com` |
+    | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
     | URI | `/v1.0/tenantRelationships/findTenantInformationByDomainName(domainName='{domain}')` |
 
     - If resolution succeeds: Update finding records with resolved tenant name
@@ -457,7 +457,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://graph.microsoft.com` |
-   | Azure AD Resource URI | `https://graph.microsoft.com` |
+   | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
    | URI | `/v1.0/policies/crossTenantAccessPolicy/default` |
 
    - Parse response to capture:
@@ -504,7 +504,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://graph.microsoft.com` |
-   | Azure AD Resource URI | `https://graph.microsoft.com` |
+   | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
    | URI | `/v1.0/policies/crossTenantAccessPolicy/partners` |
 
    > **Pagination:** Follow `@odata.nextLink` if present.
@@ -618,7 +618,7 @@ Same scope-based try/catch pattern as Flow 1.
    |-----------|-------|
    | Method | `GET` |
    | Base Resource URL | `https://graph.microsoft.com` |
-   | Azure AD Resource URI | `https://graph.microsoft.com` |
+   | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
    | URI | `/v1.0/tenantRelationships/findTenantInformationByDomainName(domainName='{requestedTenantDomain}')` |
 
    - Capture resolved `tenantId` and `displayName`
@@ -795,7 +795,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
      |-----------|-------|
      | Method | `PATCH` |
      | Base Resource URL | `https://graph.microsoft.com` |
-     | Azure AD Resource URI | `https://graph.microsoft.com` |
+     | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
      | URI | `/v1.0/policies/crossTenantAccessPolicy/partners/{tenantId}` |
 
      - Body: Restrict inbound/outbound as appropriate

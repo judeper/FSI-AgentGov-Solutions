@@ -121,7 +121,7 @@ Initialize at flow start:
 |-----------|-------|
 | Method | `GET` |
 | Base Resource URL | `https://graph.microsoft.com` |
-| Azure AD Resource URI | `https://graph.microsoft.com` |
+| Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
 | URI | `/beta/agentRegistry/agents` |
 
 **Retry Policy:**
@@ -577,7 +577,7 @@ Extract: `first(body('Get_SignIn_Logs')?['value'])?['createdDateTime']`
 |-----------|-------|
 | Method | `GET` |
 | Base Resource URL | `https://api.bap.microsoft.com` |
-| Azure AD Resource URI | `https://api.bap.microsoft.com` |
+| Microsoft Entra ID Resource URI | `https://api.bap.microsoft.com` |
 | URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{items('For_Each_Active')?['fsi_environmentid']}/bots?api-version=2021-04-01` |
 
 Extract `lastModifiedTime` and `publishedOn` for the matching agent.

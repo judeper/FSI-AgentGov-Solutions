@@ -97,14 +97,7 @@ nav:
         - Troubleshooting: solutions/conditional-access-automation/troubleshooting.md
       - Inactivity Timeout Enforcement: solutions/inactivity-timeout-enforcement/index.md
       - Agent Sharing Access Restriction Detector: solutions/agent-sharing-access-restriction-detector/index.md
-      - Cross-Tenant External Sharing Governance:
-        - solutions/cross-tenant-external-sharing-governance/index.md
-        - Prerequisites: solutions/cross-tenant-external-sharing-governance/prerequisites.md
-        - Dataverse Schema: solutions/cross-tenant-external-sharing-governance/dataverse-schema.md
-        - Flow Configuration: solutions/cross-tenant-external-sharing-governance/flow-configuration.md
-        - Power Apps: solutions/cross-tenant-external-sharing-governance/power-apps-configuration.md
-        - Power BI: solutions/cross-tenant-external-sharing-governance/power-bi-setup.md
-        - Troubleshooting: solutions/cross-tenant-external-sharing-governance/troubleshooting.md
+      - Cross-Tenant External Sharing Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-tenant-external-sharing-governance/README.md
       - Unrestricted Agent Sharing Detector:
         - solutions/unrestricted-agent-sharing-detector/index.md
         - Dataverse Schema: solutions/unrestricted-agent-sharing-detector/dataverse-schema.md
@@ -164,15 +157,7 @@ nav:
         - Power BI Setup: solutions/finra-supervision-workflow/power-bi-setup.md
         - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
         - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
-      - Model Risk Management Automation:
-        - solutions/model-risk-management-automation/index.md
-        - Prerequisites: solutions/model-risk-management-automation/prerequisites.md
-        - Dataverse Schema: solutions/model-risk-management-automation/dataverse-schema.md
-        - Flow Configuration: solutions/model-risk-management-automation/flow-configuration.md
-        - Power Apps: solutions/model-risk-management-automation/power-apps-configuration.md
-        - Power BI Dashboard: solutions/model-risk-management-automation/powerbi-dashboard.md
-        - SharePoint Setup: solutions/model-risk-management-automation/sharepoint-setup.md
-        - Troubleshooting: solutions/model-risk-management-automation/troubleshooting.md
+      - Model Risk Management Automation: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md
       - Segregation Detector:
         - solutions/segregation-detector/index.md
         - Prerequisites: solutions/segregation-detector/prerequisites.md
@@ -236,12 +221,7 @@ nav:
         - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
         - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
     - Lifecycle & Operations:
-      - Agent 365 Lifecycle Governance:
-        - solutions/agent-365-lifecycle-governance/index.md
-        - Prerequisites: solutions/agent-365-lifecycle-governance/prerequisites.md
-        - Dataverse Schema: solutions/agent-365-lifecycle-governance/dataverse-schema.md
-        - Flow Configuration: solutions/agent-365-lifecycle-governance/flow-configuration.md
-        - Troubleshooting: solutions/agent-365-lifecycle-governance/troubleshooting.md
+      - Agent 365 Lifecycle Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-365-lifecycle-governance/README.md
       - Agent Registry Automation:
         - solutions/agent-registry-automation/index.md
         - Prerequisites: solutions/agent-registry-automation/prerequisites.md

@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **32 solutions** covering 40+ controls across all 4 pillars
+- **33 live solution implementations** plus **2 documentation-only preview placeholder folders** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -23,7 +23,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-sharing-access-restriction-detector | v1.0.0 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.0 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.0.0 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.0 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 71 controls with Exchange coverage |
+| compliance-dashboard | v1.0.0 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v1.1.0 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.0.0 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
 | copilot-studio-analytics | v1.0.0 | 3.2 | Business impact analytics for Copilot Studio agents |
@@ -121,7 +121,7 @@ The single source of truth for column names is each solution's `create_*_dataver
 
 **FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework:
 - `docs/framework/` — Governance principles
-- `docs/controls/` — 71 control specifications (10-section format)
+- `docs/controls/` — 78 control specifications (10-section format)
 - `docs/playbooks/` — Implementation guides referencing solutions here
 - `docs/reference/solutions-index.md` — Complete solutions catalog
 - `docs/framework/solutions-integration.md` — Framework-to-solutions mapping

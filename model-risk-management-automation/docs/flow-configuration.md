@@ -28,7 +28,7 @@ All flows use connection references deployed by `create_mrm_connection_reference
 | `fsi_cr_dataverse_mrm` | Dataverse - MRM | Common Data Service | Model inventory CRUD, risk ratings, validation cycles, findings, monitoring, compliance events |
 | `fsi_cr_teams_mrm` | Teams - MRM | Microsoft Teams | Risk scoring cards, validation alerts, SLA breach alerts, revalidation requests |
 | `fsi_cr_approvals_mrm` | Approvals - MRM | Approvals | Validator assignment approval, revalidation confirmation, examiner alert choices |
-| `fsi_cr_http_mrm` | HTTP with Azure AD - MRM | HTTP with Azure AD | Power Platform Bots API, Graph API user resolution, Entra Agent Registry |
+| `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Power Platform Bots API, Graph API user resolution, Entra Agent Registry |
 | `fsi_cr_sharepoint_mrm` | SharePoint - MRM | SharePoint Online | Agent Card upload, folder creation, metadata updates |
 | `fsi_cr_wordonline_mrm` | Word Online - MRM | Word Online (Business) | Agent Card document generation from template |
 

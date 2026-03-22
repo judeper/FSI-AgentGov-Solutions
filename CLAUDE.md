@@ -9,7 +9,7 @@ These solutions help Financial Services organizations implement operational cont
 
 **FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation:
 - `docs/framework/` - Governance principles
-- `docs/controls/` - 71 control specifications
+- `docs/controls/` - 78 control specifications
 - `docs/playbooks/` - Implementation guides including references to solutions here
 
 ### Cross-Repository Workflow
@@ -44,7 +44,7 @@ git rev-parse --show-toplevel
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.0 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.0 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.0 |
-| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 71 controls with Exchange coverage | Docs/Dataverse | v1.0.0 |
+| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.0 |
 | [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.1.0 |
 | [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.0 |
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.0.0 |

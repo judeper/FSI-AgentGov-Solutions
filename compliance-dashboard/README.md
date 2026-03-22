@@ -2,7 +2,7 @@
 
 > **Status:** Completed
 
-Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across all 62 controls with zone-based filtering.
+Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the validated 78-control framework baseline with zone-based filtering.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 | **Executive Summary** | Overall compliance score with trend indicators |
 | **Pillar Breakdown** | Compliance status by pillar (Security, Management, Reporting, SharePoint) |
 | **Zone Filtering** | Filter by governance zone (Zone 1/2/3) |
-| **Control Drill-Down** | Detailed status for each of 62 controls |
+| **Control Drill-Down** | Detailed status for each of the 78 controls in the validated framework baseline |
 | **Trend Analysis** | Historical compliance tracking over time |
 | **Exception Tracking** | Open exceptions with remediation status |
 
@@ -127,6 +127,8 @@ python scripts/load_sample_data.py --export
 > **⚠️ Security Note:** Avoid setting `AZURE_CLIENT_SECRET` directly in shell commands, as it may be recorded in shell history. For production deployments, use [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/), [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential) from `azure-identity`, or managed identity instead.
 
 > **Note:** The `--environment` mode currently uploads control master data only. Use `--export` to generate assessment, score, and exception JSON files, then import them via Power Apps or the Dataverse API.
+
+> **Baseline Note:** Confirm the control master dataset reflects the validated 78-control framework baseline before importing it into Dataverse.
 
 **Production Deployment:** Clear sample data before production use.
 

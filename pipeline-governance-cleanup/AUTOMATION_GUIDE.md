@@ -204,7 +204,7 @@ Connect-MgGraph -ClientId "your-app-id" -TenantId "your-tenant-id" -CertificateT
 | Consideration | Recommendation |
 |---------------|----------------|
 | **Conditional Access** | Consider policies to restrict app access by IP range (corporate network only) |
-| **Audit logging** | Enable Azure AD sign-in logs for the app registration |
+| **Audit logging** | Enable Microsoft Entra ID sign-in logs for the app registration |
 | **Certificate rotation** | Align with organizational PKI policy (typically 1-2 years) |
 | **Secret rotation** | If using secrets, rotate every 90 days maximum |
 | **Documentation** | Document service principal in change management for operational handoff |

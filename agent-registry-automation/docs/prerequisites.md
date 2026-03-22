@@ -12,9 +12,9 @@ Requirements for deploying the Agent Registry Automation solution.
 | **Dataverse capacity** | Agent inventory, compliance events, and audit storage |
 | **Managed Environment** | Required for Dataverse Long-Term Retention (LTR) |
 | **Microsoft 365 E3+** | Microsoft Teams notifications, Graph API access |
-| **Azure AD Premium P1/P2** | `signInActivity` property in Graph API for orphan detection (Flow 4) |
+| **Microsoft Entra ID P1/P2** | `signInActivity` property in Graph API for orphan detection (Flow 4) |
 
-> **Note:** Azure AD Premium P1/P2 is required for the `signInActivity` property used by Flow 4 to detect inactive owners. Without this license, orphan detection is limited to account-enabled and account-existence checks. The flow handles this gracefully by skipping the inactivity check when `signInActivity` is not available.
+> **Note:** Microsoft Entra ID P1/P2 is required for the `signInActivity` property used by Flow 4 to detect inactive owners. Without this license, orphan detection is limited to account-enabled and account-existence checks. The flow handles this gracefully by skipping the inactivity check when `signInActivity` is not available.
 
 ---
 
@@ -40,7 +40,7 @@ Requirements for deploying the Agent Registry Automation solution.
 
 ### App Registration: Agent Registry Automation
 
-Register an Azure AD application with the following permissions:
+Register a Microsoft Entra ID application with the following permissions:
 
 | Permission | Type | API | Purpose |
 |------------|------|-----|---------|
@@ -137,7 +137,7 @@ The following connectors are used by the solution's Power Automate flows. Verify
 | Connector | Used By | Classification |
 |-----------|---------|---------------|
 | **Dataverse** | All flows | Must be in **Business** group |
-| **HTTP with Azure AD** | Flows 1, 3, 4 | Must be in **Business** group |
+| **HTTP with Microsoft Entra ID** | Flows 1, 3, 4 | Must be in **Business** group |
 | **Microsoft Teams** | Flows 1, 2, 4 | Must be in **Business** group |
 | **Approvals** | Flow 2 | Must be in **Business** group |
 | **Office 365 Users** | Flow 2 (SLA calculation) | Must be in **Business** group |
@@ -164,12 +164,12 @@ The following connectors are used by the solution's Power Automate flows. Verify
 - [ ] Power Platform Premium license available for flow creator
 - [ ] Target environment is a Managed Environment
 - [ ] Dataverse capacity is sufficient
-- [ ] Azure AD application registered with required permissions
+- [ ] Microsoft Entra ID application registered with required permissions
 - [ ] Admin consent granted for all API permissions
 - [ ] Client secret created and stored securely
 - [ ] DLP policies allow required connectors
 - [ ] Microsoft Teams channel configured for notifications
-- [ ] Azure AD Premium P1/P2 available (for full orphan detection)
+- [ ] Microsoft Entra ID P1/P2 available (for full orphan detection)
 - [ ] Network connectivity to required endpoints verified
 
 ---

@@ -77,7 +77,7 @@ Update these variables in the flow designer (Initialize Variable actions):
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
 | `DataverseUrl` | String | `your-dataverse-url-here` | Your Dataverse environment URL (where CMM schema is deployed). **Must be changed per environment.** |
-| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID (formerly Azure AD) tenant identifier |
+| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID tenant identifier |
 | `ClientId` | String | `your-client-id-here` | App registration client ID (same one used for certificate auth) |
 | `CertificateThumbprint` | String | `your-thumbprint` | Certificate thumbprint uploaded to Azure Automation |
 | `SubscriptionId` | String | `your-subscription-id-here` | Azure subscription containing Automation Account |

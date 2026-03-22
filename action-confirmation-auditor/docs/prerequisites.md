@@ -43,7 +43,7 @@ Requirements for deploying the Action Confirmation Auditor.
 
 ---
 
-## Azure AD App Registration
+## Microsoft Entra ID App Registration
 
 1. **Register Application**
    - Navigate to Entra ID > App registrations > New registration
@@ -116,7 +116,7 @@ See [dataverse-schema.md](dataverse-schema.md) for the auto-generated column ref
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
 | `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API |
-| `login.microsoftonline.com` | HTTPS 443 | Azure AD authentication |
+| `login.microsoftonline.com` | HTTPS 443 | Microsoft Entra ID authentication |
 | `management.azure.com` | HTTPS 443 | Azure Automation API |
 | `api.powerplatform.com` | HTTPS 443 | Power Platform Admin API |
 
@@ -138,7 +138,7 @@ If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive
 - [ ] E5 or E5 Compliance license available
 - [ ] Power Platform Premium for flow creator
 - [ ] Dataverse environment ready with sufficient capacity
-- [ ] Azure AD app registration created (`ACA-ActionConfirmationAuditor`)
+- [ ] Microsoft Entra ID app registration created (`ACA-ActionConfirmationAuditor`)
 - [ ] Admin consent granted for API permissions
 - [ ] Azure Automation account configured with runbook imported
 - [ ] Service principal has Dataverse read access to `bot` and `botcomponent` tables

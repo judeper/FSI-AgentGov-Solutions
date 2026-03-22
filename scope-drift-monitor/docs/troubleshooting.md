@@ -196,14 +196,14 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 
 **Background:**
 
-The SDM-ExpansionProcessor flow binds `fsi_securityapprovedby` using `/systemusers(@{responder/id})` from the Approvals connector response. The `responder/id` value is the Azure AD Object ID of the approver. In most modern Power Platform online environments, `systemuserid` equals the Azure AD Object ID, so the lookup succeeds. However, in migrated or on-premises-derived environments, these IDs may differ, causing a 404 or 400 error on the UpdateRecord call.
+The SDM-ExpansionProcessor flow binds `fsi_securityapprovedby` using `/systemusers(@{responder/id})` from the Approvals connector response. The `responder/id` value is the Microsoft Entra ID object ID of the approver. In most modern Power Platform online environments, `systemuserid` equals the Microsoft Entra ID object ID, so the lookup succeeds. However, in migrated or on-premises-derived environments, these IDs may differ, causing a 404 or 400 error on the UpdateRecord call.
 
 **Resolution:**
 
 - The error handlers (`Handle_Request_Approved_Failure`, `Handle_Denial_Update_Failure`) catch the failure and send admin notification emails via Outlook
 - The core scope update still succeeds — only the request status update fails
 - Manually update the request status in Dataverse after receiving the admin notification
-- If this occurs frequently, consider customizing the flow to look up the system user by Azure AD Object ID instead of using a direct bind
+- If this occurs frequently, consider customizing the flow to look up the system user by Microsoft Entra ID object ID instead of using a direct bind
 
 **Affected environments:**
 

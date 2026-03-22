@@ -84,7 +84,7 @@ $clientSecret = ConvertTo-SecureString "your-client-secret" -AsPlainText -Force
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | DataverseUrl | Yes | — | Dataverse organization URL (e.g., `https://org.crm.dynamics.com`) |
-| TenantId | Yes | — | Azure AD tenant ID or domain |
+| TenantId | Yes | — | Microsoft Entra ID tenant ID or domain |
 | Zone | No | All | Filter by zone: `1`, `2`, `3`, or `All` |
 | OutputDirectory | Yes | — | Destination folder for evidence files |
 | FromDate | No | 30 days ago | Start of date range (inclusive) |

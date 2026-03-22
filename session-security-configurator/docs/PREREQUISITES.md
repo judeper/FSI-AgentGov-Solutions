@@ -71,7 +71,7 @@ SSC scripts require outbound access to:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `https://login.microsoftonline.com` | Azure AD authentication |
+| `https://login.microsoftonline.com` | Microsoft Entra ID authentication |
 | `https://graph.microsoft.com` | Microsoft Graph API |
 | `https://*.crm.dynamics.com` | Dataverse API |
 

@@ -20,7 +20,7 @@
 **Cause:** The `fsi_controlmaster` table may not have entries for the target control IDs.
 
 **Resolution:**
-1. Verify CD sample data is loaded: `fsi_controlmasters` should have 62 records
+1. Verify CD sample data is loaded: `fsi_controlmasters` should have 78 records
 2. Check the `fsi_controlid` values match (e.g., "1.7", not "01.07")
 3. Run with `-Verbose` to see per-solution processing details
 

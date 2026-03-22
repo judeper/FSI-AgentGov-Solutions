@@ -2,7 +2,7 @@
 
 ## Required Permissions
 
-### Microsoft Entra ID (Azure AD)
+### Microsoft Entra ID
 
 | Permission | Scope | Purpose |
 |-----------|-------|---------|
@@ -68,7 +68,7 @@ Set these for CLI-based deployment:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `FUS_TENANT_ID` | Azure AD tenant ID | `contoso.onmicrosoft.com` |
+| `FUS_TENANT_ID` | Microsoft Entra ID tenant ID | `contoso.onmicrosoft.com` |
 | `FUS_CLIENT_ID` | App registration client ID | `12345-abcd-...` |
 | `FUS_CLIENT_SECRET` | Client secret (dev only) | `***` |
 | `FUS_DATAVERSE_URL` | Dataverse org URL | `https://governance.crm.dynamics.com` |

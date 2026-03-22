@@ -61,7 +61,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
 | `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL |
-| `TenantId` | String | `{{TENANT_DOMAIN}}` | Azure AD tenant identifier |
+| `TenantId` | String | `{{TENANT_DOMAIN}}` | Microsoft Entra ID tenant identifier |
 | `ClientId` | String | `{{CLIENT_ID}}` | App registration client ID |
 | `CertificateThumbprint` | String | `{{CERTIFICATE_THUMBPRINT}}` | Certificate thumbprint in Azure Automation |
 | `SubscriptionId` | String | `{{AZURE_SUBSCRIPTION}}` | Azure subscription containing Automation Account |

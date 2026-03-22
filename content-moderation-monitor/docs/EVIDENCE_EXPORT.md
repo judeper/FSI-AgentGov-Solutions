@@ -105,7 +105,7 @@ Export evidence for a specific time period:
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `DataverseUrl` | String | Yes | — | Dataverse organization URL |
-| `TenantId` | String | Yes | — | Microsoft Entra ID (formerly Azure AD) tenant ID |
+| `TenantId` | String | Yes | — | Microsoft Entra ID tenant ID |
 | `OutputDirectory` | String | Yes | — | Directory for evidence files |
 | `Zone` | String | No | All | Zone filter: All, 1, 2, or 3 |
 | `RunId` | String | No | — | Export specific validation run |

@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Preview placeholder solution folders** — Added documentation-only placeholders for `hitl-workflow-governance` and `credential-oversharing-detector`
+  - `hitl-workflow-governance`: captures native Copilot Studio / Human in the loop preview boundaries for request-for-information workflows and reserves the namespace until Microsoft publishes stable governance telemetry
+  - `credential-oversharing-detector`: captures safe-sharing / credential-oversharing preview scope, boundary notes versus sharing-recipient and runtime-drift solutions, and reserves the namespace until Microsoft ships stable admin signals
 - **Cross-Tenant External Sharing Governance v1.0.0** — Three-layer cross-tenant access governance for AI agents in FSI environments
   - Dataverse schema: 5 tables — fsi_approvedexternaltenant (allow list with alternate key), fsi_externalsharefinding (violations with composite dedup key), fsi_tenantisolationrecord (daily Layer 1 audit), fsi_entractarecord (weekly Layer 2 audit), fsi_crosstenantcomplianceevent (LTR-enabled immutable audit log)
   - Python deployment: create_ctsg_dataverse_schema.py, create_ctsg_environment_variables.py, create_ctsg_connection_references.py, deploy.py
@@ -67,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Compliance Dashboard documentation drift:** Corrected stale 62-control / 71-control references in active docs to the validated 78-control baseline across README, deployment checklist, Power BI template guidance, troubleshooting, and control master table expectations
 - **UASD Adaptive Card:** Corrected "Run Audit Script" URL to match actual deployment guide path; corrected "View Documentation" URL to point to Control 1.1 (was incorrectly referencing Control 2.24)
 
 ### Previously Added
@@ -160,6 +164,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Catalog reconciliation:** Updated root README.md and `site-docs/solutions/index.md` to align the published inventory to 33 live solutions and the validated 78-control framework baseline, bringing existing live entries and current version labels back in sync without rewriting historical release notes
+- **Preview/live boundary:** Kept `hitl-workflow-governance` and `credential-oversharing-detector` out of the 33-live-solution count while they remain documentation-only preview placeholders
+- **Entra terminology cleanup:** Active documentation now uses Microsoft Entra ID naming for app registrations, connector labels, licensing references, and resource URI tables where current product terminology applies
+- **Agent 365 governance boundary:** Clarified that Agent 365 Lifecycle Governance complements — rather than duplicates — native Agent 365 Admin Center inventory, pending request, ownerless-agent, and overview analytics surfaces
 - Updated root README.md to include Environment Lifecycle Management
 - Enhanced boundary-check.py hook with cross-repository access to FSI-AgentGov
 - Added Python/pip permissions to settings.json

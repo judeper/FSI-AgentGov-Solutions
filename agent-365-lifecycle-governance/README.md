@@ -11,6 +11,8 @@ As FSI organizations deploy AI agents at scale through Copilot Studio, Agent Bui
 This solution automates enforcement on top of Agent 365 and Entra ID Governance to address the core FSI examiner question: *"How do you verify that every AI agent has an accountable owner, operates under least-privilege access, is reviewed on a defined cadence, and is decommissioned when no longer needed?"*
 
 > **Important:** All Entra Agent 365 API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"false"` until Agent 365 GA and tenant licensing are confirmed. When disabled, flows terminate gracefully without calling external APIs.
+>
+> **Boundary:** This solution complements the native Agent 365 Admin Center governance surfaces. Use the Agent 365 Admin Center and the related FSI framework guidance for Agent Registry inventory, pending requests, ownerless-agent queues, and overview analytics. There is no separate live Agent 365 governance-monitor solution in this repository. Use this solution for automated sponsor enforcement, access reviews, inactivity handling, deactivation workflows, and deletion holds.
 
 ## Features
 

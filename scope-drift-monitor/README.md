@@ -99,8 +99,8 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
-| `fsi_SDM_ClientId` | Azure AD application client ID (used by scripts; flows use connection references) |
-| `fsi_SDM_ClientSecret` | Azure AD application client secret — uses **Secret** type (Azure Key Vault-backed); used by scripts only, flows use connection references |
+| `fsi_SDM_ClientId` | Microsoft Entra ID application client ID (used by scripts; flows use connection references) |
+| `fsi_SDM_ClientSecret` | Microsoft Entra ID application client secret — uses **Secret** type (Azure Key Vault-backed); used by scripts only, flows use connection references |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on fsi_agentscope (default: 10002) |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.office.eaglex.ic.gov` for GCC IC, `https://manage.protection.outlook.com` for DoD) |

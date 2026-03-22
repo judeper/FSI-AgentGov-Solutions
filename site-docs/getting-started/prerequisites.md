@@ -64,7 +64,7 @@ See [Shared Utilities](../reference/shared-utilities.md) for details.
 
 | Endpoint | Port | Purpose |
 |----------|------|---------|
-| `login.microsoftonline.com` | 443 | Azure AD authentication |
+| `login.microsoftonline.com` | 443 | Microsoft Entra ID authentication |
 | `*.crm.dynamics.com` | 443 | Dataverse API |
 | `graph.microsoft.com` | 443 | Microsoft Graph API |
 | `management.azure.com` | 443 | Azure Management API |

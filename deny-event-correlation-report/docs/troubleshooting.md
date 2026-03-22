@@ -124,7 +124,7 @@ customEvents
 | **Container doesn't exist** | Create container before upload |
 | **Immutable policy conflict** | Ensure not trying to overwrite immutable blob |
 | **Network restriction** | Check storage firewall allows access |
-| **Wrong authentication** | Use `-UseConnectedAccount` for Azure AD auth |
+| **Wrong authentication** | Use `-UseConnectedAccount` for Microsoft Entra ID auth |
 
 **Diagnostic Script:**
 

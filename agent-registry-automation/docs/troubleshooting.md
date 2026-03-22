@@ -142,18 +142,18 @@ Common issues and resolutions for the Agent Registry Automation solution.
    - Set `fsi_ARA_DefaultTimeZone` to your organization's default (e.g., `Eastern Standard Time`)
 3. The flow will use calendar days instead of business days for SLA calculations
 
-### HTTP with Azure AD Connector Blocked
+### HTTP with Microsoft Entra ID Connector Blocked
 
-**Symptoms:** Flows 1, 3, and 4 fail because the HTTP with Azure AD connector is blocked by DLP policy.
+**Symptoms:** Flows 1, 3, and 4 fail because the HTTP with Microsoft Entra ID connector is blocked by DLP policy.
 
 **Resolution:**
 
 This connector is **required** for the solution to function. Work with your DLP administrator to:
 
-1. Classify `HTTP with Azure AD` in the **Business** connector group
+1. Classify `HTTP with Microsoft Entra ID` in the **Business** connector group
 2. If organization-wide reclassification is not possible, create an environment-specific DLP policy that allows this connector in the governance environment
 
-> **Note:** The HTTP with Azure AD connector is used for Bots API (Flow 1), Entra Agent Registry (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate.
+> **Note:** The HTTP with Microsoft Entra ID connector is used for Bots API (Flow 1), Entra Agent Registry (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate.
 
 ---
 

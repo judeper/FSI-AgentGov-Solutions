@@ -43,7 +43,7 @@ client.create("fsi_agentaccessvalidations", {
 | Parameter | Description | Required |
 |-----------|-------------|----------|
 | `environment_url` | Dataverse environment URL | Yes |
-| `tenant_id` | Azure AD tenant ID | Yes |
+| `tenant_id` | Microsoft Entra ID tenant ID | Yes |
 | `client_id` | App registration client ID | Yes |
 | `client_secret` | Client secret (alternative to certificate) | One of |
 | `certificate_path` | PFX certificate path | One of |

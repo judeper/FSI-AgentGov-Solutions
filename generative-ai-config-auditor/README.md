@@ -134,7 +134,7 @@ The following placeholder values in solution files must be replaced with your or
 |------------|-------------|
 | `{{TENANT_DOMAIN}}` | Your tenant domain (e.g., `contoso.onmicrosoft.com`) |
 | `{{COMPLIANCE_EMAIL}}` | Compliance team distribution list |
-| `{{CLIENT_ID}}` | Azure AD app registration client ID |
+| `{{CLIENT_ID}}` | Microsoft Entra ID app registration client ID |
 | `{{CERTIFICATE_THUMBPRINT}}` | Service principal certificate thumbprint |
 | `{{AZURE_SUBSCRIPTION}}` | Azure subscription ID for Automation |
 | `{{RESOURCE_GROUP}}` | Resource group for Azure Automation account |

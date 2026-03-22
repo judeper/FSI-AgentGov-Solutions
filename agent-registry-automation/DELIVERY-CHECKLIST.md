@@ -12,7 +12,7 @@
 - [ ] Confirm customer has Power Platform Admin role available
 - [ ] Confirm customer has Entra Global Admin or Application Administrator for service principal setup
 - [ ] Confirm Microsoft Teams is available for approval workflows
-- [ ] Review customer DLP policies for potential connector blocks (Office 365 Users, HTTP with Azure AD)
+- [ ] Review customer DLP policies for potential connector blocks (Office 365 Users, HTTP with Microsoft Entra ID)
 
 ---
 
@@ -30,13 +30,13 @@
 ## Phase 2: Environment Preparation
 
 - [ ] Verify target environment is Managed Environment
-- [ ] Register Azure AD application for Bots API and Graph API access
+- [ ] Register Microsoft Entra ID application for Bots API and Graph API access
 - [ ] Grant required API permissions and admin consent (see `docs/prerequisites.md`)
 - [ ] Create client secret and store securely (Azure Key Vault recommended)
 - [ ] Verify Dataverse capacity is sufficient for agent inventory and compliance events
 - [ ] Confirm DLP policies allow required connectors:
   - Dataverse
-  - HTTP with Azure AD
+  - HTTP with Microsoft Entra ID
   - Office 365 Users (for SLA time zone lookup)
   - Microsoft Teams
   - Approvals
@@ -73,7 +73,7 @@
 - [ ] Run `scripts/create_connection_references.py` to deploy connection references
 - [ ] Bind each connection reference to an active connection:
   - `fsi_cr_ara_dataverse` — Dataverse
-  - `fsi_cr_ara_http_azuread` — HTTP with Azure AD (Bots API + Graph API)
+  - `fsi_cr_ara_http_azuread` — HTTP with Microsoft Entra ID (Bots API + Graph API)
   - `fsi_cr_ara_teams` — Microsoft Teams
   - `fsi_cr_ara_approvals` — Approvals
 
@@ -85,7 +85,7 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 
 - [ ] **Flow 1: Discover-UnregisteredAgents-Daily**
   - Build trigger (Recurrence — daily)
-  - Build environment enumeration (HTTP with Azure AD → Bots API)
+  - Build environment enumeration (HTTP with Microsoft Entra ID → Bots API)
   - Build Dataverse upsert logic (alternate key)
   - Build Zone 3 auto-quarantine branch
   - Build compliance event logging
