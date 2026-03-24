@@ -46,7 +46,7 @@ Your pipeline was created outside of our centrally governed infrastructure. To m
    - The environment will be force-linked to the central host on [Enforcement Date]
 
 <strong>Questions?</strong>
-Contact the Platform Operations team at [platform-ops@company.com] or [#platform-support in Teams].
+Contact the Platform Operations team at [platform-ops@example.com] or [#platform-support in Teams].
 
 Thank you for your cooperation in maintaining our governance standards.
 
@@ -229,7 +229,7 @@ To prevent disruption:
 If you have questions or need assistance, please contact the Platform Operations team immediately.
 
 Platform Operations Team
-[platform-ops@company.com]
+[platform-ops@example.com]
 ```
 
 ---

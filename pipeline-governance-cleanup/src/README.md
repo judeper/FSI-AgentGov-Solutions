@@ -118,7 +118,7 @@ Sends email notifications to environment/pipeline owners via Microsoft Graph.
 | InputPath | Yes | - | Path to CSV with owner information |
 | EnforcementDate | Yes | - | Date when enforcement actions will occur |
 | TestMode | No | false | Preview emails without sending |
-| SupportEmail | No | platform-ops@company.com | Support team email |
+| SupportEmail | No | platform-ops@example.com | Support team email |
 | MigrationUrl | No | (placeholder) | URL for migration request form |
 | ExemptionUrl | No | (placeholder) | URL for exemption request form |
 | SenderEmail | No | (empty) | Email address of sender (required for application permissions) |

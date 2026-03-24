@@ -310,7 +310,7 @@ To continue using pipelines:
 2. Recreate your pipeline configurations
 3. Contact Platform Ops if you need assistance
 
-Questions? Contact platform-ops@company.com
+Questions? Contact platform-ops@example.com
 ```
 
 ### Step 4.3: Update Compliance Tracking

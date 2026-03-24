@@ -65,7 +65,7 @@ param(
     [switch]$TestMode,
 
     [Parameter(Mandatory = $false)]
-    [string]$SupportEmail = "platform-ops@company.com",
+    [string]$SupportEmail = "platform-ops@example.com",
 
     [Parameter(Mandatory = $false)]
     [string]$MigrationUrl = "https://company.service-now.com/pipeline-migration",
