@@ -35,8 +35,8 @@
     PrivateData = @{
         PSData = @{
             Tags         = @('Audit', 'Compliance', 'PowerPlatform', 'Dataverse', 'ManagedIdentity', 'FSI')
-            ProjectUri   = 'https://github.com/microsoft/FSI-AgentGov-Solutions'
-            LicenseUri   = 'https://github.com/microsoft/FSI-AgentGov-Solutions/blob/main/LICENSE'
+            ProjectUri   = 'https://github.com/judeper/FSI-AgentGov-Solutions'
+            LicenseUri   = 'https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/LICENSE'
             ReleaseNotes = 'Initial release — 6 helper functions for ALCA detection and remediation runbooks.'
         }
     }
