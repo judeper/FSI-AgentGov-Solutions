@@ -10,8 +10,8 @@ Solutions for controlling who can access, share, and publish AI agents.
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
-| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.0 | 3.8 |
-| [Conditional Access Automation](conditional-access-automation/index.md) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.1 | 1.11, 1.23, 1.18 |
+| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.1 | 3.8 |
+| [Conditional Access Automation](conditional-access-automation/index.md) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.2 | 1.11, 1.23, 1.18 |
 | [Cross-Tenant and External Sharing Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-tenant-external-sharing-governance/README.md) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
 | [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.3 | 2.22, 1.23, 3.7, 3.8 |
 | [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.2 | 1.18, 2.8 |
@@ -24,8 +24,8 @@ Solutions for securing agent content, file handling, and knowledge sources.
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
 | [Agent Knowledge Source Scanner](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-knowledge-source-scanner/README.md) | Item-level permission scanning for agent knowledge source SharePoint libraries | v1.0.1 | 4.3, 1.4, 1.5 |
-| [Content Moderation Monitor](content-moderation-monitor/index.md) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.1 | 1.8, 1.14 |
-| [File Upload Security Configurator](file-upload-security/index.md) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.0 | 1.14, 1.8, 1.4 |
+| [Content Moderation Monitor](content-moderation-monitor/index.md) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.2 | 1.8, 1.14 |
+| [File Upload Security Configurator](file-upload-security/index.md) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.1 | 1.14, 1.8, 1.4 |
 | [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.0.2 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |
 | [RAG Source Validator](rag-source-validator/index.md) | Integrity validation for RAG knowledge sources with change detection | v1.0.1 | 2.16, 1.7, 2.13 |
 
@@ -37,7 +37,7 @@ Solutions for audit management, compliance reporting, and regulatory workflows.
 |----------|-------------|---------|----------|
 | [Agent Registry Automation](agent-registry-automation/index.md) | Automated discovery, registration, approval, and lifecycle governance of AI agents | v1.0.0 | 1.2, 1.7, 2.1, 2.13 |
 | [Audit Compliance Manager (ACM)](audit-compliance-manager/index.md) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments | v1.0.1 | 1.7 |
-| [Compliance Dashboard](compliance-dashboard/index.md) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.0 | 3.3, 3.1, 3.2 |
+| [Compliance Dashboard](compliance-dashboard/index.md) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.1 | 3.3, 3.1, 3.2 |
 | [Cross-Solution Integration](cross-solution-integration/index.md) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
 | [FINRA Supervision Workflow](finra-supervision-workflow/index.md) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
 | [Model Risk Management Automation](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
@@ -52,7 +52,7 @@ Solutions for observability, analytics, event correlation, and drift detection.
 | [Agent Observability Foundation](agent-observability-foundation/index.md) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.0 | 1.7, 2.8, 2.9, 3.2 |
 | [Copilot Studio Analytics](copilot-studio-analytics/index.md) | Business impact analytics for Copilot Studio agents | v1.1.0 | 3.2 |
 | [Deny Event Correlation Report](deny-event-correlation-report/index.md) | Daily deny event correlation across Purview, DLP, App Insights | v2.0.0 | 1.5, 1.7, 1.8, 3.4 |
-| [Scope Drift Monitor](scope-drift-monitor/index.md) | Detect agent data access beyond declared operational scope | v1.1.0 | 1.14, 1.4, 1.5 |
+| [Scope Drift Monitor](scope-drift-monitor/index.md) | Detect agent data access beyond declared operational scope | v1.1.1 | 1.14, 1.4, 1.5 |
 | [Hallucination Feedback Tracker](hallucination-tracker/index.md) | Feedback aggregation for hallucination pattern analysis | v0.1.0-preview | 3.10, 2.9, 2.12 |
 
 ## Agent Configuration
@@ -62,7 +62,7 @@ Solutions for validating and enforcing agent configuration settings.
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
 | [Generative AI Config Auditor](generative-ai-config-auditor/index.md) | GenAI feature configuration validation per zone governance policy | v1.0.0 | 2.24 |
-| [Session Security Configurator](session-security-configurator/index.md) | Session security validation per governance zone with drift detection | v1.0.0 | 1.23, 1.11 |
+| [Session Security Configurator](session-security-configurator/index.md) | Session security validation per governance zone with drift detection | v1.0.1 | 1.23, 1.11 |
 | [Agent Communication Restriction Detector](agent-communication-restriction-detector/index.md) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
 | [Action Confirmation Auditor](action-confirmation-auditor/index.md) | Step-up confirmation validation for agent action invocations | v1.0.0 | 1.23 |
 

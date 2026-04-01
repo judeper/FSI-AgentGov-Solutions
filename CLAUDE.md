@@ -37,7 +37,7 @@ git rev-parse --show-toplevel
 |----------|-------------|------|---------|
 | [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.0 |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.0 |
-| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.0 |
+| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.1 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.0 |
 | [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.0.1 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.1.0 |
@@ -45,16 +45,16 @@ git rev-parse --show-toplevel
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.2 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.1 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.1 |
-| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.0 |
-| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.1.1 |
-| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.1 |
+| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.1 |
+| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.1.2 |
+| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.2 |
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.1.0 |
 | [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v1.0.0 |
 | [cross-tenant-external-sharing-governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | PowerShell/Python | v1.0.0 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.0 |
 | [dr-testing-framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | PowerShell/Python | v1.1.0 |
 | [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.1.2 |
-| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.0.0 |
+| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.0.1 |
 | [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.0.0 |
 | [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.0.0 |
 | [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v0.1.0-preview |
@@ -64,9 +64,9 @@ git rev-parse --show-toplevel
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.0 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.9 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.0.1 |
-| [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.1.0 |
+| [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.1.1 |
 | [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.0.0 |
-| [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.0.0 |
+| [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.0.1 |
 | [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v1.0.2 |
 
 ## Control Implementations
