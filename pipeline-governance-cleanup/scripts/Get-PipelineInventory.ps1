@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Exports Power Platform Dataverse environment inventory for governance review.
@@ -13,7 +15,7 @@
     - Manual correlation required for non-compliant pipeline identification
 
     IMPORTANT: This script cannot distinguish between platform host and
-    custom host. Manual verification is required. See PORTAL_WALKTHROUGH.md Part 0.
+    custom host. Manual verification is required. See docs/portal-walkthrough.md Part 0.
 
     PAC CLI CONTEXT: Ensure you are authenticated to the HOST environment before
     running pac pipeline list. Use 'pac auth list' to verify current context.
@@ -23,6 +25,7 @@
 
 .PARAMETER DesignatedHostId
     Environment ID of your designated pipelines host. Used to flag compliant environments.
+    Must be a valid GUID format (e.g., 00000000-0000-0000-0000-000000000000).
 
 .PARAMETER ProbePipelines
     If specified, probes each environment to check for pipeline configurations using
@@ -48,7 +51,7 @@
 
     This script provides INVENTORY ONLY. Force-linking environments to a custom
     pipelines host requires manual action in the Deployment Pipeline Configuration app.
-    See PORTAL_WALKTHROUGH.md for manual procedures.
+    See docs/portal-walkthrough.md for manual procedures.
 
     Starting February 2026, pipeline target environments must be Managed Environments.
     Verify target environments are managed before force-linking.
@@ -60,13 +63,14 @@ param(
     [string]$OutputPath = ".\PipelineInventory.csv",
 
     [Parameter(Mandatory = $false)]
+    [ValidateScript({
+        [string]::IsNullOrEmpty($_) -or $_ -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
+    })]
     [string]$DesignatedHostId = "",
 
     [Parameter(Mandatory = $false)]
     [switch]$ProbePipelines
 )
-
-#Requires -Version 7.0
 
 # Ensure PAC CLI is available
 function Test-PacCli {
@@ -108,6 +112,11 @@ function Test-EnvironmentPipelines {
         [string]$EnvironmentId
     )
 
+    # Validate EnvironmentId is a GUID to prevent command injection
+    if ($EnvironmentId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+        return @{ HasPipelines = "Unknown"; Notes = "Invalid environment ID format" }
+    }
+
     try {
         # Note: pac pipeline list does NOT support --json, so we parse text output
         $result = pac pipeline list --environment $EnvironmentId 2>&1
@@ -145,7 +154,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.8 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.1.0 - April 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -236,6 +245,14 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
     Write-Host "Exporting inventory to: $OutputPath" -ForegroundColor Cyan
 
     try {
+        # Ensure output directory exists
+        $outputDir = Split-Path -Path $OutputPath -Parent
+        if (-not [string]::IsNullOrEmpty($outputDir) -and -not (Test-Path $outputDir)) {
+            $resolvedDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($outputDir)
+            New-Item -ItemType Directory -Path $resolvedDir -Force | Out-Null
+            Write-Verbose "Created output directory: $resolvedDir"
+        }
+
         $results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
         Write-Host "Successfully exported $($results.Count) environment records" -ForegroundColor Green
     }
@@ -282,7 +299,7 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
     Write-Host "To identify which PIPELINES HOST an environment is linked to," -ForegroundColor Yellow
     Write-Host "you must manually check using the Deployment Pipeline Configuration app." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "See PORTAL_WALKTHROUGH.md for manual verification procedures." -ForegroundColor Yellow
+    Write-Host "See docs/portal-walkthrough.md for manual verification procedures." -ForegroundColor Yellow
 }
 
 # Run main function

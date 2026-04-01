@@ -2,6 +2,8 @@
 
 Email and Teams notification templates for pipeline governance cleanup.
 
+> **Legal/Compliance Note:** Append your organization's standard legal disclaimer and confidentiality notice to all outbound notifications. Most FSI organizations require language such as: *"This message is intended only for the named recipient(s). If received in error, please delete and notify the sender."* Contact your legal or compliance team for the approved template.
+
 ---
 
 ## Email Template: Owner Notification

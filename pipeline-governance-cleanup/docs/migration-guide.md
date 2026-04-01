@@ -13,7 +13,7 @@ Use this guide if your organization has:
 - **Platform host usage** - Some environments use Microsoft's infrastructure-managed host
 - **Need for coordinated migration** - You want to migrate without disrupting active deployments
 
-If your organization has **no existing pipelines** (greenfield), see the [Greenfield Quick Start](./README.md#new-deployment-greenfield) section instead.
+If your organization has **no existing pipelines** (greenfield), see the [Greenfield Quick Start](../README.md#new-deployment-greenfield) section instead.
 
 ---
 
@@ -95,7 +95,7 @@ Migrate environments in this order to minimize disruption:
 | 3 | Development (source) | Migrate after targets are linked |
 | 4 | Sandbox (general) | Lower risk; migrate last |
 
-**Why this order?** Production environments receive deployments. Linking them to the central host first ensures all future deployments are governed. Development environments are where pipelines originate; linking them last gives makers maximum time to adjust.
+**Why this order?** Production environments receive deployments. Linking them to the central host first helps ensure future deployments route through governed infrastructure. Development environments are where pipelines originate; linking them last gives makers maximum time to adjust.
 
 #### 2.4 Tracking Migration Progress
 

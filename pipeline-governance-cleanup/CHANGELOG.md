@@ -6,6 +6,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.0] - April 2026
+
+### Security Hardening & Compliance Improvements
+
+This release addresses findings from an AI Council review (4 reviewers: Security, Customer Experience, Architecture, Compliance) to prepare the solution for customer testing.
+
+| Category | Change | Severity |
+|----------|--------|----------|
+| Security | Hard-block placeholder defaults in production sends (requires `-Force` to override) | HIGH |
+| Security | URL scheme validation — `MigrationUrl` and `ExemptionUrl` must use `https://` | HIGH |
+| Security | Notification audit log CSV written after each run for FINRA evidence trail | HIGH |
+| Security | GUID validation on `DesignatedHostId` parameter and `EnvironmentId` before shell interpolation | MEDIUM |
+| Security | Graph session wrapped in `try/finally` to guarantee `Disconnect-MgGraph` | MEDIUM |
+| Script | `#Requires` directives moved to top of file (before `param()`) in both scripts | HIGH |
+| Script | Output directory auto-creation for `Get-PipelineInventory.ps1` `-OutputPath` | MEDIUM |
+| Script | Script console references updated from `PORTAL_WALKTHROUGH.md` to `docs/portal-walkthrough.md` | MEDIUM |
+| Compliance | Prohibited language fix: "ensures all future deployments" → "helps ensure" in migration guide | HIGH |
+| Compliance | Added Data Handling and PII section to README (GLBA 501(b) guidance) | HIGH |
+| Compliance | Added legal disclaimer note to notification templates | MEDIUM |
+| Compliance | Regulatory citations upgraded to section-level (FINRA 4511(a), 3110(a), SOX §404(a)) | MEDIUM |
+| Structure | Renamed `samples/` → `templates/` (per repo convention) | MEDIUM |
+| Links | Fixed 5 broken `./README.md` links in docs/ → `../README.md` | HIGH |
+
+#### Added
+
+- `-Force` switch on `Send-OwnerNotifications.ps1` to override placeholder default blocking
+- `-ValidateScript` on `MigrationUrl` and `ExemptionUrl` requiring `https://` scheme
+- `-ValidateScript` on `DesignatedHostId` requiring valid GUID format
+- GUID validation in `Test-EnvironmentPipelines` before `pac pipeline list` execution
+- Notification audit log: `NotificationLog_<timestamp>.csv` written to input file directory
+- `try/finally` around Graph send loop ensuring `Disconnect-MgGraph` always runs
+- Data Handling and PII section in README with storage, retention, and GLBA guidance
+- Legal disclaimer guidance note in `docs/notification-templates.md`
+- Output directory auto-creation in `Get-PipelineInventory.ps1`
+
+#### Changed
+
+- Version bumped from 1.0.9 to 1.1.0 (structural + security changes warrant minor bump)
+- `#Requires` directives moved to line 1 in both PowerShell scripts
+- Regulatory citations use section-level references (FINRA Rule 4511(a), Rule 3110(a), SOX §404(a), OCC 2011-12 subtitle)
+- `samples/` renamed to `templates/`
+- Script banner references updated to new doc paths
+
+#### Fixed
+
+- 5 broken `./README.md` links in docs/ files (resolved to nonexistent `docs/README.md`)
+- Prohibited language in `docs/migration-guide.md`: "ensures all" → "helps ensure"
+- `PORTAL_WALKTHROUGH.md` references in Get-PipelineInventory.ps1 console output
+
+#### Path Migration Note
+
+File paths changed in v1.0.9 and v1.1.0. For audit trail continuity:
+- `src/Get-PipelineInventory.ps1` → `scripts/Get-PipelineInventory.ps1`
+- `src/Send-OwnerNotifications.ps1` → `scripts/Send-OwnerNotifications.ps1`
+- Root docs (e.g., `AUTOMATION_GUIDE.md`) → `docs/` (e.g., `docs/automation-guide.md`)
+- `samples/` → `templates/`
+
+---
+
 ## [1.0.9] - April 2026
 
 ### Changed
