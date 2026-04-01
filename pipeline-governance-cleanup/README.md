@@ -4,7 +4,7 @@
 
 Discover, notify, and clean up personal Power Platform pipelines before enforcing centralized ALM governance.
 
-> **Important:** This solution requires both **automated scripts** AND **manual admin actions**. Force-linking environments to a custom pipelines host cannot be automated - it requires UI interaction in the Deployment Pipeline Configuration app. See [LIMITATIONS.md](./LIMITATIONS.md) for details.
+> **Important:** This solution requires both **automated scripts** AND **manual admin actions**. Force-linking environments to a custom pipelines host cannot be automated - it requires UI interaction in the Deployment Pipeline Configuration app. See [Limitations](docs/limitations.md) for details.
 
 ## What This Solution Does
 
@@ -24,11 +24,11 @@ Discover, notify, and clean up personal Power Platform pipelines before enforcin
 | Detect pipeline presence | **Automated** | `pac pipeline list` (text parsing, no --json) |
 | Identify pipelines host association | **Manual** | Check each environment in Deployment Pipeline Configuration app |
 | Query DeploymentPipeline table via Power Automate | **Not Supported** | Use pipeline trigger events only |
-| Force-link environments | **Manual Only** | [Portal walkthrough](./PORTAL_WALKTHROUGH.md) |
+| Force-link environments | **Manual Only** | [Portal walkthrough](docs/portal-walkthrough.md) |
 | Send owner notifications | **Automated** | Microsoft Graph (delegated or application permissions) |
 | Monitor new deployments | **Automated** | Power Automate trigger events |
 
-See [LIMITATIONS.md](./LIMITATIONS.md) for detailed explanation of technical constraints.
+See [Limitations](docs/limitations.md) for detailed explanation of technical constraints.
 
 ## Who Should Use This
 
@@ -55,7 +55,7 @@ You must have a designated pipelines host environment:
 
 See [Microsoft Learn: Set Up Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/set-up-pipelines) for host environment setup.
 
-> **Understanding Host Types:** Power Platform pipelines can use the **platform host** (automatically provisioned, infrastructure-managed, limited governance) or a **custom host** (manually configured, full governance control). This solution requires a custom host. If your organization uses the platform host (no "Power Platform Pipelines" app visible in your environment's D365 apps list), you must create a custom host first. See [PORTAL_WALKTHROUGH.md Part 0](./PORTAL_WALKTHROUGH.md#part-0-identify-your-pipelines-host-environment).
+> **Understanding Host Types:** Power Platform pipelines can use the **platform host** (automatically provisioned, infrastructure-managed, limited governance) or a **custom host** (manually configured, full governance control). This solution requires a custom host. If your organization uses the platform host (no "Power Platform Pipelines" app visible in your environment's D365 apps list), you must create a custom host first. See [Portal Walkthrough Part 0](docs/portal-walkthrough.md#part-0-identify-your-pipelines-host-environment).
 
 ### 2. Roles Required
 
@@ -90,7 +90,7 @@ Use this path if your organization has **no existing personal pipelines or custo
 
 Complete these checks before proceeding:
 
-- [ ] **Confirm no existing custom hosts** - Run [Part 0 of PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md#part-0-identify-your-pipelines-host-environment) to verify no environments have the Power Platform Pipelines app installed
+- [ ] **Confirm no existing custom hosts** - Run [Part 0 of the Portal Walkthrough](docs/portal-walkthrough.md#part-0-identify-your-pipelines-host-environment) to verify no environments have the Power Platform Pipelines app installed
 - [ ] **Verify admin role** - Confirm you have Power Platform Admin or Entra Global Admin role
 - [ ] **Identify host environment** - Select an environment to become your custom host (must have Dataverse provisioned)
 - [ ] **Confirm target is (or can be) Managed Environment** - Starting February 2026, all pipeline targets must be Managed Environments
@@ -102,7 +102,7 @@ Complete these checks before proceeding:
 If all pre-flight checks pass, follow these steps:
 
 1. **Verify clean state**
-   - Run Part 0 of [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) to confirm no custom hosts exist
+   - Run Part 0 of the [Portal Walkthrough](docs/portal-walkthrough.md) to confirm no custom hosts exist
    - Run `pac pipeline list` across environments—if no pipelines are detected, this is *indicative* of greenfield state
    - **Required:** Manually verify in the Deployment Pipeline Configuration app that no custom hosts exist, even if `pac pipeline list` returns no pipelines. The CLI cannot detect all host configurations.
 
@@ -118,26 +118,26 @@ If all pre-flight checks pass, follow these steps:
 
 4. **Link development source environments**
    - Add the environments where makers will build solutions (your development source environments) to your custom host via the Deployment Pipeline Configuration app
-   - See [PORTAL_WALKTHROUGH.md Part 3](./PORTAL_WALKTHROUGH.md#part-3-force-link-an-environment)
+   - See [Portal Walkthrough Part 3](docs/portal-walkthrough.md#part-3-force-link-an-environment)
 
 5. **Restrict pipeline creation (Security Best Practice)**
    - Remove or restrict the "Deployment pipeline default" role to control who can create pipelines
    - This limits makers from creating personal hosts
-   - See [PORTAL_WALKTHROUGH.md Part 7](./PORTAL_WALKTHROUGH.md#part-7-managing-pipeline-creator-access)
+   - See [Portal Walkthrough Part 7](docs/portal-walkthrough.md#part-7-managing-pipeline-creator-access)
 
 6. **Skip to monitoring**
    - No cleanup needed for greenfield deployments
    - Proceed directly to [Step 6: Set Up Ongoing Monitoring](#step-6-set-up-ongoing-monitoring-optional)
 
-> **FSI Note:** For U.S. Financial Services organizations, restricting the "Deployment pipeline default" role is a security best practice. It limits makers from creating ungoverned personal pipeline hosts. See [LIMITATIONS.md Section 6](./LIMITATIONS.md#6-force-link-controls-environment-host-association) for details on what this controls.
+> **FSI Note:** For U.S. Financial Services organizations, restricting the "Deployment pipeline default" role is a security best practice. It limits makers from creating ungoverned personal pipeline hosts. See [Limitations Section 6](docs/limitations.md#6-force-link-controls-environment-host-association) for details on what this controls.
 
 ### Greenfield vs Brownfield
 
 | Scenario | Path | Documentation |
 |----------|------|---------------|
 | **Greenfield** - No existing pipelines | Use Quick Start above | This section |
-| **Brownfield** - Existing personal pipelines | Follow full cleanup workflow | [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) |
-| **Mixed** - Some environments have pipelines | Treat as brownfield | [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) |
+| **Brownfield** - Existing personal pipelines | Follow full cleanup workflow | [Migration Guide](docs/migration-guide.md) |
+| **Mixed** - Some environments have pipelines | Treat as brownfield | [Migration Guide](docs/migration-guide.md) |
 
 ---
 
@@ -215,7 +215,7 @@ Use the PowerShell script to list all environments and detect pipelines:
 pac auth create
 
 # Run inventory script with pipeline detection
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
 ```
 
 This produces a CSV with all environments and indicates which have pipelines (`HasPipelinesEnabled` column). **Manual review is required** to identify which pipelines host those environments are linked to.
@@ -232,7 +232,7 @@ For each environment in the inventory:
 4. If installed, note the pipelines host association
 5. Mark environments that need force-linking
 
-See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
+See [Portal Walkthrough](docs/portal-walkthrough.md) for detailed steps.
 
 ### Step 3: Prepare Notification List
 
@@ -247,13 +247,13 @@ Add owner information to your inventory:
 Send notifications to pipeline owners:
 
 ```powershell
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -TestMode  # Remove to send actual emails
 ```
 
-See [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) for email templates.
+See [Notification Templates](docs/notification-templates.md) for email templates.
 
 ### Step 5: Execute Force Link (Manual)
 
@@ -265,7 +265,7 @@ After notification period (30-60 days):
 4. Use **Force Link** button if already linked to another host
 5. Document in tracking table/spreadsheet
 
-See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for complete walkthrough.
+See [Portal Walkthrough](docs/portal-walkthrough.md) for complete walkthrough.
 
 ### Step 6: Set Up Ongoing Monitoring (Optional)
 
@@ -274,7 +274,7 @@ Use Power Automate triggers to monitor for new pipeline activity:
 - `OnDeploymentRequested` - New deployment initiated
 - `OnDeploymentCompleted` - Deployment finished
 
-See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for trigger configuration.
+See [Automation Guide](docs/automation-guide.md) for trigger configuration.
 
 ### Step 7: Post-Migration Cleanup
 
@@ -354,9 +354,9 @@ Trigger-Based Monitoring (Power Automate)
 | Cannot find pipelines app | App not installed | Install Power Platform Pipelines on host |
 | Force Link fails | Environment protected | Check for environment locks, contact support |
 | Environment not listed | Filtered by type | Ensure including all environment types |
-| Power Platform Pipelines app not visible | Using platform host instead of custom host | See PORTAL_WALKTHROUGH Part 0; platform host is infrastructure-managed |
+| Power Platform Pipelines app not visible | Using platform host instead of custom host | See Portal Walkthrough Part 0; platform host is infrastructure-managed |
 | PAC CLI returns no pipelines | Wrong auth context | Run `pac auth list`; must authenticate to HOST environment, not dev/target |
-| Users still creating personal pipelines | Force Link controls host association, not creation | See LIMITATIONS.md section 6; restrict "Deployment pipeline default" role |
+| Users still creating personal pipelines | Force Link controls host association, not creation | See Limitations section 6; restrict "Deployment pipeline default" role |
 
 ### Error Recovery Procedures
 
@@ -434,15 +434,15 @@ This solution supports compliance with:
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) | Power Automate trigger-based monitoring, service principal setup |
-| [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Manual force-link UI procedures (includes rollback) |
-| [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) | Brownfield migration and coexistence guidance |
-| [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints, backup/DR, licensing |
-| [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams notification templates, impact assessment |
-| [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) | Quick deployment checklist |
-| [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) | Compliance evidence checklist for auditors |
+| Document | Description |
+|----------|-------------|
+| [Setup Checklist](docs/setup-checklist.md) | Step-by-step deployment checklist |
+| [Automation Guide](docs/automation-guide.md) | Scheduled automation configuration |
+| [Portal Walkthrough](docs/portal-walkthrough.md) | Force-link environments in Power Platform admin |
+| [Migration Guide](docs/migration-guide.md) | Brownfield migration from personal pipelines |
+| [Notification Templates](docs/notification-templates.md) | Email and Teams notification templates |
+| [Audit Checklist](docs/audit-checklist.md) | Compliance audit verification checklist |
+| [Limitations](docs/limitations.md) | Known limitations and workarounds |
 | [samples/](./samples/) | Sample CSV files for scripts |
 
 ## Related Controls
@@ -454,7 +454,7 @@ This solution supports:
 
 ## Version
 
-1.0.8 - January 2026
+1.0.9 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

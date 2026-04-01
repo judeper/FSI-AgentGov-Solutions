@@ -10,9 +10,9 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 
 | Capability | Method | Documentation |
 |------------|--------|---------------|
-| List all environments | PowerShell + PAC CLI | [src/Get-PipelineInventory.ps1](./src/Get-PipelineInventory.ps1) |
+| List all environments | PowerShell + PAC CLI | [scripts/Get-PipelineInventory.ps1](../scripts/Get-PipelineInventory.ps1) |
 | Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
-| Send owner notifications | PowerShell + Microsoft Graph | [src/Send-OwnerNotifications.ps1](./src/Send-OwnerNotifications.ps1) |
+| Send owner notifications | PowerShell + Microsoft Graph | [scripts/Send-OwnerNotifications.ps1](../scripts/Send-OwnerNotifications.ps1) |
 | Monitor deployment events | Power Automate triggers | This document (below) |
 | Alert on new pipelines | Power Automate + Teams | This document (below) |
 
@@ -22,10 +22,10 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 |------------|--------|-------------|
 | Query DeploymentPipeline table | System table not exposed to "List rows" action | Use pipeline triggers only |
 | Identify host associations | No API returns pipeline-to-host mapping | Manual verification in admin portal |
-| Force-link environments | No API or CLI command exists | [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) |
+| Force-link environments | No API or CLI command exists | [Portal Walkthrough](./portal-walkthrough.md) |
 | Deactivate pipelines directly | Requires host environment access | Manual action in maker portal |
 
-See [LIMITATIONS.md](./LIMITATIONS.md) for technical details.
+See [Limitations](./limitations.md) for technical details.
 
 ---
 
@@ -35,19 +35,19 @@ See [LIMITATIONS.md](./LIMITATIONS.md) for technical details.
 
 Exports all Power Platform environments to CSV for review, with optional pipeline detection.
 
-**Location:** `src/Get-PipelineInventory.ps1`
+**Location:** `scripts/Get-PipelineInventory.ps1`
 
 **Usage:**
 
 ```powershell
 # Basic usage - export all environments
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv"
 
 # With pipeline probing (recommended) - detects which environments have pipelines
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
 
 # With designated host flag for compliance tracking
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines -DesignatedHostId "00000000-0000-0000-0000-000000000000"
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines -DesignatedHostId "00000000-0000-0000-0000-000000000000"
 ```
 
 **Parameters:**
@@ -90,7 +90,7 @@ After running this script, environments with `HasPipelinesEnabled = "Yes"` need 
 
 Sends governance notification emails to environment/pipeline owners.
 
-**Location:** `src/Send-OwnerNotifications.ps1`
+**Location:** `scripts/Send-OwnerNotifications.ps1`
 
 **Prerequisites:**
 - Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
@@ -113,13 +113,13 @@ Sends governance notification emails to environment/pipeline owners.
 
 ```powershell
 # Test mode - preview emails without sending
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -TestMode
 
 # Send actual notifications (delegated permissions - interactive sign-in)
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SupportEmail "platform-ops@contoso.com" `
@@ -127,7 +127,7 @@ Sends governance notification emails to environment/pipeline owners.
     -ExemptionUrl "https://contoso.service-now.com/exemption"
 
 # Send using application permissions (service principal)
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SenderEmail "noreply@contoso.com" `
@@ -192,7 +192,7 @@ For fully automated notification workflows (e.g., scheduled Azure Automation run
 Connect-MgGraph -ClientId "your-app-id" -TenantId "your-tenant-id" -CertificateThumbprint "your-thumbprint"
 
 # Run notification script with sender email (required for app permissions)
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SenderEmail "noreply@contoso.com" `
@@ -496,7 +496,7 @@ concat('Pipeline ', triggerOutputs()?['body/OutputParameters/PipelineName'], ' d
 | Identify pipeline hosts | - | Admin Portal | No API available |
 | Query pipelines | Triggers only | Admin Portal | Cannot use "List rows" |
 | Send notifications | PowerShell | - | Microsoft Graph |
-| Force-link environments | - | Admin Portal | [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) |
+| Force-link environments | - | Admin Portal | [Portal Walkthrough](./portal-walkthrough.md) |
 | Monitor deployments | Power Automate | - | Trigger-based |
 | Track compliance | Custom table | Manual updates | Hybrid approach |
 
@@ -504,14 +504,14 @@ concat('Pipeline ', triggerOutputs()?['body/OutputParameters/PipelineName'], ' d
 
 ## Next Steps
 
-1. Run [Get-PipelineInventory.ps1](./src/Get-PipelineInventory.ps1) to get environment baseline
-2. Manually verify pipeline configurations ([PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md))
+1. Run [Get-PipelineInventory.ps1](../scripts/Get-PipelineInventory.ps1) to get environment baseline
+2. Manually verify pipeline configurations ([Portal Walkthrough](./portal-walkthrough.md))
 3. Prepare notification list with owner information
-4. Run [Send-OwnerNotifications.ps1](./src/Send-OwnerNotifications.ps1)
+4. Run [Send-OwnerNotifications.ps1](../scripts/Send-OwnerNotifications.ps1)
 5. Set up trigger-based monitoring (this guide)
-6. Execute force-link after notification period ([PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md))
+6. Execute force-link after notification period ([Portal Walkthrough](./portal-walkthrough.md))
 
-See [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) for complete deployment checklist.
+See [Setup Checklist](./setup-checklist.md) for complete deployment checklist.
 
 ---
 

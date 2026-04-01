@@ -2,6 +2,15 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [1.0.3] — April 2026
+
+### Changed
+
+- Restructured solution to follow standard layout
+- Moved documentation from root to `docs/` folder
+- Renamed SOLUTION-DOCUMENTATION.md to docs/flow-configuration.md
+- Removed exported Power Automate flow JSON from `src/` (per solution content policy — manual build instructions preserved in docs/flow-configuration.md)
+
 ## [1.0.2] — March 2026
 
 ### Fixed

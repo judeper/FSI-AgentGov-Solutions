@@ -1,6 +1,6 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
@@ -23,11 +23,17 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 inactivity-timeout-enforcement/
 ├── README.md
 ├── CHANGELOG.md
-├── DELIVERY-CHECKLIST.md
-├── SOLUTION-DOCUMENTATION.md
-└── src/
-    └── detect-inactivity-timeout-noncompliance.json  # Daily compliance detection flow
+└── docs/
+    ├── delivery-checklist.md       # Pre-deployment verification checklist
+    └── flow-configuration.md       # Step-by-step flow build guide
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Flow Configuration](docs/flow-configuration.md) | Step-by-step guide to build the inactivity timeout detection flow |
+| [Delivery Checklist](docs/delivery-checklist.md) | Pre-deployment verification checklist |
 
 ## Prerequisites
 
@@ -37,10 +43,10 @@ inactivity-timeout-enforcement/
 
 ## Deployment
 
-1. Import the flow JSON file (`src/detect-inactivity-timeout-noncompliance.json`) into your Power Platform environment
+1. Follow the step-by-step build instructions in [docs/flow-configuration.md](docs/flow-configuration.md) to create the detection flow in Power Automate designer
 2. Configure connection references (see prerequisites)
 3. Activate cloud flows
-4. Verify deployment using the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
+4. Verify deployment using the [Delivery Checklist](docs/delivery-checklist.md) and the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
 
 ## Known Limitations
 

@@ -86,7 +86,7 @@ For U.S. Financial Services organizations, **a custom host is required** for gov
 - Does not support role-based access restrictions for pipeline creation
 - Does not provide visibility into pipeline configurations
 
-**Always migrate to a custom host you control.** See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for brownfield migration guidance.
+**Always migrate to a custom host you control.** See [Migration Guide](./migration-guide.md) for brownfield migration guidance.
 
 ### Which Environments to Force Link
 
@@ -556,15 +556,15 @@ Restricting the "Deployment pipeline default" role **only** affects pipeline cre
 2. Restricting the "Deployment pipeline default" role (this section)
 3. Force-linking all environments to your host (prevents deployment to/from other hosts)
 
-See [LIMITATIONS.md Section 6](./LIMITATIONS.md#6-force-link-controls-environment-host-association) for details on these boundaries.
+See [Limitations Section 6](./limitations.md#6-force-link-controls-environment-host-association) for details on these boundaries.
 
 ---
 
 ## See Also
 
-- [LIMITATIONS.md](./LIMITATIONS.md) - Why this cannot be automated
-- [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) - What CAN be automated
-- [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) - Communication templates
-- [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) - Brownfield migration procedures
-- [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) - Compliance evidence checklist
+- [Limitations](./limitations.md) - Why this cannot be automated
+- [Automation Guide](./automation-guide.md) - What CAN be automated
+- [Notification Templates](./notification-templates.md) - Communication templates
+- [Migration Guide](./migration-guide.md) - Brownfield migration procedures
+- [Audit Checklist](./audit-checklist.md) - Compliance evidence checklist
 - [Microsoft Learn: Custom Host Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines)

@@ -47,6 +47,6 @@ These samples are validated against script version **1.0.8**. If you're using a 
 
 ## See Also
 
-- [Get-PipelineInventory.ps1](../src/Get-PipelineInventory.ps1) - Inventory script
-- [Send-OwnerNotifications.ps1](../src/Send-OwnerNotifications.ps1) - Notification script
-- [AUTOMATION_GUIDE.md](../AUTOMATION_GUIDE.md) - Script documentation
+- [Get-PipelineInventory.ps1](../scripts/Get-PipelineInventory.ps1) - Inventory script
+- [Send-OwnerNotifications.ps1](../scripts/Send-OwnerNotifications.ps1) - Notification script
+- [Automation Guide](../docs/automation-guide.md) - Script documentation

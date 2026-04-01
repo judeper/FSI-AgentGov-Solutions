@@ -44,7 +44,7 @@ Store your client secret securely:
 2. Add your client secret as a secret
 3. Grant your Power Automate connection access
 
-See [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md) for detailed steps.
+See [Secrets Management](docs/secrets-management.md) for detailed steps.
 
 ### 3. Power Platform Environment
 
@@ -86,11 +86,11 @@ Create a table named `MessageCenterLog` with these columns:
 | actionsTaken | Multiline Text | Notes on response/remediation |
 | notifiedOn | DateTime | When Teams notification was sent (prevents duplicates) |
 
-> **Naming Convention Note:**Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix) for how to find it.
+> **Naming Convention Note:**Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [Teams Integration](docs/teams-integration.md#finding-your-publisher-prefix) for how to find it.
 
 ### Step 2: Create the Power Automate Flow
 
-See [FLOW_SETUP.md](./FLOW_SETUP.md) for complete flow creation instructions.
+See [Flow Configuration](docs/flow-configuration.md) for complete flow creation instructions.
 
 **Summary:**
 
@@ -103,7 +103,7 @@ See [FLOW_SETUP.md](./FLOW_SETUP.md) for complete flow creation instructions.
 
 ### Step 3: Set Up Teams Notifications
 
-See [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) for Teams setup.
+See [Teams Integration](docs/teams-integration.md) for Teams setup.
 
 **Summary:**
 
@@ -192,12 +192,12 @@ Microsoft Message Center has no webhook/push notification. The solution polls Gr
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [FLOW_SETUP.md](./FLOW_SETUP.md) | Complete Power Automate flow setup |
-| [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) | Teams notification configuration |
-| [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md) | Azure Key Vault setup |
-| [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) | Quick 10-step checklist |
+| Document | Description |
+|----------|-------------|
+| [Flow Configuration](docs/flow-configuration.md) | Step-by-step Power Automate flow build guide |
+| [Secrets Management](docs/secrets-management.md) | Key Vault integration for secure credential storage |
+| [Setup Checklist](docs/setup-checklist.md) | Quick 10-step deployment checklist |
+| [Teams Integration](docs/teams-integration.md) | Teams channel notification setup |
 
 ## Customization
 
@@ -233,7 +233,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.1.2 - March 2026
+2.1.3 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

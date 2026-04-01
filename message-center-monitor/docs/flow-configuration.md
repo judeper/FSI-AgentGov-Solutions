@@ -331,7 +331,7 @@ Add **Condition** to notify when action is truly needed:
 )
 ```
 
-> **Note:** Replace `cr123_` with your environment's publisher prefix (see [TEAMS_INTEGRATION.md § Finding Your Publisher Prefix](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix)). The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
+> **Note:** Replace `cr123_` with your environment's publisher prefix (see [Teams Integration § Finding Your Publisher Prefix](teams-integration.md#finding-your-publisher-prefix)). The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
 
 OR (visual editor equivalent):
 
@@ -397,7 +397,7 @@ Add action: **Microsoft Teams - Post card in a chat or channel**
 - **Post in:** Channel
 - **Team:** Your team
 - **Channel:** Your alerts channel
-- **Adaptive Card:** Use the template from [teams-notification-card.json](./teams-notification-card.json)
+- **Adaptive Card:** Use the template from [teams-notification-card.json](../templates/teams-notification-card.json)
 
 Replace placeholders in the card with dynamic content:
 - `{title}` → `@{items('Apply_to_each')?['title']}`
@@ -407,7 +407,7 @@ Replace placeholders in the card with dynamic content:
 - `{startDateTime}` → `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}`
 - `{actionRequiredByDateTime}` → `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}`
 - `{id}` → `@{items('Apply_to_each')?['id']}`
-- `{recordId}` → `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` (replace `cr123_` with your publisher prefix — see [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md#finding-your-publisher-prefix))
+- `{recordId}` → `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` (replace `cr123_` with your publisher prefix — see [Teams Integration](teams-integration.md#finding-your-publisher-prefix))
 
 ## Step 8: Error Handling
 

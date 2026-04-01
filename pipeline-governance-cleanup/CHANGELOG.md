@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.0.9] - April 2026
+
+### Changed
+
+- Restructured solution to follow standard layout
+- Moved documentation from root to `docs/` folder
+- Moved PowerShell scripts from `src/` to `scripts/`
+- Removed `src/` directory (per solution content policy)
+
+---
+
 ## [1.0.8] - January 2026
 
 ### Documentation Accuracy Fixes
@@ -390,9 +401,9 @@ If you implemented v1.0.0:
 
 1. Remove any flows attempting to "List rows from DeploymentPipeline" - they will not work
 2. Remove any PowerShell scripts using `pac pipeline link` - this command does not exist
-3. Use the new PowerShell scripts in `src/` for inventory and notifications
-4. Follow [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for manual force-link procedures
-5. Review [LIMITATIONS.md](./LIMITATIONS.md) to set correct expectations
+3. Use the new PowerShell scripts in `scripts/` for inventory and notifications
+4. Follow [Portal Walkthrough](docs/portal-walkthrough.md) for manual force-link procedures
+5. Review [Limitations](docs/limitations.md) to set correct expectations
 
 ---
 

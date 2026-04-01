@@ -53,7 +53,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Add client secret as a secret
 - [ ] Grant Power Automate access to read secrets
 
-**Details:** [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md)
+**Details:** [Secrets Management](secrets-management.md)
 
 ---
 
@@ -116,7 +116,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Add condition for high-severity and critical-severity posts
 - [ ] Add Teams notification action
 
-**Details:** [FLOW_SETUP.md](./FLOW_SETUP.md)
+**Details:** [Flow Configuration](flow-configuration.md)
 
 ---
 
@@ -131,11 +131,11 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 ### Step 9: Configure Teams Notification
 
 - [ ] Add Teams action to your flow
-- [ ] Use adaptive card template from `teams-notification-card.json`
+- [ ] Use adaptive card template from `templates/teams-notification-card.json`
 - [ ] Replace placeholders with dynamic content
 - [ ] Configure to post only on high-severity, critical-severity, or action-required
 
-**Details:** [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md)
+**Details:** [Teams Integration](teams-integration.md)
 
 ---
 
@@ -159,7 +159,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 
 ### Optional Enhancements
 
-- [ ] Add error notification flow (recommended — see [FLOW_SETUP.md Step 8](./FLOW_SETUP.md#step-8-error-handling) for the Catch scope pattern that sends a Teams alert with error details on flow failure)
+- [ ] Add error notification flow (recommended — see [Flow Configuration Step 8](flow-configuration.md#step-8-error-handling) for the Catch scope pattern that sends a Teams alert with error details on flow failure)
 - [ ] Create Dataverse views for filtering
 - [ ] Set up Power BI dashboard for trends
 - [ ] Integrate with ServiceNow or other ITSM

@@ -136,6 +136,6 @@ Common auditor questions and where to find answers:
 
 ## See Also
 
-- [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) - Force-link procedures
+- [Portal Walkthrough](./portal-walkthrough.md) - Force-link procedures
 - [README.md](./README.md) - Solution overview
-- [LIMITATIONS.md](./LIMITATIONS.md) - Technical constraints
+- [Limitations](./limitations.md) - Technical constraints

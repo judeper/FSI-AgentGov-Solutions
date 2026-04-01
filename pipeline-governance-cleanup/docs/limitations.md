@@ -24,7 +24,7 @@ There is no CLI command to link or force-link environments to a pipelines host.
 
 **Source:** [PAC CLI Pipeline Reference](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/pipeline)
 
-**Alternative:** Manual UI in Deployment Pipeline Configuration app. See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md).
+**Alternative:** Manual UI in Deployment Pipeline Configuration app. See [Portal Walkthrough](./portal-walkthrough.md).
 
 ---
 
@@ -42,7 +42,7 @@ There is no CLI command to link or force-link environments to a pipelines host.
 - **Direct Dataverse API** - With appropriate permissions, advanced users can query via Web API
 - **Deployment Pipeline Configuration app** - UI access for administrators
 
-**Alternative:** Use pipeline triggers (`OnDeploymentCompleted`, etc.) for event-based monitoring. See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md).
+**Alternative:** Use pipeline triggers (`OnDeploymentCompleted`, etc.) for event-based monitoring. See [Automation Guide](./automation-guide.md).
 
 ---
 
@@ -83,7 +83,7 @@ This returns pipelines that deploy TO the environment (as a target stage). Use t
 
 **Why:** Microsoft designed force-linking as an intentional administrative action with confirmation dialogs to prevent accidental breaking of existing pipeline configurations.
 
-**Alternative:** Document a manual procedure and train administrators. See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md).
+**Alternative:** Document a manual procedure and train administrators. See [Portal Walkthrough](./portal-walkthrough.md).
 
 ---
 
@@ -332,6 +332,6 @@ Until Microsoft provides APIs:
 
 ## See Also
 
-- [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) - What CAN be automated
-- [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) - Manual UI procedures
+- [Automation Guide](./automation-guide.md) - What CAN be automated
+- [Portal Walkthrough](./portal-walkthrough.md) - Manual UI procedures
 - [README.md](./README.md) - Solution overview

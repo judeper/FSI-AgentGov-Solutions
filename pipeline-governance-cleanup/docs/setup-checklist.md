@@ -29,7 +29,7 @@ Quick deployment checklist for the Pipeline Governance Cleanup solution.
 - [ ] Authenticate to Power Platform: `pac auth create`
 - [ ] Run inventory script:
   ```powershell
-  .\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
+  .\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\environment-inventory.csv" -ProbePipelines
   ```
 - [ ] Review output CSV for environment list
 
@@ -42,7 +42,7 @@ For each environment in the inventory:
 - [ ] Note current pipelines host association (if any)
 - [ ] Mark environments needing force-link in your tracking spreadsheet
 
-See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
+See [Portal Walkthrough](./portal-walkthrough.md) for detailed steps.
 
 ### Tracking Setup
 
@@ -67,14 +67,14 @@ See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
   - `EnvironmentName`
   - `EnvironmentId`
   - `OwnerName` (optional)
-- [ ] Review notification templates: [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md)
+- [ ] Review notification templates: [Notification Templates](./notification-templates.md)
 - [ ] Customize ServiceNow/support URLs in templates
 
 ### Send Notifications (✓ Automated)
 
 - [ ] Test notification delivery:
   ```powershell
-  .\src\Send-OwnerNotifications.ps1 `
+  .\scripts\Send-OwnerNotifications.ps1 `
       -InputPath ".\reports\non-compliant.csv" `
       -EnforcementDate "2026-03-01" `
       -TestMode
@@ -118,9 +118,9 @@ For each non-compliant, non-exempted environment:
 - [ ] Update tracking: Status = "ForceLinked"
 - [ ] Document date and admin performing the action
 
-See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
+See [Portal Walkthrough](./portal-walkthrough.md) for detailed steps.
 
-### Post-Enforcement Notification (⚠ Partially Automated)
+### Post-EnforcementNotification (⚠ Partially Automated)
 
 - [ ] Update notification CSV with force-linked environments
 - [ ] Send confirmation emails to affected owners
@@ -137,7 +137,7 @@ See [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) for detailed steps.
 - [ ] Test trigger fires on deployment
 - [ ] Document flow in runbook
 
-See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for flow setup.
+See [Automation Guide](./automation-guide.md) for flow setup.
 
 ### Periodic Review **[MANUAL]**
 
@@ -165,10 +165,10 @@ See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for flow setup.
 | Guide | Description |
 |-------|-------------|
 | [README.md](./README.md) | Solution overview and quick start |
-| [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) | What can be automated (and what cannot) |
-| [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Manual UI procedures for force-linking |
-| [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints explained |
-| [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams templates |
+| [Automation Guide](./automation-guide.md) | What can be automated (and what cannot) |
+| [Portal Walkthrough](./portal-walkthrough.md) | Manual UI procedures for force-linking |
+| [Limitations](./limitations.md) | Technical constraints explained |
+| [Notification Templates](./notification-templates.md) | Email and Teams templates |
 
 ---
 
@@ -182,7 +182,7 @@ See [AUTOMATION_GUIDE.md](./AUTOMATION_GUIDE.md) for flow setup.
 | Force Link button missing | Update Pipelines app, try different browser |
 | Environment not found | Verify environment ID GUID is correct |
 
-**Full troubleshooting:** See [LIMITATIONS.md](./LIMITATIONS.md) and [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md)
+**Full troubleshooting:** See [Limitations](./limitations.md) and [Portal Walkthrough](./portal-walkthrough.md)
 
 ---
 

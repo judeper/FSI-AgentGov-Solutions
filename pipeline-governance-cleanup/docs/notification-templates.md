@@ -91,12 +91,12 @@ For simpler implementation, use the PowerShell notification script instead of Po
 
 ```powershell
 # Using delegated permissions (interactive sign-in)
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01"
 
 # Using application permissions (service principal automation)
-.\src\Send-OwnerNotifications.ps1 `
+.\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
     -SenderEmail "noreply@contoso.com"
@@ -357,7 +357,7 @@ Complete before proceeding with force-link:
 
 - [ ] Makers have been notified (30+ days in advance recommended)
 - [ ] No critical deployments scheduled during force-link window
-- [ ] Rollback plan documented (see [PORTAL_WALKTHROUGH.md Part 6](./PORTAL_WALKTHROUGH.md#part-6-reversing-a-force-link-rollback))
+- [ ] Rollback plan documented (see [Portal Walkthrough Part 6](./portal-walkthrough.md#part-6-reversing-a-force-link-rollback))
 - [ ] Support contact available during enforcement
 - [ ] Environment is a Managed Environment (or conversion scheduled)
 - [ ] Exemption requests reviewed and resolved

@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.3] - April 2026
+
+### Changed
+
+- Restructured solution to follow standard layout
+- Moved documentation from root to `docs/` folder (flow-configuration, secrets-management, setup-checklist, teams-integration)
+- Moved Teams notification card template to `templates/`
+- Removed `src/` directory (per solution content policy)
+
+---
+
 ## [2.1.2] - March 2026
 
 ### Correctness Fixes
@@ -178,11 +189,11 @@ If you deployed v1.x, there is no automatic migration. Options:
 
 ### Added
 
-- [FLOW_SETUP.md](./FLOW_SETUP.md) - Complete Power Automate flow documentation
-- [TEAMS_INTEGRATION.md](./TEAMS_INTEGRATION.md) - Teams notification setup guide
-- [SECRETS_MANAGEMENT.md](./SECRETS_MANAGEMENT.md) - Azure Key Vault configuration
-- [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) - Quick 10-step deployment checklist
-- [teams-notification-card.json](./teams-notification-card.json) - Adaptive card template
+- [docs/flow-configuration.md](docs/flow-configuration.md) - Complete Power Automate flow documentation
+- [docs/teams-integration.md](docs/teams-integration.md) - Teams notification setup guide
+- [docs/secrets-management.md](docs/secrets-management.md) - Azure Key Vault configuration
+- [docs/setup-checklist.md](docs/setup-checklist.md) - Quick 10-step deployment checklist
+- [templates/teams-notification-card.json](templates/teams-notification-card.json) - Adaptive card template
 
 ### Changed
 

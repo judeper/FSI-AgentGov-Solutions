@@ -28,7 +28,7 @@ Before migrating, document your current state completely.
 Run the inventory script to identify all environments:
 
 ```powershell
-.\src\Get-PipelineInventory.ps1 -OutputPath ".\reports\pre-migration-inventory.csv" -ProbePipelines
+.\scripts\Get-PipelineInventory.ps1 -OutputPath ".\reports\pre-migration-inventory.csv" -ProbePipelines
 ```
 
 #### 1.2 Identify Active Pipelines and Owners
@@ -68,7 +68,7 @@ During migration, both old and new hosts operate in parallel. Plan for a **30-60
 | Day | Milestone | Action |
 |-----|-----------|--------|
 | 0 | Discovery Complete | Inventory finalized, tracking spreadsheet created |
-| 1-3 | Initial Notification | Send notifications using [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) |
+| 1-3 | Initial Notification | Send notifications using [Notification Templates](./notification-templates.md) |
 | 7 | Migration Window Opens | Central host is ready; makers can begin recreating pipelines |
 | 14 | First Reminder | Send reminder to makers who haven't migrated |
 | 28 | Final Notice | Send escalation notice (final warning) |
@@ -77,7 +77,7 @@ During migration, both old and new hosts operate in parallel. Plan for a **30-60
 
 #### 2.2 Communication Milestones
 
-Use templates from [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) at each milestone:
+Use templates from [Notification Templates](./notification-templates.md) at each milestone:
 
 - **Day 1-3**: Owner Notification template
 - **Day 14**: First Reminder (modified subject)
@@ -229,7 +229,7 @@ If you need to reverse a force-link during the coexistence period:
 
 **Warning:** Each force-link is disruptive to makers using the other host. Coordinate carefully and communicate changes.
 
-See [PORTAL_WALKTHROUGH.md Part 6: Reversing a Force-Link](./PORTAL_WALKTHROUGH.md#part-6-reversing-a-force-link-rollback) for detailed rollback procedures.
+See [Portal Walkthrough Part 6: Reversing a Force-Link](./portal-walkthrough.md#part-6-reversing-a-force-link-rollback) for detailed rollback procedures.
 
 ---
 
@@ -237,10 +237,10 @@ See [PORTAL_WALKTHROUGH.md Part 6: Reversing a Force-Link](./PORTAL_WALKTHROUGH.
 
 | Document | Purpose |
 |----------|---------|
-| [PORTAL_WALKTHROUGH.md](./PORTAL_WALKTHROUGH.md) | Step-by-step force-link UI procedures |
-| [NOTIFICATION_TEMPLATES.md](./NOTIFICATION_TEMPLATES.md) | Email and Teams templates for communication |
-| [LIMITATIONS.md](./LIMITATIONS.md) | Technical constraints and what cannot be automated |
-| [AUDIT_CHECKLIST.md](./AUDIT_CHECKLIST.md) | Compliance evidence requirements |
+| [Portal Walkthrough](./portal-walkthrough.md) | Step-by-step force-link UI procedures |
+| [Notification Templates](./notification-templates.md) | Email and Teams templates for communication |
+| [Limitations](./limitations.md) | Technical constraints and what cannot be automated |
+| [Audit Checklist](./audit-checklist.md) | Compliance evidence requirements |
 
 ---
 

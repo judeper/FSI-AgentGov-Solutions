@@ -12,7 +12,7 @@ The solution sends adaptive card notifications to a Teams channel when:
 
 - Microsoft Teams channel for alerts
 - Power Automate flow with Teams connector
-- Adaptive card template (`teams-notification-card.json`)
+- Adaptive card template (`templates/teams-notification-card.json`)
 
 ## Step 1: Create an Alerts Channel
 
@@ -41,7 +41,7 @@ In your Power Automate flow:
 
 ## Step 3: Use the Adaptive Card Template
 
-The file `teams-notification-card.json` contains the notification template.
+The file `templates/teams-notification-card.json` contains the notification template.
 
 ### Adaptive Card Version Compatibility
 
@@ -49,7 +49,7 @@ Teams supports Adaptive Cards versions 1.0 through 1.5. This solution uses versi
 
 ### Option A: Copy-Paste Method
 
-1. Open `teams-notification-card.json`
+1. Open `templates/teams-notification-card.json`
 2. Copy the entire JSON content
 3. In Power Automate, paste into the **Adaptive Card** field
 4. Replace placeholders with dynamic content (see below)
@@ -108,7 +108,7 @@ Only send notifications for important posts. In your flow:
 )
 ```
 
-> **Note:** Replace `cr123_` with your environment's publisher prefix. The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [FLOW_SETUP.md Step 7](./FLOW_SETUP.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
+> **Note:** Replace `cr123_` with your environment's publisher prefix. The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
 
 Or use the visual editor:
 - Condition 1: `@{outputs('Upsert_a_row')?['body/cr123_notifiedon']}` is equal to `null`
@@ -119,7 +119,7 @@ Or use the visual editor:
   - **OR**
   - Condition 4: `actionRequiredByDateTime` is not equal to `null`
 
-> **Grouping matters:** You must nest Conditions 2–4 inside an OR group, then AND that group with Condition 1 (the null check). Without explicit grouping, the default evaluation would be `(notifiedOn == null AND severity == 'high') OR severity == 'critical' OR actionRequired != null`, which bypasses duplicate prevention for critical-severity and action-required posts. See [FLOW_SETUP.md Step 7](./FLOW_SETUP.md#step-7-teams-notification-for-high-severity) for full details.
+> **Grouping matters:** You must nest Conditions 2–4 inside an OR group, then AND that group with Condition 1 (the null check). Without explicit grouping, the default evaluation would be `(notifiedOn == null AND severity == 'high') OR severity == 'critical' OR actionRequired != null`, which bypasses duplicate prevention for critical-severity and action-required posts. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details.
 
 ## Step 5: Add User Mentions (Optional)
 
@@ -198,7 +198,7 @@ Shows just the essentials:
 
 ### Full Card (Default)
 
-See `teams-notification-card.json` for the complete template with:
+See `templates/teams-notification-card.json` for the complete template with:
 - Color-coded severity indicator
 - All key metadata
 - Services affected
