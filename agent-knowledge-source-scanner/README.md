@@ -1,6 +1,6 @@
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.0.0
+> **Status:** Completed | **Version:** v1.0.1
 
 Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
 
@@ -197,6 +197,13 @@ The CSV report includes these columns:
 | `AffectedUsers` | Users or groups with access |
 | `RiskScore` | CRITICAL, HIGH, MEDIUM, or LOW |
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Prerequisites](docs/prerequisites.md) | PowerShell modules, permissions, network endpoints, and configuration |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues with authentication, permissions, large libraries, and PnP.PowerShell |
+
 ## Related Controls
 
 | Control | Description | Relationship |
@@ -220,4 +227,4 @@ The CSV report includes these columns:
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.0*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.1*

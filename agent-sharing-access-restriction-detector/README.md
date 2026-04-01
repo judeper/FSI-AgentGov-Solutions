@@ -1,6 +1,6 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v1.0.1
+> **Version:** v1.0.2
 > **Status:** Completed
 
 Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
@@ -28,14 +28,15 @@ The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform en
 agent-sharing-access-restriction-detector/
 ├── README.md
 ├── CHANGELOG.md
-└── src/
-    ├── asard-remediation-approval-workflow.json       # Remediation approval flow
-    ├── asard-exception-review-workflow.json            # Exception review and expiration flow
-    ├── adaptive-card-asard-alert.json                  # Violation alert card
-    ├── adaptive-card-asard-remediation-approval.json   # Remediation approval card
-    ├── adaptive-card-asard-remediation-result.json     # Remediation result card
-    ├── adaptive-card-asard-exception-expiring.json     # Exception expiring warning card
-    └── adaptive-card-asard-exception-expired.json      # Exception expired notification card
+├── docs/
+│   ├── flow-configuration.md                              # Flow build instructions and overview
+│   └── prerequisites.md                                   # Licenses, roles, connections, network
+└── templates/
+    ├── adaptive-card-asard-alert.json                     # Violation alert card
+    ├── adaptive-card-asard-remediation-approval.json      # Remediation approval card
+    ├── adaptive-card-asard-remediation-result.json        # Remediation result card
+    ├── adaptive-card-asard-exception-expiring.json        # Exception expiring warning card
+    └── adaptive-card-asard-exception-expired.json         # Exception expired notification card
 ```
 
 ## Supporting Scripts (FSI-AgentGov)
@@ -65,12 +66,23 @@ agent-sharing-access-restriction-detector/
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
 - Power Automate Premium license (for approval workflows)
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Flow Configuration Guide](docs/flow-configuration.md) | Overview of both flows, adaptive card templates, and environment variables |
+| [Prerequisites](docs/prerequisites.md) | Required licenses, roles, connections, Dataverse tables, and network endpoints |
+| [ASARD Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) | End-to-end setup (FSI-AgentGov) |
+| [Exception Management](https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/) | Exception lifecycle operations (FSI-AgentGov) |
+| [Troubleshooting Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-troubleshooting-guide/) | Diagnostics and resolution (FSI-AgentGov) |
+
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment
-2. Configure connection references (see prerequisites)
-3. Activate cloud flows
-4. Verify deployment using the guides below
+1. Create Dataverse tables using the schema creation script (see [prerequisites](docs/prerequisites.md))
+2. Build the two Power Automate cloud flows following the [flow configuration guide](docs/flow-configuration.md)
+3. Configure connection references and environment variables
+4. Activate cloud flows
+5. Verify deployment using the guides below
 
 See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) in FSI-AgentGov, which covers:
 
@@ -82,8 +94,8 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 | Control | Description | Implementation Evidence |
 |---------|-------------|------------------------|
-| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | `asard-remediation-approval-workflow.json` — Zone-based approved security group enforcement via `fsi_approvedsecuritygrouppolicies` table; BAP Admin API PATCH to replace non-compliant sharing principals |
-| [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | `asard-remediation-approval-workflow.json` — Governance lead approval required before remediation; zone classification determines allowed security groups; `asard-exception-review-workflow.json` — Time-bound exceptions with audit trail preservation |
+| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | Remediation approval workflow — Zone-based approved security group enforcement via `fsi_approvedsecuritygrouppolicies` table; BAP Admin API PATCH to replace non-compliant sharing principals (see [flow configuration](docs/flow-configuration.md)) |
+| [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | Remediation approval workflow — Governance lead approval required before remediation; zone classification determines allowed security groups; Exception review workflow — Time-bound exceptions with audit trail preservation (see [flow configuration](docs/flow-configuration.md)) |
 
 ## Known Limitations
 

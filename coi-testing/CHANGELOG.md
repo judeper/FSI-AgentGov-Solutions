@@ -4,6 +4,14 @@ All notable changes to the COI Testing Framework.
 
 ---
 
+## [1.0.1] - April 2026
+
+### Added
+
+- Documentation suite: docs/prerequisites.md, docs/test-scenarios.md, docs/troubleshooting.md
+
+---
+
 ## [1.0.0] - February 2026
 
 ### Added

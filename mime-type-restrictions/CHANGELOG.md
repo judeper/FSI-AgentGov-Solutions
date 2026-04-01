@@ -2,6 +2,15 @@
 
 All notable changes to MIME Type Restrictions for File Uploads are documented here.
 
+## [1.0.2] — April 2026
+
+### Changed
+- Restructured solution to follow standard layout
+- Moved documentation from root and src/ to docs/
+- Moved KQL queries to scripts/
+- Moved JSON templates to templates/
+- Retained C# plugin source code in src/
+
 ## [1.0.1] — February 2026
 
 ### Fixed

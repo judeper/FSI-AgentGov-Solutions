@@ -2,6 +2,14 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [1.0.2] — July 2025
+
+### Changed
+- Restructured solution to follow standard layout
+- Moved adaptive card templates from `src/` to `templates/`
+- Removed exported Power Automate flow JSON from `src/` (per content policy)
+- Added `docs/` with `flow-configuration.md` and `prerequisites.md`
+
 ## [1.0.1] — March 2026
 
 ### Fixed

@@ -2,6 +2,11 @@
 
 All notable changes to agent-knowledge-source-scanner will be documented in this file.
 
+## [1.0.1] - April 2026
+
+### Added
+- Documentation suite: docs/prerequisites.md, docs/troubleshooting.md
+
 ## [1.0.0] - 2026-03-17
 
 ### Added

@@ -137,7 +137,11 @@ python scripts/run_coi_tests.py --category "proprietary_bias"
 
 ## Documentation
 
-Detailed documentation is planned for a future release. See inline comments in `run_coi_tests.py` for usage.
+| Document | Description |
+|----------|-------------|
+| [Prerequisites](docs/prerequisites.md) | Python environment, package dependencies, API permissions, and Dataverse requirements |
+| [Test Scenarios](docs/test-scenarios.md) | All 10 built-in COI test scenarios with expected behaviors and fail indicators |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues with environment setup, authentication, and test execution |
 
 ## Test Execution
 
