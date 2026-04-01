@@ -4,9 +4,9 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-This repository currently includes **34 live solution implementations** and **1 documentation-only preview placeholder folder**. The preview placeholder is tracked separately until it moves beyond placeholder scope and gains deployable implementation guidance.
+This repository currently includes **35 live solution implementations** and **0 documentation-only preview placeholder folders**.
 
-## Current Solutions (34)
+## Current Solutions (35)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
@@ -34,6 +34,7 @@ This repository currently includes **34 live solution implementations** and **1 
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.0.0 | 2.24 |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v0.1.0-preview | 3.10, 2.9, 2.12 |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.0.0 | 2.12, 2.17, 1.10 |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.3 | 2.22, 1.23, 3.7, 3.8 |
 | [Message Center Monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes affecting AI agents | v2.1.3 | 2.3, 2.10 |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.0.2 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |
@@ -45,13 +46,9 @@ This repository currently includes **34 live solution implementations** and **1 
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.0.1 | 1.23, 1.11 |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |
 
-## Preview Placeholders (1)
+## Preview Placeholders (0)
 
-This folder reserves a validated namespace for an upcoming Microsoft capability. It is intentionally excluded from the 34-live-solution count until it moves beyond placeholder scope.
-
-| Solution | Status | Controls | Summary |
-|----------|--------|----------|---------|
-| [HITL Workflow Governance](./hitl-workflow-governance/) | Preview placeholder | 2.12, 2.17, 1.10 | Planned evidence-collection workflow for supervisory approvals, request-for-information routing, and audit-trail capture around human-in-the-loop checkpoints. |
+All previously tracked preview placeholders have been promoted to live solution implementations.
 
 ## How to Use
 

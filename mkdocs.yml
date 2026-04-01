@@ -158,6 +158,7 @@ nav:
         - Power BI Setup: solutions/finra-supervision-workflow/power-bi-setup.md
         - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
         - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
+      - HITL Workflow Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md
       - Model Risk Management Automation: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md
       - Segregation Detector:
         - solutions/segregation-detector/index.md

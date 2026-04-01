@@ -1,0 +1,536 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "Container",
+      "style": "attention",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "[ALERT] HITL Workflow Governance",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "color": "Attention"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${AlertSeverity}",
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "TextBlock",
+          "text": "Run ID: ${RunId}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "Small"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${Timestamp}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Scan Summary",
+          "weight": "Bolder",
+          "size": "Medium",
+          "spacing": "Medium"
+        },
+        {
+          "type": "FactSet",
+          "facts": [
+            {
+              "title": "Status",
+              "value": "${OverallStatus}"
+            },
+            {
+              "title": "Total Agents",
+              "value": "${TotalAgents}"
+            },
+            {
+              "title": "Flows Checked",
+              "value": "${TotalFlows}"
+            },
+            {
+              "title": "Checkpoints Found",
+              "value": "${CheckpointsFound}"
+            },
+            {
+              "title": "Checkpoints Missing",
+              "value": "${CheckpointsMissing}"
+            },
+            {
+              "title": "Severity",
+              "value": "${AlertSeverity}"
+            }
+          ],
+          "spacing": "Medium"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Violations by Zone",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Violations",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Agents",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 3",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z3Violations}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z3Agents}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 2",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z2Violations}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z2Agents}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone 1",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z1Violations}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${Z1Agents}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Unclassified",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${UnkViolations}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${UnkAgents}",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Top Violations",
+          "weight": "Bolder",
+          "spacing": "Medium"
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Agent",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Zone",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Violation",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Severity",
+                  "weight": "Bolder",
+                  "size": "Small"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V1AgentName}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V1Zone}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V1Type}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V1Severity}",
+                  "size": "Small",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V2AgentName}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V2Zone}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V2Type}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V2Severity}",
+                  "size": "Small",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V3AgentName}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V3Zone}",
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 2,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V3Type}",
+                  "size": "Small",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": 1,
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${V3Severity}",
+                  "size": "Small",
+                  "color": "Attention"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Dashboard",
+      "url": "${DashboardUrl}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Full Report",
+      "url": "${ReportUrl}"
+    }
+  ]
+}

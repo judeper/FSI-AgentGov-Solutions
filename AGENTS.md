@@ -6,7 +6,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **34 live solution implementations** plus **1 documentation-only preview placeholder folder** mapped to the 78-control framework across all 4 pillars
+- **35 live solution implementations** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
@@ -40,6 +40,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |
 | hallucination-tracker | v0.1.0-preview | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
+| hitl-workflow-governance | v1.0.0 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
 | inactivity-timeout-enforcement | v1.0.3 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
 | message-center-monitor | v2.1.3 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
