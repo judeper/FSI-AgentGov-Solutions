@@ -39,12 +39,12 @@ git rev-parse --show-toplevel
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.0 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.0 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.0 |
-| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.0.0 |
+| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.0.1 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.1.0 |
 | [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v1.0.0 |
-| [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.1 |
+| [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.2 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.1 |
-| [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.0 |
+| [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.1 |
 | [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.0 |
 | [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.1.1 |
 | [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.1 |
@@ -60,7 +60,7 @@ git rev-parse --show-toplevel
 | [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v0.1.0-preview |
 | [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.0.3 |
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.1.3 |
-| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.0.1 |
+| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.0.2 |
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.0 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.0.9 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.0.1 |
