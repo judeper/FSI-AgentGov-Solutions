@@ -4,6 +4,23 @@ All notable changes to the DR Testing Framework.
 
 ---
 
+## [1.1.0] - April 2026
+
+### Added
+
+- **Dataverse schema script** (`create_drt_dataverse_schema.py`) — automated table and column creation for `fsi_drtestresult` with `--output-docs`, `--dry-run`, and `--interactive` flags
+- **Documentation suite:**
+  - `docs/prerequisites.md` — licensing, roles, network requirements, sovereign cloud endpoints
+  - `docs/dataverse-schema.md` — auto-generated table and column reference
+  - `docs/evidence-export.md` — evidence packaging guide with output format and regulatory alignment
+  - `docs/troubleshooting.md` — auth, Dataverse, test execution, and Pester issue resolution
+- **Templates:**
+  - `templates/dr-test-config.sample.json` — sample test configuration with RTO/RPO targets
+  - `templates/dr-evidence-metadata.sample.json` — sample evidence export output structure
+- README updated with documentation links and automated schema deployment instructions
+
+---
+
 ## [1.0.2] - March 2026
 
 ### Fixed

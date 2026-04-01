@@ -1,0 +1,45 @@
+{
+  "$schema": "dr-test-config",
+  "version": "1.0",
+  "description": "Sample DR test configuration for AI agent infrastructure",
+  "environment": "https://contoso.crm.dynamics.com",
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "clientId": "00000000-0000-0000-0000-000000000000",
+  "tests": [
+    {
+      "testType": "AgentRestore",
+      "agentId": "00000000-0000-0000-0000-000000000000",
+      "targetRTO": 4,
+      "targetRPO": 24,
+      "schedule": "quarterly",
+      "description": "Restore primary customer service agent from backup"
+    },
+    {
+      "testType": "EnvironmentFailover",
+      "targetRTO": 2,
+      "targetRPO": 1,
+      "schedule": "semi-annual",
+      "description": "Failover to backup Power Platform environment"
+    },
+    {
+      "testType": "DataRecovery",
+      "targetRTO": 4,
+      "targetRPO": 24,
+      "schedule": "quarterly",
+      "description": "Restore Dataverse data from point-in-time backup"
+    },
+    {
+      "testType": "FullDR",
+      "agentId": "00000000-0000-0000-0000-000000000000",
+      "targetRTO": 8,
+      "targetRPO": 24,
+      "schedule": "annual",
+      "description": "Complete infrastructure recovery exercise"
+    }
+  ],
+  "notifications": {
+    "teamsWebhookUrl": "https://contoso.webhook.office.com/webhookb2/...",
+    "emailRecipients": ["dr-team@contoso.com"]
+  },
+  "notes": "Replace placeholder GUIDs with actual values. Schedule values are informational — scheduling is not yet automated."
+}

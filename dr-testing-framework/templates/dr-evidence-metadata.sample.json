@@ -1,0 +1,13 @@
+{
+  "ExportedAt": "2026-03-15T14:30:22Z",
+  "Environment": "https://contoso.crm.dynamics.com",
+  "TestRunId": "abc12345",
+  "AuditLogFiles": [
+    "dr-audit-AgentRestore-20260315-abc12345.log",
+    "dr-audit-DataRecovery-20260315-abc12345.log"
+  ],
+  "TestResults": [],
+  "Metrics": [],
+  "Gaps": [],
+  "Status": "stub — Dataverse query and full evidence packaging not yet implemented"
+}
