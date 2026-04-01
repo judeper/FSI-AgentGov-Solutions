@@ -149,7 +149,7 @@ The flow implements six violation detection rules:
 **Safety Controls:**
 - **Dry-run mode:** Environment variable `fsi_UASD_RemediationDryRun` (true/false, default: true for safe deployment)
 - **Break-glass exclusion:** Agents with `fsi_breakglassexclude=true` are detected but never remediated — violations remain open for manual review
-- **Change validation:** Post-remediation verification via API query
+- **Change validation:** Post-remediation status is recorded in `fsi_remediationresult`; a verification API query is not yet implemented (planned enhancement)
 - **Rollback support:** Original sharing configuration stored in `fsi_evidencejson` field
 
 #### 3. Exception Approval Workflow
@@ -232,7 +232,7 @@ See [docs/flow-configuration.md](docs/flow-configuration.md#flow-4-uasd-exceptio
 - `fsi_ApprovedSecurityGroup` — Reference data for display context
 
 #### 5. Teams Alert Card
-**Template:** See the Adaptive Card JSON in `docs/flow-configuration.md` (Flow 1, step 8)
+**Template:** Build the Adaptive Card following the structure described below; see `docs/flow-configuration.md` (Flow 1, step 9) for integration instructions.
 
 **Purpose:** Rich Teams notifications with severity-based styling and actionable links.
 
@@ -869,6 +869,15 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 - **v1.0.2 (February 2026):** Added Flow 4 exception expiration monitor; resolved Known Limitation #1
 - **v1.0.1 (February 2026):** Replaced exported flow JSON with step-by-step documentation; fixed setup scripts
 - **v1.0.0 (February 2026):** Initial release with 6 violation types, automated remediation, and exception management
+
+## Related Platform Capabilities
+
+The following Microsoft platform features (GA 2025) complement the controls UASD implements:
+
+- **DLP for Copilot Studio Agent Flows** — Extends data loss prevention policies to cover agent orchestration flows. Can be layered on top of the sharing-level controls UASD monitors to provide additional data-exfiltration protection.
+- **Agent Inventory Management** — Provides platform-native agent discovery and inventory. Can supplement the custom Dataverse bot-table enumeration performed by UASD Flow 1 with a centralized, Microsoft-managed inventory view.
+- **Connector Management Rules** — Provides centralized governance for connector usage policies across environments. Can complement UASD sharing controls with connector-level policy enforcement.
+- **Delegated Administration with time-limited permissions** — Enables just-in-time elevated access for administration tasks. Complements the break-glass exclusion mechanism by providing auditable, time-limited admin access.
 
 ---
 

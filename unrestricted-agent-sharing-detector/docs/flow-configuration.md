@@ -51,6 +51,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Method: GET
    - Query agents from Copilot Studio table
    - Parse sharing configuration
+   - **Pagination:** After the initial GET, check the response for an `@odata.nextLink` property. If present, issue another GET to that URL. Repeat in a Do Until loop until `@odata.nextLink` is absent, collecting all agent records across pages.
 
 6. **Evaluate Violation Rules**
    For each agent, check:
@@ -90,6 +91,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Action: "Post an Adaptive Card to a Teams Channel"
    - Channel: Use `fsi_UASD_TeamsGroupId` and `fsi_UASD_TeamsChannelId`
    - Card: Summary of violations by severity
+   - **Card Structure:** Follow the Teams Alert Card specification in `SOLUTION-DOCUMENTATION.md` § "Teams Alert Card" — include severity-based header styling, scan summary section, per-violation detail cards, and action buttons (View Details / Remediate / Dismiss).
 
 10. **Update Agent Settings**
    - Action: "Create or update a record" (Dataverse)
@@ -166,6 +168,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Action: "List records" (Dataverse)
    - Table: `fsi_ApprovedSecurityGroup`
    - Filter: `fsi_zoneclassification eq <environment-zone> and fsi_isactive eq true`
+   - **Guard — empty result set:** If zero records are returned, do NOT proceed to step 7. Instead, update `fsi_remediationresult` to `"Skipped: no approved security groups configured for zone <zone>"`, leave `fsi_violationstatus` unchanged, send an alert to the Teams channel requesting security group provisioning, and terminate the flow for this violation. This prevents remediation from removing existing sharing and adding zero groups, which would render the agent inaccessible.
 
 7. **Remediate by Violation Type**
    - Use Switch statement on `fsi_violationtype`:
@@ -202,6 +205,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Method: PATCH
    - Payload: Updated sharing configuration
    - **Skip if `equals(variables('isDryRun'), 'true')`**
+   - **Error handling:** Configure Run-After on this action for "has failed" and "has timed out". If the API call fails, set `fsi_remediationresult` to the error message (e.g., `"API PATCH failed: <status code> — <error body>"`), set `fsi_violationstatus` to 100000002 (RemediationFailed), and skip to step 10 (Send Remediation Alert) with failure details. Do NOT proceed to step 9 to mark the record as remediated.
 
 9. **Update Violation Record**
    - **Condition:** Only update remediation status if `equals(variables('isDryRun'), 'false')` and remediation was actually performed
@@ -292,7 +296,7 @@ Trigger filters:
 7. **Process Approval Response**
    - If approved:
      - Update exception status to "Approved"
-     - Calculate expiration: `addDays(fsi_requestedat, int(fsi_requestedduration))` (in days). **Note:** `int()` is required because `fsi_requestedduration` is a Decimal column and `addDays()` requires an integer parameter. If `fsi_requestedat` is null (e.g., records created via API), use `utcNow()` as fallback to prevent the `addDays` expression from failing.
+     - Calculate expiration: `addDays(fsi_requestedat, int(fsi_requestedduration))` (in days). **Note:** `int()` is required because `fsi_requestedduration` is a Decimal column and `addDays()` requires an integer parameter. If `fsi_requestedat` is null (e.g., records created via API), use `utcNow()` as fallback to prevent the `addDays` expression from failing. **Warning — stale request dates:** If approval is significantly delayed, the calculated expiration may fall in the past. Implementers should add a guard: if the calculated `fsi_expiresat` is less than or equal to `utcNow()`, set `fsi_expiresat` to `addDays(utcNow(), int(fsi_requestedduration))` and log a note in `fsi_remediationresult` (e.g., "Expiration rebased to approval date due to stale request date"). Note that this changes the duration anchor from request date to approval date, effectively extending the real-world exception window — evaluate whether this aligns with your organization's compliance requirements before implementing.
      - Set `fsi_expiresat` field to calculated expiration date
      - Update related violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Notify requester (approval granted)
