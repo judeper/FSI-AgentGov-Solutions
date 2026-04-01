@@ -147,7 +147,8 @@ def verify_application_insights(
     print(f"    - Workspace-based")
 
     if verbose:
-        print(f"    - Instrumentation Key: {component.instrumentation_key}")
+        redacted_key = component.instrumentation_key[:8] + "..." if component.instrumentation_key else "N/A"
+        print(f"    - Instrumentation Key: {redacted_key} (redacted)")
         print(f"    - Workspace ID: {workspace_id}")
 
     return (True, workspace_id, component.instrumentation_key)
