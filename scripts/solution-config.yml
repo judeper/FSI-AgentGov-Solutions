@@ -163,7 +163,7 @@ solutions:
   pipeline-governance-cleanup:
     display_name: Pipeline Governance Cleanup
     domain: lifecycle-ops
-    version: v1.0.9
+    version: v1.1.0
     controls: ["2.3", "2.1"]
 
   dr-testing-framework:
