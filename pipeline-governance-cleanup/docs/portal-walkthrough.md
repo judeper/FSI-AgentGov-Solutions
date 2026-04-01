@@ -75,7 +75,7 @@ Use this table to identify your current state and determine the appropriate acti
 | App visible in ONE environment only | Single custom host exists | Verify it's your designated host → Link remaining environments |
 | App visible in MULTIPLE environments | Multiple custom hosts exist | Inventory all hosts → Consolidate to one → Force Link environments from others |
 | App visible AND pipelines exist in platform host | Mixed state (custom + platform) | Create/designate custom host → Force Link all environments |
-| No pipelines anywhere (verified via `pac pipeline list`) | Greenfield (clean state) | Create custom host → Set as default → See [README.md Greenfield section](./README.md#new-deployment-greenfield) |
+| No pipelines anywhere (verified via `pac pipeline list`) | Greenfield (clean state) | Create custom host → Set as default → See [README.md Greenfield section](../README.md#new-deployment-greenfield) |
 
 ### FSI Recommendation
 

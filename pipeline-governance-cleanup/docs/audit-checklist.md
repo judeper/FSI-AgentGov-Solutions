@@ -56,11 +56,11 @@ How this solution supports regulatory compliance.
 
 | Regulation | Requirement | Evidence |
 |------------|------------|----------|
-| **OCC 2011-12** | Change management controls | Notification timeline, approval records, documented procedures |
+| **OCC 2011-12** (Sound Practices for Model Risk Management) | Change management controls | Notification timeline, approval records, documented procedures |
 | **FFIEC IT Handbook** | Configuration management | Centralized host documentation, inventory records |
-| **SOX 404** | IT general controls | Force-link execution records, segregation of duties |
-| **FINRA 4511** | Books and records | Complete inventory, change logs, communication records |
-| **FINRA 3110** | Supervision and oversight | Pipeline approval gates, supervisory control documentation |
+| **SOX §404(a)** | IT general controls — management assessment | Force-link execution records, segregation of duties |
+| **FINRA Rule 4511(a)** | Books and records retention | Complete inventory, change logs, communication records |
+| **FINRA Rule 3110(a)** | Supervisory system requirements | Pipeline approval gates, supervisory control documentation |
 
 ---
 
@@ -137,5 +137,5 @@ Common auditor questions and where to find answers:
 ## See Also
 
 - [Portal Walkthrough](./portal-walkthrough.md) - Force-link procedures
-- [README.md](./README.md) - Solution overview
+- [README.md](../README.md) - Solution overview
 - [Limitations](./limitations.md) - Technical constraints

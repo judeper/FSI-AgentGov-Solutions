@@ -1,3 +1,6 @@
+#Requires -Version 7.0
+#Requires -Modules Microsoft.Graph.Users.Actions
+
 <#
 .SYNOPSIS
     Sends pipeline governance notifications to environment owners via Microsoft Graph.
@@ -23,10 +26,15 @@
     Email address for the Platform Operations team. Included in notifications.
 
 .PARAMETER MigrationUrl
-    URL for the migration request form or documentation.
+    URL for the migration request form or documentation. Must use https://.
 
 .PARAMETER ExemptionUrl
-    URL for the exemption request form.
+    URL for the exemption request form. Must use https://.
+
+.PARAMETER Force
+    If specified, allows sending even when placeholder defaults are detected.
+    Without this switch, the script blocks in production mode when default
+    SupportEmail, MigrationUrl, or ExemptionUrl values are unchanged.
 
 .EXAMPLE
     .\Send-OwnerNotifications.ps1 -InputPath ".\inventory.csv" -EnforcementDate "2026-03-01" -TestMode
@@ -68,17 +76,19 @@ param(
     [string]$SupportEmail = "platform-ops@example.com",
 
     [Parameter(Mandatory = $false)]
+    [ValidateScript({ $_ -match '^https://' })]
     [string]$MigrationUrl = "https://company.service-now.com/pipeline-migration",
 
     [Parameter(Mandatory = $false)]
+    [ValidateScript({ $_ -match '^https://' })]
     [string]$ExemptionUrl = "https://company.service-now.com/pipeline-exemption",
 
     [Parameter(Mandatory = $false)]
-    [string]$SenderEmail = ""
-)
+    [string]$SenderEmail = "",
 
-#Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Users.Actions
+    [Parameter(Mandatory = $false)]
+    [switch]$Force
+)
 
 # Build email body from template
 function Build-NotificationEmail {
@@ -229,9 +239,37 @@ function Send-GraphEmail {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.0.8 - January 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.1.0 - April 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
+
+    # Check for placeholder defaults — block in production mode unless -Force
+    $placeholderDefaults = @()
+    if ($SupportEmail -eq "platform-ops@example.com") { $placeholderDefaults += "SupportEmail" }
+    if ($MigrationUrl -eq "https://company.service-now.com/pipeline-migration") { $placeholderDefaults += "MigrationUrl" }
+    if ($ExemptionUrl -eq "https://company.service-now.com/pipeline-exemption") { $placeholderDefaults += "ExemptionUrl" }
+
+    if ($placeholderDefaults.Count -gt 0) {
+        $paramList = $placeholderDefaults -join ", "
+        if (-not $TestMode -and -not $Force) {
+            Write-Error @"
+BLOCKED: Placeholder default values detected for: $paramList
+
+These defaults contain example URLs and email addresses that must be replaced
+with your organization's actual values before sending notifications to owners.
+
+To fix: Provide your organization's values:
+  -SupportEmail "your-team@yourcompany.com"
+  -MigrationUrl "https://your-itsm.com/migrate"
+  -ExemptionUrl "https://your-itsm.com/exempt"
+
+To override (not recommended): Use -Force to send with placeholder values.
+To preview safely: Use -TestMode to see what would be sent.
+"@
+            exit 1
+        }
+        Write-Warning "Placeholder defaults detected for: $paramList. Review before production use."
+    }
 
     # Load input data
     Write-Host "Loading inventory from: $InputPath" -ForegroundColor Cyan
@@ -314,68 +352,101 @@ You may need to manually add owner information to your inventory before sending 
     $sent = 0
     $failed = 0
     $index = 0
+    $auditLog = [System.Collections.Generic.List[PSCustomObject]]::new()
 
-    foreach ($record in $validRecords) {
-        $index++
-        Write-Progress -Activity "Sending notifications" -Status "$index of $($validRecords.Count): $($record.OwnerEmail)" -PercentComplete (($index / $validRecords.Count) * 100)
+    try {
+        foreach ($record in $validRecords) {
+            $index++
+            Write-Progress -Activity "Sending notifications" -Status "$index of $($validRecords.Count): $($record.OwnerEmail)" -PercentComplete (($index / $validRecords.Count) * 100)
 
-        # Build email
-        $ownerName = if ($record.OwnerName) { $record.OwnerName } else { "Pipeline Owner" }
-        $subject = "Action Required: Pipeline Governance - $($record.EnvironmentName) - Action by $($EnforcementDate.ToString('MMM d'))"
-        $body = Build-NotificationEmail -OwnerName $ownerName `
-                                        -EnvironmentName $record.EnvironmentName `
-                                        -EnvironmentId $record.EnvironmentId `
-                                        -EnforcementDate $EnforcementDate `
-                                        -SupportEmail $SupportEmail `
-                                        -MigrationUrl $MigrationUrl `
-                                        -ExemptionUrl $ExemptionUrl
+            # Build email
+            $ownerName = if ($record.OwnerName) { $record.OwnerName } else { "Pipeline Owner" }
+            $subject = "Action Required: Pipeline Governance - $($record.EnvironmentName) - Action by $($EnforcementDate.ToString('MMM d'))"
+            $body = Build-NotificationEmail -OwnerName $ownerName `
+                                            -EnvironmentName $record.EnvironmentName `
+                                            -EnvironmentId $record.EnvironmentId `
+                                            -EnforcementDate $EnforcementDate `
+                                            -SupportEmail $SupportEmail `
+                                            -MigrationUrl $MigrationUrl `
+                                            -ExemptionUrl $ExemptionUrl
 
-        if ($TestMode) {
-            Write-Host "========================================" -ForegroundColor DarkGray
-            Write-Host "TO: $($record.OwnerEmail)" -ForegroundColor White
-            Write-Host "SUBJECT: $subject" -ForegroundColor White
-            Write-Host "----------------------------------------" -ForegroundColor DarkGray
-            # Show plain text version for readability
-            Write-Host "Environment: $($record.EnvironmentName)"
-            Write-Host "Environment ID: $($record.EnvironmentId)"
-            Write-Host "Enforcement Date: $($EnforcementDate.ToString('MMMM d, yyyy'))"
-            Write-Host "========================================" -ForegroundColor DarkGray
-            Write-Host ""
-            $sent++
-        }
-        else {
-            if ($PSCmdlet.ShouldProcess($record.OwnerEmail, "Send notification email")) {
-                $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body -Sender $SenderEmail
-                if ($success) {
-                    $sent++
-                    Write-Verbose "Sent notification to $($record.OwnerEmail)"
-                }
-                else {
-                    $failed++
+            $status = "Skipped"
+
+            if ($TestMode) {
+                Write-Host "========================================" -ForegroundColor DarkGray
+                Write-Host "TO: $($record.OwnerEmail)" -ForegroundColor White
+                Write-Host "SUBJECT: $subject" -ForegroundColor White
+                Write-Host "----------------------------------------" -ForegroundColor DarkGray
+                Write-Host "Environment: $($record.EnvironmentName)"
+                Write-Host "Environment ID: $($record.EnvironmentId)"
+                Write-Host "Enforcement Date: $($EnforcementDate.ToString('MMMM d, yyyy'))"
+                Write-Host "========================================" -ForegroundColor DarkGray
+                Write-Host ""
+                $sent++
+                $status = "Previewed"
+            }
+            else {
+                if ($PSCmdlet.ShouldProcess($record.OwnerEmail, "Send notification email")) {
+                    $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body -Sender $SenderEmail
+                    if ($success) {
+                        $sent++
+                        $status = "Sent"
+                        Write-Verbose "Sent notification to $($record.OwnerEmail)"
+                    }
+                    else {
+                        $failed++
+                        $status = "Failed"
+                    }
                 }
             }
+
+            $auditLog.Add([PSCustomObject]@{
+                Timestamp       = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+                Recipient       = $record.OwnerEmail
+                EnvironmentId   = $record.EnvironmentId
+                EnvironmentName = $record.EnvironmentName
+                Subject         = $subject
+                Status          = $status
+            })
         }
     }
+    finally {
+        Write-Progress -Activity "Sending notifications" -Completed
 
-    Write-Progress -Activity "Sending notifications" -Completed
+        # Write audit log for compliance evidence (FINRA Rule 3110/4511)
+        $logTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $logDir = Split-Path -Path $InputPath -Parent
+        if ([string]::IsNullOrEmpty($logDir)) { $logDir = "." }
+        $logPath = Join-Path $logDir "NotificationLog_$logTimestamp.csv"
 
-    # Summary
-    Write-Host ""
-    Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "  Notification Summary" -ForegroundColor Cyan
-    Write-Host "================================================" -ForegroundColor Cyan
-    if ($TestMode) {
-        Write-Host "Test Mode: $sent email(s) previewed" -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "Sent: $sent" -ForegroundColor Green
-        Write-Host "Failed: $failed" -ForegroundColor $(if ($failed -gt 0) { "Red" } else { "Green" })
-    }
-    Write-Host ""
+        if ($auditLog.Count -gt 0) {
+            try {
+                $auditLog | Export-Csv -Path $logPath -NoTypeInformation -Encoding UTF8
+                Write-Host "Audit log written to: $logPath" -ForegroundColor Cyan
+            }
+            catch {
+                Write-Warning "Failed to write audit log to $logPath — $($_.Exception.Message)"
+            }
+        }
 
-    # Disconnect from Graph
-    if (-not $TestMode) {
-        Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        # Summary
+        Write-Host ""
+        Write-Host "================================================" -ForegroundColor Cyan
+        Write-Host "  Notification Summary" -ForegroundColor Cyan
+        Write-Host "================================================" -ForegroundColor Cyan
+        if ($TestMode) {
+            Write-Host "Test Mode: $sent email(s) previewed" -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "Sent: $sent" -ForegroundColor Green
+            Write-Host "Failed: $failed" -ForegroundColor $(if ($failed -gt 0) { "Red" } else { "Green" })
+        }
+        Write-Host ""
+
+        # Disconnect from Graph
+        if (-not $TestMode) {
+            Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
+        }
     }
 }
 
