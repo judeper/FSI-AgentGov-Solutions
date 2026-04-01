@@ -22,9 +22,9 @@ This file provides guidance for autonomous AI agents working on this repository.
 | agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
 | agent-knowledge-source-scanner | v1.0.0 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v1.0.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
-| agent-observability-foundation | v1.1.0 | — | Foundational observability infrastructure for agent monitoring |
+| agent-observability-foundation | v1.1.0 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
 | agent-sharing-access-restriction-detector | v1.0.1 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
-| audit-compliance-manager | v1.0.0 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
+| audit-compliance-manager | v1.0.1 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.0.0 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
 | compliance-dashboard | v1.0.0 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v1.1.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
@@ -33,18 +33,18 @@ This file provides guidance for autonomous AI agents working on this repository.
 | cross-solution-integration | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.0 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
-| dr-testing-framework | v1.0.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
+| dr-testing-framework | v1.0.2 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
 | environment-lifecycle-management | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.0.0 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |
-| hallucination-tracker | v1.0.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
+| hallucination-tracker | v0.1.0-preview | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | inactivity-timeout-enforcement | v1.0.2 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
-| message-center-monitor | v2.1.1 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
+| message-center-monitor | v2.1.2 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
 | mime-type-restrictions | v1.0.1 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.0.8 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
-| rag-source-validator | v1.0.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
+| rag-source-validator | v1.0.1 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.1.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | segregation-detector | v1.0.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | session-security-configurator | v1.0.0 | 1.23, 1.11 | Session security validation per governance zone with drift detection |
@@ -73,11 +73,12 @@ FSI-AgentGov-Solutions/
 │   ├── docs/
 │   │   ├── dataverse-schema.md    # Auto-generated from schema script
 │   │   └── flow-configuration.md  # Manual build instructions for flows
-│   └── scripts/
-│       ├── create_{prefix}_dataverse_schema.py   # Schema definition + doc generation
-│       ├── create_{prefix}_environment_variables.py
-│       ├── create_{prefix}_connection_references.py
-│       └── governance/            # Operational PowerShell scripts
+│   ├── scripts/
+│   │   ├── create_{prefix}_dataverse_schema.py   # Schema definition + doc generation
+│   │   ├── create_{prefix}_environment_variables.py
+│   │   ├── create_{prefix}_connection_references.py
+│   │   └── governance/            # Operational PowerShell scripts
+│   └── templates/             # JSON schemas, sample payloads, adaptive cards
 └── CHANGELOG.md
 ```
 
@@ -222,6 +223,92 @@ python -m py_compile scripts/hooks/*.py
 # Validate PowerShell scripts (requires PowerShell)
 pwsh -Command "Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object { [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$null) }"
 ```
+
+## Creating a New Solution
+
+Follow this checklist when creating a new solution folder:
+
+1. **Create the directory structure:**
+   ```
+   {solution-name}/
+   ├── README.md
+   ├── CHANGELOG.md
+   ├── docs/
+   │   └── (dataverse-schema.md, flow-configuration.md, prerequisites.md, etc.)
+   ├── scripts/
+   │   └── (PowerShell .ps1, Python .py, or KQL .kql files)
+   └── templates/
+       └── (JSON schemas, sample payloads, adaptive card JSON)
+   ```
+
+2. **README.md must include:** Solution title, description, prerequisites, architecture overview, deployment steps, related controls section, and a link to the solution's CHANGELOG.
+
+3. **CHANGELOG.md:** Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. Initial entry should be the solution version with an "Added" section.
+
+4. **If the solution uses Dataverse tables:** Create `scripts/create_{prefix}_dataverse_schema.py` using the shared `dataverse_client.py`. Support `--output-docs` to auto-generate `docs/dataverse-schema.md`.
+
+5. **If the solution involves Power Automate flows:** Write step-by-step manual build instructions in `docs/flow-configuration.md`. Do NOT include exported flow JSON.
+
+6. **Adaptive card JSON** goes in `templates/`, not `src/` or `docs/`.
+
+7. **Update all catalog files** — add the new solution to the tables in:
+   - `README.md` (root)
+   - `AGENTS.md`
+   - `CLAUDE.md` (both Solutions and Control Implementations tables)
+   - `.github/copilot-instructions.md`
+
+8. **Commit convention:** One solution per commit. Use format: `feat({solution-name}): initial implementation vX.Y.Z`
+
+## Version Bumping Process
+
+When a solution is updated:
+
+1. **Update the solution's `CHANGELOG.md`** with a new version entry (source of truth).
+2. **Update the version in all 4 catalog files:**
+   - `README.md` (root Solutions table)
+   - `AGENTS.md` (Solution Catalog table)
+   - `CLAUDE.md` (Solutions table)
+   - `.github/copilot-instructions.md` (Solution Catalog table)
+3. **Commit convention:** `fix({solution-name}): description` or `feat({solution-name}): description`
+
+Version numbers follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`. Use `-preview` suffix for early-stage solutions (e.g., `v0.1.0-preview`).
+
+## File Placement Rules
+
+| File Type | Location | NOT Here |
+|-----------|----------|----------|
+| PowerShell scripts (.ps1) | `scripts/` or `scripts/governance/` | `src/` |
+| Python scripts (.py) | `scripts/` | `src/` |
+| KQL queries (.kql) | `scripts/` or `kql-queries/` | `src/` |
+| Adaptive card JSON | `templates/` | `src/` |
+| JSON schemas and sample payloads | `templates/` | `src/` |
+| Flow build instructions | `docs/flow-configuration.md` | `src/` (no exported flow JSON) |
+| Dataverse schema docs | `docs/dataverse-schema.md` (auto-generated) | — |
+| C# plugins or custom code | `src/` (allowed for actual source code) | — |
+| Dataverse solution packages | Not allowed — replace with `docs/` instructions | `src/` |
+| Root-level documentation | `docs/` subfolder | Solution root (except README, CHANGELOG) |
+
+**Key rule:** `src/` is only acceptable for actual compilable source code (e.g., C# Dataverse plugins). Exported Power Platform artifacts, flow JSON, connection references, environment variable exports, and Dataverse solution packages must NOT be in `src/`.
+
+## Coding Patterns
+
+### PowerShell Scripts
+- Use `#Requires -Modules` for dependencies
+- Include `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE` in comment-based help
+- Use `[CmdletBinding()]` with parameter validation
+- Follow verb-noun naming: `Get-AgentComplianceStatus`, `Export-DenyEventReport`
+- Use approved PowerShell verbs only
+
+### Python Scripts
+- Include docstrings for all public functions
+- Use `argparse` for CLI interfaces
+- Use `logging` module (not print) for operational output
+- Type hints for function signatures
+
+### KQL Queries
+- Include comments explaining query logic
+- Use `let` statements for reusable variables
+- Parameterize time ranges
 
 ## Files to Never Modify Without Permission
 
