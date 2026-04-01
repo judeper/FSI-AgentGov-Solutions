@@ -2,6 +2,17 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.0.2] - 2025-07-14
+
+### Changed
+- Moved `src/adaptive-card-moderation-alert.json` to `templates/` per solution content policy
+- Updated README, DELIVERY-CHECKLIST, FLOW_SETUP, and SOLUTION-DOCUMENTATION to reflect new paths
+
+### Removed
+- `src/moderation-validation-flow.json` — Replaced by manual build instructions in `docs/FLOW_SETUP.md`
+- `src/dataverse/` scaffolding (empty placeholder directories and README) — Schema deployed via `scripts/create_dataverse_schema.py`
+- `src/` directory entirely
+
 ## [1.0.1] - 2026-02-15
 
 ### Fixed

@@ -15,12 +15,11 @@ Before deploying the flow:
 
 ## Deployment Steps
 
-### 1. Import Flow Definition
+### 1. Create Flow in Power Automate
 
 1. Open [Power Automate](https://make.powerautomate.com)
-2. Navigate to **My flows** > **Import** > **Import Package**
-3. Upload `src/fileupload-validation-flow.json`
-4. Configure connection references during import
+2. Navigate to **My flows** > **Create** > **Scheduled cloud flow**
+3. Follow the steps in this guide to build the flow actions and configure connection references
 
 ### 2. Configure Variables
 

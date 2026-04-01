@@ -10,7 +10,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 |-----------|-------|
 | **Control** | 1.14 — Data Minimization and Agent Scope Control |
 | **Solution Type** | Tier 2 — Automated Validation with Drift Detection |
-| **Version** | 1.0.0 |
+| **Version** | 1.0.1 |
 | **Zone Model** | Zone 1: Allowed · Zone 2: Restricted · Zone 3: Disabled |
 | **Regulatory** | FINRA 4511/25-07, SEC 17a-3, GLBA 501(b), OCC 2011-12 |
 
@@ -117,22 +117,9 @@ Import-Module ./scripts/private/FUSClient.psm1
 
 ## Configuration Placeholders
 
-The following placeholder values in solution files must be replaced with your organization's values before deployment:
+Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, certificate thumbprint, etc.) must be set during manual flow creation. See [FLOW_SETUP.md](docs/FLOW_SETUP.md#2-configure-variables) for the complete list with descriptions.
 
-> **Note:** All deployment-specific values are currently stored as `InitializeVariable` actions in the flow JSON. For full environment portability across dev/test/prod, consider migrating these to Dataverse environment variables (see [SCHEMA.md](docs/SCHEMA.md) Environment Variables section). This would allow per-environment configuration without modifying the flow definition, but requires architectural changes to the flow JSON and supporting deployment scripts.
-
-| Placeholder | Replace With | Files |
-|------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | `src/fileupload-validation-flow.json` |
-| `compliance-alerts@contoso.com` | Your compliance team email | `src/fileupload-validation-flow.json` |
-| `your-client-id-here` | Microsoft Entra ID application (client) ID | `src/fileupload-validation-flow.json` |
-| `your-certificate-thumbprint-here` | Certificate thumbprint for service principal auth | `src/fileupload-validation-flow.json` |
-| `your-subscription-id-here` | Azure subscription ID | `src/fileupload-validation-flow.json` |
-| `your-teams-group-id-here` | Teams group (team) ID for alerts | `src/fileupload-validation-flow.json` |
-| `your-teams-channel-id-here` | Teams channel ID for alerts | `src/fileupload-validation-flow.json` |
-| `https://governance.crm.dynamics.com` | Your Dataverse org URL | `src/fileupload-validation-flow.json` |
-| `rg-file-upload-security` | Azure resource group containing Automation Account | `src/fileupload-validation-flow.json` |
-| `aa-file-upload-security` | Azure Automation Account name | `src/fileupload-validation-flow.json` |
+> **Note:** For full environment portability across dev/test/prod, consider storing these values as Dataverse environment variables (see [SCHEMA.md](docs/SCHEMA.md) Environment Variables section). This allows per-environment configuration without modifying the flow definition.
 
 ## Related Controls
 

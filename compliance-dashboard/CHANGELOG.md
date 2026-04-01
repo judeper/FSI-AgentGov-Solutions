@@ -4,6 +4,19 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
+## [1.0.1] - 2026-07-15
+
+### Removed
+
+- **Exported Dataverse solution package** (`src/ComplianceDashboard/`) removed per repository content policy — solutions must not contain Power Platform runtime artifacts (flow JSON, connection references, environment variable exports)
+- Updated `templates/README.md` to reference manual build instructions instead of `src/` import
+
+### Note
+
+All flow logic remains fully documented in [Flow Configuration](docs/flow-configuration.md). Administrators should build flows manually in Power Automate designer following that guide.
+
+---
+
 ## [1.0.0] - 2026-02-04
 
 ### Added

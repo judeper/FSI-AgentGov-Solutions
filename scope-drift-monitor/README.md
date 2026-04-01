@@ -1,6 +1,6 @@
 # Scope Drift Monitor
 
-> **Status:** Completed (v1.1.0)
+> **Status:** Completed (v1.1.1)
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
@@ -78,15 +78,15 @@ Each agent scope record (`fsi_agentscope`) defines allowed resources as JSON arr
 
 ## Quick Start
 
-### 1. Deploy Solution Package
+### 1. Create Dataverse Schema and Flows
 
-```powershell
-# Package the solution using Power Platform CLI
-pac solution pack --folder ./src/ScopeDriftMonitor --zipfile ./ScopeDriftMonitor_1_1_0.zip
+Build the solution components manually in your target environment:
 
-# Import to your environment
-pac solution import --path ./ScopeDriftMonitor_1_1_0.zip --environment "https://your-org.crm.dynamics.com"
-```
+1. Create the Dataverse tables using the schema script:
+   ```bash
+   python scripts/create_sdm_dataverse_schema.py --environment "https://your-org.crm.dynamics.com"
+   ```
+2. Build the Power Automate flows manually following [Flow Configuration](docs/flow-configuration.md)
 
 ### 2. Configure Environment Variables
 
@@ -243,6 +243,7 @@ If Denied: Remediate Access → Close Violation
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
 | 1.0.0 | February 2026 | Initial schema and concept |
 
@@ -252,4 +253,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.1.0*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.1.1*

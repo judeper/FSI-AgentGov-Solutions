@@ -2,6 +2,13 @@
 
 All notable changes to the Session Security Configurator solution are documented here.
 
+## [1.0.1] - 2026-07-15
+
+### Changed
+- Moved adaptive card template from `src/` to `templates/` (repository content policy alignment)
+- Removed `src/session-validation-flow.json` flow export (see `docs/FLOW_SETUP.md` for manual build instructions)
+- Removed `src/` directory — solutions provide documentation and scripts, not Power Platform runtime artifacts
+
 ## [1.0.0] - 2026-02-09
 
 ### Added

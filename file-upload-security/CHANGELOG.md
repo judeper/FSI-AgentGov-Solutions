@@ -2,6 +2,17 @@
 
 All notable changes to the File Upload Security Configurator will be documented in this file.
 
+## [1.0.1] — 2025-07-14
+
+### Changed
+- Moved `src/adaptive-card-fileupload-alert.json` to `templates/` per solution content policy
+- Updated README, `flows/README.md`, and `docs/FLOW_SETUP.md` to reflect new paths
+
+### Removed
+- `src/fileupload-validation-flow.json` — Replaced by manual build instructions in `docs/FLOW_SETUP.md`
+- `src/dataverse/` scaffolding (empty placeholder directories and READMEs) — Schema deployed via `scripts/create_dataverse_schema.py`
+- `src/` directory entirely
+
 ## [1.0.0] — 2026-02-10
 
 ### Added

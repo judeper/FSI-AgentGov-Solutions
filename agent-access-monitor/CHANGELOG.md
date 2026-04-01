@@ -2,6 +2,13 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.0.1] - 2026-07-15
+
+### Changed
+- Moved adaptive card templates from `src/` to `templates/` (repository content policy alignment)
+- Removed `src/access-validation-flow.json` flow export (see `docs/FLOW_SETUP.md` for manual build instructions)
+- Removed `src/` directory — solutions provide documentation and scripts, not Power Platform runtime artifacts
+
 ## [1.0.0] - 2026-02-19
 
 ### Added — Phase 4: Evidence Export & Framework Integration

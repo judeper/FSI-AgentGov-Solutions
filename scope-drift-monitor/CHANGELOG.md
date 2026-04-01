@@ -4,6 +4,19 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
+## [1.1.1] - 2026-07-15
+
+### Removed
+
+- **Exported Dataverse solution package** (`src/ScopeDriftMonitor/`) removed per repository content policy — solutions must not contain Power Platform runtime artifacts (flow JSON, connection references, environment variable exports)
+- Updated Quick Start to reference manual build instructions instead of `pac solution pack` from `src/`
+
+### Note
+
+All flow logic remains fully documented in [Flow Configuration](docs/flow-configuration.md). Administrators should build flows manually in Power Automate designer following that guide.
+
+---
+
 ## [1.1.0] - February 2026
 
 ### Added
@@ -37,10 +50,6 @@ All notable changes to the Scope Drift Monitor.
   - `flow-configuration.md` - Flow setup and configuration guide
   - `troubleshooting.md` - Common issues and resolutions
   - `baseline-configuration.md` - Scope baseline setup guide
-- **Solution Package:**
-  - Unpacked solution source in `src/ScopeDriftMonitor/`
-  - Support for `pac solution pack` workflow
-
 ### Changed
 
 - Updated `New-AgentBaseline.ps1` to use Office 365 Management API instead of Microsoft Graph
@@ -91,4 +100,4 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
-*Scope Drift Monitor v1.1.0 - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.1.1 - FSI Agent Governance Framework*

@@ -10,7 +10,7 @@ The Content Moderation Monitor detects when Copilot Studio agents have insuffici
 
 It supports Control 1.27 (Content Moderation Enforcement) and related controls by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 ## Quick Start
 
@@ -96,12 +96,9 @@ content-moderation-monitor/
 │       ├── Get-ExpectedModerationLevel.ps1 # Moderation level reference
 │       ├── Test-ParameterValidation.ps1   # Parameter validators
 │       └── Connect-EnvironmentDataverse.ps1 # Per-env Dataverse auth
-├── src/
-│   ├── adaptive-card-moderation-alert.json # Teams alert template
-│   ├── moderation-validation-flow.json     # Power Automate flow
-│   └── dataverse/                          # Dataverse schema definitions
 ├── templates/
-│   └── moderation-baseline.json           # Zone requirements reference
+│   ├── moderation-baseline.json           # Zone requirements reference
+│   └── adaptive-card-moderation-alert.json # Teams alert template
 └── docs/
     ├── PREREQUISITES.md                   # Module and permission requirements
     ├── SCHEMA.md                          # Dataverse schema reference
@@ -130,16 +127,7 @@ This means:
 
 ## Configuration Placeholders
 
-The following placeholder values in solution files must be replaced with your organization's values before deployment:
-
-| Placeholder | Replace With | Files |
-|------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | `src/moderation-validation-flow.json` |
-| `your-dataverse-url-here` | Your Dataverse environment URL | `src/moderation-validation-flow.json` |
-| `compliance-alerts@contoso.com` | Your compliance team email | `src/moderation-validation-flow.json` |
-| `https://your-org.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/` | Your organization's documentation URL for Control 1.27 | `src/moderation-validation-flow.json` (inline adaptive card in `Post_Teams_Card`) |
-
-> **Note:** The flow JSON contains 10 configuration placeholders in total (including `ClientId`, `CertificateThumbprint`, `SubscriptionId`, `ResourceGroup`, `AutomationAccount`, `TeamsGroupId`, `TeamsChannelId`, `DataverseUrl`). See [Flow Setup Guide](docs/FLOW_SETUP.md#step-2-configure-variables) for the complete list with descriptions.
+Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, etc.) must be set during manual flow creation. See [Flow Setup Guide](docs/FLOW_SETUP.md#step-2-configure-variables) for the complete list with descriptions.
 
 ## Documentation
 

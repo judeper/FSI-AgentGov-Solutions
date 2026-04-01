@@ -2,6 +2,13 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.1.2] - 2026-07-15
+
+### Changed
+- Moved adaptive card template from `src/` to `templates/` (repository content policy alignment)
+- Removed `src/caa-daily-compliance-flow.json` and `src/caa-provisioning-hook-flow.json` flow exports (see `docs/` for manual build instructions)
+- Removed `src/` directory — solutions provide documentation and scripts, not Power Platform runtime artifacts
+
 ## [1.1.1] - 2026-03-13
 
 ### Fixed

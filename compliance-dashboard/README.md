@@ -350,6 +350,7 @@ See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rol
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.1 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.0.0 | February 2026 | Production release with complete deployment artifacts |
 | 1.0.0-beta | February 2026 | Initial beta release (Power BI template requires manual creation) |
 
@@ -361,4 +362,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Compliance Dashboard v1.0.0*
+*FSI Agent Governance Framework - Compliance Dashboard v1.0.1*

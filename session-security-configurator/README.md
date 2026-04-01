@@ -243,20 +243,7 @@ SSC validates six session security dimensions:
 
 ## Configuration Placeholders
 
-The following placeholder values in solution files must be replaced with your organization's values before deployment:
-
-| Placeholder | Replace With | Files |
-|------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | `src/session-validation-flow.json` |
-| `compliance-alerts@contoso.com` | Your compliance team email | `src/session-validation-flow.json` |
-| `governance.crm.dynamics.com` | Your Dataverse environment URL | `src/session-validation-flow.json` |
-| `your-client-id-here` | Your app registration client ID | `src/session-validation-flow.json` |
-| `your-certificate-thumbprint-here` | Your certificate thumbprint | `src/session-validation-flow.json` |
-| `your-subscription-id-here` | Your Azure subscription ID | `src/session-validation-flow.json` |
-| `your-teams-team-id-here` | Your Teams team (group) ID | `src/session-validation-flow.json` |
-| `your-teams-channel-id-here` | Your Teams channel ID | `src/session-validation-flow.json` |
-| `rg-session-validation` | Your Azure resource group name | `src/session-validation-flow.json` |
-| `aa-session-validator` | Your Azure Automation Account name | `src/session-validation-flow.json` |
+Flow-specific placeholders (tenant domain, Dataverse URL, certificate thumbprint, Teams channel IDs, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md) for step-by-step instructions.
 
 ## FSI-AgentGov Integration
 

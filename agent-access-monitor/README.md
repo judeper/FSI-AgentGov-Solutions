@@ -77,12 +77,10 @@ agent-access-monitor/
 │       ├── Get-ExpectedSettings.ps1       # Settings reference helper
 │       ├── Get-AAMValidationResults.ps1   # Evidence query helper
 │       └── Test-ParameterValidation.ps1   # Parameter validation helper
-├── src/
-│   ├── access-validation-flow.json        # Logic App flow definition
-│   ├── adaptive-card-access-alert.json    # Adaptive card template
-│   └── adaptive-card-zone-access-alert.json  # Zone alert card template
 ├── templates/
-│   └── zone-settings-baseline.json        # Zone requirements reference
+│   ├── zone-settings-baseline.json           # Zone requirements reference
+│   ├── adaptive-card-access-alert.json       # Adaptive card template
+│   └── adaptive-card-zone-access-alert.json  # Zone alert card template
 └── docs/
     ├── PREREQUISITES.md
     ├── FLOW_SETUP.md
@@ -109,25 +107,19 @@ See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
 
 ## Configuration Placeholders
 
-The following placeholder values in solution files must be replaced with your organization's values before deployment:
+The following placeholder values in template files must be replaced with your organization's values before use:
 
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
-| `governance.crm.dynamics.com` | Your Dataverse organization URL | `src/access-validation-flow.json` |
-| `your-org.github.io` | Your GitHub Pages domain | `src/access-validation-flow.json`, `src/adaptive-card-zone-access-alert.json` |
-| `contoso.onmicrosoft.com` | Your tenant domain | `src/access-validation-flow.json` |
-| `your-client-id-here` | Your app registration client ID | `src/access-validation-flow.json` |
-| `your-certificate-thumbprint-here` | Your certificate thumbprint | `src/access-validation-flow.json` |
-| `your-subscription-id-here` | Your Azure subscription ID | `src/access-validation-flow.json` |
-| `your-teams-group-id-here` | Your Teams group ID for alerts | `src/access-validation-flow.json` |
-| `your-teams-channel-id-here` | Your Teams channel ID for alerts | `src/access-validation-flow.json` |
-| `compliance-alerts@contoso.com` | Your compliance team email | `src/access-validation-flow.json` |
+| `your-org.github.io` | Your GitHub Pages domain | `templates/adaptive-card-zone-access-alert.json` |
+
+> **Note:** Flow-specific placeholders (Dataverse URL, tenant ID, certificate thumbprint, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md) for step-by-step instructions.
 
 ## Deployment
 
-1. Import the solution ZIP into your Power Platform environment
-2. Configure connection references (see prerequisites)
-3. Update placeholder values (see Configuration Placeholders above)
+1. Deploy Dataverse schema (see prerequisites)
+2. Build the Power Automate flow manually using [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md)
+3. Configure connection references
 4. Activate cloud flows
 5. Verify deployment using the verification steps below
 

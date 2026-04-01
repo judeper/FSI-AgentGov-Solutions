@@ -45,28 +45,15 @@ Before creating the flow, ensure you have:
 1. Navigate to [make.powerautomate.com](https://make.powerautomate.com)
 2. Select your target environment (same environment where CMM schema is deployed)
 3. Click **My flows** > **Import** > **Import Package (Legacy)**
-4. Upload `src/moderation-validation-flow.json` from this repository
-5. Map connection references:
-   - **Azure Automation** — Create new connection or select existing
-   - **Microsoft Teams** — `fsi_cr_teams_moderationmonitor`
-   - **Office 365 Outlook** — `fsi_cr_office365_moderationmonitor`
-   - **Dataverse** — `fsi_cr_dataverse_moderationmonitor`
-6. Click **Import**
-
-### Option B: Manual Creation
-
-If importing fails or you need to customize the flow:
-
-1. Go to [make.powerautomate.com](https://make.powerautomate.com)
-2. Click **Create** > **Scheduled cloud flow**
-3. Name: `CMM - Content Moderation Validation (Daily)`
-4. Set schedule:
+4. Click **Create** > **Scheduled cloud flow**
+5. Name: `CMM - Content Moderation Validation (Daily)`
+6. Set schedule:
    - Start: Today
    - Repeat every: **1 Day**
    - At: **6:00 AM**
    - Time zone: **UTC**
-5. Click **Create**
-6. Follow the flow structure defined in `src/moderation-validation-flow.json`
+7. Click **Create**
+8. Build the flow actions following the steps in this guide
 
 ## Step 2: Configure Variables
 
@@ -303,7 +290,7 @@ Additional checks:
 
 ### Adaptive Card Template Updates
 
-> **Note:** The adaptive card exists in two versions: (1) a **standalone template** at `src/adaptive-card-moderation-alert.json` with full features (Violations section, Drift Detection section, `${DocumentationUrl}` placeholder) for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/), and (2) a **simplified inline version** in the flow JSON `Post_Teams_Card` action adapted for Power Automate's `replace()` expression constraints (FactSet-based zone summary, hardcoded documentation URL). The inline version intentionally omits the Violations and Drift Detection sections because per-agent detail binding requires `$data` templating not supported by Power Automate's expression language. When updating the card structure (header, Run Summary, Zone Summary, actions), changes should be applied to both locations where applicable.
+> **Note:** The adaptive card standalone template at `templates/adaptive-card-moderation-alert.json` includes full features (Violations section, Drift Detection section, `${DocumentationUrl}` placeholder) for reference and testing in the [Adaptive Card Designer](https://adaptivecards.io/designer/). When building the flow's `Post_Teams_Card` action, use a simplified inline version adapted for Power Automate's `replace()` expression constraints (FactSet-based zone summary, hardcoded documentation URL). The inline version intentionally omits the Violations and Drift Detection sections because per-agent detail binding requires `$data` templating not supported by Power Automate's expression language.
 
 ### Flow Errors (Scope_Catch)
 

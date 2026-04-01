@@ -32,12 +32,11 @@
 - [ ] **deploy.py** — Orchestrates full Dataverse schema deployment
 - [ ] **requirements.txt** — Python package dependencies
 
-**Power Automate:**
-- [ ] **src/moderation-validation-flow.json** — Daily scheduled validation flow
-
 **Templates:**
 - [ ] **moderation-baseline.json** — Zone requirements reference
 - [ ] **adaptive-card-moderation-alert.json** — Teams alert template
+
+> **Note:** The Power Automate flow is built manually in the designer following `docs/FLOW_SETUP.md`.
 
 **Supporting Documentation** (from `docs/` directory):
 - [ ] **PREREQUISITES.md** — Module and permission requirements
@@ -56,16 +55,15 @@
 **Option A: Create ZIP Archive**
 ```bash
 # From the content-moderation-monitor directory:
-zip -r Content-Moderation-Monitor-v1.0.1.zip \
+zip -r Content-Moderation-Monitor-v1.0.2.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/*.ps1 \
   scripts/private/*.ps1 \
   scripts/private/*.psm1 \
   scripts/*.py \
   scripts/requirements.txt \
-  src/moderation-validation-flow.json \
-  src/adaptive-card-moderation-alert.json \
   templates/moderation-baseline.json \
+  templates/adaptive-card-moderation-alert.json \
   docs/PREREQUISITES.md \
   docs/SCHEMA.md \
   docs/EVIDENCE_EXPORT.md \
@@ -75,14 +73,14 @@ zip -r Content-Moderation-Monitor-v1.0.1.zip \
 
 ### 4. Email Template
 
-**Subject:** Content Moderation Monitor - Solution Delivery v1.0.1
+**Subject:** Content Moderation Monitor - Solution Delivery v1.0.2
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Content Moderation Monitor solution package, version 1.0.1.
+Please find attached the Content Moderation Monitor solution package, version 1.0.2.
 
 This solution provides automated per-agent validation of content moderation levels across
 all Copilot Studio agents with zone-based compliance requirements, drift detection, and
@@ -179,7 +177,7 @@ Best regards,
 - [ ] PowerShell scripts have no syntax errors (use PSScriptAnalyzer)
 - [ ] moderation-baseline.json is valid JSON
 - [ ] No sensitive data in files (tenant IDs, emails = placeholders)
-- [ ] Version numbers consistent (v1.0.1)
+- [ ] Version numbers consistent (v1.0.2)
 
 ### 6. Files NOT to Include
 
@@ -261,6 +259,6 @@ Evidence Export:
 
 ---
 
-**Package Version:** v1.0.1
+**Package Version:** v1.0.2
 **Release Date:** February 2026
 **Solution:** Content Moderation Monitor

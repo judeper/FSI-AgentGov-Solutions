@@ -11,7 +11,7 @@ This directory contains deployment artifacts for the Compliance Dashboard.
 
 ## Creating the Solution Package
 
-1. Deploy the solution to a development environment first (import `src/ComplianceDashboard/`)
+1. Build the Dataverse schema and flows manually using [Flow Configuration](../docs/flow-configuration.md)
 2. Navigate to [Power Apps maker portal](https://make.powerapps.com)
 3. Select **Solutions** > **Compliance Dashboard**
 4. Click **Export** > **As unmanaged**

@@ -437,9 +437,9 @@ Implementation guidance in FSI-AgentGov:
 | Dataverse Schema | `scripts/create_dataverse_schema.py` *(planned — not yet implemented)* | 3 tables, 2 shared option sets |
 | Environment Variables | `scripts/create_environment_variables.py` *(planned — not yet implemented)* | 7 runtime configuration variables |
 | Connection References | `scripts/create_connection_references.py` *(planned — not yet implemented)* | 3 Power Automate connector references (Graph connector planned) |
-| Daily Compliance Flow | `src/caa-daily-compliance-flow.json` | Automated daily validation scan |
-| ELM Provisioning Hook | `src/caa-provisioning-hook-flow.json` | Zone-based policy deployment on environment creation |
-| Teams Alert Card | `src/adaptive-card-caa-alert.json` | Violation notification template |
+| Daily Compliance Flow | See [docs/](./docs/) | Automated daily validation scan (build manually in Power Automate) |
+| ELM Provisioning Hook | See [docs/](./docs/) | Zone-based policy deployment on environment creation (build manually in Power Automate) |
+| Teams Alert Card | `templates/adaptive-card-caa-alert.json` | Violation notification template |
 | Evidence Export | `scripts/Export-CAAComplianceEvidence.ps1` | SHA-256 integrity-hashed evidence packages |
 | Evidence Verification | `scripts/Test-EvidenceIntegrity.ps1` | Hash verification for exported evidence |
 | CAAClient Module | `scripts/private/CAAClient.psm1` | 8 Dataverse functions (Connect, Read, Write) |
@@ -447,21 +447,7 @@ Implementation guidance in FSI-AgentGov:
 
 ## Configuration Placeholders
 
-The following placeholder values in solution flow files must be replaced with your organization's values before deployment:
-
-| Placeholder | Replace With | Files |
-|------------|-------------|-------|
-| `DataverseUrl` (empty) | Your Dataverse environment URL | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `TenantId` (empty) | Your Entra ID tenant ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `ClientId` (empty) | Your app registration client ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `CertificateThumbprint` (empty) | Your certificate thumbprint | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `SubscriptionId` (empty) | Your Azure subscription ID | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `ResourceGroup` (empty) | Your Azure resource group name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `AutomationAccount` (empty) | Your Azure Automation account name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `TeamsGroupId` (empty) | Your Teams group ID for alerts | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `TeamsChannelId` (empty) | Your Teams channel ID for alerts | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
-| `ComplianceDistributionList` (empty) | Your compliance team distribution list | `src/caa-daily-compliance-flow.json` |
-| `your-org` | Your GitHub organization name | `src/caa-daily-compliance-flow.json`, `src/caa-provisioning-hook-flow.json` |
+Flow-specific placeholders (Dataverse URL, tenant ID, certificate thumbprint, Teams channel IDs, etc.) are configured when manually building the Power Automate flows. See the [docs/](./docs/) folder for step-by-step build instructions.
 
 ## Known Issues and Operational Notes
 
@@ -491,13 +477,13 @@ Do **not** expect these scripts to be available as functions via `Import-Module 
 
 ### Adaptive Card Template Variables
 
-The `src/adaptive-card-caa-alert.json` template uses `${...}` variables (e.g., `${DocsBaseUrl}`, `${OverallStatus}`, `${SeverityStyle}`). These are **design-time references only** — the Power Automate flows build the adaptive card inline using `@{outputs(...)}` and `@{body(...)}` expressions in Compose actions. The template file documents the expected card structure and variable catalog in its `_metadata.templateVariables` section but is not loaded at runtime.
+The `templates/adaptive-card-caa-alert.json` template uses `${...}` variables (e.g., `${DocsBaseUrl}`, `${OverallStatus}`, `${SeverityStyle}`). These are **design-time references only** — the Power Automate flows build the adaptive card inline using `@{outputs(...)}` and `@{body(...)}` expressions in Compose actions. The template file documents the expected card structure and variable catalog in its `_metadata.templateVariables` section but is not loaded at runtime.
 
 The `${DocsBaseUrl}` variable should resolve to the organization's FSI-AgentGov documentation site root URL. Set this as an environment variable or configure it in the flow's Compose action.
 
 ### Provisioning Hook Concurrency
 
-The provisioning hook flow (`caa-provisioning-hook-flow.json`) uses a `manual` (HTTP Request) trigger with `concurrency.runs` set to `1`, which serializes all incoming ELM `ProvisioningCompleted` calls. If multiple environments are provisioned simultaneously, each zone verification queues behind the previous one, potentially violating ELM SLA expectations.
+The provisioning hook flow uses a `manual` (HTTP Request) trigger with `concurrency.runs` set to `1`, which serializes all incoming ELM `ProvisioningCompleted` calls. If multiple environments are provisioned simultaneously, each zone verification queues behind the previous one, potentially violating ELM SLA expectations.
 
 **Recommendation:** Evaluate with stakeholders whether serialized execution is acceptable. If provisioning volume is low (< 5 environments/day), serialization is acceptable. For high-volume provisioning, consider removing the concurrency limit, partitioning by zone, or accepting concurrent runs with idempotent Dataverse writes.
 

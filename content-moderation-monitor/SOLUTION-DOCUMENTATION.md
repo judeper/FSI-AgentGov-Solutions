@@ -187,7 +187,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 ```
 
 #### 2. Power Automate Flow — moderation-validation-flow.json
-**File:** `src/moderation-validation-flow.json`
+**Build instructions:** See [FLOW_SETUP.md](docs/FLOW_SETUP.md)
 
 **Purpose:** Daily scheduled orchestration of content moderation validation with Dataverse persistence and conditional alerting.
 
@@ -620,7 +620,8 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 - Coordinate moderation policy updates with business stakeholders
 
 **Version History:**
-- **v1.0.1 (February 2026):** Corrected primary control reference from 1.14 to 1.27, fixed Related Controls URL slug, added `src/` path prefix to flow file reference, fixed FSI language compliance, removed empty `flows/` directory
+- **v1.0.2 (July 2025):** Removed `src/` directory per solution content policy — moved adaptive card to `templates/`, replaced flow JSON with manual build instructions in `docs/FLOW_SETUP.md`, removed empty Dataverse scaffolding
+- **v1.0.1 (February 2026):** Corrected primary control reference from 1.14 to 1.27, fixed Related Controls URL slug, fixed FSI language compliance, removed empty `flows/` directory
 - **v1.0.0 (February 2026):** Initial release with per-agent validation, drift detection, and evidence export
 
 ---
