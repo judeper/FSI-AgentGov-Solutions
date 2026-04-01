@@ -1,6 +1,6 @@
 # Solutions Catalog
 
-33 live reference implementations organized by functional domain. The companion repository also includes 2 documentation-only preview placeholder folders, tracked separately below until they move beyond placeholder scope. Published site detail pages are linked where available; remaining entries link to the repository README.
+34 live reference implementations organized by functional domain. The companion repository also includes 1 documentation-only preview placeholder folder, tracked separately below until it moves beyond placeholder scope. Published site detail pages are linked where available; remaining entries link to the repository README.
 
 ---
 
@@ -65,6 +65,7 @@ Solutions for validating and enforcing agent configuration settings.
 | [Session Security Configurator](session-security-configurator/index.md) | Session security validation per governance zone with drift detection | v1.0.1 | 1.23, 1.11 |
 | [Agent Communication Restriction Detector](agent-communication-restriction-detector/index.md) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
 | [Action Confirmation Auditor](action-confirmation-auditor/index.md) | Step-up confirmation validation for agent action invocations | v1.0.0 | 1.23 |
+| [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) | Configuration-time credential scope governance for agent connectors | v1.0.0 | 1.14, 1.4, 1.18 |
 
 ## Lifecycle & Operations
 
@@ -81,12 +82,11 @@ Solutions for environment management, pipeline governance, and operational testi
 
 ## Preview Placeholders
 
-The companion repository also tracks two documentation-only preview placeholders. These are not counted in the 33 live reference implementations above.
+The companion repository also tracks one documentation-only preview placeholder. This is not counted in the 34 live reference implementations above.
 
 | Solution | Status | Controls | Notes |
 |----------|--------|----------|-------|
 | [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) | Preview placeholder | 2.12, 2.17, 1.10 | Planned evidence-collection workflow for supervisory approvals, request-for-information routing, and audit-trail capture around human-in-the-loop checkpoints. |
-| [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) | Planned preview placeholder | 1.14, 1.4, 1.18 | Planned zone-aware review pattern for Copilot Studio safe-sharing and credential-scope signals before broader deployable guidance is available. |
 
 ---
 
