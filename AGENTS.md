@@ -39,11 +39,11 @@ This file provides guidance for autonomous AI agents working on this repository.
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |
 | hallucination-tracker | v0.1.0-preview | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
-| inactivity-timeout-enforcement | v1.0.2 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
-| message-center-monitor | v2.1.2 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
+| inactivity-timeout-enforcement | v1.0.3 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
+| message-center-monitor | v2.1.3 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
 | mime-type-restrictions | v1.0.1 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | Zone-based MIME type configuration with server-side validation |
-| pipeline-governance-cleanup | v1.0.8 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
+| pipeline-governance-cleanup | v1.0.9 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.0.1 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.1.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | segregation-detector | v1.0.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
