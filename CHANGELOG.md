@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## credential-oversharing-detector v1.0.0 — 2026-04-01
+
+### Added
+- Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation
+- 5 Dataverse tables with auto-generated schema documentation
+- 6 PowerShell governance scripts for credential scope scanning and compliance
+- Zone-based credential policy templates
+- Teams adaptive card alert template
+- Graduated from v0.1.0-preview placeholder to complete solution
+
+---
+
 ## [Unreleased]
 
 ### Added

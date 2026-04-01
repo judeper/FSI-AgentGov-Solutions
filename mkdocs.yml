@@ -221,6 +221,7 @@ nav:
         - Prerequisites: solutions/action-confirmation-auditor/prerequisites.md
         - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
         - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
+      - Credential Oversharing Detector: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md
     - Lifecycle & Operations:
       - Agent 365 Lifecycle Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-365-lifecycle-governance/README.md
       - Agent Registry Automation:

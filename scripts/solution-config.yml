@@ -153,6 +153,12 @@ solutions:
     version: v1.0.0
     controls: ["1.23"]
 
+  credential-oversharing-detector:
+    display_name: Credential Oversharing Detector
+    domain: agent-config
+    version: v1.0.0
+    controls: ["1.14", "1.4", "1.18"]
+
   # Lifecycle & Operations
   environment-lifecycle-management:
     display_name: Environment Lifecycle Management

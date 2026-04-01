@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **33 live solution implementations** plus **2 documentation-only preview placeholder folders** mapped to the 78-control framework across all 4 pillars
+- **34 live solution implementations** plus **1 documentation-only preview placeholder folder** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -27,6 +27,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | conditional-access-automation | v1.1.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.0.2 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
 | copilot-studio-analytics | v1.1.0 | 3.2 | Business impact analytics for Copilot Studio agents |
+| credential-oversharing-detector | v1.0.0 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
 | cross-solution-integration | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.0 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |

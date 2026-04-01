@@ -8,7 +8,7 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 |---------|-------------|-----------|
 | 1.1 | Restrict Agent Publishing by Authorization | [Unrestricted Agent Sharing Detector](../solutions/unrestricted-agent-sharing-detector/index.md) |
 | 1.2 | Agent Registry and Integrated Apps Management | [Agent 365 Lifecycle Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-365-lifecycle-governance/README.md), [Agent Registry Automation](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-registry-automation/README.md), [Model Risk Management Automation](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md) |
-| 1.4 | Data Loss Prevention | [File Upload Security](../solutions/file-upload-security/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md) |
+| 1.4 | Data Loss Prevention | [File Upload Security](../solutions/file-upload-security/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md), [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) |
 | 1.5 | Network & Endpoint Security | [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md) |
 | 1.7 | Audit Logging & Evidence | [Audit Compliance Manager](../solutions/audit-compliance-manager/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Environment Lifecycle Management](../solutions/environment-lifecycle-management/index.md), [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [RAG Source Validator](../solutions/rag-source-validator/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md) |
 | 1.8 | Content Moderation | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md) |
@@ -16,8 +16,8 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 | 1.10 | Supervision & Review | [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
 | 1.11 | Conditional Access | [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Session Security Configurator](../solutions/session-security-configurator/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
 | 1.13 | File & Attachment Controls | [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
-| 1.14 | Content & Data Protection | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [File Upload Security](../solutions/file-upload-security/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md) |
-| 1.18 | Agent Sharing Restrictions | [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Agent Sharing Access Restriction Detector](../solutions/agent-sharing-access-restriction-detector/index.md) |
+| 1.14 | Content & Data Protection | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [File Upload Security](../solutions/file-upload-security/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md), [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) |
+| 1.18 | Agent Sharing Restrictions | [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Agent Sharing Access Restriction Detector](../solutions/agent-sharing-access-restriction-detector/index.md), [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) |
 | 1.23 | Step-Up Authentication & Confirmation | [Action Confirmation Auditor](../solutions/action-confirmation-auditor/index.md), [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Inactivity Timeout Enforcement](../solutions/inactivity-timeout-enforcement/index.md), [Session Security Configurator](../solutions/session-security-configurator/index.md) |
 | 1.25 | Secure File Handling | [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
 
@@ -64,7 +64,7 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 ## Coverage Summary
 
 - **Controls with implementations:** 39 of 78
-- **Live top-level solution folders:** 33
+- **Live top-level solution folders:** 34
 - **Controls per solution (avg):** 3.2
 
 !!! info "Framework Reference"

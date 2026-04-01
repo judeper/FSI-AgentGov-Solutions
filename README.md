@@ -4,9 +4,9 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
 
-This repository currently includes **33 live solution implementations** and **2 documentation-only preview placeholder folders**. The preview placeholders are tracked separately until they move beyond placeholder scope and gain deployable implementation guidance.
+This repository currently includes **34 live solution implementations** and **1 documentation-only preview placeholder folder**. The preview placeholder is tracked separately until it moves beyond placeholder scope and gains deployable implementation guidance.
 
-## Current Solutions (33)
+## Current Solutions (34)
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
@@ -24,6 +24,7 @@ This repository currently includes **33 live solution implementations** and **2 
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.2 | 1.8, 1.14 |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | v1.1.0 | 3.2 |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | v1.0.0 | 1.14, 1.4, 1.18 |
 | [Cross-Solution Integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
 | [Cross-Tenant and External Sharing Governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v2.0.0 | 1.5, 1.7, 1.8, 3.4 |
@@ -44,14 +45,13 @@ This repository currently includes **33 live solution implementations** and **2 
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.0.1 | 1.23, 1.11 |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |
 
-## Preview Placeholders (2)
+## Preview Placeholders (1)
 
-These folders reserve validated namespaces for upcoming Microsoft capabilities. They are intentionally excluded from the 33-live-solution count until they move beyond placeholder scope.
+This folder reserves a validated namespace for an upcoming Microsoft capability. It is intentionally excluded from the 34-live-solution count until it moves beyond placeholder scope.
 
 | Solution | Status | Controls | Summary |
 |----------|--------|----------|---------|
 | [HITL Workflow Governance](./hitl-workflow-governance/) | Preview placeholder | 2.12, 2.17, 1.10 | Planned evidence-collection workflow for supervisory approvals, request-for-information routing, and audit-trail capture around human-in-the-loop checkpoints. |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | Planned preview placeholder | 1.14, 1.4, 1.18 | Planned zone-aware review pattern for Copilot Studio safe-sharing and credential-scope signals before broader deployable guidance is available. |
 
 ## How to Use
 
