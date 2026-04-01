@@ -1,6 +1,6 @@
 # DR Testing Framework
 
-> **Status:** Work In Progress
+> **Version:** 1.1.0 | **Controls:** 2.4, 2.1, 1.9
 
 Automated disaster recovery testing workflows for AI agent infrastructure, ensuring compliance with operational resilience requirements.
 
@@ -111,7 +111,11 @@ Complete infrastructure recovery.
 ### 1. Deploy Dataverse Schema
 
 ```powershell
-# Template package not yet available — deploy Dataverse schema manually per the Deployment section
+# Deploy schema using Python script
+python scripts/create_drt_dataverse_schema.py --interactive
+
+# Or deploy with dry-run first
+python scripts/create_drt_dataverse_schema.py --dry-run --interactive
 ```
 
 ### 2. Run DR Test
@@ -127,13 +131,22 @@ Complete infrastructure recovery.
 
 Check test results in Dataverse.
 
-**Planned:** `New-DRTestSchedule.ps1` is under development. `Export-DREvidence.ps1` is available as a stub — it packages audit log files into an evidence directory and generates a JSON metadata file. Full Dataverse query and attestation support is planned.
+> **Note:** `New-DRTestSchedule.ps1` is planned for a future release. `Export-DREvidence.ps1` packages audit log files into an evidence directory — see [Evidence Export](docs/evidence-export.md) for details.
 
 > **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
 
 ## Deployment
 
 > **Planned** — A deployable Power Platform solution package (solution.xml, customizations.xml) for automated Dataverse schema deployment is planned to reduce deployment errors and support ALM pipelines. Until then, create the table manually as described below.
+
+Alternatively, use the automated schema script:
+
+```powershell
+python scripts/create_drt_dataverse_schema.py --interactive
+
+# Generate schema documentation
+python scripts/create_drt_dataverse_schema.py --output-docs
+```
 
 ### Dataverse Schema: `fsi_drtestresult`
 
@@ -154,7 +167,12 @@ The `Save-TestResult` function writes to a custom Dataverse table with **logical
 
 ## Documentation
 
-Detailed documentation is planned for a future release. See inline comments in `Invoke-DRTest.ps1` for usage.
+| Document | Description |
+|----------|-------------|
+| [Prerequisites](docs/prerequisites.md) | Licensing, roles, dependencies, network requirements |
+| [Dataverse Schema](docs/dataverse-schema.md) | Table and column definitions for fsi_drtestresult |
+| [Evidence Export](docs/evidence-export.md) | Evidence packaging for compliance reporting |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and resolution steps |
 
 ## Test Execution Workflow
 
@@ -337,4 +355,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v1.0.2*
+*FSI Agent Governance Framework - DR Testing Framework v1.1.0*
