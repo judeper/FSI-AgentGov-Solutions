@@ -32,7 +32,7 @@ AAH = (KnowledgeSourceReferences + WeightedSessionsWithoutKS) x TimeSavingsMulti
 | Tier | Measurement Method | Precision |
 |------|-------------------|-----------|
 | Tier 1 | Proxy via GenerativeAnswers events in App Insights where Result = "Success" | Approximate -- counts events, not distinct citations |
-| Tier 2 | Parse conversationtranscript content JSON for Citation entities | Precise -- exact count of knowledge source citations per session |
+| Tier 2 *(planned)* | Parse conversationtranscript content JSON for Citation entities | Precise -- exact count of knowledge source citations per session *(not yet implemented)* |
 
 **WeightedSessionsWithoutKS** -- Sessions that did not involve knowledge source citations, weighted by outcome quality.
 
@@ -133,26 +133,28 @@ Given 500 autonomous agent runs in a period:
 
 ---
 
-## Tier 1 vs Tier 2 Precision
+## Tier 1 vs Tier 2 Precision (Tier 2 Planned)
+
+> **Note:** Tier 2 data processing (transcript parsing, per-action tracking) is planned for a future release and is not yet implemented in the sync pipeline. The precision comparisons below describe the intended design. Current deployments operate on Tier 1 data only.
 
 The accuracy of AAH calculations depends on the data tier available.
 
-| Metric | Tier 1 Source | Tier 2 Source | Precision Difference |
+| Metric | Tier 1 Source | Tier 2 Source *(planned)* | Precision Difference |
 |--------|-------------|-------------|---------------------|
-| Knowledge source citations | GenerativeAnswers (Result = "Success") | conversationtranscript Citation entities | Tier 1 may overcount (one event per generative call, not per citation) |
-| Action execution count | Not available in Tier 1 | conversationtranscript invoke activities | Tier 1 autonomous AAH uses session-level estimates only |
+| Knowledge source citations | GenerativeAnswers (Result = "Success") | conversationtranscript Citation entities *(planned)* | Tier 1 may overcount (one event per generative call, not per citation) |
+| Action execution count | Not available in Tier 1 | conversationtranscript invoke activities *(planned)* | Tier 1 autonomous AAH uses session-level estimates only |
 | Session outcome | msdyn_botsession.msdyn_sessionoutcome | Same | No difference |
 | CSAT score | msdyn_botsession.msdyn_csatscore | Same | No difference |
 
 ### Impact on AAH Accuracy
 
-| Scenario | Tier 1 AAH | Tier 2 AAH | Variance |
+| Scenario | Tier 1 AAH | Tier 2 AAH *(planned)* | Variance |
 |----------|-----------|-----------|----------|
 | Conversational agents (KS-heavy) | May overcount by 10-20% | Precise | Moderate |
-| Conversational agents (few KS) | Close to Tier 2 | Precise | Low |
+| Conversational agents (few KS) | Close to Tier 2 *(planned)* | Precise | Low |
 | Autonomous agents | Session-level estimate only | Per-action granularity | Significant |
 
-> **Recommendation:** Use Tier 1 for initial deployment and directional metrics. Invest in Tier 2 (transcript retention extension) when precise ROI reporting is required for budgeting or executive reporting.
+> **Recommendation:** Use Tier 1 for current deployments. Tier 2 (transcript parsing for precise per-action and per-citation data) is planned for a future release.
 
 ---
 
@@ -200,7 +202,7 @@ business_impact:
     generic_action_multiplier_minutes: 3
     generic_time_saving_minutes: 5
     action_multipliers:
-      # Per-action-type overrides (Tier 2)
+      # Per-action-type overrides (Tier 2 — planned, not yet implemented)
       # data_entry: 10
       # notification: 3
       # approval: 15
@@ -214,10 +216,10 @@ business_impact:
 | Aspect | CSA | Viva Insights |
 |--------|-----|---------------|
 | **Data source** | Dataverse msdyn_botsession + App Insights | Viva Insights backend telemetry |
-| **KS citation method** | Tier 1 proxy or Tier 2 transcript parsing | Direct platform integration |
+| **KS citation method** | Tier 1 proxy (topic-name heuristic) | Direct platform integration |
 | **Time savings input** | Configurable defaults in config.yml | Maker-led inputs per topic/action |
 | **Outcome weighting** | Configurable weights per outcome type | Fixed weighting (not configurable) |
-| **Autonomous agent support** | Separate formula with per-action granularity | Included in unified calculation |
+| **Autonomous agent support** | Separate formula with session-level estimates (per-action granularity planned for Tier 2) | Included in unified calculation |
 | **Customization** | Full control over all parameters | Limited to maker-led inputs |
 | **License requirement** | None (uses existing AOF infrastructure) | Viva Insights license required |
 | **Historical recalculation** | Supported (change config, re-query) | Not supported (calculated at event time) |

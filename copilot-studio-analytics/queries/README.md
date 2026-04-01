@@ -23,7 +23,7 @@ This library contains 15 KQL queries organized into 4 categories. All queries op
 | 11 | [agent-assisted-cost.kql](business-impact/agent-assisted-cost.kql) | Business Impact | Cost savings from AAH | 30d | 1 |
 | 12 | [roi-trend.kql](business-impact/roi-trend.kql) | Business Impact | Weekly ROI trend with WoW deltas | 30d | 1 |
 | 13 | [sessions-per-topic.kql](behavior-metrics/sessions-per-topic.kql) | Behavior Metrics | Topic distribution | 7d | 1 |
-| 14 | [sessions-per-action.kql](behavior-metrics/sessions-per-action.kql) | Behavior Metrics | Action invocation frequency | 7d | 2 |
+| 14 | [sessions-per-action.kql](behavior-metrics/sessions-per-action.kql) | Behavior Metrics | Action invocation frequency | 7d | 2 *(planned)* |
 | 15 | [sessions-per-trigger.kql](behavior-metrics/sessions-per-trigger.kql) | Behavior Metrics | Autonomous triggers and completion time | 7d | 1 |
 
 ## Data Source
@@ -41,9 +41,9 @@ These events are synced from Copilot Studio's built-in analytics via the CSA syn
 | Tier | Description | Data Source |
 |------|-------------|-------------|
 | **Tier 1** | Session-level analytics from CopilotSessionOutcome events | Copilot Studio Analytics API |
-| **Tier 2** | Action-level analytics from transcript parsing | Conversation transcript API |
+| **Tier 2** *(planned)* | Action-level analytics from transcript parsing *(not yet implemented in sync pipeline)* | Conversation transcript API |
 
-Most queries operate on Tier 1 data. `sessions-per-action.kql` requires Tier 2 sync for action-level detail.
+Most queries operate on Tier 1 data. `sessions-per-action.kql` requires Tier 2 sync for action-level detail, which is planned for a future release.
 
 ## Parameters
 

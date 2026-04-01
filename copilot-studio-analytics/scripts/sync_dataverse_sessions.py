@@ -13,7 +13,7 @@ Usage:
     # Dry run (no writes to App Insights or Dataverse)
     python sync_dataverse_sessions.py --config config/config.yml --dry-run
 
-    # Tier 2 sync (includes transcript parsing)
+    # Tier 2 sync (planned -- currently sets syncTier label only)
     python sync_dataverse_sessions.py --config config/config.yml --tier 2
 
     # Verbose output for debugging
@@ -23,10 +23,10 @@ Sync Pipeline:
     1. Read watermark (last successful sync timestamp)
     2. Fetch msdyn_botsession records since watermark - lookback buffer
     3. Classify agents as Conversational or Autonomous via botcomponent
-    4. Correlate knowledge sources (Tier 1: GenerativeAnswers check)
+    4. Correlate knowledge sources (Tier 1: topic name heuristic)
     5. Transform sessions to CopilotSessionOutcome custom events
     6. Send batches to Application Insights
-    7. Update watermark on success
+    7. Update watermark to last session timestamp on success
 
 Exit Codes:
     0 - Sync completed successfully
@@ -251,6 +251,59 @@ def get_watermark(
     return timestamp
 
 
+# Maximum duration (in minutes) an InProgress watermark can be held before
+# it is considered stale and a new sync is allowed to proceed.
+STALE_LOCK_TIMEOUT_MINUTES = 30
+
+
+def check_sync_lock(
+    client: DataverseClient,
+    environment_url: str,
+    tier: int,
+) -> bool:
+    """
+    Check whether another sync is already in progress for this environment/tier.
+
+    Returns True if the lock is held (caller should abort), False if safe to proceed.
+    Stale locks older than STALE_LOCK_TIMEOUT_MINUTES are ignored with a warning.
+    """
+    tier_value = WATERMARK_TIER_1 if tier == 1 else WATERMARK_TIER_2
+
+    records = client.query(
+        WATERMARK_TABLE,
+        select=["fsi_lastsynctimestamp", "fsi_syncstatus"],
+        filter_expr=(
+            f"fsi_environmenturl eq '{environment_url}' "
+            f"and fsi_synctier eq {tier_value} "
+            f"and fsi_syncstatus eq {WATERMARK_STATUS_IN_PROGRESS}"
+        ),
+        orderby="fsi_lastsynctimestamp desc",
+        top=1,
+    )
+
+    if not records:
+        return False  # No lock held
+
+    # Check if the lock is stale
+    lock_ts_str = records[0].get("fsi_lastsynctimestamp", "")
+    if lock_ts_str:
+        try:
+            lock_ts = datetime.fromisoformat(lock_ts_str.replace("Z", "+00:00"))
+            age_minutes = (datetime.now(timezone.utc) - lock_ts).total_seconds() / 60
+            if age_minutes > STALE_LOCK_TIMEOUT_MINUTES:
+                logger.warning(
+                    "Found stale InProgress watermark from %s (%.0f min ago) — proceeding",
+                    lock_ts.isoformat(),
+                    age_minutes,
+                )
+                return False
+        except (ValueError, TypeError):
+            pass
+
+    logger.error("Another sync is already in progress for this environment/tier")
+    return True
+
+
 def update_watermark(
     client: DataverseClient,
     environment_url: str,
@@ -383,6 +436,32 @@ def correlate_knowledge_sources(
     return ks_map
 
 
+def classify_usage_type(channel_id: str) -> str:
+    """
+    Classify usage type from the session channel identifier.
+
+    Args:
+        channel_id: The msdyn_channelid value from the session record
+
+    Returns:
+        "Internal" or "External"
+    """
+    if not channel_id:
+        return "Internal"
+
+    channel_lower = channel_id.lower()
+
+    external_keywords = ["webchat", "directline", "website"]
+    if any(kw in channel_lower for kw in external_keywords):
+        return "External"
+
+    internal_keywords = ["msteams", "teams"]
+    if any(kw in channel_lower for kw in internal_keywords):
+        return "Internal"
+
+    return "Internal"
+
+
 def resolve_zone(environment_url: str, zone_mapping: dict[str, str]) -> str:
     """
     Resolve governance zone from environment URL using zone mapping.
@@ -474,6 +553,10 @@ def transform_session(
     # Knowledge source
     has_ks = ks_map.get(session_id, False)
 
+    # Derive usage type from channel
+    channel_id = session.get("msdyn_channelid", "") or ""
+    usage_type = classify_usage_type(channel_id)
+
     # Build customDimensions
     custom_dimensions = {
         "recipientId": bot_id,
@@ -486,15 +569,20 @@ def transform_session(
         "hasKnowledgeSource": str(has_ks).lower(),
         "topicName": session.get("msdyn_topicname", "") or "",
         "agentMode": agent_mode,
-        "channelId": session.get("msdyn_channelid", "") or "",
+        "channelId": channel_id,
+        "usageType": usage_type,
         "Zone": zone,
         "syncSource": "DataverseSync",
         "syncTier": f"Tier{tier}",
     }
 
+    # Use session end time as event timestamp (preferred for time-series alignment),
+    # falling back to start time if session hasn't closed yet
+    event_timestamp = closed_on if closed_on else created_on
+
     return {
         "name": "CopilotSessionOutcome",
-        "timestamp": created_on,
+        "timestamp": event_timestamp,
         "customDimensions": custom_dimensions,
     }
 
@@ -661,7 +749,7 @@ Examples:
     # Dry run (preview without changes)
     python sync_dataverse_sessions.py --config config/config.yml --dry-run
 
-    # Tier 2 sync (includes transcript parsing)
+    # Tier 2 sync (planned -- currently sets syncTier label only)
     python sync_dataverse_sessions.py --config config/config.yml --tier 2
         """,
     )
@@ -675,7 +763,11 @@ Examples:
         "--tier",
         type=int,
         choices=[1, 2],
-        help="Sync tier override (1=sessions only, 2=adds transcripts)",
+        help=(
+            "Sync tier override (1=sessions only [implemented], "
+            "2=planned for future release — currently behaves the same as "
+            "Tier 1 but sets syncTier label to 'Tier2')"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -744,10 +836,15 @@ Examples:
         else:
             ikey = "00000000-0000-0000-0000-000000000000"
 
-        # 4. Read watermark
+        # 4. Check for concurrent sync (advisory lock)
+        if not args.dry_run and check_sync_lock(dv_client, dv_config["environment_url"], tier):
+            logger.error("Aborting: another sync is in progress. Retry later.")
+            sys.exit(1)
+
+        # 5. Read watermark
         watermark = get_watermark(dv_client, dv_config["environment_url"], tier)
 
-        # 5. Update watermark to InProgress
+        # 6. Update watermark to InProgress (advisory lock)
         update_watermark(
             dv_client,
             dv_config["environment_url"],
@@ -794,16 +891,29 @@ Examples:
 
         logger.info("Transformed %d/%d sessions to events", len(events), len(sessions))
 
+        # Determine the latest session timestamp for watermark advancement
+        # Use the last session's closed or created timestamp (sessions are ordered asc)
+        last_session_timestamp = sync_start  # fallback
+        if events:
+            last_ts_str = events[-1].get("timestamp", "")
+            if last_ts_str:
+                try:
+                    last_session_timestamp = datetime.fromisoformat(
+                        last_ts_str.replace("Z", "+00:00")
+                    )
+                except (ValueError, TypeError):
+                    logger.warning("Could not parse last event timestamp, using sync_start")
+
         # 11. Send to App Insights
         sent, failed = send_to_app_insights(events, ikey, batch_size, args.dry_run)
 
-        # 12. Update watermark
+        # 12. Update watermark to last session timestamp (not sync_start)
         if failed == 0:
             update_watermark(
                 dv_client,
                 dv_config["environment_url"],
                 tier,
-                sync_start,
+                last_session_timestamp,
                 sent,
                 WATERMARK_STATUS_SUCCESS,
             )
@@ -812,7 +922,7 @@ Examples:
                 dv_client,
                 dv_config["environment_url"],
                 tier,
-                sync_start,
+                last_session_timestamp,
                 sent,
                 WATERMARK_STATUS_WARNING,
                 error_message=f"Partial sync: {failed} events failed to send",

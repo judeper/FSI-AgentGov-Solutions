@@ -22,12 +22,12 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 | CSAT distribution | KQL: CSAT Distribution query | Near parity | Same msdyn_csatscore source |
 | Resolution rate | KQL: Resolution Matrix query | Near parity | CSA adds outcome weighting by agent type |
 | Agent Assisted Hours (conversational) | KQL: Conversational AAH query | Substantial parity | CSA uses configurable multipliers vs Viva fixed calculation; Tier 1 KS proxy slightly less precise |
-| Agent Assisted Hours (autonomous) | KQL: Autonomous AAH query | Substantial parity | CSA provides per-action granularity (Tier 2); Tier 1 uses session-level estimates |
+| Agent Assisted Hours (autonomous) | KQL: Autonomous AAH query | Substantial parity | CSA currently uses session-level estimates; per-action granularity planned for Tier 2 |
 | Cost avoidance | KQL: Cost Avoidance query | Near parity | Same formula; CSA hourly rate is configurable |
 | ROI trend | KQL: ROI Trend query | Substantial parity | CSA provides period-over-period; Viva shows running total |
-| Topic performance | KQL: Topic Performance query | Partial parity | Requires Tier 2 data (msdyn_botcomponentsession); Viva has direct access |
-| Action execution metrics | KQL: Action Execution query | Partial parity | Requires Tier 2 data (conversationtranscript parsing); Viva has direct access |
-| Trigger analysis | KQL: Trigger Analysis query | Partial parity | CSA derives from session patterns; Viva has direct trigger telemetry |
+| Topic performance | KQL: Topic Performance query | Partial parity | Tier 1 provides topic name from session data; full per-topic detail requires Tier 2 data *(planned)* |
+| Action execution metrics | KQL: Action Execution query | Partial parity | Requires Tier 2 data *(planned — not yet implemented in sync pipeline)*; Viva has direct access |
+| Trigger analysis | KQL: Trigger Analysis query | Partial parity | CSA derives from session patterns; full trigger telemetry requires Tier 2 *(planned)* |
 | Maker-led time savings inputs | config.yml defaults | No parity | Viva allows per-topic/action maker estimates; CSA uses configurable defaults |
 | Business outcome data upload | Not available | Viva-only | Custom business outcome correlation (e.g., case closure, sales) |
 | Organizational hierarchy analytics | Not available | Viva-only | Department/team-level rollups based on org hierarchy |
@@ -42,7 +42,7 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 |--------|-----------|
 | **Near parity** | CSA provides functionally equivalent analytics with minor differences in data source or presentation |
 | **Substantial parity** | CSA provides the same core metric with meaningful differences in calculation method or precision |
-| **Partial parity** | CSA provides the metric but with reduced precision or additional prerequisites (e.g., Tier 2 data required) |
+| **Partial parity** | CSA provides the metric but with reduced precision or additional prerequisites (e.g., Tier 2 data planned but not yet implemented) |
 | **No parity** | CSA provides a workaround but cannot match the Viva feature |
 | **Viva-only** | Feature depends on Viva Insights infrastructure with no CSA equivalent available |
 

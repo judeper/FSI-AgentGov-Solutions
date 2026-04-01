@@ -133,7 +133,7 @@ Workbooks embed self-contained KQL queries that operate on `CopilotSessionOutcom
 |-----|---------------|---------------|
 | Session Outcomes | Conversational outcomes donut | Filter agentMode==Conversational, isEngaged==true, group by sessionOutcome |
 | Session Outcomes | Autonomous outcomes donut | Filter agentMode==Autonomous, isEngaged==true, group by sessionOutcome |
-| Session Outcomes | Outcome reason table | Group by agentMode, sessionOutcome, outcomeReason |
+| Session Outcomes | Outcome reason table | Group by agentMode, sessionOutcome, sessionOutcomeReason |
 | Customer Satisfaction | CSAT trend line | Daily avg of csatScore for conversational agents |
 | Customer Satisfaction | CSAT distribution (1-5) | Bar chart of csatScore counts |
 | Customer Satisfaction | Per-agent CSAT table | Avg csatScore grouped by agentId |
@@ -158,10 +158,10 @@ Workbooks embed self-contained KQL queries that operate on `CopilotSessionOutcom
 | Topics | Top 20 topics bar chart | Top N by session count on topicName |
 | Topics | Topic x Agent matrix | Group by agentId and topicName |
 | Topics | Topic trend (daily) | Daily bin count by topicName |
-| Actions | Action invocation table | Group by actionName with success rate (Tier 2 dependent) |
+| Actions | Action invocation table | Group by actionName with success rate (Tier 2 dependent -- planned, not yet implemented) |
 | Autonomous Agents | Outcomes with duration | Group by sessionOutcome with percentile duration |
 | Autonomous Agents | Completion time trend (P50/P95) | Daily bin percentiles of sessionDurationMs |
-| Autonomous Agents | Sessions by trigger type | Group by triggerType |
+| Autonomous Agents | Sessions by trigger type | Group by triggerType (Tier 2 dependent -- planned, `triggerType` not yet emitted by sync pipeline) |
 | Channel Distribution | Sessions by channel pie chart | Group by channel |
 | Channel Distribution | Channel x Agent breakdown | Group by agentId and channel |
 
@@ -176,7 +176,7 @@ Workbook queries use parameter reference syntax like `{TimeRange:ms}`, `"{Zone}"
 | Zone parameter shows no results | customDimensions['Zone'] field missing | Verify Copilot Studio agents emit zone metadata via environment configuration |
 | AgentType filter has no effect | customDimensions['agentMode'] field missing | Confirm agents are configured with agentMode dimension (Conversational or Autonomous) |
 | CSAT data missing in Quality Metrics | csatScore not present in telemetry | CSAT is only available for conversational agents with survey enabled |
-| Actions tab shows no data | Tier 2 sync not configured | Enable Tier 2 telemetry sync with transcript parsing for action-level data |
+| Actions tab shows no data | Tier 2 sync not yet implemented | Tier 2 transcript parsing is planned for a future release; the Actions tab requires `actionName` and `actionStatus` fields that are not yet emitted by the sync pipeline |
 | Business Impact shows zero savings | No engaged sessions in selected period | Verify isEngaged dimension is populated and adjust time range |
 | Deployment fails with "Conflict" | Duplicate workbookId in same resource group | Check parameter files for unique workbookId GUIDs per environment (dev vs prod) |
 | Queries timeout after 30 seconds | KQL query not optimized for large datasets | Narrow the TimeRange parameter or add additional filters (Zone, AgentType) |

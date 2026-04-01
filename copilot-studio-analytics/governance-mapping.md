@@ -80,7 +80,7 @@ CSA focuses on a single governance control: **Control 3.2 -- Usage Analytics and
 | Agent Overview | 3 | Visual agent inventory and adoption trends |
 | Quality Metrics | 4 | Session outcome analysis and CSAT visualization |
 | Business Impact | 3 | AAH calculations, cost avoidance, ROI tracking |
-| Behavior Analysis | 4 | Topic and action performance drill-down |
+| Behavior Analysis | 4 | Topic and action performance drill-down (Actions and trigger type tabs depend on Tier 2 data -- planned) |
 
 ---
 

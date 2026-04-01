@@ -4,15 +4,15 @@ Reference documentation for the Dataverse tables used by Copilot Studio Analytic
 
 ## Overview
 
-CSA reads from five Dataverse tables across two tiers. Tier 1 tables provide session-level outcome data and are queried on every sync. Tier 2 tables provide detailed behavior data and are queried separately for deeper analysis.
+CSA reads from five Dataverse tables across two tiers. Tier 1 tables provide session-level outcome data and are queried on every sync. Tier 2 tables are planned for a future release and will provide detailed behavior data when implemented.
 
 | Table | Tier | Purpose | Sync Frequency |
 |-------|------|---------|----------------|
 | msdyn_botsession | 1 | Session outcome records | Every sync cycle |
 | bot | 1 | Agent metadata | Every sync cycle (cached) |
 | botcomponent | 1 | Agent type classification | Daily (cached) |
-| msdyn_botcomponentsession | 2 | Per-topic session data | Daily batch |
-| conversationtranscript | 2 | Detailed conversation content | Daily batch |
+| msdyn_botcomponentsession | 2 *(planned)* | Per-topic session data | Daily batch *(planned)* |
+| conversationtranscript | 2 *(planned)* | Detailed conversation content | Daily batch *(planned)* |
 
 ---
 
@@ -85,7 +85,9 @@ Component metadata table. Used for agent type classification -- specifically to 
 
 ---
 
-## Tier 2 Tables
+## Tier 2 Tables (Planned)
+
+> **Note:** Tier 2 table queries are planned for a future release and are not yet implemented in the sync pipeline. The table schemas below document the intended data sources.
 
 > **Retention warning:** conversationtranscript records are subject to a default 30-day bulk delete job. See [prerequisites.md](../prerequisites.md) for extension instructions.
 
@@ -157,7 +159,7 @@ Full conversation content in JSON format. Contains message-level detail includin
 }
 ```
 
-**Tier 2 data extracted from content JSON:**
+**Tier 2 data extracted from content JSON *(planned — not yet implemented)*:**
 
 | Data Point | JSON Path | Description |
 |-----------|-----------|-------------|
@@ -220,7 +222,7 @@ GET /api/data/v9.2/botcomponents
   &$select=botcomponentid,componenttypename
 ```
 
-### Tier 2 Topic Sessions
+### Tier 2 Topic Sessions *(Planned)*
 
 ```
 GET /api/data/v9.2/msdyn_botcomponentsessions

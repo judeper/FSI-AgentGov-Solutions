@@ -20,9 +20,9 @@ CSA depends on infrastructure deployed by the [Agent Observability Foundation](.
 | msdyn_botsession | Read | Session outcome records |
 | bot | Read | Agent metadata (name, schema name) |
 | botcomponent | Read | Agent type classification |
-| msdyn_botcomponentsession (Tier 2) | Read | Per-topic session data |
-| conversationtranscript (Tier 2) | Read | Detailed behavior metrics |
-| fsi_csawatermark | Read/Write | Sync tracking table (created by schema script) |
+| msdyn_botcomponentsession (Tier 2 — planned) | Read | Per-topic session data *(not yet used by sync pipeline)* |
+| conversationtranscript (Tier 2 — planned) | Read | Detailed behavior metrics *(not yet used by sync pipeline)* |
+| fsi_csasyncwatermarks | Read/Write | Sync tracking table (created by schema script) |
 
 ### App Registration Setup
 
@@ -38,11 +38,13 @@ CSA depends on infrastructure deployed by the [Agent Observability Foundation](.
 
 | Config Key | Source | Example |
 |-----------|--------|---------|
-| `dataverse_url` | Power Platform admin center > Environment URL | `https://org12345.api.crm.dynamics.com` |
-| `tenant_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `client_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `client_secret` | Entra ID > App registration > Certificates & secrets | (stored securely, not in config file) |
-| `appinsights_connection_string` | AOF Application Insights > Overview > Connection String | `InstrumentationKey=...;IngestionEndpoint=...` |
+| `dataverse.environment_url` | Power Platform admin center > Environment URL | `https://org12345.api.crm.dynamics.com` |
+| `dataverse.tenant_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `dataverse.client_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `DATAVERSE_CLIENT_SECRET` env var | Entra ID > App registration > Certificates & secrets | (stored securely as environment variable, not in config file) |
+| `subscription_id` | Azure Portal > Subscriptions | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `resource_group` | Azure Portal > Resource Groups | `rg-agent-observability-dev` |
+| `application_insights.name` | Azure Portal > Application Insights | `ai-copilot-analytics-dev` |
 
 ## Software Requirements
 
@@ -67,18 +69,22 @@ Install via `pip install -r scripts/requirements.txt`:
 | azure-monitor-query | 1.3.0+ | Log Analytics query for validation |
 | azure-mgmt-applicationinsights | 4.0.0+ | App Insights management for validation |
 
-## Transcript Retention Extension (Recommended)
+## Transcript Retention Extension (Recommended for Future Tier 2 Support)
 
-> **This step is critical for Tier 2 data availability.**
+> **This step is relevant for Tier 2 data availability (planned for a future release).**
+>
+> Tier 2 sync capabilities (transcript-level analysis, per-action tracking) are not yet implemented
+> in the current sync pipeline. However, extending transcript retention now helps ensure historical
+> data is available when Tier 2 support is added.
 
-Dataverse includes a default system job that bulk-deletes `conversationtranscript` records after 30 days. If not extended, Tier 2 queries (topic-level sessions, action execution, precise knowledge source counts) lose historical data after one month.
+Dataverse includes a default system job that bulk-deletes `conversationtranscript` records after 30 days. If not extended, future Tier 2 queries (topic-level sessions, action execution, precise knowledge source counts) would lose historical data after one month.
 
 ### Impact of Default Retention
 
 | Tier | Affected | Impact if Not Extended |
 |------|----------|----------------------|
 | Tier 1 | No | msdyn_botsession records are not subject to bulk delete |
-| Tier 2 | Yes | conversationtranscript records deleted after 30 days |
+| Tier 2 *(planned)* | Yes (when implemented) | conversationtranscript records deleted after 30 days |
 
 ### Extension Steps
 
@@ -134,14 +140,14 @@ For meaningful analytics, confirm at least:
 ### Validation Commands
 
 ```bash
-# Verify AOF Application Insights has data
-python scripts/validate_telemetry.py --check-aof
+# Verify telemetry pipeline is operational (checks App Insights and event presence)
+python scripts/validate_telemetry.py --config config/config.yml
 
-# Verify Dataverse connectivity
-python scripts/validate_telemetry.py --check-dataverse
+# Extended lookback window for validation
+python scripts/validate_telemetry.py --config config/config.yml --hours 48
 
-# Full pre-deployment validation
-python scripts/validate_telemetry.py --pre-deploy
+# Verbose output for debugging
+python scripts/validate_telemetry.py --config config/config.yml --verbose
 ```
 
 ## Pre-Deployment Checklist
@@ -151,11 +157,11 @@ python scripts/validate_telemetry.py --pre-deploy
 - [ ] **Configuration values collected** -- Dataverse URL, tenant ID, client ID, App Insights connection string
 - [ ] **Client secret stored securely** -- Environment variable or key vault reference
 - [ ] **Python environment ready** -- Python 3.9+ with dependencies installed
-- [ ] **Transcript retention reviewed** -- Default 30-day bulk delete extended if Tier 2 analytics needed
+- [ ] **Transcript retention reviewed** -- Default 30-day bulk delete extended if Tier 2 analytics is planned
 - [ ] **CSAT survey enabled** -- On agents where customer satisfaction tracking is desired
 - [ ] **Test agent available** -- At least one agent with production sessions for validation
 
 ---
 
-*Prerequisites version: 1.0.0*
-*Last updated: February 2026*
+*Prerequisites version: 1.1.0*
+*Last updated: April 2026*

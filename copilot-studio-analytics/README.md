@@ -31,7 +31,7 @@ See [architecture.md](architecture.md) for the full data flow diagram and tiered
 - **Agent Overview (3 queries):** Agent inventory, active agent trend, top agents by session volume
 - **Session Outcomes (5 queries):** Conversational outcomes, autonomous outcomes, CSAT distribution, resolution matrix, outcome trends
 - **Business Impact (4 queries):** Conversational AAH, autonomous AAH, cost avoidance, ROI trend analysis
-- **Behavior Metrics (3 queries):** Topic performance, action execution (Tier 2), trigger patterns and completion rates
+- **Behavior Metrics (3 queries):** Topic performance, action execution (Tier 2 -- planned), trigger patterns and completion rates
 
 ### Azure Monitor Workbooks
 
@@ -77,7 +77,7 @@ Before deploying this solution, confirm:
 2. **Dataverse access** -- App registration with read permissions to msdyn_botsession, bot, botcomponent
 3. **Python 3.9+** with dependencies installed
 4. **Copilot Studio agents** connected to Application Insights (same as AOF prerequisite)
-5. **Transcript retention extended** (recommended) -- default 30-day bulk delete job should be modified for Tier 2 data
+5. **Transcript retention extended** (recommended for future Tier 2 support) -- default 30-day bulk delete job should be modified if planning for Tier 2 data
 
 See [prerequisites.md](prerequisites.md) for detailed requirements, role assignments, and transcript retention instructions.
 
@@ -166,7 +166,7 @@ copilot-studio-analytics/
 | Sync returns zero sessions | Dataverse app registration missing read permissions | Verify app has `msdyn_botsession` read access in Dataverse security role |
 | CopilotSessionOutcome events not appearing | App Insights connection string misconfigured | Check `appinsights_connection_string` in config.yml matches AOF deployment |
 | CSAT data missing from queries | CSAT survey not enabled on agents | Enable CSAT survey in Copilot Studio agent settings |
-| Tier 2 queries return no data | Transcript retention expired (default 30 days) | Extend conversationtranscript bulk delete job per [prerequisites.md](prerequisites.md) |
+| Tier 2 queries return no data | Tier 2 sync not yet implemented | Tier 2 transcript parsing is planned for a future release; current sync provides Tier 1 data only |
 | Autonomous agent AAH shows zero | Agent type classification failed | Verify botcomponent records exist with componenttypename for the agent |
 | Workbook shows "No data" | Time range too narrow or sync not yet run | Expand time range; verify sync completed via `validate_telemetry.py` |
 | Duplicate CopilotSessionOutcome events | Watermark table corrupted or reset | Check watermark table; re-sync with `--full-sync` flag to rebuild |

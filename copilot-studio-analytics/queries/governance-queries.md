@@ -319,7 +319,7 @@ This document complements the solution-level governance mapping by providing gra
 
 **Description:** Action invocation frequency for connector and plugin usage analysis.
 
-> **Note:** This query requires Tier 2 sync (transcript parsing) for action data. Tier 1 sync only provides session-level outcomes.
+> **Note:** This query requires Tier 2 sync (transcript parsing) for action data. Tier 2 is planned for a future release and is not yet implemented in the sync pipeline. Until then, this query will return no results.
 
 **Primary evidence for:**
 

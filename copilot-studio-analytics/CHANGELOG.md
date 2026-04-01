@@ -12,7 +12,7 @@ All notable changes to this solution are documented in this file.
   - Agent Overview (3 queries): inventory, active trend, top agents
   - Session Outcomes (5 queries): conversational/autonomous outcomes, CSAT, resolution matrix
   - Business Impact (4 queries): conversational/autonomous AAH, cost, ROI trend
-  - Behavior Metrics (3 queries): topics, actions (Tier 2), triggers/completion
+  - Behavior Metrics (3 queries): topics, actions (Tier 2 — planned), triggers/completion
 - Azure Monitor Workbooks (4 workbooks, 14 tabs):
   - Agent Overview (3 tabs)
   - Quality Metrics (4 tabs)

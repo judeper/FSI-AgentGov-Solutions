@@ -4,7 +4,7 @@ Guidance for optimizing Copilot Studio Analytics costs, including sync frequency
 
 ## Overview
 
-CSA adds incremental cost to your existing AOF infrastructure by syncing Dataverse session records into Application Insights as CopilotSessionOutcome custom events. The primary cost drivers are sync frequency, the number of agents and sessions, and the data tier selected (Tier 1 vs Tier 2).
+CSA adds incremental cost to your existing AOF infrastructure by syncing Dataverse session records into Application Insights as CopilotSessionOutcome custom events. The primary cost drivers are sync frequency, the number of agents and sessions, and the data tier selected (Tier 1 implemented; Tier 2 planned).
 
 This guide helps balance analytics freshness against ingestion costs.
 
@@ -69,11 +69,11 @@ Monthly GB = (SessionsPerDay x EventSizeKB x 30) / (1024 x 1024)
 | Event Type | Approximate Size | Notes |
 |-----------|-----------------|-------|
 | CopilotSessionOutcome (Tier 1) | ~1.5 KB | Session outcome, CSAT, agent metadata |
-| CopilotSessionOutcome (Tier 2 enriched) | ~3.0 KB | Adds topic counts, action counts, KS count |
+| CopilotSessionOutcome (Tier 2 enriched) *(planned)* | ~3.0 KB | Adds topic counts, action counts, KS count |
 
 ### Volume Estimation Table
 
-| Agents | Sessions/Day | Monthly Events | Monthly GB (Tier 1) | Monthly GB (Tier 2) | Est. Monthly Cost |
+| Agents | Sessions/Day | Monthly Events | Monthly GB (Tier 1) | Monthly GB (Tier 2) *(planned)* | Est. Monthly Cost |
 |--------|-------------|----------------|--------------------|--------------------|-------------------|
 | 1-5 | 50-200 | 1,500-6,000 | < 0.01 GB | < 0.02 GB | < $1 |
 | 5-20 | 200-2,000 | 6,000-60,000 | 0.01-0.09 GB | 0.02-0.18 GB | $1-5 |
@@ -147,7 +147,7 @@ Azure Monitor Workbooks execute KQL queries each time a user opens or refreshes 
 | Agent Overview | < 5 seconds | CopilotSessionOutcome events only |
 | Session Outcomes | < 10 seconds | CopilotSessionOutcome + native events |
 | Business Impact | < 15 seconds | CopilotSessionOutcome + GenerativeAnswers |
-| Behavior Metrics (Tier 2) | < 20 seconds | CopilotSessionOutcome + topic/action data |
+| Behavior Metrics (Tier 2) *(planned)* | < 20 seconds | CopilotSessionOutcome + topic/action data |
 
 ---
 
@@ -169,22 +169,24 @@ CopilotSessionOutcome events inherit the Log Analytics workspace retention confi
 
 ## Tier 1 vs Tier 2 Cost Comparison
 
-| Aspect | Tier 1 | Tier 2 | Difference |
+> **Note:** Tier 2 data processing (transcript parsing, per-action tracking) is planned for a future release. The cost estimates below describe the intended design. Current deployments operate on Tier 1 only.
+
+| Aspect | Tier 1 | Tier 2 *(planned)* | Difference |
 |--------|--------|--------|-----------|
 | Dataverse API calls per sync | Low (3 queries: sessions, bots, components) | Higher (5+ queries: adds topic sessions, transcripts) | 2-3x more API calls |
 | Event size | ~1.5 KB per event | ~3.0 KB per event | 2x larger events |
 | App Insights ingestion | Lower | Higher | ~2x ingestion volume |
 | Transcript JSON parsing | None | CPU-intensive content parsing | Additional compute cost |
 | Dataverse storage | Standard | Higher (transcript retention extended) | Significant if transcripts retained > 90 days |
-| Analytics precision | Approximate (KS proxy, session-level AAH) | Precise (exact KS count, per-action AAH) | Tier 2 is more accurate |
+| Analytics precision | Approximate (KS proxy, session-level AAH) | Precise (exact KS count, per-action AAH) *(planned)* | Tier 2 precision planned for future release |
 
 ### Cost Recommendation by Organization Size
 
 | Organization | Recommended Tier | Rationale |
 |-------------|-----------------|-----------|
 | Pilot (1-5 agents) | Tier 1 only | Low cost, sufficient for initial metrics |
-| Mid-size (5-50 agents) | Tier 1 + selective Tier 2 | Enable Tier 2 for high-value agents only |
-| Enterprise (50+ agents) | Tier 1 + Tier 2 | Full precision for executive reporting and compliance |
+| Mid-size (5-50 agents) | Tier 1 (Tier 2 when available) | Tier 2 planned for high-value agent analysis |
+| Enterprise (50+ agents) | Tier 1 (Tier 2 when available) | Full precision planned for executive reporting |
 
 ---
 
@@ -194,7 +196,7 @@ CopilotSessionOutcome events inherit the Log Analytics workspace retention confi
 - [ ] **Volume estimated** -- Use the estimation table to project monthly costs
 - [ ] **Sampling reviewed** -- Confirm ingestion sampling rate is appropriate for analytics precision needs
 - [ ] **Workbook queries optimized** -- Apply time range filters and early filtering in all queries
-- [ ] **Tier selection made** -- Start with Tier 1; enable Tier 2 only when precision is required
+- [ ] **Tier selection made** -- Tier 1 is currently implemented; Tier 2 is planned for a future release
 - [ ] **Retention aligned** -- CSA retention matches AOF retention (no separate configuration needed)
 - [ ] **Cost alerts configured** -- AOF cost alerts cover CSA events (same workspace)
 - [ ] **Monitoring query saved** -- CopilotSessionOutcome ingestion monitoring query bookmarked
