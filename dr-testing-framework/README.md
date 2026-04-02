@@ -2,7 +2,7 @@
 
 > **Version:** 1.1.0 | **Controls:** 2.4, 2.1, 1.9
 
-Automated disaster recovery testing workflows for AI agent infrastructure, ensuring compliance with operational resilience requirements.
+Automated disaster recovery testing workflows for AI agent infrastructure, supporting compliance with operational resilience requirements.
 
 ## Overview
 
@@ -131,7 +131,7 @@ python scripts/create_drt_dataverse_schema.py --dry-run --interactive
 
 Check test results in Dataverse.
 
-> **Note:** `New-DRTestSchedule.ps1` is planned for a future release. `Export-DREvidence.ps1` packages audit log files into an evidence directory — see [Evidence Export](docs/evidence-export.md) for details.
+> **Note:** For recurring DR tests, configure scheduling via Power Automate or Azure Automation runbooks. `Export-DREvidence.ps1` packages audit log files into an evidence directory — see [Evidence Export](docs/evidence-export.md) for details.
 
 > **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
 

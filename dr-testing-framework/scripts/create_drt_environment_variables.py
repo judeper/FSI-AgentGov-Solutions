@@ -128,19 +128,14 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                     client.create_record("environmentvariablevalues", value_data)
                 except Exception as val_err:
                     print(
-                        f"  {schemaname}: value creation failed, "
-                        f"rolling back definition - {val_err}"
+                        f"  Warning: Failed to create default value for "
+                        f"{display_name}: {val_err}"
                     )
-                    try:
-                        client.delete_record(
-                            "environmentvariabledefinitions", definition_id
-                        )
-                    except Exception as cleanup_err:
-                        print(
-                            f"  {schemaname}: WARNING - rollback failed, "
-                            f"orphaned definition {definition_id} - {cleanup_err}"
-                        )
-                    raise
+                    print(
+                        f"  Note: Environment variable definition was created "
+                        f"but has no default value. Set the value manually in "
+                        f"Power Apps."
+                    )
 
                 print(f"  {schemaname}: created")
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
