@@ -96,7 +96,7 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_AAM_BaselineMaxAgeDays` | Decimal | 30 | Alert threshold in days for stale access baselines |
 | `fsi_AAM_TeamsGroupId` | String | *(empty)* | Microsoft Teams group GUID for alert notifications |
 | `fsi_AAM_TeamsChannelId` | String | *(empty)* | Microsoft Teams channel GUID for alert notifications |
-| `fsi_AAM_DataverseUrl` | String | *(empty)* | Dataverse instance URL for API calls (e.g., `https://org.crm.dynamics.com`). Currently initialized as a flow variable in `access-validation-flow.json` (`Initialize_DataverseUrl`); migrating to an environment variable requires flow restructuring and deployment coordination. |
+| `fsi_AAM_DataverseUrl` | String | *(empty)* | Dataverse instance URL for API calls (e.g., `https://org.crm.dynamics.com`). Currently initialized as a flow variable (see `docs/FLOW_SETUP.md`, Step 2 — `DataverseUrl`); migrating to an environment variable requires flow restructuring and deployment coordination. |
 
 ## Connection References
 
@@ -106,7 +106,7 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Email alerts for compliance violations |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Adaptive card alerts for drift detection |
 
-> **Note:** The Power Automate flow (`access-validation-flow.json`) also uses the Azure Automation connector (`azureautomation`) to execute the validation runbook. This connection must be created manually during flow import — it is not managed as a solution connection reference by `create_connection_references.py`.
+> **Note:** The Power Automate flow (see `docs/FLOW_SETUP.md`) also uses the Azure Automation connector (`azureautomation`) to execute the validation runbook. This connection must be created manually when building the flow — it is not managed as a solution connection reference by `create_connection_references.py`.
 
 ## Entity Relationship Diagram
 

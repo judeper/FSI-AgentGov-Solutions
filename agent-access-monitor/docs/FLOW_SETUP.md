@@ -16,7 +16,7 @@ This flow provides automated orchestration and alerting for the Agent Access Gov
 - Sends email to distribution list for all drift alerts
 - Handles errors with CRITICAL email notification
 
-> **Maintenance Note:** The flow JSON (`access-validation-flow.json`) embeds adaptive card templates as inline strings. The standalone adaptive card JSON files (`adaptive-card-access-alert.json`, `adaptive-card-zone-access-alert.json`) duplicate this content for design-time editing. Changes to one must be manually synchronized with the other to avoid template drift.
+> **Maintenance Note:** The adaptive card JSON files (`adaptive-card-access-alert.json`, `adaptive-card-zone-access-alert.json`) provide design-time templates for the cards embedded in the flow. If you modify these templates, update the corresponding adaptive card payloads in the flow actions as well to avoid template drift.
 
 ## Prerequisites
 
@@ -40,34 +40,20 @@ Before creating the flow, ensure you have:
   - `fsi_cr_office365_accessmonitor` (Office 365 Outlook)
   - Azure Automation connection to your subscription
 
-## Step 1: Import Flow
+## Step 1: Create the Flow
 
-### Option A: Import from JSON (Recommended)
-
-1. Navigate to [make.powerautomate.com](https://make.powerautomate.com)
-2. Select your target environment (same environment where AAM schema is deployed)
-3. Click **My flows** > **Import** > **Import Package (Legacy)**
-4. Upload `src/access-validation-flow.json` from this repository
-5. Map connection references:
-   - **Azure Automation** - Create new connection or select existing
-   - **Microsoft Teams** - `fsi_cr_teams_accessmonitor`
-   - **Office 365 Outlook** - `fsi_cr_office365_accessmonitor`
-6. Click **Import**
-
-### Option B: Manual Creation
-
-If importing fails or you need to customize the flow:
+> **Note:** The flow JSON file (`access-validation-flow.json`) was removed per the Solution Content Policy. Build the flow manually in Power Automate designer following the steps below.
 
 1. Go to [make.powerautomate.com](https://make.powerautomate.com)
-2. Click **Create** > **Scheduled cloud flow**
-3. Name: `AAM - Agent Access Validation (Daily)`
-4. Set schedule:
+2. Select your target environment (same environment where AAM schema is deployed)
+3. Click **Create** > **Scheduled cloud flow**
+4. Name: `AAM - Agent Access Validation (Daily)`
+5. Set schedule:
    - Start: Today
    - Repeat every: **1 Day**
    - At: **6:00 AM**
    - Time zone: **UTC**
-5. Click **Create**
-6. Follow the flow structure defined in `src/access-validation-flow.json`
+6. Click **Create**
 
 ## Step 2: Configure Variables
 
@@ -113,6 +99,8 @@ The flow uses **three** connection references deployed during Phase 2 (Dataverse
 | `fsi_cr_azureautomation_accessmonitor` | Azure Automation | Trigger and monitor validation runbook jobs |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Post adaptive card alerts |
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Send email alerts |
+
+> **Note:** The `fsi_cr_azureautomation_accessmonitor` connection is configured manually in Power Automate when binding the Azure Automation actions. It is not created by the `create_connection_references.py` script.
 
 **To bind connection references:**
 

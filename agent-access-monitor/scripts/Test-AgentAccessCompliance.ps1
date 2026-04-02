@@ -396,18 +396,20 @@ if ($DataverseUrl -and $PersistResults) {
     # Write individual violations
     $allViolations = @()
     foreach ($envResult in $nonCompliantEnvs) {
-        foreach ($violation in $envResult.Violations) {
-            $violationRecord = @{
-                EnvironmentId          = $envResult.EnvironmentId
-                EnvironmentDisplayName = $envResult.EnvironmentDisplayName
-                Zone                   = $envResult.Zone
-                ViolationType          = $violation.Setting
-                Expected               = $violation.ExpectedValue
-                Actual                 = $violation.ActualValue
-                Severity               = $violation.Severity
-                RegulatoryContext      = $violation.RegulatoryContext
+        if ($envResult.Violations) {
+            foreach ($violation in $envResult.Violations) {
+                $violationRecord = @{
+                    EnvironmentId          = $envResult.EnvironmentId
+                    EnvironmentDisplayName = $envResult.EnvironmentDisplayName
+                    Zone                   = $envResult.Zone
+                    ViolationType          = $violation.Setting
+                    Expected               = $violation.ExpectedValue
+                    Actual                 = $violation.ActualValue
+                    Severity               = $violation.Severity
+                    RegulatoryContext      = $violation.RegulatoryContext
+                }
+                $allViolations += $violationRecord
             }
-            $allViolations += $violationRecord
         }
     }
     

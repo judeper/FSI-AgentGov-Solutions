@@ -334,11 +334,15 @@ try {
 
                 # Check for stale baseline
                 if ($bl.fsi_captured_at) {
-                    $capturedAt = [datetime]$bl.fsi_captured_at
-                    $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
-                    if ($ageInDays -gt $baselineMaxAgeDays) {
-                        Write-Verbose "Stale baseline for ${envName}: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
-                        $driftEntry.IsStaleBaseline = $true
+                    try {
+                        $capturedAt = [datetime]$bl.fsi_captured_at
+                        $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
+                        if ($ageInDays -gt $baselineMaxAgeDays) {
+                            Write-Verbose "Stale baseline for ${envName}: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
+                            $driftEntry.IsStaleBaseline = $true
+                        }
+                    } catch {
+                        Write-Warning "Invalid captured_at timestamp for ${envName}: $($_.Exception.Message)"
                     }
                 }
 

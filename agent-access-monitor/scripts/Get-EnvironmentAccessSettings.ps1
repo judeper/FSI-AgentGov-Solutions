@@ -298,7 +298,7 @@ if ($DataverseUrl -and $AccessToken) {
         }
         Write-Verbose "Pre-fetched zone classifications for $($zoneLookup.Count) environment(s)"
     } catch {
-        Write-Warning "Batch zone lookup failed: $($_.Exception.Message). Will fall back to per-environment lookup."
+        Write-Warning "Batch zone lookup failed: $($_.Exception.Message). Using naming convention classification as fallback."
     }
 }
 
