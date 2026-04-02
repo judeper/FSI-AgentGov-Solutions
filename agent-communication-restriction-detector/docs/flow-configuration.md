@@ -22,16 +22,16 @@ Before creating the flows, confirm you have:
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with ACRD schema deployed:
   - 5 tables: `fsi_CommScanRun`, `fsi_CommViolation`, `fsi_CommApprovedRoute`, `fsi_CommException`, `fsi_CommSkillInventory`
-  - 8 environment variables configured
+  - 9 environment variables configured
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Connection references** bound in Power Automate:
-  - `fsi_cr_dataverse_acrdmonitor` (Dataverse)
-  - `fsi_cr_teams_acrdmonitor` (Microsoft Teams)
-  - `fsi_cr_office365_acrdmonitor` (Office 365 Outlook)
-  - Azure Automation connection to your subscription
+  - `fsi_cr_dataverse_commrestrictiondetector` (Dataverse)
+  - `fsi_cr_teams_commrestrictiondetector` (Microsoft Teams)
+  - `fsi_cr_office365_commrestrictiondetector` (Office 365 Outlook)
+  - `fsi_cr_azureautomation_commrestrictiondetector` (Azure Automation)
 
 ---
 
@@ -154,7 +154,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 
 1. Add action: **Dataverse** > **Add a new row**
 2. Table: `Comm Scan Run` (`fsi_CommScanRun`)
-3. Connection reference: `fsi_cr_dataverse_acrdmonitor`
+3. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 4. Column mapping:
 
 | Flow Expression | Dataverse Column | Type | Description |
@@ -180,7 +180,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 ### Step 9: If Yes -- Post Teams Adaptive Card
 
 1. In the **Yes** branch, add: **Microsoft Teams** > **Post adaptive card in a chat or channel**
-2. Connection reference: `fsi_cr_teams_acrdmonitor`
+2. Connection reference: `fsi_cr_teams_commrestrictiondetector`
 3. Post in: Channel
 4. Team: `TeamsGroupId` variable
 5. Channel: `TeamsChannelId` variable
@@ -219,10 +219,10 @@ Add these **Initialize variable** actions immediately after the trigger:
 ### Step 10: If Yes -- Send Email Alert
 
 1. Still in the **Yes** branch, add: **Office 365 Outlook** > **Send an email (V2)**
-2. Connection reference: `fsi_cr_office365_acrdmonitor`
+2. Connection reference: `fsi_cr_office365_commrestrictiondetector`
 3. Configure:
    - To: `ComplianceDistributionList` variable
-   - Subject: `[ACRD Alert - @{AlertSeverity}] Agent Communication Violations Detected`
+   - Subject: `[ACRD Alert- @{AlertSeverity}] Agent Communication Violations Detected`
    - Importance: High (for Critical/Failed/Error), Normal (for Warning)
    - Body: HTML table with violation summary, zone breakdown, communication pattern details, and agent-level details
 4. Rename action: `Send_Alert_Email`
@@ -271,7 +271,7 @@ Provides a structured approval workflow when agents require exceptions to blocke
 1. Change type: **Create**
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Scope: **Organization** (all users)
-4. Connection reference: `fsi_cr_dataverse_acrdmonitor`
+4. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 
 ### Step 3: Get Exception Details
 
@@ -279,7 +279,7 @@ Provides a structured approval workflow when agents require exceptions to blocke
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
 4. Select columns: `fsi_name, fsi_sourceagentid, fsi_sourceagentname, fsi_targetagentid, fsi_targetagentname, fsi_sourcezone, fsi_targetzone, fsi_communicationpattern, fsi_justification, fsi_requestedby, fsi_requestedon`
-5. Connection reference: `fsi_cr_dataverse_acrdmonitor`
+5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 6. Rename action: `Get_Exception_Details`
 
 ### Step 4: Send Approval Email
@@ -318,11 +318,10 @@ Provides a structured approval workflow when agents require exceptions to blocke
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
 4. Column mapping:
-   - `fsi_status`: `Approved` (option set value)
+   - `fsi_exceptionstatus`: `Approved` (option set value)
    - `fsi_approvedby`: Approver display name from approval response
-   - `fsi_approvedon`: `utcNow()`
-   - `fsi_approvercomments`: Approver comments from approval response
-5. Connection reference: `fsi_cr_dataverse_acrdmonitor`
+   - `fsi_approvedat`: `utcNow()`
+5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 6. Rename action: `Update_Exception_Approved`
 
 ### Step 7: If Denied -- Update Exception Status
@@ -331,11 +330,10 @@ Provides a structured approval workflow when agents require exceptions to blocke
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
 4. Column mapping:
-   - `fsi_status`: `Denied` (option set value)
+   - `fsi_exceptionstatus`: `Denied` (option set value)
    - `fsi_approvedby`: Responder display name from approval response
-   - `fsi_approvedon`: `utcNow()`
-   - `fsi_approvercomments`: Responder comments from approval response
-5. Connection reference: `fsi_cr_dataverse_acrdmonitor`
+   - `fsi_approvedat`: `utcNow()`
+5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 6. Rename action: `Update_Exception_Denied`
 
 ### Step 8: Log to Audit Trail
@@ -354,9 +352,9 @@ After either branch (use a common action after the condition):
 ### Step 9: Send Notification to Requester
 
 1. Add action: **Office 365 Outlook** > **Send an email (V2)**
-2. Connection reference: `fsi_cr_office365_acrdmonitor`
+2. Connection reference: `fsi_cr_office365_commrestrictiondetector`
 3. Configure:
-   - To: `fsi_requestedby` (requester email from exception record)
+   - To: `fsi_requestedby`(requester email from exception record)
    - Subject: `[ACRD Exception @{Outcome}] @{fsi_sourceagentname} -> @{fsi_targetagentname}`
    - Body: HTML with decision details, approver comments, and next steps
    - Importance: Normal
@@ -402,7 +400,7 @@ After either branch (use a common action after the condition):
 
 - Verify `TeamsGroupId` and `TeamsChannelId` variables match your target channel
 - Confirm the Teams connection has permissions to post to the channel
-- Check that `fsi_cr_teams_acrdmonitor` connection reference is properly bound
+- Check that `fsi_cr_teams_commrestrictiondetector` connection reference is properly bound
 - Test channel posting manually in Power Automate to isolate permissions issues
 
 ### Parse JSON Schema Mismatch

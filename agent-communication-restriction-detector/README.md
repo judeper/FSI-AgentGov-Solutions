@@ -94,7 +94,10 @@ agent-communication-restriction-detector/
 pip install -r scripts/requirements.txt
 
 # 2. Deploy Dataverse schema (dry-run first)
-python scripts/deploy.py --interactive --dry-run
+#    Requires ACRD_TENANT_ID and ACRD_ENVIRONMENT_URL env vars, or pass explicitly:
+python scripts/deploy.py --interactive --dry-run \
+    --tenant-id <your-tenant-id> \
+    --environment-url <your-dataverse-url>
 
 # 3. Import approved communication routes
 .\scripts\governance\Import-ApprovedCommRoutes.ps1 `
@@ -113,7 +116,7 @@ Test-CommRestrictionCompliance -ExcludeSandbox -WhatIf
     -Interactive
 
 .\scripts\Test-EvidenceIntegrity.ps1 `
-    -EvidencePath ".\evidence\acrd-evidence-All-*.json"
+    -EvidenceFilePath ".\evidence\acrd-evidence-All-20260210-143022.json"
 ```
 
 ## Configuration Placeholders
