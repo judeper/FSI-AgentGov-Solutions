@@ -164,7 +164,7 @@ function Get-CAAValidationResults {
             $response = Invoke-RestMethod -Uri $currentUrl -Headers $headers -Method Get
         }
         catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
+            $statusCode = [int]$_.Exception.Response.StatusCode
             Write-Error "Dataverse query failed for table '$Table' (HTTP $statusCode): $($_.Exception.Message)"
             throw
         }

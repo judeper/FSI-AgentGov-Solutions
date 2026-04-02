@@ -366,13 +366,13 @@ See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete comman
 
 ## Known Limitations & Roadmap
 
-### Validation Runbook (Stub)
+### Validation Runbook
 
-`scripts/Start-CAAValidationRunbook.ps1` is a placeholder that returns `OverallStatus: 'NotImplemented'` with zero compliance data. Both flows (daily and provisioning hook) depend on this runbook for actual compliance validation. Flows will not crash (the runbook returns a valid JSON structure), but all compliance results are meaningless until implemented. Full implementation requires Entra ID policy enumeration, zone classification, and drift detection — a multi-sprint development effort. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) alongside Dataverse infrastructure. Track progress via the repository issue tracker.
+`scripts/Start-CAAValidationRunbook.ps1` is fully implemented with compliance checks, drift detection against stored baselines, and Dataverse persistence for validation history and violation records. Both flows (daily and provisioning hook) invoke this runbook for automated compliance validation.
 
-### Dataverse Client Module (Phase 2)
+### Dataverse Client Module
 
-`scripts/private/CAAClient.psm1` has all 8 Dataverse functions unimplemented (each throws "Not implemented — requires Phase 2 Dataverse infrastructure"). `Export-CAAComplianceEvidence.ps1` gracefully falls back to `Get-AzAccessToken -AsSecureString`, but the Dataverse integration layer is non-functional. **Implementation timeline:** Targeted for Phase 2 (Q3 2026) when Dataverse schema creation scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are also delivered. Track progress via the repository issue tracker.
+`scripts/private/CAAClient.psm1` provides 8 Dataverse functions (Connect, Read, Write) for baseline storage, validation history, and violation tracking. `Export-CAAComplianceEvidence.ps1` uses CAAClient for Dataverse queries with a fallback to `Get-AzAccessToken -AsSecureString` when the module is unavailable. The Dataverse schema is deployed via `create_caa_dataverse_schema.py`, `create_caa_environment_variables.py`, and `create_caa_connection_references.py`.
 
 ### Break-Glass Accounts
 
@@ -434,16 +434,16 @@ Implementation guidance in FSI-AgentGov:
 
 | Component | File | Purpose |
 |-----------|------|--------|
-| Dataverse Schema | `scripts/create_dataverse_schema.py` *(planned — not yet implemented)* | 3 tables, 2 shared option sets |
-| Environment Variables | `scripts/create_environment_variables.py` *(planned — not yet implemented)* | 7 runtime configuration variables |
-| Connection References | `scripts/create_connection_references.py` *(planned — not yet implemented)* | 3 Power Automate connector references (Graph connector planned) |
+| Dataverse Schema | `scripts/create_caa_dataverse_schema.py` | 3 tables, 2 shared option sets |
+| Environment Variables | `scripts/create_caa_environment_variables.py` | 7 runtime configuration variables |
+| Connection References | `scripts/create_caa_connection_references.py` | 3 Power Automate connector references (Graph connector planned) |
 | Daily Compliance Flow | See [docs/](./docs/) | Automated daily validation scan (build manually in Power Automate) |
 | ELM Provisioning Hook | See [docs/](./docs/) | Zone-based policy deployment on environment creation (build manually in Power Automate) |
 | Teams Alert Card | `templates/adaptive-card-caa-alert.json` | Violation notification template |
 | Evidence Export | `scripts/Export-CAAComplianceEvidence.ps1` | SHA-256 integrity-hashed evidence packages |
 | Evidence Verification | `scripts/Test-EvidenceIntegrity.ps1` | Hash verification for exported evidence |
 | CAAClient Module | `scripts/private/CAAClient.psm1` | 8 Dataverse functions (Connect, Read, Write) |
-| Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` *(planned — not yet implemented)* | Unattended daily execution via Azure Automation |
+| Automation Runbook | `scripts/Start-CAAValidationRunbook.ps1` | Unattended daily execution via Azure Automation |
 
 ## Configuration Placeholders
 
@@ -453,7 +453,7 @@ Flow-specific placeholders (Dataverse URL, tenant ID, certificate thumbprint, Te
 
 ### Module Architecture
 
-The `conditional-access-automation` module (`scripts/conditional-access-automation.psd1`) exports reusable helper functions from `scripts/private/` (e.g., `Connect-CAAGraphSession`, `Get-CAAPolicyBaseline`, `Compare-CAAPolicyBaseline`) and the Dataverse client stubs from `scripts/private/CAAClient.psm1`.
+The `conditional-access-automation` module (`scripts/conditional-access-automation.psd1`) exports reusable helper functions from `scripts/private/` (e.g., `Connect-CAAGraphSession`, `Get-CAAPolicyBaseline`, `Compare-CAAPolicyBaseline`) and the Dataverse client from `scripts/private/CAAClient.psm1`.
 
 The top-level scripts (`Deploy-CAPolicies.ps1`, `Test-PolicyCompliance.ps1`, `Register-ServicePrincipal.ps1`, `Watch-PolicyDrift.ps1`, `Export-PolicyBaseline.ps1`, `Export-CAAComplianceEvidence.ps1`, `Test-EvidenceIntegrity.ps1`) are **standalone entry points** with their own `param()` blocks and `#Requires` directives. Run them directly:
 

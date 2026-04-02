@@ -351,7 +351,7 @@ These prerequisites are required for compliance evidence persistence and Power A
 | Power Platform environment | Production or Sandbox with Dataverse database |
 | Dataverse database | Provisioned and accessible |
 | Security role | Service account assigned System Administrator or custom role with table CRUD |
-| CAA schema deployed | Three tables created via `create_dataverse_schema.py` |
+| CAA schema deployed | Three tables created via `create_caa_dataverse_schema.py` |
 
 ### Dataverse Deployment Checklist
 
@@ -412,6 +412,6 @@ In addition to the Graph API permissions listed above, Dataverse access requires
 - [ ] Connection references deployed (3 references)
 
 ### Power Automate
-- [ ] Daily compliance flow imported (`caa-daily-compliance-flow.json`)
+- [ ] Daily compliance flow built manually per [docs/compliance-monitoring.md](./compliance-monitoring.md)
 - [ ] Connection references configured with valid connections
 - [ ] Flow tested in manual trigger mode before enabling schedule

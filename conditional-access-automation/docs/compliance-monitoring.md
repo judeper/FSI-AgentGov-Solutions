@@ -162,7 +162,7 @@ Connect-MgGraph -Identity
 $baseline = Invoke-WebRequest -Uri $BaselineBlobUrl | ConvertFrom-Json
 
 # Check for drift
-$drift = .\Watch-PolicyDrift.ps1 -TenantId $TenantId -Baseline $baseline
+$drift = .\Watch-PolicyDrift.ps1 -TenantId $TenantId -BaselinePath $baseline
 
 # Alert if drift detected
 if ($drift.Count -gt 0) {
@@ -271,7 +271,7 @@ The manifest includes SHA-256 hashes:
 {
   "exportInfo": {
     "timestamp": "2026-04-01T00:00:00Z",
-    "exportedBy": "Export-PolicyEvidence.ps1 v1.0.0"
+    "exportedBy": "Export-CAAComplianceEvidence.ps1 v1.0.0"
   },
   "files": [
     {

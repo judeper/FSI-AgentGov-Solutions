@@ -115,9 +115,10 @@ function Get-CAAZoneClassification {
 
                 # Map option set value to zone name
                 $zoneMapping = @{
-                    100000000 = 'Zone1'
-                    100000001 = 'Zone2'
-                    100000002 = 'Zone3'
+                    100000000 = 'Unknown'
+                    100000001 = 'Zone1'
+                    100000002 = 'Zone2'
+                    100000003 = 'Zone3'
                 }
 
                 if ($zoneMapping.ContainsKey($zoneValue)) {

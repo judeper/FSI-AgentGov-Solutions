@@ -190,7 +190,7 @@ The `fsi_run_id` column on `fsi_CAPolicyViolation` logically references the vali
 
 ## Deployment
 
-Deploy the schema using the Dataverse Web API or Power Platform admin center. The deployment scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) are planned but not yet implemented.
+Deploy the schema using the Dataverse Web API or Power Platform admin center via the deployment scripts (`create_caa_dataverse_schema.py`, `create_caa_environment_variables.py`, `create_caa_connection_references.py`).
 
 Manual deployment steps:
 

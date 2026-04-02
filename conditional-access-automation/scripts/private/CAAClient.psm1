@@ -182,10 +182,10 @@ function ConvertTo-CAAZoneValue {
     param([object]$Zone)
     if ($Zone -is [int]) { return $Zone }
     switch -Wildcard ("$Zone") {
-        '*3*' { return 3 }
-        '*2*' { return 2 }
-        '*1*' { return 1 }
-        default { return 0 }
+        '*3*' { return 100000003 }
+        '*2*' { return 100000002 }
+        '*1*' { return 100000001 }
+        default { return 100000000 }
     }
 }
 
@@ -197,13 +197,13 @@ function ConvertTo-CAASeverityValue {
     param([object]$Severity)
     if ($Severity -is [int]) { return $Severity }
     switch ("$Severity") {
-        'Passed'      { return 1 }
-        'Warning'     { return 2 }
-        'GracePeriod' { return 3 }
-        'Failed'      { return 4 }
-        'Critical'    { return 4 }
-        'Error'       { return 5 }
-        default       { return 4 }
+        'Passed'      { return 100000000 }
+        'Warning'     { return 100000001 }
+        'GracePeriod' { return 100000002 }
+        'Failed'      { return 100000003 }
+        'Critical'    { return 100000003 }
+        'Error'       { return 100000004 }
+        default       { return 100000003 }
     }
 }
 
@@ -221,14 +221,25 @@ function Connect-CAADataverse {
         stores module-scoped connection state, and verifies connectivity with
         a test query to the organizations table.
 
+        When -AccessToken is provided (e.g., from Azure Automation managed identity),
+        the token is used directly and MSAL interactive auth is skipped.
+
     .PARAMETER DataverseUrl
         The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
     .PARAMETER TenantId
         The Azure AD tenant GUID for authentication.
 
+    .PARAMETER AccessToken
+        Optional pre-acquired bearer token. When provided, MSAL interactive
+        authentication is skipped and the token is used directly. Useful for
+        Azure Automation runbooks with managed identity tokens.
+
     .EXAMPLE
         Connect-CAADataverse -DataverseUrl 'https://org.crm.dynamics.com' -TenantId '00000000-...'
+
+    .EXAMPLE
+        Connect-CAADataverse -DataverseUrl 'https://org.crm.dynamics.com' -TenantId '00000000-...' -AccessToken $token
 
     .OUTPUTS
         None. Sets module-scoped connection state.
@@ -239,29 +250,47 @@ function Connect-CAADataverse {
         [ValidateNotNullOrEmpty()]
         [string]$DataverseUrl,
 
-        [Parameter(Mandatory)]
-        [ValidateNotNullOrEmpty()]
-        [string]$TenantId
+        [Parameter()]
+        [string]$TenantId,
+
+        [Parameter()]
+        [string]$AccessToken
     )
 
     $baseUrl = $DataverseUrl.TrimEnd('/')
-    $scope   = "$baseUrl/.default"
-    Write-Verbose "Acquiring MSAL token for scope: $scope (Tenant: $TenantId)"
 
-    try {
-        $tokenResult = Get-MsalToken -ClientId $script:CAAMsalClientId `
-            -TenantId $TenantId `
-            -Scopes @($scope) `
-            -Interactive
+    if ($AccessToken) {
+        # Use pre-acquired token directly (Azure Automation / managed identity)
+        Write-Verbose "Using pre-acquired access token for Dataverse: $baseUrl"
+        $script:CAADataverseUrl  = $baseUrl
+        $script:CAAAccessToken   = $AccessToken
+        $script:CAATokenExpiry   = (Get-Date).ToUniversalTime().AddMinutes(55)
+        $script:CAAMsalTenantId  = $TenantId
     }
-    catch {
-        throw "MSAL token acquisition failed for Dataverse '$DataverseUrl': $_"
+    else {
+        # Interactive MSAL auth
+        if (-not $TenantId) {
+            throw "TenantId is required when AccessToken is not provided."
+        }
+        $scope = "$baseUrl/.default"
+        Write-Verbose "Acquiring MSAL token for scope: $scope (Tenant: $TenantId)"
+
+        try {
+            $tokenResult = Get-MsalToken -ClientId $script:CAAMsalClientId `
+                -TenantId $TenantId `
+                -Scopes @($scope) `
+                -Interactive
+        }
+        catch {
+            throw "MSAL token acquisition failed for Dataverse '$DataverseUrl': $_"
+        }
+
+        $script:CAADataverseUrl  = $baseUrl
+        $script:CAAAccessToken   = $tokenResult.AccessToken
+        $script:CAATokenExpiry   = $tokenResult.ExpiresOn.UtcDateTime
+        $script:CAAMsalTenantId  = $TenantId
     }
 
-    $script:CAADataverseUrl  = $baseUrl
-    $script:CAAAccessToken   = $tokenResult.AccessToken
-    $script:CAATokenExpiry   = $tokenResult.ExpiresOn.UtcDateTime
-    $script:CAAMsalTenantId  = $TenantId
     $script:CAAHeaders = @{
         'Authorization' = "Bearer $($script:CAAAccessToken)"
         'Accept'        = 'application/json'

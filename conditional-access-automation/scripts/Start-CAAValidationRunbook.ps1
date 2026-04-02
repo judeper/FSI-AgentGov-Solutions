@@ -177,7 +177,7 @@ try {
     # try/catch so the runbook still produces valid output when stubs throw.
     $dataverseAvailable = $false
     try {
-        Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $TenantId
+        Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $TenantId -AccessToken $dataverseToken
         $dataverseAvailable = $true
         Write-Verbose "Dataverse connection established"
     } catch {
@@ -491,56 +491,62 @@ try {
         if ($activeBaseline -and $activeBaseline.Count -gt 0) {
             $bl = $activeBaseline | Select-Object -First 1
 
-            # Retrieve previous policies from the baseline record
-            $previousPolicies = if ($bl.Policies) { @($bl.Policies) }
-                elseif ($bl.policies) { @($bl.policies) }
-                else { @() }
+            if (-not $bl) {
+                Write-Verbose "No active baseline found — skipping drift detection"
+                $driftItems = [System.Collections.Generic.List[object]]::new()
+            }
+            else {
+                # Retrieve previous policies from the baseline record
+                $previousPolicies = if ($bl.Policies) { @($bl.Policies) }
+                    elseif ($bl.policies) { @($bl.policies) }
+                    else { @() }
 
-            # Check baseline staleness
-            $isStale = $false
-            $capturedAtProp = if ($bl.CapturedAt) { $bl.CapturedAt } elseif ($bl.capturedAt) { $bl.capturedAt } else { $null }
-            if ($capturedAtProp) {
-                $capturedAt = [datetime]$capturedAtProp
-                $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
-                if ($ageInDays -gt $baselineMaxAgeDays) {
-                    Write-Verbose "Stale baseline: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
-                    $isStale = $true
+                # Check baseline staleness
+                $isStale = $false
+                $capturedAtProp = if ($bl.CapturedAt) { $bl.CapturedAt } elseif ($bl.capturedAt) { $bl.capturedAt } else { $null }
+                if ($capturedAtProp) {
+                    $capturedAt = [datetime]$capturedAtProp
+                    $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
+                    if ($ageInDays -gt $baselineMaxAgeDays) {
+                        Write-Verbose "Stale baseline: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
+                        $isStale = $true
+                    }
                 }
-            }
 
-            if ($previousPolicies.Count -gt 0) {
-                # Get current normalized policy state for comparison
-                $baselineParams = @{}
-                if ($config.policyPrefix) { $baselineParams['PolicyNamePrefix'] = $config.policyPrefix }
-                if ($ConfigPath) { $baselineParams['ConfigPath'] = $ConfigPath }
-                $currentBaseline = Get-CAAPolicyBaseline @baselineParams
+                if ($previousPolicies.Count -gt 0) {
+                    # Get current normalized policy state for comparison
+                    $baselineParams = @{}
+                    if ($config.policyPrefix) { $baselineParams['PolicyNamePrefix'] = $config.policyPrefix }
+                    if ($ConfigPath) { $baselineParams['ConfigPath'] = $ConfigPath }
+                    $currentBaseline = Get-CAAPolicyBaseline @baselineParams
 
-                # Compare baselines
-                $allDrifts = Compare-CAAPolicyBaseline `
-                    -PreviousBaseline $previousPolicies `
-                    -CurrentBaseline @($currentBaseline)
+                    # Compare baselines
+                    $allDrifts = Compare-CAAPolicyBaseline `
+                        -PreviousBaseline $previousPolicies `
+                        -CurrentBaseline @($currentBaseline)
 
-                $filteredDrifts = @($allDrifts | Where-Object {
-                    $_.DriftType -ne 'None' -and $_.Severity -ge $thresholdNum
-                })
+                    $filteredDrifts = @($allDrifts | Where-Object {
+                        $_.DriftType -ne 'None' -and $_.Severity -ge $thresholdNum
+                    })
 
-                foreach ($d in $filteredDrifts) { $driftItems.Add($d) }
-                Write-Verbose "Drift detection: $($driftItems.Count) items above $severityThreshold threshold"
-            } else {
-                Write-Verbose "Active baseline has no policy data — skipping comparison"
-            }
+                    foreach ($d in $filteredDrifts) { $driftItems.Add($d) }
+                    Write-Verbose "Drift detection: $($driftItems.Count) items above $severityThreshold threshold"
+                } else {
+                    Write-Verbose "Active baseline has no policy data — skipping comparison"
+                }
 
-            if ($isStale) {
-                $driftItems.Add(@{
-                    PolicyName  = 'N/A'
-                    DriftType   = 'StaleBaseline'
-                    Severity    = 2
-                    Zone        = 'All'
-                    Dimension   = 'Baseline'
-                    Expected    = "< $baselineMaxAgeDays days"
-                    Actual      = "$([math]::Round($ageInDays, 1)) days"
-                    Description = "Active baseline exceeds maximum age ($baselineMaxAgeDays days)"
-                })
+                if ($isStale) {
+                    $driftItems.Add(@{
+                        PolicyName  = 'N/A'
+                        DriftType   = 'StaleBaseline'
+                        Severity    = 2
+                        Zone        = 'All'
+                        Dimension   = 'Baseline'
+                        Expected    = "< $baselineMaxAgeDays days"
+                        Actual      = "$([math]::Round($ageInDays, 1)) days"
+                        Description = "Active baseline exceeds maximum age ($baselineMaxAgeDays days)"
+                    })
+                }
             }
         } else {
             Write-Verbose "No active baseline found in Dataverse — skipping drift detection"
