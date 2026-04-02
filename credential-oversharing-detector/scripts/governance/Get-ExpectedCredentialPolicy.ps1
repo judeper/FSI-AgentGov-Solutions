@@ -57,7 +57,7 @@
 .NOTES
     Version: 1.0.0
     Solution: Credential Oversharing Detector (COD)
-    Controls: 1.11, 1.18, 3.8
+    Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b), OCC 2011-12
 
     Part of FSI Agent Governance Framework
