@@ -4,6 +4,20 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
+## [1.0.0] - April 2026
+
+### Added
+- Dataverse schema deployment script with 1 table, 3 option sets, and `--output-docs` support
+- Environment variables script (7 variables for analysis config, notifications)
+- Connection references script (Dataverse + Teams)
+- PowerShell governance scripts: Export-HallucinationEvidence (SHA-256), Test-EvidenceIntegrity, Get-HallucinationSummary
+- Auto-generated Dataverse schema documentation
+
+### Changed
+- Graduated from v0.1.0-preview to v1.0.0 with full deployment scripts and governance automation
+
+---
+
 ## [0.1.0-preview] - February 2026
 
 ### Added
