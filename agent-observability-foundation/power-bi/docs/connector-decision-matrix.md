@@ -419,7 +419,7 @@ Power BI Premium, PPU, and Fabric support **composite models** combining Import 
 
 **For FSI-AgentGov framework:**
 - [Control Catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)
-- [Governance Mapping](../../docs/governance-mapping.md)
+- [Governance Mapping](../../governance-mapping.md)
 
 ## Related Documentation
 

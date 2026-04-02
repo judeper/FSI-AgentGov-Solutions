@@ -150,8 +150,8 @@ Agent-specific metrics and audit trail:
 - **[Viva Insights Reconciliation](docs/viva-insights-reconciliation.md)** - Cross-system validation workflow for Application Insights vs Viva Insights metrics
 
 ### Technical Reference
-- **[Semantic Model Design](semantic-model/README.md)** - Star schema documentation, relationship diagrams, RLS configuration
-- **[DAX Measures Reference](measures/README.md)** - Complete measure documentation with calculation logic
+- **Semantic Model Design** (`semantic-model/`) - Star schema TMDL definitions, relationship diagrams, RLS configuration
+- **DAX Measures Reference** (`semantic-model/measures/`) - Measure definitions with calculation logic (CoreMetrics.tmdl)
 - **[KQL Functions](kql-views/)** - Pre-aggregation functions for efficient data consumption
 
 ## Architecture Overview
@@ -212,7 +212,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 ### Agent Observability Foundation
 - **[Main Solution README](../README.md)** - Parent solution overview and deployment
 - **[KQL Query Library](../queries/README.md)** - Foundation queries for workbooks and ad-hoc analysis
-- **[Governance Mapping](../docs/governance-mapping.md)** - Controls-to-observability artifact mapping
+- **[Governance Mapping](../governance-mapping.md)** - Controls-to-observability artifact mapping
 
 ### FSI-AgentGov Framework
 - **[Control Catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)** - Complete 78-control framework
@@ -231,7 +231,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 - See [Troubleshooting](docs/connector-decision-matrix.md#known-limitations-and-troubleshooting) for common problems
 
 **Contributing:**
-- See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines
+- See the repository root for contribution guidelines
 - Language rules: Use hedging language ("helps support", "aids in") — never "ensures compliance" or "guarantees"
 
 ---

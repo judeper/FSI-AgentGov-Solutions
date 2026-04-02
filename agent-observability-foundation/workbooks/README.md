@@ -126,7 +126,7 @@ Workbook queries use parameter reference syntax like `{TimeRange:default}` and `
 
 ## Related Documentation
 
-- **Phase 2 Summary:** [MILESTONES.md](../../.planning/MILESTONES.md) - KQL query library development
+- **Phase 2 — KQL Query Library Development:** See the solution [CHANGELOG](../CHANGELOG.md) for development history and roadmap
 - **Governance Mapping:** [governance-mapping.md](../governance-mapping.md) - Control alignment for telemetry artifacts
 - **Architecture Overview:** [architecture.md](../architecture.md) - Data flow and component details
 - **Framework Zones:** [FSI-AgentGov zones-and-tiers.md](https://github.com/judeper/FSI-AgentGov/blob/main/docs/framework/zones-and-tiers.md) - Governance zone definitions

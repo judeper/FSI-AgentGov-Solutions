@@ -657,7 +657,7 @@ This Power BI integration helps support compliance with:
 **Control 3.1 - Usage Metrics:**
 - Active Agents, Total Sessions, Total Messages measures provide adoption visibility
 
-**Control 3.2 - Error Tracking:**
+**Control 3.2 - Usage Analytics and Activity Monitoring:**
 - Error Rate, Error Rate by Zone measures enable error monitoring
 - Event-level drill-down supports root cause analysis
 

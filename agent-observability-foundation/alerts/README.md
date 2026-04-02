@@ -239,8 +239,8 @@ alerts/
 
 ## Related Documentation
 
-- **Phase 3 Plan 02:** [MILESTONES.md](../../.planning/MILESTONES.md) - Action groups and Teams integration
-- **Phase 3 Plan 04:** [MILESTONES.md](../../.planning/MILESTONES.md) - Alert rule templates
+- **Phase 3 — Action Groups and Teams Integration:** See the solution [CHANGELOG](../CHANGELOG.md) for development history and roadmap
+- **Phase 3 — Alert Rule Templates:** See the solution [CHANGELOG](../CHANGELOG.md) for development history and roadmap
 - **Governance Mapping:** [governance-mapping.md](../governance-mapping.md) - Control alignment for alerting infrastructure
 - **Framework Controls:** [FSI-AgentGov controls catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)
 
