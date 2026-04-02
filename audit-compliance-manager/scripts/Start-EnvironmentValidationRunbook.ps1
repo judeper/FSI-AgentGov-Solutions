@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
 .SYNOPSIS
@@ -132,7 +132,17 @@ try {
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
 
-    . "$scriptRoot\private\Compare-ValidationBaseline.ps1"
+    $privatePath = Join-Path $PSScriptRoot 'private'
+    $requiredHelpers = @(
+        'Compare-ValidationBaseline.ps1'
+    )
+    foreach ($helper in $requiredHelpers) {
+        $helperPath = Join-Path $privatePath $helper
+        if (-not (Test-Path $helperPath)) {
+            throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
+        }
+        . $helperPath
+    }
 
     Write-Verbose "Scripts loaded successfully"
 

@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
 <#
 .SYNOPSIS
@@ -127,9 +127,18 @@ $ErrorActionPreference = "Stop"
 
 #region Dot-source private helpers
 
-$scriptRoot = $PSScriptRoot
-. "$scriptRoot\private\Connect-AuditServices.ps1"
-. "$scriptRoot\private\New-CanaryEvent.ps1"
+$privatePath = Join-Path $PSScriptRoot 'private'
+$requiredHelpers = @(
+    'Connect-AuditServices.ps1',
+    'New-CanaryEvent.ps1'
+)
+foreach ($helper in $requiredHelpers) {
+    $helperPath = Join-Path $privatePath $helper
+    if (-not (Test-Path $helperPath)) {
+        throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
+    }
+    . $helperPath
+}
 
 #endregion
 

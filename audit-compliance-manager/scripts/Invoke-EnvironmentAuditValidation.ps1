@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 
 <#
 .SYNOPSIS
@@ -186,15 +186,29 @@ Write-Host ""
 
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
-try {
-    . "$scriptRoot\private\Connect-PowerPlatform.ps1"
-    . "$scriptRoot\private\Write-ValidationResult.ps1"
-    . "$scriptRoot\Test-EnvironmentAudit.ps1"
-    . "$scriptRoot\Test-EnvironmentRetention.ps1"
+$privatePath = Join-Path $PSScriptRoot 'private'
+$requiredHelpers = @(
+    'Connect-PowerPlatform.ps1',
+    'Write-ValidationResult.ps1'
+)
+foreach ($helper in $requiredHelpers) {
+    $helperPath = Join-Path $privatePath $helper
+    if (-not (Test-Path $helperPath)) {
+        throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
+    }
+    . $helperPath
 }
-catch {
-    Write-Error "Failed to load required scripts: $($_.Exception.Message)"
-    throw
+
+$requiredScripts = @(
+    'Test-EnvironmentAudit.ps1',
+    'Test-EnvironmentRetention.ps1'
+)
+foreach ($script in $requiredScripts) {
+    $scriptPath = Join-Path $PSScriptRoot $script
+    if (-not (Test-Path $scriptPath)) {
+        throw "Required script not found: $scriptPath. Ensure the solution is installed correctly."
+    }
+    . $scriptPath
 }
 
 # Build authentication parameter hashtable

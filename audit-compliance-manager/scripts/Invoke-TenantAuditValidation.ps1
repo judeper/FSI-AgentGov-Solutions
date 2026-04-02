@@ -1,5 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
 <#
 .SYNOPSIS
@@ -180,18 +180,36 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 # Dot-source all validator scripts
-$scriptRoot = $PSScriptRoot
-try {
-    Import-Module "$scriptRoot\AuditComplianceHelpers.psm1" -Force -ErrorAction Stop
-    . "$scriptRoot\private\Connect-PowerPlatform.ps1"
-    . "$scriptRoot\private\Write-ValidationResult.ps1"
-    . "$scriptRoot\Test-UnifiedAuditLog.ps1"
-    . "$scriptRoot\Test-MailboxAudit.ps1"
-    . "$scriptRoot\Test-PurviewRetention.ps1"
+$modulePath = Join-Path $PSScriptRoot 'AuditComplianceHelpers.psm1'
+if (-not (Test-Path $modulePath)) {
+    throw "Required module not found: $modulePath. Ensure the solution is installed correctly."
 }
-catch {
-    Write-Error "Failed to load validator scripts: $($_.Exception.Message)"
-    throw
+Import-Module $modulePath -Force -ErrorAction Stop
+
+$privatePath = Join-Path $PSScriptRoot 'private'
+$requiredHelpers = @(
+    'Connect-PowerPlatform.ps1',
+    'Write-ValidationResult.ps1'
+)
+foreach ($helper in $requiredHelpers) {
+    $helperPath = Join-Path $privatePath $helper
+    if (-not (Test-Path $helperPath)) {
+        throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
+    }
+    . $helperPath
+}
+
+$requiredScripts = @(
+    'Test-UnifiedAuditLog.ps1',
+    'Test-MailboxAudit.ps1',
+    'Test-PurviewRetention.ps1'
+)
+foreach ($script in $requiredScripts) {
+    $scriptPath = Join-Path $PSScriptRoot $script
+    if (-not (Test-Path $scriptPath)) {
+        throw "Required script not found: $scriptPath. Ensure the solution is installed correctly."
+    }
+    . $scriptPath
 }
 
 # Generate RunId for correlated validation records

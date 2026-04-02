@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 
 <#
 .SYNOPSIS
@@ -126,8 +126,17 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Dot-source authentication helper
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-. (Join-Path $scriptRoot "private" "Connect-PowerPlatform.ps1")
+$privatePath = Join-Path $PSScriptRoot 'private'
+$requiredHelpers = @(
+    'Connect-PowerPlatform.ps1'
+)
+foreach ($helper in $requiredHelpers) {
+    $helperPath = Join-Path $privatePath $helper
+    if (-not (Test-Path $helperPath)) {
+        throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
+    }
+    . $helperPath
+}
 
 function Invoke-EnvironmentDiscovery {
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]

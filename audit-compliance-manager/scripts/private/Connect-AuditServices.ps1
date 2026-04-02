@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.7.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
 <#
 .SYNOPSIS
