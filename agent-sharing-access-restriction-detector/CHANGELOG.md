@@ -2,6 +2,16 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [1.0.3] — April 2026
+
+### Added
+- Dataverse schema script with 2 tables, 3 option sets, and `--output-docs` support
+- Environment variables script (4 variables for template URL, BAP API, approval timeout, governance lead)
+- Connection references script (Dataverse, Teams, Approvals, HTTP Premium)
+- PowerShell governance scripts: Invoke-SharingComplianceScan, Test-AgentSharingCompliance, Get-ExpectedSharingPolicy, Export-SharingComplianceEvidence, Test-EvidenceIntegrity
+- Python zone rules engine (asard_zone_rules.py) with zone policy evaluation
+- Auto-generated Dataverse schema documentation
+
 ## [1.0.2] — July 2025
 
 ### Changed
