@@ -13,7 +13,7 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 | 1.7 | Audit Logging & Evidence | [Audit Compliance Manager](../solutions/audit-compliance-manager/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Environment Lifecycle Management](../solutions/environment-lifecycle-management/index.md), [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [RAG Source Validator](../solutions/rag-source-validator/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md) |
 | 1.8 | Content Moderation | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md) |
 | 1.9 | Disaster Recovery | [DR Testing Framework](../solutions/dr-testing-framework/index.md) |
-| 1.10 | Supervision & Review | [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
+| 1.10 | Supervision & Review | [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md), [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) |
 | 1.11 | Conditional Access | [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Session Security Configurator](../solutions/session-security-configurator/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
 | 1.13 | File & Attachment Controls | [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md) |
 | 1.14 | Content & Data Protection | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [File Upload Security](../solutions/file-upload-security/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [MIME Type Restrictions](../solutions/mime-type-restrictions/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md), [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) |
@@ -35,10 +35,10 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 | 2.9 | Output Quality | [Hallucination Tracker](../solutions/hallucination-tracker/index.md) |
 | 2.10 | Platform Change Management | [Message Center Monitor](../solutions/message-center-monitor/index.md) |
 | 2.11 | Conflict of Interest | [COI Testing](../solutions/coi-testing/index.md) |
-| 2.12 | Supervision & Oversight | [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [Hallucination Tracker](../solutions/hallucination-tracker/index.md) |
+| 2.12 | Supervision & Oversight | [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [Hallucination Tracker](../solutions/hallucination-tracker/index.md), [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) |
 | 2.13 | Knowledge Source Management | [RAG Source Validator](../solutions/rag-source-validator/index.md) |
 | 2.16 | RAG Source Integrity | [RAG Source Validator](../solutions/rag-source-validator/index.md) |
-| 2.17 | Multi-Agent Communication | [Agent Communication Restriction Detector](../solutions/agent-communication-restriction-detector/index.md) |
+| 2.17 | Multi-Agent Communication | [Agent Communication Restriction Detector](../solutions/agent-communication-restriction-detector/index.md), [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) |
 | 2.18 | Conflict of Interest Testing | [COI Testing](../solutions/coi-testing/index.md) |
 | 2.22 | Session Timeout | [Inactivity Timeout Enforcement](../solutions/inactivity-timeout-enforcement/index.md) |
 | 2.24 | GenAI Feature Governance | [Generative AI Config Auditor](../solutions/generative-ai-config-auditor/index.md) |

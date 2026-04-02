@@ -18,13 +18,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## hitl-workflow-governance v1.0.0 — 2026-04-02
 
 ### Added
 
-- **Preview placeholder solution folders** — Added documentation-only placeholders for `hitl-workflow-governance` and `credential-oversharing-detector`
-  - `hitl-workflow-governance`: captures native Copilot Studio / Human in the loop preview boundaries for request-for-information workflows and reserves the namespace until Microsoft publishes stable governance telemetry
-  - `credential-oversharing-detector`: captures safe-sharing / credential-oversharing preview scope, boundary notes versus sharing-recipient and runtime-drift solutions, and reserves the namespace until Microsoft ships stable admin signals
+- **HITL Workflow Governance v1.0.0** — Full solution for zone-based governance of Human in the Loop checkpoints in Copilot Studio agent flows
+  - Dataverse schema: 3 tables — fsi_HitlCheckpointResult (per-agent scan results), fsi_HitlCheckpointException (approved exceptions), fsi_HitlScanRun (immutable audit trail)
+  - Python deployment: create_hwg_dataverse_schema.py (with --output-docs), create_hwg_environment_variables.py, create_hwg_connection_references.py, deploy.py
+  - PowerShell scan scripts: Get-AgentHitlSettings.ps1, Test-HitlWorkflowCompliance.ps1, Start-HitlValidationRunbook.ps1
+  - Evidence export: Export-HitlGovernanceEvidence.ps1 (JSON + SHA-256 sidecar), Test-EvidenceIntegrity.ps1
+  - Governance validation: Test-HitlCheckpointConfiguration.ps1 for zone-based HITL policy enforcement
+  - Private helper modules: HWGClient.psm1, Connect-EnvironmentDataverse.ps1, Get-ExpectedHitlPolicy.ps1, zone classification
+  - Templates: hitl-zone-policy.json (zone requirements), adaptive-card-hitl-alert.json (Teams notification)
+  - Documentation: prerequisites, flow configuration (manual build), Dataverse schema, troubleshooting
+  - 6 environment variables, 2 connection references (Dataverse + Human in the Loop connector)
+  - Supports Controls 2.12, 2.17, 1.10
 - **Cross-Tenant External Sharing Governance v1.0.0** — Three-layer cross-tenant access governance for AI agents in FSI environments
   - Dataverse schema: 5 tables — fsi_approvedexternaltenant (allow list with alternate key), fsi_externalsharefinding (violations with composite dedup key), fsi_tenantisolationrecord (daily Layer 1 audit), fsi_entractarecord (weekly Layer 2 audit), fsi_crosstenantcomplianceevent (LTR-enabled immutable audit log)
   - Python deployment: create_ctsg_dataverse_schema.py, create_ctsg_environment_variables.py, create_ctsg_connection_references.py, deploy.py
@@ -177,7 +185,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - **Catalog reconciliation:** Updated root README.md and `site-docs/solutions/index.md` to align the published inventory to 33 live solutions and the validated 78-control framework baseline, bringing existing live entries and current version labels back in sync without rewriting historical release notes
-- **Preview/live boundary:** Kept `hitl-workflow-governance` and `credential-oversharing-detector` out of the 33-live-solution count while they remain documentation-only preview placeholders
+- **Preview/live boundary:** Both `hitl-workflow-governance` and `credential-oversharing-detector` have since graduated to v1.0.0 live solutions
 - **Entra terminology cleanup:** Active documentation now uses Microsoft Entra ID naming for app registrations, connector labels, licensing references, and resource URI tables where current product terminology applies
 - **Agent 365 governance boundary:** Clarified that Agent 365 Lifecycle Governance complements — rather than duplicates — native Agent 365 Admin Center inventory, pending request, ownerless-agent, and overview analytics surfaces
 - Updated root README.md to include Environment Lifecycle Management

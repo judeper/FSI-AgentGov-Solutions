@@ -1,6 +1,6 @@
 # Solutions Catalog
 
-34 live reference implementations organized by functional domain. The companion repository also includes 1 documentation-only preview placeholder folder, tracked separately below until it moves beyond placeholder scope. Published site detail pages are linked where available; remaining entries link to the repository README.
+35 live reference implementations organized by functional domain. Published site detail pages are linked where available; remaining entries link to the repository README.
 
 ---
 
@@ -40,6 +40,7 @@ Solutions for audit management, compliance reporting, and regulatory workflows.
 | [Compliance Dashboard](compliance-dashboard/index.md) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.1 | 3.3, 3.1, 3.2 |
 | [Cross-Solution Integration](cross-solution-integration/index.md) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
 | [FINRA Supervision Workflow](finra-supervision-workflow/index.md) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
+| [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.0.0 | 2.12, 2.17, 1.10 |
 | [Model Risk Management Automation](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | v1.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
 | [Segregation of Duties Detector](segregation-detector/index.md) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.0.0 | 2.8, 2.1, 2.3 |
 
@@ -82,11 +83,7 @@ Solutions for environment management, pipeline governance, and operational testi
 
 ## Preview Placeholders
 
-The companion repository also tracks one documentation-only preview placeholder. This is not counted in the 34 live reference implementations above.
-
-| Solution | Status | Controls | Notes |
-|----------|--------|----------|-------|
-| [HITL Workflow Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md) | Preview placeholder | 2.12, 2.17, 1.10 | Planned evidence-collection workflow for supervisory approvals, request-for-information routing, and audit-trail capture around human-in-the-loop checkpoints. |
+All previously tracked preview placeholders have been promoted to live solution implementations.
 
 ---
 

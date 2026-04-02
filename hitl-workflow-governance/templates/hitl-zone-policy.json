@@ -1,0 +1,51 @@
+{
+  "$schema": "https://fsi-agentgov.github.io/schemas/hitl-zone-policy.json",
+  "version": "1.0.0",
+  "description": "HITL Workflow Governance zone-based checkpoint requirements",
+  "zones": {
+    "Zone3": {
+      "displayName": "Zone 3 - Enterprise Managed",
+      "hitlRequired": true,
+      "preApprovalRequired": true,
+      "sampleRate": 100,
+      "slaHours": 4,
+      "requiredForActionTypes": ["write", "financial", "externalTransfer", "piiProcessing", "customerFacing"],
+      "minimumInputs": 1,
+      "severity": "Critical",
+      "regulatoryContext": "FINRA Rule 3110 requires supervisory review of customer-facing AI agent outputs. SOX 302/404 requires documented internal controls for financial operations."
+    },
+    "Zone2": {
+      "displayName": "Zone 2 - Team Collaboration",
+      "hitlRequired": true,
+      "preApprovalRequired": false,
+      "sampleRate": 10,
+      "slaHours": 24,
+      "requiredForActionTypes": ["financial", "externalTransfer", "piiProcessing"],
+      "minimumInputs": 1,
+      "severity": "High",
+      "regulatoryContext": "FINRA Rule 3110(b) recommends structured oversight for shared agent outputs. GLBA 501(b) requires safeguards for customer financial information."
+    },
+    "Zone1": {
+      "displayName": "Zone 1 - Personal Productivity",
+      "hitlRequired": false,
+      "preApprovalRequired": false,
+      "sampleRate": 0,
+      "slaHours": 72,
+      "requiredForActionTypes": [],
+      "minimumInputs": 0,
+      "severity": "Warning",
+      "regulatoryContext": "Best practice: periodic spot-check of personal agent outputs for quality assurance."
+    },
+    "Unclassified": {
+      "displayName": "Unclassified",
+      "hitlRequired": false,
+      "preApprovalRequired": false,
+      "sampleRate": 0,
+      "slaHours": 72,
+      "requiredForActionTypes": [],
+      "minimumInputs": 0,
+      "severity": "Warning",
+      "regulatoryContext": "Environment requires zone classification before HITL policy can be enforced."
+    }
+  }
+}
