@@ -2,6 +2,20 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.2.0] - 2026-04-02
+
+### Added
+- Dataverse schema deployment script with 3 tables, 2 option sets, and `--output-docs` support
+- Environment variables script (16 variables for scan config, notifications, Azure infra)
+- Connection references script (Dataverse, Office 365, Teams)
+- Python requirements.txt
+
+### Changed
+- Implemented all 8 CAAClient.psm1 Dataverse functions (previously stubs)
+- Implemented Start-CAAValidationRunbook.ps1 (previously NotImplemented placeholder)
+  - Full Azure Automation orchestration: auth, compliance checks, drift detection, Dataverse persistence
+  - Structured JSON output for Power Automate integration
+
 ## [1.1.2] - 2026-07-15
 
 ### Changed
