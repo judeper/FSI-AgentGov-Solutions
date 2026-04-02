@@ -218,7 +218,7 @@ Connect-ExchangeOnline `
 
 ```powershell
 # Run scripts with -Verbose flag
-.\Export-CopilotDenyEvents.ps1 -Verbose
+.\scripts\Export-CopilotDenyEvents.ps1 -Verbose
 
 # Or set preference
 $VerbosePreference = "Continue"

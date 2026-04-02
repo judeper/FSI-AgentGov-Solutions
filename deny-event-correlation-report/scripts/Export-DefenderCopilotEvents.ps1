@@ -51,6 +51,8 @@ param(
 #Requires -Version 7.0
 #Requires -Modules Microsoft.Graph.Security
 
+$ErrorActionPreference = "Stop"
+
 #region Main Execution
 
 # Track whether Graph was already connected at entry so we don't disconnect a

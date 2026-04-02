@@ -59,6 +59,8 @@ param(
 #Requires -Version 7.0
 #Requires -Modules ExchangeOnlineManagement
 
+$ErrorActionPreference = "Stop"
+
 #region Functions
 
 # Dot-source shared Exchange Online connection helper to avoid duplicate definitions
@@ -238,7 +240,7 @@ try {
 
     if (-not $dlpEvents -or $dlpEvents.Count -eq 0) {
         Write-Host "No DlpRuleMatch events found for the specified date range." -ForegroundColor Yellow
-        return
+        exit 0
     }
 
     # Filter for Copilot-related events
@@ -248,7 +250,7 @@ try {
     if (-not $copilotDlpEvents -or @($copilotDlpEvents).Count -eq 0) {
         Write-Host "No Copilot-related DLP events found." -ForegroundColor Yellow
         Write-Host "Note: Events are identified by Workload='MicrosoftCopilot' or policy names containing 'Copilot'." -ForegroundColor Gray
-        return
+        exit 0
     }
 
     $eventCount = @($copilotDlpEvents).Count

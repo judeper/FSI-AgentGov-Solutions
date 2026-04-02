@@ -79,6 +79,8 @@ param(
 #Requires -Version 7.0
 #Requires -Modules Az.Accounts
 
+$ErrorActionPreference = "Stop"
+
 #region Functions
 
 function Invoke-AppInsightsQuery {
@@ -281,7 +283,7 @@ customEvents
     if (-not $raiEvents -or @($raiEvents).Count -eq 0) {
         Write-Host "No RAI ContentFiltered events found for the specified date range." -ForegroundColor Yellow
         Write-Host "Note: Ensure Copilot Studio agents are configured with Application Insights." -ForegroundColor Gray
-        return
+        exit 0
     }
 
     $eventCount = @($raiEvents).Count

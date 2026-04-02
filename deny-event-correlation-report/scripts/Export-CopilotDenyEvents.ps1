@@ -60,6 +60,8 @@ param(
 #Requires -Version 7.0
 #Requires -Modules ExchangeOnlineManagement
 
+$ErrorActionPreference = "Stop"
+
 #region Functions
 
 # Dot-source shared Exchange Online connection helper to avoid duplicate definitions
@@ -240,7 +242,7 @@ try {
 
     if (-not $auditEvents -or $auditEvents.Count -eq 0) {
         Write-Host "No CopilotInteraction events found for the specified date range." -ForegroundColor Yellow
-        return
+        exit 0
     }
 
     # Filter for deny events
@@ -249,7 +251,7 @@ try {
 
     if (-not $denyEvents -or @($denyEvents).Count -eq 0) {
         Write-Host "No deny events found in the retrieved audit records." -ForegroundColor Yellow
-        return
+        exit 0
     }
 
     $denyCount = @($denyEvents).Count

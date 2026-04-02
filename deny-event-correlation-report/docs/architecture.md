@@ -169,7 +169,7 @@ Azure Automation Account
 Task Scheduler
 ├── Task: Daily Deny Report
 ├── Trigger: Daily at 6:00 AM
-├── Action: PowerShell.exe -File Invoke-DailyDenyReport.ps1
+├── Action: PowerShell.exe -File scripts\Invoke-DailyDenyReport.ps1
 └── Credentials: Service account with Audit Reader role
 ```
 
