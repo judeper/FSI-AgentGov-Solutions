@@ -2,6 +2,17 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [1.0.4] — April 2026
+
+### Added
+- Dataverse schema script with 3 tables, 2 option sets, and `--output-docs` support
+- Environment variables script (4 variables for notifications, BAP API, scan frequency, Dataverse URL)
+- Connection references script (Dataverse + Office 365 Outlook)
+- PowerShell governance scripts: Invoke-TimeoutComplianceScan, Test-TimeoutCompliance, Get-ExpectedTimeoutPolicy, Export-TimeoutComplianceEvidence, Test-EvidenceIntegrity
+- ISO 8601 duration parser (ConvertFrom-Iso8601Duration) for BAP API timeout values
+- Auto-generated Dataverse schema documentation
+- Python requirements.txt
+
 ## [1.0.3] — April 2026
 
 ### Changed
