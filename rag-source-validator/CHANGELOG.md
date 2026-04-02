@@ -4,6 +4,18 @@ All notable changes to the RAG Source Validator.
 
 ---
 
+## [1.1.0] - April 2026
+
+### Added
+- Dataverse schema deployment script with 3 tables, 6 option sets, 2 relationships, and `--output-docs`
+- Environment variables script (7 variables for Dataverse URL, Graph endpoints, freshness, notifications)
+- Connection references script (Dataverse, SharePoint, Teams)
+- PowerShell governance scripts: Export-ValidationEvidence (SHA-256), Test-EvidenceIntegrity, Get-SourceValidationSummary
+- Auto-generated Dataverse schema documentation from --output-docs
+- Python requirements.txt
+
+---
+
 ## [1.0.1] - March 2026
 
 ### Fixed

@@ -1,39 +1,75 @@
-# Dataverse Schema
+# Dataverse Schema Reference
 
-Table definitions for the RAG Source Validator.
+> Auto-generated from `create_rsv_dataverse_schema.py`. Do not edit manually.
 
----
+## Tables
 
-## Table: fsi_knowledgesource
+| SchemaName | Logical Name | Description | Ownership | Primary Name Attribute |
+|---|---|---|---|---|
+| fsi_KnowledgeSource | fsi_knowledgesource | RAG knowledge source registry with hash baselines and validation settings | UserOwned | fsi_sourcename |
+| fsi_ValidationResult | fsi_validationresult | Immutable validation history for RAG knowledge sources | OrganizationOwned | fsi_resultname |
+| fsi_SourceChange | fsi_sourcechange | Change tracking for RAG knowledge sources with review workflow | UserOwned | fsi_changename |
 
-Registry of all RAG knowledge sources.
+## Columns
 
-### Columns
+### fsi_KnowledgeSource (`fsi_knowledgesource`)
 
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `fsi_knowledgesourceid` | Uniqueidentifier | Yes | Primary key |
-| `fsi_name` | String (200) | Yes | Source display name |
-| `fsi_sourcetype` | Choice | Yes | Type of source |
-| `fsi_sourceuri` | String (500) | Yes | Source location URI |
-| `fsi_agentid` | String (36) | No | Associated agent |
-| `fsi_owner` | Lookup (User) | Yes | Source owner |
-| `fsi_description` | Text | No | Source description |
-| `fsi_currenthash` | String (64) | No | Current SHA-256 hash |
-| `fsi_baselinehash` | String (64) | No | Baseline hash for comparison |
-| `fsi_status` | Choice | Yes | Source status |
-| `fsi_lastvalidated` | DateTime | No | Last validation timestamp |
-| `fsi_validationfrequency` | Choice | Yes | How often to validate |
-| `fsi_alertonchange` | Boolean | Yes | Send alert on changes |
-| `fsi_freshnessthreshold` | Integer | No | Days before stale warning |
-| `fsi_lastmodified` | DateTime | No | Last known modification |
-| `createdon` | DateTime | Auto | Record creation |
-| `modifiedon` | DateTime | Auto | Record modification |
+| SchemaName | Logical Name | Type | Required | Description | Option Set |
+|---|---|---|---|---|---|
+| fsi_SourceName | fsi_sourcename | String | Yes | Display name of the knowledge source |  |
+| fsi_SourceType | fsi_sourcetype | Picklist | Yes |  | **fsi_RSV_sourcetype**: `1` = SharePoint Document Library, `2` = SharePoint List, `3` = SharePoint Page, `4` = Dataverse Table, `5` = Azure Blob Container, `6` = Azure Blob File, `7` = External API, `8` = Database Query |
+| fsi_SourceUri | fsi_sourceuri | String | Yes | Full URI of the knowledge source |  |
+| fsi_AgentId | fsi_agentid | String | Yes | Power Platform Bot ID referencing this source |  |
+| fsi_Description | fsi_description | Memo | No | Detailed description of the knowledge source |  |
+| fsi_CurrentHash | fsi_currenthash | String | No | SHA-256 hash of current source content |  |
+| fsi_BaselineHash | fsi_baselinehash | String | No | SHA-256 hash captured at baseline |  |
+| fsi_Status | fsi_status | Picklist | No |  | **fsi_RSV_sourcestatus**: `1` = Active, `2` = Pending Validation, `3` = Validation Failed, `4` = Stale, `5` = Archived |
+| fsi_LastValidated | fsi_lastvalidated | DateTime | No | Timestamp of last successful validation |  |
+| fsi_ValidationFrequency | fsi_validationfrequency | Picklist | No |  | **fsi_RSV_validationfrequency**: `1` = Realtime, `2` = Hourly, `3` = Daily, `4` = Weekly, `5` = Monthly |
+| fsi_AlertOnChange | fsi_alertonchange | Boolean | No | Send notification when source content changes | `1` = Yes, `0` = No |
+| fsi_FreshnessThreshold | fsi_freshnessthreshold | Integer | No | Maximum acceptable age in days before source is considered stale |  |
+| fsi_LastModified | fsi_lastmodified | DateTime | No | Timestamp of last detected source modification |  |
 
-### Choice: fsi_sourcetype
+### fsi_ValidationResult (`fsi_validationresult`)
+
+| SchemaName | Logical Name | Type | Required | Description | Option Set |
+|---|---|---|---|---|---|
+| fsi_ResultName | fsi_resultname | String | Yes | Auto-generated validation result identifier |  |
+| fsi_ValidationTime | fsi_validationtime | DateTime | Yes | Timestamp when validation was performed |  |
+| fsi_Result | fsi_result | Picklist | Yes |  | **fsi_RSV_validationresult**: `1` = Passed, `2` = Hash Mismatch, `3` = Schema Drift, `4` = Stale Content, `5` = Source Unavailable, `6` = Unexpected Error, `7` = Skipped - Not Implemented, `8` = Skipped - Unsupported Type |
+| fsi_PreviousHash | fsi_previoushash | String | No | SHA-256 hash before this validation |  |
+| fsi_CurrentHash | fsi_currenthash | String | No | SHA-256 hash at validation time |  |
+| fsi_HashChanged | fsi_hashchanged | Boolean | No | Whether source hash changed since last validation | `1` = Yes, `0` = No |
+| fsi_ChangeDetails | fsi_changedetails | Memo | No | Human-readable description of detected changes |  |
+| fsi_ValidationType | fsi_validationtype | Picklist | No |  | **fsi_RSV_validationtype**: `1` = Scheduled, `2` = On-Demand, `3` = Webhook Triggered, `4` = Baseline Capture |
+| fsi_Duration | fsi_duration | Integer | No | Validation duration in milliseconds |  |
+| fsi_ErrorDetails | fsi_errordetails | Memo | No | Error stack trace or message when validation fails |  |
+
+### fsi_SourceChange (`fsi_sourcechange`)
+
+| SchemaName | Logical Name | Type | Required | Description | Option Set |
+|---|---|---|---|---|---|
+| fsi_ChangeName | fsi_changename | String | Yes | Auto-generated change record identifier |  |
+| fsi_ChangeType | fsi_changetype | Picklist | Yes |  | **fsi_RSV_changetype**: `1` = Content Modified, `2` = Schema Changed, `3` = Source Moved, `4` = Source Deleted, `5` = Permissions Changed, `6` = New Content Added |
+| fsi_DetectedOn | fsi_detectedon | DateTime | Yes | Timestamp when the change was detected |  |
+| fsi_PreviousValue | fsi_previousvalue | Memo | No | Content or metadata value before the change |  |
+| fsi_NewValue | fsi_newvalue | Memo | No | Content or metadata value after the change |  |
+| fsi_ChangedBy | fsi_changedby | String | No | UPN or identity that made the change |  |
+| fsi_Reviewed | fsi_reviewed | Boolean | No | Whether the change has been reviewed | `1` = Yes, `0` = No |
+| fsi_ReviewedBy | fsi_reviewedby | String | No | UPN of the reviewer |  |
+| fsi_ReviewedOn | fsi_reviewedon | DateTime | No | Timestamp when the change was reviewed |  |
+| fsi_Approved | fsi_approved | Boolean | No | Whether the reviewed change was approved | `1` = Yes, `0` = No |
+
+## Option Sets
+
+### RSV Option Sets
+
+#### fsi_RSV_sourcetype
+
+Type of RAG knowledge source
 
 | Value | Label |
-|-------|-------|
+|---|---|
 | 1 | SharePoint Document Library |
 | 2 | SharePoint List |
 | 3 | SharePoint Page |
@@ -43,100 +79,62 @@ Registry of all RAG knowledge sources.
 | 7 | External API |
 | 8 | Database Query |
 
-### Choice: fsi_status
+#### fsi_RSV_sourcestatus
+
+Current status of the knowledge source
 
 | Value | Label |
-|-------|-------|
+|---|---|
 | 1 | Active |
 | 2 | Pending Validation |
 | 3 | Validation Failed |
 | 4 | Stale |
 | 5 | Archived |
 
-> **Note:** Status 2 ("Pending Validation") is defined but not currently set by any code path. It could be used to mark sources at validation start and transition to Active (1) or Validation Failed (3) on completion, providing observability for in-progress validations and preventing concurrent validation of the same source. This is reserved for a future release.
+#### fsi_RSV_validationfrequency
 
-### Choice: fsi_validationfrequency
+How often the source is validated
 
 | Value | Label |
-|-------|-------|
-| 1 | Real-time (webhook) |
+|---|---|
+| 1 | Realtime |
 | 2 | Hourly |
 | 3 | Daily |
 | 4 | Weekly |
 | 5 | Monthly |
 
----
+#### fsi_RSV_validationresult
 
-## Table: fsi_validationresult
-
-History of validation executions.
-
-### Columns
-
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `fsi_validationresultid` | Uniqueidentifier | Yes | Primary key |
-| `fsi_knowledgesourceid` | Lookup | Yes | Source validated |
-| `fsi_validationtime` | DateTime | Yes | Validation timestamp |
-| `fsi_result` | Choice | Yes | Validation result |
-| `fsi_previoushash` | String (64) | No | Hash before validation |
-| `fsi_currenthash` | String (64) | No | Hash after validation |
-| `fsi_hashchanged` | Boolean | Yes | Whether hash changed |
-| `fsi_changedetails` | Text | No | Details of changes |
-| `fsi_validationtype` | Choice | Yes | Type of validation |
-| `fsi_duration` | Integer | No | Validation duration (ms) |
-| `fsi_errordetails` | Text | No | Error if failed |
-| `createdon` | DateTime | Auto | Record creation |
-
-### Choice: fsi_result
+Outcome of a source validation run
 
 | Value | Label |
-|-------|-------|
+|---|---|
 | 1 | Passed |
-| 2 | Failed - Hash Mismatch |
-| 3 | Failed - Schema Drift |
-| 4 | Failed - Stale Content |
-| 5 | Failed - Source Unavailable |
-| 6 | Failed - Unexpected Error |
+| 2 | Hash Mismatch |
+| 3 | Schema Drift |
+| 4 | Stale Content |
+| 5 | Source Unavailable |
+| 6 | Unexpected Error |
 | 7 | Skipped - Not Implemented |
 | 8 | Skipped - Unsupported Type |
 
-### Choice: fsi_validationtype
+#### fsi_RSV_validationtype
+
+How the validation was triggered
 
 | Value | Label |
-|-------|-------|
+|---|---|
 | 1 | Scheduled |
 | 2 | On-Demand |
 | 3 | Webhook Triggered |
 | 4 | Baseline Capture |
 
----
+#### fsi_RSV_changetype
 
-## Table: fsi_sourcechange
-
-Tracked changes to knowledge sources.
-
-### Columns
-
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `fsi_sourcechangeid` | Uniqueidentifier | Yes | Primary key |
-| `fsi_knowledgesourceid` | Lookup | Yes | Affected source |
-| `fsi_changetype` | Choice | Yes | Type of change |
-| `fsi_detectedon` | DateTime | Yes | Detection timestamp |
-| `fsi_previousvalue` | Text | No | Before change |
-| `fsi_newvalue` | Text | No | After change |
-| `fsi_changedby` | String (200) | No | User who made change |
-| `fsi_reviewed` | Boolean | Yes | Change reviewed |
-| `fsi_reviewedby` | Lookup (User) | No | Reviewer |
-| `fsi_reviewedon` | DateTime | No | Review timestamp |
-| `fsi_approved` | Boolean | No | Change approved |
-| `createdon` | DateTime | Auto | Record creation |
-
-### Choice: fsi_changetype
+Type of change detected on a knowledge source
 
 | Value | Label |
-|-------|-------|
+|---|---|
 | 1 | Content Modified |
 | 2 | Schema Changed |
 | 3 | Source Moved |
@@ -144,32 +142,9 @@ Tracked changes to knowledge sources.
 | 5 | Permissions Changed |
 | 6 | New Content Added |
 
----
+## Relationships
 
-## Security Roles
-
-### RSV Viewer
-
-| Table | Permissions |
-|-------|-------------|
-| fsi_knowledgesource | Read |
-| fsi_validationresult | Read |
-| fsi_sourcechange | Read |
-
-### RSV Validator
-
-| Table | Permissions |
-|-------|-------------|
-| fsi_knowledgesource | Read, Update |
-| fsi_validationresult | Read, Create |
-| fsi_sourcechange | Read, Create, Update |
-
-### RSV Admin
-
-| Table | Permissions |
-|-------|-------------|
-| All tables | Full |
-
----
-
-*RAG Source Validator v1.0.1*
+| SchemaName | Parent (Referenced) | Child (Referencing) | Lookup Column |
+|---|---|---|---|
+| fsi_ValidationResult_KnowledgeSource | fsi_knowledgesource | fsi_validationresult | fsi_KnowledgeSourceId |
+| fsi_SourceChange_KnowledgeSource | fsi_knowledgesource | fsi_sourcechange | fsi_KnowledgeSourceId |
