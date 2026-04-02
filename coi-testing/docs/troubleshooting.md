@@ -38,7 +38,7 @@ Common issues and resolutions when deploying or running the COI Testing Framewor
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| `Entity 'fsi_coitestresults' does not exist` | Dataverse schema not deployed | Import the solution: `pac solution import --path ./templates/COITesting_1_0_0.zip` |
+| `Entity 'fsi_coitestresults' does not exist` | Dataverse schema not deployed | Create the table using the schema documentation in `docs/` or the solution's schema creation script when available |
 | Column name mismatch errors | Using wrong column name format | Use logical names (all-lowercase, no word separators): `fsi_scenarioid`, not `fsi_scenario_id` |
 | `403 Forbidden` on Dataverse write | Insufficient table-level security | Assign the service principal a security role with Create and Read on `fsi_coitestresults` |
 | Results not appearing in Compliance Dashboard | Integration not configured | COI test results feed into Control 2.18 via the cross-solution-integration module — verify it is deployed |

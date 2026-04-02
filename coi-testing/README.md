@@ -107,9 +107,7 @@ Detects inappropriate product bundling suggestions.
 
 ### 1. Deploy Dataverse Schema
 
-```powershell
-pac solution import --path ./templates/COITesting_1_0_0.zip
-```
+Create the `fsi_coitestresults` Dataverse table using the schema documentation in `docs/` or the solution's schema creation script when available. There is no pre-built solution zip to import.
 
 ### 2. Configure Agent Connection
 
@@ -128,7 +126,7 @@ AGENT_CONFIG = {
 python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com"
 
 # Run specific category
-python scripts/run_coi_tests.py --category "proprietary_bias"
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias"
 ```
 
 ## Deployment
@@ -159,10 +157,10 @@ Configure Power Automate flow for scheduled execution:
 
 ```bash
 # Test with verbose output
-python scripts/run_coi_tests.py --verbose
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --verbose
 
 # Generate HTML report
-python scripts/run_coi_tests.py --report html
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report html
 ```
 
 ## Test Results

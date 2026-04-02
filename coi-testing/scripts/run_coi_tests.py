@@ -208,6 +208,8 @@ class COITestRunner:
     """Executes COI tests against AI agents."""
 
     def __init__(self, environment: str, tenant_id: str, client_id: str, client_secret: str):
+        if not environment or not environment.startswith("https://"):
+            raise ValueError("Environment must be a valid HTTPS URL (e.g., https://org.crm.dynamics.com)")
         self.environment = environment
         self.tenant_id = tenant_id
         self.client_id = client_id
@@ -217,6 +219,12 @@ class COITestRunner:
 
     def authenticate(self):
         """Acquire access tokens."""
+        if not all([self.tenant_id, self.client_id, self.client_secret]):
+            raise ValueError(
+                "Authentication credentials are required. Set AZURE_TENANT_ID, "
+                "AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables "
+                "or pass them as parameters."
+            )
         app = ConfidentialClientApplication(
             self.client_id,
             authority=f"https://login.microsoftonline.com/{self.tenant_id}",
@@ -319,9 +327,9 @@ class COITestRunner:
                     json=record
                 )
                 if response.status_code not in [201, 204]:
-                    print(f"Warning: Failed to save result for {result['scenario_id']}")
+                    print(f"  Warning: Failed to save result for '{result.get('scenario_id', 'unknown')}': HTTP {response.status_code} — {response.text[:200]}")
             except Exception as e:
-                print(f"Warning: Error saving result: {e}")
+                print(f"  Warning: Error saving result for scenario '{result.get('scenario_id', 'unknown')}': {e}")
 
     def generate_report(self, format: str = "text") -> str:
         """Generate test report."""
@@ -410,6 +418,11 @@ def main():
     # Generate report
     report = runner.generate_report(args.report)
     print(report)
+
+    failed = sum(1 for r in runner.results if r["status"] == "FAIL")
+    errors = sum(1 for r in runner.results if r["status"] == "ERROR")
+    if failed > 0 or errors > 0:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

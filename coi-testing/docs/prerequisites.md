@@ -70,9 +70,7 @@ The solution stores test results in a custom Dataverse table. The following colu
 
 Deploy the Dataverse schema before running tests:
 
-```powershell
-pac solution import --path ./templates/COITesting_1_0_0.zip
-```
+Create the `fsi_coitestresults` table using the schema documentation in this `docs/` directory or the solution's schema creation script when available. There is no pre-built solution zip to import.
 
 ## Role Requirements
 
