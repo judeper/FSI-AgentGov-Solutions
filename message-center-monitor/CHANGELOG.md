@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] - April 2026
+
+### Added
+- Dataverse schema script with 1 table, 3 option sets, and `--output-docs` support
+- Environment variables script (6 variables for polling, notifications, Teams, Key Vault)
+- Connection references script (Dataverse, Teams, Key Vault, HTTP Premium)
+- PowerShell governance scripts: Invoke-MessageCenterSync, Get-MessageCenterAssessmentStatus, Export-MessageCenterEvidence, Test-EvidenceIntegrity
+- Auto-generated Dataverse schema documentation
+- Python requirements.txt
+
 ## [2.1.3] - April 2026
 
 ### Changed
