@@ -72,25 +72,30 @@ action-confirmation-auditor/
 ├── README.md
 ├── CHANGELOG.md
 ├── docs/
-│   ├── dataverse-schema.md              # Auto-generated schema reference
-│   ├── flow-configuration.md            # Manual build instructions for flows
-│   └── prerequisites.md                 # Deployment prerequisites
-└── scripts/
-    ├── aca_client.py                    # ACA-specific Dataverse client wrapper
-    ├── create_dataverse_schema.py       # Dataverse table/column deployment
-    ├── requirements.txt                 # Python dependencies
-    ├── governance/
-    │   ├── Connect-EnvironmentDataverse.ps1
-    │   ├── Get-ExpectedConfirmationPolicy.ps1
-    │   ├── Get-ZoneClassification.ps1
-    │   ├── Test-ParameterValidation.ps1
-    │   ├── Test-UserDefinedActionMessages.ps1  # User-defined action messages validation
-    │   └── Import-ActionRiskClassifications.ps1  # v1.1 stub
-    └── private/
-        ├── Connect-EnvironmentDataverse.ps1
-        ├── Get-ExpectedConfirmationPolicy.ps1
-        ├── Get-ZoneClassification.ps1
-        └── Test-ParameterValidation.ps1
+│   ├── dataverse-schema.md
+│   ├── flow-configuration.md
+│   └── prerequisites.md
+├── scripts/
+│   ├── aca_client.py
+│   ├── create_connection_references.py
+│   ├── create_dataverse_schema.py
+│   ├── create_environment_variables.py
+│   ├── deploy.py
+│   ├── requirements.txt
+│   ├── Export-ActionAuditEvidence.ps1
+│   ├── Get-AgentActionSettings.ps1
+│   ├── Start-ActionConfirmationValidationRunbook.ps1
+│   ├── Test-ActionConfirmationCompliance.ps1
+│   ├── Test-EvidenceIntegrity.ps1
+│   ├── governance/
+│   │   ├── Import-ActionRiskClassifications.ps1
+│   │   └── Test-UserDefinedActionMessages.ps1
+│   └── private/
+│       ├── ACAClient.psm1
+│       ├── Connect-EnvironmentDataverse.ps1
+│       ├── Get-ExpectedConfirmationPolicy.ps1
+│       ├── Get-ZoneClassification.ps1
+│       └── Test-ParameterValidation.ps1
 ```
 
 Power Automate flows are built manually using the instructions in `docs/flow-configuration.md`.
@@ -121,7 +126,7 @@ python scripts/create_dataverse_schema.py \
 
 ```powershell
 # Preview scan results without writing to Dataverse
-./scripts/governance/Get-ExpectedConfirmationPolicy.ps1 `
+./scripts/private/Get-ExpectedConfirmationPolicy.ps1 `
   -DataverseUrl "https://yourorg.crm.dynamics.com" `
   -WhatIf
 ```

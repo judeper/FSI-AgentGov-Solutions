@@ -159,7 +159,7 @@ This guide provides step-by-step instructions for manually building the Action C
    - Entity: `fsi_ActionConfirmationException`
    - Message: 1 (Create only)
    - Scope: 4 (Organization)
-   - Trigger filters: `fsi_isactive eq null` (new records only, before approval processing)
+   - Trigger filters: `fsi_isactive eq true` (active exception requests pending approval; fsi_IsActive defaults to true on create)
 
 3. **Get Exception Record**
    - Action: "Get a record" (Dataverse)
@@ -170,7 +170,7 @@ This guide provides step-by-step instructions for manually building the Action C
    - Action: "Start and wait for an approval"
    - Approval type: Approve/Reject
    - Title: Expression `concat('ACA Exception: ', triggerOutputs()?['body/fsi_actionname'], ' - ', triggerOutputs()?['body/fsi_agentname'])`
-   - Assigned to: Compliance team (from environment variable `fsi_ACA_ComplianceApproverEmail`)
+   - Assigned to: Compliance team (configure the approver email address directly in the approval action — e.g., `compliance-team@contoso.com` or a mail-enabled security group)
    - Details: Include action name, action type, agent name, environment, business justification, requestor
    - **Timeout:** Configure 14-day timeout (ISO 8601: `P14D`). Add a **Run after > Has timed out** branch to update `fsi_isactive` to `false` with note `"Timed out: no approver response within 14 days"` and notify the requestor.
 

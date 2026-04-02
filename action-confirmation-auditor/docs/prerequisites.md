@@ -118,7 +118,7 @@ See [dataverse-schema.md](dataverse-schema.md) for the auto-generated column ref
 | `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API |
 | `login.microsoftonline.com` | HTTPS 443 | Microsoft Entra ID authentication |
 | `management.azure.com` | HTTPS 443 | Azure Automation API |
-| `api.powerplatform.com` | HTTPS 443 | Power Platform Admin API |
+| `api.bap.microsoft.com` | HTTPS 443 | Power Platform Admin API |
 
 ---
 
@@ -127,7 +127,7 @@ See [dataverse-schema.md](dataverse-schema.md) for the auto-generated column ref
 ACA uses zone classification from the Environment Lifecycle Management (ELM) solution to determine confirmation requirements per environment. Zone classification is resolved using the shared module:
 
 - **Shared module:** `scripts/shared/Get-ZoneClassification.ps1` (repository root)
-- **Local wrapper:** `scripts/governance/Get-ZoneClassification.ps1`
+- **Local wrapper:** `scripts/private/Get-ZoneClassification.ps1`
 
 If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive) for all environments.
 
