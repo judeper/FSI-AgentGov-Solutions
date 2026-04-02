@@ -39,15 +39,20 @@ agent-sharing-access-restriction-detector/
     └── adaptive-card-asard-exception-expired.json         # Exception expired notification card
 ```
 
-## Supporting Scripts (FSI-AgentGov)
+## Scripts
 
-| Script | Location | Purpose |
-|--------|----------|---------|
-| Detection engine | `scripts/detect_agent_sharing_violations.py` | Enumerates agents and evaluates sharing against approved groups |
-| Remediation engine | `scripts/remediate_agent_sharing.py` | Applies sharing policy corrections |
-| Zone classification | `scripts/asard_zone_rules.py` | Classifies environments into governance zones |
-| Dataverse schema | `scripts/create_asard_dataverse_schema.py` | Creates required Dataverse tables |
-| BAP Admin client | `scripts/bap_admin_client.py` | Power Platform API client for agent enumeration |
+| Script | Purpose |
+|--------|---------|
+| `scripts/asard_zone_rules.py` | Zone classification rules for environment governance tiers |
+| `scripts/create_asard_dataverse_schema.py` | Creates required Dataverse tables and columns |
+| `scripts/create_asard_environment_variables.py` | Creates solution environment variables |
+| `scripts/create_asard_connection_references.py` | Creates solution connection references |
+| `scripts/requirements.txt` | Python dependencies |
+| `scripts/governance/Invoke-SharingComplianceScan.ps1` | Main sharing compliance scan engine |
+| `scripts/governance/Test-AgentSharingCompliance.ps1` | Compliance assessment orchestrator with summary reporting |
+| `scripts/governance/Get-ExpectedSharingPolicy.ps1` | Zone-based sharing policy definitions |
+| `scripts/governance/Export-SharingComplianceEvidence.ps1` | Evidence export with SHA-256 integrity hashing |
+| `scripts/governance/Test-EvidenceIntegrity.ps1` | Evidence file integrity verification |
 
 ## Dataverse Tables
 

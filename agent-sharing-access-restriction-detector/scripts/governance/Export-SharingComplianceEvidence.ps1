@@ -172,7 +172,7 @@ if ($Interactive) {
     }
     catch {
         Write-Error "Interactive authentication failed: $($_.Exception.Message)"
-        throw
+        exit 1
     }
 }
 else {
@@ -199,7 +199,7 @@ else {
     }
     catch {
         Write-Error "Service principal authentication failed: $($_.Exception.Message)"
-        throw
+        exit 1
     }
 }
 
@@ -244,14 +244,15 @@ $nextUrl = $complianceUrl
 while ($nextUrl) {
     try {
         $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method Get -ErrorAction Stop
-        foreach ($record in $response.value) {
+        $values = if ($response.value) { $response.value } else { @() }
+        foreach ($record in $values) {
             [void]$complianceRecords.Add($record)
         }
         $nextUrl = $response.'@odata.nextLink'
     }
     catch {
         Write-Error "Failed to query compliance records: $($_.Exception.Message)"
-        throw
+        exit 1
     }
 }
 
@@ -276,7 +277,8 @@ $nextUrl = $policyUrl
 while ($nextUrl) {
     try {
         $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method Get -ErrorAction Stop
-        foreach ($record in $response.value) {
+        $values = if ($response.value) { $response.value } else { @() }
+        foreach ($record in $values) {
             [void]$policyRecords.Add($record)
         }
         $nextUrl = $response.'@odata.nextLink'
@@ -356,7 +358,7 @@ try {
 }
 catch {
     Write-Error "Failed to write evidence file: $($_.Exception.Message)"
-    throw
+    exit 1
 }
 
 #endregion
@@ -378,7 +380,7 @@ try {
 }
 catch {
     Write-Error "Failed to generate SHA-256 hash: $($_.Exception.Message)"
-    throw
+    exit 1
 }
 
 #endregion
@@ -418,3 +420,5 @@ $result = [PSCustomObject]@{
 return $result
 
 #endregion
+
+exit 0

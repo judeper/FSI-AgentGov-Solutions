@@ -111,7 +111,10 @@ function Invoke-SharingComplianceScan {
         [string]$OutputFormat = 'Table',
 
         [Parameter()]
-        [switch]$IncludeCompliant
+        [switch]$IncludeCompliant,
+
+        [Parameter()]
+        [switch]$DryRun
     )
 
     $ErrorActionPreference = 'Stop'
@@ -302,8 +305,9 @@ function Invoke-SharingComplianceScan {
                 $nextUrl = $queryUrl
                 while ($nextUrl) {
                     $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method Get -ErrorAction Stop
-                    foreach ($record in $response.value) {
-                        [void]$groups.Add($record.fsi_groupid)
+                    $values = if ($response.value) { $response.value } else { @() }
+                    foreach ($record in $values) {
+                        if ($record.fsi_groupid) { [void]$groups.Add($record.fsi_groupid) }
                     }
                     $nextUrl = $response.'@odata.nextLink'
                 }
@@ -436,7 +440,8 @@ function Invoke-SharingComplianceScan {
             $nextUrl = "$($botApiUrl)?`$select=$selectCols&`$filter=statecode eq 0"
             while ($nextUrl) {
                 $response = Invoke-RestMethod -Uri $nextUrl -Headers $botHeaders -Method Get -ErrorAction Stop
-                foreach ($record in $response.value) {
+                $values = if ($response.value) { $response.value } else { @() }
+                foreach ($record in $values) {
                     [void]$bots.Add($record)
                 }
                 $nextUrl = $response.'@odata.nextLink'
@@ -451,8 +456,8 @@ function Invoke-SharingComplianceScan {
         $totalAgents += $bots.Count
 
         foreach ($bot in $bots) {
-            $agentId   = $bot.botid
-            $agentName = $bot.name
+            $agentId   = if ($bot.botid) { $bot.botid } else { 'unknown' }
+            $agentName = if ($bot.name) { $bot.name } else { 'Unknown Agent' }
             $sharingType = $bot.sharingtype
 
             # Query role assignments to detect shared security groups
@@ -526,55 +531,60 @@ function Invoke-SharingComplianceScan {
 
     Write-Host "[4/5] Persisting results..." -ForegroundColor Cyan
 
-    if ($DataverseUrl -and $dataverseToken -and $violations.Count -gt 0) {
-        $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-        $dvHeaders = @{
-            'Authorization'    = "Bearer $dataverseToken"
-            'Content-Type'     = 'application/json'
-            'OData-MaxVersion' = '4.0'
-            'OData-Version'    = '4.0'
-        }
-        $persistedCount = 0
+    if (-not $DryRun) {
+        if ($DataverseUrl -and $dataverseToken -and $violations.Count -gt 0) {
+            $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
+            $dvHeaders = @{
+                'Authorization'    = "Bearer $dataverseToken"
+                'Content-Type'     = 'application/json'
+                'OData-MaxVersion' = '4.0'
+                'OData-Version'    = '4.0'
+            }
+            $persistedCount = 0
 
-        foreach ($v in $violations) {
-            try {
-                $record = @{
-                    'fsi_name'              = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
-                    'fsi_agentid'           = $v.AgentId
-                    'fsi_agentname'         = $v.AgentName
-                    'fsi_environmentid'     = $v.EnvironmentId
-                    'fsi_environmentname'   = $v.EnvironmentName
-                    'fsi_zone'              = $v.Zone
-                    'fsi_sharingtype'       = $v.SharingType
-                    'fsi_violationtype'     = $v.ViolationType
-                    'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
-                    'fsi_detectedat'        = $v.DetectedAt
-                    'fsi_description'       = $v.Details
-                    'fsi_scanrunid'         = $runId
-                    'fsi_sharedgroupids'    = $v.SharedGroupIds
-                    'fsi_regulatorycontext' = $v.RegulatoryContext
+            foreach ($v in $violations) {
+                try {
+                    $record = @{
+                        'fsi_name'              = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
+                        'fsi_agentid'           = $v.AgentId
+                        'fsi_agentname'         = $v.AgentName
+                        'fsi_environmentid'     = $v.EnvironmentId
+                        'fsi_environmentname'   = $v.EnvironmentName
+                        'fsi_zone'              = $v.Zone
+                        'fsi_sharingtype'       = $v.SharingType
+                        'fsi_violationtype'     = $v.ViolationType
+                        'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
+                        'fsi_detectedat'        = $v.DetectedAt
+                        'fsi_description'       = $v.Details
+                        'fsi_scanrunid'         = $runId
+                        'fsi_sharedgroupids'    = $v.SharedGroupIds
+                        'fsi_regulatorycontext' = $v.RegulatoryContext
+                    }
+
+                    Invoke-RestMethod `
+                        -Uri "$apiBase/fsi_agentsharingcompliances" `
+                        -Headers $dvHeaders `
+                        -Method Post `
+                        -Body ($record | ConvertTo-Json -Compress) `
+                        -ErrorAction Stop | Out-Null
+
+                    $persistedCount++
                 }
-
-                Invoke-RestMethod `
-                    -Uri "$apiBase/fsi_agentsharingcompliances" `
-                    -Headers $dvHeaders `
-                    -Method Post `
-                    -Body ($record | ConvertTo-Json -Compress) `
-                    -ErrorAction Stop | Out-Null
-
-                $persistedCount++
+                catch {
+                    Write-Warning "  Failed to persist record for $($v.AgentName)`: $($_.Exception.Message)"
+                }
             }
-            catch {
-                Write-Warning "  Failed to persist record for $($v.AgentName)`: $($_.Exception.Message)"
-            }
+            Write-Host "  Persisted $persistedCount of $($violations.Count) violation record(s)" -ForegroundColor Green
         }
-        Write-Host "  Persisted $persistedCount of $($violations.Count) violation record(s)" -ForegroundColor Green
-    }
-    elseif (-not $DataverseUrl) {
-        Write-Host "  Persistence skipped (-DataverseUrl not specified)" -ForegroundColor DarkGray
+        elseif (-not $DataverseUrl) {
+            Write-Host "  Persistence skipped (-DataverseUrl not specified)" -ForegroundColor DarkGray
+        }
+        else {
+            Write-Host "  No violations to persist" -ForegroundColor Green
+        }
     }
     else {
-        Write-Host "  No violations to persist" -ForegroundColor Green
+        Write-Host "[DRY RUN] Would persist scan results to Dataverse" -ForegroundColor Yellow
     }
 
     #endregion
@@ -624,3 +634,5 @@ function Invoke-SharingComplianceScan {
 
     #endregion
 }
+
+exit 0
