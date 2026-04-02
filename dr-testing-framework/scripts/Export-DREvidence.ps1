@@ -7,9 +7,10 @@
     into compliance evidence artifacts. Supports export to JSON files for
     regulatory review (OCC, FFIEC, SEC 17a-4, FINRA 4370).
 
-    Status: Stub implementation — core export logic is planned.
-
-    # TODO: Add exit codes (0=success, 1=failure) when full implementation replaces stub logic
+    When Dataverse credentials are provided (TenantId/ClientId/ClientSecret),
+    queries fsi_drtestresults for test execution records and computes
+    compliance metrics. Generates a SHA-256 hash companion file for
+    tamper-evident evidence packaging.
 
 .PARAMETER Environment
     Dataverse environment URL to query test results from.
@@ -34,18 +35,63 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidatePattern('^[0-9a-zA-Z\-]+$')]
-    [string]$TestRunId
+    [string]$TestRunId,
+
+    [Parameter(Mandatory = $false)]
+    [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [string]$TenantId = $env:AZURE_TENANT_ID,
+
+    [Parameter(Mandatory = $false)]
+    [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [string]$ClientId = $env:AZURE_CLIENT_ID,
+
+    [Parameter(Mandatory = $false)]
+    [SecureString]$ClientSecret
 )
 
 #Requires -Version 7.0
 
+# Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided
+if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
+    $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
+}
+
 $ErrorActionPreference = "Stop"
 
+function Get-EvidenceAuthEndpoint {
+    param([string]$EnvironmentUrl)
+    if ($EnvironmentUrl -match '\.dynamics\.cn$') {
+        return 'https://login.chinacloudapi.cn'
+    } elseif ($EnvironmentUrl -match '\.(microsoftdynamics\.us|appsplatform\.us)$') {
+        return 'https://login.microsoftonline.us'
+    } else {
+        return 'https://login.microsoftonline.com'
+    }
+}
+
+function Get-EvidenceAccessToken {
+    param([string]$TenantId, [string]$ClientId, [SecureString]$ClientSecret, [string]$Scope, [string]$AuthEndpoint)
+    $plainSecret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
+    try {
+        $tokenUrl = "$AuthEndpoint/$TenantId/oauth2/v2.0/token"
+        $body = @{
+            client_id     = $ClientId
+            client_secret = $plainSecret
+            scope         = $Scope
+            grant_type    = "client_credentials"
+        }
+        $response = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $body -ContentType "application/x-www-form-urlencoded" -TimeoutSec 30
+        if ([string]::IsNullOrEmpty($response.access_token)) {
+            throw "Token endpoint returned HTTP 200 but no access_token field."
+        }
+        return $response.access_token
+    } finally {
+        $plainSecret = $null
+    }
+}
+
 # Normalize and validate Environment URL to prevent SSRF / token exfiltration
-# NOTE: When Dataverse query integration is added, use Get-AuthEndpoint from
-# Invoke-DRTest.ps1 (or extract to shared module) to resolve the correct Entra ID
-# authority for sovereign clouds (.dynamics.cn → login.chinacloudapi.cn,
-# .microsoftdynamics.us/.appsplatform.us → login.microsoftonline.us).
+# Sovereign cloud auth resolution handled by Get-EvidenceAuthEndpoint below.
 $Environment = $Environment.TrimEnd('/')
 if ($Environment -notmatch '^https://[\w\-]+\.(crm[\d]*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn)$') {
     throw "Environment must be a valid Dataverse URL (e.g., https://<org>.crm.dynamics.com, .microsoftdynamics.us, .appsplatform.us, or .dynamics.cn)"
@@ -75,17 +121,129 @@ $evidencePackage = @{
     Environment  = $Environment
     TestRunId    = if ($TestRunId) { $TestRunId } else { "all" }
     AuditLogFiles = @($auditLogs | ForEach-Object { $_.Name })
-    # TODO: Query Dataverse for test execution results and validation checks
-    TestResults  = @()
-    # TODO: Include RTO/RPO measurements from test runs
-    Metrics      = @()
-    # TODO: Generate gap list with remediation status
-    Gaps         = @()
-    Status       = "stub — Dataverse query and full evidence packaging not yet implemented"
 }
 
+# Query Dataverse for test results if credentials are available
+$testResults = @()
+$metrics = @{}
+$gaps = @()
+$evidenceStatus = "NoCredentials"
+
+if ($TenantId -and $ClientId -and $ClientSecret) {
+    try {
+        Write-Host "  Authenticating to Dataverse..." -ForegroundColor Gray
+        $authEndpoint = Get-EvidenceAuthEndpoint -EnvironmentUrl $Environment
+        $token = Get-EvidenceAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+        $dvHeaders = @{
+            "Authorization" = "Bearer $token"
+            "OData-MaxVersion" = "4.0"
+            "OData-Version" = "4.0"
+            "Accept" = "application/json"
+            "Prefer" = "odata.include-annotations=*"
+        }
+
+        # Build OData filter
+        $filter = ""
+        if ($TestRunId) {
+            $filter = "fsi_correlationid eq '$TestRunId'"
+        }
+
+        $queryUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$select=fsi_drtestresultid,fsi_testtype,fsi_executedon,fsi_actualrto,fsi_targetrto,fsi_rtomet,fsi_status,fsi_validationchecks,fsi_correlationid&`$orderby=fsi_executedon desc"
+        if ($filter) { $queryUri += "&`$filter=$filter" }
+
+        Write-Host "  Querying Dataverse for test results..." -ForegroundColor Gray
+        $queryResp = Invoke-RestMethod -Uri $queryUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 60
+        $rawResults = $queryResp.value
+
+        if ($rawResults -and $rawResults.Count -gt 0) {
+            # Map results to evidence format
+            $testResults = @($rawResults | ForEach-Object {
+                @{
+                    Id            = $_.fsi_drtestresultid
+                    TestType      = $_.fsi_testtype
+                    ExecutedOn    = $_.fsi_executedon
+                    ActualRTO     = $_.fsi_actualrto
+                    TargetRTO     = $_.fsi_targetrto
+                    RTOMet        = $_.fsi_rtomet
+                    Status        = if ($_.fsi_status -eq 1) { "Pass" } else { "Fail" }
+                    CorrelationId = $_.fsi_correlationid
+                }
+            })
+
+            # Aggregate metrics
+            $totalTests = $testResults.Count
+            $passedTests = @($testResults | Where-Object { $_.Status -eq "Pass" }).Count
+            $failedTests = $totalTests - $passedTests
+            $rtoValues = @($testResults | Where-Object { $null -ne $_.ActualRTO } | ForEach-Object { $_.ActualRTO })
+            $avgRecoveryTime = if ($rtoValues.Count -gt 0) { [math]::Round(($rtoValues | Measure-Object -Average).Average, 2) } else { $null }
+            $rtoCompliant = @($testResults | Where-Object { $_.RTOMet -eq $true }).Count
+
+            $metrics = @{
+                TotalTests       = $totalTests
+                Passed           = $passedTests
+                Failed           = $failedTests
+                PassRate         = if ($totalTests -gt 0) { [math]::Round(($passedTests / $totalTests) * 100, 1) } else { 0 }
+                AvgRecoveryTime  = $avgRecoveryTime
+                RTOCompliant     = $rtoCompliant
+                RTOComplianceRate = if ($totalTests -gt 0) { [math]::Round(($rtoCompliant / $totalTests) * 100, 1) } else { 0 }
+            }
+
+            # Identify gaps: failed tests and test types never run
+            $gaps = @($testResults | Where-Object { $_.Status -eq "Fail" } | ForEach-Object {
+                @{
+                    TestType    = $_.TestType
+                    ExecutedOn  = $_.ExecutedOn
+                    ActualRTO   = $_.ActualRTO
+                    TargetRTO   = $_.TargetRTO
+                    Issue       = "Test failed — RTO target not met or validation checks failed"
+                }
+            })
+
+            $allTestTypes = @("AgentRestore", "EnvironmentFailover", "DataRecovery", "FullDR")
+            $executedTypes = @($testResults | ForEach-Object { $_.TestType } | Sort-Object -Unique)
+            $missingTypes = @($allTestTypes | Where-Object { $_ -notin $executedTypes })
+            foreach ($missing in $missingTypes) {
+                $gaps += @{
+                    TestType = $missing
+                    Issue    = "Test type never executed — required for compliance evidence"
+                }
+            }
+
+            $evidenceStatus = if ($failedTests -eq 0 -and $missingTypes.Count -eq 0) { "Compliant" }
+                              elseif ($failedTests -gt 0) { "NonCompliant" }
+                              else { "Incomplete" }
+
+            Write-Host "  Retrieved $totalTests test result(s) ($passedTests passed, $failedTests failed)" -ForegroundColor Green
+        } else {
+            $evidenceStatus = "NoData"
+            Write-Host "  No test results found in Dataverse" -ForegroundColor Yellow
+        }
+    } catch {
+        $evidenceStatus = "QueryFailed"
+        Write-Warning "Dataverse query failed: $($_.Exception.Message)"
+    }
+} else {
+    Write-Warning "Dataverse credentials not provided. Evidence export includes audit logs only."
+}
+
+# Populate evidence package with queried data
+$evidencePackage.TestResults = $testResults
+$evidencePackage.Metrics = $metrics
+$evidencePackage.Gaps = $gaps
+$evidencePackage.Status = $evidenceStatus
+
 $outputPath = Join-Path $OutputDir "dr-evidence-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
-$evidencePackage | ConvertTo-Json -Depth 5 | Set-Content -Path $outputPath -Encoding utf8
+$jsonContent = $evidencePackage | ConvertTo-Json -Depth 5
+$jsonContent | Set-Content -Path $outputPath -Encoding utf8
+
+# Compute SHA-256 hash of the evidence JSON for tamper detection
+$sha = [System.Security.Cryptography.SHA256]::Create()
+$hashBytes = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($jsonContent))
+$hashHex = -join ($hashBytes | ForEach-Object { $_.ToString("x2") })
+$sha.Dispose()
+$hashPath = "$outputPath.sha256"
+"$hashHex  $(Split-Path $outputPath -Leaf)" | Set-Content -Path $hashPath -Encoding utf8
+Write-Host "  SHA-256 hash written to: $hashPath" -ForegroundColor Green
 
 # Copy audit logs into evidence directory
 if ($auditLogs.Count -gt 0) {
@@ -103,5 +261,10 @@ if ($auditLogs.Count -gt 0) {
 
 Write-Host ""
 Write-Host "Evidence package written to: $outputPath" -ForegroundColor Green
+Write-Host "Status: $evidenceStatus" -ForegroundColor $(if ($evidenceStatus -eq 'Compliant') { 'Green' } elseif ($evidenceStatus -eq 'NonCompliant') { 'Red' } else { 'Yellow' })
 Write-Host ""
-Write-Warning "This is a stub implementation. Full evidence export (Dataverse query, RTO/RPO metrics, gap tracking, signed attestation) is planned for a future release."
+
+# Exit codes: 0=success/compliant, 1=non-compliant or query failure
+if ($evidenceStatus -eq "NonCompliant" -or $evidenceStatus -eq "QueryFailed") {
+    exit 1
+}

@@ -292,6 +292,8 @@ Describe 'FullDR test type aggregation' {
         Mock Start-Sleep {}
         Mock Write-Host {}
         Mock Write-Warning {}
+        Mock Write-AuditLog {} -ErrorAction SilentlyContinue
+        Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
         $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
         $envResult = Test-EnvironmentFailover -DryRun $false
@@ -311,6 +313,8 @@ Describe 'FullDR test type aggregation' {
         Mock Start-Sleep {}
         Mock Write-Host {}
         Mock Write-Warning {}
+        Mock Write-AuditLog {} -ErrorAction SilentlyContinue
+        Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
         $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
         $envResult = Test-EnvironmentFailover -DryRun $false
@@ -324,6 +328,8 @@ Describe 'FullDR test type aggregation' {
         Mock Start-Sleep {}
         Mock Write-Host {}
         Mock Write-Warning {}
+        Mock Write-AuditLog {} -ErrorAction SilentlyContinue
+        Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
         $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
         $envResult = Test-EnvironmentFailover -DryRun $false

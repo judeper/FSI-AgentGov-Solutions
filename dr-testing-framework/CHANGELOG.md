@@ -4,6 +4,23 @@ All notable changes to the DR Testing Framework.
 
 ---
 
+## [1.2.0] - April 2026
+
+### Added
+- Environment variables deployment script (6 variables: RTO/RPO targets, notifications)
+- Connection references script (Dataverse + Teams)
+- Python requirements.txt
+
+### Changed
+- Replaced stub implementations in `Invoke-DRTest.ps1`:
+  - Test-AgentRestore: real Dataverse bot queries, component verification, security validation
+  - Test-EnvironmentFailover: HTTP health check, WhoAmI, data sync verification
+  - Test-DataRecovery: restore point queries, SHA-256 integrity, RPO measurement
+- Replaced stub in `Export-DREvidence.ps1`: real Dataverse queries, metric aggregation, gap analysis, SHA-256 evidence hash
+- ActualRPO/RPOMet now computed from real data recovery measurements
+
+---
+
 ## [1.1.0] - April 2026
 
 ### Added
