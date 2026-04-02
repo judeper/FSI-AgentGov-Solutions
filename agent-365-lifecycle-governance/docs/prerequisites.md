@@ -46,7 +46,7 @@ Create these before deploying flows:
 
 ### Entra Lifecycle Workflows
 
-Two workflows must be created manually in the Entra Admin Center. See Section 7 of the solution documentation for step-by-step configuration.
+Two workflows must be created manually in the Entra Admin Center. See [Flow Configuration](./flow-configuration.md) for step-by-step configuration.
 
 **Workflow 1: Agent-Sponsor-Mover-Notification**
 

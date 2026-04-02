@@ -21,21 +21,33 @@
 param(
     [Parameter(Mandatory=$true)]
     [ValidateNotNullOrEmpty()]
-    [string]$DataverseEnvironmentUrl
+    [string]$DataverseEnvironmentUrl,
+
+    [switch]$DryRun
 )
 
-Connect-AzAccount -Identity
-
-$graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-$dvToken    = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl).Token
+try {
+    Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
+    $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
+    $dvToken    = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl -ErrorAction Stop).Token
+} catch {
+    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
+    exit 1
+}
 
 $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "application/json" }
 $dvHeaders    = @{ Authorization = "Bearer $dvToken";    "Content-Type" = "application/json" }
 
 # Query Entra registry
-$registryAgents = (Invoke-RestMethod `
-    -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" `
-    -Headers $graphHeaders).value
+# NOTE: The Agent Registry API (graph.microsoft.com/beta/agentRegistry) is in beta.
+# Verify current availability at https://learn.microsoft.com/en-us/graph/api/resources/agenttypes-overview
+try {
+    $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
+} catch {
+    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
+    exit 1
+}
+if (-not $registryAgents) { $registryAgents = @() }
 
 $noSponsor = $registryAgents | Where-Object {
     -not $_.sponsor -or ($_.sponsor | Measure-Object).Count -eq 0
@@ -91,6 +103,13 @@ $summary = @{
     ComplianceStatus  = if ($noSponsor.Count -eq 0 -and $overdueReviews.Count -eq 0) {
                             "COMPLIANT" } else { "NON-COMPLIANT" }
 }
-$summary | ConvertTo-Json -Depth 3 |
-    Out-File ".\lifecycle-compliance-$(Get-Date -Format 'yyyyMMdd').json"
-Write-Host "`nCompliance report exported." -ForegroundColor Green
+if (-not $DryRun) {
+    $summary | ConvertTo-Json -Depth 3 |
+        Out-File ".\lifecycle-compliance-$(Get-Date -Format 'yyyyMMdd').json"
+    Write-Host "`nCompliance report exported." -ForegroundColor Green
+} else {
+    Write-Host "[DRY RUN] Would write compliance report with status: $($summary.ComplianceStatus)" -ForegroundColor Yellow
+    $summary | ConvertTo-Json -Depth 3 | Write-Host
+}
+
+exit 0
