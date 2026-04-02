@@ -1,7 +1,7 @@
 # Monitoring AI Agent Content Moderation Compliance
 ## Content Moderation Monitor
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Solution Type:** Automated Per-Agent Validation + Drift Detection
 **Platform:** PowerShell + Power Automate + Dataverse
 
@@ -186,12 +186,12 @@ Test-ContentModerationCompliance `
 Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 ```
 
-#### 2. Power Automate Flow — moderation-validation-flow.json
+#### 2. Power Automate Flow (Manual Build)
 **Build instructions:** See [FLOW_SETUP.md](docs/FLOW_SETUP.md)
 
 **Purpose:** Daily scheduled orchestration of content moderation validation with Dataverse persistence and conditional alerting.
 
-> **Known Limitation:** Flow configuration values (DataverseUrl, TenantId, ClientId, etc.) are stored as `InitializeVariable` actions requiring manual editing per environment. The solution deploys `fsi_CMM_*` Dataverse environment variables for these values, but the flow does not yet consume them. Migrating to `Get Environment Variable Value` lookups would enable multi-environment portability. See [FLOW_SETUP.md](docs/FLOW_SETUP.md#known-limitations) for details.
+> **Note:** This solution does not include an exported flow JSON file. Build the Power Automate flow manually in the designer following the step-by-step instructions in [FLOW_SETUP.md](docs/FLOW_SETUP.md).
 
 **Trigger:**
 - **Schedule:** Daily at 06:00 UTC
@@ -270,7 +270,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   "metadata": {
     "exportedAt": "2026-02-14T15:30:00Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.0.1",
+    "solutionVersion": "1.0.2",
     "fromDate": "2025-11-14T00:00:00Z",
     "toDate": "2026-02-14T15:30:00Z",
     "runId": null,
@@ -470,18 +470,16 @@ python deploy.py \
     --interactive
 ```
 
-**Step 5: Import Power Automate Flow**
+**Step 5: Build Power Automate Flow**
 
-1. Navigate to Power Automate → My flows → Import
-2. Upload `moderation-validation-flow.json`
-3. Configure connection references:
-   - Dataverse connection
-   - Office 365 connection
-   - Teams connection (if using Teams alerts)
-4. Set environment variables:
+Build the flow manually in Power Automate designer following the instructions in [FLOW_SETUP.md](docs/FLOW_SETUP.md):
+
+1. Create a new Scheduled flow (daily 06:00 UTC)
+2. Configure connection references (Dataverse, Office 365, Teams)
+3. Set environment variables:
    - `fsi_CMM_DataverseUrl`: Governance environment URL
    - `fsi_CMM_NotificationRecipients`: Compliance team emails
-5. Activate flow
+4. Activate flow
 
 **Step 6: Capture Initial Baseline**
 
@@ -609,7 +607,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.1
+**Solution Version:** 1.0.2
 **Release Date:** February 2026
 **License:** MIT License
 

@@ -17,7 +17,7 @@ param(
 )
 
 # Try shared module if available (monorepo context)
-$sharedScript = "$PSScriptRoot\..\..\..\scripts\shared\Get-ZoneClassification.ps1"
+$sharedScript = "$PSScriptRoot\..\..\scripts\shared\Get-ZoneClassification.ps1"
 if (Test-Path $sharedScript) {
     & $sharedScript @PSBoundParameters
     return

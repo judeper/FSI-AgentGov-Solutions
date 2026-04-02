@@ -245,7 +245,7 @@ Baseline Capture (Optional):
 □ Active baseline flag verified
 
 Power Automate Flow (Optional):
-□ moderation-validation-flow.json imported
+□ Flow built manually per docs/FLOW_SETUP.md
 □ Connection references configured
 □ Environment variables set
 □ Flow activated (daily 06:00 UTC schedule)
