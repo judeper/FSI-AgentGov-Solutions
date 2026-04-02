@@ -2,6 +2,17 @@
 
 All notable changes to this solution will be documented in this file.
 
+## [1.0.1] — 2026-02-11
+
+### Changed
+
+- **Migrated flow definitions to documentation** — Removed exported Power Automate flow JSON files (`flows/cd-solution-feed-collector.json`, `flows/elm-solution-initializer.json`) and replaced with manual build instructions in `docs/flow-configuration.md`, per the Solution Content Policy
+- Updated README Quick Start steps to reference flow build instructions instead of flow deployment
+
+### Removed
+
+- `flows/` directory containing exported Power Automate flow JSON artifacts
+
 ## [1.0.0] — 2026-02-10
 
 ### Added

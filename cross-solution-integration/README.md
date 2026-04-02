@@ -42,8 +42,10 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 | Flow | Purpose |
 |------|---------|
-| `CD-SolutionFeedCollector` | Daily automated dashboard feed from all Tier 2 solutions |
-| `ELM-SolutionInitializer` | Post-provisioning cascade to register environments in ACV |
+| CD-SolutionFeedCollector | Daily automated dashboard feed from all Tier 2 solutions |
+| ELM-SolutionInitializer | Post-provisioning cascade to register environments in ACV |
+
+> **Build instructions:** See [docs/flow-configuration.md](docs/flow-configuration.md) for step-by-step manual build instructions for both flows in Power Automate designer.
 
 ### Documentation
 
@@ -71,8 +73,8 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 1. Import `IntegrationConfig.psm1` module
 2. Run `Sync-SolutionAssessments.ps1` to perform initial assessment sync
-3. Deploy `CD-SolutionFeedCollector` flow for daily automation
-4. (Optional) Deploy `ELM-SolutionInitializer` flow for provisioning hooks
+3. Build `CD-SolutionFeedCollector` flow per [docs/flow-configuration.md](docs/flow-configuration.md) for daily automation
+4. (Optional) Build `ELM-SolutionInitializer` flow per [docs/flow-configuration.md](docs/flow-configuration.md) for provisioning hooks
 5. Verify dashboard reflects automated assessments
 
 ## Version
