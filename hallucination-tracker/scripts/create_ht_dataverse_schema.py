@@ -78,7 +78,7 @@ TABLES = {
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-                "SchemaName": f"{PUBLISHER_PREFIX}_ReportName",
+                "SchemaName": f"{PUBLISHER_PREFIX}_reportname",
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "DisplayName": {"LocalizedLabels": [{"Label": "Report Name", "LanguageCode": 1033}]},
                 "Description": {"LocalizedLabels": [{"Label": "Unique hallucination report identifier", "LanguageCode": 1033}]},

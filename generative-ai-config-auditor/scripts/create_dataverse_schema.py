@@ -628,7 +628,7 @@ def create_table_with_columns(
                     "@odata.type": (
                         "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
                     ),
-                    "SchemaName": "fsi_Name",
+                    "SchemaName": "fsi_name",
                     "DisplayName": _label(
                         f"{table_def['display']} ID"
                     ),

@@ -84,12 +84,13 @@ hitl-workflow-governance/
     ├── create_hwg_connection_references.py  # Connection reference deployment
     ├── deploy_hwg.py                       # Orchestrator (schema + env vars + connections)
     ├── requirements.txt                    # Python dependencies
+    ├── Test-HitlWorkflowCompliance.ps1         # Scan orchestrator
+    ├── Export-HitlGovernanceEvidence.ps1        # SHA-256 evidence export
+    ├── Test-EvidenceIntegrity.ps1               # Evidence hash verification
+    ├── Start-HitlValidationRunbook.ps1          # Azure Automation wrapper
+    ├── Get-AgentHitlSettings.ps1                # Agent HITL settings query
     ├── governance/
-    │   ├── Test-HitlCheckpointCompliance.ps1   # Scan orchestrator
-    │   ├── Test-HitlComplianceStatus.ps1       # Compliance posture test
-    │   ├── Export-HitlComplianceEvidence.ps1   # SHA-256 evidence export
-    │   ├── Test-EvidenceIntegrity.ps1          # Evidence hash verification
-    │   └── Start-HitlValidationRunbook.ps1     # Azure Automation wrapper
+    │   └── Test-HitlCheckpointConfiguration.ps1 # HITL checkpoint configuration
     ├── private/
     │   ├── HWGClient.psm1                  # Dataverse client module
     │   ├── Get-HitlCheckpointResults.ps1   # Evidence query helper
@@ -154,7 +155,7 @@ python scripts/deploy_hwg.py \
 
 ```powershell
 # Preview scan results without writing to Dataverse
-./scripts/governance/Test-HitlCheckpointCompliance.ps1 `
+./scripts/Test-HitlWorkflowCompliance.ps1 `
   -DataverseUrl "https://yourorg.crm.dynamics.com" `
   -WhatIf
 ```
@@ -163,7 +164,7 @@ python scripts/deploy_hwg.py \
 
 ```powershell
 # Run compliance posture test
-./scripts/governance/Test-HitlComplianceStatus.ps1 `
+./scripts/Test-HitlWorkflowCompliance.ps1 `
   -DataverseUrl "https://yourorg.crm.dynamics.com" `
   -TenantId "<tenant-id>" `
   -Interactive
@@ -174,7 +175,7 @@ python scripts/deploy_hwg.py \
 Deploy the Azure Automation runbook for recurring scans:
 
 ```powershell
-./scripts/governance/Start-HitlValidationRunbook.ps1 `
+./scripts/Start-HitlValidationRunbook.ps1 `
   -DataverseUrl "https://yourorg.crm.dynamics.com" `
   -AutomationAccountName "fsi-governance-automation" `
   -RunbookName "HitlCheckpointScan" `
