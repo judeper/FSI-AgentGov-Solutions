@@ -59,8 +59,13 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
     script_dir = Path(__file__).parent.parent
     json_path = script_dir / "sample-data" / "control-master.json"
 
-    with open(json_path, 'r') as f:
-        controls = json.load(f)
+    try:
+        with open(json_path, 'r') as f:
+            controls = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Control master file not found: {json_path}. Ensure sample data directory exists.")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in control master file {json_path}: {e}")
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -81,7 +86,9 @@ def load_control_master(dataverse_url: str, token: str, force: bool = False) -> 
     existing_records = []
     next_url = api_url
     while next_url:
-        existing = session.get(next_url, headers=headers).json()
+        response = session.get(next_url, headers=headers)
+        response.raise_for_status()
+        existing = response.json()
         existing_records.extend(existing.get("value", []))
         next_url = existing.get("@odata.nextLink")
     existing_ids = {r.get("fsi_controlid") for r in existing_records}
@@ -397,8 +404,12 @@ def main():
         sys.exit(1)
 
     print(f"\nConnecting to: {args.environment}")
-    token = get_access_token(tenant_id, client_id, client_secret, environment_url=args.environment)
-    print("Authentication successful")
+    try:
+        token = get_access_token(tenant_id, client_id, client_secret, environment_url=args.environment)
+        print("Authentication successful")
+    except Exception as e:
+        print(f"\nError: Authentication failed: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not args.assessments_only:
         print("\nLoading control master data...")

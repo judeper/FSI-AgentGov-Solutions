@@ -313,6 +313,7 @@ This section documents limitations and design decisions for v1.0.0 deployment.
 |---------|--------------|
 | [3.1 - Agent Inventory](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Agent count metrics |
 | [3.2 - Usage Analytics](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Usage trend data |
+| [3.3 - Compliance Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.3-compliance-reporting-and-attestation.md) | Aggregated compliance reporting |
 | [3.4 - Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md) | Exception correlation |
 
 ## Rollback and Uninstall

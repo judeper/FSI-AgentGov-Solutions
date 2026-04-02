@@ -209,7 +209,7 @@ Open compliance exceptions requiring remediation.
 ### Business Rule: Calculate SLA Status
 
 ```
-IF fsi_status IN (1, 2, 3) THEN
+IF fsi_exceptionstatus IN (1, 2, 3) THEN
   IF fsi_daysopen > SLA[fsi_severity] THEN
     fsi_slastatus = 3 (Breached)
   ELSE IF fsi_daysopen > SLA[fsi_severity] * 0.8 THEN
