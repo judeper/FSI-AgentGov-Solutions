@@ -142,7 +142,7 @@ The following connectors are used by the solution's Power Automate flows. Verify
 | **Approvals** | Flow 2 | Must be in **Business** group |
 | **Office 365 Users** | Flow 2 (SLA calculation) | Must be in **Business** group |
 
-> **Note:** If DLP policies block the Office 365 Users connector, configure the `fsi_ARA_DefaultTimeZone` environment variable as a fallback for SLA calculations. The flow uses calendar days instead of business days when the time zone lookup is unavailable.
+> **Note:** The flow uses calendar days for SLA calculation by default. For business-day calculation, use the Office 365 Users connector to determine the approver's time zone and exclude weekends. If DLP policies block the Office 365 Users connector, the flow falls back to the `fsi_ARA_DefaultTimeZone` environment variable.
 
 ---
 

@@ -208,6 +208,11 @@ function Get-DataverseRecords {
             }
         }
 
+        if (-not $response) {
+            Write-AuditLog "No response received after retries" -Level ERROR
+            throw "Failed to retrieve records from $EntitySet"
+        }
+
         if ($response.value) {
             $allRecords.AddRange(@($response.value))
         }
@@ -269,6 +274,15 @@ function Test-OrphanStatus {
         [Parameter(Mandatory)]
         [string]$GraphToken
     )
+
+    if (-not $Agents -or $Agents.Count -eq 0) {
+        return @{
+            CheckName  = "Orphan Detection"
+            Result     = "Pass"
+            Violations = @()
+            Summary    = "No agents to check"
+        }
+    }
 
     $violations = [System.Collections.Generic.List[object]]::new()
 
