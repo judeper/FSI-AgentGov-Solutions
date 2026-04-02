@@ -188,8 +188,6 @@ Custom Dataverse table created by `create_csa_dataverse_schema.py`. Tracks sync 
 
 > **Schema creation:** Run `python scripts/create_csa_dataverse_schema.py` to create this table. Use `--output-docs` flag to generate schema documentation. See [docs/dataverse-schema.md](../docs/dataverse-schema.md) for the auto-generated reference.
 
-> **Schema creation:** Run `python scripts/create_csa_dataverse_schema.py` to create this table. Use `--output-docs` flag to generate schema documentation.
-
 ---
 
 ## OData Query Patterns

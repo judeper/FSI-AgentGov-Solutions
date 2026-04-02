@@ -130,6 +130,7 @@ copilot-studio-analytics/
 │   └── requirements.txt                   # Python dependencies
 ├── queries/
 │   ├── README.md                          # KQL query library overview
+│   ├── governance-queries.md              # Governance-specific KQL queries
 │   ├── agent-overview/                    # Agent inventory and trends (3 queries)
 │   ├── session-outcomes/                  # Outcome analysis (5 queries)
 │   ├── business-impact/                   # AAH, cost, ROI (4 queries)
@@ -141,6 +142,7 @@ copilot-studio-analytics/
 │   ├── business-impact/                   # Business impact workbook (3 tabs)
 │   └── behavior-analysis/                 # Behavior analysis workbook (4 tabs)
 └── docs/
+    ├── dataverse-schema.md                # Auto-generated Dataverse schema reference
     ├── dataverse-data-sources.md          # Dataverse table reference
     ├── agent-assisted-hours-methodology.md # AAH calculation methodology
     ├── viva-insights-parity-matrix.md     # Feature comparison with Viva Insights

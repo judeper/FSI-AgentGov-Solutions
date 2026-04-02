@@ -854,100 +854,117 @@ Examples:
             WATERMARK_STATUS_IN_PROGRESS,
         )
 
-        # 6. Fetch agent classifications
-        agent_classifications = get_agent_classifications(dv_client)
+        try:
+            # 7. Fetch agent classifications
+            agent_classifications = get_agent_classifications(dv_client)
 
-        # 7. Fetch sessions
-        sessions = fetch_sessions(dv_client, watermark, lookback_hours)
+            # 8. Fetch sessions
+            sessions = fetch_sessions(dv_client, watermark, lookback_hours)
 
-        if not sessions:
-            logger.info("No new sessions to sync")
-            update_watermark(
-                dv_client,
-                dv_config["environment_url"],
-                tier,
-                sync_start,
-                0,
-                WATERMARK_STATUS_SUCCESS,
-            )
-            print_sync_summary(0, 0, 0, 0, 0.0)
+            if not sessions:
+                logger.info("No new sessions to sync")
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    sync_start,
+                    0,
+                    WATERMARK_STATUS_SUCCESS,
+                )
+                print_sync_summary(0, 0, 0, 0, 0.0)
+                sys.exit(0)
+
+            # 9. Correlate knowledge sources
+            ks_map = correlate_knowledge_sources(dv_client, sessions)
+
+            # 10. Resolve governance zone
+            zone = resolve_zone(dv_config["environment_url"], config.get("zone_mapping", {}))
+            logger.info("Governance zone: %s", zone)
+
+            # 11. Transform sessions to events
+            events = []
+            for session in sessions:
+                event = transform_session(
+                    session, agent_classifications, ks_map, zone, tier
+                )
+                if event:
+                    events.append(event)
+
+            logger.info("Transformed %d/%d sessions to events", len(events), len(sessions))
+
+            # Determine the latest session timestamp for watermark advancement
+            # Use the last session's closed or created timestamp (sessions are ordered asc)
+            last_session_timestamp = sync_start  # fallback
+            if events:
+                last_ts_str = events[-1].get("timestamp", "")
+                if last_ts_str:
+                    try:
+                        last_session_timestamp = datetime.fromisoformat(
+                            last_ts_str.replace("Z", "+00:00")
+                        )
+                    except (ValueError, TypeError):
+                        logger.warning("Could not parse last event timestamp, using sync_start")
+
+            # 12. Send to App Insights
+            sent, failed = send_to_app_insights(events, ikey, batch_size, args.dry_run)
+
+            # 13. Update watermark to last session timestamp (not sync_start)
+            if failed == 0:
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    last_session_timestamp,
+                    sent,
+                    WATERMARK_STATUS_SUCCESS,
+                )
+            elif sent > 0:
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    last_session_timestamp,
+                    sent,
+                    WATERMARK_STATUS_WARNING,
+                    error_message=f"Partial sync: {failed} events failed to send",
+                )
+            else:
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    sync_start,
+                    0,
+                    WATERMARK_STATUS_FAILED,
+                    error_message=f"All {failed} events failed to send",
+                )
+
+            # 14. Print summary
+            duration = (datetime.now(timezone.utc) - sync_start).total_seconds()
+            print_sync_summary(len(sessions), len(events), sent, failed, duration)
+
+            # Exit codes
+            if failed > 0 and sent > 0:
+                sys.exit(2)  # Partial sync
+            elif failed > 0:
+                sys.exit(1)  # Full failure
             sys.exit(0)
 
-        # 8. Correlate knowledge sources
-        ks_map = correlate_knowledge_sources(dv_client, sessions)
-
-        # 9. Resolve governance zone
-        zone = resolve_zone(dv_config["environment_url"], config.get("zone_mapping", {}))
-        logger.info("Governance zone: %s", zone)
-
-        # 10. Transform sessions to events
-        events = []
-        for session in sessions:
-            event = transform_session(
-                session, agent_classifications, ks_map, zone, tier
-            )
-            if event:
-                events.append(event)
-
-        logger.info("Transformed %d/%d sessions to events", len(events), len(sessions))
-
-        # Determine the latest session timestamp for watermark advancement
-        # Use the last session's closed or created timestamp (sessions are ordered asc)
-        last_session_timestamp = sync_start  # fallback
-        if events:
-            last_ts_str = events[-1].get("timestamp", "")
-            if last_ts_str:
-                try:
-                    last_session_timestamp = datetime.fromisoformat(
-                        last_ts_str.replace("Z", "+00:00")
-                    )
-                except (ValueError, TypeError):
-                    logger.warning("Could not parse last event timestamp, using sync_start")
-
-        # 11. Send to App Insights
-        sent, failed = send_to_app_insights(events, ikey, batch_size, args.dry_run)
-
-        # 12. Update watermark to last session timestamp (not sync_start)
-        if failed == 0:
-            update_watermark(
-                dv_client,
-                dv_config["environment_url"],
-                tier,
-                last_session_timestamp,
-                sent,
-                WATERMARK_STATUS_SUCCESS,
-            )
-        elif sent > 0:
-            update_watermark(
-                dv_client,
-                dv_config["environment_url"],
-                tier,
-                last_session_timestamp,
-                sent,
-                WATERMARK_STATUS_WARNING,
-                error_message=f"Partial sync: {failed} events failed to send",
-            )
-        else:
-            update_watermark(
-                dv_client,
-                dv_config["environment_url"],
-                tier,
-                sync_start,
-                0,
-                WATERMARK_STATUS_FAILED,
-                error_message=f"All {failed} events failed to send",
-            )
-
-        # 13. Print summary
-        duration = (datetime.now(timezone.utc) - sync_start).total_seconds()
-        print_sync_summary(len(sessions), len(events), sent, failed, duration)
-
-        # Exit codes
-        if failed > 0 and sent > 0:
-            sys.exit(2)  # Partial sync
-        elif failed > 0:
-            sys.exit(1)  # Full failure
-        sys.exit(0)
+        except Exception:
+            # Release the InProgress watermark lock so subsequent runs aren't blocked
+            try:
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    sync_start,
+                    0,
+                    WATERMARK_STATUS_FAILED,
+                    error_message="Sync aborted due to unhandled exception",
+                )
+            except Exception:
+                pass  # Best-effort cleanup; don't mask the original error
+            raise
 
     except FileNotFoundError as e:
         logger.error("Config error: %s", e)
