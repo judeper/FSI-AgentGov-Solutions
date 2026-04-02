@@ -163,6 +163,20 @@ class DataverseClient:
             return entity_id.split("(")[1].split(")")[0]
         return ""
 
+    def delete_record(self, entity_set: str, record_id: str) -> None:
+        """Delete a record from Dataverse.
+
+        Args:
+            entity_set: The entity set name (e.g., 'environmentvariabledefinitions')
+            record_id: The GUID of the record to delete
+        """
+        if self.dry_run:
+            print(f"  [DRY RUN] Would delete record from {entity_set}({record_id})")
+            return
+        url = urljoin(self.api_url, f"{entity_set}({record_id})")
+        response = self._session.delete(url, headers=self._get_headers())
+        response.raise_for_status()
+
     def get_entity_metadata(self, logical_name):
         if self.dry_run:
             print(f"  [DRY RUN] Would check entity: {logical_name}")

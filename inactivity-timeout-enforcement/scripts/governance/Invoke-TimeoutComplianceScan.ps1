@@ -473,6 +473,10 @@ function Invoke-TimeoutComplianceScan {
             'OData-Version'    = '4.0'
         }
 
+        # Map picklist strings to Dataverse OptionSet integer values
+        $zoneMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003; 'Unknown' = 100000000 }
+        $statusMap = @{ 'Compliant' = 100000000; 'NonCompliant' = 100000001; 'Unknown' = 100000002 }
+
         # Persist compliance results
         $persistedCount = 0
         foreach ($r in $results) {
@@ -481,13 +485,13 @@ function Invoke-TimeoutComplianceScan {
                     'fsi_name'                    = "ITE-$($r.EnvironmentName)-$runId".Substring(0, [Math]::Min(100, "ITE-$($r.EnvironmentName)-$runId".Length))
                     'fsi_environmentid'           = $r.EnvironmentId
                     'fsi_environmentname'         = $r.EnvironmentName
-                    'fsi_zone'                    = $r.Zone
+                    'fsi_zone'                    = $zoneMap[$r.Zone]
                     'fsi_timeoutenabled'          = $r.TimeoutEnabled
                     'fsi_timeoutduration'         = $r.TimeoutDuration
                     'fsi_timeoutdurationminutes'  = $r.TimeoutDurationMinutes
                     'fsi_maxallowedminutes'       = $r.MaxAllowedMinutes
                     'fsi_timeoutrequired'         = $r.TimeoutRequired
-                    'fsi_compliancestatus'        = $r.ComplianceStatus
+                    'fsi_compliancestatus'        = $statusMap[$r.ComplianceStatus]
                     'fsi_severity'                = $r.Severity
                     'fsi_regulatorycontext'       = $r.RegulatoryContext
                     'fsi_details'                 = $r.Details
@@ -519,7 +523,7 @@ function Invoke-TimeoutComplianceScan {
                         'fsi_name'            = "ITE-ERR-$($e.EnvironmentName)-$runId".Substring(0, [Math]::Min(100, "ITE-ERR-$($e.EnvironmentName)-$runId".Length))
                         'fsi_environmentid'   = $e.EnvironmentId
                         'fsi_environmentname' = $e.EnvironmentName
-                        'fsi_zone'            = $e.Zone
+                        'fsi_zone'            = $zoneMap[$e.Zone]
                         'fsi_errormessage'    = $e.ErrorMessage
                         'fsi_errortime'       = $e.ErrorTime
                         'fsi_scanrunid'       = $e.RunId

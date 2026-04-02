@@ -82,10 +82,7 @@ Each agent scope record (`fsi_agentscope`) defines allowed resources as JSON arr
 
 Build the solution components manually in your target environment:
 
-1. Create the Dataverse tables using the schema script:
-   ```bash
-   python scripts/create_sdm_dataverse_schema.py --environment "https://your-org.crm.dynamics.com"
-   ```
+1. Create the Dataverse tables manually per the [Dataverse Schema](docs/dataverse-schema.md) documentation.
 2. Build the Power Automate flows manually following [Flow Configuration](docs/flow-configuration.md)
 
 ### 2. Configure Environment Variables
