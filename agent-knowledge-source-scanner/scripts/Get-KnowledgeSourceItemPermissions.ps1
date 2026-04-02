@@ -81,7 +81,7 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.0.0
+    Version:    1.0.1
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+
     Requires:   PowerShell 7.0+
@@ -205,7 +205,14 @@ function Get-LibraryTargets {
             }
         }
         elseif ($extension -eq ".json") {
-            $jsonData = Get-Content $ListPath -Raw | ConvertFrom-Json
+            try {
+                $jsonData = Get-Content $ListPath -Raw | ConvertFrom-Json
+                if ($null -eq $jsonData) {
+                    throw "JSON file is empty or contains null"
+                }
+            } catch {
+                throw "Failed to parse JSON file '$ListPath': $($_.Exception.Message)"
+            }
             foreach ($item in $jsonData) {
                 $targets.Add(@{
                     SiteUrl     = $item.siteUrl
@@ -328,11 +335,17 @@ function Get-ItemPermissionDetails {
     )
 
     $results = [System.Collections.Generic.List[hashtable]]::new()
-    $itemPath = $Item.FieldValues["FileRef"]
-    $itemTitle = $Item.FieldValues["Title"]
-    $sensitivityLabel = $Item.FieldValues["_SensitivityLabel"]
+    $itemPath = "Unknown"
+    $itemTitle = "Unknown"
+    $sensitivityLabel = $null
 
-    if (-not $sensitivityLabel) {
+    if ($Item.FieldValues) {
+        $itemPath = $Item.FieldValues["FileRef"]
+        $itemTitle = $Item.FieldValues["Title"]
+        $sensitivityLabel = $Item.FieldValues["_SensitivityLabel"]
+    }
+
+    if (-not $sensitivityLabel -and $Item.FieldValues) {
         $sensitivityLabel = $Item.FieldValues["_ComplianceTag"]
     }
 
@@ -443,7 +456,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.0                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.1                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -598,10 +611,12 @@ try {
         ErrorCount     = $scanSummary.ErrorCount
         OutputFile     = $OutputPath
     }
+
+    exit 0
 }
 catch {
     Write-AuditLog "Scan failed: $($_.Exception.Message)" "ERROR"
-    throw
+    exit 1
 }
 finally {
     try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch { }
