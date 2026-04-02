@@ -46,7 +46,12 @@ if (-not (Test-Path $manifestPath)) {
     exit 1
 }
 
-$manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+try {
+    $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+} catch {
+    Write-Error "manifest.json is not valid JSON. Ensure the file is properly formatted. Error: $($_.Exception.Message)"
+    exit 1
+}
 
 Write-Host "Export ID:    $($manifest.exportId)" -ForegroundColor Gray
 Write-Host "Export Date:  $($manifest.exportDate)" -ForegroundColor Gray

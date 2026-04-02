@@ -149,12 +149,12 @@ $SolutionEvidence = @{
     }
     FUS = @{
         Validations = @{
-            EntitySet = 'fsi_fileupload_validationhistories'
+            EntitySet = 'fsi_fileuploadvalidationhistories'
             DateField = 'fsi_scannedon'
             Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_settingname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
         }
         Violations  = @{
-            EntitySet = 'fsi_fileupload_violations'
+            EntitySet = 'fsi_fileuploadviolations'
             DateField = 'fsi_detectedon'
             Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_settingname', 'fsi_severity', 'fsi_status')
         }

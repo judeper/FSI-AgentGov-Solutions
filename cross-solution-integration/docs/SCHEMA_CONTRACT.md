@@ -112,7 +112,7 @@ All Tier 2 solutions produce evidence packages with identical structure:
 
 **Companion file:** `{filename}.sha256` containing `{hash}  {filename}` format.
 
-**Verification:** `Test-EvidenceIntegrity.ps1` validates SHA-256 hash of evidence file matches companion hash file.
+**Verification:** `Test-UnifiedEvidenceIntegrity.ps1` validates SHA-256 hash of evidence file matches companion hash file.
 
 ---
 

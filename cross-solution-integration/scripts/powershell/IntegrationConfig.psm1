@@ -1,3 +1,5 @@
+#Requires -Modules MSAL.PS
+
 <#
 .SYNOPSIS
     Shared integration constants and translation functions for cross-solution governance integration.
@@ -207,7 +209,7 @@ function Get-SolutionTableConfig {
         }
         'AAM' = @{
             EntitySet       = 'fsi_accessvalidationhistories'
-            StatusField     = 'fsi_overall_status'
+            StatusField     = 'fsi_overallstatus'
             StatusType      = 'String'          # String: Compliant/Warning/NonCompliant/Critical
             TimestampField  = 'fsi_timestamp'
             RunIdField      = 'fsi_runid'
@@ -217,10 +219,10 @@ function Get-SolutionTableConfig {
         }
         'CMM' = @{
             EntitySet        = 'fsi_moderationvalidationhistories'
-            StatusField      = 'fsi_overall_status'
-            StatusType       = 'Percentage'     # Derived from fsi_compliant_count / fsi_total_agents
-            CompliantField   = 'fsi_compliant_count'
-            TotalField       = 'fsi_total_agents'
+            StatusField      = 'fsi_overallstatus'
+            StatusType       = 'Percentage'     # Derived from fsi_compliantcount / fsi_totalagents
+            CompliantField   = 'fsi_compliantcount'
+            TotalField       = 'fsi_totalagents'
             TimestampField   = 'fsi_timestamp'
             RunIdField       = 'fsi_runid'
             FilterLatest     = "`$orderby=fsi_timestamp desc&`$top=1"
@@ -228,8 +230,8 @@ function Get-SolutionTableConfig {
             SolutionVersion  = 'v1.0.0'
         }
         'FUS' = @{
-            EntitySet        = 'fsi_fileupload_validationhistories'
-            StatusField      = 'fsi_compliance_rate'
+            EntitySet        = 'fsi_fileuploadvalidationhistories'
+            StatusField      = 'fsi_compliancerate'
             StatusType       = 'Percentage'     # Direct percentage field
             TimestampField   = 'fsi_timestamp'
             RunIdField       = 'fsi_runid'

@@ -34,9 +34,9 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 | `IntegrationConfig.psd1` | Module manifest (metadata, GUID, FunctionsToExport) for IntegrationConfig.psm1 |
 | `IntegrationConfig.psm1` | Shared constants, mappings, and translation functions |
 | `Sync-SolutionAssessments.ps1` | Pull Tier 2 results → CD assessments |
-| `Export-UnifiedComplianceEvidence.ps1` | Aggregate per-solution evidence into master package |
+| `Export-UnifiedComplianceEvidence.ps1` | Aggregate per-solution evidence into unified package |
 | `Register-ProvisionedEnvironment.ps1` | Register newly provisioned environment in ACV registry |
-| `Test-UnifiedEvidenceIntegrity.ps1` | Verify SHA-256 chain integrity of master evidence package |
+| `Test-UnifiedEvidenceIntegrity.ps1` | Verify SHA-256 chain integrity of unified evidence package |
 
 ### Power Automate Flows
 
