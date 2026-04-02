@@ -83,7 +83,7 @@ Assign these Entra ID roles to the Managed Identity:
 1. Navigate to **Microsoft Entra ID** → **Roles and administrators**
 2. Search for **Power Platform Administrator**
 3. Click **+ Add assignments** → **Select members**
-4. Search for `FSI-AgentGov-Automation` (the MI Object ID)
+4. Search for the Automation Account's system-assigned managed identity by its display name (the Automation Account name) or by its Object (principal) ID from the Azure portal
 5. Click **Select** → **Next** → **Assign**
 6. Repeat for **Exchange Online Admin**
 

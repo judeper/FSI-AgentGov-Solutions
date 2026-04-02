@@ -186,12 +186,17 @@ class ALCAClient:
         )
         response.raise_for_status()
 
-        entity_id = response.headers.get("OData-EntityId", "")
-        if entity_id:
-            get_response = self._session.get(entity_id, headers=self._get_headers())
-            if get_response.ok:
-                return get_response.json()
-        return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
+        try:
+            entity_id = response.headers.get("OData-EntityId", "")
+            if entity_id:
+                get_response = self._session.get(entity_id, headers=self._get_headers())
+                if get_response.ok:
+                    return get_response.json()
+            return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
+        except (ValueError, KeyError) as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not parse entity response: {e}")
+            return {"status": "created"}
 
     def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
         """Create a new attribute (column) on an entity."""

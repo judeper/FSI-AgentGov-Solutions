@@ -152,6 +152,9 @@ function Test-EnvironmentAudit {
         }
 
         $org = $response.value[0]
+        if (-not $org) {
+            throw "Organization record returned null from Dataverse API"
+        }
         $result.EnvironmentId = $org.organizationid
         $result.RawValue = "AuditEnabled=$($org.isauditenabled)"
 

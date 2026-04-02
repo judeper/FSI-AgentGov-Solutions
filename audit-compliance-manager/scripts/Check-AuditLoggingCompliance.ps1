@@ -148,6 +148,7 @@ Write-Output "[Step 2/6] Enumerating Power Platform environments..."
 
 try {
     $environments = Get-AdminPowerAppEnvironment -ErrorAction Stop
+    if (-not $environments) { $environments = @() }
     $envCount = ($environments | Measure-Object).Count
     Write-Output "  [OK] Found $envCount environment(s)"
 }

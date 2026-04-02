@@ -285,6 +285,11 @@ function Invoke-EnvironmentDiscovery {
                 # Existing registry entry: check for updates
                 $registryEntry = $registryLookup[$envId]
 
+                if (-not $registryEntry.fsi_environmentregistryid) {
+                    Write-Warning "Registry entry missing ID field for environment $($env.DisplayName) — skipping update"
+                    continue
+                }
+
                 # Check if environment type changed
                 if ($registryEntry.fsi_environmenttype -ne $env.EnvironmentTypeInt) {
                     Write-Host "  Updating environment type for: $($env.DisplayName)" -ForegroundColor Yellow

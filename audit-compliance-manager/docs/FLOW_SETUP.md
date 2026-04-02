@@ -162,7 +162,7 @@ See [deployment-guide.md](deployment-guide.md) for detailed permission configura
 Add **Initialize variable** actions for each parameter:
 
 - `DataverseUrl` (String): `https://governance.crm.dynamics.com` (your central environment)
-- `TenantDomain` (String): `contoso.onmicrosoft.com` (your tenant domain)
+- `TenantId` (String): `contoso.onmicrosoft.com` (your tenant ID)
 - `ClientId` (String): Your Microsoft Entra ID application client ID
 - `CertificateThumbprint` (String): Certificate thumbprint from Azure Automation
 - `SubscriptionId` (String): Azure subscription ID
@@ -442,7 +442,7 @@ Store these values as Power Automate flow variables (initialize at the top of ea
 | Variable | Value | Notes |
 |----------|-------|-------|
 | DataverseUrl | https://governance.crm.dynamics.com | Central Dataverse environment URL |
-| TenantDomain | contoso.onmicrosoft.com | Microsoft Entra ID tenant domain |
+| TenantId | contoso.onmicrosoft.com | Microsoft Entra ID tenant ID |
 | ClientId | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | Microsoft Entra ID app registration client ID |
 | CertificateThumbprint | ABCDEF1234567890... | Certificate thumbprint from Azure Automation |
 | SubscriptionId | xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | Azure subscription ID |
