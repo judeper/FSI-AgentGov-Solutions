@@ -123,7 +123,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    - **Condition:** `tenantIsolationEnabled` equals `false`
    - **If true (isolation disabled):**
      1. Set `findingsCount` = `findingsCount + 1`
-     2. Create `fsi_crosstenantfinding` record:
+     2. Create `fsi_externalsharefinding` record:
         - `fsi_findingtype`: `"Tenant Isolation Disabled"` (Critical)
         - `fsi_severity`: `100000003` (Critical)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -150,7 +150,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    - **Condition:** Current entry `tenantId` exists in approved tenant index
    - **If false (unapproved entry):**
      1. Increment `findingsCount`
-     2. Create `fsi_crosstenantfinding`:
+     2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"Unapproved Tenant Isolation Exception"`
         - `fsi_severity`: `100000002` (High)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -161,7 +161,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    - **Condition:** Entry `direction` matches approved record `fsi_approveddirection`
    - **If false (direction mismatch):**
      1. Increment `findingsCount`
-     2. Create `fsi_crosstenantfinding`:
+     2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"Tenant Isolation Direction Mismatch"`
         - `fsi_severity`: `100000001` (Medium)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -357,9 +357,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
         - **If false:** Continue to create finding
 
      2. **Deduplication Check**
-        - Query `fsi_crosstenantfindings` for existing Open finding matching same `fsi_agentid`, `fsi_sourcetenantdomain`, and `fsi_findingtype`:
+        - Query `fsi_externalsharefindings` for existing Open finding matching same `fsi_agentid`, `fsi_sourcetenantdomain`, and `fsi_findingtype`:
           ```
-          fsi_crosstenantfindings?$filter=fsi_agentid eq '{agentId}' and fsi_sourcetenantdomain eq '{homeTenantDomain}' and fsi_findingtype eq 'Unapproved Guest Agent Share' and fsi_findingstatus eq 100000000&$top=1
+          fsi_externalsharefindings?$filter=fsi_agentid eq '{agentId}' and fsi_sourcetenantdomain eq '{homeTenantDomain}' and fsi_findingtype eq 'Unapproved Guest Agent Share' and fsi_findingstatus eq 100000000&$top=1
           ```
         - If match exists: Update `fsi_detectedat` to current timestamp, skip creation
 
@@ -379,7 +379,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
 
      4. **Create Finding**
         - Action: "Create a new record" (Dataverse)
-        - Table: `fsi_crosstenantfinding`
+        - Table: `fsi_externalsharefinding`
         - Fields:
           - `fsi_findingtype`: `"Unapproved Guest Agent Share"`
           - `fsi_severity`: Severity code from zone mapping
@@ -483,7 +483,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - **Condition:** Default inbound B2B `isBlocked` does NOT match `baselineInboundBlocked`
    - **If true:**
      1. Increment `findingsCount`
-     2. Create `fsi_crosstenantfinding`:
+     2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"CTA Default Inbound B2B Drift"`
         - `fsi_severity`: `100000001` (Medium)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -521,7 +521,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - **Condition:** Partner `tenantId` exists in approved tenant index
    - **If false (unapproved partner):**
      1. Increment `findingsCount`
-     2. Create `fsi_crosstenantfinding`:
+     2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"Unapproved CTA Partner Policy"`
         - `fsi_severity`: `100000001` (Medium)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -532,7 +532,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - **Condition:** Partner entry exists in approved registry but scope exceeds approved level (e.g., approved for inbound-only but outbound also enabled)
    - **If true:**
      1. Increment `findingsCount`
-     2. Create `fsi_crosstenantfinding`:
+     2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"CTA Partner Scope Exceeds Approval"`
         - `fsi_severity`: `100000001` (Medium)
         - `fsi_findingstatus`: `100000000` (Open)
@@ -688,7 +688,7 @@ Same scope-based try/catch pattern as Flow 1.
     3. Update Entra CTA partner policy (if applicable):
        - Action: HTTP with Microsoft Entra ID — create or update partner CTA policy
     4. Close any open findings for this tenant:
-       - Query `fsi_crosstenantfindings` where `fsi_sourcetenantid eq '{tenantId}' and fsi_findingstatus eq 100000000`
+       - Query `fsi_externalsharefindings` where `fsi_sourcetenantid eq '{tenantId}' and fsi_findingstatus eq 100000000`
        - Update each to `fsi_findingstatus` = `100000002` (Resolved), `fsi_resolvedby` = `"Onboarding Approval"`, `fsi_resolvedat` = `utcNow()`
     5. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Approved"`
     6. Send Teams notification to requestor: `"External tenant onboarding approved"`
@@ -733,7 +733,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
 
 3. **Retrieve Finding Record**
    - Action: "Get a row by ID" (Dataverse)
-   - Table: `fsi_crosstenantfinding`
+   - Table: `fsi_externalsharefinding`
    - Row ID: Trigger input `findingId`
 
 4. **Check for Duplicate Processing**
@@ -744,7 +744,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
 
 5. **Set Status to Under Review**
    - Action: "Update a record" (Dataverse)
-   - Table: `fsi_crosstenantfinding`
+   - Table: `fsi_externalsharefinding`
    - Fields:
      - `fsi_findingstatus`: `100000001` (Under Review)
 
@@ -811,7 +811,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
 
    8d. **Update Finding — Remediated**
    - Action: "Update a record" (Dataverse)
-   - Table: `fsi_crosstenantfinding`
+   - Table: `fsi_externalsharefinding`
    - Fields:
      - `fsi_findingstatus`: `100000002` (Resolved)
      - `fsi_remediationstatus`: `"Remediated"`
@@ -916,7 +916,7 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
    - **If true:**
      1. **Create Finding** (no deduplication — daily until resolved):
         - Action: "Create a new record" (Dataverse)
-        - Table: `fsi_crosstenantfinding`
+        - Table: `fsi_externalsharefinding`
         - Fields:
           - `fsi_findingtype`: `"Approved Tenant — Review Required"`
           - `fsi_severity`: `100000000` (Low)

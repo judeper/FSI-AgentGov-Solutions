@@ -9,7 +9,7 @@
 **Cause:** Column logical names in the flow action do not match the deployed Dataverse schema. This can happen if entity set names or column names were customized during deployment.
 
 **Resolution:**
-1. Open the solution's `create_cteg_dataverse_schema.py` and confirm the `SchemaName` for each column
+1. Open the solution's `create_ctsg_dataverse_schema.py` and confirm the `SchemaName` for each column
 2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_ExternalTenantId` → `fsi_externaltenantid`)
 3. Update the flow action to use the correct logical names
 4. Refer to the DELIVERY-CHECKLIST.md for confirmed field names if available
@@ -93,7 +93,7 @@
 **Cause:** The integer values used in flow expressions do not match the option set definitions in the deployed Dataverse schema.
 
 **Resolution:**
-1. Open the solution's `create_cteg_dataverse_schema.py` and locate the option set definitions
+1. Open the solution's `create_ctsg_dataverse_schema.py` and locate the option set definitions
 2. Confirm the integer values for each option (e.g., Approval Status: Pending = 0, Approved = 1, Expired = 2)
 3. Update flow expressions to use the correct integer values
 4. If the solution was imported over an existing schema, check for option set value conflicts

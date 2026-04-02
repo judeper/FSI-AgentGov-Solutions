@@ -369,7 +369,7 @@ $onboardingSection = @{
 
 try {
     $expiredRequests = Get-DVRecords `
-        -EntitySet $EntitySets.ComplianceEvents `
+        -EntitySet $EntitySets.ApprovedTenants `
         -Select "fsi_tenantname,fsi_approvalstatus,fsi_expirynotes,createdon" `
         -Filter "fsi_approvalstatus eq $ApprovalStatusExpired"
 

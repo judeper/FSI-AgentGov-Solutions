@@ -700,9 +700,7 @@ def create_table_with_columns(
     # Create columns
     print(f"  {logical_name} columns:")
     for col in columns:
-        col_schema = col["SchemaName"]
-        col_type = col.get("@odata.type", "Unknown").split(".")[-1]
-        client.create_column(logical_name, col_schema, col_type, col)
+        client.create_column(logical_name, col)
 
 
 def create_alternate_keys(client: DataverseClient, dry_run: bool = False) -> None:
@@ -726,10 +724,10 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool = False) -> Non
 
         try:
             url = (
-                f"{client.base_url}/EntityDefinitions"
+                f"{client.api_url}EntityDefinitions"
                 f"(LogicalName='{entity}')/Keys"
             )
-            resp = client.session.get(url, headers=client._get_headers())
+            resp = client._session.get(url, headers=client._get_headers())
             resp.raise_for_status()
             existing_keys = resp.json().get("value", [])
 
@@ -753,10 +751,10 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool = False) -> Non
 
         try:
             url = (
-                f"{client.base_url}/EntityDefinitions"
+                f"{client.api_url}EntityDefinitions"
                 f"(LogicalName='{entity}')/Keys"
             )
-            resp = client.session.post(
+            resp = client._session.post(
                 url, headers=client._get_headers(), json=key_definition
             )
             resp.raise_for_status()
