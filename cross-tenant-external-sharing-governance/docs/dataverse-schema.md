@@ -281,7 +281,7 @@ Weekly Entra Cross-Tenant Access policy audit snapshots. Each record captures th
   "fsi_outboundtrustsettings": "{\"isMfaAccepted\":false,\"isCompliantDeviceAccepted\":false,\"isHybridAzureADJoinedDeviceAccepted\":false}",
   "fsi_ctacompliancestatus": 0,
   "fsi_driftdetected": false,
-  "fsi_collectedby": "Flow 2 — Entra CTA Scanner"
+  "fsi_collectedby": "Flow 3 — Entra CTA Scanner"
 }
 ```
 

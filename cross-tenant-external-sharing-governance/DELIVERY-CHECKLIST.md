@@ -56,9 +56,9 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - `fsi_ctsg_findingstatus`: Open=0, Under Review=1, Remediated=2, Approved Exception=3, False Positive=4
   - `fsi_ctsg_severity`: Critical=0, High=1, Medium=2, Low=3
   - `fsi_ctsg_guestdetectionmethod`: EXT# Parsing=0, Mail Field=1, CreationType=2, Multi-Method Agreed=3, Unresolved=4
-  - `fsi_ctsg_tenantdirection`: Inbound=0, Outbound=1, Both=2
-  - `fsi_ctsg_isolationstatus`: Enabled=0, Disabled=1, Partial=2
-  - `fsi_ctsg_complianceeventtype`: TenantOnboarded=0, TenantSuspended=1, TenantRevoked=2, ViolationDetected=3, ViolationRemediated=4, ReviewCompleted=5, BaselineUpdated=6
+  - `fsi_ctsg_ppisolationdirection`: Inbound=0, Outbound=1, Both=2, None=3
+  - `fsi_ctsg_isolationcompliancestatus`: Compliant=0, Non-Compliant - Isolation Disabled=1, Non-Compliant - Unapproved Entries=2
+  - `fsi_ctsg_eventtype`: TenantOnboarded=0, TenantSuspended=1, TenantRevoked=2, ViolationDetected=3, ViolationRemediated=4, ReviewCompleted=5, BaselineUpdated=6
 
 ## Managed Identity Configuration
 

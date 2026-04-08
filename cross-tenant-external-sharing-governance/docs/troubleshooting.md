@@ -30,7 +30,7 @@
 
 **Symptom:** Finding record shows "Unknown" for the external tenant domain. Flow logs show all three resolution methods attempted.
 
-**Cause:** The three-method fallback chain (UPN parsing → mail property → proxyAddresses) yielded no domain for the guest user. This can occur with service accounts or programmatically-created guest users that lack standard mail attributes.
+**Cause:** The three-method fallback chain (EXT# UPN parsing → mail field → creationType) yielded no domain for the guest user. This can occur with service accounts or programmatically-created guest users that lack standard mail attributes.
 
 **Resolution:**
 1. Open the guest user record in Entra ID and check for a valid `mail` or `otherMails` attribute
@@ -123,7 +123,7 @@
 - **Issue:** Historical comparison fails on first run
   - **Expected:** The first run creates a baseline record. Comparison logic activates from the second run onward.
 
-### Flow 2: Entra CTA Policy Audit
+### Flow 3: Entra CTA Policy Audit
 
 - **Issue:** Partner policies return empty array
   - **Check:** Verify `MI-CrossTenantReadOnly` has `Policy.Read.All` permission
@@ -133,7 +133,7 @@
   - **Check:** Verify `CrossTenantInformation.ReadBasic.All` permission is assigned
   - **Note:** Some tenant IDs may not resolve if the remote tenant has restricted directory visibility
 
-### Flow 3: Agent Share External Detection
+### Flow 2: External Agent Share Detection
 
 - **Issue:** No agent shares detected despite known external sharing
   - **Check:** Verify the Power Platform API returns share data for the target environment

@@ -30,7 +30,7 @@
 
 .PARAMETER FindingStatusResolved
     OptionSet integer value for Resolved finding status.
-    WARNING: Confirm against deployed solution XML. Default assumes 1.
+    WARNING: Confirm against deployed solution XML. Default assumes 2.
 
 .PARAMETER SeverityCritical
     OptionSet integer value for Critical severity.
@@ -87,7 +87,7 @@ param(
     [int]$FindingStatusOpen = 0,
 
     [Parameter()]
-    [int]$FindingStatusResolved = 1,
+    [int]$FindingStatusResolved = 2,
 
     [Parameter()]
     [int]$SeverityCritical = 0,
@@ -246,7 +246,7 @@ $findingsSection = @{
 try {
     $openFindings = Get-DVRecords `
         -EntitySet $EntitySets.Findings `
-        -Select "fsi_findingstatus,fsi_severity,fsi_findingtype,fsi_governancelayer,fsi_agentname,fsi_externaltenant_name,createdon" `
+        -Select "fsi_findingstatus,fsi_severity,fsi_findingtype,fsi_governancelayer,fsi_agentname,fsi_externaltenantname,createdon" `
         -Filter "fsi_findingstatus eq $FindingStatusOpen"
 
     $findingsSection.TotalOpen = $openFindings.Count
