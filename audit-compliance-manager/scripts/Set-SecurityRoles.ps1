@@ -35,10 +35,10 @@
     If specified, shows what would be changed without making modifications.
 
 .EXAMPLE
-    ./Configure-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token
+    ./Set-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token
 
 .EXAMPLE
-    ./Configure-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token -WhatIf
+    ./Set-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token -WhatIf
 
 .NOTES
     Version: 1.0.0

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 
 <#

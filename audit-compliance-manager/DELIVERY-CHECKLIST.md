@@ -23,7 +23,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 - [ ] **Start-TenantValidationRunbook.ps1** — Azure Automation runbook wrapper (tenant)
 - [ ] **Start-EnvironmentValidationRunbook.ps1** — Azure Automation runbook wrapper (environment)
 - [ ] **Export-AuditValidationEvidence.ps1** — Compliance evidence export
-- [ ] **Configure-SecurityRoles.ps1** — Security role configuration
+- [ ] **Set-SecurityRoles.ps1** — Security role configuration
 - [ ] **Test-EnvironmentAudit.ps1** — Environment audit validator
 - [ ] **Test-EnvironmentRetention.ps1** — Environment retention validator
 - [ ] **Test-MailboxAudit.ps1** — Mailbox audit validator
@@ -50,10 +50,10 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 - [ ] **deploy.py** — ACV deployment orchestrator
 - [ ] **requirements.txt** — Python dependencies
 
-**Power Automate:**
-- [ ] **audit-remediation-approval-flow.json** — ALCA approval workflow template
-- [ ] **environment-validation-flow.json** — ACV environment validation flow template
-- [ ] **tenant-validation-flow.json** — ACV tenant validation flow template
+**Power Automate (manual build — see docs/FLOW_SETUP.md):**
+- [ ] **Tenant Validation Flow** — ACV daily tenant validation
+- [ ] **Environment Validation Flow** — ACV daily environment validation
+- [ ] **Audit Remediation Approval Flow** — ALCA approval workflow
 
 **Adaptive Card Templates:**
 - [ ] **adaptive-card-environment-alert.json** — Environment alert adaptive card
@@ -83,7 +83,7 @@ zip -r ACM-Solution-v1.0.0.zip \
   scripts/Start-TenantValidationRunbook.ps1 \
   scripts/Start-EnvironmentValidationRunbook.ps1 \
   scripts/Export-AuditValidationEvidence.ps1 \
-  scripts/Configure-SecurityRoles.ps1 \
+  scripts/Set-SecurityRoles.ps1 \
   scripts/Test-EnvironmentAudit.ps1 \
   scripts/Test-EnvironmentRetention.ps1 \
   scripts/Test-MailboxAudit.ps1 \
@@ -104,9 +104,6 @@ zip -r ACM-Solution-v1.0.0.zip \
   scripts/create_connection_references.py \
   scripts/deploy.py \
   scripts/requirements.txt \
-  templates/audit-remediation-approval-flow.json \
-  templates/environment-validation-flow.json \
-  templates/tenant-validation-flow.json \
   templates/adaptive-card-environment-alert.json \
   templates/adaptive-card-tenant-alert.json \
   docs/deployment-guide.md \
@@ -133,7 +130,7 @@ ACM-Solution-v1.0.0/
 │       ├── Start-TenantValidationRunbook.ps1
 │       ├── Start-EnvironmentValidationRunbook.ps1
 │       ├── Export-AuditValidationEvidence.ps1
-│       ├── Configure-SecurityRoles.ps1
+│       ├── Set-SecurityRoles.ps1
 │       ├── Test-EnvironmentAudit.ps1
 │       ├── Test-EnvironmentRetention.ps1
 │       ├── Test-MailboxAudit.ps1
@@ -157,9 +154,6 @@ ACM-Solution-v1.0.0/
 │   ├── deploy.py
 │   └── requirements.txt
 ├── Power-Automate/
-│   ├── audit-remediation-approval-flow.json
-│   ├── environment-validation-flow.json
-│   ├── tenant-validation-flow.json
 │   ├── adaptive-card-environment-alert.json
 │   └── adaptive-card-tenant-alert.json
 └── Deployment-Guides/

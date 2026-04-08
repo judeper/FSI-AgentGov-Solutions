@@ -346,8 +346,8 @@ python create_audit_compliance_schema.py \
     --dry-run
 ```
 
-#### 5. Power Automate Approval Flow — audit-remediation-approval-flow.json
-**File:** `templates/audit-remediation-approval-flow.json`
+#### 5. Power Automate Approval Flow — Audit Remediation Approval
+**Build instructions:** See `docs/FLOW_SETUP.md`, section 2.4
 
 **Purpose:** Power Automate cloud flow template for approval-gated remediation workflow.
 
@@ -1075,8 +1075,6 @@ The ACM solution includes the **Audit Configuration Validator (ACV)** subsystem,
 | Component | Description |
 |-----------|-------------|
 | `scripts/acv_client.py` | Dataverse Web API client with MSAL authentication (interactive browser or service principal), retry logic, and dry-run mode |
-| `templates/tenant-validation-flow.json` | Power Automate flow for tenant-level audit configuration drift detection with Teams and email alerting |
-| `templates/environment-validation-flow.json` | Power Automate flow for per-environment audit validation within an `Apply_To_Each_Alert` loop |
 | `templates/adaptive-card-tenant-alert.json` | Adaptive Card v1.4 template for tenant-level drift alerts posted to Teams |
 | `templates/adaptive-card-environment-alert.json` | Adaptive Card v1.4 template for environment-level drift alerts posted to Teams |
 | `scripts/create_dataverse_schema.py` | Creates the `fsi_auditenvironmentcompliance` Dataverse table and columns |

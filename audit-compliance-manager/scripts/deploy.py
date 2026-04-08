@@ -155,7 +155,7 @@ def deploy(
             print()
             print("  IMPORTANT: Security Configuration Required")
             print("    - AuditValidationHistory is organization-owned for immutability")
-            print("    - Run Configure-SecurityRoles.ps1 to enforce append-only access")
+            print("    - Run Set-SecurityRoles.ps1 to enforce append-only access")
             print("    - Only allow Create (append-only) for automation accounts")
             print("    - See docs/deployment-guide.md for security configuration details")
         print("=" * 70)

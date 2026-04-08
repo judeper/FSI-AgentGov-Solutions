@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
 <#
