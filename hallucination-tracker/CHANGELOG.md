@@ -56,4 +56,4 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-*Hallucination Feedback Tracker v0.1.0-preview - FSI Agent Governance Framework*
+*Hallucination Feedback Tracker v1.0.0 - FSI Agent Governance Framework*

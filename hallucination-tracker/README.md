@@ -1,6 +1,6 @@
 # Hallucination Feedback Tracker
 
-> **Status:** Work In Progress — This solution currently contains documentation, a Dataverse schema specification, and a Python analysis script. Deployable Power Platform solution artifacts (solution.xml, customizations.xml, cloud flows, Dataverse entity definitions) are planned for a future release.
+> **Version:** 1.0.0 — This solution provides Dataverse schema deployment scripts, Python pattern analysis, PowerShell governance scripts (evidence export with SHA-256 integrity, evidence verification, summary dashboard), environment variables, and connection references.
 
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 
@@ -12,11 +12,11 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Multi-Source Collection** | Feedback from users, supervisors, and automated checks | Planned |
+| **Multi-Source Collection** | Feedback from users, supervisors, and automated checks | Documented |
 | **Pattern Detection** | Identify recurring error patterns | Implemented |
 | **Agent Comparison** | Compare accuracy across agents | Implemented |
 | **Auto-Categorization** | Classify hallucination types automatically | Planned |
-| **Trend Analysis** | Track hallucination rates over time | Planned |
+| **Trend Analysis** | Track hallucination rates over time | Implemented |
 
 ## Architecture
 
@@ -124,9 +124,24 @@ Feedback derived from customer complaints routed through support channels.
 
 ### 1. Deploy Dataverse Schema
 
-> **Note:** The solution ZIP and Power BI template are not yet available. See [Dataverse Schema](docs/dataverse-schema.md) for the table specification to create manually.
+```bash
+# Generate schema documentation
+python scripts/create_ht_dataverse_schema.py --output-docs
 
-<!-- Future: pac solution import --path ./templates/HallucinationTracker_1_0_0.zip -->
+# Deploy schema (interactive auth)
+python scripts/create_ht_dataverse_schema.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://your-org.crm.dynamics.com \
+    --interactive
+
+# Or dry run to preview
+python scripts/create_ht_dataverse_schema.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://your-org.crm.dynamics.com \
+    --interactive --dry-run
+```
+
+See [Dataverse Schema](docs/dataverse-schema.md) for the full table specification.
 
 ### 2. Configure Feedback Sources
 
@@ -140,17 +155,16 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 ### 4. Deploy Dashboard
 
-> **Note:** The Power BI template (`templates/HallucinationDashboard.pbit`) is planned for a future release.
+> **Note:** The Power BI template (`templates/HallucinationDashboard.pbit`) is planned for a future release. Use `Get-HallucinationSummary.ps1` for console-based reporting in the interim.
 
 ## Deployment
 
-> **Note:** Deployable solution artifacts are not yet available. The steps below describe the planned deployment workflow.
-
-1. Import the solution ZIP into your Power Platform environment
-2. Configure connection references (see prerequisites)
-3. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
-4. Activate cloud flows
-5. Deploy the Power BI dashboard
+1. Deploy Dataverse schema: `python scripts/create_ht_dataverse_schema.py`
+2. Create environment variables: `python scripts/create_ht_environment_variables.py`
+3. Create connection references: `python scripts/create_ht_connection_references.py`
+4. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
+5. Build Power Automate flows per source configuration documentation
+6. Deploy the Power BI dashboard (template planned for future release)
 
 ## Documentation
 
@@ -259,6 +273,7 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.0 | April 2026 | Full deployment scripts, governance automation, evidence export |
 | 0.1.0-preview | February 2026 | Initial release |
 
 ## Support
@@ -267,4 +282,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - Hallucination Feedback Tracker v0.1.0-preview*
+*FSI Agent Governance Framework - Hallucination Feedback Tracker v1.0.0*
