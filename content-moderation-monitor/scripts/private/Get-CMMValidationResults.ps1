@@ -17,7 +17,7 @@ Import-Module (Join-Path $PSScriptRoot 'CMMClient.psm1') -Force
     for Dataverse Web API interaction.
 
     CMM operates at the agent level: each violation record includes per-agent detail
-    (fsi_agent_id, fsi_agent_name, fsi_expected_level, fsi_actual_level) for content
+    (fsi_agentid, fsi_agentname, fsi_expectedlevel, fsi_actuallevel) for content
     moderation governance.
 
 .PARAMETER DataverseUrl
@@ -137,23 +137,23 @@ function Get-CMMValidationResults {
         # Date range filters (convert to ISO 8601 UTC)
         $fromDateUtc = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         $toDateUtc = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        $historyFilters += "fsi_validation_time ge $fromDateUtc"
-        $historyFilters += "fsi_validation_time le $toDateUtc"
+        $historyFilters += "fsi_validationtime ge $fromDateUtc"
+        $historyFilters += "fsi_validationtime le $toDateUtc"
 
         # Optional RunId filter
         if ($RunId) {
             $safeRunId = $RunId -replace "'", "''"
-            $historyFilters += "fsi_run_id eq '$safeRunId'"
+            $historyFilters += "fsi_runid eq '$safeRunId'"
         }
 
         # Combine filters
         $historyFilterString = $historyFilters -join ' and '
 
         # Select fields for validation history
-        $historySelect = "fsi_name,fsi_run_id,fsi_validation_time,fsi_total_agents,fsi_compliant_count,fsi_violation_count,fsi_overall_status,fsi_environments_scanned,fsi_summary_json"
+        $historySelect = "fsi_name,fsi_runid,fsi_validationtime,fsi_totalagents,fsi_compliantcount,fsi_violationcount,fsi_overallstatus,fsi_environmentsscanned,fsi_summaryjson"
 
         # Build query URL
-        $historyUrl = "$DataverseUrl/api/data/v9.2/fsi_moderationvalidationhistory?`$filter=$historyFilterString&`$orderby=fsi_validation_time desc&`$select=$historySelect"
+        $historyUrl = "$DataverseUrl/api/data/v9.2/fsi_moderationvalidationhistory?`$filter=$historyFilterString&`$orderby=fsi_validationtime desc&`$select=$historySelect"
 
         Write-Verbose "Querying validation history: FromDate=$fromDateUtc, ToDate=$toDateUtc"
         if ($RunId) { Write-Verbose "RunId filter: $RunId" }
@@ -192,29 +192,31 @@ function Get-CMMValidationResults {
             $violationFilters = @()
 
             # Date range on detected_at
-            $violationFilters += "fsi_detected_at ge $fromDateUtc"
-            $violationFilters += "fsi_detected_at le $toDateUtc"
+            $violationFilters += "fsi_detectedat ge $fromDateUtc"
+            $violationFilters += "fsi_detectedat le $toDateUtc"
 
             # Optional RunId filter
             if ($RunId) {
                 $safeRunId = $RunId -replace "'", "''"
-                $violationFilters += "fsi_run_id eq '$safeRunId'"
+                $violationFilters += "fsi_runid eq '$safeRunId'"
             }
 
             # Optional zone filter (not applied when 'All')
             # fsi_zone is a Dataverse picklist (integer) column — do not quote the value
             if ($Zone -ne 'All') {
-                $violationFilters += "fsi_zone eq $Zone"
+                $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
+                $zoneIntValue = $zoneIntMap[$Zone]
+                $violationFilters += "fsi_zone eq $zoneIntValue"
             }
 
             # Combine filters
             $violationFilterString = $violationFilters -join ' and '
 
             # Select fields for violations (agent-level detail for CMM)
-            $violationSelect = "fsi_name,fsi_environment_guid,fsi_environment_name,fsi_agent_id,fsi_agent_name,fsi_zone,fsi_expected_level,fsi_actual_level,fsi_severity,fsi_regulatory_context,fsi_detected_at,fsi_run_id"
+            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_agentid,fsi_agentname,fsi_zone,fsi_expectedlevel,fsi_actuallevel,fsi_severity,fsi_regulatorycontext,fsi_detectedat,fsi_runid"
 
             # Build query URL
-            $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_moderationviolations?`$filter=$violationFilterString&`$orderby=fsi_detected_at desc&`$select=$violationSelect"
+            $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_moderationviolations?`$filter=$violationFilterString&`$orderby=fsi_detectedat desc&`$select=$violationSelect"
 
             Write-Verbose "Querying violations: Zone=$Zone"
 

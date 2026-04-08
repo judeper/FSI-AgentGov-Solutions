@@ -91,7 +91,6 @@ Package Contents:
 - 12 PowerShell Scripts (validation, evidence export, Dataverse integration)
 - 5 Python Scripts (Dataverse schema/variable/connection deployment)
 - 1 requirements.txt (Python dependencies)
-- 1 Power Automate flow (daily scheduled orchestration)
 - 2 Templates (zone requirements, Teams alert card)
 - 5 Supporting Documentation Files
 

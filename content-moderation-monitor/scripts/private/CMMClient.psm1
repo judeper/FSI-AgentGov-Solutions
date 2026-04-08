@@ -19,16 +19,16 @@ $script:AccessToken = $null
 
 # Zone string-to-integer mapping for Dataverse picklist column (fsi_acv_zone option set)
 $script:ZoneToInt = @{
-    'Unknown' = 0
-    'Zone1'   = 1
-    'Zone2'   = 2
-    'Zone3'   = 3
+    'Unknown' = 100000000
+    'Zone1'   = 100000001
+    'Zone2'   = 100000002
+    'Zone3'   = 100000003
 }
 $script:IntToZone = @{
-    0 = 'Unknown'
-    1 = 'Zone1'
-    2 = 'Zone2'
-    3 = 'Zone3'
+    100000000 = 'Unknown'
+    100000001 = 'Zone1'
+    100000002 = 'Zone2'
+    100000003 = 'Zone3'
 }
 
 #endregion
@@ -210,7 +210,7 @@ function Get-ModerationBaseline {
         Optional agent ID to filter by.
 
     .PARAMETER ActiveOnly
-        When specified, returns only active baselines (fsi_is_active eq true).
+        When specified, returns only active baselines (fsi_isactive eq true).
         Use with no other filters to batch-query all active baselines for
         hashtable construction in drift detection.
     #>
@@ -237,14 +237,14 @@ function Get-ModerationBaseline {
         $filter = "statecode eq 0"
         if ($EnvironmentId) {
             $safeEnvId = $EnvironmentId -replace "'", "''"
-            $filter += " and fsi_environment_guid eq '$safeEnvId'"
+            $filter += " and fsi_environmentguid eq '$safeEnvId'"
         }
         if ($AgentId) {
             $safeAgentId = $AgentId -replace "'", "''"
-            $filter += " and fsi_agent_id eq '$safeAgentId'"
+            $filter += " and fsi_agentid eq '$safeAgentId'"
         }
         if ($ActiveOnly) {
-            $filter += " and fsi_is_active eq true"
+            $filter += " and fsi_isactive eq true"
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?" +
@@ -275,16 +275,16 @@ function Get-ModerationBaseline {
             [PSCustomObject]@{
                 BaselineId       = $_.fsi_moderationbaselineid
                 Name             = $_.fsi_name
-                EnvironmentGuid  = $_.fsi_environment_guid
-                EnvironmentName  = $_.fsi_environment_name
+                EnvironmentGuid  = $_.fsi_environmentguid
+                EnvironmentName  = $_.fsi_environmentname
                 Zone             = $zoneName
-                AgentId          = $_.fsi_agent_id
-                AgentName        = $_.fsi_agent_name
-                ModerationLevel  = $_.fsi_moderation_level
-                CapturedBy       = $_.fsi_captured_by
-                CapturedAt       = $_.fsi_captured_at
-                IsActive         = $_.fsi_is_active
-                RawJson          = $_.fsi_raw_json
+                AgentId          = $_.fsi_agentid
+                AgentName        = $_.fsi_agentname
+                ModerationLevel  = $_.fsi_moderationlevel
+                CapturedBy       = $_.fsi_capturedby
+                CapturedAt       = $_.fsi_capturedat
+                IsActive         = $_.fsi_isactive
+                RawJson          = $_.fsi_rawjson
             }
         }
     } catch {
@@ -325,14 +325,14 @@ function Write-ModerationValidationHistory {
     try {
         $record = @{
             fsi_name               = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-            fsi_run_id             = $RunId
-            fsi_validation_time    = (Get-Date).ToUniversalTime().ToString('o')
-            fsi_total_agents       = $ValidationResult.TotalAgents
-            fsi_compliant_count    = $ValidationResult.CompliantCount
-            fsi_violation_count    = $ValidationResult.ViolationCount
-            fsi_overall_status     = $ValidationResult.OverallStatus
-            fsi_environments_scanned = $ValidationResult.EnvironmentsScanned
-            fsi_summary_json       = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
+            fsi_runid              = $RunId
+            fsi_validationtime     = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_totalagents        = $ValidationResult.TotalAgents
+            fsi_compliantcount     = $ValidationResult.CompliantCount
+            fsi_violationcount     = $ValidationResult.ViolationCount
+            fsi_overallstatus      = $ValidationResult.OverallStatus
+            fsi_environmentsscanned = $ValidationResult.EnvironmentsScanned
+            fsi_summaryjson        = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationvalidationhistory"
@@ -389,20 +389,20 @@ function Write-ModerationViolation {
 
         $record = @{
             fsi_name                = "$($Violation.AgentName)-$($Violation.Zone)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environment_guid    = $Violation.EnvironmentId
-            fsi_environment_name    = $Violation.EnvironmentDisplayName
-            fsi_agent_id            = $Violation.AgentId
-            fsi_agent_name          = $Violation.AgentName
+            fsi_environmentguid     = $Violation.EnvironmentId
+            fsi_environmentname     = $Violation.EnvironmentDisplayName
+            fsi_agentid             = $Violation.AgentId
+            fsi_agentname           = $Violation.AgentName
             fsi_zone                = $zoneInt
-            fsi_expected_level      = $Violation.ExpectedLevel
-            fsi_actual_level        = $Violation.ActualLevel
+            fsi_expectedlevel       = $Violation.ExpectedLevel
+            fsi_actuallevel         = $Violation.ActualLevel
             fsi_severity            = $Violation.Severity
-            fsi_regulatory_context  = $Violation.RegulatoryContext
-            fsi_detected_at         = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_regulatorycontext   = $Violation.RegulatoryContext
+            fsi_detectedat          = (Get-Date).ToUniversalTime().ToString('o')
         }
 
         if ($RunId) {
-            $record['fsi_run_id'] = $RunId
+            $record['fsi_runid'] = $RunId
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationviolations"
@@ -667,7 +667,7 @@ function Save-CMMBaseline {
 
         # Deactivate existing active baseline for this agent
         $safeAgentId = $AgentId -replace "'", "''"
-        $deactivateFilter = "fsi_is_active eq true and fsi_agent_id eq '$safeAgentId'"
+        $deactivateFilter = "fsi_isactive eq true and fsi_agentid eq '$safeAgentId'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines?`$filter=$deactivateFilter&`$select=fsi_moderationbaselineid"
 
         $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers
@@ -676,7 +676,7 @@ function Save-CMMBaseline {
             $prevId = $prev.fsi_moderationbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationbaselines($prevId)"
-                $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json
+                $patchBody = @{ fsi_isactive = $false } | ConvertTo-Json
                 Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
                 Write-Verbose "Deactivated previous baseline: $prevId"
             }
@@ -694,16 +694,16 @@ function Save-CMMBaseline {
 
         $record = @{
             fsi_name               = "$AgentName-$Zone-$timestamp"
-            fsi_environment_guid   = $EnvironmentGuid
-            fsi_environment_name   = $EnvironmentName
+            fsi_environmentguid    = $EnvironmentGuid
+            fsi_environmentname    = $EnvironmentName
             fsi_zone               = $zoneInt
-            fsi_agent_id           = $AgentId
-            fsi_agent_name         = $AgentName
-            fsi_moderation_level   = $ModerationLevel
-            fsi_captured_by        = $capturedByValue
-            fsi_captured_at        = $timestamp
-            fsi_is_active          = $true
-            fsi_raw_json           = $rawJsonValue
+            fsi_agentid            = $AgentId
+            fsi_agentname          = $AgentName
+            fsi_moderationlevel    = $ModerationLevel
+            fsi_capturedby         = $capturedByValue
+            fsi_capturedat         = $timestamp
+            fsi_isactive           = $true
+            fsi_rawjson            = $rawJsonValue
         }
 
         if ($PSCmdlet.ShouldProcess("$AgentName in $EnvironmentName ($Zone)", "Save moderation baseline")) {
@@ -742,9 +742,9 @@ function Get-CMMLastValidation {
     }
 
     try {
-        $select = "fsi_name,fsi_run_id,fsi_overall_status,fsi_violation_count,fsi_total_agents,fsi_summary_json,fsi_validation_time"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_summaryjson,fsi_validationtime"
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_moderationvalidationhistory?" +
-               "`$orderby=fsi_validation_time desc&`$top=$Top&`$select=$select"
+               "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{
             'Authorization'    = "Bearer $script:AccessToken"
@@ -759,12 +759,12 @@ function Get-CMMLastValidation {
             return $response.value | ForEach-Object {
                 [PSCustomObject]@{
                     Name           = $_.fsi_name
-                    RunId          = $_.fsi_run_id
-                    OverallStatus  = $_.fsi_overall_status
-                    ViolationCount = $_.fsi_violation_count
-                    TotalAgents    = $_.fsi_total_agents
-                    SummaryJson    = $_.fsi_summary_json
-                    Timestamp      = $_.fsi_validation_time
+                    RunId          = $_.fsi_runid
+                    OverallStatus  = $_.fsi_overallstatus
+                    ViolationCount = $_.fsi_violationcount
+                    TotalAgents    = $_.fsi_totalagents
+                    SummaryJson    = $_.fsi_summaryjson
+                    Timestamp      = $_.fsi_validationtime
                 }
             }
         }

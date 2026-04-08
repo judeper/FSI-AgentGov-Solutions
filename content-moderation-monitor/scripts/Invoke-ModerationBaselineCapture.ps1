@@ -18,7 +18,7 @@
     - Queries live agent content moderation levels via Get-AgentModerationSettings
     - Captures ContentModerationLevel per agent (High, Medium, Low)
     - Deactivates existing active baselines per agent (single active baseline per agent)
-    - Writes new ModerationBaseline records to Dataverse with fsi_is_active=true
+    - Writes new ModerationBaseline records to Dataverse with fsi_isactive=true
     - Supports filtering by zone, environment GUID, or agent ID
     - Supports both interactive and certificate-based authentication
     - WhatIf mode for safe preview without writing to Dataverse
@@ -121,7 +121,7 @@
 
     Baseline management:
     - Only one active baseline per agent at any time
-    - Previous active baselines are automatically deactivated (fsi_is_active=false)
+    - Previous active baselines are automatically deactivated (fsi_isactive=false)
     - Deactivated baselines remain in Dataverse for historical audit
     - Use WhatIf to preview before committing
 
