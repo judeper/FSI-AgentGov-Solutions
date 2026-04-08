@@ -1,6 +1,6 @@
 # DR Testing Framework
 
-> **Version:** 1.1.0 | **Controls:** 2.4, 2.1, 1.9
+> **Version:** 1.2.0 | **Controls:** 2.4, 2.1, 1.9
 
 Automated disaster recovery testing workflows for AI agent infrastructure, supporting compliance with operational resilience requirements.
 
@@ -322,6 +322,8 @@ The framework generates compliance evidence:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | April 2026 | Environment variables, connection references, real Dataverse implementations in Invoke-DRTest and Export-DREvidence |
+| 1.1.0 | April 2026 | Dataverse schema script, documentation suite, prerequisites guide |
 | 1.0.2 | March 2026 | Sovereign cloud auth endpoint mapping, ClientId validation, exit code 2 for persistence failures |
 | 1.0.1 | March 2026 | Write-AuditLog stream fix, Retry-After support, SSRF validation, verbose diagnostics |
 | 1.0.0 | February 2026 | Initial release |
@@ -355,4 +357,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v1.1.0*
+*FSI Agent Governance Framework - DR Testing Framework v1.2.0*

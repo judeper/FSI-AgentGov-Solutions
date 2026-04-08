@@ -21,7 +21,7 @@ Before creating the flows, confirm you have:
   - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with ACRD schema deployed:
-  - 5 tables: `fsi_CommScanRun`, `fsi_CommViolation`, `fsi_CommApprovedRoute`, `fsi_CommException`, `fsi_CommSkillInventory`
+  - 5 tables: `fsi_CommScanRun`, `fsi_AgentCommViolation`, `fsi_ApprovedCommRoute`, `fsi_CommException`, `fsi_AgentSkillRegistration`
   - 9 environment variables configured
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
@@ -166,7 +166,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 | `TotalAgents` | `fsi_totalagents` | Integer | Total agents scanned |
 | `string(TotalEnvironments)` | `fsi_environmentsscanned` | String | Environments scanned |
 | Full JSON output | `fsi_summaryjson` | Memo | Complete runbook output |
-| `Timestamp` | `fsi_scantime` | DateTime | Scan execution timestamp |
+| `Timestamp` | `fsi_validationtime` | DateTime | Scan execution timestamp |
 
 5. Rename action: `Write_Scan_Run`
 
@@ -346,7 +346,7 @@ After either branch (use a common action after the condition):
    - `fsi_name`: `"ExceptionDecision-" + utcNow()`
    - `fsi_overallstatus`: `"Info"`
    - `fsi_summaryjson`: JSON object with exception ID, decision (Approved/Denied), approver, comments, source/target agent details
-   - `fsi_scantime`: `utcNow()`
+   - `fsi_validationtime`: `utcNow()`
 4. Rename: `Log_Exception_Decision`
 
 ### Step 9: Send Notification to Requester

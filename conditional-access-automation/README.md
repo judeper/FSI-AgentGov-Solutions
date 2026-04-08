@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v1.1.1
+> **Status:** Completed | **Version:** v1.2.0
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
@@ -493,7 +493,7 @@ The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve
 
 ## Version
 
-1.1.0 - February 2026
+1.2.0 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

@@ -293,7 +293,7 @@ function Get-ACRDSkillRegistration {
             if ($EnvironmentId -notmatch $guidPattern) {
                 throw "EnvironmentId '$EnvironmentId' is not a valid GUID format."
             }
-            $filter += " and fsi_environmentguid eq '$EnvironmentId'"
+            $filter += " and fsi_environmentid eq '$EnvironmentId'"
         }
         if ($AgentId) {
             if ($AgentId -notmatch $guidPattern) {
@@ -337,7 +337,7 @@ function Get-ACRDSkillRegistration {
             [PSCustomObject]@{
                 RegistrationId        = $_.fsi_agentskillregistrationid
                 Name                  = $_.fsi_name
-                EnvironmentGuid       = $_.fsi_environmentguid
+                EnvironmentGuid       = $_.fsi_environmentid
                 EnvironmentName       = $_.fsi_environmentname
                 SourceZone            = $sourceZoneName
                 AgentId               = $_.fsi_agentid
@@ -392,7 +392,7 @@ function Write-ACRDScanRun {
         $record = @{
             fsi_name                 = "$($ScanResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
             fsi_runid                = $RunId
-            fsi_scantime             = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_validationtime       = (Get-Date).ToUniversalTime().ToString('o')
             fsi_totalagents          = $ScanResult.TotalAgents
             fsi_totalskills          = $ScanResult.TotalSkills
             fsi_compliantcount       = $ScanResult.CompliantCount
@@ -470,14 +470,14 @@ function Write-ACRDViolation {
 
         $record = @{
             fsi_name                  = "$($Violation.CallingAgentName)->$($Violation.TargetAgentName)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environmentguid       = $Violation.EnvironmentId
+            fsi_callingenvironmentid  = $Violation.EnvironmentId
             fsi_environmentname       = $Violation.EnvironmentDisplayName
             fsi_callingagentid        = $Violation.CallingAgentId
             fsi_callingagentname      = $Violation.CallingAgentName
-            fsi_targetagentid         = $Violation.TargetAgentId
-            fsi_targetagentname       = $Violation.TargetAgentName
-            fsi_sourcezone            = $sourceZoneInt
-            fsi_targetzone            = $targetZoneInt
+            fsi_calledagentid         = $Violation.TargetAgentId
+            fsi_calledagentname       = $Violation.TargetAgentName
+            fsi_callingagentzone      = $sourceZoneInt
+            fsi_calledagentzone       = $targetZoneInt
             fsi_violationstatus       = $violationStatusInt
             fsi_severity              = $Violation.Severity
             fsi_regulatorycontext     = $Violation.RegulatoryContext
@@ -494,7 +494,7 @@ function Write-ACRDViolation {
             $record['fsi_skillname'] = $Violation.SkillName
         }
         if ($Violation.TargetEnvironmentId) {
-            $record['fsi_targetenvironmentid'] = $Violation.TargetEnvironmentId
+            $record['fsi_calledenvironmentid'] = $Violation.TargetEnvironmentId
         }
 
         if ($RunId) {
@@ -808,9 +808,9 @@ function Get-ACRDLastScan {
     }
 
     try {
-        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_totalskills,fsi_summaryjson,fsi_scantime"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_totalskills,fsi_summaryjson,fsi_validationtime"
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_commscanruns?" +
-               "`$orderby=fsi_scantime desc&`$top=$Top&`$select=$select"
+               "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{
             'Authorization'    = "Bearer $script:AccessToken"
@@ -831,7 +831,7 @@ function Get-ACRDLastScan {
                     TotalAgents    = $_.fsi_totalagents
                     TotalSkills    = $_.fsi_totalskills
                     SummaryJson    = $_.fsi_summaryjson
-                    Timestamp      = $_.fsi_scantime
+                    Timestamp      = $_.fsi_validationtime
                 }
             }
         }

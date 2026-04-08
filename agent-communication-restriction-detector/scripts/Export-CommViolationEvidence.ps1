@@ -1,4 +1,8 @@
 #Requires -Version 7.0
+# MSAL.PS is used for Dataverse authentication but is deprecated.
+# Microsoft recommends migrating to the Azure.Identity module.
+# See: https://github.com/AzureAD/MSAL.PS/issues/100
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -21,8 +25,8 @@
     and audit trail metadata.
 
     ACRD operates at the agent communication level: violation records include
-    per-agent detail (fsi_callingagentid, fsi_callingagentname, fsi_targetagentid,
-    fsi_targetagentname, fsi_sourcezone, fsi_targetzone, fsi_violationtype) for
+    per-agent detail (fsi_callingagentid, fsi_callingagentname, fsi_calledagentid,
+    fsi_calledagentname, fsi_callingagentzone, fsi_calledagentzone, fsi_violationtype) for
     inter-agent communication governance. This script supports FSI-AgentGov
     Control 2.17 (Multi-Agent Orchestration Limits) evidence collection
     requirements for agent communication restriction governance.
@@ -309,13 +313,13 @@ $headers = @{
 
 try {
     # Build scan runs OData filter
-    $scanFilter = "fsi_scantime ge $fromDateUtc and fsi_scantime le $toDateUtc"
+    $scanFilter = "fsi_validationtime ge $fromDateUtc and fsi_validationtime le $toDateUtc"
     if ($RunId) {
         $scanFilter += " and fsi_runid eq '$RunId'"
     }
 
     $scanRunUri = "$baseUrl/api/data/v9.2/fsi_commscanruns?" +
-                  "`$filter=$scanFilter&`$orderby=fsi_scantime desc"
+                  "`$filter=$scanFilter&`$orderby=fsi_validationtime desc"
 
     # Paginate through all scan run records
     $scanRuns = @()
@@ -345,7 +349,7 @@ try {
     $violationFilter = "fsi_detectedat ge $fromDateUtc and fsi_detectedat le $toDateUtc"
     if ($Zone -ne 'All') {
         $zoneInt = [int]$Zone
-        $violationFilter += " and fsi_sourcezone eq $zoneInt"
+        $violationFilter += " and fsi_callingagentzone eq $zoneInt"
     }
     if ($RunId) {
         $violationFilter += " and fsi_runid eq '$RunId'"
@@ -431,7 +435,7 @@ $scanRunsReadable = $scanRuns | ForEach-Object {
     [PSCustomObject]@{
         name                 = $_.fsi_name
         runId                = $_.fsi_runid
-        scanTime             = $_.fsi_scantime
+        scanTime             = $_.fsi_validationtime
         totalAgents          = $_.fsi_totalagents
         totalSkills          = $_.fsi_totalskills
         compliantCount       = $_.fsi_compliantcount
@@ -446,21 +450,21 @@ $scanRunsReadable = $scanRuns | ForEach-Object {
 $violationsReadable = $violations | ForEach-Object {
     [PSCustomObject]@{
         name                 = $_.fsi_name
-        environmentGuid      = $_.fsi_environmentguid
+        callingEnvironmentId = $_.fsi_callingenvironmentid
         environmentName      = $_.fsi_environmentname
         callingAgentId       = $_.fsi_callingagentid
         callingAgentName     = $_.fsi_callingagentname
-        targetAgentId        = $_.fsi_targetagentid
-        targetAgentName      = $_.fsi_targetagentname
-        sourceZone           = $_.fsi_sourcezone
-        targetZone           = $_.fsi_targetzone
+        calledAgentId        = $_.fsi_calledagentid
+        calledAgentName      = $_.fsi_calledagentname
+        callingAgentZone     = $_.fsi_callingagentzone
+        calledAgentZone      = $_.fsi_calledagentzone
         violationType        = $_.fsi_violationtype
         severity             = $_.fsi_severity
         regulatoryContext    = $_.fsi_regulatorycontext
         detectedAt           = $_.fsi_detectedat
         runId                = $_.fsi_runid
         skillName            = $_.fsi_skillname
-        targetEnvironmentId  = $_.fsi_targetenvironmentid
+        calledEnvironmentId  = $_.fsi_calledenvironmentid
     }
 }
 

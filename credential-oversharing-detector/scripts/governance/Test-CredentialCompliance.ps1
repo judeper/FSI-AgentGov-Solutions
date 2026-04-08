@@ -31,9 +31,6 @@
 .PARAMETER ExcludeSandbox
     Exclude sandbox-type environments from the scan.
 
-.PARAMETER ExcludeTrial
-    Exclude trial-type environments from the scan.
-
 .PARAMETER IncludeCompliant
     Include compliant agents in output. Default: violations only.
 
@@ -60,9 +57,9 @@
     settings and table output.
 
 .EXAMPLE
-    .\Test-CredentialCompliance.ps1 -OutputFormat JSON -ExcludeSandbox -ExcludeTrial
+    .\Test-CredentialCompliance.ps1 -OutputFormat JSON -ExcludeSandbox
 
-    Scans production environments only with JSON output.
+    Scans non-sandbox environments with JSON output.
 
 .EXAMPLE
     .\Test-CredentialCompliance.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
@@ -97,9 +94,6 @@ param(
 
     [Parameter()]
     [switch]$ExcludeSandbox,
-
-    [Parameter()]
-    [switch]$ExcludeTrial,
 
     [Parameter()]
     [switch]$IncludeCompliant,
@@ -142,7 +136,7 @@ if (-not (Test-Path $policyScriptPath)) {
 
 # Resolve baseline policy path
 if (-not $BaselinePath) {
-    $BaselinePath = Join-Path (Split-Path $scriptRoot -Parent) "templates" "zone-credential-policy.json"
+    $BaselinePath = Join-Path (Split-Path (Split-Path $scriptRoot -Parent) -Parent) "templates" "zone-credential-policy.json"
 }
 
 if (-not (Test-Path $BaselinePath)) {
@@ -274,10 +268,10 @@ if ($PersistResults -and $DataverseUrl) {
         fsi_name              = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_scanrunid         = $scanResult.ScanRunId
         fsi_overallstatus     = $overallStatus
-        fsi_totalagents       = $scanResult.TotalAgents
+        fsi_agentsscanned     = $scanResult.TotalAgents
         fsi_compliantagents   = $totalCompliant
-        fsi_totalviolations   = $scanResult.TotalViolations
-        fsi_scantimestamp     = $scanResult.ScanTimestamp
+        fsi_violationsfound   = $scanResult.TotalViolations
+        fsi_scanstartedat     = $scanResult.ScanTimestamp
         fsi_zonesummary       = ($zoneSummary | ConvertTo-Json -Depth 5 -Compress)
     }
 

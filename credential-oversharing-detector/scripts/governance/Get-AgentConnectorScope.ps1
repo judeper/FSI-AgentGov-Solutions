@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules Az.Accounts, Microsoft.PowerApps.Administration.PowerShell
 
 <#
 .SYNOPSIS

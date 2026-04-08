@@ -78,7 +78,7 @@ $ErrorActionPreference = "Stop"
 #region Resolve Policy File
 
 if (-not $PolicyPath) {
-    $PolicyPath = Join-Path (Split-Path $PSScriptRoot -Parent) "templates" "zone-credential-policy.json"
+    $PolicyPath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "templates" "zone-credential-policy.json"
 }
 
 #endregion

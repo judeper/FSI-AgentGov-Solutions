@@ -177,7 +177,7 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
   "metadata": {
     "exportedAt": "2026-02-10T14:30:22Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.0.1",
+    "solutionVersion": "1.0.2",
     "fromDate": "2026-01-11T00:00:00Z",
     "toDate": "2026-02-10T14:30:22Z",
     "runId": null,

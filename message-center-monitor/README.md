@@ -233,7 +233,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.1.3 - April 2026
+2.2.0 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

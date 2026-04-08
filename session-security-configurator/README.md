@@ -1,6 +1,6 @@
 # Session Security Configurator
 
-> **Status:** v1.0.0 — Complete
+> **Status:** v1.0.1 — Complete
 
 Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements.
 
@@ -260,6 +260,7 @@ This solution supports the following FSI-AgentGov controls:
 | Control | Description |
 |---------|-------------|
 | [1.23](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-session-security-step-up-authentication/) | Session Security and Step-Up Authentication |
+| [1.11](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-mfa/) | Conditional Access and MFA |
 
 ## Related Solutions
 
