@@ -102,7 +102,7 @@ This guide provides step-by-step instructions for manually building the HITL Wor
    - Fields:
      - `fsi_name`: Expression `concat('HITL-Run-', variables('runId'))`
      - `fsi_runid`: Variable `runId`
-     - `fsi_validationtime`: Variable `timestamp`
+     - `fsi_scantime`: Variable `timestamp`
      - `fsi_overallstatus`: Parsed `OverallStatus`
      - `fsi_totalagents`: Parsed `TotalAgents`
      - `fsi_totalflows`: Parsed `TotalFlows`

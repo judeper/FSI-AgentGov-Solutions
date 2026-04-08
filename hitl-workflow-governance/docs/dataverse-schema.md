@@ -41,6 +41,7 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_CheckpointStatus | Picklist (fsi_HWG_checkpointstatus) | Yes | Whether checkpoint is present/missing |
 | fsi_AssignedReviewers | String(2000) | No | Configured reviewer email addresses |
 | fsi_InputCount | Integer | No | Number of RFI inputs configured |
+| fsi_HasHitlCheckpoint | Boolean (default: false) | Yes | Whether agent flow has at least one HITL checkpoint |
 | fsi_ViolationStatus | Picklist (fsi_HWG_violationstatus) | Yes | Current violation lifecycle status |
 | fsi_ViolationType | String(200) | No | e.g., MissingHitlCheckpoint, MissingReviewer, InsufficientInputs |
 | fsi_Severity | String(50) | Yes | Critical/High/Medium/Warning |
@@ -76,9 +77,13 @@ Auto-generated schema documentation. Do not edit manually.
 |-------------------|------|----------|-------------|
 | fsi_Name | String(200) | Yes | Primary name attribute |
 | fsi_RunId | String(36) | Yes | GUID correlating all records in one scan run |
-| fsi_ValidationTime | DateTime | Yes | When scan executed |
+| fsi_ScanTime | DateTime | Yes | When scan executed |
 | fsi_TotalAgents | Integer | Yes | Total agents scanned |
 | fsi_TotalFlows | Integer | Yes | Total agent flows evaluated |
+| fsi_AgentsWithHitl | Integer | No | Agents with at least one HITL checkpoint |
+| fsi_AgentsMissingHitl | Integer | No | Agents missing required HITL checkpoints |
+| fsi_TotalCheckpoints | Integer | No | Total HITL checkpoints found across all agents |
+| fsi_CompliantCount | Integer | No | Number of compliant agents in this scan run |
 | fsi_CheckpointsFound | Integer | Yes | HITL checkpoints detected |
 | fsi_CheckpointsMissing | Integer | Yes | Required HITL checkpoints not found |
 | fsi_ViolationCount | Integer | Yes | Total violations detected in this scan run |

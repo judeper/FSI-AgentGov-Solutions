@@ -103,7 +103,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 1. Manually create global option sets in Power Apps maker portal if automated deployment fails
 2. Re-run the schema deployment script with `--tables-only` to skip option set creation
 3. Or assign Solution.Add permissions to the deployment account
-4. Verify option set values match those in `create_hitl_dataverse_schema.py`
+4. Verify option set values match those in `create_hwg_dataverse_schema.py`
 
 ---
 
@@ -167,7 +167,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 
 **Resolution:**
 1. Verify the Teams connector connection is authenticated (Power Automate > Connections)
-2. Check `fsi_HITL_TeamsGroupId` and `fsi_HITL_TeamsChannelId` environment variables contain correct GUIDs
+2. Check `fsi_HWG_TeamsGroupId` and `fsi_HWG_TeamsChannelId` environment variables contain correct GUIDs
 3. Verify the channel exists and the flow connection user has access
 4. Check Teams admin policies allow bot messages and adaptive card posting
 5. Test with a direct chat instead of channel to isolate the issue
@@ -198,7 +198,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 **Cause:** Approver did not respond within the configured timeout period.
 
 **Resolution:**
-1. Verify the `fsi_HITL_ComplianceApproverEmail` environment variable points to an active, monitored mailbox
+1. Verify the `fsi_HWG_ComplianceApproverEmail` environment variable points to an active, monitored mailbox
 2. Consider using a distribution group or shared mailbox for approvals
 3. Set up a reminder flow that re-notifies the approver at 7 days
 4. After timeout, the exception record is automatically set to `fsi_isactive = false` — resubmit if still needed
