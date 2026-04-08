@@ -29,7 +29,7 @@
 
 ### Dataverse
 
-#### "Entity 'fsi_fileupload_baseline' does not exist"
+#### "Entity 'fsi_fileuploadbaseline' does not exist"
 
 **Cause:** Schema not deployed.
 
@@ -39,7 +39,7 @@ cd scripts
 python deploy.py --tenant-id <tid> --url <url> --interactive
 ```
 
-#### "Column 'fsi_file_upload_enabled' does not exist"
+#### "Column 'fsi_fileuploadenabled' does not exist"
 
 **Cause:** Partial schema deployment.
 
@@ -122,7 +122,7 @@ cd file-upload-security\scripts
 **Cause:** No validation history in date range.
 
 **Resolution:**
-1. Verify validation runs have completed: check `fsi_fileupload_validationhistory`
+1. Verify validation runs have completed: check `fsi_fileuploadvalidationhistory`
 2. Adjust date range: `-StartDate` and `-EndDate`
 3. Run a validation first: `Test-FileUploadCompliance.ps1`
 

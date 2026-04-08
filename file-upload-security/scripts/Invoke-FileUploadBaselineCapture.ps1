@@ -128,6 +128,8 @@ $banner = @"
 Write-Host $banner
 
 # ── Validate Parameters ──────────────────────────────────────────
+try {
+
 if (-not $DataverseUrl) {
     throw 'DataverseUrl is required. Provide via -DataverseUrl or environment variable.'
 }
@@ -317,3 +319,9 @@ switch ($OutputFormat) {
 
 # Return results for pipeline use
 $results
+
+} catch {
+    Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  At: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    throw
+}

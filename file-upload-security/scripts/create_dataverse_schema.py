@@ -2,9 +2,9 @@
 """Create Dataverse schema for File Upload Security Configurator.
 
 Creates three tables with idempotent column provisioning:
-  - fsi_fileupload_baseline      (UserOwned)
-  - fsi_fileupload_validationhistory (OrgOwned / immutable)
-  - fsi_fileupload_violation     (UserOwned)
+  - fsi_FileUploadBaseline      (UserOwned)
+  - fsi_FileUploadValidationHistory (OrgOwned / immutable)
+  - fsi_FileUploadViolation     (UserOwned)
 
 Reuses shared option sets: fsi_acv_zone, fsi_acv_severity.
 
@@ -129,53 +129,53 @@ def _decimal_col(
 # ── Table Definitions ──────────────────────────────────────────────
 
 BASELINE_COLUMNS = [
-    ("fsi_agent_id", "string", lambda: _string_col("fsi_agent_id", "Agent ID", 200, True)),
-    ("fsi_agent_name", "string", lambda: _string_col("fsi_agent_name", "Agent Name", 500)),
-    ("fsi_environment_id", "string", lambda: _string_col("fsi_environment_id", "Environment ID", 200)),
-    ("fsi_environment_name", "string", lambda: _string_col("fsi_environment_name", "Environment Name", 500)),
+    ("fsi_AgentId", "string", lambda: _string_col("fsi_AgentId", "Agent ID", 200, True)),
+    ("fsi_AgentName", "string", lambda: _string_col("fsi_AgentName", "Agent Name", 500)),
+    ("fsi_EnvironmentId", "string", lambda: _string_col("fsi_EnvironmentId", "Environment ID", 200)),
+    ("fsi_EnvironmentName", "string", lambda: _string_col("fsi_EnvironmentName", "Environment Name", 500)),
     ("fsi_zone", "picklist", lambda: _picklist_col("fsi_zone", "Zone", "fsi_acv_zone")),
-    ("fsi_file_upload_enabled", "boolean", lambda: _bool_col("fsi_file_upload_enabled", "File Upload Enabled")),
-    ("fsi_content_moderation_level", "string", lambda: _string_col("fsi_content_moderation_level", "Content Moderation Level", 50)),
-    ("fsi_baseline_captured_on", "datetime", lambda: _datetime_col("fsi_baseline_captured_on", "Baseline Captured On")),
-    ("fsi_baseline_captured_by", "string", lambda: _string_col("fsi_baseline_captured_by", "Baseline Captured By", 200)),
-    ("fsi_owner_email", "string", lambda: _string_col("fsi_owner_email", "Owner Email", 320)),
+    ("fsi_FileUploadEnabled", "boolean", lambda: _bool_col("fsi_FileUploadEnabled", "File Upload Enabled")),
+    ("fsi_ContentModerationLevel", "string", lambda: _string_col("fsi_ContentModerationLevel", "Content Moderation Level", 50)),
+    ("fsi_BaselineCapturedOn", "datetime", lambda: _datetime_col("fsi_BaselineCapturedOn", "Baseline Captured On")),
+    ("fsi_BaselineCapturedBy", "string", lambda: _string_col("fsi_BaselineCapturedBy", "Baseline Captured By", 200)),
+    ("fsi_OwnerEmail", "string", lambda: _string_col("fsi_OwnerEmail", "Owner Email", 320)),
     ("fsi_notes", "memo", lambda: _memo_col("fsi_notes", "Notes")),
 ]
 
 HISTORY_COLUMNS = [
-    ("fsi_run_id", "string", lambda: _string_col("fsi_run_id", "Run ID", 100, True)),
-    ("fsi_run_timestamp", "datetime", lambda: _datetime_col("fsi_run_timestamp", "Run Timestamp")),
-    ("fsi_validation_time", "datetime", lambda: _datetime_col("fsi_validation_time", "Validation Time")),
-    ("fsi_total_agents", "integer", lambda: _int_col("fsi_total_agents", "Total Agents")),
-    ("fsi_compliant_count", "integer", lambda: _int_col("fsi_compliant_count", "Compliant Count")),
-    ("fsi_violation_count", "integer", lambda: _int_col("fsi_violation_count", "Violation Count")),
-    ("fsi_file_upload_enabled_count", "integer", lambda: _int_col("fsi_file_upload_enabled_count", "File Upload Enabled Count")),
-    ("fsi_overall_status", "string", lambda: _string_col("fsi_overall_status", "Overall Status", 50)),
-    ("fsi_compliance_rate", "decimal", lambda: _decimal_col("fsi_compliance_rate", "Compliance Rate %")),
-    ("fsi_environments_scanned", "integer", lambda: _int_col("fsi_environments_scanned", "Environments Scanned")),
-    ("fsi_scan_duration_seconds", "integer", lambda: _int_col("fsi_scan_duration_seconds", "Scan Duration (s)", 0, 86400)),
-    ("fsi_summary_json", "memo", lambda: _memo_col("fsi_summary_json", "Summary JSON")),
+    ("fsi_RunId", "string", lambda: _string_col("fsi_RunId", "Run ID", 100, True)),
+    ("fsi_RunTimestamp", "datetime", lambda: _datetime_col("fsi_RunTimestamp", "Run Timestamp")),
+    ("fsi_ValidationTime", "datetime", lambda: _datetime_col("fsi_ValidationTime", "Validation Time")),
+    ("fsi_TotalAgents", "integer", lambda: _int_col("fsi_TotalAgents", "Total Agents")),
+    ("fsi_CompliantCount", "integer", lambda: _int_col("fsi_CompliantCount", "Compliant Count")),
+    ("fsi_ViolationCount", "integer", lambda: _int_col("fsi_ViolationCount", "Violation Count")),
+    ("fsi_FileUploadEnabledCount", "integer", lambda: _int_col("fsi_FileUploadEnabledCount", "File Upload Enabled Count")),
+    ("fsi_OverallStatus", "string", lambda: _string_col("fsi_OverallStatus", "Overall Status", 50)),
+    ("fsi_ComplianceRate", "decimal", lambda: _decimal_col("fsi_ComplianceRate", "Compliance Rate %")),
+    ("fsi_EnvironmentsScanned", "integer", lambda: _int_col("fsi_EnvironmentsScanned", "Environments Scanned")),
+    ("fsi_ScanDurationSeconds", "integer", lambda: _int_col("fsi_ScanDurationSeconds", "Scan Duration (s)", 0, 86400)),
+    ("fsi_SummaryJson", "memo", lambda: _memo_col("fsi_SummaryJson", "Summary JSON")),
     ("fsi_notes", "memo", lambda: _memo_col("fsi_notes", "Run Notes")),
 ]
 
 VIOLATION_COLUMNS = [
-    ("fsi_agent_id", "string", lambda: _string_col("fsi_agent_id", "Agent ID", 200, True)),
-    ("fsi_agent_name", "string", lambda: _string_col("fsi_agent_name", "Agent Name", 500)),
-    ("fsi_environment_id", "string", lambda: _string_col("fsi_environment_id", "Environment ID", 200)),
-    ("fsi_environment_name", "string", lambda: _string_col("fsi_environment_name", "Environment Name", 500)),
+    ("fsi_AgentId", "string", lambda: _string_col("fsi_AgentId", "Agent ID", 200, True)),
+    ("fsi_AgentName", "string", lambda: _string_col("fsi_AgentName", "Agent Name", 500)),
+    ("fsi_EnvironmentId", "string", lambda: _string_col("fsi_EnvironmentId", "Environment ID", 200)),
+    ("fsi_EnvironmentName", "string", lambda: _string_col("fsi_EnvironmentName", "Environment Name", 500)),
     ("fsi_zone", "picklist", lambda: _picklist_col("fsi_zone", "Zone", "fsi_acv_zone")),
     ("fsi_severity", "picklist", lambda: _picklist_col("fsi_severity", "Severity", "fsi_acv_severity")),
-    ("fsi_violation_type", "string", lambda: _string_col("fsi_violation_type", "Violation Type", 100)),
-    ("fsi_file_upload_expected", "string", lambda: _string_col("fsi_file_upload_expected", "File Upload Expected", 50)),
-    ("fsi_file_upload_actual", "string", lambda: _string_col("fsi_file_upload_actual", "File Upload Actual", 50)),
-    ("fsi_content_moderation_level", "string", lambda: _string_col("fsi_content_moderation_level", "Content Moderation Level", 50)),
-    ("fsi_content_moderation_minimum", "string", lambda: _string_col("fsi_content_moderation_minimum", "Minimum Required Moderation", 50)),
-    ("fsi_detected_on", "datetime", lambda: _datetime_col("fsi_detected_on", "Detected On")),
-    ("fsi_run_id", "string", lambda: _string_col("fsi_run_id", "Run ID", 100)),
-    ("fsi_owner_email", "string", lambda: _string_col("fsi_owner_email", "Owner Email", 320)),
-    ("fsi_remediation_notes", "memo", lambda: _memo_col("fsi_remediation_notes", "Remediation Notes")),
+    ("fsi_ViolationType", "string", lambda: _string_col("fsi_ViolationType", "Violation Type", 100)),
+    ("fsi_FileUploadExpected", "string", lambda: _string_col("fsi_FileUploadExpected", "File Upload Expected", 50)),
+    ("fsi_FileUploadActual", "string", lambda: _string_col("fsi_FileUploadActual", "File Upload Actual", 50)),
+    ("fsi_ContentModerationLevel", "string", lambda: _string_col("fsi_ContentModerationLevel", "Content Moderation Level", 50)),
+    ("fsi_ContentModerationMinimum", "string", lambda: _string_col("fsi_ContentModerationMinimum", "Minimum Required Moderation", 50)),
+    ("fsi_DetectedOn", "datetime", lambda: _datetime_col("fsi_DetectedOn", "Detected On")),
+    ("fsi_RunId", "string", lambda: _string_col("fsi_RunId", "Run ID", 100)),
+    ("fsi_OwnerEmail", "string", lambda: _string_col("fsi_OwnerEmail", "Owner Email", 320)),
+    ("fsi_RemediationNotes", "memo", lambda: _memo_col("fsi_RemediationNotes", "Remediation Notes")),
     ("fsi_resolved", "boolean", lambda: _bool_col("fsi_resolved", "Resolved")),
-    ("fsi_resolved_on", "datetime", lambda: _datetime_col("fsi_resolved_on", "Resolved On")),
+    ("fsi_ResolvedOn", "datetime", lambda: _datetime_col("fsi_ResolvedOn", "Resolved On")),
 ]
 
 
@@ -222,17 +222,17 @@ def ensure_shared_option_sets(client: FUSClient) -> None:
 
     client.create_option_set(
         "fsi_acv_zone",
-        [("Zone 1 - Personal", 1), ("Zone 2 - Team", 2), ("Zone 3 - Enterprise", 3)],
+        [("Zone 1 - Personal", 100000000), ("Zone 2 - Team", 100000001), ("Zone 3 - Enterprise", 100000002)],
     )
     client.create_option_set(
         "fsi_acv_severity",
         [
-            ("Info", 0),
-            ("Low", 1),
-            ("Medium", 2),
-            ("High", 3),
-            ("Critical", 4),
-            ("Warning", 5),
+            ("Info", 100000000),
+            ("Low", 100000001),
+            ("Medium", 100000002),
+            ("High", 100000003),
+            ("Critical", 100000004),
+            ("Warning", 100000005),
         ],
     )
 
@@ -243,7 +243,7 @@ def deploy_schema(client: FUSClient) -> None:
 
     _create_table(
         client,
-        logical_name="fsi_fileupload_baseline",
+        logical_name="fsi_FileUploadBaseline",
         display="File Upload Baseline",
         plural="File Upload Baselines",
         description="Approved file upload configuration baseline per agent",
@@ -253,7 +253,7 @@ def deploy_schema(client: FUSClient) -> None:
 
     _create_table(
         client,
-        logical_name="fsi_fileupload_validationhistory",
+        logical_name="fsi_FileUploadValidationHistory",
         display="File Upload Validation History",
         plural="File Upload Validation History",
         description="Immutable audit trail of file upload compliance scans",
@@ -263,7 +263,7 @@ def deploy_schema(client: FUSClient) -> None:
 
     _create_table(
         client,
-        logical_name="fsi_fileupload_violation",
+        logical_name="fsi_FileUploadViolation",
         display="File Upload Violation",
         plural="File Upload Violations",
         description="Active file upload policy violations requiring remediation",

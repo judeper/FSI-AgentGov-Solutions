@@ -405,9 +405,9 @@ function ConvertTo-ZoneOptionValue {
     #>
     param([string]$Zone)
     switch -Regex ($Zone) {
-        '1' { return 1 }
-        '2' { return 2 }
-        '3' { return 3 }
+        '1' { return 100000000 }
+        '2' { return 100000001 }
+        '3' { return 100000002 }
         default {
             Write-Warning "Unknown zone '$Zone' — cannot map to option set value"
             return $null
@@ -422,12 +422,12 @@ function ConvertTo-SeverityOptionValue {
     #>
     param([string]$Severity)
     switch ($Severity) {
-        'Info'     { return 0 }
-        'Low'      { return 1 }
-        'Warning'  { return 5 }
-        'Medium'   { return 2 }
-        'High'     { return 3 }
-        'Critical' { return 4 }
+        'Info'     { return 100000000 }
+        'Low'      { return 100000001 }
+        'Warning'  { return 100000005 }
+        'Medium'   { return 100000002 }
+        'High'     { return 100000003 }
+        'Critical' { return 100000004 }
         default {
             Write-Warning "Unknown severity '$Severity' — cannot map to option set value"
             return $null
@@ -474,17 +474,17 @@ function Get-FileUploadBaseline {
         $filter = "statecode eq 0"
         if ($EnvironmentId) {
             $safeEnvId = $EnvironmentId -replace "'", "''"
-            $filter += " and fsi_environment_id eq '$safeEnvId'"
+            $filter += " and fsi_environmentid eq '$safeEnvId'"
         }
         if ($AgentId) {
             $safeAgentId = $AgentId -replace "'", "''"
-            $filter += " and fsi_agent_id eq '$safeAgentId'"
+            $filter += " and fsi_agentid eq '$safeAgentId'"
         }
         if ($ActiveOnly) {
             # Active records already filtered by statecode eq 0 above
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_baselines?" +
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines?" +
                "`$filter=$filter&`$orderby=createdon desc"
 
         $headers = @{
@@ -505,15 +505,15 @@ function Get-FileUploadBaseline {
             [PSCustomObject]@{
                 BaselineId          = $_.fsi_fileuploadbaselineid
                 Name                = $_.fsi_name
-                EnvironmentGuid     = $_.fsi_environment_id
-                EnvironmentName     = $_.fsi_environment_name
+                EnvironmentGuid     = $_.fsi_environmentid
+                EnvironmentName     = $_.fsi_environmentname
                 Zone                = $_.fsi_zone
-                AgentId             = $_.fsi_agent_id
-                AgentName           = $_.fsi_agent_name
-                FileUploadEnabled   = $_.fsi_file_upload_enabled
-                ModerationLevel     = $_.fsi_content_moderation_level
-                CapturedBy          = $_.fsi_baseline_captured_by
-                CapturedAt          = $_.fsi_baseline_captured_on
+                AgentId             = $_.fsi_agentid
+                AgentName           = $_.fsi_agentname
+                FileUploadEnabled   = $_.fsi_fileuploadenabled
+                ModerationLevel     = $_.fsi_contentmoderationlevel
+                CapturedBy          = $_.fsi_baselinecapturedby
+                CapturedAt          = $_.fsi_baselinecapturedon
             }
         }
     } catch {
@@ -570,15 +570,15 @@ function Save-FUSBaseline {
         }
 
         # Deactivate existing active baseline for this agent
-        $deactivateFilter = "statecode eq 0 and fsi_agent_id eq '$($AgentId -replace "'", "''")'"
-        $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_baselines?`$filter=$deactivateFilter&`$select=fsi_fileuploadbaselineid"
+        $deactivateFilter = "statecode eq 0 and fsi_agentid eq '$($AgentId -replace "'", "''")'"
+        $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines?`$filter=$deactivateFilter&`$select=fsi_fileuploadbaselineid"
 
         $existing = Invoke-DataverseRequest -Uri $queryUri -Headers $headers -Method Get
 
         foreach ($prev in $existing.value) {
             $prevId = $prev.fsi_fileuploadbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
-                $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_baselines($prevId)"
+                $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines($prevId)"
                 $patchBody = @{ statecode = 1 } | ConvertTo-Json
                 Invoke-DataverseRequest -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
                 Write-Verbose "Deactivated previous baseline: $prevId"
@@ -592,19 +592,19 @@ function Save-FUSBaseline {
 
         $record = @{
             fsi_name                  = "$AgentName-$Zone-$timestamp"
-            fsi_environment_id        = $EnvironmentGuid
-            fsi_environment_name      = $EnvironmentName
+            fsi_environmentid         = $EnvironmentGuid
+            fsi_environmentname       = $EnvironmentName
             fsi_zone                  = (ConvertTo-ZoneOptionValue -Zone $Zone)
-            fsi_agent_id              = $AgentId
-            fsi_agent_name            = $AgentName
-            fsi_file_upload_enabled   = $FileUploadEnabled
-            fsi_content_moderation_level = $ModerationLevel
-            fsi_baseline_captured_by  = $capturedByValue
-            fsi_baseline_captured_on  = $timestamp
+            fsi_agentid               = $AgentId
+            fsi_agentname             = $AgentName
+            fsi_fileuploadenabled     = $FileUploadEnabled
+            fsi_contentmoderationlevel = $ModerationLevel
+            fsi_baselinecapturedby    = $capturedByValue
+            fsi_baselinecapturedon    = $timestamp
         }
 
         if ($PSCmdlet.ShouldProcess("$AgentName in $EnvironmentName ($Zone)", "Save file upload baseline")) {
-            $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_baselines"
+            $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines"
             $response = Invoke-DataverseRequest -Uri $uri -Headers $headers -Method Post -Body ($record | ConvertTo-Json)
             Write-Verbose "Baseline saved for $AgentName in $EnvironmentName ($Zone)"
             return $response
@@ -641,18 +641,18 @@ function Write-FileUploadValidationHistory {
     try {
         $record = @{
             fsi_name                   = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-            fsi_run_id                 = $RunId
-            fsi_validation_time        = (Get-Date).ToUniversalTime().ToString('o')
-            fsi_total_agents           = $ValidationResult.TotalAgents
-            fsi_compliant_count        = $ValidationResult.CompliantCount
-            fsi_violation_count        = $ValidationResult.ViolationCount
-            fsi_file_upload_enabled_count = $ValidationResult.FileUploadEnabledCount
-            fsi_overall_status         = $ValidationResult.OverallStatus
-            fsi_environments_scanned   = $ValidationResult.EnvironmentsScanned
-            fsi_summary_json           = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
+            fsi_runid                  = $RunId
+            fsi_validationtime         = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_totalagents            = $ValidationResult.TotalAgents
+            fsi_compliantcount         = $ValidationResult.CompliantCount
+            fsi_violationcount         = $ValidationResult.ViolationCount
+            fsi_fileuploadenabledcount = $ValidationResult.FileUploadEnabledCount
+            fsi_overallstatus          = $ValidationResult.OverallStatus
+            fsi_environmentsscanned    = $ValidationResult.EnvironmentsScanned
+            fsi_summaryjson            = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_validationhistorys"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistorys"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -695,25 +695,25 @@ function Write-FileUploadViolation {
     try {
         $record = @{
             fsi_name                    = "$($Violation.AgentName)-$($Violation.Zone)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environment_id          = $Violation.EnvironmentId
-            fsi_environment_name        = $Violation.EnvironmentDisplayName
-            fsi_agent_id                = $Violation.AgentId
-            fsi_agent_name              = $Violation.AgentName
+            fsi_environmentid           = $Violation.EnvironmentId
+            fsi_environmentname         = $Violation.EnvironmentDisplayName
+            fsi_agentid                 = $Violation.AgentId
+            fsi_agentname               = $Violation.AgentName
             fsi_zone                    = (ConvertTo-ZoneOptionValue -Zone $Violation.Zone)
-            fsi_file_upload_expected    = $Violation.ExpectedFileUpload
-            fsi_file_upload_actual      = $Violation.ActualFileUpload
-            fsi_content_moderation_minimum = $Violation.ExpectedModeration
-            fsi_content_moderation_level = $Violation.ActualModeration
+            fsi_fileuploadexpected      = $Violation.ExpectedFileUpload
+            fsi_fileuploadactual        = $Violation.ActualFileUpload
+            fsi_contentmoderationminimum = $Violation.ExpectedModeration
+            fsi_contentmoderationlevel  = $Violation.ActualModeration
             fsi_severity                = (ConvertTo-SeverityOptionValue -Severity $Violation.Severity)
-            fsi_violation_type          = $Violation.ViolationType
-            fsi_detected_on             = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_violationtype           = $Violation.ViolationType
+            fsi_detectedon              = (Get-Date).ToUniversalTime().ToString('o')
         }
 
         if ($RunId) {
-            $record['fsi_run_id'] = $RunId
+            $record['fsi_runid'] = $RunId
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_violations"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadviolations"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -750,9 +750,9 @@ function Get-FUSLastValidation {
     }
 
     try {
-        $select = "fsi_name,fsi_run_id,fsi_overall_status,fsi_violation_count,fsi_total_agents,fsi_file_upload_enabled_count,fsi_summary_json,fsi_validation_time"
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileupload_validationhistorys?" +
-               "`$orderby=fsi_validation_time desc&`$top=$Top&`$select=$select"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_fileuploadenabledcount,fsi_summaryjson,fsi_validationtime"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistorys?" +
+               "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{
             'Authorization'    = "Bearer $script:AccessToken"
@@ -767,13 +767,13 @@ function Get-FUSLastValidation {
             return $response.value | ForEach-Object {
                 [PSCustomObject]@{
                     Name                   = $_.fsi_name
-                    RunId                  = $_.fsi_run_id
-                    OverallStatus          = $_.fsi_overall_status
-                    ViolationCount         = $_.fsi_violation_count
-                    TotalAgents            = $_.fsi_total_agents
-                    FileUploadEnabledCount = $_.fsi_file_upload_enabled_count
-                    SummaryJson            = $_.fsi_summary_json
-                    Timestamp              = $_.fsi_validation_time
+                    RunId                  = $_.fsi_runid
+                    OverallStatus          = $_.fsi_overallstatus
+                    ViolationCount         = $_.fsi_violationcount
+                    TotalAgents            = $_.fsi_totalagents
+                    FileUploadEnabledCount = $_.fsi_fileuploadenabledcount
+                    SummaryJson            = $_.fsi_summaryjson
+                    Timestamp              = $_.fsi_validationtime
                 }
             }
         }

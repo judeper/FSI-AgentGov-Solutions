@@ -146,6 +146,8 @@ if ($DryRun) {
 
 #region Execute Validation Pipeline
 
+try {
+
 $startTime = Get-Date
 $runId = [Guid]::NewGuid().ToString()
 
@@ -315,3 +317,9 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 #endregion
+
+} catch {
+    Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  At: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    throw
+}

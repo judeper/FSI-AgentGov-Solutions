@@ -51,7 +51,7 @@ After import, edit the flow and update these variables:
 
 1. Run the flow manually (use **Test** in flow designer)
 2. Verify Azure Automation job starts and completes
-3. Check Dataverse `fsi_fileupload_validationhistory` for new record
+3. Check Dataverse `fsi_fileuploadvalidationhistory` for new record
 4. If violations exist, verify Teams card and email delivery
 
 ## Flow Architecture
