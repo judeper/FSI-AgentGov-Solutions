@@ -1,5 +1,6 @@
 #Requires -Version 7.0
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+#Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 <#
 .SYNOPSIS

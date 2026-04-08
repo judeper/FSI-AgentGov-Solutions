@@ -99,6 +99,7 @@ function Compare-GenAIConfigCompliance {
     )
 
     begin {
+        try {
         #region Load Zone Policy
 
         $privateRoot = Join-Path $PSScriptRoot 'private'
@@ -152,9 +153,14 @@ function Compare-GenAIConfigCompliance {
         }
 
         #endregion
+        } catch {
+            Write-Error "Failed to initialize GenAI compliance comparison: $($_.Exception.Message)"
+            throw
+        }
     }
 
     process {
+        try {
         foreach ($agent in $InputObject) {
             $totalCount++
 
@@ -300,9 +306,14 @@ function Compare-GenAIConfigCompliance {
                 $complianceResult
             }
         }
+        } catch {
+            Write-Error "Failed to evaluate agent compliance: $($_.Exception.Message)"
+            throw
+        }
     }
 
     end {
+        try {
         #region Summary Statistics
 
         Write-Verbose "Compliance check complete:"
@@ -320,5 +331,9 @@ function Compare-GenAIConfigCompliance {
         }
 
         #endregion
+        } catch {
+            Write-Error "Failed to summarize compliance results: $($_.Exception.Message)"
+            throw
+        }
     }
 }

@@ -48,6 +48,8 @@ $script:GenAIFeatureTypeToInt = @{
     'SearchAndSummarize'     = 100000003
     'GenerativeActions'      = 100000004
     'KnowledgeSource'        = 100000005
+    'ModelKnowledge'         = 100000006
+    'SemanticSearch'         = 100000007
 }
 $script:IntToGenAIFeatureType = @{
     100000000 = 'AzureOpenAIIntegration'
@@ -56,6 +58,8 @@ $script:IntToGenAIFeatureType = @{
     100000003 = 'SearchAndSummarize'
     100000004 = 'GenerativeActions'
     100000005 = 'KnowledgeSource'
+    100000006 = 'ModelKnowledge'
+    100000007 = 'SemanticSearch'
 }
 
 # Orchestration mode picklist mapping

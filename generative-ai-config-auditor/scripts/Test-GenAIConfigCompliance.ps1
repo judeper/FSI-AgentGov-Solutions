@@ -171,6 +171,8 @@ function Test-GenAIConfigCompliance {
         [int]$Top = 0
     )
 
+    try {
+
     #region Script Initialization
 
     $ErrorActionPreference = 'Stop'
@@ -643,4 +645,9 @@ function Test-GenAIConfigCompliance {
     }
 
     #endregion
+
+    } catch {
+        Write-Error "GenAI config compliance scan failed: $($_.Exception.Message)"
+        throw
+    }
 }

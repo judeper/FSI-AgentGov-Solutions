@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS  # Deprecated: migrating to Azure.Identity; MSAL.PS still required for Dataverse token acquisition
 
 <#
 .SYNOPSIS

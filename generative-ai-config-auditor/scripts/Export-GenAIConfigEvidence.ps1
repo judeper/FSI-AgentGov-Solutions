@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS  # Deprecated: migrating to Azure.Identity; MSAL.PS still required for Dataverse token acquisition
 
 <#
 .SYNOPSIS
@@ -352,7 +353,7 @@ if ($IncludeApprovedConnections) {
     Write-Host "Querying approved AOAI connections..." -ForegroundColor Cyan
 
     try {
-        $connResults = Get-GACApprovedConnections
+        $connResults = Get-ApprovedConnections
         if ($connResults) {
             $approvedConns = @($connResults)
         }
