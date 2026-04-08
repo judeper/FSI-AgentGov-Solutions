@@ -128,7 +128,7 @@ $DefaultRules = @{
             fsi_severity = 2
             fsi_enabled = $true
             fsi_allowexception = $true
-            fsi_description = "Ensures connection review by independent party"
+            fsi_description = "Supports connection review by independent party"
         }
     )
 

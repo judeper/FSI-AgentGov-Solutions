@@ -8,7 +8,7 @@ Common issues and resolutions for the Agent Knowledge Source Scanner.
 |-------|-------|------------|
 | `Connect-PnPOnline` fails with "Access denied" | Signed-in user lacks access to the target SharePoint site | Verify the user has at least Site Member or Site Visitor read access to the target site collection |
 | Interactive login prompt does not appear | PnP.PowerShell version incompatibility or browser redirect issue | Update to PnP.PowerShell 2.5.0+ (`Update-Module PnP.PowerShell`); clear cached tokens with `Disconnect-PnPOnline` before retrying |
-| "AADSTS50011: The redirect URI specified in the request does not match" | PnP.PowerShell app registration redirect mismatch | Register your own Entra ID app and use `-ClientId` with `Connect-PnPOnline`, or use `Register-PnPManagementShellAccess` to consent the PnP multi-tenant app |
+| "AADSTS50011: The redirect URI specified in the request does not match" | PnP.PowerShell app registration redirect mismatch | For PnP.PowerShell 3.x, the multi-tenant app was removed — register a tenant-specific app with `Register-PnPEntraIDApp` and pass `-ClientId`. For PnP 2.x, use `Register-PnPManagementShellAccess` to consent the PnP multi-tenant app |
 | Authentication works but scan fails on specific sites | Multi-geo or cross-tenant site access | Each `Connect-PnPOnline` call targets one site; verify the user has access to every site listed in `-SiteUrl` or `-LibraryList` |
 
 ## Permission Enumeration
@@ -26,7 +26,7 @@ Common issues and resolutions for the Agent Knowledge Source Scanner.
 |-------|-------|------------|
 | "Failed to resolve group '...'" warning | The `-AgentUserGroupId` GUID does not exist or the user lacks group read permissions | Verify the group object ID in Entra ID; the scanning user needs `GroupMember.Read.All` or the Entra ID Reader role |
 | "No agent user scope defined" warning | Neither `-AgentUserGroupId` nor `-AgentUserGroupMembers` was provided | Scope comparison is optional; provide one of these parameters to enable out-of-scope detection and CRITICAL/LOW risk scoring |
-| Scope comparison misses some users | Nested group membership is not fully resolved | `Get-PnPAzureADGroupMember` returns direct members only; flatten nested groups manually or provide the full UPN list via `-AgentUserGroupMembers` |
+| Scope comparison misses some users | Nested group membership is not fully resolved | `Get-PnPEntraIDGroupMember` (PnP 3.x) / `Get-PnPAzureADGroupMember` (PnP 2.x) returns direct members only; flatten nested groups manually or provide the full UPN list via `-AgentUserGroupMembers` |
 
 ## Large Library Handling
 
@@ -44,7 +44,7 @@ Common issues and resolutions for the Agent Knowledge Source Scanner.
 | "The term 'Connect-PnPOnline' is not recognized" | PnP.PowerShell module not installed or not imported | Run `Install-Module PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser` |
 | Module version conflict | Multiple PnP.PowerShell versions installed | Run `Get-Module PnP.PowerShell -ListAvailable` to check; remove older versions with `Uninstall-Module PnP.PowerShell -RequiredVersion <old>` |
 | "Requires PowerShell 7.0" error | Script launched from Windows PowerShell 5.1 | Use `pwsh` (PowerShell 7+) instead of `powershell.exe`; install from [PowerShell GitHub releases](https://github.com/PowerShell/PowerShell/releases) |
-| `Get-PnPAzureADGroupMember` not found | Older PnP.PowerShell version or PnP module rename | In PnP.PowerShell 2.x, the cmdlet name may vary; update to 2.5.0+ where the cmdlet is available |
+| `Get-PnPAzureADGroupMember` not found | PnP.PowerShell 3.x renamed this cmdlet to `Get-PnPEntraIDGroupMember` | Update to PnP.PowerShell 3.x and use `-ClientId`, or use PnP.PowerShell 2.5.0+. The scanner handles both cmdlet names automatically via try/catch fallback |
 
 ## Configuration Issues
 

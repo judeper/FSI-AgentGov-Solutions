@@ -334,13 +334,13 @@ Write-Host "Building evidence package..." -ForegroundColor Cyan
 $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
         name              = $_.fsi_name
-        runId             = $_.fsi_run_id
-        validationTime    = $_.fsi_validation_time
-        totalEnvironments = $_.fsi_total_environments
-        compliantCount    = $_.fsi_compliant_count
-        violationCount    = $_.fsi_violation_count
-        overallStatus     = $_.fsi_overall_status
-        summaryJson       = $_.fsi_summary_json
+        runId             = $_.fsi_runid
+        validationTime    = $_.fsi_validationtime
+        totalEnvironments = $_.fsi_totalenvironments
+        compliantCount    = $_.fsi_compliantcount
+        violationCount    = $_.fsi_violationcount
+        overallStatus     = $_.fsi_overallstatus
+        summaryJson       = $_.fsi_summaryjson
     }
 }
 
@@ -348,16 +348,16 @@ $validationsReadable = $validations | ForEach-Object {
 $violationsReadable = $violations | ForEach-Object {
     [PSCustomObject]@{
         name              = $_.fsi_name
-        environmentGuid   = $_.fsi_environment_guid
-        environmentName   = $_.fsi_environment_name
+        environmentGuid   = $_.fsi_environmentguid
+        environmentName   = $_.fsi_environmentname
         zone              = $_.fsi_zone
-        violationType     = $_.fsi_violation_type
-        expectedValue     = $_.fsi_expected_value
-        actualValue       = $_.fsi_actual_value
+        violationType     = $_.fsi_violationtype
+        expectedValue     = $_.fsi_expectedvalue
+        actualValue       = $_.fsi_actualvalue
         severity          = $_.fsi_severity
-        regulatoryContext = $_.fsi_regulatory_context
-        detectedAt        = $_.fsi_detected_at
-        runId             = $_.fsi_run_id
+        regulatoryContext = $_.fsi_regulatorycontext
+        detectedAt        = $_.fsi_detectedat
+        runId             = $_.fsi_runid
     }
 }
 
@@ -366,15 +366,15 @@ $baselinesReadable = @()
 if ($IncludeBaselines -and $baselines.Count -gt 0) {
     $baselinesReadable = $baselines | ForEach-Object {
         [PSCustomObject]@{
-            environmentGuid                = $_.fsi_environment_guid
-            environmentName                = $_.fsi_environment_name
+            environmentGuid                = $_.fsi_environmentguid
+            environmentName                = $_.fsi_environmentname
             zone                           = $_.fsi_zone
-            botLimitSharingMode            = $_.fsi_bot_limit_sharing_mode
-            botAuthoringSharingDisabled     = $_.fsi_bot_authoring_sharing_disabled
-            botPublishedLimitSharingMode   = $_.fsi_bot_published_bot_limit_sharing_mode
-            capturedBy                     = $_.fsi_captured_by
-            capturedAt                     = $_.fsi_captured_at
-            isActive                       = $_.fsi_is_active
+            botLimitSharingMode            = $_.fsi_botlimitsharingmode
+            botAuthoringSharingDisabled     = $_.fsi_botauthoringsharingdisabled
+            botPublishedLimitSharingMode   = $_.fsi_botpublishedbotlimitsharingmode
+            capturedBy                     = $_.fsi_capturedby
+            capturedAt                     = $_.fsi_capturedat
+            isActive                       = $_.fsi_isactive
         }
     }
 }

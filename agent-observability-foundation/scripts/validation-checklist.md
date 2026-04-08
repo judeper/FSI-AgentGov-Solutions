@@ -393,7 +393,7 @@ For more detailed troubleshooting guidance, see:
 
 This checklist helps support successful deployment by:
 
-1. **Pre-deployment validation** — Ensures all prerequisites are met before starting
+1. **Pre-deployment validation** — Validates that all prerequisites are met before starting
 2. **Workbook verification** — Confirms all 3 workbooks deploy correctly and are functional
 3. **Alert verification** — Confirms Logic App → Action Groups → Alert Rules dependency chain
 4. **Post-deployment guidance** — Sets expectations for baseline periods and WORM policy timing

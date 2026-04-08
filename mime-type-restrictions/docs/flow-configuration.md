@@ -33,8 +33,8 @@ The **MIME Type Restrictions for File Uploads** solution provides defense-in-dep
 - **Sentinel Monitoring:** KQL queries aggregate blocked upload attempts for security operations review
 
 **Business Value:**
-- Reduce malware distribution risk by 95%+ through multi-layered validation
-- Prevent data exfiltration via file-based steganography
+- Significantly reduces malware distribution risk through multi-layered validation
+- Helps prevent data exfiltration via file-based steganography
 - Support regulatory examinations with automated MIME restriction evidence
 - Enable security operations teams to detect and respond to upload abuse patterns
 - Reduce Dataverse storage costs by blocking large executable files
@@ -197,7 +197,7 @@ Plugin writes detailed trace logs for troubleshooting:
 ```
 
 #### 2. DLP Policy Template — dlp-policy-template.json
-**File:** `src/dlp-policy-template.json`
+**File:** `templates/dlp-policy-template.json`
 
 **Purpose:** Power Platform DLP policy template that restricts file upload connectors by blocking dangerous file extensions at the connector level (Layer 1 enforcement).
 
@@ -255,7 +255,7 @@ Organizations should customize the template based on business requirements:
 ```
 
 #### 3. MIME Configuration — MimeConfig.json
-**File:** `src/MimeConfig.json`
+**File:** `templates/mime-config.json`
 
 **Purpose:** Centralized configuration file for Dataverse plugin validation logic. Defines allowed MIME types, blocked signatures, and validation parameters.
 
@@ -316,7 +316,7 @@ To add new allowed MIME types:
 3. Test with sample upload to verify magic byte validation
 
 #### 4. Sentinel Query — query-mime-blocks.kql
-**File:** `src/query-mime-blocks.kql`
+**File:** `scripts/query-mime-blocks.kql`
 
 **Purpose:** KQL query for Microsoft Sentinel to aggregate blocked file upload attempts over the past 30 days, grouped by file extension, user, and environment.
 
@@ -367,7 +367,7 @@ PowerPlatformDlpActivity_CL
 ```
 
 #### 5. Sentinel Alert — high-volume-blocks.json
-**File:** `src/high-volume-blocks.json`
+**File:** `templates/high-volume-blocks.json`
 
 **Purpose:** Sentinel alert rule that triggers when a user attempts to upload blocked file types more than 10 times in 1 hour, indicating potential attack or policy violation.
 
@@ -399,7 +399,7 @@ PowerPlatformDlpActivity_CL
 5. If legitimate: Create exception request with business justification
 
 #### 6. Sentinel Query — query-exception-usage.kql
-**File:** `src/query-exception-usage.kql`
+**File:** `scripts/query-exception-usage.kql`
 
 **Purpose:** KQL query to track exception usage patterns for governance review and policy tuning.
 

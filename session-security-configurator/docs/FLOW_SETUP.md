@@ -39,35 +39,19 @@ Before creating the flow, ensure you have:
   - fsi_cr_office365_sessionvalidation (Office 365 Outlook)
   - Azure Automation connection to your subscription
 
-## Step 1: Import Flow
-
-### Option A: Import from JSON (Recommended)
-
-1. Navigate to [make.powerautomate.com](https://make.powerautomate.com)
-2. Select your target environment (same environment where SSC schema is deployed)
-3. Click **My flows** > **Import** > **Import Package (Legacy)**
-4. Upload `src/session-validation-flow.json` from this repository
-5. Map connection references:
-   - **Dataverse** → fsi_cr_dataverse_sessionvalidation
-   - **Azure Automation** → Create new connection or select existing
-   - **Microsoft Teams** → fsi_cr_teams_sessionvalidation
-   - **Office 365 Outlook** → fsi_cr_office365_sessionvalidation
-6. Click **Import**
-
-### Option B: Manual Creation
-
-If importing fails or you need to customize the flow:
+## Step 1: Create the Flow
 
 1. Go to [make.powerautomate.com](https://make.powerautomate.com)
-2. Click **Create** > **Scheduled cloud flow**
-3. Name: `SSC - Session Validation (Daily)`
-4. Set schedule:
+2. Select your target environment (same environment where SSC schema is deployed)
+3. Click **Create** > **Scheduled cloud flow**
+4. Name: `SSC - Session Validation (Daily)`
+5. Set schedule:
    - Start: Today
    - Repeat every: **1 Day**
    - At: **6:00 AM**
    - Time zone: **UTC**
-5. Click **Create**
-6. Follow the flow structure defined in `src/session-validation-flow.json`
+6. Click **Create**
+7. Follow the flow structure described in the sections below
 
 ## Step 2: Configure Variables
 

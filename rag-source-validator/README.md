@@ -6,7 +6,7 @@ Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources 
 
 ## Overview
 
-The RAG Source Validator ensures AI agents use trusted, verified knowledge sources by continuously validating content integrity, detecting unauthorized modifications, and tracking changes over time.
+The RAG Source Validator helps verify AI agents use trusted, verified knowledge sources by continuously validating content integrity, detecting unauthorized modifications, and tracking changes over time.
 
 ## Features
 
@@ -154,7 +154,7 @@ For structured data sources, validates schema hasn't changed.
 
 ### Freshness Validation
 
-Ensures content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
+Validates that content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
 
 > **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, or manual updates in the model-driven app).
 
@@ -196,7 +196,7 @@ For documents with references, validates all links are accessible.
 
 > Records must be preserved in a non-rewriteable, non-erasable format.
 
-**Coverage:** Hash validation ensures records haven't been altered.
+**Coverage:** Hash validation helps verify records haven't been altered.
 
 > **Limitation:** Validation results are currently stored in standard mutable Dataverse records, which do not satisfy WORM (Write Once Read Many) requirements. Production deployments requiring full SEC 17a-4 compliance should integrate an immutable audit trail (e.g., Azure Immutable Blob Storage, or a third-party WORM-compliant archive) to store validation results alongside Dataverse records.
 

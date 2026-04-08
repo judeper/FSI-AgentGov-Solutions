@@ -250,7 +250,7 @@ Before pipeline promotion:
 
 For supervision queue assignments:
 1. Validates supervisor isn't also the agent developer
-2. Ensures independent review
+2. Supports independent review
 
 ## Regulatory Alignment
 
@@ -282,9 +282,9 @@ For supervision queue assignments:
 
 | Control | Relationship |
 |---------|--------------|
+| [2.8 - Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-segregation-of-duties.md) | Primary — role conflict detection and Maker/Checker enforcement |
 | [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Environment role context |
 | [2.3 - Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md) | Pipeline integration |
-| [1.18 - Application-Level RBAC](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.18-application-level-role-based-access-control.md) | Role definitions |
 
 ## Platform Update Notes
 

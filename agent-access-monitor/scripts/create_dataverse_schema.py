@@ -30,10 +30,10 @@ SHARED_OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_acv_severity": {
@@ -43,11 +43,11 @@ SHARED_OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Passed", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "GracePeriod", "LanguageCode": 1033}]}},
-            {"Value": 4, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
-            {"Value": 5, "Label": {"LocalizedLabels": [{"Label": "Error", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Passed", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "GracePeriod", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Error", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -193,7 +193,7 @@ def get_access_violation_entity() -> dict:
 BASELINE_TABLE_COLUMNS = [
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_environment_guid",
+        "SchemaName": "fsi_EnvironmentGuid",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment GUID", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Power Platform environment GUID", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -202,7 +202,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_environment_name",
+        "SchemaName": "fsi_EnvironmentName",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Name", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Environment display name", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -219,7 +219,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_bot_limit_sharing_mode",
+        "SchemaName": "fsi_BotLimitSharingMode",
         "DisplayName": {"LocalizedLabels": [{"Label": "Bot Limit Sharing Mode", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Bot sharing limitation mode setting", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -228,7 +228,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
-        "SchemaName": "fsi_bot_authoring_sharing_disabled",
+        "SchemaName": "fsi_BotAuthoringSharingDisabled",
         "DisplayName": {"LocalizedLabels": [{"Label": "Bot Authoring Sharing Disabled", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Whether bot authoring sharing is disabled", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -236,7 +236,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_bot_published_bot_limit_sharing_mode",
+        "SchemaName": "fsi_BotPublishedBotLimitSharingMode",
         "DisplayName": {"LocalizedLabels": [{"Label": "Published Bot Limit Sharing Mode", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Published bot sharing limitation mode setting", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -245,7 +245,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
-        "SchemaName": "fsi_is_active",
+        "SchemaName": "fsi_IsActive",
         "DisplayName": {"LocalizedLabels": [{"Label": "Is Active", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Whether this baseline is the current active baseline", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -253,7 +253,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-        "SchemaName": "fsi_captured_at",
+        "SchemaName": "fsi_CapturedAt",
         "DisplayName": {"LocalizedLabels": [{"Label": "Captured At", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "When the baseline snapshot was captured", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -261,7 +261,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_captured_by",
+        "SchemaName": "fsi_CapturedBy",
         "DisplayName": {"LocalizedLabels": [{"Label": "Captured By", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Identity that captured the baseline", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -270,7 +270,7 @@ BASELINE_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-        "SchemaName": "fsi_raw_json",
+        "SchemaName": "fsi_RawJson",
         "DisplayName": {"LocalizedLabels": [{"Label": "Raw JSON", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Full JSON payload of access settings at capture time", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -282,7 +282,7 @@ BASELINE_TABLE_COLUMNS = [
 HISTORY_TABLE_COLUMNS = [
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_run_id",
+        "SchemaName": "fsi_RunId",
         "DisplayName": {"LocalizedLabels": [{"Label": "Run ID", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "GUID correlating all records in one execution run", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -307,7 +307,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-        "SchemaName": "fsi_total_environments",
+        "SchemaName": "fsi_TotalEnvironments",
         "DisplayName": {"LocalizedLabels": [{"Label": "Total Environments", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Number of environments evaluated in this run", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -316,7 +316,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-        "SchemaName": "fsi_compliant_count",
+        "SchemaName": "fsi_CompliantCount",
         "DisplayName": {"LocalizedLabels": [{"Label": "Compliant Count", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Number of environments that passed validation", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -325,7 +325,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-        "SchemaName": "fsi_violation_count",
+        "SchemaName": "fsi_ViolationCount",
         "DisplayName": {"LocalizedLabels": [{"Label": "Violation Count", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Number of environments with violations", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -334,7 +334,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_overall_status",
+        "SchemaName": "fsi_OverallStatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Overall Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Aggregate validation status (e.g., Passed, Failed, Warning)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -343,7 +343,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-        "SchemaName": "fsi_summary_json",
+        "SchemaName": "fsi_SummaryJson",
         "DisplayName": {"LocalizedLabels": [{"Label": "Summary JSON", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Full JSON summary of validation results", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -351,7 +351,7 @@ HISTORY_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-        "SchemaName": "fsi_validation_time",
+        "SchemaName": "fsi_ValidationTime",
         "DisplayName": {"LocalizedLabels": [{"Label": "Validation Time", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "When validation was executed", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -363,7 +363,7 @@ HISTORY_TABLE_COLUMNS = [
 VIOLATION_TABLE_COLUMNS = [
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_run_id",
+        "SchemaName": "fsi_RunId",
         "DisplayName": {"LocalizedLabels": [{"Label": "Run ID", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "GUID correlating this violation to a validation run", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -372,7 +372,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_environment_guid",
+        "SchemaName": "fsi_EnvironmentGuid",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment GUID", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Power Platform environment GUID", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -381,7 +381,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_environment_name",
+        "SchemaName": "fsi_EnvironmentName",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Name", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Environment display name", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -406,7 +406,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_violation_type",
+        "SchemaName": "fsi_ViolationType",
         "DisplayName": {"LocalizedLabels": [{"Label": "Violation Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Type of access policy violation detected", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -415,7 +415,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_expected_value",
+        "SchemaName": "fsi_ExpectedValue",
         "DisplayName": {"LocalizedLabels": [{"Label": "Expected Value", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Expected configuration value per governance policy", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -424,7 +424,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_actual_value",
+        "SchemaName": "fsi_ActualValue",
         "DisplayName": {"LocalizedLabels": [{"Label": "Actual Value", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Actual configuration value found in environment", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -433,7 +433,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_severity_label",
+        "SchemaName": "fsi_SeverityLabel",
         "DisplayName": {"LocalizedLabels": [{"Label": "Severity Label", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Original severity classification string (Critical, High, Warning, Info)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -442,7 +442,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_regulatory_context",
+        "SchemaName": "fsi_RegulatoryContext",
         "DisplayName": {"LocalizedLabels": [{"Label": "Regulatory Context", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Regulatory requirement context (e.g., FINRA 4511, SEC 17a-3)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -451,7 +451,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-        "SchemaName": "fsi_detected_at",
+        "SchemaName": "fsi_DetectedAt",
         "DisplayName": {"LocalizedLabels": [{"Label": "Detected At", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "When the violation was detected", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
@@ -467,7 +467,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_acknowledged_by",
+        "SchemaName": "fsi_AcknowledgedBy",
         "DisplayName": {"LocalizedLabels": [{"Label": "Acknowledged By", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Identity that acknowledged the violation", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -476,7 +476,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-        "SchemaName": "fsi_acknowledged_on",
+        "SchemaName": "fsi_AcknowledgedOn",
         "DisplayName": {"LocalizedLabels": [{"Label": "Acknowledged On", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "When the violation was acknowledged", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
@@ -484,7 +484,7 @@ VIOLATION_TABLE_COLUMNS = [
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-        "SchemaName": "fsi_resolved_at",
+        "SchemaName": "fsi_ResolvedAt",
         "DisplayName": {"LocalizedLabels": [{"Label": "Resolved At", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "When the violation was resolved", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},

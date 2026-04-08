@@ -43,6 +43,12 @@ Polls Communication Compliance API for new flagged items and creates Supervision
      $top: 100
    Note: Uses Purview Communication Compliance API, NOT Graph security/alerts_v2
          (see docs/communication-compliance-setup.md for API access configuration)
+
+> ⚠️ **API Risk:** The `compliance.microsoft.com/api/SupervisoryReview/alerts` endpoint
+> is undocumented and not officially supported by Microsoft. It may change or be removed
+> without notice. As a fallback, consider using `Connect-IPPSSession` with
+> `Get-SupervisoryReviewPolicyV2` cmdlets for programmatic access.
+
    Note: The $top=100 parameter prevents action execution limit errors when a
          large alert backlog exists (e.g., post-outage or first run). Remaining
          alerts are picked up in subsequent polling cycles.

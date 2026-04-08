@@ -185,6 +185,7 @@ Environment ID: $safeEnvironmentId
 
 # Send email via Microsoft Graph
 function Send-GraphEmail {
+    [CmdletBinding()]
     param(
         [string]$To,
         [string]$Subject,

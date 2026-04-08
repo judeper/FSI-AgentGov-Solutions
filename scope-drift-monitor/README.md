@@ -209,7 +209,7 @@ If Denied: Remediate Access → Close Violation
 
 > Personal data shall be adequate, relevant and limited to what is necessary.
 
-**Coverage:** Scope definitions ensure agents only access necessary data.
+**Coverage:** Scope definitions help limit agent access to declared data sources.
 
 ### GLBA 501(b)
 
@@ -221,7 +221,7 @@ If Denied: Remediate Access → Close Violation
 
 > Data collected for specified purposes cannot be used for incompatible purposes.
 
-**Coverage:** Scope enforcement ensures purpose-limited data access.
+**Coverage:** Scope monitoring supports purpose-limited data access requirements.
 
 ## Related Controls
 

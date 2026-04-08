@@ -129,7 +129,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                 except Exception as val_err:
                     print(
                         f"  Warning: Failed to create default value for "
-                        f"{display_name}: {val_err}"
+                        f"{schemaname}: {val_err}"
                     )
                     print(
                         f"  Note: Environment variable definition was created "

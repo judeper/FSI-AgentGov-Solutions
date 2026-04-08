@@ -113,7 +113,6 @@ This guide covers common issues encountered during deployment and operation of t
    - `ValidationSLA_Tier1_Assignment`, `ValidationSLA_Tier1_Review`, `ValidationSLA_Tier1_Completion`
    - `ValidationSLA_Tier2_Assignment`, `ValidationSLA_Tier2_Review`, `ValidationSLA_Tier2_Completion`
    - `ValidationSLA_Tier3_Assignment`, `ValidationSLA_Tier3_Review`, `ValidationSLA_Tier3_Completion`
-   - `ValidationSLA_Tier4_Assignment`, `ValidationSLA_Tier4_Review`, `ValidationSLA_Tier4_Completion`
 2. Check that `fsi_submitteddate` is populated on the validation cycle record
 3. For assignment SLA breaches: Flow 4 handles null `fsi_assigneddate` — if the assignment date is null and the deadline has passed, it is treated as a breach
 4. Confirm the Flow 4 recurrence trigger is configured for **Monday at 08:00 UTC**
@@ -199,19 +198,19 @@ GET {org}.crm.dynamics.com/api/data/v9.2/fsi_modelinventories?$select=fsi_modeli
 ### Find Agents Missing Risk Scores
 
 ```
-GET {org}.crm.dynamics.com/api/data/v9.2/fsi_modelinventories?$filter=fsi_compositescore eq null and fsi_mrmstatus eq 'Submitted'&$select=fsi_modelid,fsi_agentdisplayname
+GET {org}.crm.dynamics.com/api/data/v9.2/fsi_modelinventories?$filter=fsi_currentriskrating eq null and fsi_mrmstatus eq 100000001&$select=fsi_modelid,fsi_modelname
 ```
 
 ### List Open Validation Cycles
 
 ```
-GET {org}.crm.dynamics.com/api/data/v9.2/fsi_validationcycles?$filter=fsi_cyclestatus ne 'Completed' and fsi_cyclestatus ne 'Rejected'&$select=fsi_validationcycleid,fsi_modelid,fsi_cyclestatus,fsi_submitteddate
+GET {org}.crm.dynamics.com/api/data/v9.2/fsi_validationcycles?$filter=fsi_cyclestatus ne 100000006 and fsi_cyclestatus ne 100000007&$select=fsi_cycleid,fsi_modelid,fsi_cyclestatus,fsi_submitteddate
 ```
 
 ### Recent Compliance Events
 
 ```
-GET {org}.crm.dynamics.com/api/data/v9.2/fsi_mrmcomplianceevents?$orderby=fsi_eventdate desc&$top=20&$select=fsi_eventtype,fsi_modelid,fsi_eventdetails,fsi_eventdate
+GET {org}.crm.dynamics.com/api/data/v9.2/fsi_mrmcomplianceevents?$orderby=fsi_eventtimestamp desc&$top=20&$select=fsi_eventtype,fsi_modelid,fsi_eventdetails,fsi_eventtimestamp
 ```
 
 ## Getting Help

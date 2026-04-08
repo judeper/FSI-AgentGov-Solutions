@@ -3,7 +3,7 @@
 ## Files to Include in Customer Package
 
 ### 1. Documentation
-- [ ] **SOLUTION-DOCUMENTATION.md** — Main technical documentation (Executive Summary + Technical Details)
+- [ ] **docs/flow-configuration.md** — Main technical documentation (Executive Summary + Technical Details)
 
 ### 2. Solution Components (Source Files)
 
@@ -28,7 +28,7 @@ All files located in the `src/` directory:
 ```bash
 # From the mime-type-restrictions directory:
 zip -r MIME-Type-Restrictions-v1.0.1.zip \
-  SOLUTION-DOCUMENTATION.md \
+  docs/flow-configuration.md \
   src/BUILD-INSTRUCTIONS.md \
   src/ValidateMimeTypePlugin.cs \
   src/MimeConfig.json \
@@ -41,7 +41,7 @@ zip -r MIME-Type-Restrictions-v1.0.1.zip \
 **Option B: Create Structured Folder**
 ```
 MIME-Type-Restrictions-v1.0.1/
-├── SOLUTION-DOCUMENTATION.md
+├── docs/flow-configuration.md
 ├── Dataverse-Plugin/
 │   ├── BUILD-INSTRUCTIONS.md
 │   ├── ValidateMimeTypePlugin.cs
@@ -69,7 +69,7 @@ This solution provides defense-in-depth validation of file uploads in Copilot St
 through server-side magic byte inspection, DLP policy enforcement, and Sentinel monitoring.
 
 Package Contents:
-- SOLUTION-DOCUMENTATION.md — Complete technical documentation with:
+- docs/flow-configuration.md — Complete technical documentation with:
   • Executive Summary (problem statement, solution overview, business value)
   • Technical Details (architecture, 3-layer enforcement, components)
   • Configuration and Prerequisites (plugin registration, DLP deployment)
@@ -97,8 +97,8 @@ Architecture:
 • Layer 3: Sentinel Monitoring (blocked event aggregation and alerting)
 
 Business Value:
-• Reduce malware distribution risk by 95%+ through multi-layered validation
-• Prevent data exfiltration via file-based steganography
+• Significantly reduces malware distribution risk through multi-layered validation
+• Helps prevent data exfiltration via file-based steganography
 • Enable security operations teams to detect upload abuse patterns
 • Support regulatory examinations with automated MIME restriction evidence
 
@@ -108,7 +108,7 @@ Regulatory Support:
 • SEC 17a-4 — Recordkeeping
 
 Next Steps:
-1. Review the SOLUTION-DOCUMENTATION.md file (Section 2: Technical Details)
+1. Review the docs/flow-configuration.md file (Section 2: Technical Details)
 2. Build Dataverse plugin DLL from C# source (Visual Studio required)
 3. Register plugin using Plugin Registration Tool:
    - Entity: annotation (Note)
@@ -159,7 +159,7 @@ Best regards,
 Before sending to customer, verify:
 
 - [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
-- [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
+- [ ] docs/flow-configuration.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)

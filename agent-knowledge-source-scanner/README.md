@@ -1,6 +1,6 @@
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.0.1
+> **Status:** Completed | **Version:** v1.0.2
 
 Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
 
@@ -102,27 +102,41 @@ Risk scoring is stricter than general SharePoint oversharing analysis because ag
 
 ### Runtime Requirements
 
-| Requirement | Minimum Version |
-|-------------|----------------|
-| **PowerShell** | 7.0 |
-| **PnP.PowerShell** | 2.5.0 |
+| Requirement | Minimum Version | Notes |
+|-------------|----------------|-------|
+| **PowerShell** | 7.0 (7.4+ for PnP 3.x) | |
+| **PnP.PowerShell** | 2.5.0 | 3.x supported with `-ClientId` |
 
 ## Quick Start
 
 ### 1. Install Prerequisites
 
 ```powershell
+# PnP.PowerShell 2.x (uses built-in multi-tenant app)
 Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
+
+# OR PnP.PowerShell 3.x (requires tenant-specific app registration)
+Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentUser
+# See docs/prerequisites.md for Register-PnPEntraIDApp setup
 ```
 
 ### 2. Scan a Single Library
 
 ```powershell
+# PnP.PowerShell 2.x (no -ClientId needed)
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
     -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
     -LibraryName "Documents" `
     -AgentName "HR-Agent" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001"
+
+# PnP.PowerShell 3.x (requires -ClientId)
+.\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
+    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
+    -LibraryName "Documents" `
+    -AgentName "HR-Agent" `
+    -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
+    -ClientId "your-client-id-here"
 ```
 
 ### 3. Scan Multiple Libraries from a List
@@ -216,7 +230,8 @@ The CSV report includes these columns:
 
 | Limitation | Description | Workaround |
 |------------|-------------|------------|
-| **PnP interactive auth only** | v1.0.0 uses `-Interactive` authentication; service principal auth for unattended scanning is planned | Run interactively or use PnP PowerShell's certificate-based auth manually |
+| **PnP interactive auth only** | v1.0.x uses `-Interactive` authentication; service principal auth for unattended scanning is planned | Run interactively or use PnP PowerShell's certificate-based auth manually |
+| **PnP.PowerShell 3.x requires `-ClientId`** | The PnP multi-tenant app was removed in September 2024; PnP 3.x requires a tenant-specific Entra app registration | Register an app with `Register-PnPEntraIDApp` and pass `-ClientId` (see [Prerequisites](docs/prerequisites.md)) |
 | **No agent definition auto-resolution** | Agent user scope must be provided manually; automated resolution from Copilot Studio agent definition is not yet implemented | Provide `-AgentUserGroupId` or `-AgentUserGroupMembers` parameter |
 | **Sensitivity label field availability** | `_SensitivityLabel` field requires Microsoft Information Protection labels to be published; falls back to `_ComplianceTag` | Verify sensitivity labels are enabled in your tenant |
 | **Large library performance** | Scanning libraries with 10,000+ items may take significant time | Adjust `maxItemsPerLibrary` in config or use `-MaxItemsPerLibrary` parameter |
@@ -227,4 +242,4 @@ The CSV report includes these columns:
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.1*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.2*

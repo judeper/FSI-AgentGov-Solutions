@@ -114,7 +114,13 @@ function Get-AccessToken {
         [string]$Scope
     )
 
-    $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+    $loginEndpoint = switch -Wildcard ($Scope) {
+        "*office365.us*"           { "https://login.microsoftonline.us" }
+        "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
+        "*protection.outlook.com*" { "https://login.microsoftonline.us" }
+        default                    { "https://login.microsoftonline.com" }
+    }
+    $tokenUrl = "$loginEndpoint/$TenantId/oauth2/v2.0/token"
     $body = @{
         client_id     = $ClientId
         client_secret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password

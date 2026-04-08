@@ -16,7 +16,7 @@
     - Queries live Power Platform environment access settings via Get-EnvironmentAccessSettings
     - Captures bot-limitSharingMode, bot-authoringSharingDisabled, bot-publishedBotLimitSharingMode
     - Deactivates existing active baselines per environment (single active baseline per environment)
-    - Writes new AccessBaseline records to Dataverse with fsi_is_active=true
+    - Writes new AccessBaseline records to Dataverse with fsi_isactive=true
     - Supports filtering by zone or specific environment GUID
     - Supports both interactive and certificate-based authentication
     - WhatIf mode for safe preview without writing to Dataverse
@@ -107,7 +107,7 @@
 
     Baseline management:
     - Only one active baseline per environment at any time
-    - Previous active baselines are automatically deactivated (fsi_is_active=false)
+    - Previous active baselines are automatically deactivated (fsi_isactive=false)
     - Deactivated baselines remain in Dataverse for historical audit
     - Use WhatIf to preview before committing
 

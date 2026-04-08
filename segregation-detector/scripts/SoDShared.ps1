@@ -1,3 +1,5 @@
+#Requires -Version 7.1
+
 <#
 .SYNOPSIS
     Shared helper functions for the Segregation of Duties Detector scripts.

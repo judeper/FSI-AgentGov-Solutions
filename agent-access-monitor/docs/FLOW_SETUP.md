@@ -125,12 +125,12 @@ The flow uses **three** connection references deployed during Phase 2 (Dataverse
 | Flow Expression | Dataverse Column | Type |
 |----------------|------------------|------|
 | `"Scan-" + Timestamp` | `fsi_name` | String |
-| `guid()` | `fsi_run_id` | String (GUID) |
-| `OverallStatus` | `fsi_overall_status` | String |
-| `length(Violations)` | `fsi_violation_count` | Integer |
-| `TotalEnvironments` | `fsi_total_environments` | Integer |
-| Full JSON output | `fsi_summary_json` | Memo |
-| `Timestamp` | `fsi_validation_time` | DateTime |
+| `guid()` | `fsi_runid` | String (GUID) |
+| `OverallStatus` | `fsi_overallstatus` | String |
+| `length(Violations)` | `fsi_violationcount` | Integer |
+| `TotalEnvironments` | `fsi_totalenvironments` | Integer |
+| Full JSON output | `fsi_summaryjson` | Memo |
+| `Timestamp` | `fsi_validationtime` | DateTime |
 
 **Troubleshooting validation history writes:**
 

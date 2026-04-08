@@ -16,7 +16,7 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 | MC-002 | Solution Developer | Solution Promoter | Critical | Requires independent promotion review |
 | MC-003 | Flow Creator | Flow Approver | High | Enforces flow change review |
 | MC-004 | DLP Policy Author | DLP Policy Approver | Critical | Prevents self-exemption |
-| MC-005 | Connection Creator | Connection Approver | High | Ensures connection review |
+| MC-005 | Connection Creator | Connection Approver | High | Supports connection review |
 
 ### Segregation Rules (Category 2)
 
