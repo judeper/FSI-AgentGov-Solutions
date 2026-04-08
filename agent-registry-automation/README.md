@@ -173,7 +173,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 
 ## Key Configuration Notes
 
-- **Entra Agent Registry (Flow 3):** Disabled by default via the `fsi_ARA_EntraRegistrySyncEnabled` environment variable. Enable only after confirming Entra Agent Registry API availability (requires Agent 365 / Frontier licensing).
+- **Entra Agent Registry (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming Entra Agent Registry API availability (requires Agent 365 / Frontier licensing).
 - **BotFrameworkEndpoint field name:** The `properties.botFrameworkEndpoint` field from the Bots API response needs live API confirmation. Verify the exact field path in your environment before enabling Flow 1.
 - **Office 365 connector for SLA:** The SLA calculation in Flow 2 uses the Office 365 Users connector to determine the approver's time zone for business-day calculations. If DLP policies block this connector, configure a fallback time zone in the `fsi_ARA_DefaultTimeZone` environment variable.
 - **7-year retention (LTR):** The `fsi_agentcomplianceevent` table is designed for Dataverse Long-Term Retention. Enable LTR policies after deployment to support SEC 17a-3/4 retention requirements.

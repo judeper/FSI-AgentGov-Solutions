@@ -64,18 +64,21 @@
 - [ ] Run `scripts/create_environment_variables.py` to deploy environment variables
 - [ ] Configure current values for all environment variables:
   - `fsi_ARA_TenantId`
-  - `fsi_ARA_DataverseEnvironment`
+  - `fsi_ARA_DataverseEnvironmentUrl`
   - `fsi_ARA_GovernanceTeamEmail`
   - `fsi_ARA_TeamsChannelId`
   - `fsi_ARA_ApprovalDeadlineDays`
-  - `fsi_ARA_EntraRegistrySyncEnabled`
+  - `fsi_ARA_IsEntraRegistrySyncEnabled`
   - `fsi_ARA_DefaultTimeZone`
+  - `fsi_ARA_FrameworkVersion`
+  - `fsi_ARA_EscalationApproverUPN`
+  - `fsi_ARA_FlowAdministrators`
 - [ ] Run `scripts/create_connection_references.py` to deploy connection references
 - [ ] Bind each connection reference to an active connection:
-  - `fsi_cr_ara_dataverse` — Dataverse
-  - `fsi_cr_ara_http_azuread` — HTTP with Microsoft Entra ID (Bots API + Graph API)
-  - `fsi_cr_ara_teams` — Microsoft Teams
-  - `fsi_cr_ara_approvals` — Approvals
+  - `fsi_cr_dataverse_agentregistry` — Dataverse
+  - `fsi_cr_http_agentregistry` — HTTP with Microsoft Entra ID (Bots API + Graph API)
+  - `fsi_cr_teams_agentregistry` — Microsoft Teams
+  - `fsi_cr_office365_agentregistry` — Office 365
 
 ---
 
@@ -101,7 +104,7 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
   - Test with a manual registration request
 - [ ] **Flow 3: Sync-EntraAgentRegistry** (optional — feature-flagged)
   - Build trigger (Dataverse — when agent inventory updated)
-  - Build feature flag gate (`fsi_ARA_EntraRegistrySyncEnabled`)
+  - Build feature flag gate (`fsi_ARA_IsEntraRegistrySyncEnabled`)
   - Build Entra Agent Registry API call
   - Build sync status update
   - **Note:** Skip if Entra Agent Registry API is not available

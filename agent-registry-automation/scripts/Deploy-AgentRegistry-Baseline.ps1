@@ -310,14 +310,29 @@ function Write-ComplianceEvent {
         [string]$Details
     )
 
-    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    # fsi_ara_eventtype option set values:
+    #   100000000 = Discovered, 100000001 = Registered, 100000002 = Approved,
+    #   100000003 = Rejected, 100000004 = Quarantined, 100000005 = SLA_Escalated,
+    #   100000006 = OrphanDetected, 100000007 = OwnerChanged,
+    #   100000008 = Decommissioned, 100000009 = EntraSynced
+    $eventTypeMap = @{
+        "Discovered"      = 100000000
+        "Registered"      = 100000001
+        "Approved"        = 100000002
+        "Rejected"        = 100000003
+        "Quarantined"     = 100000004
+        "SLA_Escalated"   = 100000005
+        "OrphanDetected"  = 100000006
+        "OwnerChanged"    = 100000007
+        "Decommissioned"  = 100000008
+        "EntraSynced"     = 100000009
+    }
 
     $payload = @{
         fsi_agentid       = $AgentId
         fsi_environmentid = $EnvironmentId
-        fsi_eventtype     = $EventType
+        fsi_eventtype     = $eventTypeMap[$EventType]
         fsi_eventdetails  = $Details
-        fsi_createdon     = $timestamp
         fsi_correlationid = $script:CorrelationId
     }
 
@@ -416,7 +431,7 @@ foreach ($env in $environments) {
                 fsi_environmentname    = $envName
                 fsi_registrationstatus = $script:RegistrationStatusUnregistered
                 fsi_zone               = $zoneValue
-                fsi_lastscamnedat      = $timestamp
+                fsi_lastscannedat      = $timestamp
                 fsi_isorphaned         = $false
             }
 

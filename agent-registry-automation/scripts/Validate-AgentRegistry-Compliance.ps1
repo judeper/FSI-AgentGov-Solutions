@@ -643,7 +643,7 @@ if ($CheckOrphans) {
 Write-AuditLog "Querying agent inventory..."
 $agents = Get-DataverseRecords -EntitySet "fsi_agentinventorys" `
     -Token $dvToken `
-    -Select "fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_registrationstatus,fsi_zone,fsi_ownerupn,fsi_isorphaned,fsi_lastscamnedat"
+    -Select "fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_registrationstatus,fsi_zone,fsi_ownerupn,fsi_isorphaned,fsi_lastscannedat"
 
 Write-AuditLog "Found $($agents.Count) agent(s) in inventory"
 
