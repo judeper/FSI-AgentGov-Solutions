@@ -77,10 +77,7 @@
     Version:    1.0.0
     Author:     FSI Agent Governance
     Requires:   PowerShell 7.0+
-    Requires:   Microsoft.Graph.Mail 2.0.0+
-    Requires:   Microsoft.Graph.Users 2.0.0+
-    Requires:   Microsoft.Graph.Groups 2.0.0+
-    Requires:   Microsoft.Graph.Security 2.0.0+
+    Requires:   Microsoft.Graph.Authentication 2.0.0+
     Framework:  FSI Agent Governance
     Controls:   3.3, 3.1, 3.2
 #>
@@ -539,7 +536,8 @@ try {
             "MailboxSettings.Read",
             "Mail.Read",
             "Group.Read.All",
-            "SecurityAlert.Read.All"
+            "SecurityAlert.Read.All",
+            "AuditLog.Read.All"
         )
         Connect-MgGraph -Scopes $scopes -TenantId $TenantId -ErrorAction Stop | Out-Null
     }
@@ -613,11 +611,11 @@ try {
             DLPAlertCount                 = $report.DLPAlerts.Count
             InactiveSharedMailboxCount    = $report.BroadMailboxAccess.Count
             ExternalDLMembershipCount    = $report.ExternalDistributionListRisks.Count
-            HighRiskCount                 = @(
+            HighRiskCount                 = (
                 @($report.ExternalForwarding | Where-Object { $_.Risk -eq "HIGH" }).Count +
                 @($report.DLPAlerts | Where-Object { $_.Risk -eq "HIGH" }).Count
             )
-            MediumRiskCount               = @(
+            MediumRiskCount               = (
                 @($report.DLPAlerts | Where-Object { $_.Risk -eq "MEDIUM" }).Count +
                 @($report.BroadMailboxAccess | Where-Object { $_.Risk -eq "MEDIUM" }).Count +
                 @($report.ExternalDistributionListRisks | Where-Object { $_.Risk -eq "MEDIUM" }).Count
