@@ -49,7 +49,7 @@
     Uses the returned policy object to drive compliance evaluation logic.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA 501(b), SOX 302, FINRA 4511, NIST 800-53 AC-11/AC-12

@@ -81,7 +81,7 @@
     Full scan with Dataverse persistence, returning PSCustomObjects for pipeline use.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA 501(b), SOX 302/404, FINRA 4511, NIST 800-53 AC-11/AC-12
@@ -122,7 +122,7 @@ function Invoke-TimeoutComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Inactivity Timeout Enforcement v1.0.0"
+    Write-Verbose "Inactivity Timeout Enforcement v1.0.4"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -189,7 +189,7 @@ function Invoke-TimeoutComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Inactivity Timeout Enforcement v1.0.0" -ForegroundColor Cyan
+    Write-Host "Inactivity Timeout Enforcement v1.0.4" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -482,21 +482,21 @@ function Invoke-TimeoutComplianceScan {
         foreach ($r in $results) {
             try {
                 $record = @{
-                    'fsi_name'                    = "ITE-$($r.EnvironmentName)-$runId".Substring(0, [Math]::Min(100, "ITE-$($r.EnvironmentName)-$runId".Length))
+                    'fsi_compliancename'          = "ITE-$($r.EnvironmentName)-$runId".Substring(0, [Math]::Min(200, "ITE-$($r.EnvironmentName)-$runId".Length))
                     'fsi_environmentid'           = $r.EnvironmentId
                     'fsi_environmentname'         = $r.EnvironmentName
                     'fsi_zone'                    = $zoneMap[$r.Zone]
-                    'fsi_timeoutenabled'          = $r.TimeoutEnabled
+                    'fsi_inactivitytimeoutenabled' = $r.TimeoutEnabled
                     'fsi_timeoutduration'         = $r.TimeoutDuration
                     'fsi_timeoutdurationminutes'  = $r.TimeoutDurationMinutes
-                    'fsi_maxallowedminutes'       = $r.MaxAllowedMinutes
+                    'fsi_requiredmaxduration'     = $r.MaxAllowedMinutes
                     'fsi_timeoutrequired'         = $r.TimeoutRequired
                     'fsi_compliancestatus'        = $statusMap[$r.ComplianceStatus]
                     'fsi_severity'                = $r.Severity
                     'fsi_regulatorycontext'       = $r.RegulatoryContext
-                    'fsi_details'                 = $r.Details
+                    'fsi_notes'                   = $r.Details
                     'fsi_scanrunid'               = $r.RunId
-                    'fsi_scantime'                = $r.ScanTime
+                    'fsi_lastscandate'            = $r.ScanTime
                 }
 
                 Invoke-RestMethod `
@@ -520,12 +520,12 @@ function Invoke-TimeoutComplianceScan {
             foreach ($e in $errorLogs) {
                 try {
                     $errorRecord = @{
-                        'fsi_name'            = "ITE-ERR-$($e.EnvironmentName)-$runId".Substring(0, [Math]::Min(100, "ITE-ERR-$($e.EnvironmentName)-$runId".Length))
+                        'fsi_errorname'       = "ITE-ERR-$($e.EnvironmentName)-$runId".Substring(0, [Math]::Min(200, "ITE-ERR-$($e.EnvironmentName)-$runId".Length))
                         'fsi_environmentid'   = $e.EnvironmentId
                         'fsi_environmentname' = $e.EnvironmentName
                         'fsi_zone'            = $zoneMap[$e.Zone]
-                        'fsi_errormessage'    = $e.ErrorMessage
-                        'fsi_errortime'       = $e.ErrorTime
+                        'fsi_errorraw'        = $e.ErrorMessage
+                        'fsi_timestamp'       = $e.ErrorTime
                         'fsi_scanrunid'       = $e.RunId
                     }
 

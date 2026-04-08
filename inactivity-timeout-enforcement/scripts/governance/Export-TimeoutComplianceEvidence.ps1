@@ -86,7 +86,7 @@
     Exports all zones with interactive auth for ad-hoc examination preparation.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA 501(b), SOX 302/404, FINRA 4511, NIST 800-53 AC-11/AC-12
@@ -239,8 +239,8 @@ $fromDateUtc = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateUtc = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 $filterParts = @(
-    "fsi_scantime ge $fromDateUtc",
-    "fsi_scantime le $toDateUtc"
+    "fsi_lastscandate ge $fromDateUtc",
+    "fsi_lastscandate le $toDateUtc"
 )
 
 if ($Zone -ne 'All') {
@@ -249,11 +249,11 @@ if ($Zone -ne 'All') {
 }
 
 $filter = $filterParts -join ' and '
-$select = 'fsi_name,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_timeoutenabled,fsi_timeoutduration,fsi_timeoutdurationminutes,fsi_maxallowedminutes,fsi_timeoutrequired,fsi_compliancestatus,fsi_severity,fsi_regulatorycontext,fsi_details,fsi_scanrunid,fsi_scantime'
+$select = 'fsi_compliancename,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_inactivitytimeoutenabled,fsi_timeoutduration,fsi_timeoutdurationminutes,fsi_requiredmaxduration,fsi_timeoutrequired,fsi_compliancestatus,fsi_severity,fsi_regulatorycontext,fsi_notes,fsi_scanrunid,fsi_lastscandate'
 
 # Paginated query for compliance records
 $complianceRecords = [System.Collections.ArrayList]::new()
-$nextUrl = "$apiBase/fsi_inactivitytimeoutcompliances?`$filter=$filter&`$select=$select&`$orderby=fsi_scantime desc"
+$nextUrl = "$apiBase/fsi_inactivitytimeoutcompliances?`$filter=$filter&`$select=$select&`$orderby=fsi_lastscandate desc"
 
 try {
     while ($nextUrl) {
@@ -272,9 +272,9 @@ catch {
 
 # Query error logs
 $errorLogs = [System.Collections.ArrayList]::new()
-$errorFilter = "fsi_errortime ge $fromDateUtc and fsi_errortime le $toDateUtc"
-$errorSelect = 'fsi_name,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_errormessage,fsi_errortime,fsi_scanrunid'
-$errorNextUrl = "$apiBase/fsi_inactivitytimeouterrorlogs?`$filter=$errorFilter&`$select=$errorSelect&`$orderby=fsi_errortime desc"
+$errorFilter = "fsi_timestamp ge $fromDateUtc and fsi_timestamp le $toDateUtc"
+$errorSelect = 'fsi_errorname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_errorraw,fsi_timestamp,fsi_scanrunid'
+$errorNextUrl = "$apiBase/fsi_inactivitytimeouterrorlogs?`$filter=$errorFilter&`$select=$errorSelect&`$orderby=fsi_timestamp desc"
 
 try {
     while ($errorNextUrl) {
@@ -321,7 +321,7 @@ elseif ($totalRecords -eq 0) {
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Inactivity Timeout Enforcement'
-    solutionVersion = '1.0.0'
+    solutionVersion = '1.0.4'
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
     zoneFilter      = $Zone
@@ -343,33 +343,33 @@ $summary = [PSCustomObject]@{
 # Convert compliance records to readable format
 $complianceReadable = $complianceRecords | ForEach-Object {
     [PSCustomObject]@{
-        name                   = $_.fsi_name
+        name                   = $_.fsi_compliancename
         environmentId          = $_.fsi_environmentid
         environmentName        = $_.fsi_environmentname
         zone                   = $_.fsi_zone
-        timeoutEnabled         = $_.fsi_timeoutenabled
+        timeoutEnabled         = $_.fsi_inactivitytimeoutenabled
         timeoutDuration        = $_.fsi_timeoutduration
         timeoutDurationMinutes = $_.fsi_timeoutdurationminutes
-        maxAllowedMinutes      = $_.fsi_maxallowedminutes
+        maxAllowedMinutes      = $_.fsi_requiredmaxduration
         timeoutRequired        = $_.fsi_timeoutrequired
         complianceStatus       = $_.fsi_compliancestatus
         severity               = $_.fsi_severity
         regulatoryContext      = $_.fsi_regulatorycontext
-        details                = $_.fsi_details
+        details                = $_.fsi_notes
         scanRunId              = $_.fsi_scanrunid
-        scanTime               = $_.fsi_scantime
+        scanTime               = $_.fsi_lastscandate
     }
 }
 
 # Convert error logs to readable format
 $errorsReadable = $errorLogs | ForEach-Object {
     [PSCustomObject]@{
-        name            = $_.fsi_name
+        name            = $_.fsi_errorname
         environmentId   = $_.fsi_environmentid
         environmentName = $_.fsi_environmentname
         zone            = $_.fsi_zone
-        errorMessage    = $_.fsi_errormessage
-        errorTime       = $_.fsi_errortime
+        errorMessage    = $_.fsi_errorraw
+        errorTime       = $_.fsi_timestamp
         scanRunId       = $_.fsi_scanrunid
     }
 }

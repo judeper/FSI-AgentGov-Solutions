@@ -1,6 +1,6 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.3
+> **Version:** v1.0.4
 > **Status:** Completed
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
@@ -16,6 +16,9 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 | Control | Relationship |
 |---------|--------------|
 | [2.22 - Inactivity Timeout Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) | Primary — Timeout policy compliance detection |
+| [1.23 - Session Security](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-session-security/) | Session timeout configuration validation |
+| [3.7 - Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.7-monitoring/) | Continuous compliance monitoring and alerting |
+| [3.8 - Access Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.8-access-monitoring/) | Overly permissive access detection via timeout gaps |
 
 ## Components
 
@@ -23,9 +26,21 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 inactivity-timeout-enforcement/
 ├── README.md
 ├── CHANGELOG.md
-└── docs/
-    ├── delivery-checklist.md       # Pre-deployment verification checklist
-    └── flow-configuration.md       # Step-by-step flow build guide
+├── docs/
+│   ├── dataverse-schema.md       # Auto-generated schema reference
+│   ├── delivery-checklist.md     # Pre-deployment verification checklist
+│   └── flow-configuration.md    # Step-by-step flow build guide
+└── scripts/
+    ├── create_ite_dataverse_schema.py
+    ├── create_ite_connection_references.py
+    ├── create_ite_environment_variables.py
+    ├── requirements.txt
+    └── governance/
+        ├── Invoke-TimeoutComplianceScan.ps1
+        ├── Test-TimeoutCompliance.ps1
+        ├── Get-ExpectedTimeoutPolicy.ps1
+        ├── Export-TimeoutComplianceEvidence.ps1
+        └── Test-EvidenceIntegrity.ps1
 ```
 
 ## Documentation

@@ -35,6 +35,10 @@
 | fsi_TimeoutDuration | fsi_timeoutduration | String | No | Configured timeout duration (ISO 8601 or minutes) |  |
 | fsi_RequiredMaxDuration | fsi_requiredmaxduration | Integer | No | Maximum inactivity timeout required by policy in minutes |  |
 | fsi_ComplianceStatus | fsi_compliancestatus | Picklist | Yes | Inactivity timeout compliance status | **fsi_ITE_compliancestatus**: `100000000` = Compliant, `100000001` = NonCompliant, `100000002` = Unknown |
+| fsi_TimeoutDurationMinutes | fsi_timeoutdurationminutes | Integer | No | Actual configured timeout duration in minutes |  |
+| fsi_TimeoutRequired | fsi_timeoutrequired | Boolean | No | Whether inactivity timeout is required per zone policy | `1` = Yes, `0` = No |
+| fsi_Severity | fsi_severity | String | No | Severity level of the compliance result |  |
+| fsi_RegulatoryContext | fsi_regulatorycontext | Memo | No | Applicable regulatory references for this compliance result |  |
 | fsi_Notes | fsi_notes | Memo | No | Additional notes or details about the compliance result |  |
 | fsi_LastScanDate | fsi_lastscandate | DateTime | No | When this compliance record was last scanned |  |
 | fsi_ScanRunId | fsi_scanrunid | String | No | GUID correlating all records in one scan run |  |
@@ -45,6 +49,9 @@
 |---|---|---|---|---|---|
 | fsi_ErrorName | fsi_errorname | String | Yes | Unique error record identifier |  |
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
+| fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |
+| fsi_Zone | fsi_zone | Picklist | No | Governance zone classification | **fsi_acv_zone**: `100000000` = Unclassified, `100000001` = Zone 1, `100000002` = Zone 2, `100000003` = Zone 3 |
+| fsi_ScanRunId | fsi_scanrunid | String | No | GUID correlating all records in one scan run |  |
 | fsi_ErrorType | fsi_errortype | Picklist | Yes | Type of error encountered during scan | **fsi_ITE_errortype**: `100000000` = MissingPolicy, `100000001` = Unauthorized, `100000002` = Forbidden, `100000003` = NotFound, `100000004` = Throttled, `100000005` = ParseError, `100000006` = DataverseError |
 | fsi_ErrorRaw | fsi_errorraw | Memo | No | Raw error message or stack trace |  |
 | fsi_Timestamp | fsi_timestamp | DateTime | Yes | When the error occurred |  |

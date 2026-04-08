@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.2
+**Version:** 1.0.4
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -378,13 +378,11 @@ Execute the following in Dataverse (via Power Apps maker portal → Tables → N
    - Primary Column: Auto-number (e.g., `ERR-{SEQNUM:5}`)
    - Add columns per Data Model section
 
-**Step 3: Import Solution**
+**Step 3: Build the Cloud Flow**
 
-1. Download the flow JSON: `detect-inactivity-timeout-noncompliance.json`
-2. Navigate to Power Platform Admin Center → Environments
-3. Select your governance environment (recommended: dedicated governance environment)
-4. Navigate to Solutions → Import
-5. Import the JSON file as a cloud flow
+1. Navigate to Power Automate → Cloud flows → + New → Scheduled cloud flow
+2. Build the flow manually following the configuration steps in the sections below
+3. The flow should follow the architecture pattern described in the Architecture Overview above
 
 **Step 4: Configure Connection References**
 
@@ -817,8 +815,8 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
-**Release Date:** March 2026
+**Solution Version:** 1.0.4
+**Release Date:** April 2026
 **License:** MIT License
 
 **Change Management:**
