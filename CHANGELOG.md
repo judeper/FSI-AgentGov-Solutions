@@ -19,6 +19,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — Remediation Sweep
+
+### Fixed
+- **Dataverse SchemaNames:** Corrected snake_case to PascalCase in agent-access-monitor (27 cols), content-moderation-monitor (24 cols), file-upload-security (35 cols + 3 tables)
+- **Option set values:** Corrected to 100000000+ range across 8 solutions
+- **Schema↔script column mismatches:** Aligned column names in 8 solutions (ARA, ASARD, ITE, ACRD, COD, CTSG, ALG, GAC)
+- **Prohibited regulatory language:** Replaced "ensures compliance" / "guarantees" across 6 solutions
+- **Sovereign cloud auth bug:** Fixed environment-specific endpoint handling in scope-drift-monitor
+- **Version drift:** Synchronized catalog versions across 9 solutions (ASARD v1.0.3, CAA v1.2.0, CSI v1.0.1, DRTF v1.2.0, HT v1.0.0, ITE v1.0.4, MCM v2.2.0, RSV v1.1.0, AKSS v1.0.2)
+- **Control mapping errors:** Corrected control references in 3 solutions
+- **Stale file references:** Updated broken doc/script paths across 4 solutions
+
+### Added
+- **agent-365-lifecycle-governance:** Updated for Agent 365 GA (May 2026)
+- **agent-knowledge-source-scanner:** PnP.PowerShell 3.x compatibility
+- **generative-ai-config-auditor:** Added Get-GACValidationResults.ps1 governance script
+- **Try/catch error handling:** Added structured error handling to 10+ scripts
+- **MSAL.PS deprecation comments:** Added migration guidance comments across 13 solutions
+
+### Removed
+- **audit-compliance-manager:** Deleted 3 exported flow JSON files (content policy compliance)
+
+---
+
 ## credential-oversharing-detector v1.0.0 — 2026-04-01
 
 ### Added
