@@ -126,7 +126,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "**To renew an exception:**\n\n1. Navigate to Dataverse `fsi_agentsharingcompliances` table\n2. Locate the agent record by `fsi_agent_id` and `fsi_environment_id`\n3. Update `fsi_exception_expires_at` to new expiration date (future date)\n4. Optionally update `fsi_exception_review_date` for next review cycle\n5. Save the record\n\n**To allow expiration:**\n\nNo action needed. The exception will automatically reset to NonCompliant status on the expiration date, triggering a re-scan during the next detection run.",
+          "text": "**To renew an exception:**\n\n1. Navigate to Dataverse `fsi_agentsharingcompliances` table\n2. Locate the agent record by `fsi_agentid` and `fsi_environmentid`\n3. Update `fsi_exceptionexpiresat` to new expiration date (future date)\n4. Save the record\n\n**To allow expiration:**\n\nNo action needed. The exception will automatically reset to NonCompliant status on the expiration date, triggering a re-scan during the next detection run.",
           "wrap": true,
           "spacing": "Small"
         }

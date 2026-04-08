@@ -11,8 +11,17 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - PowerShell governance scripts: Invoke-SharingComplianceScan, Test-AgentSharingCompliance, Get-ExpectedSharingPolicy, Export-SharingComplianceEvidence, Test-EvidenceIntegrity
 - Python zone rules engine (asard_zone_rules.py) with zone policy evaluation
 - Auto-generated Dataverse schema documentation
+- Seven new columns on AgentSharingCompliance table: SharingType, ViolationType, Severity, Description, ScanRunId, SharedGroupIds, RegulatoryContext
 
-## [1.0.2] — July 2025
+### Fixed
+- Aligned PS script column references with Dataverse schema (`fsi_groupid` → `fsi_securitygroupid`, `fsi_groupname` → `fsi_securitygroupname`)
+- Removed `exit 0` from Invoke-SharingComplianceScan.ps1 and Test-AgentSharingCompliance.ps1 (broke dot-sourcing)
+- Fixed snake_case column names in docs and adaptive card templates to match Dataverse logical names
+- Fixed ComplianceStatus option set values in docs (was 0–3, corrected to 100000000–100000003)
+- Fixed CHANGELOG date ordering (v1.0.2 was incorrectly dated July 2025)
+- Added MSAL.PS deprecation notice in Export-SharingComplianceEvidence.ps1
+
+## [1.0.2] — March 2026
 
 ### Changed
 - Restructured solution to follow standard layout

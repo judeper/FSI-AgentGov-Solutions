@@ -1,6 +1,6 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
@@ -82,8 +82,8 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 |-------|---------|
 | `fsi_agentsharingcompliances` | Detected sharing policy violations with agent identity, zone, and remediation status |
 | `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per zone |
-| `fsi_agentsharingcompliances.fsi_exception_*` | Time-bound exception records with approval audit trail (columns on compliance table) |
-| `fsi_agentsharingcompliances.fsi_remediation_*` | Immutable remediation action history (columns on compliance table) |
+| `fsi_agentsharingcompliances.fsi_exception*` | Time-bound exception records with approval audit trail (columns on compliance table) |
+| `fsi_agentsharingcompliances.fsi_remediation*` | Immutable remediation action history (columns on compliance table) |
 
 ## Prerequisites
 
@@ -128,7 +128,7 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 - **30-day runtime limit**: The sequential approval loop (concurrency=1) with 7-day timeouts means >4 agents will exceed Power Automate's 30-day maximum runtime limit, silently dropping later agents. For environments with >4 non-compliant agents, consider batch approval or a child flow pattern.
 - **Sovereign cloud deployment**: The BAP Admin API base URL is configurable via the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. Override for GCC, GCC-High, or DoD deployments.
-- **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to prevent repeated approval requests to the same approver. Override by manually resetting `fsi_approval_status` in Dataverse.
+- **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to prevent repeated approval requests to the same approver. Override by manually resetting `fsi_remediationstatus` in Dataverse.
 - **Adaptive card templates (remediation)**: `adaptive-card-asard-remediation-approval.json` and `adaptive-card-asard-remediation-result.json` are reference templates for external integrations (e.g., custom Power Apps, third-party dashboards). The remediation approval workflow uses inline Markdown for approval and notification messages — these templates are not loaded by the workflow at runtime.
 - **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Ensure the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).
 - **Exception query pagination**: The exception review workflow retrieves up to 5,000 records per query (Dataverse maximum per request). Environments with >5,000 active exceptions should use Dataverse views or custom reporting for complete visibility.

@@ -79,7 +79,7 @@
 
 .NOTES
     File: Export-SharingComplianceEvidence.ps1
-    Version: 1.0.0
+    Version: 1.0.3
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -155,6 +155,9 @@ $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
 if ($Interactive) {
     try {
+        # NOTE: MSAL.PS is archived and no longer maintained.
+        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
+        # See https://github.com/AzureAD/MSAL.PS for archive notice.
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
             throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
         }
@@ -184,6 +187,8 @@ else {
     }
 
     try {
+        # NOTE: MSAL.PS is archived and no longer maintained.
+        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
             throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
         }
@@ -264,7 +269,7 @@ Write-Host "  Compliance records retrieved: $($complianceRecords.Count)" -Foregr
 
 Write-Host "Querying approved security group policies..." -ForegroundColor Cyan
 
-$policySelect = 'fsi_name,fsi_groupid,fsi_groupname,fsi_zone,fsi_approvedby,fsi_approvedat'
+$policySelect = 'fsi_name,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
 $policyFilter = 'statecode eq 0'
 if ($Zone -ne 'All') {
     $policyFilter += " and fsi_zone eq 'Zone$Zone'"
@@ -314,7 +319,7 @@ elseif ($violationRecords -gt 0) { $overallStatus = 'Review' }
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Agent Sharing Access Restriction Detector'
-    solutionVersion = '1.0.2'
+    solutionVersion = '1.0.3'
     controls        = @('1.18', '2.8')
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc

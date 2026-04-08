@@ -1,7 +1,7 @@
 # Prerequisites
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 
 ## Required Licenses
 
@@ -47,9 +47,9 @@ Key columns on `fsi_agentsharingcompliances`:
 - `fsi_agentid`, `fsi_agentname` — Agent identity
 - `fsi_environmentid`, `fsi_environmentname` — Environment identity
 - `fsi_zone` — Governance zone classification (1, 2, or 3)
-- `fsi_compliancestatus` — Status choice (Compliant=0, NonCompliant=1, Exception=2, Error=3)
-- `fsi_exception_expires_at`, `fsi_exception_justification`, `fsi_exception_approved_by` — Exception lifecycle fields
-- `fsi_remediation_*` — Immutable remediation action history
+- `fsi_compliancestatus` — Status choice (Compliant=100000000, NonCompliant=100000001, Exception=100000002, Error=100000003)
+- `fsi_exceptionexpiresat`, `fsi_exceptionjustification`, `fsi_exceptionapprovedby` — Exception lifecycle fields
+- `fsi_remediation*` — Immutable remediation action history
 
 ## Power Automate Connections
 

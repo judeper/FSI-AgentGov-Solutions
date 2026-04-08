@@ -34,6 +34,13 @@
 | fsi_ExceptionJustification | fsi_exceptionjustification | Memo | No | Business justification for compliance exception |  |
 | fsi_ExceptionApprovedBy | fsi_exceptionapprovedby | String | No | UPN of the person who approved the exception |  |
 | fsi_EvidenceJson | fsi_evidencejson | Memo | No | JSON evidence payload for audit trail |  |
+| fsi_SharingType | fsi_sharingtype | String | No | Agent sharing type (SpecificUsers, OrgWide, Public) |  |
+| fsi_ViolationType | fsi_violationtype | String | No | Type of sharing policy violation detected |  |
+| fsi_Severity | fsi_severity | Integer | No | Violation severity code (100000000=Critical, 100000001=High, 100000002=Medium, 100000003=Low, 100000004=Informational) |  |
+| fsi_Description | fsi_description | Memo | No | Human-readable description of the violation or compliance assessment |  |
+| fsi_ScanRunId | fsi_scanrunid | String | No | Unique identifier for the scan run that produced this record |  |
+| fsi_SharedGroupIds | fsi_sharedgroupids | Memo | No | JSON array of security group IDs the agent is shared with |  |
+| fsi_RegulatoryContext | fsi_regulatorycontext | String | No | Applicable regulatory context for this compliance record |  |
 
 ### fsi_ApprovedSecurityGroupPolicy (`fsi_approvedsecuritygrouppolicy`)
 

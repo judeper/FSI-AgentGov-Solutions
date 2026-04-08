@@ -325,5 +325,3 @@ function Test-AgentSharingCompliance {
 
     #endregion
 }
-
-exit 0
