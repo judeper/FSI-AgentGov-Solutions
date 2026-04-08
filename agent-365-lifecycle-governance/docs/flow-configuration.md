@@ -1,5 +1,7 @@
 # Power Automate Flow Configuration
 
+> **Note:** All choice/option-set field filters in OData expressions use integer values, not string labels. Refer to [dataverse-schema.md](./dataverse-schema.md) for the integer↔label mapping.
+
 Detailed specifications for building the six lifecycle governance flows in Power Automate designer.
 
 ## Flow Architecture
@@ -73,7 +75,7 @@ Detailed specifications for building the six lifecycle governance flows in Power
 
 ## Feature Flag
 
-> **CRITICAL:** Every flow must check the `IsAgent365LifecycleEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_lifecyclecomplianceevent` and terminate with `Cancelled` status and message `"Agent 365 Lifecycle not enabled"`. This gate prevents API calls to Agent 365 endpoints before GA availability.
+> **CRITICAL:** Every flow must check the `IsAgent365LifecycleEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_lifecyclecomplianceevent` and terminate with `Cancelled` status and message `"Agent 365 Lifecycle not enabled"`. This gate allows flows to be disabled independently of deployment status.
 
 ---
 
@@ -253,9 +255,9 @@ nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 | `fsi_agentid` | Agent ID from loop |
 | `fsi_sponsorupn` | Resolved sponsor UPN |
 | `fsi_sponsorobjectid` | Resolved sponsor Object ID |
-| `fsi_assigneddate` | `utcNow()` |
-| `fsi_assignmentmethod` | `"Auto"` or `"Default"` |
-| `fsi_isactive` | `true` |
+| `fsi_assignmentdate` | `utcNow()` |
+| `fsi_assignmentreason` | `100000000` (Initial Onboarding) or `100000003` (Manual Reassignment) |
+| `fsi_iscurrent` | `true` |
 
 #### Step 3g: Add Agent to Security Groups
 
@@ -656,7 +658,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| Filter rows | `fsi_agentid eq '@{triggerBody()?['agentId']}' and fsi_requeststatus eq 'Pending'` |
+| Filter rows | `fsi_agentid eq '@{triggerBody()?['agentId']}' and fsi_approvalstatus eq 100000000` |
 | Top count | `1` |
 
 **Condition:** If result is non-empty, log `"Duplicate Request Skipped"` and terminate with `Cancelled` status.
@@ -670,9 +672,9 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Table | `fsi_deactivationrequest` |
 | `fsi_agentid` | `triggerBody()?['agentId']` |
 | `fsi_agentname` | `triggerBody()?['agentName']` |
-| `fsi_reason` | `triggerBody()?['reason']` |
+| `fsi_triggerreason` | `triggerBody()?['reason']` |
 | `fsi_requestedby` | `triggerBody()?['requestedBy']` |
-| `fsi_requeststatus` | `"Pending"` |
+| `fsi_approvalstatus` | `100000000` (Pending) |
 | `fsi_requestdate` | `utcNow()` |
 
 ### Step 4: Send Deactivation Approval
@@ -730,12 +732,11 @@ deletionHoldExpiry = addDays(utcNow(), holdDays)
 
 | Parameter | Value |
 |-----------|-------|
-| `fsi_requeststatus` | `"Approved"` |
-| `fsi_approvedby` | Approver identity |
-| `fsi_approveddate` | `utcNow()` |
-| `fsi_approvalcomments` | Approval response comments |
-| `fsi_deletionholdexpiry` | Calculated hold expiry |
-| `fsi_deletioncompleted` | `false` |
+| `fsi_approvalstatus` | `100000001` (Approved) |
+| `fsi_approverupn` | Approver identity |
+| `fsi_approvaldate` | `utcNow()` |
+| `fsi_approvalnotes` | Approval response comments |
+| `fsi_deletionholduntil` | Calculated hold expiry |
 
 ##### Step 5d: Update Lifecycle Record
 
@@ -760,7 +761,7 @@ Send Teams message confirming deactivation with deletion hold expiry date.
 
 ##### Step 5g: Update Deactivation Request
 
-Set `fsi_requeststatus` = `"Rejected"`, record rejection comments.
+Set `fsi_approvalstatus` = `100000002` (Rejected), record rejection comments in `fsi_approvalnotes`.
 
 ##### Step 5h: Restore Lifecycle Record
 
@@ -838,7 +839,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 **If false (sponsor departed):**
 
 1. Increment `sponsorsDeparted`
-2. Mark sponsor inactive in `fsi_sponsorassignment`: set `fsi_isactive` = `false`, `fsi_enddate` = `utcNow()`
+2. Mark sponsor inactive in `fsi_sponsorassignment`: set `fsi_iscurrent` = `false`, `fsi_enddate` = `utcNow()`
 3. Update lifecycle record: `fsi_sponsoractive` = `false`
 
 #### Step 4c: Attempt Auto-Reassignment
@@ -914,7 +915,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| Filter rows | `fsi_requeststatus eq 'Approved' and fsi_deletionholdexpiry lt @{utcNow()} and fsi_deletioncompleted eq false` |
+| Filter rows | `fsi_approvalstatus eq 100000001 and fsi_deletionholduntil lt @{utcNow()} and fsi_deletiondate eq null` |
 
 ### Step 3: For Each Expired Hold
 
@@ -958,7 +959,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 
 ##### Step 3b-ii: Update Deactivation Request
 
-Set `fsi_deletioncompleted` = `true`, `fsi_deletiondate` = `utcNow()`.
+Set `fsi_deletiondate` = `utcNow()`.
 
 ##### Step 3b-iii: Update Lifecycle Record
 
@@ -976,7 +977,7 @@ Log `fsi_eventtype` = `"Agent Deleted"`, `fsi_complianceimpact` = `"Critical"`.
 
 | Parameter | Value |
 |-----------|-------|
-| `fsi_deletionholdexpiry` | `addDays(utcNow(), 30)` |
+| `fsi_deletionholduntil` | `addDays(utcNow(), 30)` |
 
 ##### Step 3b-vi: Log Compliance Event
 
@@ -1023,7 +1024,7 @@ All flows terminate gracefully when `IsAgent365LifecycleEnabled` = `"false"`:
 Flows 3, 4, and 5 must check for existing open deactivation requests before creating new ones:
 
 ```
-Filter: fsi_agentid eq '{agentId}' and fsi_requeststatus eq 'Pending'
+Filter: fsi_agentid eq '{agentId}' and fsi_approvalstatus eq 100000000
 ```
 
 If a pending request exists, skip creation and log `"Duplicate Request Skipped"`.
@@ -1145,7 +1146,7 @@ All components should be developed inside a Dataverse solution container for man
 5. Set `fsi_lastactivitydate` to 100+ days ago, run Flow 3 — verify inactivity detection
 6. Verify Flow 4 triggers and sends approval
 7. Approve deactivation — verify service principal is disabled
-8. Advance `fsi_deletionholdexpiry` to past date, run Flow 6 — verify final confirmation
+8. Advance `fsi_deletionholduntil` to past date, run Flow 6 — verify final confirmation
 9. Confirm deletion — verify service principal is removed
 10. Check `fsi_lifecyclecomplianceevent` for complete audit trail
 

@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.0 — Pre-GA (Agent 365 target GA: May 1, 2026)
+> **Status:** v1.1.0 — GA (Agent 365 GA: May 1, 2026)
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 
@@ -10,7 +10,7 @@ As FSI organizations deploy AI agents at scale through Copilot Studio, Agent Bui
 
 This solution automates enforcement on top of Agent 365 and Entra ID Governance to address the core FSI examiner question: *"How do you verify that every AI agent has an accountable owner, operates under least-privilege access, is reviewed on a defined cadence, and is decommissioned when no longer needed?"*
 
-> **Important:** All Entra Agent 365 API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"false"` until Agent 365 GA and tenant licensing are confirmed. When disabled, flows terminate gracefully without calling external APIs.
+> **Important:** All Entra Agent 365 API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"true"` after deployment validation — Agent 365 is now GA for OBO agents (May 2026). When disabled, flows terminate gracefully without calling external APIs.
 >
 > **Boundary:** This solution complements the native Agent 365 Admin Center governance surfaces. Use the Agent 365 Admin Center and the related FSI framework guidance for Agent Registry inventory, pending requests, ownerless-agent queues, and overview analytics. There is no separate live Agent 365 governance-monitor solution in this repository. Use this solution for automated sponsor enforcement, access reviews, inactivity handling, deactivation workflows, and deletion holds.
 
@@ -114,7 +114,7 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
    .\scripts\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@contoso.com"
    ```
 5. Build flows in Power Automate designer following [docs/flow-configuration.md](./docs/flow-configuration.md)
-6. Set `IsAgent365LifecycleEnabled` to `"true"` after validation
+6. Set `IsAgent365LifecycleEnabled` to `"true"` after deployment validation (Agent 365 is now GA for OBO agents)
 7. Validate compliance:
    ```powershell
    .\scripts\Validate-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
@@ -149,7 +149,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 | Limitation | Impact | Mitigation |
 |-----------|--------|------------|
-| Agent 365 in Frontier preview pre-GA | Lifecycle workflow tasks may not be available | Feature flag disables gracefully; Dataverse-only tracking remains active |
+| Agent 365 GA for OBO agents (May 2026); autonomous agents with full Entra identities remain in Frontier preview | Lifecycle workflow tasks may not be available for autonomous agents | Feature flag disables gracefully; Dataverse-only tracking remains active |
 | `AuditLog.Read.All` may be restricted | Inactivity detection falls back to PPAC timestamps | Flow 3 handles gracefully — sets source to "Unknown", does not trigger deactivation |
 | Daily polling scales poorly past 100 agents | Flow 2 Part C may run long | Consider Graph change notifications (webhooks) as agent count grows |
 | Agentic user deletion is automatic | Deleting agent instance also deletes mailbox and OneDrive | 90-day deletion hold for Zone 3 provides investigation window |

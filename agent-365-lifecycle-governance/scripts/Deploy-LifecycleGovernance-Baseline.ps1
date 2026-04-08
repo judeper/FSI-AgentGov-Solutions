@@ -1,3 +1,5 @@
+#Requires -Modules Az.Accounts
+
 <#
 .SYNOPSIS
     Deploys baseline configuration for Agent 365 Lifecycle Governance.
@@ -37,6 +39,7 @@ param(
 try {
     Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
     $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
+    # Reserved for future use — Power Platform Admin API token for PPAC operations
     $ppToken    = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com" -ErrorAction Stop).Token
 } catch {
     Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
@@ -50,8 +53,10 @@ Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cy
 
 # Retrieve all agents — filter client-side for unsponsored agents
 # Server-side sponsor filter syntax must be validated in test tenant
-# NOTE: The Agent Registry API (graph.microsoft.com/beta/agentRegistry) is in beta.
-# Verify current availability at https://learn.microsoft.com/en-us/graph/api/resources/agenttypes-overview
+# NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
+# The /beta/agentRegistry endpoint may now have a v1.0 equivalent.
+# Test with v1.0 in your tenant before migrating.
+# Autonomous agents with full Entra identities remain in Frontier preview.
 try {
     $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
 } catch {

@@ -1,3 +1,5 @@
+#Requires -Modules Az.Accounts
+
 <#
 .SYNOPSIS
     Validates Agent 365 lifecycle compliance status.
@@ -39,8 +41,10 @@ $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "appli
 $dvHeaders    = @{ Authorization = "Bearer $dvToken";    "Content-Type" = "application/json" }
 
 # Query Entra registry
-# NOTE: The Agent Registry API (graph.microsoft.com/beta/agentRegistry) is in beta.
-# Verify current availability at https://learn.microsoft.com/en-us/graph/api/resources/agenttypes-overview
+# NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
+# The /beta/agentRegistry endpoint may now have a v1.0 equivalent.
+# Test with v1.0 in your tenant before migrating.
+# Autonomous agents with full Entra identities remain in Frontier preview.
 try {
     $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
 } catch {
