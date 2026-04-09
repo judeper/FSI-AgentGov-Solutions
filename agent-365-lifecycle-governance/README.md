@@ -133,6 +133,20 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 
 ## Known Limitations
 
+### Relationship to Native Agentic Center of Enablement (2026 Wave 1)
+
+Microsoft's [Agentic Center of Enablement](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/power-platform-governance-administration/automate-governance-agentic-center-enablement) (Agentic CoE) introduces three AI-powered agents to the Power Platform admin center: a **Highlights agent** for daily tenant activity snapshots, an **Insights agent** for continuous governance issue scanning (ownerless resources, default environment activity), and an **Action Plan agent** for automated remediation plans.
+
+**Relationship to this solution:** The Agentic CoE provides **tenant-wide visibility and general governance automation**. This solution provides **FSI-specific lifecycle enforcement** that goes beyond what the native CoE covers:
+
+- Zone-based access review cadences (quarterly/semi-annual/annual) aligned to regulatory requirements
+- Sponsor enforcement with auto-reassignment on departure
+- Mandatory deletion hold periods (30/90 days) before permanent identity removal
+- Immutable compliance event logging with 7-year LTR for FINRA 4511 / SEC 17a-4
+- Integration with Entra ID Governance lifecycle workflows and conditional access
+
+FSI organizations should use the Agentic CoE for tenant-level visibility and general governance, and deploy this solution for the regulatory-grade lifecycle controls that financial services examiners require.
+
 | Limitation | Impact | Mitigation |
 |-----------|--------|------------|
 | Agent 365 in Frontier preview pre-GA | Lifecycle workflow tasks may not be available | Feature flag disables gracefully; Dataverse-only tracking remains active |

@@ -121,6 +121,14 @@ Configuration values for the Power Automate flow (tenant domain, Dataverse URL, 
 
 > **Note:** For full environment portability across dev/test/prod, consider storing these values as Dataverse environment variables (see [SCHEMA.md](docs/SCHEMA.md) Environment Variables section). This allows per-environment configuration without modifying the flow definition.
 
+## Platform Update Notes
+
+### Microsoft Purview Sensitivity Labels (2026 Wave 1)
+
+Microsoft is introducing [sensitivity label visibility in Copilot Studio](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/power-platform-governance-administration/view-sensitivity-labels-copilot-studio) (GA June 2026). This feature enables Purview autolabeling at the Dataverse column level, with labels surfaced when selecting knowledge sources and in agent response citations.
+
+**Relationship to this solution:** Purview sensitivity labels classify data and make classification visible to makers and users. File Upload Security validates **whether file uploads are enabled or disabled** per governance zone. As sensitivity labels become available in Copilot Studio, organizations can use label metadata to inform zone policy decisions — for example, automatically escalating the violation severity when an upload-enabled agent accesses columns labeled "Highly Confidential." The two capabilities are complementary.
+
 ## Related Controls
 
 - **1.14** — Data Minimization and Agent Scope Control (primary)

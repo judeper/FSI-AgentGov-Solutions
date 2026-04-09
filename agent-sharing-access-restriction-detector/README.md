@@ -56,6 +56,16 @@ agent-sharing-access-restriction-detector/
 
 ## Platform Update Notes
 
+### Native Agent Sharing Rules (GA May 2025)
+
+Microsoft introduced native admin controls in the Power Platform admin center to [block and limit sharing for Copilot Studio agents](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules-preview). These controls allow administrators to:
+
+- Allow or block makers from sharing agents with individuals or security groups
+- Set numerical limits on viewer sharing per agent
+- Apply rules at the managed environment level or via environment groups
+
+**Relationship to ASARD:** The native sharing rules provide **preventive controls** — they block sharing at the platform level. ASARD provides **zone-specific detective controls** — it validates that each agent's sharing configuration aligns with approved security group policies for its governance zone, manages time-bound exceptions with approval workflows, and generates compliance evidence. FSI organizations should deploy the native sharing rules as the primary enforcement layer and use ASARD for granular zone-based compliance auditing and exception management.
+
 ### M365 Copilot Agent Store (April 2026)
 
 Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments introduce a parallel sharing channel that operates outside environment-level controls:

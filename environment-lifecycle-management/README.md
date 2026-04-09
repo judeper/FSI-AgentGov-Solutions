@@ -296,6 +296,19 @@ Notify Requester → END
 
 ## Platform Update Notes
 
+### Relationship to Native Agentic Center of Enablement (2026 Wave 1)
+
+Microsoft's [Agentic Center of Enablement](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/power-platform-governance-administration/automate-governance-agentic-center-enablement) (Agentic CoE) introduces AI-powered agents to the Power Platform admin center for automated governance — daily tenant snapshots, continuous issue scanning, and remediation planning.
+
+**Relationship to this solution:** The Agentic CoE monitors tenant-level governance health. ELM governs the **environment request and provisioning lifecycle** — intake, zone classification, approval routing, automated provisioning via Service Principal, security group binding, and baseline hardening. These are complementary, not overlapping:
+
+- ELM enforces zone-based governance **at provisioning time** (before environments exist)
+- The Agentic CoE monitors **existing environments** for governance drift
+- ELM maintains immutable provisioning audit trails for FINRA 4511 / SEC 17a-4
+- ELM integrates with Copilot Studio intake agents for self-service provisioning with guardrails
+
+FSI organizations should use the Agentic CoE for ongoing environment health monitoring and ELM for governed provisioning and regulatory evidence.
+
 ### Unified Environment Types (April 2026)
 
 Microsoft has introduced [unified environment types](https://learn.microsoft.com/en-us/power-platform/admin/unified-experience/unified-environment-types-and-templates) for Power Platform, consolidating environment management under three standardized types:

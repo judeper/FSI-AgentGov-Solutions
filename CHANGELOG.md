@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## Documentation Updates — 2026-04-09
+
+### Changed
+- **site-docs/index.md** — Fixed homepage metrics count from 33 to 35 solutions
+- **unrestricted-agent-sharing-detector** — Added Native Agent Sharing Rules (GA May 2025) section referencing platform controls and positioning UASD as complementary audit/evidence layer
+- **agent-sharing-access-restriction-detector** — Added Native Agent Sharing Rules (GA May 2025) section referencing platform controls and positioning ASARD for zone-based compliance auditing
+- **agent-365-lifecycle-governance** — Added Relationship to Native Agentic Center of Enablement (2026 Wave 1) section explaining FSI-specific lifecycle enforcement beyond native CoE
+- **environment-lifecycle-management** — Added Relationship to Native Agentic Center of Enablement (2026 Wave 1) section distinguishing provisioning-time governance from tenant monitoring
+- **scope-drift-monitor** — Added Microsoft Purview Sensitivity Labels (2026 Wave 1) forward-looking note on complementary data classification
+- **file-upload-security** — Added Microsoft Purview Sensitivity Labels (2026 Wave 1) forward-looking note on complementary data classification
+
+---
+
 ## credential-oversharing-detector v1.0.0 — 2026-04-01
 
 ### Added

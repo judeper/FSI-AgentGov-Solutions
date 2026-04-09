@@ -56,6 +56,17 @@ Power Automate flows and Canvas apps are built manually using the instructions i
 
 ## Platform Update Notes
 
+### Native Agent Sharing Rules (GA May 2025)
+
+Microsoft introduced native admin controls in the Power Platform admin center to [block and limit sharing for Copilot Studio agents](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules-preview). These controls allow administrators to:
+
+- Allow or block makers from sharing agents with individuals as editors
+- Allow or block makers from sharing agents with viewers (individuals and security groups)
+- Set numerical limits on how many viewers an agent can be shared with
+- Apply rules at the managed environment level or via environment groups
+
+**Relationship to UASD:** The native sharing rules provide **preventive controls** — they block sharing at the platform level before it occurs. UASD provides **detective and corrective controls** — it audits existing sharing configurations, detects violations that predate native rule deployment, manages time-bound exceptions, and generates compliance evidence for regulatory examinations. FSI organizations should deploy the native sharing rules as the primary enforcement layer and use UASD for ongoing audit, evidence collection, and exception management.
+
 ### M365 Copilot Agent Store (April 2026)
 
 Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments may bypass environment-level sharing controls, creating additional governance considerations:

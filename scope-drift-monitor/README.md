@@ -233,6 +233,12 @@ If Denied: Remediate Access → Close Violation
 
 ## Known Limitations
 
+### Microsoft Purview Sensitivity Labels (2026 Wave 1)
+
+Microsoft is introducing [sensitivity label visibility in Copilot Studio](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/power-platform-governance-administration/view-sensitivity-labels-copilot-studio) (GA June 2026). This feature enables Purview autolabeling at the Dataverse column level, with labels surfaced in Copilot Studio knowledge source selection and agent response citations.
+
+**Relationship to this solution:** Purview sensitivity labels provide **classification and visibility** — they label data and surface those labels to makers and users. The Scope Drift Monitor provides **enforcement and audit** — it detects when agents access resources beyond their declared operational scope and triggers remediation workflows. As Purview labels become available, organizations can use label metadata to enrich scope baselines (e.g., auto-flag agents accessing columns labeled "Highly Confidential" that are outside declared scope). The two capabilities are complementary.
+
 - **Detection telemetry not persisted:** The `Compose_Detection_Summary` action builds operational telemetry (events processed, violations created, source availability) each cycle but does not persist it to Dataverse. Detection metrics are only available through Power Automate's 28-day run history. Organizations with FSI audit retention requirements should export flow run data to a long-term store (see [Flow Configuration > Known Limitations](docs/flow-configuration.md)).
 - **Scope item records not auto-provisioned:** The `New-AgentBaseline.ps1` script populates aggregate `fsi_agentscope` JSON arrays (allowed connectors, sites, tables, APIs) but does not create individual `fsi_scopeitem` rows. The `Check_Expired_Scope_Items` scope in SDM-DriftDetector queries `fsi_scopeitem` for expired entries, so expiration-based detection requires manual Dataverse record creation or a custom provisioning script.
 

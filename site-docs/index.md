@@ -19,7 +19,7 @@ Microsoft Copilot Studio and Power Platform.
 
 <div class="metrics-strip">
   <div class="metric">
-    <span class="metric-number">33</span>
+    <span class="metric-number">35</span>
     <span class="metric-label">Solutions</span>
   </div>
   <div class="metric">
