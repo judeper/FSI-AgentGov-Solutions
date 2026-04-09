@@ -286,6 +286,24 @@ For supervision queue assignments:
 | [2.3 - Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md) | Pipeline integration |
 | [1.18 - Application-Level RBAC](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.18-application-level-role-based-access-control.md) | Role definitions |
 
+## Platform Update Notes
+
+### Power Platform RBAC REST API (April 2026)
+
+Microsoft has introduced new [REST API endpoints for RBAC role assignments](https://learn.microsoft.com/en-us/rest/api/power-platform/authorization/role-based-access-control) in the Power Platform, including:
+
+- **RBAC role assignment management** — Create, list, and delete role assignments for users, groups, and service principals at tenant, environment group, or environment scope
+- **Copilot agent reassignment** — Programmatic transfer of agent ownership
+- **Built-in roles** — Power Platform Owner, Contributor, Reader, RBAC Administrator
+
+**Impact on this solution:** These new API endpoints provide a more comprehensive source of role assignment data than the current Graph API + PowerShell cmdlet approach used by `Invoke-SoDScan.ps1`. Future enhancements should consider:
+
+- Querying the RBAC REST API for environment-scoped role assignments to supplement Entra ID directory role queries
+- Adding conflict rules for the new built-in Power Platform RBAC roles (Owner, Contributor, RBAC Administrator)
+- Monitoring agent reassignment events as potential SoD bypass vectors
+
+> **Note:** The RBAC REST API is currently in preview. Monitor [Microsoft documentation](https://learn.microsoft.com/en-us/rest/api/power-platform/) for GA availability before production integration.
+
 ## Known Limitations
 
 | Limitation | Description |

@@ -261,6 +261,25 @@ Compliance tracking with upsert by environment ID:
 | `fsi_environmentid` | Text | Power Platform environment GUID (alternate key) |
 | `fsi_compliancestatus` | Choice | Compliant, Non-Compliant, Remediation Pending, Error |
 
+## Platform Update Notes
+
+### Data Subject Request (DSR) Compliance Endpoints (April 2026)
+
+Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com/en-us/rest/api/power-platform/) with new DSR compliance endpoints covering:
+
+- **Flow DSR** — Export and delete flow run data for individual data subjects
+- **Approval DSR** — Export and delete approval records
+- **Transcript DSR** — Export and delete Copilot Studio conversation transcripts
+- **Prompt DSR** — Export and delete AI prompt history
+
+**Impact on this solution:** ACM currently validates audit configuration and retention but does not cover DSR processing workflows. Organizations subject to GDPR, CCPA, or similar privacy regulations should consider:
+
+- Incorporating DSR endpoint availability checks into the environment validation scan
+- Documenting DSR processing procedures alongside audit retention policies
+- Verifying that Dataverse audit retention periods do not conflict with DSR deletion obligations
+
+> **Note:** DSR compliance automation is not yet included in ACM scripts. Organizations should track DSR capabilities through their privacy operations program and evaluate integration in a future release.
+
 ## Components
 
 ### Scripts

@@ -288,6 +288,24 @@ Quarterly testing reports per FINRA Rule 3120:
 | **SEC 17a-3** | Recordkeeping | Immutable SupervisionLog |
 | **SEC 17a-4** | Record preservation | 6-year retention via Dataverse; **WORM storage required** — export to compliant archival storage (see `scripts/export_supervision_evidence.py`) |
 
+## Platform Update Notes
+
+### DSR Transcript Endpoints (April 2026)
+
+Microsoft has added new [Power Platform REST API](https://learn.microsoft.com/en-us/rest/api/power-platform/) endpoints for Data Subject Request (DSR) compliance, including transcript export and deletion for Copilot Studio conversations.
+
+**Impact on this solution:** FINRA Rule 4511 requires member firms to retain books and records for specified periods. The new DSR transcript endpoints introduce a potential conflict between privacy-driven deletion requests and regulatory retention obligations. Organizations should:
+
+- Ensure DSR deletion workflows check for active supervision holds before deleting Copilot Studio transcripts
+- Document retention-override policies that defer transcript deletion until the FINRA 4511 / SEC 17a-4 retention period expires
+- Consider adding a DSR hold check step to the supervision queue workflow to prevent premature evidence destruction
+
+### Voice Agent Supervision (April 2026)
+
+Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with telephony integration. Voice-enabled agents generate speech transcripts that may require supervisory review under FINRA 3110, similar to text-based agent outputs.
+
+> **Note:** Voice transcript ingestion is not yet automated in this solution's supervision queue. Organizations deploying voice-enabled agents should evaluate manual supervision coverage until automated voice transcript routing is implemented.
+
 ## Documentation
 
 | Guide | Description |

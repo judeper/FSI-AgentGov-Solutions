@@ -54,6 +54,18 @@ Power Automate flows and Canvas apps are built manually using the instructions i
 - Power Platform Admin or Entra Global Admin permissions
 - The Python setup scripts (`scripts/create_uasd_*.py`) depend on a shared `DataverseClient` module located at `../scripts/shared/dataverse_client.py` (relative to the repository root containing this solution). Ensure the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions) repository structure is intact, or install the `dataverse_client` module on `PYTHONPATH`.
 
+## Platform Update Notes
+
+### M365 Copilot Agent Store (April 2026)
+
+Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments may bypass environment-level sharing controls, creating additional governance considerations:
+
+- **Prebuilt agents** deployed from the Agent Store are available to assigned users without going through environment-level sharing configuration
+- **Admin controls** in the M365 Admin Center (`Agents > All agents`) allow admins to assign, block, or restrict agent access — these controls operate independently of Power Platform environment sharing settings
+- Organizations should verify that Agent Store deployment policies align with zone-based sharing restrictions enforced by this solution
+
+> **Note:** UASD currently detects sharing violations within Power Platform environments. Agent Store deployment visibility is not yet covered. Organizations should review Agent Store admin controls alongside environment-level sharing governance.
+
 ## Deployment
 
 1. Create Dataverse schema: `python scripts/create_uasd_dataverse_schema.py`

@@ -54,6 +54,18 @@ agent-sharing-access-restriction-detector/
 | `scripts/governance/Export-SharingComplianceEvidence.ps1` | Evidence export with SHA-256 integrity hashing |
 | `scripts/governance/Test-EvidenceIntegrity.ps1` | Evidence file integrity verification |
 
+## Platform Update Notes
+
+### M365 Copilot Agent Store (April 2026)
+
+Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments introduce a parallel sharing channel that operates outside environment-level controls:
+
+- **Agent Store deployments** are managed via the M365 Admin Center (`Agents > All agents`), not through Power Platform environment sharing settings
+- Agents deployed through the Agent Store may be accessible to users who would not have access through environment-level sharing policies
+- Zone-based sharing restrictions enforced by ASARD should be complemented by Agent Store admin policies to prevent policy bypass
+
+> **Note:** ASARD currently validates sharing configurations within Power Platform environments. Agent Store deployment governance is not yet covered by this solution. Organizations should coordinate environment-level sharing policies with M365 Admin Center agent deployment controls.
+
 ## Dataverse Tables
 
 | Table | Purpose |

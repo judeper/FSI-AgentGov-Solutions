@@ -207,6 +207,20 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 | [3.1 — Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-regulatory-audit-logging.md) | Secondary — fsi_mrmcomplianceevent immutable audit log |
 | [1.2 — Agent Registry](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.2-agent-registry-and-integrated-apps-management.md) | Secondary — reads from agent-registry-automation inventory |
 
+## Platform Update Notes
+
+### AI-Powered Self-Healing for Desktop Flows (April 2026)
+
+Microsoft has introduced an AI-powered self-healing capability for Power Automate desktop flows (preview), which uses GPT-4.1 mini and Claude Sonnet 4.5 to recover from runtime UI errors (e.g., "Element not found" failures) in single-element UI/web actions.
+
+**Impact on this solution:** Self-healing desktop flows represent an emerging AI capability that may require MRM inventory tracking under OCC 2011-12 / SR 11-7:
+
+- **Model inventory scope:** Organizations should evaluate whether self-healing-enabled desktop flows meet the threshold for "model" classification under their MRM policy framework
+- **Risk rating considerations:** Self-healing introduces runtime AI decision-making that operates outside the original flow design — this may warrant a higher risk rating than standard RPA flows
+- **Validation requirements:** The self-healing AI models (GPT-4.1 mini, Claude Sonnet 4.5) are managed by Microsoft and not configurable by the organization — validation should focus on outcomes and error recovery accuracy
+
+> **Note:** This solution currently governs Copilot Studio and Agent Builder agents only. Desktop flow AI capabilities (including self-healing) are not yet within scope. Organizations with significant desktop flow deployments should evaluate whether their MRM framework requires separate inventory and validation processes for AI-enabled RPA.
+
 ## Known Limitations
 
 - **Copilot Studio telemetry:** Agent usage telemetry may not expose granular error and escalation rates via Power Platform API. Flow 4 creates monitoring records with `fsi_datasource = "Not Available"` to preserve cadence evidence.

@@ -142,6 +142,24 @@ The following placeholder values in solution files must be replaced with your or
 | `{{TEAMS_GROUP_ID}}` | Microsoft Teams group (team) GUID |
 | `{{TEAMS_CHANNEL_ID}}` | Microsoft Teams channel GUID |
 
+## Platform Update Notes
+
+### Admin Path Change (April 2026)
+
+Copilot Studio generative AI feature governance controls have moved from **Environment > Settings > Features** to the centralized **Copilot > Settings** area in both the Power Platform Admin Center and the Microsoft 365 Admin Center. This change is part of the [Copilot Control System](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-control-system/management-controls) consolidation.
+
+**Impact on this solution:** Scripts that reference admin center navigation paths for manual verification should use the new `Copilot > Settings` location. Automated validation via the Bots API and PowerShell cmdlets is unaffected.
+
+### Voice Feature Enablement (April 2026)
+
+Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice enablement introduces additional governance considerations:
+
+- **Zone 3 agents** with voice capabilities may require explicit approval before enabling real-time voice mode, due to telephony channel exposure
+- Voice-enabled agents generate speech transcripts that may fall under FINRA 4511 and SEC 17a-4 record-keeping requirements
+- Organizations should evaluate whether voice feature toggles require the same zone-based governance as other GenAI features audited by this solution
+
+> **Note:** Voice configuration governance is not yet automated in GAC scripts. Organizations should include voice enablement in their manual feature governance reviews until automated support is added.
+
 ## Related Controls
 
 | Control | Relationship |

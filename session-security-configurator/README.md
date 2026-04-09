@@ -245,6 +245,14 @@ SSC validates six session security dimensions:
 
 Flow-specific placeholders (tenant domain, Dataverse URL, certificate thumbprint, Teams channel IDs, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md) for step-by-step instructions.
 
+## Platform Update Notes
+
+### Admin Path Change (April 2026)
+
+Copilot-related admin controls have moved from **Environment > Settings > Features** to the centralized **Copilot > Settings** area in both the Power Platform Admin Center and the Microsoft 365 Admin Center. This change is part of the [Copilot Control System](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-control-system/management-controls) consolidation.
+
+**Impact on this solution:** When verifying session security configurations in the admin center, navigate to the new `Copilot > Settings` path for Copilot-specific feature controls. Authentication context and Conditional Access policy configurations remain in **Entra ID > Security > Conditional Access** and are unaffected.
+
 ## FSI-AgentGov Integration
 
 This solution supports the following FSI-AgentGov controls:

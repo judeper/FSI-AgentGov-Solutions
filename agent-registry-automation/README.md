@@ -196,6 +196,32 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 | [2.1 — Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.1-managed-environments-for-power-platform.md) | Secondary — environment governance |
 | [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.13-documentation-and-record-keeping.md) | Secondary — ownership and lifecycle records |
 
+## Platform Update Notes
+
+### M365 Copilot Agent Store (April 2026)
+
+Microsoft has introduced the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), a centralized marketplace for discovering, deploying, and managing agents within Microsoft 365 Copilot. The Agent Store supports three deployment paths:
+
+| Path | Source | Governance Implication |
+|------|--------|----------------------|
+| **Prebuilt** | Microsoft-provided agents | Require admin-level deployment approval; should be inventoried alongside custom agents |
+| **Copilot Studio** | Organization-built agents via Copilot Studio | Already covered by this solution's Bots API discovery |
+| **External Platforms** | Third-party agents via Teams Bot or custom integrations | May not be discoverable via the Bots API; require alternative inventory mechanisms |
+
+**Impact on this solution:** The current discovery mechanism uses the Power Platform Bots API (`2022-03-01-preview`) to scan for agents within Power Platform environments. This does not cover:
+
+- **Prebuilt agents** deployed from the Agent Store, which may not appear in the Bots API response
+- **External platform agents** registered through Teams Bot manifests or custom engine agents
+- **Agent Store admin controls** for blocking or allowing agent deployment at the tenant level
+
+Future enhancements should consider:
+
+- Adding Graph API queries for the [M365 Agents admin guide](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide) endpoints to discover Agent Store deployments
+- Extending the `fsi_agentsource` choice set to include Agent Store (Prebuilt) and External Platform categories
+- Monitoring the Agent Store admin center for new agent deployments as a supplementary discovery channel
+
+> **Note:** Agent Store discovery integration is not yet implemented. Organizations should manually inventory prebuilt and external agents until automated discovery support is added.
+
 ## Known Limitations
 
 - **Bots API preview:** The Power Platform Bots API (`2022-03-01-preview`) may change at GA. Monitor Microsoft documentation for breaking changes to the endpoint schema.

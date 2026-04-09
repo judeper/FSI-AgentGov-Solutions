@@ -116,6 +116,19 @@ This means:
 - Violations are reported at the agent level, not the environment level
 - Remediation targets specific bots rather than environment-wide configuration
 
+## Platform Update Notes
+
+### Voice Agent Moderation Considerations (April 2026)
+
+Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice-enabled agents introduce additional content moderation considerations:
+
+- **Speech-to-text transcription** may not be subject to the same content moderation filters as text input — organizations should verify that moderation applies equally to both modalities
+- **Barge-in behavior** (user interrupting agent speech) may bypass moderation checkpoints if the interrupted content is not fully evaluated
+- **DTMF input** is numeric-only and lower risk, but agents that combine DTMF with natural language voice require full moderation coverage
+- **Zone 3 agents** with telephony channels are customer-facing by definition and should maintain High moderation regardless of voice mode
+
+> **Note:** This solution currently validates content moderation levels for text-based agent interactions only. Voice-specific moderation validation is not yet automated. Organizations deploying voice-enabled agents should include voice moderation coverage in their manual governance reviews.
+
 ## Related Controls
 
 | Control | Relationship |

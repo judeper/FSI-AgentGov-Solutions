@@ -294,6 +294,26 @@ Notify Requester → END
 | Environment Approvers | None | Approve requests in model-driven app |
 | Compliance/Audit | Evidence export | Read-only ProvisioningLog |
 
+## Platform Update Notes
+
+### Unified Environment Types (April 2026)
+
+Microsoft has introduced [unified environment types](https://learn.microsoft.com/en-us/power-platform/admin/unified-experience/unified-environment-types-and-templates) for Power Platform, consolidating environment management under three standardized types:
+
+| Unified Type | Abbreviation | Replaces | Scope |
+|-------------|-------------|----------|-------|
+| Unified Production Environment | **UPE** | Production | Live workloads, up to 80 AOS instances |
+| Unified Sandbox Environment | **USE** | Sandbox | Testing, UAT, training, up to 80 AOS instances |
+| Unified Developer Environment | **UDE** | Developer | Single-developer, X++ development, 1 AOS instance |
+
+**Impact on this solution:** The ELM Dataverse schema (`create_dataverse_schema.py`) currently uses the legacy environment type choice values: Production, Sandbox, Developer, Trial, Default. As organizations adopt unified environment types:
+
+- The `fsi_environmenttype` choice on the `EnvironmentRequest` table may need to be expanded to include UPE, USE, and UDE values
+- Zone classification logic should map UPE → Zone 2/3 (production), USE → Zone 1/2 (sandbox), UDE → Zone 1 (developer)
+- Environment Group assignment rules may need updating as Microsoft aligns environment groups with unified types
+
+> **Note:** The unified environment types are currently most relevant for Dynamics 365 Finance & Operations workloads. Copilot Studio and standard Power Platform environments continue to use the existing Production/Sandbox/Developer model. Monitor Microsoft documentation for broader adoption timelines before modifying the schema.
+
 ## Troubleshooting
 
 ### Common Issues
