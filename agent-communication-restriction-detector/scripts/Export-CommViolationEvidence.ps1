@@ -124,7 +124,7 @@
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
-    - ACRD Dataverse schema deployed (fsi_commscanruns,
+    - ACRD Dataverse schema deployed (fsi_commscanrun,
       fsi_agentcommviolations, fsi_approvedcommroutes, fsi_commexceptions tables)
 
     Evidence file naming convention:
@@ -318,7 +318,7 @@ try {
         $scanFilter += " and fsi_runid eq '$RunId'"
     }
 
-    $scanRunUri = "$baseUrl/api/data/v9.2/fsi_commscanruns?" +
+    $scanRunUri = "$baseUrl/api/data/v9.2/fsi_commscanrun?" +
                   "`$filter=$scanFilter&`$orderby=fsi_validationtime desc"
 
     # Paginate through all scan run records

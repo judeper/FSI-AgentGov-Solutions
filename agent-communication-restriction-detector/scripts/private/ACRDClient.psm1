@@ -402,7 +402,7 @@ function Write-ACRDScanRun {
             fsi_summaryjson          = ($ScanResult | ConvertTo-Json -Depth 10 -Compress)
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_commscanruns"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_commscanrun"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -702,7 +702,7 @@ function Get-CommExceptions {
             [PSCustomObject]@{
                 ExceptionId     = $_.fsi_commexceptionid
                 CallingAgentId  = $_.fsi_callingagentid
-                TargetAgentId   = $_.fsi_targetagentid
+                TargetAgentId   = $_.fsi_calledagentid
                 SourceZone      = $sourceZoneName
                 TargetZone      = $targetZoneName
                 Status          = $statusName
@@ -794,7 +794,7 @@ function Get-ACRDLastScan {
         Retrieves recent scan run records from Dataverse.
 
     .DESCRIPTION
-        Queries the fsi_commscanruns table ordered by timestamp descending.
+        Queries the fsi_commscanrun table ordered by timestamp descending.
         Used by drift detection to compare current scan results against previous runs.
     #>
     [CmdletBinding()]
@@ -809,7 +809,7 @@ function Get-ACRDLastScan {
 
     try {
         $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_totalskills,fsi_summaryjson,fsi_validationtime"
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_commscanruns?" +
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_commscanrun?" +
                "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{

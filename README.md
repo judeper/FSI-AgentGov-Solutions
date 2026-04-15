@@ -13,7 +13,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations per zone policy | v1.0.1 | 1.23 |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | v1.1.1 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.2 | 3.8 |
-| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
+| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | v1.0.1 | 2.17 |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | v1.0.2 | 4.3, 1.4, 1.5 |
 | [Agent Observability Foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.0 | 1.7, 2.8, 2.9, 3.2 |
 | [Agent Registry Automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | v1.0.0 | 1.2, 1.7, 2.1, 2.13 |

@@ -2,6 +2,14 @@
 
 All notable changes to the Agent Communication Restriction Detector are documented in this file.
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Entity set `fsi_commscanruns` → `fsi_commscanrun` in ACRDClient.psm1 and Export script (matches schema EntitySetName)
+- Exception column `fsi_targetagentid` → `fsi_calledagentid` in ACRDClient.psm1 (matches schema)
+- README status updated from "In Development" to "Released"
+
 ## [1.0.0] - 2026-02-24
 
 ### Added

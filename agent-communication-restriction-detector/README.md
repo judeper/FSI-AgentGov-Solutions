@@ -6,8 +6,8 @@ Detects unauthorized agent-to-agent communication patterns, zone boundary violat
 
 | Property | Value |
 |----------|-------|
-| Status | In Development |
-| Version | 1.0.0 |
+| Status | Released |
+| Version | 1.0.1 |
 | Primary Control | [2.17 -- Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) |
 | Regulatory Context | FINRA 3110, GLBA 501(b), SOX 404 |
 
