@@ -295,4 +295,4 @@ Power Automate connection references for the GAC flows.
 
 ---
 
-*Generative AI Config Auditor -- Dataverse Schema Reference v1.0.0*
+*Generative AI Config Auditor -- Dataverse Schema Reference v1.0.1*
