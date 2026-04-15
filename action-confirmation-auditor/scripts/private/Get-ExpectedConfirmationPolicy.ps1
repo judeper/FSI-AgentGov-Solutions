@@ -17,6 +17,10 @@
 .PARAMETER Zone
     The governance zone: Zone1, Zone2, Zone3, or Unknown.
 
+.EXAMPLE
+    $policy = .\Get-ExpectedConfirmationPolicy.ps1 -Zone "Zone3"
+    Returns the confirmation policy for Zone 3 (all actions require confirmation).
+
 .OUTPUTS
     PSCustomObject with per-action-type policies, violation severities, and regulatory context.
 

@@ -56,14 +56,15 @@ Requirements for deploying the Action Confirmation Auditor.
    - Dynamics CRM: `user_impersonation` (Delegated) or configure S2S
    - Admin consent: Required
 
-3. **Client Secret**
-   - Create client secret with appropriate expiration
-   - Store securely in Azure Key Vault or Azure Automation credentials
+3. **Certificate Authentication**
+   - Create or upload a certificate for the app registration
+   - Record the certificate thumbprint for Azure Automation configuration
+   - Certificate-based auth is required for the validation runbook
 
 4. **Record Values**
-   - Application (client) ID > `fsi_ACA_ClientId`
-   - Directory (tenant) ID > `fsi_ACA_TenantId`
-   - Client secret > Store in Azure Automation credential asset
+   - Application (client) ID > Pass as `-ClientId` runbook parameter
+   - Directory (tenant) ID > Pass as `-TenantId` runbook parameter
+   - Certificate thumbprint > Pass as `-CertificateThumbprint` runbook parameter
 
 ---
 
@@ -77,9 +78,9 @@ Requirements for deploying the Action Confirmation Auditor.
    - Import `Start-ActionConfirmationValidationRunbook.ps1` as PowerShell 7.2 runbook
    - Publish the runbook
 
-3. **Configure Credentials**
-   - Create credential asset with app registration client ID and secret
-   - Or configure System-Assigned Managed Identity with required permissions
+3. **Configure Authentication**
+   - Upload certificate to Azure Automation certificate store
+   - The runbook uses certificate-based auth via `-ClientId` and `-CertificateThumbprint` parameters
 
 4. **Install Required Modules**
    - `Az.Accounts` (for authentication)

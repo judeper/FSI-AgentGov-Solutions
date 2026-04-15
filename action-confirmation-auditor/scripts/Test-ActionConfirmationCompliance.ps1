@@ -405,10 +405,10 @@ function Test-ActionConfirmationCompliance {
     $exceptions = @{}
     if ($dataverseConnected) {
         try {
-            $exceptionRecords = Get-ACAExceptions
+            $exceptionRecords = Get-ActionConfirmationExceptions
             if ($exceptionRecords) {
                 foreach ($exc in $exceptionRecords) {
-                    $key = "$($exc.fsi_agentid)|$($exc.fsi_actionname)"
+                    $key = "$($exc.AgentId)|$($exc.ActionName)"
                     $exceptions[$key] = $exc
                 }
             }

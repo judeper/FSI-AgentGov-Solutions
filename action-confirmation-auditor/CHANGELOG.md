@@ -2,6 +2,26 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Aligned all PowerShell scripts with Dataverse schema source of truth:
+  - Entity set `fsi_actionscanruns` → `fsi_actionscanrun` (ACAClient.psm1, Export-ActionAuditEvidence.ps1, Start-ActionConfirmationValidationRunbook.ps1)
+  - Column `fsi_scantime` → `fsi_validationtime` across all scan run queries
+  - Column `fsi_reason` → `fsi_justification` for exception records
+  - Removed references to non-existent `fsi_connectorid` column (use `fsi_connectorname`)
+  - Removed references to non-existent `fsi_agentname` on exception table
+  - Fixed `fsi_compliantcount` → `fsi_actionswithconfirmation` in evidence export
+  - Removed non-existent `fsi_actioncategory` from evidence export
+- Fixed `Get-ACAExceptions` → `Get-ActionConfirmationExceptions` function call in Test-ActionConfirmationCompliance.ps1
+- Fixed exception property access to use PSCustomObject property names (`AgentId`, `ActionName`) instead of raw Dataverse column names
+- Standardized bot component lookup field to `_botid_value` (was inconsistently `_parentbotid_value` in ACAClient.psm1)
+- Updated README: corrected Quick Start dry-run command, environment variables table, removed false CSV export claim
+- Updated flow-configuration.md: corrected environment variables, runbook parameters, Dataverse column names, removed non-existent exception columns
+- Updated prerequisites.md: corrected authentication guidance to certificate-based auth
+- Added missing `.EXAMPLE` sections to PowerShell comment-based help (ACAClient.psm1, Connect-EnvironmentDataverse.ps1, Get-ExpectedConfirmationPolicy.ps1, Get-ZoneClassification.ps1)
+
 ## [1.0.0] - 2026-02-24
 
 ### Added
