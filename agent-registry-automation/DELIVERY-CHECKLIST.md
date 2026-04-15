@@ -129,7 +129,7 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 
 ## Phase 7: Validation
 
-- [ ] Run `scripts/Validate-AgentRegistry-Compliance.ps1` for automated validation
+- [ ] Run `scripts/Test-AgentRegistryCompliance.ps1` for automated validation
 - [ ] Verify Flow 1 completes a discovery scan without errors
 - [ ] Verify Flow 2 processes a test registration request end-to-end
 - [ ] Verify Flow 4 identifies a known orphaned agent (if available)
@@ -184,6 +184,6 @@ Do NOT include these repository management files:
 
 ---
 
-**Package Version:** v1.0.0
+**Package Version:** v1.0.1
 **Release Date:** March 2026
 **Solution:** Agent Registry Automation

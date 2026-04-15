@@ -32,13 +32,13 @@
     Requires User.Read.All permission on the Managed Identity.
 
 .EXAMPLE
-    .\Validate-AgentRegistry-Compliance.ps1 `
+    .\Test-AgentRegistryCompliance.ps1 `
         -DataverseUrl "https://contoso.crm.dynamics.com" `
         -OutputFormat JSON `
         -OutputPath ".\compliance-report-$(Get-Date -Format yyyyMMdd).json"
 
 .EXAMPLE
-    .\Validate-AgentRegistry-Compliance.ps1 `
+    .\Test-AgentRegistryCompliance.ps1 `
         -DataverseUrl "https://contoso.crm.dynamics.com" `
         -CheckOrphans `
         -IncludeDetails

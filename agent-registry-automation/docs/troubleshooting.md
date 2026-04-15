@@ -349,4 +349,4 @@ $response.value | Format-Table fsi_name, fsi_requeststatus, fsi_approvaldeadline
 
 ---
 
-*Agent Registry Automation v1.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*

@@ -114,7 +114,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 | Connection reference deployment | `scripts/create_connection_references.py` | Python |
 | Deployment orchestrator | `scripts/deploy.py` | Python |
 | Baseline inventory export | `scripts/Deploy-AgentRegistry-Baseline.ps1` | PowerShell |
-| Compliance validation | `scripts/Validate-AgentRegistry-Compliance.ps1` | PowerShell |
+| Compliance validation | `scripts/Test-AgentRegistryCompliance.ps1` | PowerShell |
 | Flow build instructions | `docs/flow-configuration.md` | Documentation |
 | Dataverse schema reference | `docs/dataverse-schema.md` | Documentation |
 
@@ -166,7 +166,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 
 ```powershell
 # Verify schema, variables, connections, and flow status
-.\scripts\Validate-AgentRegistry-Compliance.ps1 `
+.\scripts\Test-AgentRegistryCompliance.ps1 `
     -EnvironmentUrl "https://your-org.crm.dynamics.com" `
     -TenantId "your-tenant-id"
 ```
@@ -235,7 +235,8 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.1 | March 2026 | Initial release |
+| 1.0.1 | 2026-04-15 | Schema alignment fixes, verb corrections |
+| 1.0.0 | 2026-03-15 | Initial release |
 
 ## Support
 

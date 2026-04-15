@@ -35,7 +35,7 @@ Solutions for audit management, compliance reporting, and regulatory workflows.
 
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
-| [Agent Registry Automation](agent-registry-automation/index.md) | Automated discovery, registration, approval, and lifecycle governance of AI agents | v1.0.0 | 1.2, 1.7, 2.1, 2.13 |
+| [Agent Registry Automation](agent-registry-automation/index.md) | Automated discovery, registration, approval, and lifecycle governance of AI agents | v1.0.1 | 1.2, 1.7, 2.1, 2.13 |
 | [Audit Compliance Manager (ACM)](audit-compliance-manager/index.md) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments | v1.0.1 | 1.7 |
 | [Compliance Dashboard](compliance-dashboard/index.md) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.1 | 3.3, 3.1, 3.2 |
 | [Cross-Solution Integration](cross-solution-integration/index.md) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
