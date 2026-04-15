@@ -278,7 +278,7 @@ def deploy_schema(client: FUSClient) -> None:
 
 # ── CLI Entry Point ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for File Upload Security Configurator"
     )

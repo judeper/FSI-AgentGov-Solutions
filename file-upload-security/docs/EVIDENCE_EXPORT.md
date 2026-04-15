@@ -81,7 +81,7 @@ Each evidence file is accompanied by a `.sha256` companion file:
 
 - Retain evidence exports per your organization's retention policy
 - Minimum recommended: 7 years (aligns with SEC/FINRA requirements)
-- Store in write-once or immutable storage for regulatory compliance
+- Store in write-once or append-only storage to support regulatory compliance requirements
 - Maintain chain of custody documentation for evidence files
 
 ---

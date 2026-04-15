@@ -23,8 +23,8 @@
 
 ### fsi_fileuploadvalidationhistory
 
-**Ownership:** OrganizationOwned (immutable audit trail)
-**Purpose:** Immutable record of each compliance validation scan. Supports FINRA 4511 audit trail requirements.
+**Ownership:** OrganizationOwned (tamper-resistant audit trail)
+**Purpose:** Append-only record of each compliance validation scan. Supports FINRA 4511 audit trail requirements.
 
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|

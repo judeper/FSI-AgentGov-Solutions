@@ -157,7 +157,7 @@ def deploy_environment_variables(client: FUSClient) -> None:
 
 # ── CLI Entry Point ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create environment variables for File Upload Security Configurator"
     )

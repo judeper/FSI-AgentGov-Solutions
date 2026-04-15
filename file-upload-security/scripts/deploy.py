@@ -97,7 +97,7 @@ Next Steps:
 
 # ── CLI Entry Point ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Deploy File Upload Security Configurator to Dataverse"
     )

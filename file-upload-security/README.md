@@ -10,7 +10,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 |-----------|-------|
 | **Control** | 1.14 — Data Minimization and Agent Scope Control |
 | **Solution Type** | Tier 2 — Automated Validation with Drift Detection |
-| **Version** | 1.0.1 |
+| **Version** | 1.0.2 |
 | **Zone Model** | Zone 1: Allowed · Zone 2: Restricted · Zone 3: Disabled |
 | **Regulatory** | FINRA 4511/25-07, SEC 17a-3, GLBA 501(b), OCC 2011-12 |
 
@@ -30,6 +30,7 @@ Copilot Studio agents can accept file uploads (images, PDFs, text files) during 
 - Microsoft.PowerApps.Administration.PowerShell module
 - Copilot Studio environment access
 - See [PREREQUISITES.md](docs/PREREQUISITES.md)
+- See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ### Validate File Upload Compliance
 
