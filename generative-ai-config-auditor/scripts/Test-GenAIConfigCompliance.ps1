@@ -316,9 +316,17 @@ function Test-GenAIConfigCompliance {
     if ($IncludeCompliant) {
         $compareParams['IncludeCompliant'] = $true
     }
-    if ($DataverseUrl -and $DataverseToken) {
+    if ($DataverseUrl) {
         $compareParams['DataverseUrl'] = $DataverseUrl
-        $compareParams['DataverseToken'] = $DataverseToken
+        if ($DataverseToken) {
+            $compareParams['DataverseToken'] = $DataverseToken
+        } else {
+            # Try to retrieve token from GACClient module connection
+            $storedToken = Get-GACConnection
+            if ($storedToken) {
+                $compareParams['DataverseToken'] = $storedToken.AccessToken
+            }
+        }
     }
 
     #endregion

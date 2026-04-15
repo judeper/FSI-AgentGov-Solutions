@@ -112,7 +112,7 @@ function Compare-GenAIConfigCompliance {
                 Write-Verbose "Querying approved connections whitelist from Dataverse..."
                 $baseUrl = $DataverseUrl.TrimEnd('/')
                 $uri = "$baseUrl/api/data/v9.2/fsi_gacapprovedconnections?" +
-                    "`$filter=statecode eq 0&" +
+                    "`$filter=statecode eq 0 and fsi_isactive eq true&" +
                     "`$select=fsi_connectionid,fsi_connectionname,fsi_zone"
 
                 $headers = @{
@@ -124,10 +124,12 @@ function Compare-GenAIConfigCompliance {
 
                 $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
                 $approvedConnections = @{}
+                $zoneIntToName = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3'; 0 = 'Unknown' }
 
                 foreach ($conn in $response.value) {
                     if ($conn.fsi_connectionid) {
-                        $approvedConnections[$conn.fsi_connectionid] = $conn
+                        $connZoneName = $zoneIntToName[[int]$conn.fsi_zone] ?? 'Unknown'
+                        $approvedConnections["$($conn.fsi_connectionid)|$connZoneName"] = $conn
                     }
                 }
 
@@ -173,11 +175,17 @@ function Compare-GenAIConfigCompliance {
             } catch {
                 Write-Warning "Failed to get GenAI policy for zone '$agentZone': $($_.Exception.Message)"
                 $policy = [PSCustomObject]@{
-                    Zone                       = $agentZone
-                    AoaiAllowed                = $false
-                    AllowedOrchestrationModes  = @('Classic')
-                    GenerativeAnswersAllowed   = $false
-                    RegulatoryContext          = 'Policy evaluation failed'
+                    Zone                             = $agentZone
+                    AoaiAllowed                      = $false
+                    AllowedOrchestrationModes        = @('Classic')
+                    GenerativeAnswersAllowed         = $false
+                    AoaiViolationSeverity            = 'High'
+                    OrchestrationViolationSeverity   = 'High'
+                    GenAnswersViolationSeverity      = 'High'
+                    WhitelistViolationSeverity       = 'High'
+                    ModelKnowledgeViolationSeverity  = 'High'
+                    SemanticSearchViolationSeverity  = 'High'
+                    RegulatoryContext                = 'Policy evaluation failed'
                 }
             }
 
@@ -189,7 +197,7 @@ function Compare-GenAIConfigCompliance {
                 $violations += [PSCustomObject]@{
                     ViolationType    = 'AoaiNotAllowed'
                     Description      = "Azure OpenAI is enabled but not permitted in $agentZone"
-                    Severity         = if ($agentZone -match '3') { 'Critical' } else { 'High' }
+                    Severity         = $policy.AoaiViolationSeverity
                     RegulatoryContext = "FINRA 3110 - supervisory controls for AI model usage; $($policy.RegulatoryContext)"
                 }
             }
@@ -201,7 +209,7 @@ function Compare-GenAIConfigCompliance {
                     $violations += [PSCustomObject]@{
                         ViolationType    = 'OrchestrationModeNotAllowed'
                         Description      = "Orchestration mode '$($agent.OrchestrationMode)' is not permitted in $agentZone (allowed: $($policy.AllowedOrchestrationModes -join ', '))"
-                        Severity         = 'High'
+                        Severity         = $policy.OrchestrationViolationSeverity
                         RegulatoryContext = "GLBA 501(b) - safeguard controls for generative orchestration; $($policy.RegulatoryContext)"
                     }
                 }
@@ -212,18 +220,19 @@ function Compare-GenAIConfigCompliance {
                 $violations += [PSCustomObject]@{
                     ViolationType    = 'GenerativeAnswersNotAllowed'
                     Description      = "Agent has $($agent.GenerativeAnswersNodeCount) generative answers node(s) but generative answers are not permitted in $agentZone"
-                    Severity         = if ($agentZone -match '3') { 'Critical' } else { 'High' }
+                    Severity         = $policy.GenAnswersViolationSeverity
                     RegulatoryContext = "SOX 404 - internal control over generative content; $($policy.RegulatoryContext)"
                 }
             }
 
             # Rule 4: AOAI connection whitelist validation
             if ($agent.AoaiConnectionId -and $null -ne $approvedConnections) {
-                if (-not $approvedConnections.ContainsKey($agent.AoaiConnectionId)) {
+                $approvalKey = "$($agent.AoaiConnectionId)|$agentZone"
+                if (-not $approvedConnections.ContainsKey($approvalKey)) {
                     $violations += [PSCustomObject]@{
                         ViolationType    = 'UnapprovedAoaiConnection'
                         Description      = "AOAI connection '$($agent.AoaiConnectionId)' is not in the approved connections whitelist"
-                        Severity         = 'High'
+                        Severity         = $policy.WhitelistViolationSeverity
                         RegulatoryContext = "FINRA 3110 - approved vendor controls; $($policy.RegulatoryContext)"
                     }
                 }
