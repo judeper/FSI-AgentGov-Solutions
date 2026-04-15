@@ -125,7 +125,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 ```powershell
 # Deploy tables, option sets, and alternate keys
 python scripts/create_dataverse_schema.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id" `
     --client-id "your-client-id" `
     --client-secret "your-client-secret"
@@ -136,7 +136,7 @@ python scripts/create_dataverse_schema.py `
 ```powershell
 # Create environment variables in the target environment
 python scripts/create_environment_variables.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id"
 ```
 
@@ -145,7 +145,7 @@ python scripts/create_environment_variables.py `
 ```powershell
 # Create connection references for the 4 flows
 python scripts/create_connection_references.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id"
 ```
 

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Critical: Zone option-set mapping corrected (Zone1=100000001, Zone2=100000002, Zone3=100000003) in both Deploy and Validate scripts
+- Critical: Compliance event payload uses correct columns (fsi_details, fsi_eventtimestamp instead of fsi_eventdetails, fsi_correlationid)
+- Critical: Validate script uses fsi_eventtimestamp instead of non-existent fsi_createdon
+- Critical: Validate script uses fsi_approvalstatus instead of non-existent fsi_requeststatus
+- README: fixed --environment flag to --environment-url in deployment examples
+
+---
+
 ## [1.0.0] - March 2026
 
 ### Added

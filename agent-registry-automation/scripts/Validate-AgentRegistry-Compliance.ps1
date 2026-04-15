@@ -88,8 +88,8 @@ $script:MaxRetries = 3
 $script:GraphApiUrl = "https://graph.microsoft.com/v1.0"
 
 # Zone option set values
-$script:Zone2Value = 100000001
-$script:Zone3Value = 100000002
+$script:Zone2Value = 100000002
+$script:Zone3Value = 100000003
 
 # Registration status option set values
 $script:StatusUnregistered = 100000000
@@ -388,8 +388,8 @@ function Test-EventLogIntegrity {
     # Query total event count
     $events = Get-DataverseRecords -EntitySet "fsi_agentcomplianceevents" `
         -Token $Token `
-        -Select "fsi_agentcomplianceeventid,fsi_createdon,fsi_eventtype" `
-        -OrderBy "fsi_createdon asc"
+        -Select "fsi_agentcomplianceeventid,fsi_eventtimestamp,fsi_eventtype" `
+        -OrderBy "fsi_eventtimestamp asc"
 
     if ($events.Count -eq 0) {
         return @{
@@ -402,8 +402,8 @@ function Test-EventLogIntegrity {
 
     # Check for gaps longer than 24 hours between consecutive events
     for ($i = 1; $i -lt $events.Count; $i++) {
-        $prev = [datetime]$events[$i - 1].fsi_createdon
-        $curr = [datetime]$events[$i].fsi_createdon
+        $prev = [datetime]$events[$i - 1].fsi_eventtimestamp
+        $curr = [datetime]$events[$i].fsi_eventtimestamp
         $gap = ($curr - $prev).TotalHours
 
         if ($gap -gt 24) {
@@ -439,7 +439,7 @@ function Test-SlaCompliance {
     $slaThreshold = (Get-Date).AddHours(-$script:SlaDeadlineHours).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
     # Query pending requests created before the SLA deadline
-    $filter = "fsi_requeststatus eq 100000000 and createdon lt $slaThreshold"
+    $filter = "fsi_approvalstatus eq 100000000 and createdon lt $slaThreshold"
     $pendingRequests = Get-DataverseRecords -EntitySet "fsi_registrationrequests" `
         -Token $Token `
         -Select "fsi_registrationrequestid,fsi_agentid,fsi_agentname,fsi_requestedby,createdon" `

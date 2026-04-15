@@ -77,9 +77,9 @@ $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $script:MaxRetries = 3
 
 $script:ZoneOptionSet = @{
-    1 = 100000000  # Zone 1 - Personal
-    2 = 100000001  # Zone 2 - Team
-    3 = 100000002  # Zone 3 - Enterprise
+    1 = 100000001  # Zone 1 - Personal
+    2 = 100000002  # Zone 2 - Team
+    3 = 100000003  # Zone 3 - Enterprise
 }
 
 $script:RegistrationStatusUnregistered = 100000000
@@ -329,11 +329,11 @@ function Write-ComplianceEvent {
     }
 
     $payload = @{
-        fsi_agentid       = $AgentId
-        fsi_environmentid = $EnvironmentId
-        fsi_eventtype     = $eventTypeMap[$EventType]
-        fsi_eventdetails  = $Details
-        fsi_correlationid = $script:CorrelationId
+        fsi_agentid        = $AgentId
+        fsi_environmentid  = $EnvironmentId
+        fsi_eventtype      = $eventTypeMap[$EventType]
+        fsi_details        = $Details
+        fsi_eventtimestamp  = (Get-Date).ToUniversalTime().ToString('o')
     }
 
     $uri = "$script:DataverseApiBase/fsi_agentcomplianceevents"
