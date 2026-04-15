@@ -687,7 +687,7 @@ function Test-HitlWorkflowCompliance {
 
         if ($PSCmdlet.ShouldProcess("Dataverse validation history", "Write HITL scan results")) {
             try {
-                Write-HWGValidationHistory -ValidationResult $validationSummary -RunId $runId
+                Write-HitlScanRun -ValidationResult $validationSummary -RunId $runId
                 Write-Verbose "Validation history written with RunId: $runId"
             } catch {
                 Write-Warning "Failed to write validation history: $($_.Exception.Message)"
@@ -713,7 +713,7 @@ function Test-HitlWorkflowCompliance {
                             Details            = $violation.Details
                             RegulatoryContext   = $violation.RegulatoryContext
                         }
-                        Write-HWGViolation -Violation $violationData -RunId $runId
+                        Write-HitlViolation -Violation $violationData -RunId $runId
                     } catch {
                         Write-Warning "Failed to write violation for $($agentResult.AgentName): $($_.Exception.Message)"
                     }
@@ -721,7 +721,7 @@ function Test-HitlWorkflowCompliance {
             }
         }
 
-        Write-Output "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))"
+        Write-Host "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))" -ForegroundColor Green
     } elseif ($PersistResults -and -not $dataverseConnected) {
         Write-Warning "PersistResults requested but Dataverse not connected. Results not persisted."
     }
