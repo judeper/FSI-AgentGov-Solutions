@@ -98,6 +98,7 @@ This guide provides step-by-step instructions for manually building the Action C
      - `fsi_overallstatus`: Parsed `OverallStatus`
      - `fsi_totalagents`: Parsed `TotalAgents`
      - `fsi_totalactions`: Parsed `TotalActions`
+     - `fsi_actionswithconfirmation`: Expression `sub(body('Parse_JSON')?['TotalActions'], body('Parse_JSON')?['ActionsMissingConfirmation'])`
      - `fsi_actionsmissingconfirmation`: Parsed `ActionsMissingConfirmation`
      - `fsi_violationcount`: Parsed violations array length
      - `fsi_summaryjson`: Full JSON output
@@ -108,10 +109,17 @@ This guide provides step-by-step instructions for manually building the Action C
    - Table: `fsi_ActionAuditResult`
    - Fields:
      - `fsi_name`: Expression `take(concat(items('Apply_to_each')?['ActionName'], ' - Missing Confirmation'), 100)`
+     - `fsi_environmentguid`: Parsed `EnvironmentId` from violation item
+     - `fsi_environmentname`: Parsed `EnvironmentName` from violation item
+     - `fsi_zone`: Parsed `Zone` — map to option set integer: Zone 1 = 1, Zone 2 = 2, Zone 3 = 3
+     - `fsi_agentid`: Parsed `AgentId` from violation item
+     - `fsi_agentname`: Parsed `AgentName` from violation item
      - `fsi_actionname`: `ActionName`
-     - `fsi_actiontype`: `ActionType`
-     - `fsi_confirmationstatus`: `ConfirmationStatus`
-     - `fsi_severity`: `Severity` (mapped to option set value)
+     - `fsi_actiontype`: Map to option set integer: ConnectorAction = 100000000, CloudFlowAction = 100000001, PluginAction = 100000002, CustomAction = 100000003, HttpRequest = 100000004
+     - `fsi_risklevel`: `ActionCategory` from violation (Write/Delete/Read/ExternalTransfer/Execute)
+     - `fsi_confirmationstatus`: Map to option set integer: Present = 100000000, Missing = 100000001, Partial = 100000002, UnableToDetermine = 100000003
+     - `fsi_violationstatus`: 100000000 (Open)
+     - `fsi_severity`: `Severity` (string value: Critical/High/Medium/Warning)
      - `fsi_runid`: Variable `runId`
      - `fsi_detectedat`: Variable `timestamp`
 
@@ -256,7 +264,6 @@ Before deploying flows, create connection references in Power Automate:
 | `fsi_cr_teams_actionconfirmationauditor` | Microsoft Teams | Current User |
 | `fsi_cr_office365_actionconfirmationauditor` | Office 365 Outlook | Current User |
 | `fsi_cr_azureautomation_actionconfirmationauditor` | Azure Automation | Service Principal |
-| `fsi_cr_approvals_actionconfirmationauditor` | Approvals | Current User |
 
 **Steps to Create Connection Reference:**
 1. Power Automate > Solutions > ACA
@@ -266,7 +273,7 @@ Before deploying flows, create connection references in Power Automate:
 5. Create connection > Select authentication
 6. Save
 
-Repeat for Teams, Office 365 Outlook, Azure Automation, and Approvals connectors.
+Repeat for Teams, Office 365 Outlook, and Azure Automation connectors.
 
 ---
 
@@ -311,8 +318,8 @@ After building all flows:
 ## Troubleshooting
 
 **Issue: Azure Automation runbook fails with authentication error**
-- **Cause:** Service principal credentials expired or insufficient permissions
-- **Resolution:** Verify the Azure Automation Run As account or Managed Identity has Power Platform Admin permissions. Ensure `ClientId` and `CertificateThumbprint` runbook parameters are correct.
+- **Cause:** Service principal certificate expired or insufficient permissions
+- **Resolution:** Verify the certificate uploaded to the Azure Automation account has not expired. Confirm the service principal has Power Platform Admin permissions. Ensure `ClientId` and `CertificateThumbprint` runbook parameters are correct.
 
 **Issue: Flow fails with "Invalid URI" error**
 - **Cause:** Dataverse URL or API endpoint malformed

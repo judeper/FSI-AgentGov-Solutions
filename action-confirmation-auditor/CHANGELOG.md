@@ -2,6 +2,27 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.0.2] - 2026-04-15
+
+### Fixed
+
+- **README.md**: Corrected Quick Start CLI flag `--dataverse-url` → `--environment-url` to match actual `create_dataverse_schema.py` argument
+- **README.md**: Fixed dry-run example to dot-source script before calling `Test-ActionConfirmationCompliance` function
+- **README.md**: Added mandatory auth parameters (`-TenantId`, `-Interactive`) to evidence export example
+- **README.md**: Formalized regulation references (FINRA Rule 3110, GLBA Section 501(b), SOX Section 404)
+- **docs/prerequisites.md**: Corrected deployment command `--dataverse-url` → `--environment-url`
+- **docs/prerequisites.md**: Fixed Dataverse table names from SchemaName format to logical names
+- **docs/prerequisites.md**: Updated footer version v1.0.0 → v1.0.2
+- **docs/dataverse-schema.md**: Regenerated from schema script to include missing `fsi_ViolationType` column
+- **docs/flow-configuration.md**: Added missing required fields to Action Scan Run record creation (`fsi_actionswithconfirmation`)
+- **docs/flow-configuration.md**: Added all required fields and option set value mappings to Action Audit Result creation (`fsi_environmentguid`, `fsi_environmentname`, `fsi_zone`, `fsi_agentid`, `fsi_agentname`, `fsi_risklevel`, `fsi_violationstatus`)
+- **docs/flow-configuration.md**: Removed undocumented `fsi_cr_approvals_actionconfirmationauditor` connection reference not created by deployment scripts
+- **docs/flow-configuration.md**: Aligned troubleshooting guidance with certificate-based service principal authentication
+- **scripts/private/ACAClient.psm1**: Fixed `Connect-ACADataverse` to reset `$script:DataverseUrl` on token acquisition failure instead of leaving partial connected state
+- **scripts/private/ACAClient.psm1**: Fixed help example to reference `Get-ACALastValidation` (was non-existent `Get-ACAScanRunHistory`)
+- **scripts/Export-ActionAuditEvidence.ps1**: Added `#Requires -Modules MSAL.PS` declaration
+- **scripts/Test-ActionConfirmationCompliance.ps1**: Fixed help text entity set name `fsi_actionscanruns` → `fsi_actionscanrun`
+
 ## [1.0.1] - 2026-04-15
 
 ### Fixed

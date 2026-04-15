@@ -16,7 +16,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
-| action-confirmation-auditor | v1.0.1 | 1.23 | Step-up confirmation validation for agent actions |
+| action-confirmation-auditor | v1.0.2 | 1.23 | Step-up confirmation validation for agent actions |
 | agent-365-lifecycle-governance | v1.1.1 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.0.2 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.0.1 | 2.17 | Inter-agent communication restriction validation |

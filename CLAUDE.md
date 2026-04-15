@@ -35,7 +35,7 @@ git rev-parse --show-toplevel
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
-| [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.1 |
+| [action-confirmation-auditor](./action-confirmation-auditor/) | Step-up confirmation validation for agent action invocations | PowerShell/Python | v1.0.2 |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.1 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.0.2 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.1 |

@@ -94,15 +94,15 @@ The ACA solution uses 3 Dataverse tables:
 
 | Table | Logical Name | Purpose |
 |-------|-------------|---------|
-| Action Audit Result | `fsi_ActionAuditResult` | Individual violation records per action |
-| Action Confirmation Exception | `fsi_ActionConfirmationException` | Approved exception records |
-| Action Scan Run | `fsi_ActionScanRun` | Scan execution history and summary |
+| Action Audit Result | `fsi_actionauditresult` | Individual violation records per action |
+| Action Confirmation Exception | `fsi_actionconfirmationexception` | Approved exception records |
+| Action Scan Run | `fsi_actionscanrun` | Scan execution history and summary |
 
 Deploy using:
 
 ```bash
 python scripts/create_dataverse_schema.py \
-  --dataverse-url https://yourorg.crm.dynamics.com \
+  --environment-url https://yourorg.crm.dynamics.com \
   --client-id <app-id> \
   --client-secret <secret> \
   --tenant-id <tenant-id>
@@ -148,4 +148,4 @@ If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive
 
 ---
 
-*Action Confirmation Auditor v1.0.0*
+*Action Confirmation Auditor v1.0.2*

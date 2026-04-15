@@ -14,7 +14,7 @@
 .EXAMPLE
     Import-Module .\ACAClient.psm1
     Connect-ACADataverse -DataverseUrl "https://org.crm.dynamics.com"
-    $history = Get-ACAScanRunHistory -Top 5
+    $history = Get-ACALastValidation -Top 5
 
 .NOTES
     Module: ACAClient.psm1
@@ -167,6 +167,8 @@ function Connect-ACADataverse {
             Write-Verbose "Acquired Dataverse token via Az.Accounts"
         } catch {
             Write-Warning "No access token provided and Az.Accounts token acquisition failed. Use Connect-EnvironmentDataverse for authenticated access."
+            $script:DataverseUrl = $null
+            return
         }
     }
 

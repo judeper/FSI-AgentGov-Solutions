@@ -1,6 +1,6 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.0.1
+> **Version:** v1.0.2
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
@@ -22,9 +22,9 @@ The Action Confirmation Auditor (ACA) scans Power Platform environments for Copi
 
 | Regulation | Relevance |
 |------------|-----------|
-| **FINRA 3110** | Supervisory system requirements for automated trading and client-facing operations |
-| **GLBA 501(b)** | Safeguards for customer information accessed by automated agents |
-| **SOX 404** | Internal control over financial reporting workflows executed by agents |
+| **FINRA Rule 3110** | Supervisory system requirements for automated trading and client-facing operations |
+| **GLBA Section 501(b)** | Safeguards for customer information accessed by automated agents |
+| **SOX Section 404** | Internal control over financial reporting workflows executed by agents |
 
 ACA supports compliance with these regulations by providing auditable evidence that agent actions include appropriate human-in-the-loop confirmation steps.
 
@@ -116,7 +116,7 @@ See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
 
 ```bash
 python scripts/create_dataverse_schema.py \
-  --dataverse-url https://yourorg.crm.dynamics.com \
+  --environment-url https://yourorg.crm.dynamics.com \
   --client-id <app-id> \
   --client-secret <secret> \
   --tenant-id <tenant-id>
@@ -126,9 +126,8 @@ python scripts/create_dataverse_schema.py \
 
 ```powershell
 # Preview scan results without writing to Dataverse
-./scripts/Test-ActionConfirmationCompliance.ps1 `
-  -DataverseUrl "https://yourorg.crm.dynamics.com" `
-  -WhatIf
+. ./scripts/Test-ActionConfirmationCompliance.ps1
+Test-ActionConfirmationCompliance -WhatIf
 ```
 
 ### 3. Export Evidence
@@ -137,8 +136,9 @@ python scripts/create_dataverse_schema.py \
 # Export SHA-256 hashed evidence for regulatory examination
 ./scripts/Export-ActionAuditEvidence.ps1 `
   -DataverseUrl "https://yourorg.crm.dynamics.com" `
-  -FromDate (Get-Date).AddDays(-30) `
-  -ToDate (Get-Date)
+  -TenantId "contoso.onmicrosoft.com" `
+  -OutputDirectory ".\evidence" `
+  -Interactive
 ```
 
 ## Configuration

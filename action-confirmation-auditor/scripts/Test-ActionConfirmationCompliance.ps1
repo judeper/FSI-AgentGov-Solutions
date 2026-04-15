@@ -88,7 +88,7 @@ function Test-ActionConfirmationCompliance {
 
     .PARAMETER PersistResults
         When specified with -DataverseUrl, writes validation summary to
-        fsi_actionscanruns and individual violations to
+        fsi_actionscanrun and individual violations to
         fsi_actionauditresults. Requires active Dataverse connection.
 
     .PARAMETER Top
