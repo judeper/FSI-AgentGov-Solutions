@@ -1,6 +1,6 @@
 # Model Risk Management Automation
 
-> **Status:** Production Ready (v1.0.0)
+> **Status:** Production Ready (v1.0.1)
 
 Automated OCC 2011-12 / Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-ready Agent Card generation.
 
@@ -234,7 +234,7 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.0 | March 2026 | Initial release |
+| 1.0.1 | March 2026 | Initial release |
 
 ## Support
 
@@ -246,4 +246,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Model Risk Management Automation v1.0.0*
+*FSI Agent Governance Framework — Model Risk Management Automation v1.0.1*
