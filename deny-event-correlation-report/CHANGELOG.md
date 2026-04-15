@@ -9,7 +9,7 @@ All notable changes to the Deny Event Correlation Report are documented here.
 - Critical: Local CSV files are no longer deleted when blob uploads fail (prevents compliance evidence loss)
 - Blob upload failures are now tracked and prevent premature file cleanup
 
-## [2.0.0] — February 2026
+## [2.0.0] — 2026-02-15
 
 ### Added
 - Purview CopilotInteraction extraction script (`Export-CopilotDenyEvents.ps1`)

@@ -57,10 +57,10 @@
     WARNING: Confirm against deployed solution XML. Default assumes 2.
 
 .EXAMPLE
-    .\Validate-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com"
+    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com"
 
 .EXAMPLE
-    .\Validate-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 0 -SeverityHigh 1
+    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 0 -SeverityHigh 1
 
 .NOTES
     FSI Agent Governance Framework - Cross-Tenant External Sharing Governance
