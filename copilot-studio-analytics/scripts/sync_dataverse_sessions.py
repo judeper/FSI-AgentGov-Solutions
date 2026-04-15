@@ -38,7 +38,6 @@ Requirements:
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -695,7 +694,7 @@ def get_instrumentation_key(config: dict[str, Any]) -> str:
         )
 
 
-def print_banner():
+def print_banner() -> None:
     """Print sync banner."""
     print()
     print("=" * 70)
@@ -736,7 +735,7 @@ def print_sync_summary(
     print("=" * 70)
 
 
-def main():
+def main() -> None:
     """CLI entry point for Dataverse session sync."""
     parser = argparse.ArgumentParser(
         description="Sync Copilot Studio sessions from Dataverse to Application Insights",
