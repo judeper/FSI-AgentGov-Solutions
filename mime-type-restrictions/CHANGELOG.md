@@ -2,7 +2,7 @@
 
 All notable changes to MIME Type Restrictions for File Uploads are documented here.
 
-## [1.0.2] — April 2026
+## [1.0.2] — 2026-04-10
 
 ### Changed
 - Restructured solution to follow standard layout
@@ -11,7 +11,7 @@ All notable changes to MIME Type Restrictions for File Uploads are documented he
 - Moved JSON templates to templates/
 - Retained C# plugin source code in src/
 
-## [1.0.1] — February 2026
+## [1.0.1] — 2026-02-20
 
 ### Fixed
 - Standardized KQL field names in `high-volume-blocks.json` alert rule to use `OperationType_s`/`ActionTaken_s` (matching KQL queries)
@@ -25,7 +25,7 @@ All notable changes to MIME Type Restrictions for File Uploads are documented he
 - Design decisions section documenting intentional exclusions (legacy Office, SVG, rate limiting)
 - PowerShell module (FsiMimeControl) documentation in SOLUTION-DOCUMENTATION.md, README.md, and DELIVERY-CHECKLIST.md
 
-## [1.0.0] — February 2026
+## [1.0.0] — 2026-02-01
 
 ### Added
 - Dataverse plugin (`ValidateMimeTypePlugin.cs`) for server-side MIME type validation

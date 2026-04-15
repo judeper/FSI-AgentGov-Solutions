@@ -9,8 +9,8 @@
     Supports SEC 17a-4(f) compliance by providing tamper-evident evidence packages
     with cryptographic integrity verification.
 
-    IMPORTANT: The SHA-256 hash file provides integrity detection but not tamper-proof
-    guarantees. An actor with filesystem access can modify the evidence and regenerate
+    IMPORTANT: The SHA-256 hash file provides integrity detection but does not offer
+    tamper-proof protection. An actor with filesystem access can modify the evidence and regenerate
     the hash. For full SEC 17a-4(f) compliance, store evidence files on immutable/WORM
     storage or apply a detached CMS/PKCS#7 digital signature.
 
