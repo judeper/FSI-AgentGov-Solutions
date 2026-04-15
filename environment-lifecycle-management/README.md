@@ -413,7 +413,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.1.2 - January 2026
+1.1.3 - January 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

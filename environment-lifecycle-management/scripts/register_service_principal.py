@@ -239,7 +239,7 @@ def store_in_keyvault(
     return result.properties.version
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Register Service Principal for ELM",

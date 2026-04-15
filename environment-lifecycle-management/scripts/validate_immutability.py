@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from elm_client import ELMClient
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Validate ProvisioningLog immutability",

@@ -222,7 +222,7 @@ def verify_role(
     return len(issues) == 0, issues
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Verify ELM security role privileges",

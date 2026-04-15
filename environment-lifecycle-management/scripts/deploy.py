@@ -46,7 +46,7 @@ from create_views import create_views
 from create_field_security import create_field_security
 
 
-def print_banner():
+def print_banner() -> None:
     """Print deployment banner."""
     print()
     print("=" * 70)
@@ -274,7 +274,7 @@ def deploy(
     return success
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy ELM components to Dataverse",
