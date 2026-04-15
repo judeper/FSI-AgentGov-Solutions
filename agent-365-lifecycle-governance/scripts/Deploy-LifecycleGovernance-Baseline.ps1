@@ -42,15 +42,12 @@ param(
 try {
     Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
     $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
-    # Reserved for future use — Power Platform Admin API token for PPAC operations
-    $ppToken    = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com" -ErrorAction Stop).Token
 } catch {
     Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
 }
 
 $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "application/json" }
-$ppHeaders    = @{ Authorization = "Bearer $ppToken";    "Content-Type" = "application/json" }
 
 Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cyan
 

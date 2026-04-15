@@ -4,6 +4,8 @@
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## Overview
 
 As FSI organizations deploy AI agents at scale through Copilot Studio, Agent Builder, and Azure AI Foundry, the agent fleet grows faster than governance processes can keep pace. Agents are onboarded without sponsors, run indefinitely without access reviews, accumulate stale permissions, and persist after their business purpose has ended.
@@ -53,7 +55,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 ┌────────────────────────▼─────────────────────────────────────────┐
 │                    ACTION LAYER                                  │
 │  Teams Notifications · Power Automate Approvals                  │
-│  Entra Lifecycle Workflows · Power Apps Admin Portal             │
+│  Entra Lifecycle Workflows · Power Platform Admin                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -184,7 +186,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Version
 
-1.1.0
+1.1.1
 
 ## License
 

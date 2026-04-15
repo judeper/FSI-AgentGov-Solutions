@@ -1298,7 +1298,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent 365 Lifecycle Governance",
         formatter_class=argparse.RawDescriptionHelpFormatter,
