@@ -396,7 +396,7 @@ function Test-PurviewRetention {
                     $retentionDays = 90
                     $coveredBy = "Default policy"
 
-                    Write-Host "  ⚠ $recordType: Not explicitly covered (defaults to 90 days)" -ForegroundColor Yellow
+                    Write-Host "  ⚠ $($recordType): Not explicitly covered (defaults to 90 days)" -ForegroundColor Yellow
 
                     if (90 -lt $minimumRequiredDays) {
                         $checks += @{
@@ -426,7 +426,7 @@ function Test-PurviewRetention {
                 }
                 elseif ($retentionDays -lt $minimumRequiredDays) {
                     # Covered but retention too short
-                    Write-Host "  ✗ $recordType: Covered by '$coveredBy' but retention ($retentionDays days) is below minimum ($minimumRequiredDays days)" -ForegroundColor Red
+                    Write-Host "  ✗ $($recordType): Covered by '$coveredBy' but retention ($retentionDays days) is below minimum ($minimumRequiredDays days)" -ForegroundColor Red
 
                     $checks += @{
                         Name         = "${recordType}Coverage"
@@ -446,7 +446,7 @@ function Test-PurviewRetention {
                 }
                 else {
                     # Covered and retention sufficient
-                    Write-Host "  ✓ $recordType: Covered by '$coveredBy' ($retentionDays days)" -ForegroundColor Green
+                    Write-Host "  ✓ $($recordType): Covered by '$coveredBy' ($retentionDays days)" -ForegroundColor Green
 
                     $checks += @{
                         Name         = "${recordType}Coverage"

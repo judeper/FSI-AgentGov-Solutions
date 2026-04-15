@@ -398,7 +398,7 @@ python create_audit_compliance_schema.py \
 **Purpose:** Tracks current audit compliance status for each Power Platform environment. Updated via upsert pattern (by environment ID) on each compliance check.
 
 **Table Properties:**
-- **Schema Name:** `fsi_AuditEnvironmentCompliance`
+- **Schema Name:** `fsi_auditenvironmentcompliance`
 - **Logical Name:** `fsi_auditenvironmentcompliance`
 - **Ownership:** Organization-owned
 - **Auditing:** Enabled

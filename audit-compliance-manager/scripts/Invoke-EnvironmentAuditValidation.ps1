@@ -416,7 +416,7 @@ foreach ($env in $validationSet) {
         $envToken = $envAuth.DataverseAccessToken
     }
     catch {
-        Write-Warning "  ✗ Failed to acquire token for $envName: $($_.Exception.Message)"
+        Write-Warning "  ✗ Failed to acquire token for $($envName): $($_.Exception.Message)"
         $envResult.OverallStatus = "Error"
         $envResult.AuditStatus = "Error"
         $envResult.RetentionStatus = "Error"

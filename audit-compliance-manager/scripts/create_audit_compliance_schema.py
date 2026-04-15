@@ -551,7 +551,7 @@ def create_schema(client: ALCAClient, dry_run: bool = False) -> dict:
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Audit Logging Compliance Automation (ALCA)",

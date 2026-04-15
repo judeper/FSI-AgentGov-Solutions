@@ -39,7 +39,7 @@ from create_environment_variables import create_environment_variables
 from create_connection_references import create_connection_references
 
 
-def print_banner():
+def print_banner() -> None:
     """Print deployment banner."""
     print()
     print("=" * 70)
@@ -168,7 +168,7 @@ def deploy(
     return success
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy ACV components to Dataverse",
