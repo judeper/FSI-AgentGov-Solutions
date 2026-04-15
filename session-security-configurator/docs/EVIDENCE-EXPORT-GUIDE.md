@@ -120,7 +120,7 @@ session-security-evidence-Zone3-20260209-143022.json.sha256
     "zone": "Zone3",
     "fromDate": "2026-01-10T00:00:00Z",
     "toDate": "2026-02-09T23:59:59Z",
-    "exportVersion": "1.0.0",
+    "exportVersion": "1.0.1",
     "recordCount": 42,
     "organizationUrl": "https://org.crm.dynamics.com"
   },

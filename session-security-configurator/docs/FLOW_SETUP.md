@@ -375,7 +375,7 @@ The flow routes alerts based on validation status and drift detection:
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Last Updated:** 2026-02-07
 **Solution:** Session Security Configurator
 **Phase:** 3 - Automation and Alerting

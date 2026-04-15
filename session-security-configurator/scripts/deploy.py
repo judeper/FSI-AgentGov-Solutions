@@ -209,7 +209,7 @@ def deploy(
     return success
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Deploy Session Security Configurator components to Dataverse",
         formatter_class=argparse.RawDescriptionHelpFormatter,

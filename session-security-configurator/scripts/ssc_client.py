@@ -258,7 +258,7 @@ class SSCClient:
         return self.create_attribute(entity_logical_name, column_metadata)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Dataverse Web API client for Session Security Configurator", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--tenant-id", default=os.environ.get("SSC_TENANT_ID"), help="Entra ID tenant ID (or set SSC_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("SSC_CLIENT_ID"), help="Application (client) ID (or set SSC_CLIENT_ID env var)")

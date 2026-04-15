@@ -103,7 +103,7 @@ def create_connection_references(client: SSCClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create connection references for Session Security Configurator",
         formatter_class=argparse.RawDescriptionHelpFormatter,
