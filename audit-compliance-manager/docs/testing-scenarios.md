@@ -16,7 +16,7 @@
 - Dataverse records all have `fsi_compliancestatus = 100000000` (Compliant)
 
 **Verification:**
-1. Run `Check-AuditLoggingCompliance.ps1` with required parameters
+1. Run `Test-AuditLoggingCompliance.ps1` with required parameters
 2. Verify console output shows all environments as Compliant
 3. Check Dataverse table for matching records
 

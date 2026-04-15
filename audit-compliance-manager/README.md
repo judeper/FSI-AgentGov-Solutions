@@ -1,5 +1,6 @@
 # Audit Compliance Manager (ACM)
 
+> **Version:** v1.0.2
 > **Status:** Completed
 
 Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the Audit Configuration Validator (ACV) and Audit Logging Compliance Automation (ALCA) into a single solution that validates audit configurations, detects compliance gaps, and remediates non-compliant environments.
@@ -157,7 +158,7 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
 
 ```powershell
 # Detect audit logging compliance gaps across environments
-.\scripts\Check-AuditLoggingCompliance.ps1 `
+.\scripts\Test-AuditLoggingCompliance.ps1 `
     -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
     -TenantDomain "contoso.onmicrosoft.com"
 ```
@@ -302,7 +303,7 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 | Environment Runbook | `scripts/Start-EnvironmentValidationRunbook.ps1` | ACV | Azure Automation wrapper |
 | Helper Module | `scripts/AuditComplianceHelpers.psm1` | ALCA | Shared functions (retry, MI auth, Dataverse, email) |
 | Module Manifest | `scripts/AuditComplianceHelpers.psd1` | ALCA | Module metadata and exports |
-| Detection Runbook | `scripts/Check-AuditLoggingCompliance.ps1` | ALCA | Scan environments for audit compliance |
+| Detection Runbook | `scripts/Test-AuditLoggingCompliance.ps1` | ALCA | Scan environments for audit compliance |
 | Remediation Runbook | `scripts/Enable-AuditLogging.ps1` | ALCA | Enable auditing on non-compliant environments |
 | Unified Audit Log Check | `scripts/Test-UnifiedAuditLog.ps1` | ACV | Validates unified audit log configuration |
 | Mailbox Audit Check | `scripts/Test-MailboxAudit.ps1` | ACV | Validates mailbox audit settings |
@@ -356,7 +357,7 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 │  - Invoke-WithRetry, Get-ManagedIdentityToken                   │
 │  - Invoke-DataverseRequest, Send-ComplianceNotification         │
 │                                                                 │
-│  Detection: Check-AuditLoggingCompliance.ps1                    │
+│  Detection: Test-AuditLoggingCompliance.ps1                    │
 │  - MI Auth, environment scanning, Dataverse upsert              │
 │                                                                 │
 │  Remediation: Enable-AuditLogging.ps1                           │
@@ -377,7 +378,7 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 | Tenant-level validation | **Automated** | PowerShell scripts |
 | Environment discovery | **Automated** | `Invoke-EnvironmentDiscovery.ps1` |
 | Environment validation | **Automated** | `Invoke-EnvironmentAuditValidation.ps1` |
-| Compliance detection (ALCA) | **Automated** | `Check-AuditLoggingCompliance.ps1` |
+| Compliance detection (ALCA) | **Automated** | `Test-AuditLoggingCompliance.ps1` |
 | Remediation (ALCA) | **Automated** | `Enable-AuditLogging.ps1` |
 | Power Automate flows | **Manual** | Build using docs/FLOW_SETUP.md instructions |
 | Alerting configuration | **Template** | Configured via Power Automate flows |

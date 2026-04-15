@@ -5,7 +5,7 @@
     Shared helper module for Audit Logging Compliance Automation (ALCA) runbooks.
 
 .DESCRIPTION
-    Provides common functions used by both the detection (Check-AuditLoggingCompliance)
+    Provides common functions used by both the detection (Test-AuditLoggingCompliance)
     and remediation (Enable-AuditLogging) runbooks. All functions use Managed Identity
     authentication — NEVER interactive auth or hardcoded credentials.
 

@@ -253,12 +253,12 @@ Import these modules from the PowerShell Gallery:
 
 1. Navigate to **Automation Account** → **Runbooks** → **+ Create a runbook**
 2. Configure:
-   - **Name:** `Check-AuditLoggingCompliance`
+   - **Name:** `Test-AuditLoggingCompliance`
    - **Runbook type:** PowerShell
    - **Runtime version:** 7.2
    - **Description:** Scans all Power Platform environments for Purview unified audit and Dataverse audit compliance
 3. Click **Create**
-4. In the editor, paste the contents of `scripts/Check-AuditLoggingCompliance.ps1`
+4. In the editor, paste the contents of `scripts/Test-AuditLoggingCompliance.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.2 Create Remediation Runbook
@@ -286,7 +286,7 @@ Both runbooks should show:
 
 After completing all 5 phases, run the detection runbook in Test mode:
 
-1. Navigate to **Check-AuditLoggingCompliance** runbook → **Test pane**
+1. Navigate to **Test-AuditLoggingCompliance** runbook → **Test pane**
 2. Enter parameters:
    - **DataverseEnvironmentUrl:** `https://your-org.crm.dynamics.com`
    - **TenantDomain:** `yourdomain.onmicrosoft.com`

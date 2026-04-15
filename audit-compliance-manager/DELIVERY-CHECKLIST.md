@@ -12,7 +12,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **PowerShell Components (ALCA):**
 - [ ] **AuditComplianceHelpers.psm1** — Shared helper module (MI auth, retry, Dataverse, email)
 - [ ] **AuditComplianceHelpers.psd1** — Module manifest
-- [ ] **Check-AuditLoggingCompliance.ps1** — Detection runbook
+- [ ] **Test-AuditLoggingCompliance.ps1** — Detection runbook
 - [ ] **Enable-AuditLogging.ps1** — Remediation runbook
 - [ ] **AuditComplianceHelpers.Tests.ps1** — Pester unit tests (optional, for validation)
 
@@ -75,7 +75,7 @@ zip -r ACM-Solution-v1.0.0.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
-  scripts/Check-AuditLoggingCompliance.ps1 \
+  scripts/Test-AuditLoggingCompliance.ps1 \
   scripts/Enable-AuditLogging.ps1 \
   scripts/Invoke-TenantAuditValidation.ps1 \
   scripts/Invoke-EnvironmentAuditValidation.ps1 \
@@ -121,7 +121,7 @@ ACM-Solution-v1.0.0/
 │   ├── ALCA/
 │   │   ├── AuditComplianceHelpers.psm1
 │   │   ├── AuditComplianceHelpers.psd1
-│   │   ├── Check-AuditLoggingCompliance.ps1
+│   │   ├── Test-AuditLoggingCompliance.ps1
 │   │   └── Enable-AuditLogging.ps1
 │   └── ACV/
 │       ├── Invoke-TenantAuditValidation.ps1
@@ -388,7 +388,7 @@ Dataverse Schema:
 □ Alternate key fsi_environmentid_key created
 
 Runbooks:
-□ ACM-Check-AuditLoggingCompliance runbook created and published
+□ ACM-Test-AuditLoggingCompliance runbook created and published
 □ ACM-Enable-AuditLogging runbook created and published
 □ Helper module referenced correctly in both runbooks
 

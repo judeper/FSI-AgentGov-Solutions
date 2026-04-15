@@ -127,8 +127,8 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 - Mock-based testing for MI authentication
 - Retry logic validation with simulated failures
 
-#### 2. Detection Runbook — Check-AuditLoggingCompliance.ps1
-**File:** `scripts/Check-AuditLoggingCompliance.ps1`
+#### 2. Detection Runbook — Test-AuditLoggingCompliance.ps1
+**File:** `scripts/Test-AuditLoggingCompliance.ps1`
 
 **Purpose:** Azure Automation runbook that scans all Power Platform environments for audit logging compliance and writes results to Dataverse.
 
@@ -189,7 +189,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 
 **Example Execution:**
 ```powershell
-.\Check-AuditLoggingCompliance.ps1 `
+.\Test-AuditLoggingCompliance.ps1 `
     -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
     -TenantDomain "contoso.onmicrosoft.com" `
     -SendEmail `
@@ -562,11 +562,11 @@ For each Power Platform environment with Dataverse:
 **Step 5: Create Detection Runbook**
 
 1. Navigate to **Azure Automation Account** → **Runbooks** → **+ Create a runbook**
-2. **Name:** `ALCA-Check-AuditLoggingCompliance`
+2. **Name:** `ALCA-Test-AuditLoggingCompliance`
 3. **Runbook type:** PowerShell
 4. **Runtime version:** 7.2
 5. Click **Create**
-6. **Edit PowerShell Runbook:** Paste contents of `Check-AuditLoggingCompliance.ps1`
+6. **Edit PowerShell Runbook:** Paste contents of `Test-AuditLoggingCompliance.ps1`
 7. Click **Save** → **Publish**
 
 **Step 6: Create Remediation Runbook**
@@ -600,7 +600,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 8: Schedule Detection Runbook**
 
-1. Navigate to **ALCA-Check-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
+1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
 2. **Create schedule:**
    - **Name:** `Weekly-Audit-Compliance-Scan`
    - **Starts:** Next Monday 06:00 UTC
@@ -616,7 +616,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 9: Test Detection Runbook**
 
-1. Navigate to **ALCA-Check-AuditLoggingCompliance** runbook → **Start**
+1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Start**
 2. **Parameters:**
    - `DataverseEnvironmentUrl`: `https://governance.crm.dynamics.com`
    - `TenantDomain`: `contoso.onmicrosoft.com`
@@ -645,7 +645,7 @@ For each Power Platform environment with Dataverse:
 **Test 1: Detection Runbook — Authentication**
 
 ```powershell
-# In Azure Automation → Runbooks → ALCA-Check-AuditLoggingCompliance → Test pane
+# In Azure Automation → Runbooks → ALCA-Test-AuditLoggingCompliance → Test pane
 
 # Expected output:
 # [Step 1/6] Authenticating via Managed Identity...

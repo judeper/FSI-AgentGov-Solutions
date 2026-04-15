@@ -40,14 +40,14 @@
     and CSV attachment. Requires NotificationFromAddress and NotificationToAddresses.
 
 .EXAMPLE
-    .\Check-AuditLoggingCompliance.ps1 `
+    .\Test-AuditLoggingCompliance.ps1 `
         -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
         -TenantDomain "contoso.onmicrosoft.com"
 
     Scans all environments and writes results to Dataverse. No email notification.
 
 .EXAMPLE
-    .\Check-AuditLoggingCompliance.ps1 `
+    .\Test-AuditLoggingCompliance.ps1 `
         -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
         -TenantDomain "contoso.onmicrosoft.com" `
         -SendEmail `

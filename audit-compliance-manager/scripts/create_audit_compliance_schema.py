@@ -29,7 +29,7 @@ Alternate Key:
 
 Seed Data:
   After schema deployment, the table is populated automatically by the
-  Check-AuditLoggingCompliance.ps1 detection runbook. No manual seed data
+  Test-AuditLoggingCompliance.ps1 detection runbook. No manual seed data
   is required. To verify the schema, run this script with --dry-run first,
   then deploy and execute the detection runbook against a test environment.
 """
@@ -473,7 +473,7 @@ def print_seed_data_instructions() -> None:
     print("\n[Seed Data Configuration]")
     print("""
   No manual seed data is required. The fsi_auditenvironmentcompliance table
-  is populated automatically by the Check-AuditLoggingCompliance.ps1 detection
+  is populated automatically by the Test-AuditLoggingCompliance.ps1 detection
   runbook during its first execution.
 
   To verify the schema manually, you can create a test record:
