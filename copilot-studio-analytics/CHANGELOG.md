@@ -2,6 +2,11 @@
 
 All notable changes to this solution are documented in this file.
 
+## [1.1.1] - 2026-04-15
+
+### Fixed
+- Updated dataverse-data-sources.md to v1.1.0 and aligned session column names (msdyn_startedon/msdyn_endedon → msdyn_sessioncreatedon/msdyn_sessionclosedon to match sync script)
+
 ## [1.1.0] - 2026-04-01
 
 ### Fixed

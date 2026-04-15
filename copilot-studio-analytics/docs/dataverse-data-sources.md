@@ -28,8 +28,8 @@ The primary data source for session outcome analytics. Each record represents on
 | msdyn_botid | Lookup (bot) | Reference to the agent | Foreign key to bot table |
 | msdyn_sessionoutcome | OptionSet | Session result | See outcome values below |
 | msdyn_csatscore | Integer | Customer satisfaction score | 1-5 scale; null if survey not enabled |
-| msdyn_startedon | DateTime | Session start timestamp | UTC |
-| msdyn_endedon | DateTime | Session end timestamp | UTC; used as event timestamp |
+| msdyn_sessioncreatedon | DateTime | Session start timestamp | UTC |
+| msdyn_sessionclosedon | DateTime | Session end timestamp | UTC; used as event timestamp |
 | msdyn_conversationid | String | Conversation identifier | Links to conversationtranscript |
 | msdyn_channelid | String | Channel identifier | Teams, Web, etc. |
 | modifiedon | DateTime | Last modified timestamp | Used for watermark-based sync |
@@ -234,5 +234,5 @@ GET /api/data/v9.2/msdyn_botcomponentsessions
 
 ---
 
-*Dataverse Data Sources version: 1.0.0*
+*Dataverse Data Sources version: 1.1.0*
 *Last updated: February 2026*
