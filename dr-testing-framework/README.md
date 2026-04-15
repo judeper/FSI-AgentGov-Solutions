@@ -1,6 +1,6 @@
 # DR Testing Framework
 
-> **Version:** 1.2.0 | **Controls:** 2.4, 2.1, 1.9
+> **Version:** 1.2.1 | **Controls:** 2.4, 2.1, 1.9
 
 Automated disaster recovery testing workflows for AI agent infrastructure, supporting compliance with operational resilience requirements.
 
@@ -96,7 +96,7 @@ Complete infrastructure recovery.
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Administrator** | Environment operations |
+| **Power Platform Admin** | Environment operations |
 | **System Administrator** | Dataverse restore |
 | **Backup Operator** | Azure Backup access |
 
@@ -357,4 +357,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v1.2.0*
+*FSI Agent Governance Framework - DR Testing Framework v1.2.1*
