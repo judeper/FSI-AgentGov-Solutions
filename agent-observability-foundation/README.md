@@ -152,7 +152,7 @@ For comprehensive pre-deployment prerequisites and post-deployment verification 
 
 The validation checklist covers:
 - Azure infrastructure verification (Application Insights, Log Analytics, Storage)
-- Software requirements (PowerShell 7.0+, Azure CLI 2.50+)
+- Software requirements (PowerShell 7.0+, Azure CLI 2.60+)
 - ARM template file verification
 - Workbook deployment validation with idempotency testing
 - Alert deployment validation with 3-phase dependency checks

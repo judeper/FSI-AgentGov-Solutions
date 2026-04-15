@@ -168,7 +168,7 @@ def verify_application_insights(
     print(f"    - Retention: {retention} days")
 
     if verbose:
-        print(f"    - Instrumentation Key: {component.instrumentation_key}")
+        print(f"    - Resource ID: {component.id}")
         print(f"    - Workspace ID: {workspace_id}")
 
     return (True, workspace_id, retention)

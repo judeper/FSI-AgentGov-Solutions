@@ -2,6 +2,14 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.1.1] — 2026-04-15
+
+### Fixed
+
+- Security: removed instrumentation key logging from verify_telemetry.py (logged resource ID instead)
+- architecture.md: replaced all "ADLS Gen2" references with "Azure Blob Storage (StorageV2, HNS disabled)" to match actual script requirements
+- README: corrected Azure CLI minimum version from 2.50+ to 2.60+ (required by alert deployment)
+
 ## [1.1.0] — February 2026
 
 ### Added
