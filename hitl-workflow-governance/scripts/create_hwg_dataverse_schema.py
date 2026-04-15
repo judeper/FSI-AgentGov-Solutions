@@ -641,7 +641,7 @@ def create_schema(client: HWGClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for HITL Workflow Governance",

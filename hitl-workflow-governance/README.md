@@ -1,6 +1,6 @@
 # HITL Workflow Governance
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `advancedapprovals` connector.
@@ -225,7 +225,7 @@ Zone policy thresholds are configured in `templates/hitl-zone-policy.json`. See 
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.0.0 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
+| v1.0.1 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
