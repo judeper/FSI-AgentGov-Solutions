@@ -1,6 +1,6 @@
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.0.2
+> **Status:** Completed | **Version:** v1.0.3
 
 Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
 

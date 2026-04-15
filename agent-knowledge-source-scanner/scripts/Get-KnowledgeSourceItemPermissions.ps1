@@ -113,7 +113,7 @@ param(
     [string]$AgentName = "Unknown",
 
     [Parameter(Mandatory = $false)]
-    [ValidatePattern('^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
+    [ValidatePattern('(?i)^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
     [string]$AgentUserGroupId,
 
     [Parameter(Mandatory = $false)]
@@ -469,7 +469,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.1                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.3                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -553,7 +553,12 @@ try {
                     }
 
                     # Only scan items with unique permissions (HasUniqueRoleAssignments)
-                    Get-PnPProperty -ClientObject $item -Property "HasUniqueRoleAssignments" | Out-Null
+                    try {
+                        Get-PnPProperty -ClientObject $item -Property "HasUniqueRoleAssignments" | Out-Null
+                    } catch {
+                        Write-Verbose "Could not load permissions for item $($item.Id): $($_.Exception.Message)"
+                        continue
+                    }
 
                     if (-not $item.HasUniqueRoleAssignments -and -not $IncludeCompliant) {
                         continue

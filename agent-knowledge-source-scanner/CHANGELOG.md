@@ -2,6 +2,15 @@
 
 All notable changes to agent-knowledge-source-scanner will be documented in this file.
 
+## [1.0.3] - 2026-04-15
+
+### Fixed
+
+- GUID validation for AgentUserGroupId now case-insensitive (accepts uppercase hex)
+- Added per-item error handling for HasUniqueRoleAssignments property load (one bad item no longer fails entire library scan)
+- Aligned script version banner with solution version
+- Updated template metadata version
+
 ## [1.0.2] - April 2026
 
 ### Added
