@@ -2,6 +2,12 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.0.3] - 2026-04-15
+
+### Fixed
+
+- Critical: Test-ContentModerationCompliance Write-Output changed to Write-Host in Object mode to prevent pipeline contamination (string was mixed into scan results, corrupting counts in runbook)
+
 ## [1.0.2] - 2025-07-14
 
 ### Changed

@@ -547,7 +547,7 @@ function Test-ContentModerationCompliance {
             }
         }
 
-        Write-Output "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))"
+        Write-Host "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))" -ForegroundColor Green
     } elseif ($PersistResults -and -not $dataverseConnected) {
         Write-Warning "PersistResults requested but Dataverse not connected. Results not persisted."
     }
