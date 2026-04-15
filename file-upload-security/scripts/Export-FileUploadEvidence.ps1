@@ -167,7 +167,7 @@ $headers = @{
 
 $baseUrl = "$($connection.DataverseUrl)/api/data/v9.2"
 
-$historyUrl = "$baseUrl/fsi_fileuploadvalidationhistorys"
+$historyUrl = "$baseUrl/fsi_fileuploadvalidationhistories"
 if ($filterString) {
     $historyUrl += "?`$filter=$filterString"
 }

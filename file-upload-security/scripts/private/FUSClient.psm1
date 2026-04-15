@@ -652,7 +652,7 @@ function Write-FileUploadValidationHistory {
             fsi_summaryjson            = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistorys"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistories"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -751,7 +751,7 @@ function Get-FUSLastValidation {
 
     try {
         $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalagents,fsi_fileuploadenabledcount,fsi_summaryjson,fsi_validationtime"
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistorys?" +
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadvalidationhistories?" +
                "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{

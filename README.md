@@ -29,8 +29,8 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Cross-Tenant and External Sharing Governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.1 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v2.0.1 | 1.5, 1.7, 1.8, 3.4 |
 | [DR Testing Framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | v1.2.1 | 2.4, 2.1, 1.9 |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated environment provisioning with zone-based governance classification | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 |
-| [File Upload Security Configurator](./file-upload-security/) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.1 | 1.14, 1.8, 1.4 |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated environment provisioning with zone-based governance classification | v1.1.3 | 2.1, 2.2, 2.3, 2.8, 1.7 |
+| [File Upload Security Configurator](./file-upload-security/) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.2 | 1.14, 1.8, 1.4 |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.0.0 | 2.24 |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.0.0 | 3.10, 2.9, 2.12 |

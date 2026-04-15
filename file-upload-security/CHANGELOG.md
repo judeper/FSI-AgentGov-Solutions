@@ -2,6 +2,12 @@
 
 All notable changes to the File Upload Security Configurator will be documented in this file.
 
+## [1.0.2] — 2026-04-15
+
+### Fixed
+
+- Critical: Entity set name corrected from fsi_fileuploadvalidationhistorys to fsi_fileuploadvalidationhistories (was malformed plural)
+
 ## [1.0.1] — 2025-07-14
 
 ### Changed
