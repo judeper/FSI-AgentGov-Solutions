@@ -244,8 +244,10 @@ $filterParts = @(
 )
 
 if ($Zone -ne 'All') {
-    $zoneValue = "Zone$Zone"
-    $filterParts += "fsi_zone eq '$zoneValue'"
+    # Map zone name to option set integer for Dataverse choice filter
+    $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
+    $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
+    $filterParts += "fsi_zone eq $zoneInt"
 }
 
 $filter = $filterParts -join ' and '
