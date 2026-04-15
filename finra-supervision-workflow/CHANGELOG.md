@@ -2,7 +2,7 @@
 
 All notable changes to the FINRA Supervision Workflow solution are documented here.
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 
