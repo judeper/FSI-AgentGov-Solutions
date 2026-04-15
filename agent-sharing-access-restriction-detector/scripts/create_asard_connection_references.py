@@ -104,7 +104,7 @@ def create_connection_references(client: DataverseClient, dry_run: bool = False)
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point for ASARD connection reference creation."""
     parser = argparse.ArgumentParser(
         description="Create connection references for Agent Sharing Access Restriction Detector",

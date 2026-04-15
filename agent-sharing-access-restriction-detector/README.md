@@ -1,7 +1,9 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v1.0.3
+> **Version:** v1.0.4
 > **Status:** Completed
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
 
@@ -88,7 +90,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 ## Prerequisites
 
 - Microsoft Entra ID app registration with BAP Admin API and Microsoft Graph permissions
-- Power Platform admin role (or Global Admin)
+- Power Platform Admin (or Entra Global Admin)
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
 - Power Automate Premium license (for approval workflows)

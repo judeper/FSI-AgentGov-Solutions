@@ -685,7 +685,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     """CLI entry point for ASARD Dataverse schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Sharing Access Restriction Detector",
