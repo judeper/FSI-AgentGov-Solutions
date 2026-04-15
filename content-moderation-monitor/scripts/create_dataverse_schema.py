@@ -437,7 +437,7 @@ def create_schema(client: CMMClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Content Moderation Monitor",

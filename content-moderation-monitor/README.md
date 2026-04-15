@@ -10,7 +10,9 @@ The Content Moderation Monitor detects when Copilot Studio agents have insuffici
 
 It supports Controls 1.8 (Runtime Protection) and 1.14 (Content Moderation Enforcement) by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
 
-**Version:** 1.0.2
+**Version:** 1.0.3
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Quick Start
 

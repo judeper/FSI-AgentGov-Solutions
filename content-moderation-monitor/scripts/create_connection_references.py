@@ -152,7 +152,7 @@ def create_connection_references(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for connection reference deployment."""
     parser = argparse.ArgumentParser(
         description=(

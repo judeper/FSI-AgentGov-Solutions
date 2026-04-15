@@ -31,9 +31,9 @@ POST_DEPLOYMENT_GUIDANCE = """
 Post-Deployment Steps
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-1. SECURITY — Configure fsi_ModerationValidationHistory security role:
+1. SECURITY — Configure fsi_moderationvalidationhistory security role:
    - Navigate to Settings > Security > Security Roles
-   - Remove Write and Delete privileges for fsi_ModerationValidationHistory
+   - Remove Write and Delete privileges for fsi_moderationvalidationhistory
    - This supports immutable audit records (FINRA 4511, SEC 17a-3)
 
 2. CONNECTIONS — Bind connection references in Power Automate:
@@ -152,7 +152,7 @@ def run_deployment(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for CMM deployment orchestrator."""
     parser = argparse.ArgumentParser(
         description=(
