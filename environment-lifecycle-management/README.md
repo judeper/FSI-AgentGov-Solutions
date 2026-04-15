@@ -69,6 +69,7 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive \
     --dry-run
 
@@ -76,6 +77,7 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive
 ```
 
