@@ -331,7 +331,7 @@ def create_environment_variables(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Create Dataverse environment variables for "
