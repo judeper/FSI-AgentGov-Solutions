@@ -6,8 +6,8 @@ All notable changes to the Agent 365 Lifecycle Governance solution.
 
 ### Fixed
 
-- Validate-LifecycleCompliance.ps1: compliance status now returns UNKNOWN when Dataverse queries fail instead of false COMPLIANT
-- Validate-LifecycleCompliance.ps1: InactiveAgents count now included in compliance decision logic
+- Test-LifecycleCompliance.ps1: compliance status now returns UNKNOWN when Dataverse queries fail instead of false COMPLIANT
+- Test-LifecycleCompliance.ps1: InactiveAgents count now included in compliance decision logic
 - README: replaced "Immutable Audit Trail" overclaim with conditional language requiring security role configuration
 - README: added `--client-id` to interactive deployment examples (required by DataverseClient)
 - CHANGELOG: replaced "immutable" overclaim with conditional language
@@ -30,7 +30,7 @@ All notable changes to the Agent 365 Lifecycle Governance solution.
   - Flow 4: Execute-DeactivationWorkflow (called)
   - Flow 5: Monitor-SponsorChanges-Weekly (weekly)
   - Flow 6: Check-DeletionHold-Daily (daily)
-- **PowerShell scripts:** Deploy-LifecycleGovernance-Baseline.ps1, Validate-LifecycleCompliance.ps1
+- **PowerShell scripts:** Deploy-LifecycleGovernance-Baseline.ps1, Test-LifecycleCompliance.ps1
 - **Templates:** Adaptive Card v1.2 for sponsor assignment notification, sample configuration JSON
 - **Documentation:** Prerequisites, canvas app guide, Power BI dashboard guide, troubleshooting
 - **Delivery checklist:** Phased pre-deployment and post-deployment validation tasks

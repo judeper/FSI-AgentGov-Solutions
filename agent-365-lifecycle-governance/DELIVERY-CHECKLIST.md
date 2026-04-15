@@ -88,7 +88,7 @@ Pre-deployment validation and post-deployment verification tasks. Complete each 
 ## Phase 5: Post-Deployment Validation
 
 - [ ] Run `Deploy-LifecycleGovernance-Baseline.ps1` to capture baseline
-- [ ] Run `Validate-LifecycleCompliance.ps1` to verify initial compliance state
+- [ ] Run `Test-LifecycleCompliance.ps1` to verify initial compliance state
 - [ ] Verify immutability: confirm `fsi_lifecyclecomplianceevent` has no delete capability for non-admin roles
 - [ ] Verify Dataverse LTR is active on `fsi_lifecyclecomplianceevent`
 - [ ] Test end-to-end: register a test agent → sponsor assignment → access review → deactivation → deletion hold → deletion

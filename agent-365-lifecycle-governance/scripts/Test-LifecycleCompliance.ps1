@@ -19,7 +19,7 @@
     Preview compliance results without writing the report file.
 
 .EXAMPLE
-    .\Validate-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
+    .\Test-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
 #>
 
 [CmdletBinding()]

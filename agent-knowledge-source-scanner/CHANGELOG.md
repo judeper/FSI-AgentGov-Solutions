@@ -11,7 +11,7 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 - Aligned script version banner with solution version
 - Updated template metadata version
 
-## [1.0.2] - April 2026
+## [1.0.2] - 2026-04-10
 
 ### Added
 - `-ClientId` parameter for PnP.PowerShell 3.x tenant-specific app registration support
@@ -25,7 +25,7 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 - Updated quick start examples to show both PnP 2.x and 3.x usage
 - Updated troubleshooting guidance for PnP 3.x cmdlet renames and authentication changes
 
-## [1.0.1] - April 2026
+## [1.0.1] - 2026-04-10
 
 ### Added
 - Documentation suite: docs/prerequisites.md, docs/troubleshooting.md

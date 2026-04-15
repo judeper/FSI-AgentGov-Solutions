@@ -22,7 +22,7 @@ All notable changes to the COI Testing Framework.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 

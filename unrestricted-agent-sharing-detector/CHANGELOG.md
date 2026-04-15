@@ -2,7 +2,7 @@
 
 All notable changes to the Unrestricted Agent Sharing Detector are documented here.
 
-## [1.0.2] — February 2026
+## [1.0.2] — 2026-02-15
 
 ### Added
 - Flow 4 (`UASD-Exception-Expiration-Monitor`) build instructions in `docs/flow-configuration.md`
@@ -12,7 +12,7 @@ All notable changes to the Unrestricted Agent Sharing Detector are documented he
   - New environment variable: `fsi_UASD_ExpirationWarningDays` (default: 7)
 - Resolved Known Limitation #1 (exception expiration monitoring)
 
-## [1.0.1] — February 2026
+## [1.0.1] — 2026-02-15
 
 ### Changed
 - Removed `src/` directory with exported flow JSON per Solution Content Policy — flows are now built manually using `docs/flow-configuration.md`
@@ -21,7 +21,7 @@ All notable changes to the Unrestricted Agent Sharing Detector are documented he
 - Schema script generates `docs/dataverse-schema.md` via `--output-docs` flag
 - Trimmed SOLUTION-DOCUMENTATION.md to reference generated schema docs
 
-## [1.0.0] — February 2026
+## [1.0.0] — 2026-02-15
 
 ### Added
 - Detector scan flow for continuous monitoring of agent sharing configurations

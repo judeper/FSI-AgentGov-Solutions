@@ -119,7 +119,7 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 6. Set `IsAgent365LifecycleEnabled` to `"true"` after deployment validation (Agent 365 is now GA for OBO agents)
 7. Validate compliance:
    ```powershell
-   .\scripts\Validate-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
+   .\scripts\Test-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
    ```
 
 ## Regulatory Alignment
