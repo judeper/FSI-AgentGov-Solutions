@@ -4,6 +4,14 @@ All notable changes to the DR Testing Framework.
 
 ---
 
+## [1.2.1] - 2026-04-15
+
+### Fixed
+
+- Critical: Save-TestResult now includes required fsi_name primary attribute (was omitted, causing Dataverse writes to fail)
+
+---
+
 ## [1.2.0] - April 2026
 
 ### Added
