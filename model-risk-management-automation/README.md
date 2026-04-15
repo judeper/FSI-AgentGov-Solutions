@@ -126,7 +126,7 @@ See [Prerequisites](docs/prerequisites.md) for complete details.
 | Connection reference deployment | `scripts/create_mrm_connection_references.py` | Python |
 | Deployment orchestrator | `scripts/deploy.py` | Python |
 | Baseline inventory export | `scripts/Deploy-MRM-Baseline.ps1` | PowerShell |
-| Compliance validation | `scripts/Validate-MRM-Compliance.ps1` | PowerShell |
+| Compliance validation | `scripts/Test-MRMCompliance.ps1` | PowerShell |
 | Flow build instructions | `docs/flow-configuration.md` | Documentation |
 | Power Apps build guide | `docs/power-apps-configuration.md` | Documentation |
 | Power BI build guide | `docs/powerbi-dashboard.md` | Documentation |

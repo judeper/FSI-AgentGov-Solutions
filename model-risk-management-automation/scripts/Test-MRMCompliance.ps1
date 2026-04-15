@@ -33,10 +33,10 @@
     Default: 100000001 (per create_mrm_dataverse_schema.py).
 
 .EXAMPLE
-    .\Validate-MRM-Compliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com"
+    .\Test-MRMCompliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com"
 
 .EXAMPLE
-    .\Validate-MRM-Compliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com" -ValidationStatusValidated 6 -FindingSeverityCritical 1
+    .\Test-MRMCompliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com" -ValidationStatusValidated 6 -FindingSeverityCritical 1
 #>
 
 #Requires -Modules Az.Accounts

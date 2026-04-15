@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.2.0] - April 2026
+## [2.2.0] - 2026-04-10
 
 ### Added
 - Dataverse schema script with 1 table, 3 option sets, and `--output-docs` support
@@ -10,7 +10,7 @@
 - Auto-generated Dataverse schema documentation
 - Python requirements.txt
 
-## [2.1.3] - April 2026
+## [2.1.3] - 2026-04-10
 
 ### Changed
 
@@ -21,7 +21,7 @@
 
 ---
 
-## [2.1.2] - March 2026
+## [2.1.2] - 2026-03-15
 
 ### Correctness Fixes
 
@@ -56,7 +56,7 @@
 
 ---
 
-## [2.1.1] - January 2026
+## [2.1.1] - 2026-01-15
 
 ### Technical Accuracy Updates
 
@@ -97,7 +97,7 @@ This release addresses terminology and deprecation updates identified during tec
 
 ---
 
-## [2.1.0] - January 2026
+## [2.1.0] - 2026-01-15
 
 ### Technical Review Fixes
 
@@ -214,7 +214,7 @@ If you deployed v1.x, there is no automatic migration. Options:
 
 ---
 
-## [1.3.0] - January 2026
+## [1.3.0] - 2026-01-15
 
 > **Note:** v1.3.0 was the final release of the compliance-focused design. See v2.0.0 for the simplified approach.
 
@@ -287,7 +287,7 @@ If you deployed v1.x, there is no automatic migration. Options:
 
 ---
 
-## [1.2.0] - January 2026
+## [1.2.0] - 2026-01-15
 
 ### AI-Readiness & Critical Fixes
 
@@ -309,7 +309,7 @@ If you deployed v1.x, there is no automatic migration. Options:
 
 ---
 
-## [1.1.0] - January 2026
+## [1.1.0] - 2026-01-15
 
 ### Expanded Deployment Script
 
@@ -325,7 +325,7 @@ New capabilities added:
 
 ---
 
-## [1.0.0] - January 2026
+## [1.0.0] - 2026-01-15
 
 ### Initial Release
 

@@ -4,7 +4,15 @@ All notable changes to the RAG Source Validator.
 
 ---
 
-## [1.1.0] - April 2026
+## [1.1.1] - 2026-04-15
+
+### Fixed
+
+- Added required primary name fields to Dataverse record writes
+
+---
+
+## [1.1.0] - 2026-04-10
 
 ### Added
 - Dataverse schema deployment script with 3 tables, 6 option sets, 2 relationships, and `--output-docs`
@@ -16,7 +24,7 @@ All notable changes to the RAG Source Validator.
 
 ---
 
-## [1.0.1] - March 2026
+## [1.0.1] - 2026-03-15
 
 ### Fixed
 
@@ -29,7 +37,7 @@ All notable changes to the RAG Source Validator.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 

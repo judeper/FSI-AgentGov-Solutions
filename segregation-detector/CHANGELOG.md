@@ -4,7 +4,7 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 
