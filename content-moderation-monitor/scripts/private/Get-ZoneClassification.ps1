@@ -46,7 +46,7 @@ if ($DataverseUrl -and $AccessToken) {
             'Accept' = 'application/json'
         }
         $safeEnvId = $EnvironmentId -replace "'", "''"
-        $filter = "fsi_environment_guid eq '$safeEnvId'"
+        $filter = "fsi_environmentguid eq '$safeEnvId'"
         $url = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentlifecycles?`$filter=$filter&`$select=fsi_zone&`$top=1"
         $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -ErrorAction Stop
         if ($response.value -and $response.value.Count -gt 0) {

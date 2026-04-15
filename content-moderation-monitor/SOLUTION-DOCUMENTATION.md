@@ -1,7 +1,7 @@
 # Monitoring AI Agent Content Moderation Compliance
 ## Content Moderation Monitor
 
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Solution Type:** Automated Per-Agent Validation + Drift Detection
 **Platform:** PowerShell + Power Automate + Dataverse
 

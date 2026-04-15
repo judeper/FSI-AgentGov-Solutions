@@ -271,4 +271,4 @@ For quarterly regulatory preparation, include baselines (`-IncludeBaselines`) to
 
 ---
 
-*Content Moderation Governance Monitor — Evidence Export Guide v1.0.1*
+*Content Moderation Governance Monitor — Evidence Export Guide v1.0.3*

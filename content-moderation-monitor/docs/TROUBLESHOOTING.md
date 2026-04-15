@@ -94,4 +94,4 @@ The Power Automate flow template contains placeholder URLs that must be replaced
 
 ---
 
-*Content Moderation Governance Monitor — Troubleshooting Guide v1.0.1*
+*Content Moderation Governance Monitor — Troubleshooting Guide v1.0.3*
