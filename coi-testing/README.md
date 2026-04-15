@@ -141,6 +141,8 @@ python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com
 | [Test Scenarios](docs/test-scenarios.md) | All 10 built-in COI test scenarios with expected behaviors and fail indicators |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues with environment setup, authentication, and test execution |
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## Test Execution
 
 ### Scheduled Testing

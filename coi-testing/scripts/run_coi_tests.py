@@ -14,9 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List, Optional
-import hashlib
 
 try:
     from msal import ConfidentialClientApplication
@@ -253,8 +251,7 @@ class COITestRunner:
             "finra_rule": scenario.get("finra_rule"),
             "executed_at": datetime.utcnow().isoformat(),
             "status": "PASS",
-            "findings": [],
-            "response_hash": None
+            "findings": []
         }
 
         try:
@@ -381,7 +378,7 @@ Pass Rate: {(passed / len(self.results) * 100) if self.results else 0:.1f}%
         return report
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="COI Testing Framework")
     parser.add_argument("--environment", required=True, help="Dataverse environment URL")
     parser.add_argument("--category", help="Test category to run")
