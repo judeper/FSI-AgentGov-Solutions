@@ -22,7 +22,7 @@ Unified audit compliance solution for Microsoft 365 and Power Platform environme
 
 | Role | Purpose |
 |------|---------|
-| Exchange Online Admin | Unified Audit Log configuration, Search-UnifiedAuditLog |
+| Exchange Administrator | Unified Audit Log configuration, Search-UnifiedAuditLog |
 | Purview Compliance Admin | Purview retention policy access |
 | Power Platform Admin | Environment enumeration, audit configuration |
 | Entra Global Admin | Managed Identity role assignments |

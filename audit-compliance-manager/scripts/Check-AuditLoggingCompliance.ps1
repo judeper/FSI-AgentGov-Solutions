@@ -121,7 +121,8 @@ try {
     # Get Dataverse token for compliance record writes
     # Token refreshed periodically for long-running scans (50+ environments)
     $script:dvTokenAcquiredAt = Get-Date
-    $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+    $script:dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+    $dvToken = $script:dvToken
     Write-Output "  [OK] Dataverse authentication successful"
 }
 catch {

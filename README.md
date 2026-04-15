@@ -18,7 +18,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Agent Observability Foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.1 | 1.7, 2.8, 2.9, 3.2 |
 | [Agent Registry Automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | v1.0.1 | 1.2, 1.7, 2.1, 2.13 |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.4 | 1.18, 2.8 |
-| [Audit Compliance Manager (ACM)](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.1 | 1.7 |
+| [Audit Compliance Manager (ACM)](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.2 | 1.7 |
 | [Conflict of Interest Testing](./coi-testing/) | Conflict of interest testing for agent recommendations | v1.0.1 | 2.18, 2.11, 2.5 |
 | [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.1 | 3.3, 3.1, 3.2 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.2.0 | 1.11, 1.23, 1.18 |
