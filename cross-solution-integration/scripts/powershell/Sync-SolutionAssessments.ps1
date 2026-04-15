@@ -49,7 +49,7 @@
     .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -ClientId "app-guid" -ClientSecret $secret
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Date: 2026-02-10
     Requires: IntegrationConfig.psm1
 #>

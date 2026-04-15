@@ -2,6 +2,12 @@
 
 All notable changes to this solution will be documented in this file.
 
+## [1.0.2] — 2026-04-15
+
+### Fixed
+
+- Aligned version strings in all 3 PowerShell scripts to v1.0.1 (were still 1.0.0)
+
 ## [1.0.1] — 2026-02-11
 
 ### Changed
