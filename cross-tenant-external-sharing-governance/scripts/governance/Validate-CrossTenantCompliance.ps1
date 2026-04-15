@@ -454,7 +454,7 @@ $ctaSection = @{
 try {
     $ctaRecords = Get-DVRecords `
         -EntitySet $EntitySets.EntraCTA `
-        -Select "fsi_compliancestatus,fsi_unapprovedcount,createdon" `
+        -Select "fsi_compliancestatus,fsi_unapprovedpartnercount,createdon" `
         -OrderBy "createdon desc" `
         -Top 1
 
@@ -462,12 +462,12 @@ try {
         $latestCta = $ctaRecords[0]
         $ctaSection.LatestRecord = $latestCta.createdon
         $ctaSection.ComplianceStatus = $latestCta.fsi_compliancestatus
-        $ctaSection.UnapprovedCount = $latestCta.fsi_unapprovedcount
+        $ctaSection.UnapprovedCount = $latestCta.fsi_unapprovedpartnercount
 
         Write-Host "  Latest snapshot: $($latestCta.createdon)"
         Write-Host "  Compliance status: $($latestCta.fsi_compliancestatus)"
-        Write-Host "  Unapproved partners: $($latestCta.fsi_unapprovedcount)" `
-            -ForegroundColor $(if ($latestCta.fsi_unapprovedcount -gt 0) { "Red" } else { "Green" })
+        Write-Host "  Unapproved partners: $($latestCta.fsi_unapprovedpartnercount)" `
+            -ForegroundColor $(if ($latestCta.fsi_unapprovedpartnercount -gt 0) { "Red" } else { "Green" })
     } else {
         Write-Warning "No Entra CTA records found. Flow 2 may not have run yet."
     }

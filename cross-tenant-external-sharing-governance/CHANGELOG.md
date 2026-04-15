@@ -4,6 +4,12 @@ All notable changes to the Cross-Tenant External Sharing Governance solution.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Critical: CTA compliance validation now queries correct column fsi_unapprovedpartnercount (was fsi_unapprovedcount, which belongs to the isolation table)
+
 ## [1.0.0] - 2026-03-20
 
 ### Added
