@@ -1,7 +1,7 @@
 # Securing AI Agent File Uploads with MIME Type Restrictions
 ## MIME Type Restrictions for File Uploads
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Solution Type:** Server-Side Validation + DLP Policy + Monitoring
 **Platform:** Dataverse Plugin + Power Platform DLP + Microsoft Sentinel
 
@@ -263,7 +263,7 @@ Organizations should customize the template based on business requirements:
 
 ```json
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "enforcementMode": "Block",
   "maxFileSizeBytes": 10485760,
   "zone": 3,
@@ -866,7 +866,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.1
+**Solution Version:** 1.0.2
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -877,7 +877,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 - Coordinate DLP policy updates with business unit stakeholders (advance notice recommended)
 
 **Version History:**
-- **v1.0.1 (February 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
+- **v1.0.2 (February 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
 - **v1.0.0 (February 2026):** Initial release with Dataverse plugin, DLP template, and Sentinel queries
 
 ---
