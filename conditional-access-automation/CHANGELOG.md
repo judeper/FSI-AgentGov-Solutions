@@ -2,6 +2,13 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.2.1] - 2026-04-15
+
+### Fixed
+
+- Critical: Export-CAAComplianceEvidence now reads correct token variable ($script:CAAAccessToken, was $script:AccessToken)
+- Updated EVIDENCE_EXPORT.md version references from 1.1.0 to 1.2.0
+
 ## [1.2.0] - 2026-04-02
 
 ### Added

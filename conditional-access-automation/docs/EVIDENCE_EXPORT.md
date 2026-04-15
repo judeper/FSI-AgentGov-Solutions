@@ -116,7 +116,7 @@ Each evidence package contains the following top-level sections:
 | `toDate` | ISO 8601 | End of the evidence window |
 | `runId` | String | Specific run ID filter, or `null` for all runs |
 | `exportVersion` | String | Evidence schema version (currently `"1.0.0"`) |
-| `solutionVersion` | String | CAA solution version (currently `"1.1.0"`) |
+| `solutionVersion` | String | CAA solution version (currently `"1.2.0"`) |
 | `recordCount` | Integer | Number of validation records |
 | `violationCount` | Integer | Number of violation records |
 | `baselineCount` | Integer | Number of baseline records |
@@ -156,7 +156,7 @@ Array of active baseline records from `fsi_CAPolicyBaseline` (included when `-In
     "toDate": "2026-02-10T15:30:00.0000000Z",
     "runId": null,
     "exportVersion": "1.0.0",
-    "solutionVersion": "1.1.0",
+    "solutionVersion": "1.2.0",
     "recordCount": 30,
     "violationCount": 2,
     "baselineCount": 8
@@ -263,4 +263,4 @@ See the [cross-solution integration guide](https://github.com/judeper/FSI-AgentG
 
 ---
 
-*Version: 1.1.0 | Last Updated: February 2026*
+*Version: 1.2.0 | Last Updated: February 2026*

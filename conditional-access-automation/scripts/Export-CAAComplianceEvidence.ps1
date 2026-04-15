@@ -175,7 +175,7 @@ try {
 } catch {
     Write-Warning "Connect-CAADataverse failed: $_. Falling back to Get-AzAccessToken."
 }
-$accessToken = $script:AccessToken
+$accessToken = $script:CAAAccessToken
 
 # If CAAClient sets module-scoped token, retrieve it; otherwise fall back
 # to interactive token acquisition for the Dataverse resource
