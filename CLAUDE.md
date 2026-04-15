@@ -60,10 +60,10 @@ git rev-parse --show-toplevel
 | [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.0.1 |
 | [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.0.0 |
 | [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.0.1 |
-| [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.0.4 |
+| [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.0.5 |
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.2.0 |
 | [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.0.2 |
-| [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.0 |
+| [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.1 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.1.0 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.1.0 |
 | [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.1.1 |
