@@ -89,7 +89,7 @@ BUILTIN_ROLES = {
 }
 
 
-def print_banner():
+def print_banner() -> None:
     """Print deployment banner."""
     print()
     print("=" * 70)
@@ -720,7 +720,7 @@ def print_summary(
     print("=" * 70)
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Provision FSI-compliant Azure telemetry infrastructure",

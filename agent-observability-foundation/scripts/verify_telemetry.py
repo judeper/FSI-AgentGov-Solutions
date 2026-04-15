@@ -60,7 +60,7 @@ except ImportError:
     LOGS_QUERY_AVAILABLE = False
 
 
-def print_banner():
+def print_banner() -> None:
     """Print verification banner."""
     print()
     print("=" * 70)
@@ -397,7 +397,7 @@ def print_verification_summary(
     return 0
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Verify telemetry flow from Copilot Studio to Application Insights",

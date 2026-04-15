@@ -14,7 +14,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | **Supporting evidence** | The artifact provides supplementary evidence alongside other controls |
 | **Partial coverage** | The artifact provides some evidence but additional artifacts are needed (often from future phases) |
 
-> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or artifact "ensures" or "guarantees" compliance. Implementation, validation, and ongoing maintenance are required for compliance.
+> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or artifact should be described as independently satisfying a compliance obligation. Implementation, validation, and ongoing maintenance are required for compliance.
 
 ---
 

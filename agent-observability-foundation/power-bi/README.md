@@ -232,7 +232,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 
 **Contributing:**
 - See the repository root for contribution guidelines
-- Language rules: Use hedging language ("helps support", "aids in") — never "ensures compliance" or "guarantees"
+- Language rules: Use hedging language ("helps support", "aids in") — avoid absolute compliance claims
 
 ---
 

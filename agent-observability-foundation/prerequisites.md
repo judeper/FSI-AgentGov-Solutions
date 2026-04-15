@@ -11,7 +11,7 @@ This document lists all requirements for deploying the Agent Observability Found
 | Application Insights | Contributor | Azure Monitor (included) | 730-day retention may incur additional cost |
 | Log Analytics Workspace | Log Analytics Contributor | Azure Monitor (included) | PerGB2018 pricing tier; 730-day retention |
 | Storage Account (StorageV2) | Storage Account Contributor | Standard | For Diagnostic Settings export to Azure Blob Storage |
-| RBAC Assignments | User Access Administrator | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
+| RBAC Assignments | User Access Admin | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
 
 ### Cost Considerations
 

@@ -1,6 +1,6 @@
 # Agent Observability Foundation
 
-> **Version:** v1.1.0
+> **Version:** v1.1.1
 > **Status:** Completed
 
 FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
@@ -256,14 +256,12 @@ This solution supports the following FSI-AgentGov framework controls:
 
 ## Version
 
-**v1.1.0** - February 2026
+**v1.1.1** - 2026-04-15
 
-**What's New in v1.1.0:**
-- Azure Monitor Workbooks (3 workbooks with 14 tabs total)
-- Dynamic threshold alert rules (3 alerts across 9 zone-specific rules)
-- Zone-based notification routing via Teams and email
-- Alert tuning guide for sensitivity and baseline period optimization
-- KQL query library with 14 production queries
+**What's New in v1.1.1:**
+- Removed instrumentation key logging from `verify_telemetry.py` and now log the resource ID instead
+- Updated architecture guidance to use Azure Blob Storage (StorageV2, HNS disabled) terminology consistently
+- Corrected the Azure CLI minimum version to 2.60+ for alert deployment
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
