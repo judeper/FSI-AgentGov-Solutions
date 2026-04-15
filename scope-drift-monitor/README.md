@@ -1,6 +1,6 @@
 # Scope Drift Monitor
 
-> **Status:** Completed (v1.1.1)
+> **Status:** Completed (v1.1.2)
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
@@ -246,7 +246,7 @@ Microsoft is introducing [sensitivity label visibility in Copilot Studio](https:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
+| 1.1.2 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
 | 1.0.0 | February 2026 | Initial schema and concept |
 
@@ -256,4 +256,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.1.1*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.1.2*
