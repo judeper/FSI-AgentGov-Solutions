@@ -64,7 +64,7 @@ All notable changes to the Conditional Access Automation solution are documented
 - Register-ServicePrincipal.ps1 modernized with Key Vault integration
 - Module manifest updated with Tier 2 function exports
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 
