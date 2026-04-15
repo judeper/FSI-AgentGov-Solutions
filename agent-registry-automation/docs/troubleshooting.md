@@ -34,7 +34,7 @@ Common issues and resolutions for the Agent Registry Automation solution.
 
 | Cause | Resolution |
 |-------|------------|
-| Insufficient role | The service principal or user must have Power Platform Admin role |
+| Insufficient role | The service principal or user must have Power Platform Admin |
 | Environment-level restriction | Some environments may restrict API access — verify environment security settings |
 | Sovereign cloud mismatch | GCC/GCC High environments use different API endpoints |
 

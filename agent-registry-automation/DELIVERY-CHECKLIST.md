@@ -1,6 +1,6 @@
 # Agent Registry Automation — Customer Delivery Checklist
 
-**Version:** v1.0.0
+**Version:** v1.0.1
 **Solution:** Agent Registry Automation
 
 ---

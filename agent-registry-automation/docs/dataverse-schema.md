@@ -334,4 +334,4 @@ Tracks ownership changes for agents in the registry. Created when Flow 4 detects
 
 ---
 
-*Agent Registry Automation v1.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*

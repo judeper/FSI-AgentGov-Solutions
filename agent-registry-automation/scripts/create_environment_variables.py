@@ -240,7 +240,7 @@ def create_environment_variables(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for environment variable deployment."""
     parser = argparse.ArgumentParser(
         description=(

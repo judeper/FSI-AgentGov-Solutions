@@ -558,4 +558,4 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 
 ---
 
-*Agent Registry Automation v1.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*
