@@ -2,6 +2,12 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Write-Output contamination in Object output mode changed to Write-Host
+
 ## [1.0.0] - 2026-02-24
 
 ### Added
