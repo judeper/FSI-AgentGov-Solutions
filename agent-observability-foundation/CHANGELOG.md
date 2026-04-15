@@ -10,7 +10,7 @@ All notable changes to the Agent Observability Foundation are documented here.
 - architecture.md: replaced all "ADLS Gen2" references with "Azure Blob Storage (StorageV2, HNS disabled)" to match actual script requirements
 - README: corrected Azure CLI minimum version from 2.50+ to 2.60+ (required by alert deployment)
 
-## [1.1.0] — February 2026
+## [1.1.0] — 2026-02-15
 
 ### Added
 - Azure Monitor Workbooks: Operational Health (4 tabs), Error Diagnostics (5 tabs), Usage Overview (5 tabs)
@@ -21,12 +21,12 @@ All notable changes to the Agent Observability Foundation are documented here.
 - Alert tuning guide for dynamic threshold sensitivity and baseline period optimization
 - Validation checklist for pre/post-deployment verification
 
-## [1.0.1] — February 2026
+## [1.0.1] — 2026-02-10
 
 ### Added
 - Agent usage workbook (`agent-usage-workbook.json`) migrated from FSI-AgentGov `src/`
 
-## [1.0.0] — January 2026
+## [1.0.0] — 2026-01-15
 
 ### Added
 - Application Insights provisioning with 730-day retention for Copilot Studio telemetry

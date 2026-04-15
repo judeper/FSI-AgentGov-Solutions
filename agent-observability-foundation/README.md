@@ -7,9 +7,9 @@ FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with l
 
 ## Architecture Overview
 
-The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2 with hierarchical namespace disabled — required for Diagnostic Settings compatibility), supporting Control 2.8 (Access Control and Segregation of Duties).
+The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC Rule 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2 with hierarchical namespace disabled — required for Diagnostic Settings compatibility), supporting Control 2.8 (Access Control and Segregation of Duties).
 
-This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that satisfy FINRA 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
+This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that help satisfy FINRA Rule 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
 
 All Azure resources are provisioned via Python scripts using the Azure SDK for Python, enabling repeatable lab deployments and teardown cycles. WORM (Write Once Read Many) policy configuration for SEC 17a-4(f) compliance is deliberately excluded from automation to prevent accidental immutable lockdown in production environments.
 
@@ -180,8 +180,6 @@ agent-observability-foundation/
 │   ├── deploy-alerts.ps1              # Alert infrastructure deployment (PowerShell 7.0+)
 │   ├── validation-checklist.md        # Pre/post-deployment verification checklist
 │   └── requirements.txt               # Python dependencies
-├── src/
-│   └── agent-usage-workbook.json      # Agent usage workbook source
 ├── queries/
 │   ├── README.md                      # KQL query library overview
 │   ├── performance/                   # Core operational queries (2 queries)

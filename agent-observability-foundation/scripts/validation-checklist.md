@@ -24,7 +24,7 @@ Verify that Phase 1 telemetry infrastructure has been deployed:
   Verify: `az group show --name {rg-name} --query "{Name:name, Location:location, State:properties.provisioningState}"`
 
 - [ ] **Application Insights deployed**
-  Verify: `az monitor app-insights component show --app {ai-name} --resource-group {rg-name} --query "{Name:name, State:provisioningState, InstrumentationKey:instrumentationKey}"`
+  Verify: `az monitor app-insights component show --app {ai-name} --resource-group {rg-name} --query "{Name:name, State:provisioningState, ResourceId:id}"`
 
 - [ ] **Log Analytics workspace deployed**
   Verify: `az monitor log-analytics workspace show --workspace-name {law-name} --resource-group {rg-name} --query "{Name:name, RetentionDays:retentionInDays, State:provisioningState}"`
@@ -40,8 +40,8 @@ Verify that Phase 1 telemetry infrastructure has been deployed:
 - [ ] **PowerShell 7.0+ installed**
   Verify: `pwsh --version` (should show `7.0.0` or higher)
 
-- [ ] **Azure CLI 2.50+ installed**
-  Verify: `az version --query "\"azure-cli\""` (should show `2.50.0` or higher)
+- [ ] **Azure CLI 2.60+ installed**
+  Verify: `az version --query "\"azure-cli\""` (should show `2.60.0` or higher)
 
 - [ ] **Azure CLI authenticated**
   Verify: `az account show` (should show your account details without error)
@@ -373,7 +373,7 @@ To point runbook URLs to internal documentation sites, edit the `customPropertie
 | **Alert never fires despite visible anomalies** | Dynamic threshold in "Learning" state | Wait 10-14 days for baseline establishment; verify alert rule is enabled; check alert evaluation frequency and aggregation period |
 | **Teams notification shows raw JSON** | Direct Teams webhook (not Logic App intermediary) | Verify action group uses `logicAppReceiver` (not `webhookReceiver`); ensure Logic App callback URL is correct in action group |
 | **Email notifications not received** | Wrong email address or spam filter | Verify `emailReceivers` in action group ARM templates; check spam/junk folders; verify email domain allows Azure Monitor emails |
-| **PowerShell script fails with "Command not found"** | Azure CLI not installed or not in PATH | Install Azure CLI 2.50+; verify with `az version`; restart PowerShell session after installation |
+| **PowerShell script fails with "Command not found"** | Azure CLI not installed or not in PATH | Install Azure CLI 2.60+; verify with `az version`; restart PowerShell session after installation |
 | **Script fails with "Parameter file not found"** | Wrong working directory or missing parameter files | Ensure you're running script from solution root directory; verify all parameter files exist; check file paths in error message |
 
 ### Additional Resources
