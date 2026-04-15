@@ -510,7 +510,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Message Center Monitor",
         formatter_class=argparse.RawDescriptionHelpFormatter,
