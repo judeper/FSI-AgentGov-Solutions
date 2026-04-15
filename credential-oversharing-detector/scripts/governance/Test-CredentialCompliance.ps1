@@ -141,11 +141,9 @@ if (-not $BaselinePath) {
 
 if (-not (Test-Path $BaselinePath)) {
     Write-Warning "Zone credential policy not found at $BaselinePath. Using script-level defaults."
-    $policyFile = $null
 }
 else {
     Write-Host "  Policy baseline: $BaselinePath" -ForegroundColor Gray
-    $policyFile = Get-Content -Path $BaselinePath -Raw | ConvertFrom-Json
 }
 
 #endregion

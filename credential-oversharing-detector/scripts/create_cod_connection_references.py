@@ -9,7 +9,6 @@ Approvals, and Power Platform Admin for credential scanning and alerting.
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
@@ -112,7 +111,7 @@ def create_connection_references(client: DataverseClient, dry_run: bool = False)
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create connection references for Credential Oversharing Detector",
         formatter_class=argparse.RawDescriptionHelpFormatter,
