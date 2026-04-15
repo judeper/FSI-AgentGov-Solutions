@@ -10,7 +10,7 @@
 
 **Resolution:**
 1. Open the solution's `create_ctsg_dataverse_schema.py` and confirm the `SchemaName` for each column
-2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_ExternalTenantId` → `fsi_externaltenantid`)
+2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_externaltenantid`)
 3. Update the flow action to use the correct logical names
 4. Refer to the DELIVERY-CHECKLIST.md for confirmed field names if available
 

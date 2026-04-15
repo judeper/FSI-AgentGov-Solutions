@@ -20,7 +20,6 @@ Tables:
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
@@ -949,7 +948,7 @@ def generate_schema_docs() -> str:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description=(

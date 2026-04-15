@@ -30,7 +30,6 @@ Usage:
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
@@ -162,7 +161,7 @@ def _print_post_deployment(is_dry_run: bool):
     print()
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy CTSG components to Dataverse",
