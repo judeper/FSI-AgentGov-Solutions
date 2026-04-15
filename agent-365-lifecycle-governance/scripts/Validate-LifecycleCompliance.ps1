@@ -15,6 +15,9 @@
 .PARAMETER DataverseEnvironmentUrl
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
+.PARAMETER DryRun
+    Preview compliance results without writing the report file.
+
 .EXAMPLE
     .\Validate-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
 #>
@@ -39,6 +42,7 @@ try {
 
 $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "application/json" }
 $dvHeaders    = @{ Authorization = "Bearer $dvToken";    "Content-Type" = "application/json" }
+$queryErrors  = $false
 
 # Query Entra registry
 # NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
@@ -79,6 +83,7 @@ try {
     Write-Warning "Could not query access reviews: $_"
     Write-Warning "Verify entity set name and choice field integer values in DELIVERY-CHECKLIST.md"
     $overdueReviews = @()
+    $queryErrors = $true
 }
 
 # Query Dataverse for inactive agents
@@ -94,6 +99,7 @@ try {
 } catch {
     Write-Warning "Could not query inactive agents: $_"
     $inactiveAgents = @()
+    $queryErrors = $true
 }
 
 # Export compliance summary
@@ -104,7 +110,9 @@ $summary = @{
     UnsponsoredAgents = $noSponsor.Count
     OverdueReviews    = $overdueReviews.Count
     InactiveAgents    = $inactiveAgents.Count
-    ComplianceStatus  = if ($noSponsor.Count -eq 0 -and $overdueReviews.Count -eq 0) {
+    ComplianceStatus  = if ($queryErrors) {
+                            "UNKNOWN - Query errors occurred"
+                        } elseif ($noSponsor.Count -eq 0 -and $overdueReviews.Count -eq 0 -and $inactiveAgents.Count -eq 0) {
                             "COMPLIANT" } else { "NON-COMPLIANT" }
 }
 if (-not $DryRun) {

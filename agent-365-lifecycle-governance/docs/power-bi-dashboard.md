@@ -175,4 +175,4 @@ If zone-based access restriction is required:
 
 ---
 
-*Agent 365 Lifecycle Governance v1.0.0*
+*Agent 365 Lifecycle Governance v1.1.0*

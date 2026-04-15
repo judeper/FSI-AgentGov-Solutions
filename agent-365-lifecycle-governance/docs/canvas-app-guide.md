@@ -66,7 +66,7 @@ SortByColumns(
 **Components:**
 
 - **Display form** showing the full lifecycle record for the selected agent
-- **Sponsor history gallery** — filtered `fsi_sponsorassignment` records for the selected agent, sorted by `fsi_assignedat` descending
+- **Sponsor history gallery** — filtered `fsi_sponsorassignment` records for the selected agent, sorted by `fsi_assignmentdate` descending
 - **Access review history gallery** — filtered `fsi_accessreview` records for the selected agent
 - **Deactivation request history** — filtered `fsi_deactivationrequest` records
 - **Button: "Request Manual Deactivation"** — navigates to a deactivation request form or triggers Flow 4
@@ -140,4 +140,4 @@ ClearCollect(colExport, Filter(fsi_lifecyclecomplianceevents, ...));
 
 ---
 
-*Agent 365 Lifecycle Governance v1.0.0*
+*Agent 365 Lifecycle Governance v1.1.0*

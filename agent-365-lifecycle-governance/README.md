@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.0 — GA (Agent 365 GA: May 1, 2026)
+> **Status:** v1.1.1 — GA (Agent 365 GA: May 1, 2026)
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 
@@ -24,7 +24,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 | **Deactivation Workflows** | Approval-gated agent disabling with zone-based deletion hold periods (30 or 90 days) |
 | **Sponsor Monitoring** | Weekly validation of sponsor account status with auto-reassignment on departure |
 | **Deletion Hold Enforcement** | Daily enforcement of mandatory hold periods before permanent identity deletion |
-| **Immutable Audit Trail** | All lifecycle events logged to append-only Dataverse table with 7-year LTR |
+| **Audit Trail** | All lifecycle events logged to append-only Dataverse table (requires no-delete security roles and 7-year LTR configuration for immutability) |
 
 ## Architecture
 
@@ -47,7 +47,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 │                 PERSISTENCE LAYER                                │
 │              Dataverse — 5 Custom Tables                         │
 │  AgentLifecycleRecord · SponsorAssignment · AccessReview         │
-│  DeactivationRequest · LifecycleComplianceEvent (immutable)      │
+│  DeactivationRequest · LifecycleComplianceEvent (append-only)    │
 └────────────────────────┬─────────────────────────────────────────┘
                          │
 ┌────────────────────────▼─────────────────────────────────────────┐
@@ -82,7 +82,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 | `fsi_sponsorassignment` | Sponsor history and accountability | fsi_sponsorupn, fsi_assignmentreason, fsi_iscurrent |
 | `fsi_accessreview` | Access review records and decisions | fsi_entrareviewid, fsi_reviewstatus, fsi_certifierdecision |
 | `fsi_deactivationrequest` | Deactivation approvals and outcomes | fsi_triggerreason, fsi_approvalstatus, fsi_deletionholduntil |
-| `fsi_lifecyclecomplianceevent` | Immutable lifecycle event log | fsi_eventtype, fsi_complianceimpact, fsi_timestamp |
+| `fsi_lifecyclecomplianceevent` | Append-only lifecycle event log (configure no-delete security roles for immutability) | fsi_eventtype, fsi_complianceimpact, fsi_timestamp |
 
 Full schema reference: [docs/dataverse-schema.md](./docs/dataverse-schema.md)
 
@@ -105,9 +105,9 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 2. Create Entra security groups and lifecycle workflows ([docs/prerequisites.md](./docs/prerequisites.md))
 3. Deploy Dataverse schema:
    ```bash
-   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --interactive
-   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --interactive
-   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --interactive
+   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
+   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
+   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
    ```
 4. Run baseline assessment:
    ```powershell
@@ -126,7 +126,7 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 |-----------|-------------|------------------------|
 | **OCC 2011-12 / Fed SR 11-7** | Model risk management — models must have designated owners | Sponsor assignment enforced at onboarding; access reviews on defined cadence |
 | **FINRA Rule 3110** | Supervisory procedures for all systems | Lifecycle workflow automation helps maintain active supervisors for every agent |
-| **FINRA Rule 4511** | Books and records — lifecycle events must be logged and retained | Immutable Dataverse compliance event log with 7-year LTR |
+| **FINRA Rule 4511** | Books and records — lifecycle events must be logged and retained | Append-only Dataverse compliance event log (supports 7-year LTR when no-delete security roles configured) |
 | **SEC 17a-3/4** | 7-year retention for broker-dealer records | Dataverse Long-Term Retention policy on lifecycle event table |
 | **GLBA 501(b)** | Access to customer data must be controlled and revoked when no longer needed | Automated access expiration and deactivation workflows |
 | **SOX 302/404** | Access rights must be periodically reviewed and certified | Zone-based access review workflows with certifier accountability |

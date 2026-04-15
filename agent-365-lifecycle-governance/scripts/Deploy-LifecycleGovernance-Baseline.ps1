@@ -18,6 +18,9 @@
 .PARAMETER DefaultSponsorUPN
     Fallback sponsor UPN for agents without identified owners.
 
+.PARAMETER DryRun
+    Preview baseline results without writing the report file.
+
 .EXAMPLE
     .\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@contoso.com"
 #>

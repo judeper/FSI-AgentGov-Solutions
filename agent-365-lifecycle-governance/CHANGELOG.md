@@ -2,6 +2,19 @@
 
 All notable changes to the Agent 365 Lifecycle Governance solution.
 
+## [1.1.1] - 2026-04-15
+
+### Fixed
+
+- Validate-LifecycleCompliance.ps1: compliance status now returns UNKNOWN when Dataverse queries fail instead of false COMPLIANT
+- Validate-LifecycleCompliance.ps1: InactiveAgents count now included in compliance decision logic
+- README: replaced "Immutable Audit Trail" overclaim with conditional language requiring security role configuration
+- README: added `--client-id` to interactive deployment examples (required by DataverseClient)
+- CHANGELOG: replaced "immutable" overclaim with conditional language
+- canvas-app-guide.md: corrected `fsi_assignedat` → `fsi_assignmentdate` (matches schema)
+- Updated version footers in canvas-app-guide.md, power-bi-dashboard.md, troubleshooting.md to v1.1.0
+- Added missing `.PARAMETER DryRun` to comment-based help in both PowerShell scripts
+
 ## [1.1.0] - 2026-03-20
 
 ### Added
@@ -28,4 +41,4 @@ All notable changes to the Agent 365 Lifecycle Governance solution.
 - Agent 365 GA target: May 1, 2026. Set feature flag to "false" until licensing is confirmed.
 - Entra Lifecycle Workflow tasks for agents require Frontier-enabled tenant for pre-GA testing.
 - Default access review decision is "Deny" — silence equals revocation in FSI regulatory contexts.
-- `fsi_lifecyclecomplianceevent` table is immutable (no delete for non-admin roles) with 7-year Dataverse LTR.
+- `fsi_lifecyclecomplianceevent` table supports append-only operation when no-delete security roles are configured, with 7-year Dataverse LTR.
