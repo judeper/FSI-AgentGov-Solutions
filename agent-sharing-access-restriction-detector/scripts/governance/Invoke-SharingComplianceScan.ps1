@@ -354,7 +354,11 @@ function Invoke-SharingComplianceScan {
                 return 'GroupSharing'
             }
 
-            if ($Policy.RequireApprovedGroups -and $ApprovedGroupIds) {
+            if ($Policy.RequireApprovedGroups) {
+                if (-not $ApprovedGroupIds -or $ApprovedGroupIds.Count -eq 0) {
+                    return 'UnapprovedGroup'
+                }
+
                 foreach ($groupId in $SharedGroupIds) {
                     if ($groupId -notin $ApprovedGroupIds) {
                         return 'UnapprovedGroup'
@@ -405,6 +409,7 @@ function Invoke-SharingComplianceScan {
         $envId   = $environment.EnvironmentName
         $envName = $environment.DisplayName
         $envOrgUrl = $environment.Internal.properties.linkedEnvironmentMetadata.instanceApiUrl
+        $envDataverseToken = $null
 
         Write-Verbose "Scanning environment: $envName ($envId)"
 
@@ -427,12 +432,29 @@ function Invoke-SharingComplianceScan {
         }
         $approvedGroups = $approvedGroupCache[$zone]
 
+        if ($envOrgUrl -and $ClientId) {
+            try {
+                $envTokenBody = @{
+                    grant_type    = 'client_credentials'
+                    client_id     = $ClientId
+                    client_secret = $plainSecret
+                    scope         = "$($envOrgUrl.TrimEnd('/'))/.default"
+                }
+                $envTokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -Method POST -Body $envTokenBody -ErrorAction Stop
+                $envDataverseToken = $envTokenResponse.access_token
+            }
+            catch {
+                Write-Warning "Could not acquire token for $envOrgUrl - skipping environment: $_"
+                continue
+            }
+        }
+
         # Query bots in this environment
         try {
             $botApiUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/bots"
             $selectCols = 'botid,name,statecode,sharingtype,createdon'
             $botHeaders = @{
-                'Authorization'    = "Bearer $dataverseToken"
+                'Authorization'    = "Bearer $envDataverseToken"
                 'Accept'           = 'application/json'
                 'OData-MaxVersion' = '4.0'
                 'OData-Version'    = '4.0'
@@ -535,6 +557,7 @@ function Invoke-SharingComplianceScan {
 
     if (-not $DryRun) {
         if ($DataverseUrl -and $dataverseToken -and $violations.Count -gt 0) {
+            $zoneMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3; 'Unknown' = 0 }
             $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
             $dvHeaders = @{
                 'Authorization'    = "Bearer $dataverseToken"
@@ -552,8 +575,8 @@ function Invoke-SharingComplianceScan {
                         'fsi_agentname'         = $v.AgentName
                         'fsi_environmentid'     = $v.EnvironmentId
                         'fsi_environmentname'   = $v.EnvironmentName
-                        'fsi_zone'              = $v.Zone
-                        'fsi_sharingtype'       = $v.SharingTypeLabel
+                        'fsi_zone'              = if ($zoneMap.ContainsKey($v.Zone)) { $zoneMap[$v.Zone] } else { 0 }
+                        'fsi_sharingtype'       = $v.SharingLabel
                         'fsi_violationtype'     = $v.ViolationType
                         'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
                         'fsi_compliancestatus'  = 1  # NonCompliant
