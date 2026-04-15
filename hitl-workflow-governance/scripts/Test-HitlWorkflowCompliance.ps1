@@ -434,10 +434,10 @@ function Test-HitlWorkflowCompliance {
     $exceptions = @{}
     if ($dataverseConnected) {
         try {
-            $exceptionRecords = Get-HWGExceptions
+            $exceptionRecords = Get-HitlCheckpointExceptions
             if ($exceptionRecords) {
                 foreach ($exc in $exceptionRecords) {
-                    $key = "$($exc.fsi_agentid)|$($exc.fsi_flowid)"
+                    $key = "$($exc.AgentId)|$($exc.ActionName)"
                     $exceptions[$key] = $exc
                 }
             }
@@ -490,7 +490,7 @@ function Test-HitlWorkflowCompliance {
             # Check each HITL checkpoint for reviewer and input compliance
             foreach ($flow in $hitlFlows) {
                 # Check for exception
-                $exceptionKey = "$($flow.AgentId)|$($flow.FlowId)"
+                $exceptionKey = "$($flow.AgentId)|$($flow.FlowName)"
                 if ($exceptions.ContainsKey($exceptionKey)) {
                     Write-Verbose "Exception found for $($flow.AgentName) flow $($flow.FlowName)"
                     continue
@@ -682,7 +682,7 @@ function Test-HitlWorkflowCompliance {
             FlowsWithHitl        = $flowsWithHitl
             CompliantCount       = $compliantAgentCount
             ViolationCount       = $violationAgentCount
-            EnvironmentsScanned  = $environmentNameList
+            EnvironmentsScanned  = $uniqueEnvironments
         }
 
         if ($PSCmdlet.ShouldProcess("Dataverse validation history", "Write HITL scan results")) {
