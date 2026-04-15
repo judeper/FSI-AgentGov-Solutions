@@ -286,7 +286,7 @@ Category Distribution:
         return report
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Hallucination Pattern Analyzer")
     parser.add_argument("--environment", required=True, help="Dataverse environment URL")
     parser.add_argument("--days", type=int, default=30, help="Analysis period in days")
