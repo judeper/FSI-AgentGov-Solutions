@@ -689,7 +689,6 @@ def create_schema(client: ACRDClient, dry_run: bool = False) -> None:
         )
 
     # Summary
-    all_optionsets = {**SHARED_OPTIONSETS, **ACRD_OPTIONSETS}
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")
@@ -708,7 +707,7 @@ def create_schema(client: ACRDClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Communication Restriction Detector",

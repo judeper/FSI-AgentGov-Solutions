@@ -77,7 +77,7 @@ The executing user or service principal must have one of:
 
 - Power Platform Admin role
 - Dynamics 365 Service Admin role
-- Global Admin role
+- Entra Global Admin role
 
 These roles are required to enumerate environments and query agent skill registrations across the tenant.
 

@@ -150,6 +150,8 @@ The following placeholder values in solution files must be replaced with your or
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table, column, and option set reference
 - [Flow Setup](docs/flow-configuration.md) -- Power Automate deployment guide
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## License
 
 MIT License -- See [LICENSE](../LICENSE)

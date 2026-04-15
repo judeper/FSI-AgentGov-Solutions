@@ -266,7 +266,7 @@ function Get-AgentSkillRegistrations {
                     if ($component.content) {
                         try {
                             $contentStr = $component.content
-                            $componentJson = $contentStr | ConvertFrom-Json -ErrorAction Stop
+                            $null = $contentStr | ConvertFrom-Json -ErrorAction Stop
 
                             # Look for skill manifest URL patterns
                             if ($contentStr -match '"manifestUrl"\s*:\s*"([^"]+)"') {
