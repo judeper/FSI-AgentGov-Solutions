@@ -259,7 +259,6 @@ try {
 
     $driftDetails = @()
     $globalIsFirstRun = $false
-    $previousScanFailed = $false
 
     # Query the most recent scan run from Dataverse
     $baseUrl = $DataverseUrl.TrimEnd('/')
@@ -311,7 +310,6 @@ try {
         }
     } catch {
         Write-Verbose "Previous scan query failed: $($_.Exception.Message). Failing open -- no drift detection."
-        $previousScanFailed = $true
         $globalIsFirstRun = $true
     }
 

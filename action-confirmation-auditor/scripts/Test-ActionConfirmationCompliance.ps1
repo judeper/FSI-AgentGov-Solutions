@@ -452,7 +452,7 @@ function Test-ActionConfirmationCompliance {
             # Determine severity
             $severity = Get-ActionSeverity -Policy $policy -ActionCategory $category
 
-            if ($requiresConfirm -and $action.ConfirmationStatus -in @('Missing', 'Partial', 'Unable to Determine')) {
+            if ($requiresConfirm -and $action.ConfirmationStatus -in @('Missing', 'Partial', 'UnableToDetermine')) {
                 $agentIsCompliant = $false
                 $agentViolations += [PSCustomObject]@{
                     ActionName         = $action.ActionName

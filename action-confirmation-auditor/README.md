@@ -158,6 +158,7 @@ python scripts/create_dataverse_schema.py \
 - [Prerequisites](docs/prerequisites.md) -- Licensing, permissions, and setup requirements
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table and column reference (auto-generated)
 - [Flow Configuration](docs/flow-configuration.md) -- Manual build instructions for Power Automate flows
+- See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## License
 
