@@ -381,7 +381,7 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
 
 # Compute summary statistics
 $totalScans = $validationsReadable.Count
-$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Compliant' }).Count
+$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Passed' }).Count
 $scansWithViolations = ($validationsReadable | Where-Object { $_.violationCount -gt 0 }).Count
 $totalViolations = $violationsReadable.Count
 $criticalViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Critical' }).Count
@@ -389,7 +389,7 @@ $highViolations = ($violationsReadable | Where-Object { $_.severity -eq 'High' }
 $warningViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Warning' }).Count
 
 # Compute overall status (worst-case across all scans)
-$overallStatus = "Compliant"
+$overallStatus = "Passed"
 $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStatus -ErrorAction SilentlyContinue
 if ($statusValues -contains "Failed") {
     $overallStatus = "Failed"
@@ -410,7 +410,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Agent Access Governance Monitor"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.0.1"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }

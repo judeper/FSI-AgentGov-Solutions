@@ -440,6 +440,14 @@ function Save-AAMBaseline {
     }
 
     try {
+        # Map zone integer to Dataverse option set value
+        $zoneMap = @{
+            1 = 100000001
+            2 = 100000002
+            3 = 100000003
+        }
+        $zoneValue = if ($zoneMap.ContainsKey($Zone)) { $zoneMap[$Zone] } else { 100000000 }
+
         $headers = @{
             'Authorization'    = "Bearer $(Get-ValidToken)"
             'Content-Type'     = 'application/json'
@@ -473,7 +481,7 @@ function Save-AAMBaseline {
             fsi_name                             = "$EnvironmentName-Zone$Zone-$timestamp"
             fsi_environmentguid                  = $EnvironmentGuid
             fsi_environmentname                  = $EnvironmentName
-            fsi_zone                             = $Zone
+            fsi_zone                             = $zoneValue
             fsi_botlimitsharingmode              = $BotLimitSharingMode
             fsi_botauthoringsharingdisabled       = $BotAuthoringSharingDisabled
             fsi_botpublishedbotlimitsharingmode   = $BotPublishedBotLimitSharingMode

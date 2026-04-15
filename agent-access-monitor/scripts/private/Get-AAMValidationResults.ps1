@@ -208,7 +208,10 @@ function Get-AAMValidationResults {
 
             # Optional zone filter (not applied when 'All')
             if ($Zone -ne 'All') {
-                $violationFilters += "fsi_zone eq $Zone"
+                # Map zone name to Dataverse option set integer
+                $zoneIntMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003 }
+                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
+                $violationFilters += "fsi_zone eq $zoneInt"
             }
 
             # Combine filters

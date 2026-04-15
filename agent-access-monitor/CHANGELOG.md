@@ -2,6 +2,16 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.0.2] - 2026-04-15
+
+### Fixed
+
+- Critical: Save-AAMBaseline now maps zone integers (1/2/3) to Dataverse option set values (100000001+) before writing
+- Critical: Get-AAMValidationResults zone filter now uses correct option set integers
+- Export-AgentAccessEvidence: fixed status comparison from "Compliant" to "Passed" to match validation writer
+- Get-ZoneClassification: fixed `fsi_environment_id` → `fsi_environmentid` (Dataverse naming convention)
+- SCHEMA.md: corrected fsi_zone type from Integer to OptionSet, fsi_severity from String to OptionSet, fsi_summaryjson from String to Memo
+
 ## [1.0.1] - 2026-07-15
 
 ### Changed

@@ -14,7 +14,7 @@ Stores captured access configuration snapshots for each Power Platform environme
 |--------|------|-------------|
 | `fsi_environmentguid` | String | Power Platform environment unique identifier |
 | `fsi_environmentname` | String | Display name of the environment |
-| `fsi_zone` | Integer | Governance zone (100000001, 100000002, or 100000003) |
+| `fsi_zone` | OptionSet (fsi_acv_zone) | Governance zone (100000001, 100000002, or 100000003) |
 | `fsi_botlimitsharingmode` | String | Agent sharing limit setting at capture time |
 | `fsi_botauthoringsharingdisabled` | Boolean | Whether agent authoring sharing is disabled |
 | `fsi_botpublishedbotlimitsharingmode` | String | Published agent sharing limit at capture time |
@@ -38,7 +38,7 @@ Immutable audit trail of validation run results. Each record represents one comp
 | `fsi_compliantcount` | Integer | Environments meeting zone requirements |
 | `fsi_violationcount` | Integer | Environments with access violations |
 | `fsi_overallstatus` | String | Aggregate status (Passed, Warning, Failed, Review) |
-| `fsi_summaryjson` | String | Per-zone breakdown as JSON (Total, Compliant, Violations per zone) |
+| `fsi_summaryjson` | Memo | Per-zone breakdown as JSON (Total, Compliant, Violations per zone) |
 
 ### fsi_accessviolations
 
@@ -49,11 +49,11 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_name` | String | Violation display name (auto-generated) |
 | `fsi_environmentguid` | String | Environment where violation was detected |
 | `fsi_environmentname` | String | Display name of the environment |
-| `fsi_zone` | Integer | Governance zone of the environment |
+| `fsi_zone` | OptionSet (fsi_acv_zone) | Governance zone of the environment |
 | `fsi_violationtype` | String | Setting that violated policy (e.g., `bot-limitSharingMode`) |
 | `fsi_expectedvalue` | String | Required value per zone policy |
 | `fsi_actualvalue` | String | Current environment setting value |
-| `fsi_severity` | String | Severity classification (Critical, High, Warning, Info) |
+| `fsi_severity` | OptionSet (fsi_acv_severity) | Severity classification (option set integer; see fsi_severitylabel for text) |
 | `fsi_severitylabel` | String | Original severity string for Critical/High distinction |
 | `fsi_regulatorycontext` | String | Applicable regulations (e.g., FINRA 4511, SOX 404) |
 | `fsi_detectedat` | DateTime | Timestamp of violation detection (UTC) |
