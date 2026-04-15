@@ -356,6 +356,7 @@ function New-SourceChange {
 
     $change = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($SourceId)"
+        fsi_changename = "$ChangeType-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_changetype = $ChangeType
         fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_previousvalue = $PreviousValue
@@ -436,6 +437,7 @@ foreach ($source in $sources) {
     $sourceUpdated = $false
     $result = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($($source.fsi_knowledgesourceid))"
+        fsi_resultname = "Validation-$($source.fsi_name)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_validationtime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_validationtype = 2  # On-Demand
         fsi_previoushash = $source.fsi_currenthash
