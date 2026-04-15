@@ -83,7 +83,7 @@ function Write-AuditLog {
         [string]$CorrelationId = $script:CorrelationId
     )
     $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
-    Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
+    Write-Host "[$timestamp] [$Level] [$CorrelationId] $Message"
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
 
