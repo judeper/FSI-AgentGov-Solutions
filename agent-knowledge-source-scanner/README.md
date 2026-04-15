@@ -4,6 +4,8 @@
 
 Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## Overview
 
 When a Copilot Studio agent uses a SharePoint document library as a knowledge source, it retrieves and returns **exact document content** to users — not site-level summaries. If individual files within that library are overshared (accessible to users outside the agent's intended audience), the agent becomes a direct data exposure path.
@@ -242,4 +244,4 @@ The CSV report includes these columns:
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.2*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.3*
