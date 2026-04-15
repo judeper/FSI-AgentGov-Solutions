@@ -1,7 +1,7 @@
 # Flow Configuration Guide
 
 > **Solution:** Cross-Solution Integration
-> **Version:** v1.0.1
+> **Version:** v1.0.2
 
 This document provides step-by-step instructions for manually building the two Power Automate cloud flows required by the Cross-Solution Integration layer. These flows automate the daily Compliance Dashboard feed from Tier 2 solutions and the environment initialization cascade from ELM provisioning events.
 
@@ -170,14 +170,14 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 1. **List rows** — Query AAM Latest
    - Table: `fsi_accessvalidationhistories`
    - Order by: `fsi_timestamp desc`
-   - Select: `fsi_overall_status,fsi_runid,fsi_timestamp`
+   - Select: `fsi_overallstatus,fsi_runid,fsi_timestamp`
    - Top count: `1`
 
 2. **Condition** — AAM Has Records
 
 3. **If yes → Compose** — Map AAM Status (string-based mapping):
 
-   | fsi_overall_status | Status | Score |
+   | fsi_overallstatus | Status | Score |
    |-------------------|--------|-------|
    | `compliant` (case-insensitive) | 1 (Compliant) | 100 |
    | `warning` (case-insensitive) | 2 (Non-Compliant) | 50 |
@@ -194,14 +194,14 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 1. **List rows** — Query CMM Latest
    - Table: `fsi_moderationvalidationhistories`
    - Order by: `fsi_timestamp desc`
-   - Select: `fsi_compliant_count,fsi_total_agents,fsi_runid,fsi_timestamp`
+   - Select: `fsi_compliantcount,fsi_totalagents,fsi_runid,fsi_timestamp`
    - Top count: `1`
 
 2. **Condition** — CMM Has Records
 
 3. **If yes → Compose** — Map CMM Status (compliance-rate-based mapping):
-   - Calculate `complianceRate = (fsi_compliant_count / fsi_total_agents) × 100`
-   - Handle edge case: if `fsi_total_agents` is 0 or null, set status = 4 (Not Assessed), score = null
+   - Calculate `complianceRate = (fsi_compliantcount / fsi_totalagents) × 100`
+   - Handle edge case: if `fsi_totalagents` is 0 or null, set status = 4 (Not Assessed), score = null
 
    | Compliance Rate | Status | Score |
    |----------------|--------|-------|
@@ -222,14 +222,14 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 1. **List rows** — Query FUS Latest
    - Table: `fsi_fileupload_validationhistories`
    - Order by: `fsi_timestamp desc`
-   - Select: `fsi_compliance_rate,fsi_runid,fsi_timestamp`
+   - Select: `fsi_compliancerate,fsi_runid,fsi_timestamp`
    - Top count: `1`
 
 2. **Condition** — FUS Has Records
 
 3. **If yes → Compose** — Map FUS Status:
 
-   | fsi_compliance_rate | Status | Score |
+   | fsi_compliancerate | Status | Score |
    |--------------------|--------|-------|
    | null | 3 (Critical) | 0 |
    | ≥ 100 | 1 (Compliant) | Rounded rate |

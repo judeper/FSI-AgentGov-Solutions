@@ -254,7 +254,7 @@ if ($DryRun) {
     Write-Host "`n[DryRun] Export plan:" -ForegroundColor Yellow
     foreach ($sol in $Solutions) {
         $tables = $SolutionEvidence[$sol]
-        Write-Host "  $sol:" -ForegroundColor Yellow
+        Write-Host "  $($sol):" -ForegroundColor Yellow
         Write-Host "    Validations: $($tables.Validations.EntitySet)" -ForegroundColor Yellow
         Write-Host "    Violations:  $($tables.Violations.EntitySet)" -ForegroundColor Yellow
     }

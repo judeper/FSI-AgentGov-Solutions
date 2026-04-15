@@ -6,7 +6,7 @@ This document defines the canonical Dataverse option set values and data contrac
 
 ## Canonical Option Sets
 
-### Zone Classification (`fsi_acv_zone`)
+### Zone Classification (`fsi_acvzone`)
 
 The zone option set classifies governance environments by security posture.
 
@@ -20,7 +20,7 @@ The zone option set classifies governance environments by security posture.
 
 **Normalization Note:** Some solutions (ACV, SSC) may use internal values `100000001`, `100000002`, `100000003` for zone storage. The integration layer normalizes these to `1`, `2`, `3` via `Get-CanonicalZoneValue` in `IntegrationConfig.psm1`. All cross-solution queries and mappings use the canonical 1/2/3 values.
 
-### Severity Classification (`fsi_acv_severity`)
+### Severity Classification (`fsi_acvseverity`)
 
 The severity option set classifies validation results by compliance impact.
 

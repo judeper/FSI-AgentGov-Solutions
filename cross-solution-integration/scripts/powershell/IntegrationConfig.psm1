@@ -27,7 +27,7 @@ $script:ZoneValues = @{
     'Unclassified' = 0
 }
 
-# Canonical severity values (fsi_acv_severity)
+# Canonical severity values (fsi_acvseverity)
 $script:SeverityValues = @{
     'Passed'      = 1
     'Warning'     = 2
