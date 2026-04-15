@@ -4,6 +4,15 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
+## [1.0.2] - 2026-04-15
+
+### Fixed
+
+- Removed stale ZIP import instructions from README and dataverse-schema.md (package was removed in v1.0.1)
+- Updated Get-ExchangeComplianceData.ps1 version strings to v1.0.2
+
+---
+
 ## [1.0.1] - 2026-07-15
 
 ### Removed

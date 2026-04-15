@@ -93,14 +93,11 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 
 Follow the comprehensive [Deployment Checklist](docs/deployment-checklist.md) for step-by-step deployment validation.
 
-### 1. Deploy Power Platform Solution
+### 1. Deploy Dataverse Schema
 
-```powershell
-# Import the unmanaged solution package
-pac solution import --path ./templates/ComplianceDashboard_1_0_0.zip
-```
+Create the Dataverse tables manually following the schema definitions in [Dataverse Schema](docs/dataverse-schema.md). The solution does not ship a packaged `.zip` — tables, columns, and option sets are created through the Power Platform admin center or PAC CLI.
 
-The solution package includes:
+The schema includes:
 - 5 Dataverse tables (control master, assessments, scores, exceptions, evidence)
 - 2 Power Automate flows (score calculator, exception monitor)
 - 3 security roles (Viewer, Assessor, Admin)

@@ -20,7 +20,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.4 | 1.18, 2.8 |
 | [Audit Compliance Manager (ACM)](./audit-compliance-manager/) | Unified audit compliance — validates configurations, detects gaps, and remediates non-compliant environments (consolidates former ACV + ALCA) | v1.0.2 | 1.7 |
 | [Conflict of Interest Testing](./coi-testing/) | Conflict of interest testing for agent recommendations | v1.0.2 | 2.18, 2.11, 2.5 |
-| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.1 | 3.3, 3.1, 3.2 |
+| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | v1.0.2 | 3.3, 3.1, 3.2 |
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.2.0 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.2 | 1.8, 1.14 |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | v1.1.0 | 3.2 |
