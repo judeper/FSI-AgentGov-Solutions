@@ -290,7 +290,9 @@ function Invoke-SharingComplianceScan {
         if ($DvUrl -and $DvToken) {
             try {
                 $apiBase = "$($DvUrl.TrimEnd('/'))/api/data/v9.2"
-                $filter = "fsi_zone eq '$Zone' and statecode eq 0"
+                $zoneIntMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3 }
+                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { 0 }
+                $filter = "fsi_zone eq $zoneInt and fsi_isactive eq true"
                 $select = "fsi_securitygroupid,fsi_securitygroupname,fsi_zone"
                 $queryUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$filter=$filter&`$select=$select"
 
@@ -545,15 +547,16 @@ function Invoke-SharingComplianceScan {
             foreach ($v in $violations) {
                 try {
                     $record = @{
-                        'fsi_name'              = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
+                        'fsi_complianceid'      = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
                         'fsi_agentid'           = $v.AgentId
                         'fsi_agentname'         = $v.AgentName
                         'fsi_environmentid'     = $v.EnvironmentId
                         'fsi_environmentname'   = $v.EnvironmentName
                         'fsi_zone'              = $v.Zone
-                        'fsi_sharingtype'       = $v.SharingType
+                        'fsi_sharingtype'       = $v.SharingTypeLabel
                         'fsi_violationtype'     = $v.ViolationType
                         'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
+                        'fsi_compliancestatus'  = 1  # NonCompliant
                         'fsi_detectedat'        = $v.DetectedAt
                         'fsi_description'       = $v.Details
                         'fsi_scanrunid'         = $runId

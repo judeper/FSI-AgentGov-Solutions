@@ -2,6 +2,17 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [1.0.4] — 2026-04-15
+
+### Fixed
+
+- Critical: Zone filters now use integer option set values instead of string literals in Export and Scan scripts
+- Critical: Compliance record primary field changed from fsi_name to fsi_complianceid (matches schema)
+- Critical: Added missing fsi_compliancestatus field to compliance record writes
+- Policy column fsi_name changed to fsi_policyname (matches schema)
+- Policy filter uses fsi_isactive instead of statecode for business-level active check
+- Sharing type persists label text instead of raw numeric value
+
 ## [1.0.3] — April 2026
 
 ### Added

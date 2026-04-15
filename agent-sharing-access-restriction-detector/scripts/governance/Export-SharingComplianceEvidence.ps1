@@ -233,13 +233,16 @@ $headers = @{
 $fromDateUtc = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateUtc   = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-$select = 'fsi_name,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,' +
+$select = 'fsi_complianceid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,' +
           'fsi_zone,fsi_sharingtype,fsi_violationtype,fsi_severity,fsi_description,' +
           'fsi_detectedat,fsi_scanrunid,fsi_sharedgroupids,fsi_regulatorycontext'
 
 $filter = "fsi_detectedat ge $fromDateUtc and fsi_detectedat le $toDateUtc"
 if ($Zone -ne 'All') {
-    $filter += " and fsi_zone eq 'Zone$Zone'"
+    # Map zone name to option set integer
+    $zoneIntMap = @{ '1' = 1; '2' = 2; '3' = 3 }
+    $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
+    $filter += " and fsi_zone eq $zoneInt"
 }
 
 $complianceUrl = "$apiBase/fsi_agentsharingcompliances?`$select=$select&`$filter=$filter&`$orderby=fsi_detectedat desc"
@@ -269,10 +272,10 @@ Write-Host "  Compliance records retrieved: $($complianceRecords.Count)" -Foregr
 
 Write-Host "Querying approved security group policies..." -ForegroundColor Cyan
 
-$policySelect = 'fsi_name,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
-$policyFilter = 'statecode eq 0'
+$policySelect = 'fsi_policyname,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
+$policyFilter = 'fsi_isactive eq true'
 if ($Zone -ne 'All') {
-    $policyFilter += " and fsi_zone eq 'Zone$Zone'"
+    $policyFilter += " and fsi_zone eq $zoneInt"
 }
 
 $policyUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$select=$policySelect&`$filter=$policyFilter&`$orderby=fsi_zone asc"
