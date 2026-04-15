@@ -7,7 +7,7 @@ Simple pass-through since this is a standalone solution repository.
 import json
 import sys
 
-def main():
+def main() -> None:
     # Allow all commands in this repository
     print(json.dumps({"decision": "allow"}))
     sys.exit(0)
