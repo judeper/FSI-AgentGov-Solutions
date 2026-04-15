@@ -2,6 +2,15 @@
 
 All notable changes to this solution are documented here.
 
+## [1.0.1] — 2026-04-15
+
+### Fixed
+
+- Critical: Scan persistence uses fsi_scanid instead of non-existent fsi_name
+- Critical: Violation persistence uses fsi_violationid and adds required fsi_violationstatus
+- Critical: Export uses correct column names (fsi_scanstartedat, fsi_agentsscanned, fsi_violationsfound)
+- Zone filter in evidence export uses integer option set values instead of string literals
+
 ## [1.0.0] — 2026-04-01
 
 ### Added

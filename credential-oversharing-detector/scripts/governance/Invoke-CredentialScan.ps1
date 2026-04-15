@@ -606,7 +606,7 @@ if ($DataverseUrl -and $dvHeaders) {
 
     # Write scan record
     $scanRecord = @{
-        fsi_name              = "COD-Scan-$scanRunId"
+        fsi_scanid            = "COD-Scan-$scanRunId"
         fsi_scanrunid         = $scanRunId
         fsi_scanstartedat     = $scanTimestamp
         fsi_totalenvironments = $envCount
@@ -627,7 +627,7 @@ if ($DataverseUrl -and $dvHeaders) {
     # Write violation records
     foreach ($v in $violations) {
         $violationRecord = @{
-            fsi_name            = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))"
+            fsi_violationid     = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))"
             fsi_scanrunid       = $scanRunId
             fsi_agentid         = $v.AgentId
             fsi_agentname       = $v.AgentName
@@ -636,6 +636,7 @@ if ($DataverseUrl -and $dvHeaders) {
             fsi_zone            = $zoneMap[$v.Zone]
             fsi_violationtype   = $violationTypeMap[$v.ViolationType]
             fsi_severity        = $severityMap[$v.Severity]
+            fsi_violationstatus = 100000000  # Open
             fsi_description     = $v.Description
             fsi_detectedat      = $v.DetectedAt
         }
