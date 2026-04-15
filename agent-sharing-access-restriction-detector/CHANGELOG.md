@@ -13,7 +13,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Policy filter uses fsi_isactive instead of statecode for business-level active check
 - Sharing type persists label text instead of raw numeric value
 
-## [1.0.3] — April 2026
+## [1.0.3] — 2026-04-10
 
 ### Added
 - Dataverse schema script with 2 tables, 3 option sets, and `--output-docs` support
@@ -32,7 +32,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Fixed CHANGELOG date ordering (v1.0.2 was incorrectly dated July 2025)
 - Added MSAL.PS deprecation notice in Export-SharingComplianceEvidence.ps1
 
-## [1.0.2] — March 2026
+## [1.0.2] — 2026-03-20
 
 ### Changed
 - Restructured solution to follow standard layout
@@ -40,7 +40,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Removed exported Power Automate flow JSON from `src/` (per content policy)
 - Added `docs/` with `flow-configuration.md` and `prerequisites.md`
 
-## [1.0.1] — March 2026
+## [1.0.1] — 2026-03-10
 
 ### Fixed
 - **CRITICAL**: ApprovalTimeoutDays null guard now uses `coalesce()` in both branches of the ternary, preventing null from producing an invalid ISO 8601 duration (`"PD"`)
@@ -52,7 +52,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Added N+1 approved groups query pattern to README Known Limitations
 - Updated exception query pagination documentation to reflect 5,000 record limit
 
-## [1.0.0] — February 2026
+## [1.0.0] — 2026-02-15
 
 ### Added
 - Remediation approval workflow (`asard-remediation-approval-workflow.json`) for governance-gated sharing corrections

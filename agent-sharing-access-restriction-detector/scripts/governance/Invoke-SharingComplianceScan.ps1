@@ -579,7 +579,7 @@ function Invoke-SharingComplianceScan {
                         'fsi_sharingtype'       = $v.SharingLabel
                         'fsi_violationtype'     = $v.ViolationType
                         'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
-                        'fsi_compliancestatus'  = 1  # NonCompliant
+                        'fsi_compliancestatus'  = 100000001  # NonCompliant
                         'fsi_detectedat'        = $v.DetectedAt
                         'fsi_description'       = $v.Details
                         'fsi_scanrunid'         = $runId
