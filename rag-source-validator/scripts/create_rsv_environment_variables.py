@@ -148,7 +148,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create environment variables for RAG Source Validator",
         formatter_class=argparse.RawDescriptionHelpFormatter,

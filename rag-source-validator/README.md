@@ -1,6 +1,6 @@
 # RAG Source Validator
 
-> **Status:** Work In Progress
+> **Status:** Completed (v1.1.1)
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -227,7 +227,7 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.1 | March 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
+| 1.1.1 | March 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
@@ -289,4 +289,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.0.1*
+*FSI Agent Governance Framework - RAG Source Validator v1.1.1*
