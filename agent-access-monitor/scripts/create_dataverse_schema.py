@@ -10,7 +10,6 @@ with all columns and supporting option sets. Reuses shared option sets
 import argparse
 import os
 import sys
-from typing import Optional
 
 from aam_client import AAMClient
 
@@ -667,7 +666,7 @@ def create_schema(client: AAMClient, dry_run: bool = False) -> dict:
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Access Governance Monitor",

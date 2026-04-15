@@ -64,7 +64,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 
 ## Related Documentation
 
-- [PREREQUISITES.md](PREREQUISITES.md) — Module and permission requirements
-- [SCHEMA.md](SCHEMA.md) — Dataverse table definitions and environment variables
-- [EVIDENCE_EXPORT.md](EVIDENCE_EXPORT.md) — Evidence export operations guide
-- [FLOW_SETUP.md](FLOW_SETUP.md) — Power Automate flow deployment and configuration
+- [prerequisites.md](prerequisites.md) — Module and permission requirements
+- [dataverse-schema.md](dataverse-schema.md) — Dataverse table definitions and environment variables
+- [evidence-export.md](evidence-export.md) — Evidence export operations guide
+- [flow-configuration.md](flow-configuration.md) — Power Automate flow deployment and configuration

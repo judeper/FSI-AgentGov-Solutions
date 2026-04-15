@@ -5,6 +5,8 @@ Automated validation of Power Platform environment agent access settings against
 > **Version:** v1.0.2
 > **Status:** Completed
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## Overview
 
 The Agent Access Governance Monitor detects when Power Platform environments have overly permissive agent access configurations that violate governance zone requirements. It supports Control 3.8 (Copilot Hub and Governance Dashboard) by automating compliance validation.
@@ -83,11 +85,11 @@ agent-access-monitor/
 │   ├── adaptive-card-access-alert.json       # Adaptive card template
 │   └── adaptive-card-zone-access-alert.json  # Zone alert card template
 └── docs/
-    ├── PREREQUISITES.md
-    ├── FLOW_SETUP.md
-    ├── SCHEMA.md
-    ├── EVIDENCE_EXPORT.md
-    └── TROUBLESHOOTING.md
+    ├── prerequisites.md
+    ├── flow-configuration.md
+    ├── dataverse-schema.md
+    ├── evidence-export.md
+    └── troubleshooting.md
 ```
 
 ## Related Controls
@@ -100,11 +102,11 @@ agent-access-monitor/
 | [1.1 - Restrict Publishing](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.1-restrict-agent-publishing-by-authorization/) | Publishing authorization |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Sharing limits |
 
-> **Evidence Export:** Use `Export-AgentAccessEvidence.ps1` to produce tamper-evident JSON evidence packages for regulatory examinations. See [docs/EVIDENCE_EXPORT.md](docs/EVIDENCE_EXPORT.md) for details.
+> **Evidence Export:** Use `Export-AgentAccessEvidence.ps1` to produce tamper-evident JSON evidence packages for regulatory examinations. See [docs/evidence-export.md](docs/evidence-export.md) for details.
 
 ## Prerequisites
 
-See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
+See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
 
 ## Configuration Placeholders
 
@@ -114,12 +116,12 @@ The following placeholder values in template files must be replaced with your or
 |------------|-------------|-------|
 | `your-org.github.io` | Your GitHub Pages domain | `templates/adaptive-card-zone-access-alert.json` |
 
-> **Note:** Flow-specific placeholders (Dataverse URL, tenant ID, certificate thumbprint, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md) for step-by-step instructions.
+> **Note:** Flow-specific placeholders (Dataverse URL, tenant ID, certificate thumbprint, etc.) are configured when manually building the Power Automate flow. See [docs/flow-configuration.md](docs/flow-configuration.md) for step-by-step instructions.
 
 ## Deployment
 
 1. Deploy Dataverse schema (see prerequisites)
-2. Build the Power Automate flow manually using [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md)
+2. Build the Power Automate flow manually using [docs/flow-configuration.md](docs/flow-configuration.md)
 3. Configure connection references
 4. Activate cloud flows
 5. Verify deployment using the verification steps below

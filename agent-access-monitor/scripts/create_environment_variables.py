@@ -9,7 +9,6 @@ scan frequency, grace periods, and alerting configuration.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from aam_client import AAMClient
 
@@ -144,7 +143,7 @@ def create_environment_variables(client: AAMClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create environment variables for Agent Access Governance Monitor",
