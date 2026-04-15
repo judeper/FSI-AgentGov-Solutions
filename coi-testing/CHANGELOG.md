@@ -4,6 +4,16 @@ All notable changes to the COI Testing Framework.
 
 ---
 
+## [1.0.2] - 2026-04-15
+
+### Fixed
+
+- Status persistence now correctly maps SKIPPED/WARN/ERROR to distinct Dataverse values (was coercing all non-PASS to FAIL)
+- Added SKIPPED count to test report generation
+- Updated README version footer to match current version
+
+---
+
 ## [1.0.1] - April 2026
 
 ### Added

@@ -311,11 +311,12 @@ class COITestRunner:
         }
 
         for result in self.results:
+            status_map = {"PASS": 1, "FAIL": 2, "SKIPPED": 3, "WARN": 4, "ERROR": 5}
             record = {
                 "fsi_scenarioid": result["scenario_id"],
                 "fsi_scenarioname": result["scenario_name"],
                 "fsi_category": result["category"],
-                "fsi_status": 1 if result["status"] == "PASS" else 2,
+                "fsi_status": status_map.get(result["status"], 3),
                 "fsi_executedon": result["executed_at"],
                 "fsi_findings": json.dumps(result.get("findings", []))
             }
@@ -337,6 +338,7 @@ class COITestRunner:
         failed = sum(1 for r in self.results if r["status"] == "FAIL")
         warnings = sum(1 for r in self.results if r["status"] == "WARN")
         errors = sum(1 for r in self.results if r["status"] == "ERROR")
+        skipped = sum(1 for r in self.results if r["status"] == "SKIPPED")
 
         if format == "json":
             return json.dumps(self.results, indent=2, default=str)

@@ -238,4 +238,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - COI Testing v1.0.0*
+*FSI Agent Governance Framework - COI Testing v1.0.2*
