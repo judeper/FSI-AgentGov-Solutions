@@ -338,7 +338,7 @@ The solution requires the following connection references:
 
 The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
 - MSI is enabled for the Power Platform environment
-- MSI service principal is added as a **member** of the Power Platform Administrator role in Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members
+- MSI service principal is added as a **member** of the Power Platform Admin role in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
 
 #### Configuration Steps
 
@@ -349,8 +349,8 @@ The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
 1. Enable MSI for the Power Platform environment:
    - Navigate to Azure Portal → Managed Identities → Create
    - Assign identity to Power Platform environment
-2. Grant Power Platform Administrator role to MSI:
-   - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members**
+2. Grant Power Platform Admin role to MSI:
+   - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Admin → Members**
    - Add the MSI service principal as a member
 3. Verify the role assignment is active before proceeding to Step 2
 
@@ -510,7 +510,7 @@ For **Unknown** environments (missing policy):
 
 For **Unknown** environments (API error):
 1. Check `fsi_inactivitytimeouterrorlogs` table for error type
-2. **Unauthorized (401):** Verify MSI has Power Platform Administrator role
+2. **Unauthorized (401):** Verify MSI has Power Platform Admin role
 3. **Forbidden (403):** Verify MSI permissions on specific environment
 4. **NotFound (404):** Environment may have been deleted → Remove policy record
 5. **Throttled (429):** BAP API rate limit exceeded → Contact Microsoft Support
@@ -520,10 +520,10 @@ For **Unknown** environments (API error):
 
 **Issue: Flow fails with "Unauthorized" error**
 
-**Cause:** Managed Service Identity lacks Power Platform Administrator role
+**Cause:** Managed Service Identity lacks Power Platform Admin role
 
 **Resolution:**
-1. Navigate to Microsoft 365 Admin Center → Roles → Power Platform Administrator
+1. Navigate to Microsoft 365 Admin Center → Roles → Power Platform Admin
 2. Add MSI service principal as member
 3. Wait 15 minutes for role propagation
 4. Re-run flow to verify success

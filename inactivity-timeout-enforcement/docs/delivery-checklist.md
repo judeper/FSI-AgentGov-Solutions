@@ -47,8 +47,8 @@
 
 ### 7. Permissions
 
-- [ ] Managed Service Identity configured with Power Platform Administrator role
-- [ ] MSI service principal added in Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members
+- [ ] Managed Service Identity configured with Power Platform Admin role
+- [ ] MSI service principal added in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
 - [ ] Dataverse System Administrator role assigned
 
 ### 8. PowerShell Governance Scripts
