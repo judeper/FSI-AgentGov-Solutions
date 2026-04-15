@@ -344,7 +344,7 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> in
     return failures
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy FINRA Supervision Workflow solution")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
     parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID")
