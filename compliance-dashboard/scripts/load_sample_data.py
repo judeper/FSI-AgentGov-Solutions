@@ -329,7 +329,7 @@ def export_sample_data(controls: list, output_dir: Path) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Load sample data for Compliance Dashboard")
     parser.add_argument("--environment", help="Dataverse environment URL")
     parser.add_argument("--controls-only", action="store_true", help="Load only control master data")
