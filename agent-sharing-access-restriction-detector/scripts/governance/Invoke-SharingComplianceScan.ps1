@@ -74,7 +74,7 @@
 
 .NOTES
     File: Invoke-SharingComplianceScan.ps1
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -123,7 +123,7 @@ function Invoke-SharingComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Sharing Access Restriction Detector v1.0.0"
+    Write-Verbose "Agent Sharing Access Restriction Detector v1.0.4"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -140,7 +140,7 @@ function Invoke-SharingComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Agent Sharing Access Restriction Detector v1.0.0" -ForegroundColor Cyan
+    Write-Host "Agent Sharing Access Restriction Detector v1.0.4" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -536,7 +536,7 @@ function Invoke-SharingComplianceScan {
                 Zone            = $zone
                 SharingType     = $sharingType
                 SharingLabel    = $sharingLabel
-                SharedGroupIds  = ($sharedGroupIds -join ',')
+                SharedGroupIds  = ($sharedGroupIds | ConvertTo-Json -Compress)
                 ViolationType   = $violationType
                 Severity        = $severity
                 RegulatoryContext = $policy.RegulatoryContext

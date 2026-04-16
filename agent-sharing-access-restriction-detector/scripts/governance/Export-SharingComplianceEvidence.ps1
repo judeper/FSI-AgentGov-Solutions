@@ -79,7 +79,7 @@
 
 .NOTES
     File: Export-SharingComplianceEvidence.ps1
-    Version: 1.0.3
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -234,7 +234,7 @@ $fromDateUtc = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateUtc   = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 $select = 'fsi_complianceid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,' +
-          'fsi_zone,fsi_sharingtype,fsi_violationtype,fsi_severity,fsi_description,' +
+          'fsi_zone,fsi_sharingtype,fsi_violationtype,fsi_severity,fsi_compliancestatus,fsi_description,' +
           'fsi_detectedat,fsi_scanrunid,fsi_sharedgroupids,fsi_regulatorycontext'
 
 $filter = "fsi_detectedat ge $fromDateUtc and fsi_detectedat le $toDateUtc"
@@ -322,7 +322,7 @@ elseif ($violationRecords -gt 0) { $overallStatus = 'Review' }
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Agent Sharing Access Restriction Detector'
-    solutionVersion = '1.0.3'
+    solutionVersion = '1.0.4'
     controls        = @('1.18', '2.8')
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
@@ -428,5 +428,3 @@ $result = [PSCustomObject]@{
 return $result
 
 #endregion
-
-exit 0

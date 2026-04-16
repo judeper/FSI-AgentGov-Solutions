@@ -46,7 +46,7 @@
 
 .NOTES
     File: Get-ExpectedSharingPolicy.ps1
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
