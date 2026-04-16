@@ -128,8 +128,8 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
    | Severity | Status | Score |
    |----------|--------|-------|
    | 1 (Info) | 1 (Compliant) | 100 |
-   | 2 or 3 (Warning/Error) | 2 (Non-Compliant) | 50 |
-   | Other | 3 (Critical) | 0 |
+   | 2 or 3 (Warning/Error) | 2 (Partial) | 50 |
+   | Other | 3 (Non-Compliant) | 0 |
 
 4. **If yes → Upsert Assessment** — Check for existing assessment today, then create or update:
    - **List rows** — Check existing `fsi_controlassessments` where `_fsi_controlmasterid_value` equals the `fsi_INT_ControlGuid_1_7` parameter and `fsi_assessmentdate` is today
@@ -180,8 +180,8 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
    | fsi_overallstatus | Status | Score |
    |-------------------|--------|-------|
    | `compliant` (case-insensitive) | 1 (Compliant) | 100 |
-   | `warning` (case-insensitive) | 2 (Non-Compliant) | 50 |
-   | Other | 3 (Critical) | 0 |
+   | `warning` (case-insensitive) | 2 (Partial) | 50 |
+   | Other | 3 (Non-Compliant) | 0 |
 
 4. **If yes → Upsert Assessment** for `fsi_INT_ControlGuid_3_8` (same upsert pattern as ACV)
 
@@ -201,14 +201,14 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 3. **If yes → Compose** — Map CMM Status (compliance-rate-based mapping):
    - Calculate `complianceRate = (fsi_compliantcount / fsi_totalagents) × 100`
-   - Handle edge case: if `fsi_totalagents` is 0 or null, set status = 4 (Not Assessed), score = null
+   - Handle edge case: if `fsi_totalagents` is 0 or null, set status = 4 (Not Applicable), score = null
 
    | Compliance Rate | Status | Score |
    |----------------|--------|-------|
    | ≥ 100% | 1 (Compliant) | Rounded rate |
-   | ≥ 80% | 2 (Non-Compliant) | Rounded rate |
-   | < 80% | 3 (Critical) | Rounded rate |
-   | No agents | 4 (Not Assessed) | null |
+   | ≥ 80% | 2 (Partial) | Rounded rate |
+   | < 80% | 3 (Non-Compliant) | Rounded rate |
+   | No agents | 4 (Not Applicable) | null |
 
 4. **If yes → Upsert Assessment** for `fsi_INT_ControlGuid_1_8`
    - Notes include: `Compliance: {compliantCount}/{totalAgents} agents.`
@@ -217,10 +217,10 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 ##### Scope: Sync_FUS (Control 1.14)
 
-**Source table:** `fsi_fileupload_validationhistories`
+**Source table:** `fsi_fileuploadvalidationhistories`
 
 1. **List rows** — Query FUS Latest
-   - Table: `fsi_fileupload_validationhistories`
+   - Table: `fsi_fileuploadvalidationhistories`
    - Order by: `fsi_timestamp desc`
    - Select: `fsi_compliancerate,fsi_runid,fsi_timestamp`
    - Top count: `1`
@@ -231,10 +231,10 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
    | fsi_compliancerate | Status | Score |
    |--------------------|--------|-------|
-   | null | 3 (Critical) | 0 |
+   | null | 3 (Non-Compliant) | 0 |
    | ≥ 100 | 1 (Compliant) | Rounded rate |
-   | ≥ 80 | 2 (Non-Compliant) | Rounded rate |
-   | < 80 | 3 (Critical) | Rounded rate |
+   | ≥ 80 | 2 (Partial) | Rounded rate |
+   | < 80 | 3 (Non-Compliant) | Rounded rate |
 
 4. **If yes → Upsert Assessment** for `fsi_INT_ControlGuid_1_14`
    - Notes include: `Compliance rate: {complianceRate}%.`
@@ -262,8 +262,8 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
    - Check existing assessment for `fsi_INT_ControlGuid_1_11` + today
    - Select includes: `fsi_controlassessmentid,fsi_status,fsi_score`
    - **If exists → Update** using worst-of-two merge logic:
-     - If existing status = 4 (Not Assessed), use CAA status
-     - If CAA status = 4 (Not Assessed), keep existing status
+     - If existing status = 4 (Not Applicable), use CAA status
+     - If CAA status = 4 (Not Applicable), keep existing status
      - Otherwise, keep the **higher** status value (worse condition) and **lower** score
    - **If not exists → Create** with CAA status directly (primary feed, dual-feed with SSC)
 
@@ -327,7 +327,7 @@ ACV → fsi_auditvalidationhistories ──→ Map Severity ──→ Upsert ─
 SSC → fsi_validationhistories ──────→ Map Severity ──→ Upsert ──→ fsi_controlassessments (1.23, 1.11)
 AAM → fsi_accessvalidationhistories → Map Status   ──→ Upsert ──→ fsi_controlassessments (3.8)
 CMM → fsi_moderationvalidationhistories → Map Rate ──→ Upsert ──→ fsi_controlassessments (1.8)
-FUS → fsi_fileupload_validationhistories → Map Rate → Upsert ──→ fsi_controlassessments (1.14)
+FUS → fsi_fileuploadvalidationhistories → Map Rate  → Upsert ──→ fsi_controlassessments (1.14)
 CAA → fsi_capolicyvalidationhistories → Map Severity → Upsert ──→ fsi_controlassessments (1.11, 1.23, 1.18)
 ```
 

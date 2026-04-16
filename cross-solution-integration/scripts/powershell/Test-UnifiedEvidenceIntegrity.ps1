@@ -20,7 +20,7 @@
     .\Test-UnifiedEvidenceIntegrity.ps1 -ExportPath ".\evidence-export-2026-02-01-140000" -Detailed
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Date: 2026-02-10
 #>
 

@@ -207,6 +207,9 @@ function Get-DataverseRecords {
                 }
             }
         }
+        if (-not $success) {
+            $url = $null
+        }
     } while ($url)
 
     return $allRecords

@@ -106,7 +106,7 @@ This approach is consistent with the per-solution evidence export pattern used b
 | SSC | `fsi_validationhistories` | `fsi_driftviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
 | AAM | `fsi_accessvalidationhistories` | `fsi_accessviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, permissionType, expectedAccess, actualAccess |
 | CMM | `fsi_moderationvalidationhistories` | `fsi_moderationviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, moderationPolicy, expectedConfig, actualConfig |
-| FUS | `fsi_fileupload_validationhistories` | `fsi_fileupload_violations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
+| FUS | `fsi_fileuploadvalidationhistories` | `fsi_fileuploadviolations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
 | CAA | `fsi_capolicyvalidationhistories` | `fsi_capolicyviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
 
 ---

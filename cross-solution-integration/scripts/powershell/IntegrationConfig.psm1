@@ -12,7 +12,7 @@
     (ACV, SSC, AAM, CMM, FUS, CAA) and the Compliance Dashboard.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Date: 2026-02-10
     Solution: Cross-Solution Integration
 #>

@@ -57,7 +57,7 @@ The service principal or interactive user needs:
 | SSC | SSC Viewer (or custom) | Read `fsi_validationhistory` |
 | AAM | AAM Viewer (or custom) | Read `fsi_accessvalidationhistory` |
 | CMM | CMM Viewer (or custom) | Read `fsi_moderationvalidationhistory` |
-| FUS | FUS Viewer (or custom) | Read `fsi_fileupload_validationhistory` |
+| FUS | FUS Viewer (or custom) | Read `fsi_fileuploadvalidationhistory` |
 | CAA | CAA Viewer (or custom) | Read `fsi_capolicyvalidationhistory` |
 | CD | CD Assessor | Create/Update `fsi_controlassessment`, `fsi_complianceevidence` |
 

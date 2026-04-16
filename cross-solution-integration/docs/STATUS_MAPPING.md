@@ -107,7 +107,7 @@ compliance_rate = (fsi_compliantcount / fsi_totalagents) * 100
 
 ### FUS → Control 1.14
 
-**Source table:** `fsi_fileupload_validationhistories`
+**Source table:** `fsi_fileuploadvalidationhistories`
 **Source field:** `fsi_compliancerate` (Decimal)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
