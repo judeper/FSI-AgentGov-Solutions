@@ -82,8 +82,8 @@ nav:
       - Agent Access Monitor:
         - solutions/agent-access-monitor/index.md
         - Prerequisites: solutions/agent-access-monitor/prerequisites.md
-        - Schema: solutions/agent-access-monitor/schema.md
-        - Flow Setup: solutions/agent-access-monitor/flow-setup.md
+        - Dataverse Schema: solutions/agent-access-monitor/dataverse-schema.md
+        - Flow Configuration: solutions/agent-access-monitor/flow-configuration.md
         - Evidence Export: solutions/agent-access-monitor/evidence-export.md
         - Troubleshooting: solutions/agent-access-monitor/troubleshooting.md
       - Conditional Access Automation:

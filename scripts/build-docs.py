@@ -442,16 +442,18 @@ def validate(config: dict) -> bool:
     """Validate build output: file counts and nav references."""
     ok = True
 
-    # Check all 28 solution index.md files exist
+    # Check solution index.md count matches config
+    expected_count = len(config.get("solutions", {}))
     solution_indexes = list(SOLUTIONS_OUT.glob("*/index.md"))
-    if len(solution_indexes) != 28:
+    if len(solution_indexes) != expected_count:
         log.error(
-            "Expected 28 solution index.md files, found %d",
+            "Expected %d solution index.md files, found %d",
+            expected_count,
             len(solution_indexes),
         )
         ok = False
     else:
-        log.info("OK: 28 solution index.md files generated")
+        log.info("OK: %d solution index.md files generated", expected_count)
 
     # Check all nav-referenced files exist
     # Custom loader that ignores !!python/name tags (used by mkdocs for superfences)
@@ -468,6 +470,9 @@ def validate(config: dict) -> bool:
 
     missing = []
     for nav_file in nav_files:
+        # Skip external URLs (used for solutions without local docs)
+        if nav_file.startswith(("http://", "https://")):
+            continue
         full_path = SITE_DOCS / nav_file
         if not full_path.exists():
             missing.append(nav_file)
