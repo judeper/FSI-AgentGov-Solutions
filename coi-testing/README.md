@@ -209,7 +209,7 @@ COI test results feed into the Compliance Dashboard for Control 2.18 status.
 
 > High standards of commercial honor and just and equitable principles of trade.
 
-**Coverage:** Bias tests ensure fair dealing with customers.
+**Coverage:** Bias tests help support fair dealing with customers.
 
 ### SEC Regulation Best Interest
 
@@ -238,4 +238,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - COI Testing v1.0.0*
+*FSI Agent Governance Framework - COI Testing v1.0.2*

@@ -22,7 +22,7 @@ pip install -r scripts/requirements.txt
 | `msal` | ≥ 1.30.0 | Microsoft Authentication Library — acquires OAuth 2.0 tokens for Dataverse and Direct Line API access |
 | `requests` | ≥ 2.32.0 | HTTP client for Dataverse Web API and Direct Line API calls |
 
-## Azure AD App Registration
+## Microsoft Entra ID App Registration
 
 The test runner authenticates using a confidential client (service principal). Register an application in Entra ID:
 
