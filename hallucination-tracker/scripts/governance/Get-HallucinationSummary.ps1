@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -245,7 +246,7 @@ $headers = @{
 }
 
 $filter = "createdon ge $fromDate"
-$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,createdon,modifiedon"
+$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_isresolved,createdon,modifiedon"
 
 $queryUrl = "$apiBase/fsi_hallucinationreports?`$select=$select&`$filter=$filter&`$orderby=createdon desc"
 
@@ -282,6 +283,7 @@ $reports = $allReports | ForEach-Object {
         severity   = if ($null -ne $_.fsi_severity) { $SeverityMap[[int]$_.fsi_severity] } else { 'Unknown' }
         agentId    = $_.fsi_agentid
         source     = if ($null -ne $_.fsi_source) { $SourceMap[[int]$_.fsi_source] } else { 'Unknown' }
+        isResolved = $_.fsi_isresolved
         createdOn  = $_.createdon
         modifiedOn = $_.modifiedon
     }
@@ -289,11 +291,11 @@ $reports = $allReports | ForEach-Object {
 
 $totalReports = $reports.Count
 
-# Resolved vs unresolved: reports modified after creation are considered resolved
+# Resolved vs unresolved based on the fsi_isresolved flag
 $resolvedCount = 0
 $unresolvedCount = 0
 foreach ($report in $reports) {
-    if ($report.modifiedOn -and $report.createdOn -and $report.modifiedOn -ne $report.createdOn) {
+    if ($report.isResolved -eq $true) {
         $resolvedCount++
     }
     else {
