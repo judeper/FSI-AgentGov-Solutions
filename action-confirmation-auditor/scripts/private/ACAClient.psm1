@@ -279,7 +279,8 @@ function Write-ACAValidationHistory {
         $record = @{
             fsi_name                        = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
             fsi_runid                       = $RunId
-            fsi_scantime                    = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_validationtime              = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_totalagents                 = $ValidationResult.TotalAgents
             fsi_totalactions                = $ValidationResult.TotalActions
             fsi_actionswithconfirmation     = $ValidationResult.ActionsWithConfirmation
             fsi_actionsmissingconfirmation  = $ValidationResult.ActionsMissingConfirmation
@@ -288,7 +289,7 @@ function Write-ACAValidationHistory {
             fsi_summaryjson                 = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
         }
 
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_actionscanruns"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_actionscanrun"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -442,9 +443,9 @@ function Get-ACALastValidation {
     }
 
     try {
-        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_totalactions,fsi_actionswithconfirmation,fsi_actionsmissingconfirmation,fsi_summaryjson,fsi_scantime"
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_actionscanruns?" +
-               "`$orderby=fsi_scantime desc&`$top=$Top&`$select=$select"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_totalagents,fsi_totalactions,fsi_actionswithconfirmation,fsi_actionsmissingconfirmation,fsi_summaryjson,fsi_validationtime"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_actionscanrun?" +
+               "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{
             'Authorization'    = "Bearer $script:AccessToken"
@@ -465,7 +466,7 @@ function Get-ACALastValidation {
                     ActionsWithConfirmation     = $_.fsi_actionswithconfirmation
                     ActionsMissingConfirmation  = $_.fsi_actionsmissingconfirmation
                     SummaryJson                = $_.fsi_summaryjson
-                    Timestamp                  = $_.fsi_scantime
+                    Timestamp                  = $_.fsi_validationtime
                 }
             }
         }
@@ -579,7 +580,7 @@ function Get-ActionConfirmationExceptions {
                 AgentName   = $_.fsi_agentname
                 Zone        = $zoneName
                 ApprovedBy  = $_.fsi_approvedby
-                Reason      = $_.fsi_reason
+                Reason      = $_.fsi_justification
                 ExpiresAt   = $_.fsi_expiresat
                 IsActive    = $_.fsi_isactive
             }

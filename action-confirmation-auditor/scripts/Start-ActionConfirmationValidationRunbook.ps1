@@ -26,10 +26,10 @@
     results and route alerts based on severity and drift status.
 
 .PARAMETER TenantId
-    Azure AD tenant ID for authentication.
+    Microsoft Entra ID tenant ID for authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for certificate-based authentication.
+    Microsoft Entra ID application (client) ID for certificate-based authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
@@ -273,8 +273,8 @@ try {
     $previousAgentMap = @{}
 
     try {
-        $prevScanUri = "$baseUrl/api/data/v9.2/fsi_actionscanruns?" +
-            "`$orderby=fsi_scantime desc&`$top=1&" +
+        $prevScanUri = "$baseUrl/api/data/v9.2/fsi_actionscanrun?" +
+            "`$orderby=fsi_validationtime desc&`$top=1&" +
             "`$select=fsi_runid,fsi_summaryjson"
 
         $prevScanResponse = Invoke-RestMethod -Uri $prevScanUri -Method Get -Headers $driftHeaders -ErrorAction Stop

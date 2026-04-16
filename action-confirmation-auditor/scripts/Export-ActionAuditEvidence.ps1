@@ -29,7 +29,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -59,7 +59,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-ActionAuditEvidence.ps1 `
@@ -113,7 +113,7 @@
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
-    - ACA Dataverse schema deployed (fsi_actionscanruns,
+    - ACA Dataverse schema deployed (fsi_actionscanrun,
       fsi_actionauditresults, fsi_actionconfirmationexceptions tables)
 
     Evidence file naming convention:
@@ -288,17 +288,17 @@ $headers = @{
     'Prefer'           = 'odata.include-annotations=*'
 }
 
-# Query validation history from fsi_actionscanruns
+# Query validation history from fsi_actionscanrun
 $fromDateStr = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateStr = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-$validationFilter = "fsi_scantime ge $fromDateStr and fsi_scantime le $toDateStr"
+$validationFilter = "fsi_validationtime ge $fromDateStr and fsi_validationtime le $toDateStr"
 if ($RunId) {
     $validationFilter += " and fsi_runid eq '$RunId'"
 }
 
 try {
-    $validationUri = "$baseUrl/api/data/v9.2/fsi_actionscanruns?`$filter=$validationFilter&`$orderby=fsi_scantime desc"
+    $validationUri = "$baseUrl/api/data/v9.2/fsi_actionscanrun?`$filter=$validationFilter&`$orderby=fsi_validationtime desc"
     $validationResponse = Invoke-RestMethod -Uri $validationUri -Method Get -Headers $headers -ErrorAction Stop
     $validations = if ($validationResponse.value) { $validationResponse.value } else { @() }
     Write-Host "Retrieved $($validations.Count) validation records" -ForegroundColor Green
@@ -363,7 +363,7 @@ $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
         name                 = $_.fsi_name
         runId                = $_.fsi_runid
-        scanTime             = $_.fsi_scantime
+        scanTime             = $_.fsi_validationtime
         totalAgents          = $_.fsi_totalagents
         totalActions         = $_.fsi_totalactions
         compliantCount       = $_.fsi_compliantcount
@@ -385,7 +385,7 @@ $violationsReadable = $violations | ForEach-Object {
         zone               = $_.fsi_zone
         actionName         = $_.fsi_actionname
         actionType         = $_.fsi_actiontype
-        actionCategory     = $_.fsi_actioncategory
+        actionCategory     = $_.fsi_violationtype  # Action category derived from violation type
         connectorName      = $_.fsi_connectorname
         confirmationStatus = $_.fsi_confirmationstatus
         violationType      = $_.fsi_violationtype
@@ -407,7 +407,7 @@ if ($IncludeExceptions -and $exceptionRecords.Count -gt 0) {
             actionName         = $_.fsi_actionname
             actionType         = $_.fsi_actiontype
             zone               = $_.fsi_zone
-            reason             = $_.fsi_reason
+            reason             = $_.fsi_justification
             approvedBy         = $_.fsi_approvedby
             approvedAt         = $_.fsi_approvedat
             expiresAt          = $_.fsi_expiresat

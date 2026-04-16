@@ -88,7 +88,7 @@ function Test-ActionConfirmationCompliance {
 
     .PARAMETER PersistResults
         When specified with -DataverseUrl, writes validation summary to
-        fsi_actionscanruns and individual violations to
+        fsi_actionscanrun and individual violations to
         fsi_actionauditresults. Requires active Dataverse connection.
 
     .PARAMETER Top
@@ -442,11 +442,17 @@ function Test-ActionConfirmationCompliance {
                 $requiresConfirm = $true
             }
 
-            # Check for exceptions
+            # Check for exceptions (including expiration validation)
             $exceptionKey = "$($agent.AgentId)|$($action.ActionName)"
             if ($exceptions.ContainsKey($exceptionKey)) {
-                Write-Verbose "Exception found for $($agent.AgentName) action $($action.ActionName)"
-                continue
+                $exc = $exceptions[$exceptionKey]
+                # Validate exception has not expired (FINRA 3110(b)(1) — expired exceptions must not suppress violations)
+                if ($exc.fsi_expiresat -and [datetime]$exc.fsi_expiresat -lt (Get-Date).ToUniversalTime()) {
+                    Write-Verbose "Exception expired for $($agent.AgentName) action $($action.ActionName) (expired: $($exc.fsi_expiresat))"
+                } else {
+                    Write-Verbose "Active exception found for $($agent.AgentName) action $($action.ActionName)"
+                    continue
+                }
             }
 
             # Determine severity
