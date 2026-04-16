@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -104,7 +104,7 @@ ITE operates as a single Power Automate cloud flow with daily scheduled executio
 ### Solution Components
 
 #### Detect Inactivity Timeout Non-Compliance Flow
-**File:** `detect-inactivity-timeout-noncompliance.json`
+**Flow Name:** Detect Inactivity Timeout Non-Compliance
 
 **Purpose:** Continuous monitoring of inactivity timeout configurations across all Power Platform environments with zone-based policy evaluation.
 
@@ -264,7 +264,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeoutcomplianceid` | GUID | Primary key |
-| `fsi_name` | String(200) | Auto-generated name: `{EnvironmentId} - {Timestamp}` |
+| `fsi_compliancename` | String(200) | Auto-generated name: `{EnvironmentId} - {Timestamp}` |
 | `fsi_environmentid` | String(100) | Canonical environment name |
 | `fsi_environmentname` | String(200) | Environment display name |
 | `fsi_zone` | Choice | Governance zone (from policy) |
@@ -288,7 +288,7 @@ Diagnostic logs for API errors and missing policy issues.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeouterrorlogid` | GUID | Primary key |
-| `fsi_name` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
+| `fsi_errorname` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
 | `fsi_environmentid` | String(100) | Canonical environment name where error occurred |
 | `fsi_errortype` | String(50) | Error classification: `MissingPolicy`, `Unauthorized`, `Forbidden`, `NotFound`, `Throttled`, `ParseError`, `DataverseError` |
 | `fsi_errorraw` | Memo | Raw error response from BAP API or policy lookup. **Security note:** may contain internal URLs, tenant identifiers, and correlation IDs — configure Dataverse column-level security to restrict read access to authorized roles. |
@@ -770,7 +770,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Management must establish and maintain adequate internal controls to ensure reliability of financial reporting, including IT controls for session management.
 
 **ITE Support:**
-- Zone-based policy enforcement ensures financial production environments (Zone 3) meet 60-minute maximum timeout
+- Zone-based policy enforcement helps verify financial production environments (Zone 3) meet 60-minute maximum timeout
 - Immutable compliance records provide audit trail for internal control effectiveness
 - Daily monitoring enables timely detection of control deficiencies
 
@@ -779,7 +779,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules, the Exchange Act, and applicable SEC rules, including records of technology controls and compliance monitoring.
 
 **ITE Support:**
-- Continuous monitoring ensures inactivity timeout controls remain effective
+- Continuous monitoring helps verify inactivity timeout controls remain effective
 - Non-compliant environment detection prevents unauthorized access through unattended workstations
 - Email alerting enables timely supervisory review and remediation
 
@@ -798,7 +798,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 **ITE Support:**
 - Validates inactivity timeout termination is enabled across all environments
-- Ensures termination occurs within regulatory timeframes (≤ 120 minutes)
+- Supports verification that termination occurs within regulatory timeframes (≤ 120 minutes)
 - Provides evidence of automated session termination enforcement
 
 ---
@@ -815,7 +815,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.4
+**Solution Version:** 1.0.5
 **Release Date:** April 2026
 **License:** MIT License
 

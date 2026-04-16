@@ -345,7 +345,7 @@ function Write-HitlScanRun {
             $body['fsi_totalcheckpoints'] = [int]$ValidationResult.TotalCheckpoints
         }
         if ($null -ne $ValidationResult.EnvironmentsScanned) {
-            $body['fsi_environmentsscanned'] = [int]$ValidationResult.EnvironmentsScanned
+            $body['fsi_environmentsscanned'] = $ValidationResult.EnvironmentsScanned
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_hitlscanruns"
@@ -543,32 +543,15 @@ function Write-HitlViolation {
     }
 
     try {
-        # Map zone string to option set value
-        $zoneValue = switch ($Violation.Zone) {
-            'Zone1' { 100000000 }
-            'Zone2' { 100000001 }
-            'Zone3' { 100000002 }
-            default { 100000002 }
-        }
+        # Convert zone string to picklist integer for Dataverse
+        $zoneValue = if ($script:ZoneToInt.ContainsKey($Violation.Zone)) {
+            $script:ZoneToInt[$Violation.Zone]
+        } else { 0 }
 
-        # Map severity to option set value
-        $severityValue = switch ($Violation.Severity) {
-            'Critical' { 100000000 }
-            'High'     { 100000001 }
-            'Medium'   { 100000002 }
-            'Low'      { 100000003 }
-            'Warning'  { 100000004 }
-            default    { 100000002 }
-        }
-
-        # Map checkpoint type - default to StepConfirmation if not provided
-        $checkpointTypeValue = switch ($Violation.CheckpointType) {
-            'StepConfirmation'  { 100000000 }
-            'HumanApproval'     { 100000001 }
-            'SupervisorReview'  { 100000002 }
-            'EscalationTrigger' { 100000003 }
-            default             { 100000000 }
-        }
+        # Convert checkpoint type string to picklist integer for Dataverse
+        $checkpointTypeValue = if ($Violation.CheckpointType -and $script:CheckpointTypeToInt.ContainsKey($Violation.CheckpointType)) {
+            $script:CheckpointTypeToInt[$Violation.CheckpointType]
+        } else { $null }
 
         $body = @{
             fsi_name              = "Violation - $($Violation.AgentName ?? $Violation.AgentId) - $($RunId.Substring(0,8))"
@@ -581,7 +564,7 @@ function Write-HitlViolation {
             fsi_checkpointstatus  = 100000002
             fsi_hashitlcheckpoint = $false
             fsi_violationstatus   = 100000000
-            fsi_severity          = $severityValue
+            fsi_severity          = $Violation.Severity
             fsi_detectedat        = (Get-Date).ToUniversalTime().ToString("o")
             fsi_runid             = $RunId
         }
@@ -768,21 +751,13 @@ function Get-HitlCheckpointExceptions {
                 $script:IntToZone[[int]$zoneValue]
             } else { 'Unknown' }
 
-            # Convert action category integer back to string
-            $actionCatValue = $_.fsi_actioncategory
-            $actionCatName = if ($null -ne $actionCatValue -and $script:IntToActionCategory.ContainsKey([int]$actionCatValue)) {
-                $script:IntToActionCategory[[int]$actionCatValue]
-            } else { 'Unknown' }
-
             [PSCustomObject]@{
                 ExceptionId    = $_.fsi_hitlcheckpointexceptionid
-                ActionName     = $_.fsi_actionname
-                ActionCategory = $actionCatName
                 AgentId        = $_.fsi_agentid
                 AgentName      = $_.fsi_agentname
                 Zone           = $zoneName
                 ApprovedBy     = $_.fsi_approvedby
-                Reason         = $_.fsi_reason
+                Justification  = $_.fsi_justification
                 ExpiresAt      = $_.fsi_expiresat
                 IsActive       = $_.fsi_isactive
             }

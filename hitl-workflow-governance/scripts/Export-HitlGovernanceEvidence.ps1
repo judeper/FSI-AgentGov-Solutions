@@ -394,7 +394,7 @@ if ($IncludeExceptions) {
             flowName      = $_.fsi_flowname
             flowId        = $_.fsi_flowid
             zone          = $_.fsi_zone
-            reason        = $_.fsi_reason
+            justification = $_.fsi_justification
             approvedBy    = $_.fsi_approvedby
             approvedAt    = $_.fsi_approvedat
             expiresAt     = $_.fsi_expiresat
@@ -456,7 +456,7 @@ $totalRecords = ($generatedFiles.Values | Measure-Object -Property RecordCount -
 $manifest = [PSCustomObject]@{
     exportTimestamp  = $exportTimestamp
     solution         = "HITL Workflow Governance"
-    solutionVersion  = "1.0.0"
+    solutionVersion  = "1.0.1"
     controls         = @("2.12", "2.17", "1.10")
     startDate        = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     endDate          = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

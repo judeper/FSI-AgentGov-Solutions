@@ -682,7 +682,7 @@ function Test-HitlWorkflowCompliance {
             FlowsWithHitl        = $flowsWithHitl
             CompliantCount       = $compliantAgentCount
             ViolationCount       = $violationAgentCount
-            EnvironmentsScanned  = $uniqueEnvironments
+            EnvironmentsScanned  = $environmentNameList
         }
 
         if ($PSCmdlet.ShouldProcess("Dataverse validation history", "Write HITL scan results")) {

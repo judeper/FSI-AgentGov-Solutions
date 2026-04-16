@@ -146,7 +146,7 @@ $filterString = if ($filters.Count -gt 0) {
 
 $select = "fsi_name,fsi_runid,fsi_environmentguid,fsi_environmentname,fsi_agentid,fsi_agentname," +
           "fsi_zone,fsi_checkpointtype,fsi_checkpointstatus," +
-          "fsi_severity,fsi_regulatorycontext,fsi_topicname,fsi_topicid,fsi_detectedat"
+          "fsi_severity,fsi_regulatorycontext,fsi_flowname,fsi_flowid,fsi_detectedat"
 
 $uri = "$baseUrl/api/data/v9.2/fsi_hitlcheckpointresults?" +
        "`$select=$select&`$orderby=fsi_detectedat desc&`$top=$Top$filterString"
@@ -188,11 +188,6 @@ $typedResults = $checkpointResults | ForEach-Object {
         $intToCheckpointType[[int]$checkpointTypeValue]
     } else { $null }
 
-    $actionCatValue = $_.fsi_actioncategory
-    $actionCatName = if ($null -ne $actionCatValue -and $intToActionCategory.ContainsKey([int]$actionCatValue)) {
-        $intToActionCategory[[int]$actionCatValue]
-    } else { 'Unknown' }
-
     [PSCustomObject]@{
         Name                   = $_.fsi_name
         RunId                  = $_.fsi_runid
@@ -205,8 +200,8 @@ $typedResults = $checkpointResults | ForEach-Object {
         CheckpointStatus       = $checkpointStatusName
         Severity               = $_.fsi_severity
         RegulatoryContext      = $_.fsi_regulatorycontext
-        TopicName              = $_.fsi_topicname
-        TopicId                = $_.fsi_topicid
+        FlowName               = $_.fsi_flowname
+        FlowId                 = $_.fsi_flowid
         DetectedAt             = $_.fsi_detectedat
     }
 }

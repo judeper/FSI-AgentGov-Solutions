@@ -20,7 +20,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Account type: Single tenant
 - [ ] Click "Register"
 
-**Details:** [README.md - Prerequisites](./README.md#prerequisites)
+**Details:** [README.md - Prerequisites](../README.md#prerequisites)
 
 ---
 
@@ -33,7 +33,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Search for and add `ServiceMessage.Read.All`
 - [ ] Click "Grant admin consent"
 
-**Details:** [README.md - Microsoft Entra ID App Registration](./README.md#1-microsoft-entra-id-app-registration)
+**Details:** [README.md - Microsoft Entra ID App Registration](../README.md#1-microsoft-entra-id-app-registration)
 
 ---
 
@@ -74,14 +74,17 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | startDateTime | DateTime |
 | actionRequiredByDateTime | DateTime |
 | lastModifiedDateTime | DateTime |
+| endDateTime | DateTime |
 | isMajorChange | Yes/No |
 | body | Multiline Text (set max length to 100,000+) |
 | assessmentStatus | Choice |
 | assessment | Multiline Text |
 | impactsAgents | Yes/No |
-| assessedBy | Lookup (User) |
+| assessedBy | Text (200) |
 | assessedDate | DateTime |
 | actionsTaken | Multiline Text |
+| tags | Text (1000) |
+| hasAttachments | Yes/No |
 | notifiedOn | DateTime |
 
 **Choice Values:**
@@ -91,7 +94,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | severity | High, Normal, Critical |
 | assessmentStatus | Not Assessed, Reviewed, Impacts Agents, No Impact |
 
-**Details:** [README.md - Data Model](./README.md#data-model)
+**Details:** [README.md - Data Model](../README.md#data-model)
 
 ---
 
@@ -188,4 +191,4 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | Teams notifications missing | Verify channel connector and condition logic |
 | Key Vault access denied | Check access policy or RBAC assignment |
 
-**Full troubleshooting:** [README.md - Troubleshooting](./README.md#troubleshooting)
+**Full troubleshooting:** [README.md - Troubleshooting](../README.md#troubleshooting)

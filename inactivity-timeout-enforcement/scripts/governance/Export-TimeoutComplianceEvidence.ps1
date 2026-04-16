@@ -86,7 +86,7 @@
     Exports all zones with interactive auth for ad-hoc examination preparation.
 
 .NOTES
-    Version: 1.0.4
+    Version: 1.0.5
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA 501(b), SOX 302/404, FINRA 4511, NIST 800-53 AC-11/AC-12
@@ -275,7 +275,7 @@ catch {
 # Query error logs
 $errorLogs = [System.Collections.ArrayList]::new()
 $errorFilter = "fsi_timestamp ge $fromDateUtc and fsi_timestamp le $toDateUtc"
-$errorSelect = 'fsi_errorname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_errorraw,fsi_timestamp,fsi_scanrunid'
+$errorSelect = 'fsi_errorname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_errortype,fsi_errorraw,fsi_timestamp,fsi_scanrunid'
 $errorNextUrl = "$apiBase/fsi_inactivitytimeouterrorlogs?`$filter=$errorFilter&`$select=$errorSelect&`$orderby=fsi_timestamp desc"
 
 try {
@@ -305,9 +305,9 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
 # Compute summary statistics
 $totalRecords        = $complianceRecords.Count
-$compliantCount      = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 'Compliant' }).Count
-$nonCompliantCount   = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 'NonCompliant' }).Count
-$unknownCount        = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 'Unknown' }).Count
+$compliantCount      = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 100000000 }).Count
+$nonCompliantCount   = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 100000001 }).Count
+$unknownCount        = ($complianceRecords | Where-Object { $_.fsi_compliancestatus -eq 100000002 }).Count
 
 $overallStatus = 'Compliant'
 if ($nonCompliantCount -gt 0) {
@@ -323,7 +323,7 @@ elseif ($totalRecords -eq 0) {
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Inactivity Timeout Enforcement'
-    solutionVersion = '1.0.4'
+    solutionVersion = '1.0.5'
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
     zoneFilter      = $Zone

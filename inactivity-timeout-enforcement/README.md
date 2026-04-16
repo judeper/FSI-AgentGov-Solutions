@@ -1,6 +1,6 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.4
+> **Version:** v1.0.5
 > **Status:** Completed
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.

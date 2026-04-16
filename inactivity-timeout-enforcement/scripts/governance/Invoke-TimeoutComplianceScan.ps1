@@ -81,7 +81,7 @@
     Full scan with Dataverse persistence, returning PSCustomObjects for pipeline use.
 
 .NOTES
-    Version: 1.0.4
+    Version: 1.0.5
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA 501(b), SOX 302/404, FINRA 4511, NIST 800-53 AC-11/AC-12
@@ -122,7 +122,7 @@ function Invoke-TimeoutComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Inactivity Timeout Enforcement v1.0.4"
+    Write-Verbose "Inactivity Timeout Enforcement v1.0.5"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -189,7 +189,7 @@ function Invoke-TimeoutComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Inactivity Timeout Enforcement v1.0.4" -ForegroundColor Cyan
+    Write-Host "Inactivity Timeout Enforcement v1.0.5" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan

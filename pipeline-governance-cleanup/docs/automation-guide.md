@@ -142,12 +142,12 @@ For fully automated notification workflows (e.g., scheduled Azure Automation run
 
 ### Prerequisites
 
-- Entra ID Entra Global Admin or Application Administrator role
+- Entra Global Admin or Application Administrator role
 - Certificate (recommended) or client secret for authentication
 
 ### Step 1: Create App Registration
 
-1. Navigate to [Azure Portal](https://portal.azure.com) > **Azure Active Directory** > **App registrations**
+1. Navigate to [Azure Portal](https://portal.azure.com) > **Microsoft Entra ID** > **App registrations**
 2. Click **New registration**
 3. Configure:
    - **Name:** `Pipeline-Governance-Notifications`

@@ -402,7 +402,7 @@ You may need to manually add owner information to your inventory before sending 
             }
 
             $auditLog.Add([PSCustomObject]@{
-                Timestamp       = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+                Timestamp       = ([DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"))
                 Recipient       = $record.OwnerEmail
                 EnvironmentId   = $record.EnvironmentId
                 EnvironmentName = $record.EnvironmentName
