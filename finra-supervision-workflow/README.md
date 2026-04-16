@@ -38,7 +38,7 @@ Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 c
 
 - **Routes** flagged AI agent outputs to designated supervisory principals
 - **Tracks** review status with configurable SLAs and escalation
-- **Enforces** supervision coverage by zone and agent tier
+- **Helps enforce** supervision coverage by zone and agent tier
 - **Documents** supervisory reviews for regulatory evidence
 - **Reports** supervision metrics via Power BI dashboard
 

@@ -15,7 +15,7 @@
     storage or apply a detached CMS/PKCS#7 digital signature.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    Microsoft Entra ID tenant ID.
 
 .PARAMETER ClientId
     Service principal application (client) ID.

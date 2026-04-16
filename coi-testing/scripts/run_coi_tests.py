@@ -14,9 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List, Optional
-import hashlib
 
 try:
     from msal import ConfidentialClientApplication

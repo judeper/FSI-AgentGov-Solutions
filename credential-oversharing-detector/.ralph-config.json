@@ -1,0 +1,8 @@
+{
+  "domainFacts": [
+    "CRITICAL: Scripts use non-schema column names for scan runs (fsi_scanrunid, fsi_scantimestamp, fsi_totalagents, fsi_overallstatus). Schema defines fsi_scanid, fsi_scanstartedat, fsi_scancompletedat, fsi_agentsscanned. Full alignment is required before deployment.",
+    "Zone option set uses values 100000000-100000003 (not 0/1/2). Scripts must convert zone integers to the correct option set values before Dataverse writes.",
+    "Violation records require fsi_violationid and fsi_violationstatus (Required). Scripts currently omit these required columns.",
+    "Teams incoming webhooks are deprecated. Adaptive card template references to incoming webhooks should be replaced with Power Automate Workflows or Graph Teams channel posting."
+  ]
+}

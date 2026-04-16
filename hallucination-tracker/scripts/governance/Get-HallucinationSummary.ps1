@@ -245,7 +245,7 @@ $headers = @{
 }
 
 $filter = "createdon ge $fromDate"
-$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,createdon,modifiedon"
+$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_isresolved,createdon,modifiedon"
 
 $queryUrl = "$apiBase/fsi_hallucinationreports?`$select=$select&`$filter=$filter&`$orderby=createdon desc"
 
@@ -289,17 +289,9 @@ $reports = $allReports | ForEach-Object {
 
 $totalReports = $reports.Count
 
-# Resolved vs unresolved: reports modified after creation are considered resolved
-$resolvedCount = 0
-$unresolvedCount = 0
-foreach ($report in $reports) {
-    if ($report.modifiedOn -and $report.createdOn -and $report.modifiedOn -ne $report.createdOn) {
-        $resolvedCount++
-    }
-    else {
-        $unresolvedCount++
-    }
-}
+# Resolved vs unresolved: use fsi_isresolved column (schema source of truth)
+$resolvedCount = ($reports | Where-Object { $_.isResolved -eq $true }).Count
+$unresolvedCount = $totalReports - $resolvedCount
 
 # Category distribution
 $categoryDistribution = @{}

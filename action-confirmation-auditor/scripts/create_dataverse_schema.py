@@ -308,6 +308,13 @@ ACTION_CONFIRMATION_EXCEPTION_COLUMNS = [
                   description="Exception expiration date (optional)"),
     _memo_col("fsi_Justification", "Justification", 5000,
               description="Business justification for the exception"),
+    _string_col("fsi_RejectedBy", "Rejected By", 200,
+                required=False,
+                description="UPN of administrator who rejected the exception"),
+    _memo_col("fsi_ApprovalNotes", "Approval Notes", 5000,
+              description="Approver comments on approval decision"),
+    _memo_col("fsi_RejectionNotes", "Rejection Notes", 5000,
+              description="Approver comments on rejection decision"),
     _boolean_col("fsi_IsActive", "Is Active", default=True,
                  description="Whether this exception is currently active"),
 ]
@@ -656,7 +663,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("ACA_TENANT_ID"),
-        help="Azure AD tenant ID (or set ACA_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set ACA_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

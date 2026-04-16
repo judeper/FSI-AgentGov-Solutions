@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "The Dataverse entity set for scan runs is 'fsi_actionscanrun' (singular, explicitly set via entity_set_name in create_dataverse_schema.py line 380). Do not use the auto-pluralized 'fsi_actionscanruns'.",
+    "The scan timestamp column on fsi_ActionScanRun is SchemaName 'fsi_ValidationTime' (logical: 'fsi_validationtime'). There is no 'fsi_scantime' column.",
+    "The exception justification column on fsi_ActionConfirmationException is SchemaName 'fsi_Justification' (logical: 'fsi_justification'). There is no 'fsi_reason' column.",
+    "Exception expiration is enforced at scan time: if fsi_ExpiresAt is non-null and in the past, the exception is treated as expired and does not suppress violations. This supports FINRA 3110(b)(1) supervisory requirements.",
+    "Microsoft.PowerApps.Administration.PowerShell is a Windows PowerShell 5.1 module. Scripts requiring both this module and PowerShell 7.x features should document the compatibility constraint."
+  ]
+}

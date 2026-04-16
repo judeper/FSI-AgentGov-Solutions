@@ -1029,7 +1029,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules and the Exchange Act, including electronic records of system configurations and audit trails.
 
 **ALCA Support:**
-- Continuous monitoring ensures audit logging remains enabled across all environments
+- Continuous monitoring helps maintain audit logging enabled across all environments
 - Entity-level audit on Copilot Studio entities (bot, botcomponent, workflow) tracks agent changes
 - Automated remediation prevents prolonged audit gaps
 - Compliance records provide evidence of supervisory controls effectiveness
@@ -1041,7 +1041,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Purview unified audit log captures all M365 and Power Platform activities
 - Dataverse audit log captures entity changes, field modifications, and API calls
-- Entity-level audit ensures Copilot Studio agent changes are recorded
+- Entity-level audit aids in recording Copilot Studio agent changes
 - Compliance table provides immutable evidence of audit configuration history
 
 ### SOX 404 — Internal Controls over Financial Reporting
@@ -1050,7 +1050,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 
 **ALCA Support:**
 - Automated detection validates audit controls remain effective (preventive control)
-- Remediation workflow ensures non-compliant environments are corrected (detective and corrective control)
+- Remediation workflow supports correction of non-compliant environments (detective and corrective control)
 - Dataverse compliance table provides audit trail of control effectiveness
 - Email notifications enable timely management review of control deficiencies
 
@@ -1061,7 +1061,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Audit logging captures access to environments containing customer data
 - Entity-level audit on systemuser entity tracks user access and permission changes
-- Continuous monitoring ensures audit controls remain active
+- Continuous monitoring helps maintain active audit controls
 - Remediation prevents audit gaps that could obscure unauthorized access
 
 ---

@@ -90,7 +90,7 @@ ENV_VAR_DEFINITIONS = [
         "type": 100000000,  # String
         "default_value": "",
         "description": (
-            "Azure AD / Entra ID tenant ID for service principal "
+            "Microsoft Entra ID tenant ID for service principal "
             "authentication in flows."
         ),
     },

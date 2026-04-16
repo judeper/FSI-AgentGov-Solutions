@@ -115,7 +115,7 @@ Each action type has a configurable time saving value:
 
 | Parameter | Default | Configurable | Notes |
 |-----------|---------|-------------|-------|
-| GenericTimeSaving | 3 minutes | Yes (config.yml) | Minimum time saving for successful autonomous task completion |
+| GenericTimeSaving | 5 minutes | Yes (config.yml) | Minimum time saving for successful autonomous task completion |
 
 ### Calculation Example
 

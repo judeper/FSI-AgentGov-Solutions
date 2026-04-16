@@ -39,7 +39,7 @@ try {
     $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
     $ppToken    = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com" -ErrorAction Stop).Token
 } catch {
-    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
+    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has AgentRegistry.ReadWrite.All and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
 }
 
@@ -51,11 +51,12 @@ Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cy
 # Retrieve all agents — filter client-side for unsponsored agents
 # Server-side sponsor filter syntax must be validated in test tenant
 # NOTE: The Agent Registry API (graph.microsoft.com/beta/agentRegistry) is in beta.
+# TODO: verify — Agent 365 GA may change this to agentIdentity or agentRegistry/agentInstances.
 # Verify current availability at https://learn.microsoft.com/en-us/graph/api/resources/agenttypes-overview
 try {
     $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
 } catch {
-    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
+    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has AgentRegistry.ReadWrite.All. Error: $($_.Exception.Message)"
     exit 1
 }
 if (-not $registryAgents) { $registryAgents = @() }

@@ -23,7 +23,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com). Required.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER Zone
     Governance zone filter. Valid values: 'All', '1', '2', '3'. Defaults to 'All'.
@@ -47,7 +47,7 @@
     Use interactive browser-based authentication instead of service principal.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER ClientSecret
     Client secret for service principal authentication. Must be a SecureString.
@@ -217,7 +217,7 @@ if ($Interactive) {
         # Attempt to use MSAL.PS if available
         if (Get-Module -ListAvailable -Name MSAL.PS) {
             if (-not $ClientId) {
-                throw "ClientId is required for MSAL.PS interactive authentication. Provide -ClientId with your Azure AD application ID."
+                throw "ClientId is required for MSAL.PS interactive authentication. Provide -ClientId with your Microsoft Entra ID application ID."
             }
             Import-Module MSAL.PS -ErrorAction Stop
 

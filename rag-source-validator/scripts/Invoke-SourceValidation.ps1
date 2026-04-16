@@ -13,13 +13,13 @@
     Specific source ID to validate (optional - validates all if not specified).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Defaults to the AZURE_TENANT_ID environment variable.
+    Microsoft Entra ID tenant ID. Defaults to the AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Defaults to the AZURE_CLIENT_ID environment variable.
+    Microsoft Entra ID application (client) ID. Defaults to the AZURE_CLIENT_ID environment variable.
 
 .PARAMETER ClientSecret
-    Azure AD client secret as a SecureString. Falls back to the AZURE_CLIENT_SECRET
+    Microsoft Entra ID client secret as a SecureString. Falls back to the AZURE_CLIENT_SECRET
     environment variable if not provided. Production deployments should use
     certificate-based auth or managed identities.
 
@@ -31,7 +31,7 @@
     https://microsoftgraph.chinacloudapi.cn (China).
 
 .PARAMETER AuthBaseUrl
-    Azure AD token endpoint base URL. Supports sovereign clouds:
+    Microsoft Entra ID token endpoint base URL. Supports sovereign clouds:
     https://login.microsoftonline.com (commercial, default),
     https://login.microsoftonline.us (GCC High),
     https://login.chinacloudapi.cn (China).
@@ -74,7 +74,7 @@ param(
     [ValidateSet("https://graph.microsoft.com", "https://graph.microsoft.us", "https://dod-graph.microsoft.us", "https://microsoftgraph.chinacloudapi.cn")]
     [string]$GraphBaseUrl = "https://graph.microsoft.com",
 
-    # Sovereign cloud support: override for Azure AD token endpoint base URL.
+    # Sovereign cloud support: override for Microsoft Entra ID token endpoint base URL.
     # Must match the same sovereign cloud as GraphBaseUrl and Environment (see note above).
     [Parameter(Mandatory = $false)]
     [ValidateSet("https://login.microsoftonline.com", "https://login.microsoftonline.us", "https://login.chinacloudapi.cn")]

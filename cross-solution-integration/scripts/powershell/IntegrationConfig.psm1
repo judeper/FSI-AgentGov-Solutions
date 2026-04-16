@@ -461,7 +461,7 @@ function Get-SolutionDirectories {
     param()
 
     return @{
-        'ACV' = 'audit-configuration-validator'
+        'ACV' = 'audit-compliance-manager'
         'SSC' = 'session-security-configurator'
         'AAM' = 'agent-access-monitor'
         'CMM' = 'content-moderation-monitor'

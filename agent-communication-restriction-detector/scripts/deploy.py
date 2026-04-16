@@ -184,7 +184,7 @@ def main():
             "  # Deploy only connection references\n"
             "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  ACRD_TENANT_ID        Azure AD tenant ID\n"
+            "  ACRD_TENANT_ID        Microsoft Entra ID tenant ID\n"
             "  ACRD_CLIENT_ID        Service principal app ID\n"
             "  ACRD_CLIENT_SECRET    Service principal secret\n"
             "  ACRD_ENVIRONMENT_URL  Dataverse environment URL\n"
@@ -195,7 +195,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("ACRD_TENANT_ID"),
-        help="Azure AD tenant ID (or set ACRD_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set ACRD_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

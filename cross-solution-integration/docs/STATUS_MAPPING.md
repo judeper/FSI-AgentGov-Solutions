@@ -69,7 +69,7 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 ### AAM → Control 3.8
 
 **Source table:** `fsi_accessvalidationhistories`
-**Source field:** `fsi_overall_status` (String)
+**Source field:** `fsi_overallstatus` (String)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
 | AAM Status | CD Status | CD Score | Logic |
@@ -86,12 +86,12 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 ### CMM → Control 1.8
 
 **Source table:** `fsi_moderationvalidationhistories`
-**Source fields:** `fsi_compliant_count` (Integer), `fsi_total_agents` (Integer)
+**Source fields:** `fsi_compliantcount` (Integer), `fsi_totalagents` (Integer)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
 **Compliance Rate Calculation:**
 ```
-compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
+compliance_rate = (fsi_compliantcount / fsi_totalagents) * 100
 ```
 
 | Compliance Rate | CD Status | CD Score | Logic |
@@ -107,8 +107,8 @@ compliance_rate = (fsi_compliant_count / fsi_total_agents) * 100
 
 ### FUS → Control 1.14
 
-**Source table:** `fsi_fileupload_validationhistories`
-**Source field:** `fsi_compliance_rate` (Decimal)
+**Source table:** `fsi_fileuploadvalidationhistories`
+**Source field:** `fsi_compliancerate` (Decimal)
 **Query:** Latest record ordered by `fsi_timestamp desc`
 
 | Compliance Rate | CD Status | CD Score | Logic |

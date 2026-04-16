@@ -1,0 +1,8 @@
+{
+  "domainFacts": [
+    "The Dataverse entity set for scan runs is 'fsi_commscanrun' (singular). The scan timestamp column is 'fsi_validationtime' (SchemaName: fsi_ValidationTime).",
+    "Violation columns use calling/called naming convention: fsi_callingenvironmentid (not fsi_environmentguid), fsi_calledagentid (not fsi_targetagentid), fsi_callingagentzone (not fsi_sourcezone), fsi_calledagentzone (not fsi_targetzone).",
+    "The skill manifest URL column is fsi_skillmanifesturl (SchemaName: fsi_SkillManifestUrl), not fsi_skillname.",
+    "Cross-tenant detection relies on URL pattern heuristic. Explicit tenant ID comparison is not yet implemented."
+  ]
+}

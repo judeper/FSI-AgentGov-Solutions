@@ -19,13 +19,13 @@
     Lookback window in minutes. Default: 15.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Defaults to AZURE_TENANT_ID environment variable.
+    Microsoft Entra ID tenant ID. Defaults to AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
-    Azure AD application client ID. Defaults to AZURE_CLIENT_ID environment variable.
+    Microsoft Entra ID application client ID. Defaults to AZURE_CLIENT_ID environment variable.
 
 .PARAMETER ClientSecret
-    Azure AD application client secret. Defaults to AZURE_CLIENT_SECRET environment variable.
+    Microsoft Entra ID application client secret. Defaults to AZURE_CLIENT_SECRET environment variable.
 
 .EXAMPLE
     .\Invoke-DriftScan.ps1 -Environment "https://contoso.crm.dynamics.com"
@@ -37,8 +37,8 @@
 
 .NOTES
     Requires:
-    - Azure AD application with Office 365 Management APIs permissions (ActivityFeed.Read)
-    - Azure AD application with Dataverse permissions
+    - Microsoft Entra ID application with Office 365 Management APIs permissions (ActivityFeed.Read)
+    - Microsoft Entra ID application with Dataverse permissions
     - Microsoft 365 E5 or E5 Compliance license for CopilotInteraction events
 #>
 

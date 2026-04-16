@@ -94,12 +94,12 @@ This guide provides step-by-step instructions for manually building the Action C
    - Fields:
      - `fsi_name`: Expression `concat('ACA-Run-', variables('runId'))`
      - `fsi_runid`: Variable `runId`
-     - `fsi_timestamp`: Variable `timestamp`
+     - `fsi_validationtime`: Variable `timestamp`
      - `fsi_overallstatus`: Parsed `OverallStatus`
      - `fsi_totalagents`: Parsed `TotalAgents`
      - `fsi_totalactions`: Parsed `TotalActions`
      - `fsi_actionsmissingconfirmation`: Parsed `ActionsMissingConfirmation`
-     - `fsi_resultjson`: Full JSON output
+     - `fsi_summaryjson`: Full JSON output
 
 8. **For Each Violation**
    - Loop through parsed `Violations` array
@@ -111,7 +111,7 @@ This guide provides step-by-step instructions for manually building the Action C
      - `fsi_actiontype`: `ActionType`
      - `fsi_confirmationstatus`: `ConfirmationStatus`
      - `fsi_severity`: `Severity` (mapped to option set value)
-     - `fsi_scanrunid`: Variable `runId`
+     - `fsi_runid`: Variable `runId`
      - `fsi_detectedat`: Variable `timestamp`
 
 9. **Check Alert Threshold**

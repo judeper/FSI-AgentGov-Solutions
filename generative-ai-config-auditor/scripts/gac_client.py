@@ -570,7 +570,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("GAC_TENANT_ID"),
-        help="Azure AD tenant ID (or set GAC_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set GAC_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

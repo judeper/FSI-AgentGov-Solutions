@@ -7,16 +7,16 @@ Requirements for deploying the Agent Knowledge Source Scanner solution.
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
 | PowerShell | 7.0+ | Core runtime (`#Requires -Version 7.0`) |
-| PnP.PowerShell | 2.5.0+ | SharePoint Online item enumeration, permission reads, sensitivity label retrieval |
+| PnP.PowerShell | 3.0.0+ | SharePoint Online item enumeration, permission reads, sensitivity label retrieval |
 
 ## Installation
 
 ```powershell
 # Install PnP.PowerShell module
-Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
+Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentUser
 ```
 
-> **Note:** PnP.PowerShell 2.5.0+ requires PowerShell 7.0 or later. Windows PowerShell 5.1 is not supported.
+> **Note:** PnP.PowerShell 3.0.0+ requires PowerShell 7.2 or later. Windows PowerShell 5.1 is not supported.
 
 ## Permissions
 
@@ -36,7 +36,7 @@ When using the `-AgentUserGroupId` parameter to resolve agent user scope from a 
 
 | Permission | Type | Required For |
 |------------|------|--------------|
-| **GroupMember.Read.All** or **Group.Read.All** | Delegated | Resolve security group members via `Get-PnPAzureADGroupMember` |
+| **GroupMember.Read.All** or **Group.Read.All** | Delegated | Resolve security group members via `Get-PnPEntraIDGroupMember` |
 | **Entra ID Reader** role | Directory | Alternative: read group membership via directory role |
 
 If group resolution fails, the script logs a warning and continues without agent user scope comparison.

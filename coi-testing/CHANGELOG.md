@@ -4,6 +4,17 @@ All notable changes to the COI Testing Framework.
 
 ---
 
+## [1.0.2] - 2026-04-16
+
+### Fixed
+
+- Fixed prohibited compliance language: "ensure" → "help support" in README.md
+- Fixed product name: "Azure AD" → "Microsoft Entra ID" in prerequisites.md
+- Fixed version mismatch in README footer (v1.0.0 → v1.0.2)
+- Removed unused imports (hashlib, Path) from run_coi_tests.py
+
+---
+
 ## [1.0.1] - April 2026
 
 ### Added

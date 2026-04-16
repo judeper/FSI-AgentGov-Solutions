@@ -250,7 +250,7 @@ Before pipeline promotion:
 
 For supervision queue assignments:
 1. Validates supervisor isn't also the agent developer
-2. Ensures independent review
+2. Supports independent review
 
 ## Regulatory Alignment
 

@@ -13,26 +13,26 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
-| action-confirmation-auditor | v1.0.0 | 1.23 | Step-up confirmation validation for agent actions |
-| agent-365-lifecycle-governance | v1.1.0 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
-| agent-access-monitor | v1.0.1 | 3.8 | Automated detection of overly permissive agent access configurations |
-| agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
-| agent-knowledge-source-scanner | v1.0.1 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
-| agent-registry-automation | v1.0.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
-| agent-observability-foundation | v1.1.0 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
-| agent-sharing-access-restriction-detector | v1.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
-| audit-compliance-manager | v1.0.1 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
-| coi-testing | v1.0.1 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.1 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
-| conditional-access-automation | v1.1.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
-| content-moderation-monitor | v1.0.2 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
-| copilot-studio-analytics | v1.1.0 | 3.2 | Business impact analytics for Copilot Studio agents |
-| credential-oversharing-detector | v1.0.0 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
-| cross-solution-integration | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
+| action-confirmation-auditor | v1.0.1 | 1.23 | Step-up confirmation validation for agent actions |
+| agent-365-lifecycle-governance | v1.1.1 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
+| agent-access-monitor | v1.0.2 | 3.8 | Automated detection of overly permissive agent access configurations |
+| agent-communication-restriction-detector | v1.0.1 | 2.17 | Inter-agent communication restriction validation |
+| agent-knowledge-source-scanner | v1.0.2 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
+| agent-registry-automation | v1.0.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
+| agent-observability-foundation | v1.1.1 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
+| agent-sharing-access-restriction-detector | v1.0.4 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
+| audit-compliance-manager | v1.0.2 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
+| coi-testing | v1.0.2 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
+| compliance-dashboard | v1.0.2 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| conditional-access-automation | v1.2.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
+| content-moderation-monitor | v1.0.3 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
+| copilot-studio-analytics | v1.1.1 | 3.2 | Business impact analytics for Copilot Studio agents |
+| credential-oversharing-detector | v1.0.1 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
+| cross-solution-integration | v1.0.2 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.0 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
 | dr-testing-framework | v1.1.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
-| environment-lifecycle-management | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| environment-lifecycle-management | v1.1.3 | 2.1, 2.2, 2.3, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.0.1 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |

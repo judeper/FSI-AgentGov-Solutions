@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "CAA Dataverse SchemaNames use literal underscores (fsi_Policy_Id, fsi_Validation_Time). Logical names are the SchemaNames lowercased including the underscores (fsi_policy_id, fsi_validation_time). This is correct and intentional.",
+    "The export script references fsi_overallstatus but schema defines fsi_Overall_Severity (logical: fsi_overall_severity) as a Picklist. Export filtering needs integer comparison, not string.",
+    "Get-ZoneClassification.ps1 column names (fsi_environment_guid, fsi_zone_classification) need verification against the ELM solution's create_elm_dataverse_schema.py to confirm correct logical names.",
+    "All 9 CA policy templates use v1.0 Graph API schema and include break-glass account exclusions. Templates target Control 1.11 specifically via _metadata.targetControl.",
+    "The CA WhatIf evaluation endpoint (graph.microsoft.com/beta/identity/conditionalAccess/evaluate) is beta-only with no GA commitment."
+  ]
+}

@@ -35,9 +35,9 @@ CONNECTION_REFS = [
     },
     {
         "logical_name": "fsi_cr_http_lifecyclegov",
-        "display_name": "HTTP with Azure AD - ALG",
+        "display_name": "HTTP with Microsoft Entra ID - ALG",
         "connector": "shared_webcontents",
-        "description": "HTTP with Azure AD connector for Microsoft Graph API calls (Agent 365, Lifecycle Workflows, Access Reviews)",
+        "description": "HTTP with Microsoft Entra ID connector for Microsoft Graph API calls (Agent 365, Lifecycle Workflows, Access Reviews)",
     },
     {
         "logical_name": "fsi_cr_powerplatformadmin_lifecyclegov",
@@ -119,7 +119,7 @@ Connection references created:
   - fsi_cr_dataverse_lifecyclegov (Dataverse connector)
   - fsi_cr_teams_lifecyclegov (Teams connector)
   - fsi_cr_approvals_lifecyclegov (Approvals connector)
-  - fsi_cr_http_lifecyclegov (HTTP with Azure AD connector)
+  - fsi_cr_http_lifecyclegov (HTTP with Microsoft Entra ID connector)
   - fsi_cr_powerplatformadmin_lifecyclegov (Power Platform for Admins connector)
 
 These connection references must be bound to actual connections in Power Automate

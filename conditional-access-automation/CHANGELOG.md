@@ -2,6 +2,17 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [1.2.1] - 2026-04-16
+
+### Fixed
+
+- Fixed prohibited compliance language: "ensuring" → "supporting" in README.md
+- Fixed version references in README.md (v1.1.1 → v1.1.2, footer version updated)
+
+### Added
+
+- Created `.ralph-config.json` with domain facts from council review
+
 ## [1.2.0] - 2026-04-02
 
 ### Added

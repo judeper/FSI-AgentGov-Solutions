@@ -31,7 +31,7 @@ Variables consumed by Power Automate flows:
   - fsi_MRM_ValidationSLA_Tier3_Assignment: Tier 3 validator assignment SLA
   - fsi_MRM_ValidationSLA_Tier3_Findings: Tier 3 findings delivery SLA
   - fsi_MRM_ValidationSLA_Tier3_Remediation: Tier 3 remediation SLA
-  - fsi_MRM_TenantId: Azure AD / Entra ID tenant ID
+  - fsi_MRM_TenantId: Microsoft Entra ID / Entra ID tenant ID
   - fsi_MRM_MaterialChangeTextDiffThreshold: Material change text diff threshold
   - fsi_MRM_ValidationApproachingDaysLookahead: Validation due lookahead days
 """
@@ -310,7 +310,7 @@ ENV_VAR_DEFINITIONS = [
         "type": 100000000,  # String
         "default_value": "",
         "description": (
-            "Azure AD / Entra ID tenant ID for "
+            "Microsoft Entra ID / Entra ID tenant ID for "
             "service principal auth."
         ),
     },

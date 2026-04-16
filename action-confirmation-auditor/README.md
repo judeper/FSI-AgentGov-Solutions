@@ -1,6 +1,6 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
@@ -156,6 +156,22 @@ python scripts/create_dataverse_schema.py \
 - [Prerequisites](docs/prerequisites.md) -- Licensing, permissions, and setup requirements
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table and column reference (auto-generated)
 - [Flow Configuration](docs/flow-configuration.md) -- Manual build instructions for Power Automate flows
+
+## Evidence Retention
+
+Financial services organizations should configure Dataverse retention policies to meet regulatory record-keeping requirements:
+
+| Regulation | Minimum Retention | Notes |
+|------------|------------------|-------|
+| **FINRA Rule 4511** | 6 years | Books and records; 3 years readily accessible |
+| **SEC Rule 17a-4** | 6 years (3+3) | 3 years readily accessible + 3 years archival |
+| **SOX Section 802** | 7 years | Audit workpapers |
+
+**Recommended configuration:**
+- Enable Dataverse auditing on `fsi_ActionScanRun`, `fsi_ActionAuditResult`, and `fsi_ActionConfirmationException` tables
+- Configure Dataverse long-term retention (LTR) for a minimum 7-year period to cover all applicable regulations
+- `fsi_ActionScanRun` is OrganizationOwned to prevent user-level deletion; enable admin audit logging for change tracking
+- Export evidence files (via `Export-ActionAuditEvidence.ps1`) to immutable storage (e.g., Azure Blob with WORM policy) for SEC 17a-4(f) non-rewriteable requirements
 
 ## License
 

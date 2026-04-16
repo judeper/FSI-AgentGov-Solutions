@@ -203,6 +203,11 @@ OPTIONSETS = {
             {"Value": 100000012, "Label": {"LocalizedLabels": [{"Label": "Agent Deleted", "LanguageCode": 1033}]}},
             {"Value": 100000013, "Label": {"LocalizedLabels": [{"Label": "Zone Assigned", "LanguageCode": 1033}]}},
             {"Value": 100000014, "Label": {"LocalizedLabels": [{"Label": "CA Policy Validated", "LanguageCode": 1033}]}},
+            {"Value": 100000015, "Label": {"LocalizedLabels": [{"Label": "Feature Flag Skip", "LanguageCode": 1033}]}},
+            {"Value": 100000016, "Label": {"LocalizedLabels": [{"Label": "Activity Data Unavailable", "LanguageCode": 1033}]}},
+            {"Value": 100000017, "Label": {"LocalizedLabels": [{"Label": "Duplicate Request Skipped", "LanguageCode": 1033}]}},
+            {"Value": 100000018, "Label": {"LocalizedLabels": [{"Label": "Deletion Hold Extended", "LanguageCode": 1033}]}},
+            {"Value": 100000019, "Label": {"LocalizedLabels": [{"Label": "Access Review Denied", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_ALG_complianceimpact": {

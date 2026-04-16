@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "PnP.PowerShell 3.0.0+ renamed Get-PnPAzureADGroupMember to Get-PnPEntraIDGroupMember. Always use the current cmdlet name.",
+    "Get-PnPEntraIDGroupMember returns direct members only — nested group membership is not resolved. This is a known limitation documented in troubleshooting.md.",
+    "Item-level permission scanning catches oversharing that site-level scanners miss (Anyone links, per-file external sharing, sensitivity label mismatches). This is the primary value proposition vs generic SharePoint scanners.",
+    "FlexibleLink permission type is scored as LOW risk but may warrant MEDIUM/HIGH treatment depending on tenant sharing policy. Review risk scoring if strict data boundary enforcement is required.",
+    "This solution has no Dataverse integration — scan results are CSV-only. Compliance Dashboard (Control 3.3) integration requires a future create_aks_dataverse_schema.py."
+  ]
+}

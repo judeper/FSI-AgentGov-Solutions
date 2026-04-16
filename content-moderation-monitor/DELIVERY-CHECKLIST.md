@@ -160,7 +160,7 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Baseline updated when moderation level increases (not decreases)
 
 5. **Evidence Export:**
-   - SHA-256 integrity hash ensures tamper detection
+   - SHA-256 integrity hash aids in tamper detection
    - Companion .sha256 file contains hash for verification
    - Use Test-EvidenceIntegrity.ps1 to validate before submitting to auditors
 

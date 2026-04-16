@@ -105,7 +105,7 @@ For production environments, use the [manual setup process](#quick-start) for fu
 - **Maintains** immutable provisioning audit trail for regulatory evidence
 - **Exports** quarterly evidence with SHA-256 integrity hashing
 
-**This is an environment governance solution** - it helps organizations automate environment provisioning while maintaining regulatory compliance for FINRA 4511, SEC 17a-3/4, and SOX 404.
+**This is an environment governance solution** - it helps organizations automate environment provisioning while supporting compliance with FINRA 4511, SEC 17a-3/4, and SOX 404 requirements.
 
 ## Known Limitations
 
@@ -319,7 +319,7 @@ Microsoft has introduced [unified environment types](https://learn.microsoft.com
 | Unified Sandbox Environment | **USE** | Sandbox | Testing, UAT, training, up to 80 AOS instances |
 | Unified Developer Environment | **UDE** | Developer | Single-developer, X++ development, 1 AOS instance |
 
-**Impact on this solution:** The ELM Dataverse schema (`create_dataverse_schema.py`) currently uses the legacy environment type choice values: Production, Sandbox, Developer, Trial, Default. As organizations adopt unified environment types:
+**Impact on this solution:** The ELM Dataverse schema (`create_dataverse_schema.py`) currently uses the environment type choice values: Production, Sandbox, Developer. As organizations adopt unified environment types:
 
 - The `fsi_environmenttype` choice on the `EnvironmentRequest` table may need to be expanded to include UPE, USE, and UDE values
 - Zone classification logic should map UPE → Zone 2/3 (production), USE → Zone 1/2 (sandbox), UDE → Zone 1 (developer)

@@ -10,7 +10,7 @@
     The Dataverse environment URL (e.g., https://your-org.crm.dynamics.com)
 
 .PARAMETER TenantId
-    Azure AD tenant ID. If not specified, uses AZURE_TENANT_ID environment variable.
+    Microsoft Entra ID tenant ID. If not specified, uses AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
     Service principal client ID. If not specified, uses AZURE_CLIENT_ID environment variable.

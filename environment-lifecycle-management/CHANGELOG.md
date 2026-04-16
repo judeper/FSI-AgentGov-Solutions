@@ -2,6 +2,14 @@
 
 All notable changes to the Environment Lifecycle Management solution.
 
+## [1.1.3] - 2026-04-16
+
+### Fixed
+
+- Fixed prohibited compliance language: "maintaining regulatory compliance" → "supporting compliance with" in README.md
+- Fixed prohibited compliance language: "ensures" → "helps prevent" in dataverse-schema.md
+- Fixed incorrect environment type claim: removed "Trial, Default" from README (schema only defines Sandbox, Production, Developer)
+
 ## [1.1.2] - 2026-01-31
 
 ### Changed

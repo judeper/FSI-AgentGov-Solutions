@@ -772,7 +772,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Management must establish and maintain adequate internal controls to ensure reliability of financial reporting, including IT controls for session management.
 
 **ITE Support:**
-- Zone-based policy enforcement ensures financial production environments (Zone 3) meet 60-minute maximum timeout
+- Zone-based policy enforcement helps verify financial production environments (Zone 3) meet 60-minute maximum timeout
 - Immutable compliance records provide audit trail for internal control effectiveness
 - Daily monitoring enables timely detection of control deficiencies
 
@@ -781,7 +781,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules, the Exchange Act, and applicable SEC rules, including records of technology controls and compliance monitoring.
 
 **ITE Support:**
-- Continuous monitoring ensures inactivity timeout controls remain effective
+- Continuous monitoring helps verify inactivity timeout controls remain effective
 - Non-compliant environment detection prevents unauthorized access through unattended workstations
 - Email alerting enables timely supervisory review and remediation
 
@@ -800,7 +800,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 **ITE Support:**
 - Validates inactivity timeout termination is enabled across all environments
-- Ensures termination occurs within regulatory timeframes (≤ 120 minutes)
+- Supports termination within regulatory timeframes (≤ 120 minutes)
 - Provides evidence of automated session termination enforcement
 
 ---

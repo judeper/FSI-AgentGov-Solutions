@@ -171,7 +171,7 @@ copilot-studio-analytics/
 | Tier 2 queries return no data | Tier 2 sync not yet implemented | Tier 2 transcript parsing is planned for a future release; current sync provides Tier 1 data only |
 | Autonomous agent AAH shows zero | Agent type classification failed | Verify botcomponent records exist with componenttypename for the agent |
 | Workbook shows "No data" | Time range too narrow or sync not yet run | Expand time range; verify sync completed via `validate_telemetry.py` |
-| Duplicate CopilotSessionOutcome events | Watermark table corrupted or reset | Check watermark table; re-sync with `--full-sync` flag to rebuild |
+| Duplicate CopilotSessionOutcome events | Watermark table corrupted or reset | Check watermark table; delete watermark records from fsi_csasyncwatermarks and re-run sync to rebuild |
 
 ## Related Controls
 

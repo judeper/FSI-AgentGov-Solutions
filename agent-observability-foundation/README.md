@@ -236,7 +236,7 @@ agent-observability-foundation/
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| Diagnostic settings export shows no data | ADLS Gen2 hierarchical namespace enabled | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
+| Diagnostic settings export shows no data | StorageV2 (with immutability policies) hierarchical namespace enabled | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
 | Queries return "no data" after 90 days | Only `retentionInDays` set, not `totalRetentionInDays` | Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full interactive access |
 | WORM policy locked production data permanently | WORM applied via automation script | Never automate WORM - use manual `worm-configuration.md` steps with explicit confirmation |
 | Adaptive sampling not reducing costs | Python SDK does not support adaptive sampling | Configure ingestion sampling at workspace level, not SDK level; see `cost-tuning-guide.md` |
@@ -251,7 +251,6 @@ This solution supports the following FSI-AgentGov framework controls:
 - [Control 1.7: Comprehensive Audit Logging and Compliance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) - Primary evidence via Application Insights customEvents
 - [Control 3.2: Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) - Session metrics and interaction analytics
 - [Control 2.9: Agent Performance Monitoring and Optimization](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring-and-optimization.md) - Latency telemetry foundation
-- [Control 1.6: Microsoft Purview DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) - RBAC separation for content access
 - [Control 2.8: Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md) - Operational vs compliance access paths
 
 ## Version

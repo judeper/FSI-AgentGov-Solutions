@@ -43,6 +43,7 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_RiskLevel | String(50) | Yes | Zone-based risk level (hardcoded in v1.0) |
 | fsi_ConfirmationStatus | Picklist (fsi_ACA_confirmationstatus) | Yes | Whether step-up confirmation is present/missing/partial |
 | fsi_ViolationStatus | Picklist (fsi_ACA_violationstatus) | Yes | Current violation lifecycle status |
+| fsi_ViolationType | String(200) | No | Violation type identifier (e.g., MissingConfirmation, MissingUserDefinedActionMessage) |
 | fsi_Severity | String(50) | Yes | Violation severity (Critical/High/Medium/Warning) |
 | fsi_RegulatoryContext | String(2000) | No | FINRA/SOX/GLBA regulatory impact context |
 | fsi_DetectedAt | DateTime | Yes | When violation was detected |
@@ -66,6 +67,9 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_ApprovedAt | DateTime | Yes | When exception was approved |
 | fsi_ExpiresAt | DateTime | No | Exception expiration date (optional) |
 | fsi_Justification | Memo(5000) | No | Business justification for the exception |
+| fsi_RejectedBy | String(200) | No | UPN of administrator who rejected the exception |
+| fsi_ApprovalNotes | Memo(5000) | No | Approver comments on approval decision |
+| fsi_RejectionNotes | Memo(5000) | No | Approver comments on rejection decision |
 | fsi_IsActive | Boolean (default: true) | Yes | Whether this exception is currently active |
 
 ### Action Scan Run (`fsi_ActionScanRun`)
