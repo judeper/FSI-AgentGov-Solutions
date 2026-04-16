@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.1] - 2026-04-16
+
+### Updated
+
+- Product name: "Azure AD" / "HTTP with Azure AD" → "Microsoft Entra ID" / "HTTP with Microsoft Entra ID" across Python scripts
+
+### Added
+
+- Created `.ralph-config.json` with domain facts from council review
+
+---
+
 ## [1.0.0] - March 2026
 
 ### Added

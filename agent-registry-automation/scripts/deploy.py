@@ -51,7 +51,7 @@ Post-Deployment Steps
    - fsi_cr_dataverse_agentregistry  \u2192 Select Dataverse connection
    - fsi_cr_teams_agentregistry      \u2192 Select Teams connection
    - fsi_cr_office365_agentregistry  \u2192 Select Office 365 connection
-   - fsi_cr_http_agentregistry       \u2192 Select HTTP with Azure AD connection
+   - fsi_cr_http_agentregistry       \u2192 Select HTTP with Microsoft Entra ID connection
 
 5. VERIFY \u2014 Run dry-run to confirm deployment:
    python deploy.py --dry-run [--interactive | --client-id ...]

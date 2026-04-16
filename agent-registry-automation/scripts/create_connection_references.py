@@ -3,7 +3,7 @@
 
 Deploys four connection references that Power Automate flows use to
 interact with Dataverse, Microsoft Teams, Office 365, and HTTP with
-Azure AD endpoints. All operations are idempotent — safe to re-run.
+Microsoft Entra ID endpoints. All operations are idempotent — safe to re-run.
 
 Connection References:
   - fsi_cr_dataverse_agentregistry: Core data operations
@@ -55,10 +55,10 @@ CONNECTION_REF_DEFINITIONS = [
     },
     {
         "logical_name": "fsi_cr_http_agentregistry",
-        "display_name": "HTTP with Azure AD - Agent Registry Automation",
+        "display_name": "HTTP with Microsoft Entra ID - Agent Registry Automation",
         "connector_id": "shared_webcontents",
         "description": (
-            "HTTP with Azure AD connection for Agent Registry Automation. "
+            "HTTP with Microsoft Entra ID connection for Agent Registry Automation. "
             "Used for Power Platform Bots API calls and Microsoft Graph "
             "Agent Registry API calls."
         ),
@@ -116,7 +116,7 @@ def create_connection_references(
     """Deploy all ARA connection references to Dataverse.
 
     Creates four connection references for Dataverse, Teams, Office 365,
-    and HTTP with Azure AD connectors. All operations are idempotent —
+    and HTTP with Microsoft Entra ID connectors. All operations are idempotent —
     safe to re-run.
 
     Args:

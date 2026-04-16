@@ -1,0 +1,8 @@
+{
+  "domainFacts": [
+    "There are significant schema-script mismatches in this solution. The create_dataverse_schema.py is the source of truth. Scripts and flow docs reference different column names (e.g., fsi_botframeworkendpoint vs fsi_agentendpointurl, fsi_requeststatus vs fsi_approvalstatus). Full alignment is needed.",
+    "Environment variable and connection reference names in create_*_environment_variables.py and create_*_connection_references.py do not match what README/flow-configuration.md reference. Validate actual deployed names against script output.",
+    "The Agent Registry Graph API path (agentRegistrations vs agentRegistry/agentInstances) is pre-GA and may change. Verify against current Microsoft Learn docs before deployment.",
+    "HTTP with Microsoft Entra ID (preauthorized) is the current connector name — not 'HTTP with Azure AD'."
+  ]
+}
