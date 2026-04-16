@@ -18,10 +18,10 @@
     fsi_complianceevidence table for import via Power Automate or Dataverse API.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Defaults to AZURE_TENANT_ID environment variable.
+    Microsoft Entra ID tenant ID. Defaults to AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Defaults to AZURE_CLIENT_ID environment variable.
+    Microsoft Entra ID application (client) ID. Defaults to AZURE_CLIENT_ID environment variable.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -50,7 +50,7 @@
     https://dod-graph.microsoft.us (DoD).
 
 .PARAMETER AuthBaseUrl
-    Azure AD token endpoint base URL. Supports sovereign clouds:
+    Microsoft Entra ID token endpoint base URL. Supports sovereign clouds:
     https://login.microsoftonline.com (commercial, default),
     https://login.microsoftonline.us (GCC High).
 

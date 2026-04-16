@@ -796,7 +796,7 @@ Provide these instructions in the template:
    For deployment instructions, see: docs/deployment-checklist.md
    ```
 4. Check **Include sample data in the template:** `No` (unchecked)
-   - Ensures template is lightweight
+   - Helps keep the template lightweight
    - Customers connect to their own environment
 5. Click **OK**
 6. Save as: `ComplianceDashboard.pbit`
