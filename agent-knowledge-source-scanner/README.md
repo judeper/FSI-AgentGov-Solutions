@@ -212,6 +212,16 @@ The CSV report includes these columns:
 | [1.4 - Data Boundary Enforcement](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-data-boundary-enforcement.md) | Enforce data boundaries for agent access | Related |
 | [1.5 - DLP Policy Application](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-dlp-policy-application.md) | Apply DLP policies to agent data access | Related |
 
+## Regulatory Context
+
+| Regulation | Relevance |
+|------------|-----------|
+| **GLBA 501(b)** | Information security safeguards for customer data accessed through agent knowledge sources |
+| **FINRA 4511** | Record-keeping requirements for access control assessments and evidence of permission reviews |
+| **SEC 17a-3/4** | Retention of scan evidence demonstrating periodic access validation |
+
+This solution supports compliance with these regulations by providing auditable evidence that agent knowledge source permissions have been reviewed for oversharing. Organizations should store scan output CSV files on immutable media (e.g., Azure Blob Storage with WORM policy) to meet SEC 17a-4(f) non-rewritable storage requirements.
+
 ## Known Limitations
 
 | Limitation | Description | Workaround |

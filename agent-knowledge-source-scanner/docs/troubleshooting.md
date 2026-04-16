@@ -26,7 +26,7 @@ Common issues and resolutions for the Agent Knowledge Source Scanner.
 |-------|-------|------------|
 | "Failed to resolve group '...'" warning | The `-AgentUserGroupId` GUID does not exist or the user lacks group read permissions | Verify the group object ID in Entra ID; the scanning user needs `GroupMember.Read.All` or the Entra ID Reader role |
 | "No agent user scope defined" warning | Neither `-AgentUserGroupId` nor `-AgentUserGroupMembers` was provided | Scope comparison is optional; provide one of these parameters to enable out-of-scope detection and CRITICAL/LOW risk scoring |
-| Scope comparison misses some users | Nested group membership is not fully resolved | `Get-PnPAzureADGroupMember` returns direct members only; flatten nested groups manually or provide the full UPN list via `-AgentUserGroupMembers` |
+| Scope comparison misses some users | Nested group membership is not fully resolved | `Get-PnPEntraIDGroupMember` returns direct members only; flatten nested groups manually or provide the full UPN list via `-AgentUserGroupMembers` |
 
 ## Large Library Handling
 
@@ -44,7 +44,7 @@ Common issues and resolutions for the Agent Knowledge Source Scanner.
 | "The term 'Connect-PnPOnline' is not recognized" | PnP.PowerShell module not installed or not imported | Run `Install-Module PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser` |
 | Module version conflict | Multiple PnP.PowerShell versions installed | Run `Get-Module PnP.PowerShell -ListAvailable` to check; remove older versions with `Uninstall-Module PnP.PowerShell -RequiredVersion <old>` |
 | "Requires PowerShell 7.0" error | Script launched from Windows PowerShell 5.1 | Use `pwsh` (PowerShell 7+) instead of `powershell.exe`; install from [PowerShell GitHub releases](https://github.com/PowerShell/PowerShell/releases) |
-| `Get-PnPAzureADGroupMember` not found | Older PnP.PowerShell version or PnP module rename | In PnP.PowerShell 2.x, the cmdlet name may vary; update to 2.5.0+ where the cmdlet is available |
+| `Get-PnPEntraIDGroupMember` not found | Older PnP.PowerShell version | Update to PnP.PowerShell 3.0.0+ where the cmdlet is available. In older versions this was `Get-PnPAzureADGroupMember`. |
 
 ## Configuration Issues
 

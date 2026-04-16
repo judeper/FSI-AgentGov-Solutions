@@ -261,7 +261,7 @@ function Get-AgentUserScope {
 
     if ($GroupId) {
         try {
-            $groupMembers = Get-PnPAzureADGroupMember -Identity $GroupId
+            $groupMembers = Get-PnPEntraIDGroupMember -Identity $GroupId
             foreach ($member in $groupMembers) {
                 if ($member.UserPrincipalName) {
                     [void]$scope.Add($member.UserPrincipalName)
