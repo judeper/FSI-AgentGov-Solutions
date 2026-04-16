@@ -16,7 +16,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | action-confirmation-auditor | v1.0.3 | 1.23 | Step-up confirmation validation for agent actions |
 | agent-365-lifecycle-governance | v1.1.2 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.0.3 | 3.8 | Automated detection of overly permissive agent access configurations |
-| agent-communication-restriction-detector | v1.0.1 | 2.17 | Inter-agent communication restriction validation |
+| agent-communication-restriction-detector | v1.0.2 | 2.17 | Inter-agent communication restriction validation |
 | agent-knowledge-source-scanner | v1.0.3 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v1.0.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.1.1 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
