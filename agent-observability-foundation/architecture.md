@@ -83,7 +83,7 @@ The Log Analytics workspace serves as the unified query surface for telemetry da
 
 **Configuration Notes:**
 - Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full 2-year interactive access
-- Archive retention beyond 730 days requires ADLS Gen2 export (configured via Diagnostic Settings)
+- Archive retention beyond 730 days requires StorageV2 (with immutability policies) export (configured via Diagnostic Settings)
 
 **Framework Control Reference:** Supports Control 3.2 (Usage Analytics and Activity Monitoring) by providing real-time query capability for session metrics, message volumes, and interaction patterns.
 
@@ -97,7 +97,7 @@ The Log Analytics workspace serves as the unified query surface for telemetry da
 The storage account receives telemetry exports via Azure Monitor Diagnostic Settings. Data is stored in JSON format organized by date hierarchy.
 
 **Critical Configuration:**
-- Do NOT enable hierarchical namespace - Diagnostic Settings export does not support ADLS Gen2 with hierarchical namespace enabled
+- Do NOT enable hierarchical namespace - Diagnostic Settings export does not support StorageV2 (with immutability policies) with hierarchical namespace enabled
 - WORM policy configuration is manual (see [docs/worm-configuration.md](docs/worm-configuration.md)) to prevent accidental immutable lockdown
 
 **Framework Control Reference:** Helps meet SEC 17a-4 long-term retention requirements when configured with WORM policy for immutable storage.
@@ -112,7 +112,7 @@ The ARM template (`templates/diagnostic-settings.json`) additionally exports `Ap
 
 **Retention Policy:** Configured at storage account level (separate from Log Analytics retention)
 
-Diagnostic Settings establish the export pipeline from Application Insights to ADLS Gen2 storage. This enables retention periods beyond the 730-day Log Analytics maximum.
+Diagnostic Settings establish the export pipeline from Application Insights to StorageV2 (with immutability policies) storage. This enables retention periods beyond the 730-day Log Analytics maximum.
 
 ### RBAC Separation
 
@@ -121,7 +121,7 @@ The architecture establishes two distinct access paths to support separation of 
 | Data Path | Role | Scope | Access | Purpose |
 |-----------|------|-------|--------|---------|
 | Operational | Monitoring Reader | Resource Group | Log Analytics queries | Real-time monitoring, troubleshooting |
-| Compliance | Storage Blob Data Reader | Storage Account | ADLS Gen2 blob access | Audit evidence retrieval, regulatory examination |
+| Compliance | Storage Blob Data Reader | Storage Account | StorageV2 (with immutability policies) blob access | Audit evidence retrieval, regulatory examination |
 
 **Framework Control Reference:** Supports Control 1.6 (DSPM for AI) separation of duties by isolating operational monitoring from compliance audit access. Also supports Control 2.8 (Access Control and Segregation of Duties) by enforcing distinct roles for different data access patterns.
 
@@ -130,10 +130,10 @@ The architecture establishes two distinct access paths to support separation of 
 | Data Path | Role Assignment | Resource Access | Primary Use Case |
 |-----------|-----------------|-----------------|------------------|
 | Operational Monitoring | Monitoring Reader | Log Analytics Workspace | SOC analysts - real-time queries, alerts, incident response |
-| Compliance Audit | Storage Blob Data Reader | ADLS Gen2 Storage Account | Compliance officers - audit evidence, regulatory examination |
+| Compliance Audit | Storage Blob Data Reader | StorageV2 (with immutability policies) Storage Account | Compliance officers - audit evidence, regulatory examination |
 | Infrastructure Admin | Contributor | Resource Group | Platform operations - deployment, configuration changes |
 
-This separation ensures that:
+This separation is designed so that:
 1. SOC analysts can query telemetry without accessing compliance archives
 2. Compliance officers can retrieve audit evidence without modifying operational settings
 3. Changes to telemetry infrastructure require elevated permissions with audit trail
@@ -143,12 +143,12 @@ This separation ensures that:
 | Tier | Storage Location | Retention Period | Query Access | Primary Use Case |
 |------|------------------|------------------|--------------|------------------|
 | Hot | Log Analytics interactive | 730 days | Real-time KQL | Daily operations, incident response, performance monitoring |
-| Archive | ADLS Gen2 export | 6+ years (with WORM) | Search jobs / blob access | SEC 17a-4 audit, regulatory examination, legal hold |
+| Archive | StorageV2 (with immutability policies) export | 6+ years (with WORM) | Search jobs / blob access | SEC 17a-4 audit, regulatory examination, legal hold |
 
 **Retention Configuration Notes:**
 - Log Analytics 730-day retention satisfies SEC 17a-4(b)(4) 2-year requirement for interactive access
-- ADLS Gen2 with WORM policy satisfies SEC 17a-4(a) 6-year requirement for immutable archival
-- Cohasset has validated ADLS Gen2 immutable storage for SEC 17a-4(f) compliance
+- StorageV2 (with immutability policies) with WORM policy satisfies SEC 17a-4(a) 6-year requirement for immutable archival
+- Cohasset has validated StorageV2 (with immutability policies) immutable storage for SEC 17a-4(f) compliance
 
 ## Delivered Phases
 
@@ -195,7 +195,7 @@ Phase 4 will deliver executive reporting via Power BI:
 
 | Regulation | Requirement | How This Architecture Supports |
 |------------|-------------|-------------------------------|
-| **SEC 17a-4** | 2-year accessibility (b)(4), 6-year retention (a), immutable storage (f) | 730-day Log Analytics + ADLS Gen2 export with WORM policy capability |
+| **SEC 17a-4** | 2-year accessibility (b)(4), 6-year retention (a), immutable storage (f) | 730-day Log Analytics + StorageV2 (with immutability policies) export with WORM policy capability |
 | **FINRA 4511** | Books and records retention, audit trail | Application Insights customEvents with full interaction capture |
 | **SOX 302/404** | Internal controls documentation, evidence preservation | Immutable ProvisioningLog, quarterly evidence export |
 | **SR 11-7** | Model risk management, ongoing monitoring | Telemetry foundation for performance monitoring and model validation |

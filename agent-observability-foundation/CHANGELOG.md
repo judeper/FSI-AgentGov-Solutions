@@ -2,6 +2,19 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.1.1] — 2026-04-16
+
+### Fixed
+
+- Fixed FSI language violation: "ensures that" → "is designed so that" in architecture.md
+- Removed Control 1.6 from Related Controls (not in official catalog for this solution)
+- Corrected storage terminology: "ADLS Gen2" → "StorageV2 (with immutability policies)" where HNS-disabled StorageV2 is required
+- Removed test artifact (test_write.txt) from solution root
+
+### Added
+
+- Created `.ralph-config.json` with domain facts from council review
+
 ## [1.1.0] — February 2026
 
 ### Added
