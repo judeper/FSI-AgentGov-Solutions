@@ -41,7 +41,7 @@ git rev-parse --show-toplevel
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Inter-agent communication restriction validation per zone routing policy | PowerShell/Python | v1.0.2 |
 | [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.0.3 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.1.1 |
-| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v1.0.1 |
+| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v1.0.2 |
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.4 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.2 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.2 |
