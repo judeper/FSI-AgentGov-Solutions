@@ -126,7 +126,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Trigger filters:
      - `fsi_violationstatus eq 100000000` (Open violations only)
      - `fsi_remediatedat eq null` (Not yet remediated)
-   - **Concurrency Control:** In the trigger settings, set **Degree of Parallelism** to `1` (sequential processing). The Dataverse trigger defaults to concurrency degree 50. If a Detector scan creates multiple violation types for the same agent (e.g., ORG_WIDE_SHARING + EXCESSIVE_INDIVIDUAL), parallel flow instances could race on the same agent's sharing configuration, causing inconsistent remediation. Sequential processing ensures each violation is fully remediated before the next begins.
+   - **Concurrency Control:** In the trigger settings, set **Degree of Parallelism** to `1` (sequential processing). The Dataverse trigger defaults to concurrency degree 50. If a Detector scan creates multiple violation types for the same agent (e.g., ORG_WIDE_SHARING + EXCESSIVE_INDIVIDUAL), parallel flow instances could race on the same agent's sharing configuration, causing inconsistent remediation. Sequential processing helps confirm each violation is fully remediated before the next begins.
 
 3. **Initialize Dry-Run Mode**
    - Get environment variable: `fsi_UASD_RemediationDryRun`
@@ -315,7 +315,7 @@ Trigger filters:
 Entity: fsi_SharingException
 Trigger filters: fsi_exceptionstatus eq 100000000 (Pending only)
 ```
-> **Note:** The `fsi_exceptionstatus` field has no default value in the schema (`ApplicationRequired`, no `DefaultValue`). The Canvas App and any API callers must explicitly set it to Pending (100000000) when creating records. This trigger filter ensures only Pending records activate the workflow.
+> **Note:** The `fsi_exceptionstatus` field has no default value in the schema (`ApplicationRequired`, no `DefaultValue`). The Canvas App and any API callers must explicitly set it to Pending (100000000) when creating records. This trigger filter restricts activation to only Pending records the workflow.
 
 ---
 
