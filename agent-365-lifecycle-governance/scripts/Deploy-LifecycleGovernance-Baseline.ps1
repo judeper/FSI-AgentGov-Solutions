@@ -14,6 +14,7 @@
 
 .PARAMETER DataverseEnvironmentUrl
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
+    Reserved for future Dataverse schema validation during baseline deployment.
 
 .PARAMETER DefaultSponsorUPN
     Fallback sponsor UPN for agents without identified owners.
@@ -90,6 +91,10 @@ if (-not $DryRun) {
     $baseline | ConvertTo-Json -Depth 5 | Write-Host
 }
 
+# DataverseEnvironmentUrl is reserved for future Dataverse schema validation.
+# When Dataverse validation is implemented, it will verify that the ALG tables
+# and columns exist in the target environment before baseline population.
+Write-Host "Dataverse environment (for future validation): $DataverseEnvironmentUrl" -ForegroundColor DarkGray
 Write-Host "Review unsponsored agents and set IsAgent365LifecycleEnabled to 'true' to activate flows." -ForegroundColor Yellow
 Write-Host "Confirm DefaultSponsorUPN environment variable is set to: $DefaultSponsorUPN" -ForegroundColor Cyan
 

@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.1 — GA (Agent 365 GA: May 1, 2026)
+> **Status:** v1.1.2 — GA (Agent 365 GA: May 1, 2026)
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 
@@ -186,7 +186,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Version
 
-1.1.1
+1.1.2
 
 ## License
 

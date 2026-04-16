@@ -2,6 +2,25 @@
 
 All notable changes to the Agent 365 Lifecycle Governance solution.
 
+## [1.1.2] - 2026-04-08
+
+### Fixed
+
+- flow-configuration.md: replaced all picklist string labels with integer values matching `fsi_ALG_*` option sets (e.g., `'Active'` → `100000001`, `'In Progress'` → `100000001`)
+- flow-configuration.md: replaced non-existent columns — `fsi_eventdate` → `fsi_timestamp`, `fsi_correlationid` → `fsi_relatedrecordid`, `fsi_reviewcompleteddate` → `fsi_decisiondate`, `fsi_reviewoutcome` → `fsi_certifierdecision`
+- flow-configuration.md: replaced `fsi_agentid` on child tables (SponsorAssignment, AccessReview, DeactivationRequest) with `fsi_AgentLifecycleRecordLookup@odata.bind` lookup binding
+- flow-configuration.md: moved `fsi_sponsorupn` on compliance event table into `fsi_eventdetails` JSON
+- flow-configuration.md: replaced `fsi_agentname` on DeactivationRequest with `fsi_name`
+- flow-configuration.md: added missing required fields — `fsi_sponsordisplayname`, `fsi_assignedby`, `fsi_AgentLifecycleRecordLookup@odata.bind` on SponsorAssignment; `fsi_name`, `fsi_triggeredby`, `fsi_timestamp` on LifecycleComplianceEvent; `fsi_name`, `fsi_zonecadence`, `fsi_AgentLifecycleRecordLookup@odata.bind` on AccessReview; `fsi_name`, `fsi_AgentLifecycleRecordLookup@odata.bind` on DeactivationRequest
+- flow-configuration.md: corrected event type values — `"Feature Flag Skip"` → Zone Assigned with detail in fsi_eventdetails, `"Access Review Created"` → Access Review Started, `"Access Review Denied"` → Access Review Completed with certifier decision, `"Activity Data Unavailable"` → Inactivity Detected with detail, `"Duplicate Request Skipped"` → Deactivation Requested with detail, `"Agent Deactivated"` → Agent Disabled, `"Sponsor Reassigned"` → Sponsor Assigned with detail, `"Deletion Hold Extended"` → Deactivation Approved with detail
+- flow-configuration.md: added `fsi_disabledate` to Flow 4 Step 5c deactivation approval update
+- create_alg_dataverse_schema.py: replaced "Immutable event log" with "Append-only event log" for fsi_LifecycleComplianceEvent description
+- dataverse-schema.md: replaced "Immutable event log" with "Append-only event log"
+- DELIVERY-CHECKLIST.md: replaced "Immutable compliance event records" with "Append-only compliance event records (requires no-delete security roles)"
+- Deploy-LifecycleGovernance-Baseline.ps1: documented `DataverseEnvironmentUrl` parameter as reserved for future Dataverse validation
+- canvas-app-guide.md: corrected "Informational" to "None" in compliance impact dropdown to match fsi_ALG_complianceimpact option set
+- Updated version footers in DELIVERY-CHECKLIST.md, canvas-app-guide.md, power-bi-dashboard.md, troubleshooting.md to v1.1.1
+
 ## [1.1.1] - 2026-04-15
 
 ### Fixed

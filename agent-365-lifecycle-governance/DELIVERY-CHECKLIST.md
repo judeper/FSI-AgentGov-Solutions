@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance — Delivery Checklist
 
-**Version:** v1.1.0
+**Version:** v1.1.1
 **Solution:** Agent 365 Lifecycle Governance
 
 Pre-deployment validation and post-deployment verification tasks. Complete each phase in order.
@@ -106,7 +106,7 @@ Pre-deployment validation and post-deployment verification tasks. Complete each 
   - Weekly: Compliance event volume and anomaly review
 - [ ] Confirm regulatory record retention:
   - SEC 17a-3/4: 7-year retention on compliance event table (LTR)
-  - FINRA 4511: Immutable compliance event records
+  - FINRA 4511: Append-only compliance event records (requires no-delete security roles)
 
 ---
 
@@ -148,5 +148,5 @@ Do NOT include these repository management files:
 
 ---
 
-**Package Version:** v1.1.0
+**Package Version:** v1.1.1
 **Solution:** Agent 365 Lifecycle Governance

@@ -10,7 +10,7 @@
 | fsi_SponsorAssignment | fsi_sponsorassignment | Sponsor assignment history for agent lifecycle tracking | fsi_sponsorupn |
 | fsi_AccessReview | fsi_accessreview | Access review records for agent lifecycle governance | fsi_name |
 | fsi_DeactivationRequest | fsi_deactivationrequest | Deactivation approval requests for agent lifecycle management | fsi_name |
-| fsi_LifecycleComplianceEvent | fsi_lifecyclecomplianceevent | Immutable event log for agent lifecycle compliance auditing | fsi_name |
+| fsi_LifecycleComplianceEvent | fsi_lifecyclecomplianceevent | Append-only event log for agent lifecycle compliance auditing | fsi_name |
 
 ## Columns
 
