@@ -301,10 +301,6 @@ function Get-ACRDSkillRegistration {
             }
             $filter += " and fsi_agentid eq '$AgentId'"
         }
-        if ($ActiveOnly) {
-            $filter += " and fsi_isactive eq true"
-        }
-
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_agentskillregistrations?" +
                "`$filter=$filter&`$orderby=createdon desc"
 
@@ -323,13 +319,13 @@ function Get-ACRDSkillRegistration {
         }
 
         return $allRecords | ForEach-Object {
-            # Convert picklist integers back to zone strings
-            $sourceZoneValue = $_.fsi_sourcezone
+            # Convert picklist integer back to zone string
+            $sourceZoneValue = $_.fsi_zone
             $sourceZoneName = if ($null -ne $sourceZoneValue -and $script:IntToZone.ContainsKey([int]$sourceZoneValue)) {
                 $script:IntToZone[[int]$sourceZoneValue]
             } else { 'Unknown' }
 
-            $targetZoneValue = $_.fsi_targetzone
+            $targetZoneValue = $_.fsi_zone
             $targetZoneName = if ($null -ne $targetZoneValue -and $script:IntToZone.ContainsKey([int]$targetZoneValue)) {
                 $script:IntToZone[[int]$targetZoneValue]
             } else { 'Unknown' }
@@ -348,8 +344,6 @@ function Get-ACRDSkillRegistration {
                 TargetEnvironmentId   = $_.fsi_targetenvironmentid
                 TargetZone            = $targetZoneName
                 ManifestUrl           = $_.fsi_manifesturl
-                OwnerId               = $_.fsi_ownerid
-                IsActive              = $_.fsi_isactive
                 CapturedAt            = $_.fsi_capturedat
             }
         }

@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-CommRestrictionCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -94,7 +94,7 @@ function Test-CommRestrictionCompliance {
 
     .PARAMETER PersistResults
         When specified with -DataverseUrl, writes scan summary to
-        fsi_commscanruns and individual violations to
+        fsi_commscanrun and individual violations to
         fsi_agentcommviolations. Requires active Dataverse connection.
 
     .PARAMETER Top

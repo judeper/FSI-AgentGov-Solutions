@@ -21,7 +21,7 @@
 
     ACRD drift detection operates at the skill registration level and compares
     current agent-to-agent communication routes against the previous scan's
-    snapshot stored in fsi_commscanruns.fsi_summaryjson. It classifies drift by
+    snapshot stored in fsi_commscanrun.fsi_summaryjson. It classifies drift by
     direction (Weakened, Strengthened, Changed) based on zone rank changes for
     three drift types: NewRoute, RemovedRoute, and TargetZoneChanged.
 
@@ -91,7 +91,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 
@@ -307,7 +307,7 @@ try {
 
     # Calculate summary from scan results
     $totalSkills = $scanResult.Count
-    $uniqueAgents = @($scanResult | Select-Object -Property CallingAgentId -Unique).Count
+    $uniqueAgents = @($scanResult | Select-Object -Property AgentId -Unique).Count
     $uniqueEnvs = @($scanResult | Select-Object -Property EnvironmentId -Unique).Count
     $environmentNameList = ($scanResult | Select-Object -Property EnvironmentDisplayName -Unique |
         ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
@@ -360,7 +360,7 @@ try {
                     # TargetAgentName, SourceZone, TargetZone, EnvironmentId, EnvironmentName
                     if ($previousSummary.SkillSnapshot) {
                         foreach ($snap in $previousSummary.SkillSnapshot) {
-                            # Key: CallingAgentId->TargetAgentId::SkillName (unique per route)
+                            # Key: AgentId->TargetAgentId::SkillName (unique per route)
                             $snapKey = "$($snap.AgentId)->$($snap.TargetAgentId)::$($snap.SkillName)"
                             $previousSkillMap[$snapKey] = $snap
                         }
@@ -397,7 +397,7 @@ try {
     # Build current skill route map
     $currentSkillMap = @{}
     foreach ($skill in $scanResult) {
-        $key = "$($skill.CallingAgentId)->$($skill.TargetAgentId)::$($skill.SkillName)"
+        $key = "$($skill.AgentId)->$($skill.TargetAgentId)::$($skill.SkillName)"
         $currentSkillMap[$key] = $skill
     }
 
@@ -414,8 +414,8 @@ try {
                 $driftDetails += [PSCustomObject]@{
                     DriftType       = 'NewRoute'
                     RouteKey        = $key
-                    AgentId         = $current.CallingAgentId
-                    AgentName       = $current.CallingAgentName
+                    AgentId         = $current.AgentId
+                    AgentName       = $current.AgentName
                     SkillName       = $current.SkillName
                     TargetAgentId   = $current.TargetAgentId
                     TargetAgentName = $current.TargetAgentName
@@ -468,8 +468,8 @@ try {
                     $driftDetails += [PSCustomObject]@{
                         DriftType       = 'TargetZoneChanged'
                         RouteKey        = $key
-                        AgentId         = $current.CallingAgentId
-                        AgentName       = $current.CallingAgentName
+                        AgentId         = $current.AgentId
+                        AgentName       = $current.AgentName
                         SkillName       = $current.SkillName
                         TargetAgentId   = $current.TargetAgentId
                         TargetAgentName = $current.TargetAgentName
@@ -497,8 +497,8 @@ try {
     $violations = @()
     foreach ($v in $violationResults) {
         $violations += [PSCustomObject]@{
-            CallingAgentId      = $v.CallingAgentId
-            CallingAgentName    = $v.CallingAgentName
+            AgentId             = $v.AgentId
+            AgentName           = $v.AgentName
             TargetAgentId       = $v.TargetAgentId
             TargetAgentName     = $v.TargetAgentName
             SkillName           = $v.SkillName

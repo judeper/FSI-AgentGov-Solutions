@@ -69,7 +69,7 @@
     Valid DirectionType values: OneWay, Bidirectional
     The combination of SourceZone + TargetZone + DirectionType is the idempotency key.
 
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
