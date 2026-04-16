@@ -14,6 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime
+import logging
 from typing import Dict, List, Optional
 
 try:
@@ -261,7 +262,6 @@ class COITestRunner:
                 print(f"    Input: {json.dumps(scenario['input'], indent=2)}")
 
             # FIXME: No agent interaction implemented — test cannot validate COI behavior
-            import logging
             logging.warning(
                 "COI test '%s' skipped: Direct Line API integration not yet implemented",
                 scenario["id"]
@@ -278,6 +278,7 @@ class COITestRunner:
 
     def run_tests(self, category: Optional[str] = None, verbose: bool = False) -> List[Dict]:
         """Run all tests for specified category."""
+        self.results = []
         scenarios = self.get_scenarios(category)
         print(f"\nRunning {len(scenarios)} test scenarios...")
 
@@ -287,6 +288,7 @@ class COITestRunner:
             status_color = {
                 "PASS": "\033[92m",  # Green
                 "FAIL": "\033[91m",  # Red
+                "SKIPPED": "\033[96m",  # Cyan
                 "WARN": "\033[93m",  # Yellow
                 "ERROR": "\033[91m"  # Red
             }.get(result["status"], "")
@@ -342,7 +344,7 @@ class COITestRunner:
         elif format == "html":
             html = "<html><body><h1>COI Test Results</h1>"
             html += f"<p>Execution Time: {datetime.utcnow().isoformat()}</p>"
-            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Warn: {warnings} | Error: {errors}</p>"
+            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Skipped: {skipped} | Warn: {warnings} | Error: {errors}</p>"
             html += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
             for r in self.results:
                 html += f"<tr><td>{r.get('scenario_id','')} - {r.get('scenario_name','')}</td>"
@@ -362,6 +364,7 @@ Total Scenarios: {len(self.results)}
 Results:
   PASS:    {passed}
   FAIL:    {failed}
+  SKIPPED: {skipped}
   WARN:    {warnings}
   ERROR:   {errors}
 
