@@ -30,7 +30,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -64,7 +64,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-GenAIConfigEvidence.ps1 `

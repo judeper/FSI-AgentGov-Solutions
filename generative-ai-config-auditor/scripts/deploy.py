@@ -182,7 +182,7 @@ def main():
             "  # Deploy only connection references\n"
             "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  GAC_TENANT_ID        Azure AD tenant ID\n"
+            "  GAC_TENANT_ID        Microsoft Entra ID tenant ID\n"
             "  GAC_CLIENT_ID        Service principal app ID\n"
             "  GAC_CLIENT_SECRET    Service principal secret\n"
             "  GAC_ENVIRONMENT_URL  Dataverse environment URL\n"
@@ -193,7 +193,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("GAC_TENANT_ID"),
-        help="Azure AD tenant ID (or set GAC_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set GAC_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",
