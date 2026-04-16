@@ -322,6 +322,7 @@ The framework generates compliance evidence:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.1 | April 2026 | Save-TestResult fix: include required `fsi_name` primary attribute for Dataverse writes |
 | 1.2.0 | April 2026 | Environment variables, connection references, real Dataverse implementations in Invoke-DRTest and Export-DREvidence |
 | 1.1.0 | April 2026 | Dataverse schema script, documentation suite, prerequisites guide |
 | 1.0.2 | March 2026 | Sovereign cloud auth endpoint mapping, ClientId validation, exit code 2 for persistence failures |

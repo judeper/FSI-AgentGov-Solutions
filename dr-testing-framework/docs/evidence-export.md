@@ -4,9 +4,9 @@
 
 Evidence export packages DR test results and audit logs for regulatory examination. The `Export-DREvidence.ps1` script collects local audit log files, generates a JSON metadata file with timestamps and file inventory, and copies everything into a portable evidence directory.
 
-Currently supports local audit log collection; Dataverse-backed export is planned for a future release.
+Supports local audit log collection and Dataverse-backed export with RTO/RPO metric aggregation, gap analysis, and SHA-256 tamper-evident hashing.
 
-## Current Capabilities (v1.0.2)
+## Current Capabilities (v1.2.1)
 
 | Capability | Status |
 |---|---|
@@ -14,9 +14,10 @@ Currently supports local audit log collection; Dataverse-backed export is planne
 | JSON metadata generation with timestamps and file inventory | ✅ Implemented |
 | Correlation ID filtering (`-TestRunId` parameter) | ✅ Implemented |
 | SSRF-safe URL validation (commercial, GCC, GCC High, China clouds) | ✅ Implemented |
-| Dataverse query for test execution results | 🔲 Planned |
-| RTO/RPO measurement aggregation | 🔲 Planned |
-| Gap list with remediation status | 🔲 Planned |
+| Dataverse query for test execution results | ✅ Implemented |
+| RTO/RPO measurement aggregation | ✅ Implemented |
+| Gap list with remediation status | ✅ Implemented |
+| SHA-256 integrity hashing | ✅ Implemented |
 
 ## Usage Examples
 
@@ -63,12 +64,42 @@ Each export generates a timestamped JSON file with the following structure:
   "Environment": "https://contoso.crm.dynamics.com",
   "TestRunId": "abc12345",
   "AuditLogFiles": [
-    "dr-audit-AgentRestore-abc12345.log"
+    "dr-audit-AgentRestore-20260315-abc12345.log",
+    "dr-audit-DataRecovery-20260315-abc12345.log"
   ],
-  "TestResults": [],
-  "Metrics": [],
+  "TestResults": [
+    {
+      "Id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "TestType": "AgentRestore",
+      "ExecutedOn": "2026-03-15T13:00:00Z",
+      "ActualRTO": 1.75,
+      "TargetRTO": 4.0,
+      "RTOMet": true,
+      "Status": "Pass",
+      "CorrelationId": "abc12345"
+    },
+    {
+      "Id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "TestType": "DataRecovery",
+      "ExecutedOn": "2026-03-15T14:00:00Z",
+      "ActualRTO": 2.5,
+      "TargetRTO": 4.0,
+      "RTOMet": true,
+      "Status": "Pass",
+      "CorrelationId": "abc12345"
+    }
+  ],
+  "Metrics": {
+    "TotalTests": 2,
+    "Passed": 2,
+    "Failed": 0,
+    "PassRate": 100.0,
+    "AvgRecoveryTime": 2.13,
+    "RTOCompliant": 2,
+    "RTOComplianceRate": 100.0
+  },
   "Gaps": [],
-  "Status": "stub — Dataverse query and full evidence packaging not yet implemented"
+  "Status": "Compliant"
 }
 ```
 
@@ -78,20 +109,16 @@ Each export generates a timestamped JSON file with the following structure:
 | `Environment` | string | Validated Dataverse environment URL |
 | `TestRunId` | string | Correlation ID used to filter, or `"all"` if not specified |
 | `AuditLogFiles` | string[] | List of audit log filenames included in the package |
-| `TestResults` | object[] | **Planned** — DR test execution results from Dataverse |
-| `Metrics` | object[] | **Planned** — RTO/RPO measurements from test runs |
-| `Gaps` | object[] | **Planned** — Identified gaps with remediation status |
-| `Status` | string | Implementation status indicator |
+| `TestResults` | object[] | DR test execution results from `fsi_drtestresult` in Dataverse |
+| `Metrics` | object | RTO/RPO measurements aggregated from test runs |
+| `Gaps` | object[] | Identified gaps with remediation status |
+| `Status` | string | Overall compliance status (`Compliant`, `NonCompliant`, `Incomplete`, `NoData`, `NoCredentials`, `QueryFailed`) |
 
 ## Planned Capabilities
 
-The following features are not yet implemented and are planned for future releases:
+The following feature is not yet implemented and is planned for a future release:
 
-- **Dataverse query for test execution results** — Query `fsi_drtestexecution` records and include pass/fail outcomes in the evidence package
-- **RTO/RPO measurement aggregation** — Summarize recovery time and recovery point measurements across test runs
-- **Gap list with remediation status** — Generate a list of identified gaps with current remediation tracking
 - **Signed attestation template** — Produce a pre-filled attestation document for reviewer sign-off
-- **SHA-256 integrity hashing** — Compute file hashes for tamper evidence on exported artifacts
 
 ## Regulatory Alignment
 
