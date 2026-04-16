@@ -1,10 +1,10 @@
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v1.1.1
+> **Status:** Completed | **Version:** v1.1.2
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
-> **Security Context:** This solution implements Zero Trust access controls for AI applications, ensuring consistent MFA enforcement and risk-based authentication across all governance zones.
+> **Security Context:** This solution implements Zero Trust access controls for AI applications, supporting consistent MFA enforcement and risk-based authentication across all governance zones.
 
 ## Prerequisites
 
@@ -493,7 +493,7 @@ The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve
 
 ## Version
 
-1.1.0 - February 2026
+1.1.2 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
