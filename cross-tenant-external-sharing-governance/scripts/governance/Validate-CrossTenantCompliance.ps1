@@ -246,7 +246,7 @@ $findingsSection = @{
 try {
     $openFindings = Get-DVRecords `
         -EntitySet $EntitySets.Findings `
-        -Select "fsi_findingstatus,fsi_severity,fsi_findingtype,fsi_governancelayer,fsi_agentname,fsi_externaltenant_name,createdon" `
+        -Select "fsi_findingstatus,fsi_severity,fsi_findingtype,fsi_governancelayer,fsi_agentname,fsi_externaltenantname,createdon" `
         -Filter "fsi_findingstatus eq $FindingStatusOpen"
 
     $findingsSection.TotalOpen = $openFindings.Count
