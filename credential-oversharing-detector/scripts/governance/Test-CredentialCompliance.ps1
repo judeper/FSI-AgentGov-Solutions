@@ -78,7 +78,7 @@
     - ZoneSummary: Per-zone compliance breakdown
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b)
@@ -263,8 +263,9 @@ if ($PersistResults -and $DataverseUrl) {
     $dvApiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
     $complianceRecord = @{
-        fsi_name              = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        fsi_scanid            = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_scanrunid         = $scanResult.ScanRunId
+        fsi_scanstatus        = if ($scanResult.TotalViolations -eq 0) { 100000000 } else { 100000001 }
         fsi_overallstatus     = $overallStatus
         fsi_agentsscanned     = $scanResult.TotalAgents
         fsi_compliantagents   = $totalCompliant

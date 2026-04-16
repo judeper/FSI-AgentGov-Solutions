@@ -94,7 +94,7 @@
     - Violations: Array of violation detail objects
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b), OCC 2011-12
@@ -723,7 +723,7 @@ switch ($OutputFormat) {
         $jsonOutput | ConvertTo-Json -Depth 10
     }
     'Object' {
-        $summaryResult
+        # Return handled by #region Return Summary below
     }
 }
 
