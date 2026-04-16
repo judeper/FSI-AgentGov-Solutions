@@ -32,6 +32,9 @@ The primary data source for session outcome analytics. Each record represents on
 | msdyn_sessionclosedon | DateTime | Session end timestamp | UTC; used as event timestamp |
 | msdyn_conversationid | String | Conversation identifier | Links to conversationtranscript |
 | msdyn_channelid | String | Channel identifier | Teams, Web, etc. |
+| msdyn_sessionoutcomereason | String | Reason for session outcome | e.g., escalation reason, resolution detail |
+| msdyn_isengaged | Boolean | Whether the user engaged with the agent | Filters out non-interactive sessions |
+| msdyn_topicname | String | Topic name associated with the session | Primary topic that handled the session |
 | modifiedon | DateTime | Last modified timestamp | Used for watermark-based sync |
 | createdon | DateTime | Record creation timestamp | |
 
@@ -196,11 +199,11 @@ Custom Dataverse table created by `create_csa_dataverse_schema.py`. Tracks sync 
 
 ```
 GET /api/data/v9.2/msdyn_botsessions
-  ?$filter=modifiedon gt {watermark}
+  ?$filter=msdyn_sessioncreatedon ge {watermark}
   &$select=msdyn_botsessionid,msdyn_sessionoutcome,msdyn_csatscore,
-           msdyn_startedon,msdyn_endedon,_msdyn_botid_value,
+           msdyn_sessioncreatedon,msdyn_sessionclosedon,_msdyn_botid_value,
            msdyn_conversationid,msdyn_channelid,modifiedon
-  &$orderby=modifiedon asc
+  &$orderby=msdyn_sessioncreatedon asc
   &$top=5000
 ```
 
@@ -227,7 +230,7 @@ GET /api/data/v9.2/msdyn_botcomponentsessions
   ?$filter=createdon gt {watermark}
   &$select=msdyn_botcomponentsessionid,_msdyn_botsessionid_value,
            msdyn_topicname,msdyn_sessionoutcome,
-           msdyn_startedon,msdyn_endedon
+           msdyn_sessioncreatedon,msdyn_sessionclosedon
   &$orderby=createdon asc
   &$top=5000
 ```

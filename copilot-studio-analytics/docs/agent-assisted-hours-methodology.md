@@ -115,7 +115,7 @@ Each action type has a configurable time saving value:
 
 | Parameter | Default | Configurable | Notes |
 |-----------|---------|-------------|-------|
-| GenericTimeSaving | 3 minutes | Yes (config.yml) | Minimum time saving for successful autonomous task completion |
+| GenericTimeSaving | 5 minutes | Yes (config.yml) | Minimum time saving for successful autonomous task completion |
 
 ### Calculation Example
 
@@ -127,9 +127,9 @@ Given 500 autonomous agent runs in a period:
 | Data entry actions | 80 | 10 min each | 800 |
 | Notification actions | 120 | 3 min each | 360 |
 | Approval actions | 30 | 15 min each | 450 |
-| Sessions without actions | 170 | 3 min each | 510 |
-| **Total minutes** | | | **2,620** |
-| **AAH** | | | 2,620 / 60 = **43.7 hours** |
+| Sessions without actions | 170 | 5 min each | 850 |
+| **Total minutes** | | | **2,960** |
+| **AAH** | | | 2,960 / 60 = **49.3 hours** |
 
 ---
 

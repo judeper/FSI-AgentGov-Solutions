@@ -47,7 +47,7 @@ customEvents
 | extend CSATScore = todouble(customDimensions["csatScore"])
 | summarize
     EngagedSessions = count(),
-    ResolvedSessions = countif(Outcome == "Resolved"),
+    ResolvedSessions = countif(Outcome == "Resolved" or Outcome == "Success"),
     AvgCSAT = round(avgif(CSATScore, AgentType == "Conversational" and isnotnull(CSATScore) and tostring(CSATScore) != ""), 1)
     by AgentId, AgentType
 | extend ResolutionRate = round(todouble(ResolvedSessions) / EngagedSessions * 100, 1)
