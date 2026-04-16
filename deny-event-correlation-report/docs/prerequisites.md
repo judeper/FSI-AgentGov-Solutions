@@ -131,6 +131,8 @@ Starting **March 31, 2026**, API key authentication will no longer work. Configu
 
 #### Option B: API Key (Deprecated - Ends March 31, 2026)
 
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
+>
 > ⚠️ **Deprecated:** This method will stop working on March 31, 2026.
 
 1. Navigate to Azure Portal > Application Insights resource
@@ -225,6 +227,8 @@ customEvents
 ---
 
 ## Authentication Migration
+
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
 
 ### Timeline
 

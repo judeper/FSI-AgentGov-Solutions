@@ -30,6 +30,8 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
+>
 > **⚠️ Warning: x-api-key Deprecated - March 31, 2026**
 >
 > If you are troubleshooting API key authentication issues, note that this authentication method is **deprecated** and will **stop working on March 31, 2026**. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
