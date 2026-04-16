@@ -2,6 +2,12 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.0.3] - 2026-04-16
+
+### Fixed
+
+- Fixed 3 prohibited compliance language violations: "ensures" → hedging language in SOLUTION-DOCUMENTATION.md, DELIVERY-CHECKLIST.md
+
 ## [1.0.2] - 2025-07-14
 
 ### Changed

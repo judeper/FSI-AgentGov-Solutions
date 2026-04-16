@@ -590,7 +590,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 **Requirement:** Management must establish and maintain adequate internal controls, including IT controls for content validation.
 
 **Solution Support:**
-- Automated daily validation ensures content moderation controls remain effective
+- Automated daily validation helps maintain content moderation controls effective
 - Drift detection identifies when controls are weakened (High → Low)
 - Evidence export provides audit trail of control effectiveness
 
@@ -601,7 +601,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 **Solution Support:**
 - Content moderation prevents inappropriate disclosures via AI agents
 - Zone-based requirements align with data sensitivity (customer data = Zone 3 = High moderation)
-- Monitoring ensures safeguards remain active
+- Monitoring helps maintain active safeguards
 
 ---
 
