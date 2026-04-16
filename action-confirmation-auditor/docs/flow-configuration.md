@@ -75,8 +75,14 @@ This guide provides step-by-step instructions for manually building the Action C
            "items": {
              "type": "object",
              "properties": {
+               "EnvironmentId": { "type": "string" },
+               "EnvironmentName": { "type": "string" },
+               "Zone": { "type": "string" },
+               "AgentId": { "type": "string" },
+               "AgentName": { "type": "string" },
                "ActionName": { "type": "string" },
                "ActionType": { "type": "string" },
+               "ActionCategory": { "type": "string" },
                "ConfirmationStatus": { "type": "string" },
                "Severity": { "type": "string" }
              }

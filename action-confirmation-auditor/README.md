@@ -1,6 +1,6 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.

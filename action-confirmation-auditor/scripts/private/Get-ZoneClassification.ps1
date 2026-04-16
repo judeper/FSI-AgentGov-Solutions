@@ -22,6 +22,9 @@
     .\Get-ZoneClassification.ps1 -EnvironmentId "abc-123" -EnvironmentDisplayName "Prod"
     Returns the zone classification for the specified environment.
 #>
+
+#requires -Version 7.0
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]

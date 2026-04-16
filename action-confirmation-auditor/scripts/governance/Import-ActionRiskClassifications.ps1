@@ -30,6 +30,10 @@
 .PARAMETER WhatIf
     Preview import without writing to Dataverse.
 
+.EXAMPLE
+    .\Import-ActionRiskClassifications.ps1 -CsvPath ".\risk-rules.csv" -DataverseUrl "https://org.crm.dynamics.com" -Interactive
+    Imports risk classification rules from CSV into Dataverse (v1.1 feature — currently throws NotImplemented).
+
 .NOTES
     File: Import-ActionRiskClassifications.ps1
     Version: 0.1.0 (stub)

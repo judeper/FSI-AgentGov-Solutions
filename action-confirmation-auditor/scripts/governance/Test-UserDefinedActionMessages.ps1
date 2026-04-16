@@ -76,7 +76,7 @@
 
 .NOTES
     File: Test-UserDefinedActionMessages.ps1
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -577,17 +577,31 @@ function Test-UserDefinedActionMessages {
             }
 
             foreach ($v in $violations) {
+                # Map zone string to picklist integer
+                $zoneInt = switch ($v.Zone) {
+                    'Zone 1' { 1 }
+                    'Zone 2' { 2 }
+                    'Zone 3' { 3 }
+                    default  { 0 }
+                }
+
                 $record = @{
-                    fsi_name              = "UDAM-$($v.AgentId)-$(Get-Date -Format 'yyyyMMdd')"
-                    fsi_environmentguid   = $v.EnvironmentId
-                    fsi_environmentname   = $v.EnvironmentDisplayName
-                    fsi_agentid           = $v.AgentId
-                    fsi_agentname         = $v.AgentName
-                    fsi_violationtype     = $v.ViolationType
-                    fsi_severity          = $v.Severity
-                    fsi_regulatorycontext = $v.RegulatoryContext
-                    fsi_detectedat        = $v.RetrievedAt.ToString('yyyy-MM-ddTHH:mm:ssZ')
-                    fsi_runid             = $runId
+                    fsi_name               = "UDAM-$($v.AgentId)-$(Get-Date -Format 'yyyyMMdd')"
+                    fsi_environmentguid    = $v.EnvironmentId
+                    fsi_environmentname    = $v.EnvironmentDisplayName
+                    fsi_zone               = $zoneInt
+                    fsi_agentid            = $v.AgentId
+                    fsi_agentname          = $v.AgentName
+                    fsi_actionname         = 'UserDefinedActionMessage'
+                    fsi_actiontype         = 100000000  # ConnectorAction default
+                    fsi_risklevel          = if ($v.ActionCategory) { $v.ActionCategory } else { 'Execute' }
+                    fsi_confirmationstatus = 100000001  # Missing
+                    fsi_violationstatus    = 100000000  # Open
+                    fsi_violationtype      = $v.ViolationType
+                    fsi_severity           = $v.Severity
+                    fsi_regulatorycontext  = $v.RegulatoryContext
+                    fsi_detectedat         = $v.RetrievedAt.ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    fsi_runid              = $runId
                 }
 
                 if ($PSCmdlet.ShouldProcess("fsi_actionauditresults", "Create violation record for $($v.AgentName)")) {

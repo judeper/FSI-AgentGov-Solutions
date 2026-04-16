@@ -108,7 +108,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
     Requires:
@@ -314,7 +314,7 @@ if ($RunId) {
     $violationFilter += " and fsi_runid eq '$RunId'"
 }
 if ($Zone -ne 'All') {
-    $violationFilter += " and fsi_zone eq 'Zone$Zone'"
+    $violationFilter += " and fsi_zone eq $Zone"
 }
 
 try {
@@ -469,7 +469,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Action Confirmation Auditor"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.0.2"
     control         = "1.23"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

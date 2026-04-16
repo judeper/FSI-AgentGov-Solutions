@@ -2,6 +2,25 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.0.3] - 2026-04-16
+
+### Fixed
+
+- **scripts/private/ACAClient.psm1**: Added missing required fields `fsi_totalagents` and `fsi_violationcount` to `Write-ACAValidationHistory` scan run record
+- **scripts/private/ACAClient.psm1**: Added missing `fsi_risklevel` field to `Write-ACAViolation` violation record
+- **scripts/Test-ActionConfirmationCompliance.ps1**: Fixed `$validationSummary` to pass `ActionsWithConfirmation`, `ActionsMissingConfirmation`, and `ViolationCount` keys matching `Write-ACAValidationHistory` expectations
+- **scripts/Test-ActionConfirmationCompliance.ps1**: Changed `OverallStatus` from non-schema value `Review` to `Warning` to match schema documentation
+- **scripts/Test-ActionConfirmationCompliance.ps1**: Exception matching now validates `IsActive`, `ExpiresAt`, and `Zone` fields instead of matching on AgentId|ActionName alone
+- **scripts/Get-AgentActionSettings.ps1**: Fixed confirmation status string `Unable to Determine` → `UnableToDetermine` to match schema option set
+- **scripts/Get-AgentActionSettings.ps1**: Fixed `ActionsMissingConfirmation` count to include Partial and UnableToDetermine statuses (was only counting Missing)
+- **scripts/Export-ActionAuditEvidence.ps1**: Fixed zone filter to use integer picklist value instead of string `'Zone1'` for OData query
+- **scripts/governance/Test-UserDefinedActionMessages.ps1**: Added missing required Dataverse fields (`fsi_zone`, `fsi_actionname`, `fsi_actiontype`, `fsi_risklevel`, `fsi_confirmationstatus`, `fsi_violationstatus`) when persisting violations
+- **docs/flow-configuration.md**: Added missing violation properties (`EnvironmentId`, `EnvironmentName`, `Zone`, `AgentId`, `AgentName`, `ActionCategory`) to Parse JSON schema
+- **scripts/private/Get-ZoneClassification.ps1**: Added missing `#requires -Version 7.0` statement
+- **scripts/governance/Import-ActionRiskClassifications.ps1**: Added missing `.EXAMPLE` section to comment-based help
+- Updated all script `.NOTES` version references from `1.0.0` to `1.0.2`
+- **scripts/Export-ActionAuditEvidence.ps1**: Updated evidence metadata `solutionVersion` from `1.0.0` to `1.0.2`
+
 ## [1.0.2] - 2026-04-15
 
 ### Fixed

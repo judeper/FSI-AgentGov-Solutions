@@ -87,7 +87,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
 
