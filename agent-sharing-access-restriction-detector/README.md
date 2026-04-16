@@ -88,7 +88,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 ## Prerequisites
 
 - Microsoft Entra ID app registration with BAP Admin API and Microsoft Graph permissions
-- Power Platform admin role (or Global Admin)
+- Power Platform Admin role (or Entra Global Admin)
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
 - Power Automate Premium license (for approval workflows)

@@ -13,7 +13,7 @@ This document provides an overview of the two Power Automate cloud flows require
 
 **Key behaviors:**
 
-- Queries `fsi_agentsharingcompliances` for agents with `fsi_compliance_status = NonCompliant`
+- Queries `fsi_agentsharingcompliances` for agents with `fsi_compliancestatus = NonCompliant`
 - Paginates results using `@odata.nextLink` (up to 5,000 records per page)
 - Processes agents sequentially (concurrency = 1) with configurable approval timeout (default: 7 days)
 - Queries approved security groups from `fsi_approvedsecuritygrouppolicies` per agent zone
@@ -31,7 +31,7 @@ This document provides an overview of the two Power Automate cloud flows require
 
 - Runs daily via recurrence trigger
 - Queries exceptions expiring within the next 14 days → sends warning notification via Teams adaptive card
-- Queries exceptions past their expiration date → resets `fsi_compliance_status` from `Exception` (2) to `NonCompliant` (1), clears expiration fields (preserves justification and audit trail), and sends expired notification
+- Queries exceptions past their expiration date → resets `fsi_compliancestatus` from `Exception` (2) to `NonCompliant` (1), clears expiration fields (preserves justification and audit trail), and sends expired notification
 - Loads adaptive card templates via HTTP GET from configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`)
 - Retrieves up to 5,000 records per query (Dataverse maximum per request)
 

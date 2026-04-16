@@ -291,7 +291,7 @@ function Invoke-SharingComplianceScan {
             try {
                 $apiBase = "$($DvUrl.TrimEnd('/'))/api/data/v9.2"
                 $filter = "fsi_zone eq '$Zone' and statecode eq 0"
-                $select = "fsi_groupid,fsi_groupname,fsi_zone"
+                $select = "fsi_securitygroupid,fsi_securitygroupname,fsi_zone"
                 $queryUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$filter=$filter&`$select=$select"
 
                 $headers = @{
@@ -307,7 +307,7 @@ function Invoke-SharingComplianceScan {
                     $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method Get -ErrorAction Stop
                     $values = if ($response.value) { $response.value } else { @() }
                     foreach ($record in $values) {
-                        if ($record.fsi_groupid) { [void]$groups.Add($record.fsi_groupid) }
+                        if ($record.fsi_securitygroupid) { [void]$groups.Add($record.fsi_securitygroupid) }
                     }
                     $nextUrl = $response.'@odata.nextLink'
                 }

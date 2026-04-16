@@ -264,7 +264,7 @@ Write-Host "  Compliance records retrieved: $($complianceRecords.Count)" -Foregr
 
 Write-Host "Querying approved security group policies..." -ForegroundColor Cyan
 
-$policySelect = 'fsi_name,fsi_groupid,fsi_groupname,fsi_zone,fsi_approvedby,fsi_approvedat'
+$policySelect = 'fsi_name,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
 $policyFilter = 'statecode eq 0'
 if ($Zone -ne 'All') {
     $policyFilter += " and fsi_zone eq 'Zone$Zone'"

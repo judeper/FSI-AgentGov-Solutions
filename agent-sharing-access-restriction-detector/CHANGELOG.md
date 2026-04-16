@@ -2,6 +2,18 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [1.0.4] — 2026-04-16
+
+### Fixed
+
+- Fixed Dataverse column names in Invoke-SharingComplianceScan.ps1 and Export-SharingComplianceEvidence.ps1: fsi_groupid → fsi_securitygroupid, fsi_groupname → fsi_securitygroupname
+- Fixed snake_case column names in flow-configuration.md: fsi_compliance_status → fsi_compliancestatus, fsi_agent_id → fsi_agentid, fsi_exception_expires_at → fsi_exceptionexpiresat
+- Fixed role naming in README.md: "Global Admin" → "Entra Global Admin"
+
+### Added
+
+- Updated `.ralph-config.json` with additional domain facts from council review
+
 ## [1.0.3] — April 2026
 
 ### Added
