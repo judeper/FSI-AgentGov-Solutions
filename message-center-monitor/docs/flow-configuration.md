@@ -31,7 +31,7 @@ Before starting, ensure you have:
    - At: 9:00 AM (or your preferred time)
 5. Click **Create**
 
-> **Concurrency Control:** To prevent duplicate processing when a manual test run overlaps with a scheduled run, configure the Recurrence trigger's concurrency setting. Click the trigger's **...** menu > **Settings** > enable **Concurrency Control** and set **Degree of Parallelism** to `1`. This ensures only one instance of the flow runs at a time — if a second run is triggered while one is in progress, it queues instead of running in parallel.
+> **Concurrency Control:** To prevent duplicate processing when a manual test run overlaps with a scheduled run, configure the Recurrence trigger's concurrency setting. Click the trigger's **...** menu > **Settings** > enable **Concurrency Control** and set **Degree of Parallelism** to `1`. This means only one instance of the flow runs at a time — if a second run is triggered while one is in progress, it queues instead of running in parallel.
 
 ## Step 2: Get Client Secret from Key Vault (Recommended)
 
@@ -364,7 +364,7 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 
 > **Note:** Replace `cr123_` with your publisher prefix. See the Option A note above for details.
 
-This prevents notifications for posts with past deadlines and ensures each post triggers at most one notification.
+This prevents notifications for posts with past deadlines and means each post triggers at most one notification.
 
 **After sending a Teams notification**, add a **Dataverse - Update a row** action to set `notifiedOn` to `@{utcNow()}`. This marks the post as notified so it won't trigger again on the next run. If you later want to re-notify (e.g., deadline approaching), reset `notifiedOn` to null or add a separate reminder condition.
 
@@ -437,7 +437,7 @@ Wrap the main processing logic in a **Scope** action for better error handling:
      ```
    - This enables faster operational triage without requiring manual navigation to flow run history.
 
-> **Why include Apply to each in Try?** If a single message fails to process (e.g., malformed data), the entire loop stops. Wrapping it in Try ensures you get notified of partial failures. For even more granular handling, you can add a nested Try/Catch inside the Apply to each loop to handle individual message failures without stopping the entire run.
+> **Why include Apply to each in Try?** If a single message fails to process (e.g., malformed data), the entire loop stops. Wrapping it in Try means you get notified of partial failures. For even more granular handling, you can add a nested Try/Catch inside the Apply to each loop to handle individual message failures without stopping the entire run.
 
 ## Step 9: Save and Test
 
