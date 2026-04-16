@@ -238,4 +238,4 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 
 *Power BI Solution Version: 1.0.0*
 *Last Updated: February 2026*
-*Part of Agent Observability Foundation v1.1.0*
+*Part of Agent Observability Foundation v1.1.1*

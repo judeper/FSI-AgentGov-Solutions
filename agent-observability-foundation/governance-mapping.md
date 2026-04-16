@@ -223,5 +223,5 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-*Governance Mapping version: 1.1.0*
+*Governance Mapping version: 1.1.1*
 *Last updated: February 2026*

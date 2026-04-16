@@ -133,7 +133,7 @@ The architecture establishes two distinct access paths to support separation of 
 | Compliance Audit | Storage Blob Data Reader | Azure Blob Storage Account | Compliance officers - audit evidence, regulatory examination |
 | Infrastructure Admin | Contributor | Resource Group | Platform operations - deployment, configuration changes |
 
-This separation ensures that:
+This separation is designed so that:
 1. SOC analysts can query telemetry without accessing compliance archives
 2. Compliance officers can retrieve audit evidence without modifying operational settings
 3. Changes to telemetry infrastructure require elevated permissions with audit trail
@@ -202,5 +202,5 @@ Phase 4 will deliver executive reporting via Power BI:
 
 ---
 
-*Architecture version: 1.1.0*
+*Architecture version: 1.1.1*
 *Last updated: February 2026*

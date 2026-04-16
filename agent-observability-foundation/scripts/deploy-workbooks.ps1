@@ -42,7 +42,7 @@
 
 .NOTES
     Requirements:
-    - Azure CLI 2.50.0 or higher
+    - Azure CLI 2.60.0 or higher
     - PowerShell 7.0 or higher
     - Authenticated Azure session (az login)
     - Contributor or Owner role on target resource group
@@ -157,7 +157,7 @@ function Test-Prerequisites {
         $allChecksPassed = $false
     }
 
-    # Check 2: Azure CLI version >= 2.50.0
+    # Check 2: Azure CLI version >= 2.60.0
     if ($allChecksPassed) {
         Write-Host "  Checking Azure CLI version..." -ForegroundColor White
         $cliVersion = $azVersion.'azure-cli'
@@ -165,10 +165,10 @@ function Test-Prerequisites {
         $majorVersion = [int]$versionParts[0]
         $minorVersion = [int]$versionParts[1]
 
-        if ($majorVersion -gt 2 -or ($majorVersion -eq 2 -and $minorVersion -ge 50)) {
-            Write-Host "    ${COLOR_GREEN}✓ Azure CLI $cliVersion (>= 2.50.0)${COLOR_RESET}"
+        if ($majorVersion -gt 2 -or ($majorVersion -eq 2 -and $minorVersion -ge 60)) {
+            Write-Host "    ${COLOR_GREEN}✓ Azure CLI $cliVersion (>= 2.60.0)${COLOR_RESET}"
         } else {
-            Write-Host "    ${COLOR_RED}✗ Azure CLI $cliVersion (< 2.50.0)${COLOR_RESET}"
+            Write-Host "    ${COLOR_RED}✗ Azure CLI $cliVersion (< 2.60.0)${COLOR_RESET}"
             Write-Host "    Update: az upgrade" -ForegroundColor Yellow
             $allChecksPassed = $false
         }
