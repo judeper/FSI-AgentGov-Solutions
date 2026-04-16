@@ -2,6 +2,13 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.0.2] - 2026-04-16
+
+### Fixed
+
+- Fixed control mapping in Test-AgentAccessCompliance.ps1: added primary control 3.8 (Copilot Hub) to .NOTES
+- Fixed hardcoded version strings in Export-AgentAccessEvidence.ps1 (1.0.0 → 1.0.1)
+
 ## [1.0.1] - 2026-07-15
 
 ### Changed

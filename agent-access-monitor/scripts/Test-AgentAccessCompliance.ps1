@@ -79,7 +79,7 @@
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
-    Controls: 2.5 (Agent Sharing Scope), 2.6 (Restrict Team-Created Agent Sharing)
+    Controls: 3.8 (Copilot Hub — primary), 2.5 (Agent Sharing Scope), 2.6 (Restrict Team-Created Agent Sharing)
     Regulations: FINRA 4511, SOX 404, GLBA 501(b)
 #>
 
