@@ -76,7 +76,7 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 | SSC | — | `fsi_validationhistory` | `fsi_driftviolation` |
 | AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | `fsi_accessviolation` |
 | CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | `fsi_moderationviolation` |
-| FUS | `fsi_fileupload_baseline` | `fsi_fileupload_validationhistory` | `fsi_fileupload_violation` |
+| FUS | `fsi_fileuploadbaseline` | `fsi_fileuploadvalidationhistory` | `fsi_fileuploadviolation` |
 | CAA | — | `fsi_capolicyvalidationhistory` | `fsi_capolicyviolation` |
 
 ### Correlation

@@ -2,6 +2,13 @@
 
 All notable changes to this solution will be documented in this file.
 
+## [1.0.2] — 2026-04-16
+
+### Fixed
+
+- Fixed 19 snake_case Dataverse column/table names in docs (fsi_overall_status → fsi_overallstatus, fsi_fileupload_validationhistories → fsi_fileuploadvalidationhistories, etc.)
+- Fixed ACV solution directory mapping in IntegrationConfig.psm1: 'audit-configuration-validator' → 'audit-compliance-manager'
+
 ## [1.0.1] — 2026-02-11
 
 ### Changed
