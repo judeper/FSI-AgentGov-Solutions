@@ -176,12 +176,10 @@ This connector is **required** for the solution to function. Work with your DLP 
 
 ```powershell
 .\scripts\Deploy-AgentRegistry-Baseline.ps1 `
-    -TenantId "your-tenant-id" `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com" `
-    -ClientId "your-client-id" `
-    -ClientSecret "your-client-secret" `
-    -AuthMode ServicePrincipal
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
+
+> **Note:** This script uses Managed Identity authentication exclusively. It must run in an Azure Automation context with a system-assigned Managed Identity.
 
 ---
 
@@ -239,7 +237,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 
 1. Navigate to **Power Apps** > **Solutions** > **Agent Registry Automation**
 2. Select **Environment Variables**
-3. Verify all 7 variables exist and have current values set
+3. Verify all 10 variables exist and have current values set
 
 ### Environment Variable Has No Current Value
 
@@ -349,4 +347,4 @@ $response.value | Format-Table fsi_name, fsi_requeststatus, fsi_approvaldeadline
 
 ---
 
-*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.2 — FSI Agent Governance Framework*

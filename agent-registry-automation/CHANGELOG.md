@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.2] - 2026-04-16
+
+### Fixed
+
+- Critical: Added `fsi_name` (primary name column) to agent inventory records in Deploy-AgentRegistry-Baseline.ps1
+- Critical: Added `fsi_name` to compliance event payload in Deploy-AgentRegistry-Baseline.ps1
+- Critical: `fsi_publishedstatus` now maps Bots API string values to option-set integers matching the Dataverse schema
+- Critical: Environment ID uses `$env.name` (GUID) instead of `$env.id` (ARM resource path) in Deploy-AgentRegistry-Baseline.ps1
+- README: Quick Start examples corrected to use actual script parameters (`-DataverseUrl`)
+- CHANGELOG: Fixed script filename reference (`Test-AgentRegistryCompliance.ps1`, not `Validate-AgentRegistry-Compliance.ps1`)
+- Troubleshooting: Fixed environment variable count from 7 to 10
+- Troubleshooting: Fixed fallback auth example to match actual script parameters
+- DELIVERY-CHECKLIST: Release date corrected to April 2026
+
+---
+
 ## [1.0.1] - 2026-04-15
 
 ### Fixed
@@ -34,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `deploy.py` — Orchestrator with `--dry-run`, `--tables-only`, `--vars-only`, `--refs-only`
 - **PowerShell Governance Scripts:**
   - `Deploy-AgentRegistry-Baseline.ps1` — Baseline inventory export (Managed Identity auth)
-  - `Validate-AgentRegistry-Compliance.ps1` — Compliance validation with examiner reporting
+  - `Test-AgentRegistryCompliance.ps1` — Compliance validation with examiner reporting
 - **Power Automate Flows** (documentation-only, manual build):
   - Flow 1: Discover-UnregisteredAgents-Daily — daily Bots API scan across all environments
   - Flow 2: Enforce-RegistrationApproval-Gate — Teams approval with SLA tracking and escalation
@@ -67,4 +83,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.2 — FSI Agent Governance Framework*

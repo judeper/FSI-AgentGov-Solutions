@@ -1,6 +1,6 @@
 # Agent Registry Automation
 
-> **Status:** Production Ready (v1.0.1)
+> **Status:** Production Ready (v1.0.2)
 
 Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform environments, supporting FSI agent inventory and record-keeping requirements.
 
@@ -158,8 +158,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 ```powershell
 # Export existing agents to seed the inventory
 .\scripts\Deploy-AgentRegistry-Baseline.ps1 `
-    -TenantId "your-tenant-id" `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com"
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
 
 ### 6. Validate Deployment
@@ -167,8 +166,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 ```powershell
 # Verify schema, variables, connections, and flow status
 .\scripts\Test-AgentRegistryCompliance.ps1 `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com" `
-    -TenantId "your-tenant-id"
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
 
 ## Key Configuration Notes
@@ -235,6 +233,7 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.2 | 2026-04-16 | Data integrity fixes, parameter corrections |
 | 1.0.1 | 2026-04-15 | Schema alignment fixes, verb corrections |
 | 1.0.0 | 2026-03-15 | Initial release |
 
@@ -248,4 +247,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Agent Registry Automation v1.0.1*
+*FSI Agent Governance Framework — Agent Registry Automation v1.0.2*

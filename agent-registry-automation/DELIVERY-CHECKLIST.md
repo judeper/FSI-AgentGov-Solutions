@@ -1,6 +1,6 @@
 # Agent Registry Automation — Customer Delivery Checklist
 
-**Version:** v1.0.1
+**Version:** v1.0.2
 **Solution:** Agent Registry Automation
 
 ---
@@ -184,6 +184,6 @@ Do NOT include these repository management files:
 
 ---
 
-**Package Version:** v1.0.1
-**Release Date:** March 2026
+**Package Version:** v1.0.2
+**Release Date:** April 2026
 **Solution:** Agent Registry Automation

@@ -84,6 +84,14 @@ $script:ZoneOptionSet = @{
 
 $script:RegistrationStatusUnregistered = 100000000
 
+# fsi_ara_publishedstatus option set values (from create_dataverse_schema.py)
+$script:PublishedStatusMap = @{
+    'Published'   = 100000000
+    'Draft'       = 100000001
+    'Quarantined' = 100000002
+    'Disabled'    = 100000003
+}
+
 # --- Helper Functions ------------------------------------------------------------
 
 function Write-AuditLog {
@@ -329,6 +337,7 @@ function Write-ComplianceEvent {
     }
 
     $payload = @{
+        fsi_name           = "Discovery - $AgentId"
         fsi_agentid        = $AgentId
         fsi_environmentid  = $EnvironmentId
         fsi_eventtype      = $eventTypeMap[$EventType]
@@ -403,7 +412,7 @@ $zoneValue = $script:ZoneOptionSet[$Zone]
 $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 foreach ($env in $environments) {
-    $envId = $env.id
+    $envId = $env.name  # GUID — $env.id is the ARM resource path
     $envName = $env.properties.displayName
     $counters.EnvironmentsScanned++
 
@@ -425,6 +434,7 @@ foreach ($env in $environments) {
             $botName = $bot.properties.displayName
 
             $agentRecord = @{
+                fsi_name               = $botName
                 fsi_agentid            = $botId
                 fsi_agentname          = $botName
                 fsi_environmentid      = $envId
@@ -440,9 +450,14 @@ foreach ($env in $environments) {
                 $agentRecord["fsi_ownerupn"] = $bot.properties.owner.userPrincipalName
             }
 
-            # Include published status if available
+            # Include published status if available — map string to option-set integer
             if ($bot.properties.publishedStatus) {
-                $agentRecord["fsi_publishedstatus"] = $bot.properties.publishedStatus
+                $mappedStatus = $script:PublishedStatusMap[$bot.properties.publishedStatus]
+                if ($null -ne $mappedStatus) {
+                    $agentRecord["fsi_publishedstatus"] = $mappedStatus
+                } else {
+                    Write-AuditLog "  Unknown publishedStatus '$($bot.properties.publishedStatus)' for $botName — skipping field" -Level WARN
+                }
             }
 
             if ($PSCmdlet.ShouldProcess("$botName ($botId) in $envName", "Upsert agent inventory record")) {
