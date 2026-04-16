@@ -16,26 +16,26 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
-| action-confirmation-auditor | v1.0.0 | 1.23 | Step-up confirmation validation for agent actions |
-| agent-365-lifecycle-governance | v1.1.0 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
-| agent-access-monitor | v1.0.1 | 3.8 | Automated detection of overly permissive agent access configurations |
-| agent-communication-restriction-detector | v1.0.0 | 2.17 | Inter-agent communication restriction validation |
-| agent-knowledge-source-scanner | v1.0.1 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
-| agent-registry-automation | v1.0.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
-| agent-observability-foundation | v1.1.0 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
-| agent-sharing-access-restriction-detector | v1.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
-| audit-compliance-manager | v1.0.1 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
-| coi-testing | v1.0.1 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.1 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
-| conditional-access-automation | v1.1.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
-| content-moderation-monitor | v1.0.2 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
-| copilot-studio-analytics | v1.1.0 | 3.2 | Business impact analytics for Copilot Studio agents |
-| credential-oversharing-detector | v1.0.0 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
-| cross-solution-integration | v1.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
+| action-confirmation-auditor | v1.0.1 | 1.23 | Step-up confirmation validation for agent actions |
+| agent-365-lifecycle-governance | v1.1.1 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
+| agent-access-monitor | v1.0.2 | 3.8 | Automated detection of overly permissive agent access configurations |
+| agent-communication-restriction-detector | v1.0.1 | 2.17 | Inter-agent communication restriction validation |
+| agent-knowledge-source-scanner | v1.0.2 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
+| agent-registry-automation | v1.0.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
+| agent-observability-foundation | v1.1.1 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
+| agent-sharing-access-restriction-detector | v1.0.4 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
+| audit-compliance-manager | v1.0.2 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
+| coi-testing | v1.0.2 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
+| compliance-dashboard | v1.0.2 | 3.3, 3.1, 3.2 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| conditional-access-automation | v1.2.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
+| content-moderation-monitor | v1.0.3 | 1.8, 1.14 | Per-agent content moderation validation against zone requirements |
+| copilot-studio-analytics | v1.1.1 | 3.2 | Business impact analytics for Copilot Studio agents |
+| credential-oversharing-detector | v1.0.1 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
+| cross-solution-integration | v1.0.2 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.0 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
 | dr-testing-framework | v1.1.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
-| environment-lifecycle-management | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| environment-lifecycle-management | v1.1.3 | 2.1, 2.2, 2.3, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.0.1 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.0.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.0.0 | 2.24 | GenAI feature enablement governance per zone |
@@ -330,3 +330,41 @@ Version numbers follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.
 GitHub Copilot's recognized built-in aliases are: `read`, `edit`, `search`, `execute`, `agent`, `web`, `todo`. Unrecognized names are silently ignored (falling back to unrestricted access).
 
 **Platform differences:** The `web` and `todo` aliases are supported in VS Code Copilot Chat but are currently not applicable to the GitHub.com Copilot coding agent. This repo does not define custom Copilot agents or prompts — agent workflows are orchestrated from FSI-AgentGov using cross-repo edits.
+
+## Council Review Lessons Learned (2026-04-16)
+
+An autonomous multi-agent council review (GPT-5.4 + Claude Opus 4.6) audited all 34 solutions. Key patterns discovered:
+
+### Common Issues Found Across Solutions
+
+1. **Dataverse Column Name Mismatches** — The most common critical issue. Scripts and flow docs frequently reference column names that don't match the schema defined in `create_*_dataverse_schema.py`. Common patterns:
+   - `fsi_scantime` vs `fsi_validationtime` (scan timestamp column name varies by solution)
+   - Entity set name pluralization (`fsi_actionscanruns` vs `fsi_actionscanrun`)
+   - Snake_case in docs (`fsi_compliance_status`) that should be logical name (`fsi_compliancestatus`)
+   - **Rule:** Always verify column names against `create_*_dataverse_schema.py` before writing OData queries
+
+2. **"Azure AD" Product Naming** — Found in ~60 files across ~20 solutions. Most common in Python `argparse` help text (`help="Azure AD tenant ID"`) and PowerShell `.PARAMETER` descriptions.
+
+3. **Compliance Language Violations** — "ensures", "guarantees", "enforces" found in ~25 locations across ~15 solutions. Most common in SOLUTION-DOCUMENTATION.md files, flow-configuration.md, and README feature descriptions.
+
+4. **Flow Documentation Column Drift** — Flow build instructions in `docs/flow-configuration.md` frequently reference columns that don't exist in the deployed schema. This appears to happen when flow docs are written from design specs rather than validated against the schema script.
+
+5. **Option Set Value Confusion** — Documentation shows picklist values as 0/1/2/3 but actual Dataverse option sets use 100000000/100000001/etc. Flow builders following docs create broken OData filters.
+
+### `.ralph-config.json` Pattern
+
+The council review created `.ralph-config.json` files for 8 solutions to capture domain-specific facts that would be lost between sessions. These files contain a `domainFacts` array with free-text entries about:
+- Correct column names and entity set names
+- Known design decisions and intentional behaviors
+- Platform compatibility constraints
+- API versioning notes
+
+**When creating or editing a solution**, always check for `.ralph-config.json` first and read its domain facts before making changes.
+
+### Validation Priority for Future Reviews
+
+1. Run `create_*_dataverse_schema.py --output-docs` to regenerate schema docs
+2. Grep for "Azure AD" (should be zero hits outside CHANGELOG historical entries)
+3. Grep for "ensures|guarantees|will prevent|eliminates risk" in *.md files
+4. Compare script `$select`/`$filter` columns against schema definitions
+5. Verify option set values in flow docs match `create_*_dataverse_schema.py`
