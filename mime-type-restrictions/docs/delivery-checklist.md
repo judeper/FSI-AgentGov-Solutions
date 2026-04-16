@@ -7,20 +7,20 @@
 
 ### 2. Solution Components (Source Files)
 
-All files located in the `src/` directory:
+Files located in `src/`, `docs/`, `scripts/`, and `templates/` directories:
 
 **Server-Side Validation:**
-- [ ] **ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
-- [ ] **BUILD-INSTRUCTIONS.md** — Step-by-step guide to build the plugin DLL from source
-- [ ] **MimeConfig.json** — MIME type allowlist/blocklist configuration
+- [ ] **src/ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
+- [ ] **docs/build-instructions.md** — Step-by-step guide to build the plugin DLL from source
+- [ ] **templates/mime-config.json** — MIME type allowlist/blocklist configuration
 
 **DLP Policy:**
-- [ ] **dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
+- [ ] **templates/dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
 
 **Sentinel Monitoring:**
-- [ ] **query-mime-blocks.kql** — KQL query for blocked upload events (30-day summary)
-- [ ] **high-volume-blocks.json** — Sentinel alert rule for high-volume block patterns
-- [ ] **query-exception-usage.kql** — KQL query for exception usage tracking
+- [ ] **scripts/query-mime-blocks.kql** — KQL query for blocked upload events (30-day summary)
+- [ ] **templates/high-volume-blocks.json** — Sentinel alert rule for high-volume block patterns
+- [ ] **scripts/query-exception-usage.kql** — KQL query for exception usage tracking
 
 ### 3. Packaging Instructions
 
@@ -29,28 +29,29 @@ All files located in the `src/` directory:
 # From the mime-type-restrictions directory:
 zip -r MIME-Type-Restrictions-v1.0.2.zip \
   docs/flow-configuration.md \
-  src/BUILD-INSTRUCTIONS.md \
+  docs/build-instructions.md \
   src/ValidateMimeTypePlugin.cs \
-  src/MimeConfig.json \
-  src/dlp-policy-template.json \
-  src/query-mime-blocks.kql \
-  src/high-volume-blocks.json \
-  src/query-exception-usage.kql
+  templates/mime-config.json \
+  templates/dlp-policy-template.json \
+  scripts/query-mime-blocks.kql \
+  templates/high-volume-blocks.json \
+  scripts/query-exception-usage.kql
 ```
 
 **Option B: Create Structured Folder**
 ```
 MIME-Type-Restrictions-v1.0.2/
-├── docs/flow-configuration.md
-├── Dataverse-Plugin/
-│   ├── BUILD-INSTRUCTIONS.md
-│   ├── ValidateMimeTypePlugin.cs
-│   └── MimeConfig.json
-├── DLP-Policy/
-│   └── dlp-policy-template.json
-└── Sentinel-Monitoring/
+├── docs/
+│   ├── flow-configuration.md
+│   └── build-instructions.md
+├── src/
+│   └── ValidateMimeTypePlugin.cs
+├── templates/
+│   ├── mime-config.json
+│   ├── dlp-policy-template.json
+│   └── high-volume-blocks.json
+└── scripts/
     ├── query-mime-blocks.kql
-    ├── high-volume-blocks.json
     └── query-exception-usage.kql
 ```
 
@@ -310,5 +311,5 @@ Operational Readiness:
 ---
 
 **Package Version:** v1.0.2
-**Release Date:** February 2026
+**Release Date:** April 2026
 **Solution:** MIME Type Restrictions for File Uploads

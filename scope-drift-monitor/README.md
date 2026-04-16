@@ -246,7 +246,8 @@ Microsoft is introducing [sensitivity label visibility in Copilot Studio](https:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.1.2 | July 2026 | Removed exported Dataverse solution package per content policy |
+| 1.1.2 | April 2026 | Fixed Write-Output pipeline contamination, prohibited language, PnP 3.x compatibility |
+| 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
 | 1.0.0 | February 2026 | Initial schema and concept |
 

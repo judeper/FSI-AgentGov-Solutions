@@ -1,3 +1,5 @@
+#Requires -Version 7.1
+
 <#
 .SYNOPSIS
     Scans for Segregation of Duties violations across Entra ID and Power Platform.
@@ -52,8 +54,6 @@ param(
     [Parameter(Mandatory = $false)]
     [switch]$DryRun
 )
-
-#Requires -Version 7.1
 
 $ErrorActionPreference = "Stop"
 

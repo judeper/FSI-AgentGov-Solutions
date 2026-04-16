@@ -10,10 +10,7 @@
     "4. Review blocked extensions against your organization's specific requirements before enforcement.",
     "5. Coordinate with compliance and business teams to confirm extension lists align with approved file types.",
     "",
-    "This template supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12.",
-    "NEEDS_HUMAN_REVIEW: Verify the OCC 2011-12 reference — OCC Bulletin 2011-12 covers model risk",
-    "management, not file upload restrictions. Consider OCC 2023-35 (third-party risk) or omit",
-    "pending compliance team confirmation.",
+    "This template supports compliance with FINRA 4511 and SEC 17a-4.",
     "It does not guarantee regulatory compliance on its own — organizations should verify",
     "configuration meets their specific obligations."
   ],

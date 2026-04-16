@@ -867,7 +867,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 ## Support and Maintenance
 
 **Solution Version:** 1.0.2
-**Release Date:** February 2026
+**Release Date:** April 2026
 **License:** MIT License
 
 **Change Management:**
@@ -877,7 +877,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 - Coordinate DLP policy updates with business unit stakeholders (advance notice recommended)
 
 **Version History:**
-- **v1.0.2 (February 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
+- **v1.0.2 (April 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
 - **v1.0.0 (February 2026):** Initial release with Dataverse plugin, DLP template, and Sentinel queries
 
 ---

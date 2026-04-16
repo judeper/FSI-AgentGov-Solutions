@@ -109,4 +109,4 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-*Scope Drift Monitor v1.1.1 - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.1.2 - FSI Agent Governance Framework*
