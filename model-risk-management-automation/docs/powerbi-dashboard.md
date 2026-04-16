@@ -60,7 +60,7 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 | Open Critical Findings | Card | Count where severity = Critical and status ≠ Closed |
 | Total Open Findings | Card | Count where status ≠ Closed |
 | Findings by Category | Bar chart | X-axis: `fsi_findingcategory`, Y-axis: count |
-| Findings by Severity | Bar chart | X-axis: `fsi_findingseverity`, Y-axis: count |
+| Findings by Severity | Bar chart | X-axis: `fsi_severity`, Y-axis: count |
 | Open Findings Detail | Table | Finding ID, Model Name, Category, Severity, Owner, Due Date, Status |
 
 ### Page 4: Monitoring Trends
@@ -116,7 +116,7 @@ AVERAGEX(
 Open Critical Findings = 
 CALCULATE(
     COUNTROWS(fsi_validationfinding),
-    fsi_validationfinding[fsi_findingseverity] = "Critical",
+    fsi_validationfinding[fsi_severity] = "Critical",
     fsi_validationfinding[fsi_findingstatus] <> "Closed"
 )
 ```

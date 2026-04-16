@@ -213,7 +213,7 @@ function Get-GACValidationResults {
             $violationFilterString = $violationFilters -join ' and '
 
             # Select fields for violations (agent-level detail for GAC)
-            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_agentid,fsi_agentname,fsi_zone,fsi_violationtype,fsi_aoaienabled,fsi_orchestrationmode,fsi_featuretype,fsi_expectedstate,fsi_actualstate,fsi_connectionstatus,fsi_severity,fsi_regulatorycontext,fsi_topicname,fsi_topicid,fsi_detectedat,fsi_runid"
+            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_agentid,fsi_agentname,fsi_zone,fsi_featuretype,fsi_expectedstate,fsi_actualstate,fsi_connectionstatus,fsi_severity,fsi_regulatorycontext,fsi_topicname,fsi_topicid,fsi_detectedat,fsi_runid"
 
             # Build query URL
             $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_gacviolations?`$filter=$violationFilterString&`$orderby=fsi_detectedat desc&`$select=$violationSelect"

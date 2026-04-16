@@ -110,9 +110,9 @@ This guide covers common issues encountered during deployment and operation of t
 **Resolution:**
 
 1. Verify the following environment variables are set with integer day values:
-   - `ValidationSLA_Tier1_Assignment`, `ValidationSLA_Tier1_Review`, `ValidationSLA_Tier1_Completion`
-   - `ValidationSLA_Tier2_Assignment`, `ValidationSLA_Tier2_Review`, `ValidationSLA_Tier2_Completion`
-   - `ValidationSLA_Tier3_Assignment`, `ValidationSLA_Tier3_Review`, `ValidationSLA_Tier3_Completion`
+   - `ValidationSLA_Tier1_Assignment`, `ValidationSLA_Tier1_Findings`, `ValidationSLA_Tier1_Remediation`
+   - `ValidationSLA_Tier2_Assignment`, `ValidationSLA_Tier2_Findings`, `ValidationSLA_Tier2_Remediation`
+   - `ValidationSLA_Tier3_Assignment`, `ValidationSLA_Tier3_Findings`, `ValidationSLA_Tier3_Remediation`
 2. Check that `fsi_submitteddate` is populated on the validation cycle record
 3. For assignment SLA breaches: Flow 4 handles null `fsi_assigneddate` — if the assignment date is null and the deadline has passed, it is treated as a breach
 4. Confirm the Flow 4 recurrence trigger is configured for **Monday at 08:00 UTC**

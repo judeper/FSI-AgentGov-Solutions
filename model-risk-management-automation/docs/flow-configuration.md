@@ -187,7 +187,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
          - fsi_modelprovider: @{enrichedAgent.modelProvider} (if available)
          - fsi_datainputs: @{enrichedAgent.dataInputs} (if available)
        Note: Preserve MRM-managed fields on update (do NOT overwrite):
-             fsi_mrmtier, fsi_riskrating, fsi_validationcadence,
+             fsi_mrmtier, fsi_currentriskrating, fsi_validationcadence,
              fsi_validationstatus, fsi_mrmstatus (except as set below)
 
    4.7 Condition: IsNewRecord == true
@@ -205,7 +205,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
        If Yes:
          4.8.1 Update row: fsi_modelinventories
                - fsi_materialchangeflag: true
-               - fsi_materialchangedetails: Compose criteria summary
+               - fsi_materialchangedesc: Compose criteria summary
          4.8.2 Run child flow: Generate-AgentCard-OnChange
                Pass: Model Inventory record ID
          4.8.3 Condition: MRM Tier in (Tier 1, Tier 2)
@@ -309,13 +309,13 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
            equals(model.fsi_modelprovider, 'Third-Party')), 5,
          if(and(
            equals(model.fsi_modelprovider, 'Microsoft'),
-           contains(toLower(model.fsi_modeldetails), 'llm')), 4,
+           contains(toLower(model.fsi_underlyingmodel), 'llm')), 4,
          if(or(
            equals(model.fsi_modelprovider, 'Anthropic'),
            equals(model.fsi_modelprovider, 'OpenAI')), 4,
          if(and(
            equals(model.fsi_modelprovider, 'Microsoft'),
-           not(contains(toLower(model.fsi_modeldetails), 'llm'))), 2,
+           not(contains(toLower(model.fsi_underlyingmodel), 'llm'))), 2,
          3))))}
 
    3.5 Explainability Score (based on fsi_decisionoutputtype)
@@ -395,16 +395,16 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
    - fsi_modelinventoryid: @{model.id} (lookup)
    - fsi_compositerating: @{CompositeRating}
    - fsi_totalscore: @{TotalScore}
-   - fsi_decisionimpactscore: @{decisionImpact}
-   - fsi_datasensitivityscore: @{dataSensitivity}
-   - fsi_userpopulationscore: @{userPopulation}
-   - fsi_modelcomplexityscore: @{modelComplexity}
-   - fsi_explainabilityscore: @{explainability}
-   - fsi_regulatoryexposurescore: @{regulatoryExposure}
-   - fsi_changefrequencyscore: @{changeFrequency}
+   - fsi_score_decisionimpact: @{decisionImpact}
+   - fsi_score_datasensitivity: @{dataSensitivity}
+   - fsi_score_userpopulation: @{userPopulation}
+   - fsi_score_complexity: @{modelComplexity}
+   - fsi_score_explainability: @{explainability}
+   - fsi_score_regulatoryexposure: @{regulatoryExposure}
+   - fsi_score_changefrequency: @{changeFrequency}
    - fsi_iscurrent: true
-   - fsi_ratingdate: @{utcNow()}
-   - fsi_rationale: Compose min 100 chars including all 7 factor scores,
+   - fsi_scoringdate: @{utcNow()}
+   - fsi_scoringrationale: Compose min 100 chars including all 7 factor scores,
      composite calculation, tier assignment reason, and zone weight rationale
    - fsi_zoneweightrationale: "Zone @{zone}: User Population score=@{up},
      Regulatory Exposure score=@{re}. Zone-based factors contribute
@@ -412,12 +412,11 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
 
 9. Update Model Inventory
    Update row: fsi_modelinventories
-   - fsi_riskrating: @{CompositeRating}
+   - fsi_currentriskrating: @{CompositeRating}
    - fsi_mrmtier: @{mrmTier}
    - fsi_validationcadence: @{cadence}
    - fsi_nextvalidationdue: @{addMonths(utcNow(), cadenceMonths)}
    - fsi_mrmstatus: Risk Scored
-   - fsi_lastriskscoredate: @{utcNow()}
 
 10. Send Teams Notification
     Connection: fsi_cr_teams_mrm
@@ -504,8 +503,8 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
    Create row: fsi_validationcycles
    - fsi_modelinventoryid: @{ModelInventoryRecordId} (lookup)
    - fsi_validationtype: @{ValidationType}
-   - fsi_mrmtieratsnapshot: @{model.fsi_mrmtier}
-   - fsi_riskratingatsnapshot: @{model.fsi_riskrating}
+   - fsi_mrmtieratstart: @{model.fsi_mrmtier}
+   - fsi_ratingatstart: @{model.fsi_currentriskrating}
    - fsi_cyclestatus: Not Started
    - fsi_cycleopeneddate: @{utcNow()}
 
@@ -558,7 +557,7 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
                        - fsi_validatorupn: @{validatorUPN}
                        - fsi_validatordisplayname: @{validatorDisplayName}
                        - fsi_cyclestatus: In Progress
-                       - fsi_assignmentdate: @{utcNow()}
+                       - fsi_assigneddate: @{utcNow()}
                  6.2.5 Update model inventory:
                        - fsi_validationstatus: In Progress
                        - fsi_mrmstatus: In Validation
@@ -774,10 +773,10 @@ Performs weekly performance monitoring across all validated models, checks monit
 
    5.2 Apply to each: Check SLA
        5.2.1 Get tier-specific SLA from environment variables
-             Based on fsi_mrmtieratsnapshot
+             Based on fsi_mrmtieratstart
 
        5.2.2 Check Assignment SLA
-             Condition: fsi_assignmentdate is null
+             Condition: fsi_assigneddate is null
                         AND dateDiff('Day', fsi_cycleopeneddate, utcNow())
                         > AssignmentSLA
              Note: Null-safe — a null assignment date when the deadline
@@ -787,8 +786,8 @@ Performs weekly performance monitoring across all validated models, checks monit
 
        5.2.3 Check Findings SLA
              Condition: fsi_findingsissueddate is null
-                        AND fsi_assignmentdate is not null
-                        AND dateDiff('Day', fsi_assignmentdate, utcNow())
+                        AND fsi_assigneddate is not null
+                        AND dateDiff('Day', fsi_assigneddate, utcNow())
                         > FindingsSLA
              If Yes: Log SLA breach, notify validator and MRM officer
 
@@ -936,13 +935,13 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
        "riskRating": "@{rating.fsi_compositerating}",
        "totalScore": @{rating.fsi_totalscore},
        "scoringDimensions": {
-         "decisionImpact": @{rating.fsi_decisionimpactscore},
-         "dataSensitivity": @{rating.fsi_datasensitivityscore},
-         "userPopulation": @{rating.fsi_userpopulationscore},
-         "modelComplexity": @{rating.fsi_modelcomplexityscore},
-         "explainability": @{rating.fsi_explainabilityscore},
-         "regulatoryExposure": @{rating.fsi_regulatoryexposurescore},
-         "changeFrequency": @{rating.fsi_changefrequencyscore}
+         "decisionImpact": @{rating.fsi_score_decisionimpact},
+         "dataSensitivity": @{rating.fsi_score_datasensitivity},
+         "userPopulation": @{rating.fsi_score_userpopulation},
+         "modelComplexity": @{rating.fsi_score_complexity},
+         "explainability": @{rating.fsi_score_explainability},
+         "regulatoryExposure": @{rating.fsi_score_regulatoryexposure},
+         "changeFrequency": @{rating.fsi_score_changefrequency}
        },
        "lastValidatedDate": "@{model.fsi_lastvalidateddate}",
        "validationOutcome": "@{cycle.fsi_validationoutcome}",
@@ -1086,7 +1085,7 @@ Sends an approval request to the MRM officer when a monitoring threshold is brea
      - Reason: @{RevalidationReason}
      - Agent: @{model.fsi_agentname}
      - Current Tier: @{model.fsi_mrmtier}
-     - Current Rating: @{model.fsi_riskrating}
+     - Current Rating: @{model.fsi_currentriskrating}
      - Last Validated: @{model.fsi_lastvalidateddate}
      - Next Due: @{model.fsi_nextvalidationdue}
      - Material Change Flag: @{model.fsi_materialchangeflag}

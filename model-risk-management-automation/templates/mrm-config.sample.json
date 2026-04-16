@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "metadata": {
     "solution": "model-risk-management-automation",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Sample configuration for MRM Automation environment variables"
   },
   "featureFlags": {

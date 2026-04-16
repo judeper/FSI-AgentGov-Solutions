@@ -28,9 +28,9 @@ Before creating the flows, confirm you have:
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Connection references** bound in Power Automate:
-  - `fsi_cr_dataverse_gacmonitor` (Dataverse)
-  - `fsi_cr_teams_gacmonitor` (Microsoft Teams)
-  - `fsi_cr_office365_gacmonitor` (Office 365 Outlook)
+  - `fsi_cr_dataverse_genaiconfigauditor` (Dataverse)
+  - `fsi_cr_teams_genaiconfigauditor` (Microsoft Teams)
+  - `fsi_cr_office365_genaiconfigauditor` (Office 365 Outlook)
   - Azure Automation connection to your subscription
 
 ---
@@ -158,7 +158,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 
 1. Add action: **Dataverse** > **Add a new row**
 2. Table: `GAC Validation History` (`fsi_GACValidationHistory`)
-3. Connection reference: `fsi_cr_dataverse_gacmonitor`
+3. Connection reference: `fsi_cr_dataverse_genaiconfigauditor`
 4. Column mapping:
 
 | Flow Expression | Dataverse Column | Type | Description |
@@ -184,7 +184,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 ### Step 9: If Yes -- Post Teams Adaptive Card
 
 1. In the **Yes** branch, add: **Microsoft Teams** > **Post adaptive card in a chat or channel**
-2. Connection reference: `fsi_cr_teams_gacmonitor`
+2. Connection reference: `fsi_cr_teams_genaiconfigauditor`
 3. Post in: Channel
 4. Team: `TeamsGroupId` variable
 5. Channel: `TeamsChannelId` variable
@@ -223,7 +223,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 ### Step 10: If Yes -- Send Email Alert
 
 1. Still in the **Yes** branch, add: **Office 365 Outlook** > **Send an email (V2)**
-2. Connection reference: `fsi_cr_office365_gacmonitor`
+2. Connection reference: `fsi_cr_office365_genaiconfigauditor`
 3. Configure:
    - To: `ComplianceDistributionList` variable
    - Subject: `[GAC Alert - @{AlertSeverity}] Generative AI Config Violations Detected`
@@ -276,7 +276,7 @@ Sends real-time notifications when approved Azure OpenAI connections are added t
 2. Table name: `GAC Approved Connections` (`fsi_GACApprovedConnection`)
 3. Scope: **Organization** (all users)
 4. Select columns: `fsi_isactive, fsi_connectionname, fsi_zone, fsi_aoaiendpoint`
-5. Connection reference: `fsi_cr_dataverse_gacmonitor`
+5. Connection reference: `fsi_cr_dataverse_genaiconfigauditor`
 
 ### Step 3: Initialize Variables
 
@@ -361,7 +361,7 @@ After either branch (use a common action after the condition):
 
 - Verify `TeamsGroupId` and `TeamsChannelId` variables match your target channel
 - Confirm the Teams connection has permissions to post to the channel
-- Check that `fsi_cr_teams_gacmonitor` connection reference is properly bound
+- Check that `fsi_cr_teams_genaiconfigauditor` connection reference is properly bound
 - Test channel posting manually in Power Automate to isolate permissions issues
 
 ### Parse JSON Schema Mismatch

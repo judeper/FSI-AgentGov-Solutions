@@ -1044,7 +1044,7 @@ function Get-ApprovedConnections {
             } else { 'Unknown' }
 
             [PSCustomObject]@{
-                ConnectionId   = $_.fsi_gacapprovedconnectionid
+                ConnectionId   = $_.fsi_connectionid
                 ConnectionName = $_.fsi_connectionname
                 Zone           = $zoneName
                 AoaiEndpoint   = $_.fsi_aoaiendpoint

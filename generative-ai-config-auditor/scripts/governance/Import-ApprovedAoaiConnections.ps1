@@ -287,6 +287,7 @@ foreach ($row in $csvData) {
         'fsi_isactive'       = $true
         'fsi_notes'          = $notes
         'fsi_name'           = "$connectionName ($zone)"
+        'fsi_approvedat'     = (Get-Date).ToUniversalTime().ToString('o')
     }
 
     if ($rowApprovedBy) {
