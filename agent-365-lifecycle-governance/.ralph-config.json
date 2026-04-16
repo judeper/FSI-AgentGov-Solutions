@@ -1,0 +1,10 @@
+{
+  "domainFacts": [
+    "The fsi_ALG_eventtype option set is the source of truth for lifecycle event types. Flow docs must use labels from this set exactly. Key mappings: 100000000=Sponsor Assigned, 100000003=Access Review Started, 100000011=Agent Disabled.",
+    "Dataverse column fsi_iscurrent (not fsi_isactive) is the correct logical name for the 'current sponsor' flag on fsi_sponsorassignment. The SchemaName is fsi_IsCurrent.",
+    "Deactivation request approval status uses fsi_approvalstatus (not fsi_requeststatus). SchemaName: fsi_ApprovalStatus.",
+    "Deletion hold expiry uses fsi_deletionholduntil (not fsi_deletionholdexpiry). SchemaName: fsi_DeletionHoldUntil.",
+    "The Agent 365 Registry API (graph.microsoft.com/beta/agentRegistry) is pre-GA and may change at Agent 365 GA (target May 2026). The IsAgent365LifecycleEnabled feature flag gates all external API calls.",
+    "HTTP with Microsoft Entra ID (preauthorized) connector is the current name — not 'HTTP with Azure AD'."
+  ]
+}
