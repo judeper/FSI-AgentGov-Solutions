@@ -142,6 +142,9 @@ All choice/option-set fields in OData expressions use **integer values**, not st
         - `fsi_findingtype`: `"Tenant Isolation Disabled"` (Critical)
         - `fsi_severity`: `0` (Critical)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_detecteddate`: Variable `timestamp`
         - `fsi_remediationnotes`: `"Power Platform tenant isolation is disabled. All external tenants can access resources without restriction."`
      3. Trigger Flow 5 (`Remediate-UnauthorizedExternalAccess`) with finding ID
@@ -169,6 +172,9 @@ All choice/option-set fields in OData expressions use **integer values**, not st
         - `fsi_findingtype`: `"Unapproved Tenant Isolation Exception"`
         - `fsi_severity`: `1` (High)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_externaltenanttenantid`: Entry `tenantId`
         - `fsi_remediationnotes`: Expression `concat('Tenant ', tenantId, ' found in PPAC allow-list but not in approved registry')`
 
@@ -180,6 +186,9 @@ All choice/option-set fields in OData expressions use **integer values**, not st
         - `fsi_findingtype`: `"Unapproved Tenant Isolation Exception"`
         - `fsi_severity`: `2` (Medium)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_remediationnotes`: Expression `concat('Approved direction: ', approvedDirection, '; Actual direction: ', actualDirection)`
 
 10. **Create Tenant Isolation Record**
@@ -371,9 +380,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
         - **If false:** Continue to create finding
 
      2. **Deduplication Check**
-        - Query `fsi_externalsharefindings` for existing Open finding matching same `fsi_agentid`, `fsi_externaltenantname`, and `fsi_findingtype`:
+        - Query `fsi_externalsharefindings` for existing Open finding matching same `fsi_agentid`, `fsi_externaltenanttenantid`, and `fsi_findingtype`:
           ```
-          fsi_externalsharefindings?$filter=fsi_agentid eq '{agentId}' and fsi_externaltenantname eq '{homeTenantDomain}' and fsi_findingtype eq 1 and fsi_findingstatus eq 0&$top=1
+          fsi_externalsharefindings?$filter=fsi_agentid eq '{agentId}' and fsi_externaltenanttenantid eq '{homeTenantDomain}' and fsi_findingtype eq 1 and fsi_findingstatus eq 0&$top=1
           ```
         - If match exists: Update `fsi_detecteddate` to current timestamp, skip creation
 
@@ -398,6 +407,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
           - `fsi_findingtype`: `"Unapproved Guest Share"`
           - `fsi_severity`: Severity code from zone mapping
           - `fsi_findingstatus`: `0` (Open)
+          - `fsi_detectedby`: `"Detect-ExternalAgentShares-Daily"`
+          - `fsi_governancelayer`: `2` (Layer 3 — Agent Shares)
+          - `fsi_remediationstatus`: `0` (Pending)
           - `fsi_agentid`: Agent GUID
           - `fsi_agentname`: Agent display name
           - `fsi_environmentid`: Environment GUID
@@ -501,6 +513,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
         - `fsi_findingtype`: `"Unapproved B2B Access"`
         - `fsi_severity`: `2` (Medium)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_remediationnotes`: Expression `concat('Expected inbound B2B blocked=', baselineInboundBlocked, '; Actual=', actualValue)`
 
    5b. **Check Outbound B2B**
@@ -539,6 +554,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
         - `fsi_findingtype`: `"Unapproved B2B Access"`
         - `fsi_severity`: `2` (Medium)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_externaltenanttenantid`: Partner `tenantId`
         - `fsi_remediationnotes`: `"Partner CTA policy exists for tenant not in approved registry"`
 
@@ -550,6 +568,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
         - `fsi_findingtype`: `"Unapproved B2B Access"`
         - `fsi_severity`: `2` (Medium)
         - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_remediationnotes`: Expression detailing approved vs. actual scope
 
 9. **Create Entra CTA Record**
@@ -933,6 +954,9 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
           - `fsi_findingtype`: `"Approved Tenant - Review Required"`
           - `fsi_severity`: `3` (Low)
           - `fsi_findingstatus`: `0` (Open)
+          - `fsi_detectedby`: `"Monitor-AnnualTenantReviews-Daily"`
+          - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+          - `fsi_remediationstatus`: `0` (Pending)
           - `fsi_externaltenanttenantid`: `fsi_tenantid`
           - `fsi_externaltenantname`: `fsi_primarydomain`
           - `fsi_remediationnotes`: Expression `concat('Annual review overdue since ', fsi_annualreviewdue, ' for tenant ', fsi_tenantname)`

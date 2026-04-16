@@ -389,7 +389,7 @@ try {
         $expiredRequests | Select-Object fsi_tenantname, createdon | Format-Table -AutoSize
     }
 } catch {
-    $onboardingSection.Errors += "Failed to query compliance events: $($_.Exception.Message)"
+    $onboardingSection.Errors += "Failed to query expired onboarding requests: $($_.Exception.Message)"
     Write-Warning "Failed to query $($EntitySets.ComplianceEvents): $($_.Exception.Message)"
 }
 
@@ -469,7 +469,7 @@ try {
         Write-Host "  Unapproved partners: $($latestCta.fsi_unapprovedpartnercount)" `
             -ForegroundColor $(if ($latestCta.fsi_unapprovedpartnercount -gt 0) { "Red" } else { "Green" })
     } else {
-        Write-Warning "No Entra CTA records found. Flow 2 may not have run yet."
+        Write-Warning "No Entra CTA records found. Flow 3 may not have run yet."
     }
 } catch {
     $ctaSection.Errors += "Failed to query Entra CTA records: $($_.Exception.Message)"

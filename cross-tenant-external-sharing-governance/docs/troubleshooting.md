@@ -10,7 +10,7 @@
 
 **Resolution:**
 1. Open the solution's `create_ctsg_dataverse_schema.py` and confirm the `SchemaName` for each column
-2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_externaltenantid`)
+2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_externaltenanttenantid`)
 3. Update the flow action to use the correct logical names
 4. Refer to the DELIVERY-CHECKLIST.md for confirmed field names if available
 
@@ -60,7 +60,7 @@
 **Resolution:**
 1. Search `fsi_externalsharefindings` for existing records matching the agent and tenant combination
 2. If an open finding already exists, it should be remediated or closed before a new detection creates a fresh record
-3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to "Resolved" — only resolved or closed findings allow new detections for the same combination
+3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to one of the terminal states (Remediated, Approved Exception, or False Positive) — only terminal-status findings allow new detections for the same combination. Valid `fsi_findingstatus` values: Open (0), Under Review (1), Remediated (2), Approved Exception (3), False Positive (4)
 
 ### Tenant Isolation Disabled Cannot Be Auto-Remediated
 

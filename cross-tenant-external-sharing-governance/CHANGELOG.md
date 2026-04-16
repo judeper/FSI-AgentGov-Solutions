@@ -22,7 +22,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `fsi_entractarecord` — Weekly Entra CTA audit snapshots
   - `fsi_crosstenantcomplianceevent` — Immutable compliance event log (7-year LTR)
 - **Python deployment scripts** — `create_ctsg_dataverse_schema.py`, `create_ctsg_environment_variables.py`, `create_ctsg_connection_references.py`, `deploy.py`
-- **PowerShell governance scripts** — `Deploy-CrossTenantBaseline.ps1`, `Validate-CrossTenantCompliance.ps1`
+- **PowerShell governance scripts** — `Deploy-CrossTenantBaseline.ps1`, `Test-CrossTenantCompliance.ps1`
 - **Power Automate flows (documentation-only, manual build):**
   - Flow 1: Validate-TenantIsolation-Daily
   - Flow 2: Detect-ExternalAgentShares-Daily (5-value guest detection method)

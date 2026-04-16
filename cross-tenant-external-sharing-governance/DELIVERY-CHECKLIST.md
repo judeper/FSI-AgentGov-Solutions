@@ -58,7 +58,7 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - `fsi_ctsg_guestdetectionmethod`: EXT# Parsing=0, Mail Field=1, CreationType=2, Multi-Method Agreed=3, Unresolved=4
   - `fsi_ctsg_ppisolationdirection`: Inbound=0, Outbound=1, Both=2, None=3
   - `fsi_ctsg_isolationcompliancestatus`: Compliant=0, Non-Compliant - Isolation Disabled=1, Non-Compliant - Unapproved Entries=2
-  - `fsi_ctsg_eventtype`: TenantOnboarded=0, TenantSuspended=1, TenantRevoked=2, ViolationDetected=3, ViolationRemediated=4, ReviewCompleted=5, BaselineUpdated=6
+  - `fsi_ctsg_eventtype`: Tenant Isolation Validated=0, Unapproved Entry Detected=1, Direction Mismatch=2, External Agent Share Detected=3, Unapproved Agent Share=4, CTA Default Block Missing=5, CTA Partner Mismatch=6, CTA Inbound Risk=7, Inbound B2B Unrestricted=8, Outbound B2B Unrestricted=9, Direct Connect Unrestricted=10, Tenant Onboarded=11, Tenant Suspended=12, Tenant Revoked=13, Review Completed=14, Review Overdue=15, API Schema Validation Failed=16
 
 ## Managed Identity Configuration
 
