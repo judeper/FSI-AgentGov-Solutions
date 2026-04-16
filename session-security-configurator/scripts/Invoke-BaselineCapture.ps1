@@ -32,10 +32,10 @@
     Example: https://governance.crm.dynamics.com
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required.
+    Microsoft Entra ID tenant ID. Required.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required.
+    Microsoft Entra ID application (client) ID. Required.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Required unless

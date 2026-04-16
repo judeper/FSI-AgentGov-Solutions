@@ -15,13 +15,13 @@
     - c5: Emergency access
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    Microsoft Entra ID tenant ID.
 
 .PARAMETER Interactive
     Use interactive browser authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.

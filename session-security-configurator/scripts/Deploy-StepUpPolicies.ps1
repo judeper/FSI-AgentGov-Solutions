@@ -14,11 +14,11 @@
     Includes pre-deployment CA policy conflict audit and mandatory break-glass validation.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    Microsoft Entra ID tenant ID.
 
 .PARAMETER ConfigPath
     Path to tenant configuration JSON file containing:
-    - tenantId: Azure AD tenant ID
+    - tenantId: Microsoft Entra ID tenant ID
     - groups: Zone user group IDs (zone1Users, zone2Users, zone3Users)
     - breakGlassAccounts: Break-glass account user IDs (array)
     - authStrengthPolicies: Auth strength policy IDs (passwordlessMFA, phishingResistantMFA)
@@ -34,7 +34,7 @@
     Use interactive browser authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.

@@ -53,10 +53,10 @@
     Use interactive browser-based authentication instead of service principal.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for service principal authentication.
+    Microsoft Entra ID tenant ID. Required for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required for service principal authentication.
+    Microsoft Entra ID application (client) ID. Required for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -129,7 +129,7 @@
 
     License requirements:
     - Microsoft 365 E5 or E5 Security license for Conditional Access
-    - Azure AD Premium P2 for Privileged Identity Management features
+    - Microsoft Entra ID P2 for Privileged Identity Management features
 
     Performance considerations:
     - Full validation (with PIM) takes 2-5 minutes

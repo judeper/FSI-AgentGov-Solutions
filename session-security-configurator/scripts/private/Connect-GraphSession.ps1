@@ -14,13 +14,13 @@
     redundant authentication prompts.
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Optional for interactive auth, required for service principal.
+    Microsoft Entra ID tenant ID. Optional for interactive auth, required for service principal.
 
 .PARAMETER Interactive
     Use interactive authentication (browser-based). Default authentication mode.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID. Required for service principal authentication.
+    Microsoft Entra ID application (client) ID. Required for service principal authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
