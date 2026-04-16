@@ -276,7 +276,7 @@ The flows are deployed as part of the Power Apps solution package (not as a stan
 
 1. Navigate to [Power Apps maker portal](https://make.powerapps.com)
 2. Select **Solutions** > **Import solution**
-3. Upload the exported solution zip (see `templates/README.md` for how to create `ComplianceDashboard_1_0_0.zip` from a dev environment)
+3. Build the Dataverse schema using [Dataverse Schema](dataverse-schema.md) and create flows manually following this guide
 4. Configure connection references when prompted
 5. Set environment variables when prompted
 6. After import, navigate to **Power Automate** and turn on the flows
@@ -346,4 +346,4 @@ The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'H
 
 ---
 
-*Compliance Dashboard v1.0.0*
+*Compliance Dashboard v1.0.2*

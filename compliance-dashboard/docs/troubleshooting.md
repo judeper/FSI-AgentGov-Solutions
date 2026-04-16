@@ -358,4 +358,4 @@ For issues not covered here:
 
 ---
 
-*Compliance Dashboard v1.0.0*
+*Compliance Dashboard v1.0.2*

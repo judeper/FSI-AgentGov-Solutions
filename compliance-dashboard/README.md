@@ -77,7 +77,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 | Role | Required For |
 |------|--------------|
 | Purview Compliance Admin | Purview Compliance Manager API access |
-| Power Platform Administrator | Environment and DLP data |
+| Power Platform Admin | Environment and DLP data |
 | Power BI Admin | Workspace creation and sharing |
 | System Administrator (Dataverse) | Table creation and data access |
 
@@ -87,7 +87,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 |----------|---------|---------|
 | Environment Lifecycle Management | v1.1.0+ | Zone classification data |
 | FINRA Supervision Workflow | v1.0.0+ | Supervision metrics (optional) |
-| Get-ExchangeComplianceData.ps1 | v1.0.0 | Exchange compliance signal collection (included) |
+| Get-ExchangeComplianceData.ps1 | v1.0.2 | Exchange compliance signal collection (included) |
 
 ## Quick Start
 
@@ -348,7 +348,8 @@ See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rol
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.2 | July 2026 | Removed exported Dataverse solution package per content policy |
+| 1.0.2 | April 2026 | Removed stale ZIP import references; updated Exchange script version |
+| 1.0.1 | March 2026 | Removed exported Dataverse solution package per content policy |
 | 1.0.0 | February 2026 | Production release with complete deployment artifacts |
 | 1.0.0-beta | February 2026 | Initial beta release (Power BI template requires manual creation) |
 

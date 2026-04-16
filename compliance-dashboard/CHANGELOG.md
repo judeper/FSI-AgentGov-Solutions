@@ -13,7 +13,7 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
-## [1.0.1] - 2026-07-15
+## [1.0.1] - 2026-03-15
 
 ### Removed
 
