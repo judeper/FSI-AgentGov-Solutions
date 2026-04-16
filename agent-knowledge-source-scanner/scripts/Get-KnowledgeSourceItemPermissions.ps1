@@ -86,7 +86,7 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.0.2
+    Version:    1.0.3
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
     Requires:   PowerShell 7.0+ (7.4+ for PnP.PowerShell 3.x)
@@ -480,7 +480,7 @@ try {
     }
     $config = Get-ScanConfig -Path $configFilePath
 
-    if ($MaxItemsPerLibrary -ne 10000) {
+    if ($PSBoundParameters.ContainsKey('MaxItemsPerLibrary')) {
         $config.maxItemsPerLibrary = $MaxItemsPerLibrary
     }
 
@@ -515,6 +515,13 @@ try {
         ErrorCount     = 0
     }
 
+    # Detect PnP.PowerShell version once before scanning
+    $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
+        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
+        throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
+    }
+
     # Scan each library
     $libraryIndex = 0
     foreach ($target in $targets) {
@@ -524,13 +531,6 @@ try {
 
         if ($PSCmdlet.ShouldProcess("$($target.SiteUrl)/$($target.LibraryName)", "Scan item permissions")) {
             try {
-                # Detect PnP.PowerShell 3.x and warn if -ClientId is missing
-                $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-                if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
-                    Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
-                    throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
-                }
-
                 $connectParams = @{ Url = $target.SiteUrl; Interactive = $true }
                 if ($ClientId) { $connectParams['ClientId'] = $ClientId }
                 Connect-PnPOnline @connectParams -ErrorAction Stop
