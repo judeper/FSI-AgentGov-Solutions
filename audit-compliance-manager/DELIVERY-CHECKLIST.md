@@ -71,7 +71,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **Option A: Create ZIP Archive**
 ```bash
 # From the audit-compliance-manager directory:
-zip -r ACM-Solution-v1.0.0.zip \
+zip -r ACM-Solution-v1.0.2.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
@@ -115,7 +115,7 @@ zip -r ACM-Solution-v1.0.0.zip \
 
 **Option B: Create Structured Folder**
 ```
-ACM-Solution-v1.0.0/
+ACM-Solution-v1.0.2/
 ├── SOLUTION-DOCUMENTATION.md
 ├── PowerShell-Components/
 │   ├── ALCA/
@@ -166,7 +166,7 @@ ACM-Solution-v1.0.0/
 
 ### 4. Email Template
 
-**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.1
+**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.2
 
 **Body:**
 
@@ -220,8 +220,8 @@ Architecture:
 • Exponential backoff retry logic for API resilience
 
 Business Value:
-• Eliminate manual audit configuration overhead (95%+ time savings)
-• Ensure continuous audit coverage across all Power Platform environments
+• Reduce manual audit configuration overhead (95%+ time savings)
+• Help maintain continuous audit coverage across all Power Platform environments
 • Support regulatory examinations with automated compliance evidence
 • Detect and remediate audit gaps within 24 hours (weekly scan) or faster (daily scan)
 
@@ -277,7 +277,7 @@ Before sending to customer, verify:
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `example.com`)
-- [ ] Version numbers are consistent (v1.0.0) across all files
+- [ ] Version numbers are consistent (v1.0.2) across all files
 - [ ] Placeholder values documented clearly (see Configuration Placeholders section in README)
 
 ### 6. Files NOT to Include
@@ -419,6 +419,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.1
+**Package Version:** v1.0.2
 **Release Date:** February 2026
 **Solution:** Audit Compliance Manager (ACM)

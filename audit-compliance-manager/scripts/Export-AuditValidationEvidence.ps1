@@ -94,7 +94,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication

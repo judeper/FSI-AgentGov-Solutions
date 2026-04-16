@@ -63,7 +63,7 @@
     Uses service principal authentication and exports results to JSON file.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
 
     IMPORTANT: Power Platform Administrator or Global Administrator role is required

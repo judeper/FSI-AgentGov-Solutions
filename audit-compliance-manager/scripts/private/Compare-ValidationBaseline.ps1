@@ -78,7 +78,7 @@
     - IsFirstRun: Boolean indicating if no baseline exists
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
 
     Dataverse schema reference:
     - Table: fsi_auditvalidationhistory

@@ -71,7 +71,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
 
     Azure Automation setup:
     1. Import this script as a runbook

@@ -83,7 +83,7 @@
     - RemediationHint: Suggested fix if failed
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires PowerShell 7.0 or later.
 
     If the auditretentionperiodv2 field is not available or returns null, the validation

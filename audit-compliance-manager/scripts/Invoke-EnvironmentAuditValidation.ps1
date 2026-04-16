@@ -111,7 +111,7 @@
     - SkippedTrialDev: Array of Trial/Developer environment names (excluded by policy)
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module v2.0 or later
     - PowerShell 7.0 or later

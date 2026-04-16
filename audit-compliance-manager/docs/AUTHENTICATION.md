@@ -284,6 +284,6 @@ Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $mi.Id | Format-Tabl
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Last Updated:** 2026-02-16
 **Solution:** Audit Compliance Manager (ACM)

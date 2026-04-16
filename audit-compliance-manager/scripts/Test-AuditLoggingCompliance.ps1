@@ -57,7 +57,7 @@
     Scans all environments, writes to Dataverse, and sends email with CSV attachment.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: Azure Automation with System-Assigned Managed Identity
     Permissions: Power Platform Administrator, Exchange Administrator, Dataverse Application User, Mail.Send
 #>

@@ -35,7 +35,7 @@
     Dataverse for all environments with fsi_compliancestatus = Non-Compliant (100000001).
 
 .PARAMETER EnableTenantUnifiedAudit
-    Switch. If set, enables tenant-wide Purview unified audit via Set-AdminConfig.
+    Switch. If set, enables tenant-wide Purview unified audit via Set-AdminPowerAppTenantSettings.
     Default: $true. This is a tenant-wide change — use with caution.
 
 .PARAMETER WhatIf
@@ -43,7 +43,7 @@
     Outputs "[WHATIF] Would enable..." messages.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: PowerShell 7.2+, Azure Automation with System-Assigned MI
     Modules: Microsoft.PowerApps.Administration.PowerShell 2.0+, ExchangeOnlineManagement 3.0+
     ALCA Solution: Audit Logging Compliance Automation
@@ -235,6 +235,7 @@ $isWhatIf = $WhatIfPreference
 
 # Token management — track acquisition time for refresh before expiry
 $script:dvTokenAcquiredAt = $null
+$script:dvToken = $null
 
 function Get-FreshDataverseToken {
     <#
@@ -415,7 +416,7 @@ try {
 
     if ($EnableTenantUnifiedAudit) {
         if ($isWhatIf) {
-            Write-Output "  [WHATIF] Would enable tenant-wide Purview unified audit via Set-AdminConfig"
+            Write-Output "  [WHATIF] Would enable tenant-wide Purview unified audit via Set-AdminPowerAppTenantSettings"
             Write-Output "  [WHATIF] WARNING: This is a TENANT-WIDE change affecting all environments"
         }
         else {

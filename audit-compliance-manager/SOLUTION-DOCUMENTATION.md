@@ -1,7 +1,7 @@
 # Automating Audit Logging Compliance for AI Agent Environments
 ## Audit Compliance Manager (ACM) — ALCA + ACV
 
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Solution Type:** Automated Detection and Remediation
 **Platform:** Azure Automation + Power Platform with Dataverse
 
@@ -33,8 +33,8 @@ The **Audit Logging Compliance Automation (ALCA)** solution provides enterprise-
 - **Email Notifications:** HTML notifications with CSV attachments showing compliance summary
 
 **Business Value:**
-- Eliminate manual audit configuration overhead (95%+ time savings)
-- Ensure continuous audit coverage across all Power Platform environments
+- Reduce manual audit configuration overhead (95%+ time savings)
+- Help maintain continuous audit coverage across all Power Platform environments
 - Support regulatory examinations with automated compliance evidence
 - Detect and remediate audit gaps within 24 hours (or faster with daily scheduling)
 - Enable security incident response with comprehensive audit trails
@@ -118,7 +118,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 | `Send-ComplianceNotification` | Send email via Graph sendMail | Shared mailbox support, CSV attachments, HTML body |
 
 **Module Manifest:** `scripts/AuditComplianceHelpers.psd1`
-- Version: 1.0.0
+- Version: 1.0.2
 - PowerShell Version: 7.2+
 - Exported Functions: 6 functions listed above
 
@@ -1029,9 +1029,9 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules and the Exchange Act, including electronic records of system configurations and audit trails.
 
 **ALCA Support:**
-- Continuous monitoring ensures audit logging remains enabled across all environments
+- Continuous monitoring helps keep audit logging enabled across all environments
 - Entity-level audit on Copilot Studio entities (bot, botcomponent, workflow) tracks agent changes
-- Automated remediation prevents prolonged audit gaps
+- Automated remediation helps prevent prolonged audit gaps
 - Compliance records provide evidence of supervisory controls effectiveness
 
 ### SEC 17a-3 / 17a-4 — Recordkeeping
@@ -1041,7 +1041,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Purview unified audit log captures all M365 and Power Platform activities
 - Dataverse audit log captures entity changes, field modifications, and API calls
-- Entity-level audit ensures Copilot Studio agent changes are recorded
+- Entity-level audit helps ensure Copilot Studio agent changes are recorded
 - Compliance table provides immutable evidence of audit configuration history
 
 ### SOX 404 — Internal Controls over Financial Reporting
@@ -1050,7 +1050,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 
 **ALCA Support:**
 - Automated detection validates audit controls remain effective (preventive control)
-- Remediation workflow ensures non-compliant environments are corrected (detective and corrective control)
+- Remediation workflow helps correct non-compliant environments (detective and corrective control)
 - Dataverse compliance table provides audit trail of control effectiveness
 - Email notifications enable timely management review of control deficiencies
 
@@ -1061,8 +1061,8 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Audit logging captures access to environments containing customer data
 - Entity-level audit on systemuser entity tracks user access and permission changes
-- Continuous monitoring ensures audit controls remain active
-- Remediation prevents audit gaps that could obscure unauthorized access
+- Continuous monitoring helps keep audit controls active
+- Remediation helps prevent audit gaps that could obscure unauthorized access
 
 ---
 
@@ -1093,7 +1093,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.2
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -1104,7 +1104,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - Coordinate tenant-wide audit enablement with M365 admin team (impacts all services)
 
 **Version History:**
-- **v1.0.0 (February 2026):** Initial release with detection, remediation, MI authentication, and approval workflow
+- **v1.0.2 (February 2026):** Initial release with detection, remediation, MI authentication, and approval workflow
 
 ---
 

@@ -18,7 +18,7 @@
     - Send-ComplianceNotification: Graph sendMail via shared mailbox
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: PowerShell 7.2+, Azure Automation with System-Assigned Managed Identity
 #>
 

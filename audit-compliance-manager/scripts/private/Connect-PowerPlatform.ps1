@@ -53,7 +53,7 @@
     Connects using service principal authentication with certificate thumbprint.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
     Requires MSAL.PS module for Dataverse token acquisition.
 

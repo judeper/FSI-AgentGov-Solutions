@@ -63,7 +63,7 @@
     - RemediationHint: Suggested fix if failed
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires PowerShell 7.0 or later.
 
     Grace period detection is best-effort. If enablement timestamp cannot be determined

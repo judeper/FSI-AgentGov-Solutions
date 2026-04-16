@@ -41,7 +41,7 @@
     ./Set-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token -WhatIf
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: System Administrator role on the target Dataverse environment.
     The created role should be assigned to the automation Managed Identity
     INSTEAD OF System Administrator for production environments.
