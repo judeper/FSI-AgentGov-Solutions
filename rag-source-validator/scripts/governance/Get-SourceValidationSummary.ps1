@@ -242,7 +242,7 @@ function Invoke-DataverseQuery {
 Write-Host "Querying knowledge sources..." -ForegroundColor Cyan
 
 $sourceFilter = if ($IncludeArchived) { "" } else { "`$filter=fsi_status ne 5&" }
-$sourceSelect = "fsi_knowledgesourceid,fsi_name,fsi_sourcetype,fsi_sourceuri,fsi_agentid,fsi_currenthash,fsi_baselinehash,fsi_status,fsi_lastvalidated,fsi_freshnessthreshold,fsi_lastmodified"
+$sourceSelect = "fsi_knowledgesourceid,fsi_sourcename,fsi_sourcetype,fsi_sourceuri,fsi_agentid,fsi_currenthash,fsi_baselinehash,fsi_status,fsi_lastvalidated,fsi_freshnessthreshold,fsi_lastmodified"
 $sourceUri = "$DataverseUrl/api/data/v9.2/fsi_knowledgesources?${sourceFilter}`$select=$sourceSelect"
 
 $knowledgeSources = Invoke-DataverseQuery -Uri $sourceUri -Headers $headers
@@ -271,7 +271,7 @@ foreach ($source in $knowledgeSources) {
         }
     }
     catch {
-        Write-Warning "Failed to query validation for source '$($source.fsi_name)': $($_.Exception.Message)"
+        Write-Warning "Failed to query validation for source '$($source.fsi_sourcename)': $($_.Exception.Message)"
     }
 }
 
@@ -357,7 +357,7 @@ foreach ($source in $knowledgeSources) {
     $daysSinceValidation = ($now - $lastValidated).TotalDays
     if ($daysSinceValidation -gt $threshold) {
         $staleSources.Add([PSCustomObject]@{
-            Name              = $source.fsi_name
+            Name              = $source.fsi_sourcename
             SourceId          = $source.fsi_knowledgesourceid
             LastValidated     = $source.fsi_lastvalidated
             ThresholdDays     = $threshold
@@ -375,7 +375,7 @@ $sourceDetails = foreach ($source in $knowledgeSources) {
     $hasRecentChange = $sourceId -in $sourcesWithRecentHashChanges
 
     [PSCustomObject]@{
-        Name              = $source.fsi_name
+        Name              = $source.fsi_sourcename
         SourceType        = $sourceTypeLabels[[int]$source.fsi_sourcetype]
         Status            = $statusLabels[[int]$source.fsi_status]
         LastValidated     = $lastTime
@@ -422,7 +422,7 @@ $resultObj = [PSCustomObject]@{
     Sources             = @($sourceDetails)
     NeverValidated      = @($neverValidated | ForEach-Object {
         [PSCustomObject]@{
-            Name     = $_.fsi_name
+            Name     = $_.fsi_sourcename
             SourceId = $_.fsi_knowledgesourceid
             Status   = $statusLabels[[int]$_.fsi_status]
         }
@@ -486,7 +486,7 @@ switch ($OutputFormat) {
         if ($neverValidatedCount -gt 0) {
             Write-Host "Never Validated Sources" -ForegroundColor Yellow
             $neverValidated | ForEach-Object {
-                Write-Host "  - $($_.fsi_name) ($($_.fsi_knowledgesourceid))" -ForegroundColor Yellow
+                Write-Host "  - $($_.fsi_sourcename) ($($_.fsi_knowledgesourceid))" -ForegroundColor Yellow
             }
             Write-Host ""
         }

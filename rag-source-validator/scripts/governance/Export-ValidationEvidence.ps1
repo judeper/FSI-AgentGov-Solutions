@@ -275,7 +275,7 @@ $sourceTypeFilter = switch ($SourceType) {
     default      { "" }
 }
 
-$sourceSelect = "fsi_knowledgesourceid,fsi_name,fsi_sourcetype,fsi_sourceuri,fsi_agentid,fsi_description,fsi_currenthash,fsi_baselinehash,fsi_status,fsi_lastvalidated,fsi_validationfrequency,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
+$sourceSelect = "fsi_knowledgesourceid,fsi_sourcename,fsi_sourcetype,fsi_sourceuri,fsi_agentid,fsi_description,fsi_currenthash,fsi_baselinehash,fsi_status,fsi_lastvalidated,fsi_validationfrequency,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
 $sourceFilter = "fsi_status ne 5$sourceTypeFilter"  # Exclude archived
 $sourceUri = "$DataverseUrl/api/data/v9.2/fsi_knowledgesources?`$select=$sourceSelect&`$filter=$sourceFilter"
 
@@ -337,7 +337,7 @@ $resultLabels = @{
 $sourcesReadable = $knowledgeSources | ForEach-Object {
     [PSCustomObject]@{
         knowledgeSourceId   = $_.fsi_knowledgesourceid
-        name                = $_.fsi_name
+        name                = $_.fsi_sourcename
         sourceType          = $sourceTypeLabels[[int]$_.fsi_sourcetype]
         sourceTypeValue     = $_.fsi_sourcetype
         sourceUri           = $_.fsi_sourceuri
@@ -418,7 +418,7 @@ $evidence = [PSCustomObject]@{
     metadata = [PSCustomObject]@{
         exportedAt      = $exportTimestamp
         solution        = "RAG Source Validator"
-        solutionVersion = "1.0.1"
+        solutionVersion = "1.1.1"
         daysBack        = $DaysBack
         fromDate        = $fromDate
         sourceTypeFilter = $SourceType

@@ -227,7 +227,9 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.1.1 | March 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
+| 1.1.1 | April 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
+| 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity); sovereign cloud support |
+| 1.0.1 | March 2026 | Binary-safe SHA-256 hashing for non-text content |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
