@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Council Review] - 2026-04-16
+
+### Council Review — Autonomous Multi-Agent Audit
+
+- Processed **34 solutions** via dual-model council review (GPT-5.4 + Claude Opus 4.6)
+- Applied fixes to **31 solutions** (2 solutions had no issues, 1 partially fixed)
+- **189 total fixes** across **136 files modified**
+- Key fix categories:
+  - **Dataverse column name mismatches** — Fixed dozens of schema-script misalignments (fsi_scantime → fsi_validationtime, entity set pluralization, snake_case → logical names)
+  - **Product naming** — Updated "Azure AD" → "Microsoft Entra ID" across 60+ files
+  - **Compliance language** — Replaced 20+ prohibited phrases ("ensures", "guarantees") with hedging language ("supports", "helps maintain")
+  - **Missing schema columns** — Added exception audit trail columns (rejection notes, approval notes)
+  - **Functional bugs** — Fixed KQL query bug (ResolutionRate always 0% for autonomous agents), exception expiration enforcement, resolution tracking
+  - **Domain facts** — Created `.ralph-config.json` files for 8 solutions documenting key design decisions
+- 0 items logged to REVIEW_NEEDED.md (all fixes applied directly)
+- 0 GitHub Issues opened (no LOW confidence items requiring human review)
+
+---
+
 ## Documentation Updates — 2026-04-09
 
 ### Changed
