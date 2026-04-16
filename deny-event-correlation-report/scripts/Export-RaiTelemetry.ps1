@@ -6,7 +6,7 @@
     Queries Application Insights for Copilot Studio ContentFiltered events,
     which indicate when Azure AI Content Safety blocked agent responses.
 
-    Uses Entra ID (Azure AD) authentication for secure access.
+    Uses Microsoft Entra ID authentication for secure access.
 
 .PARAMETER AppInsightsAppId
     The Application ID of your Application Insights resource.
@@ -35,7 +35,7 @@
     Author: FSI Agent Governance Framework
     Version: 1.3
     Requires: Az.Accounts module
-    Authentication: Entra ID (Azure AD) - uses Connect-AzAccount
+    Authentication: Microsoft Entra ID - uses Connect-AzAccount
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -43,7 +43,7 @@
 
 <#
 ================================================================================
-  AUTHENTICATION MIGRATION COMPLETE - Entra ID (Azure AD)
+  AUTHENTICATION MIGRATION COMPLETE - Microsoft Entra ID
 ================================================================================
 
   This script now uses Entra ID authentication via Connect-AzAccount.

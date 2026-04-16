@@ -53,7 +53,7 @@
 
 <#
 ================================================================================
-  AUTHENTICATION NOTE: Entra ID (Azure AD) - Migration Complete
+  AUTHENTICATION NOTE: Microsoft Entra ID - Migration Complete
 ================================================================================
 
   Export-RaiTelemetry.ps1 uses Entra ID authentication via Connect-AzAccount.
