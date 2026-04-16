@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Compares environment access settings against zone compliance baselines.
@@ -48,7 +50,7 @@
 
 .NOTES
     File: Compare-ZoneCompliance.ps1
-    Version: 0.1.0
+    Version: 1.0.3
 #>
 
 [CmdletBinding()]

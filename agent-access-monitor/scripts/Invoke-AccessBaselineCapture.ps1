@@ -1,4 +1,5 @@
 #Requires -Version 7.1
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS

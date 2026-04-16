@@ -2,7 +2,7 @@
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 > **Status:** Completed
 
 See [CHANGELOG](./CHANGELOG.md) for version history.

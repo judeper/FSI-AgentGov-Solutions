@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 0.1.0
+    Version: 1.0.3
     Author: FSI Agent Governance Team
 #>
 

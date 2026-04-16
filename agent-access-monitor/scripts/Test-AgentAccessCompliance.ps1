@@ -75,11 +75,11 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 0.1.0
+    Version: 1.0.3
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
-    Controls: 2.5 (Agent Sharing Scope), 2.6 (Restrict Team-Created Agent Sharing)
+    Controls: 3.8 (Copilot Hub and Governance Dashboard)
     Regulations: FINRA 4511, SOX 404, GLBA 501(b)
 #>
 
@@ -127,7 +127,7 @@ $scriptRoot = $PSScriptRoot
 
 # Banner
 Write-Verbose "========================================="
-Write-Verbose "Agent Access Governance Monitor v0.1.0"
+Write-Verbose "Agent Access Governance Monitor v1.0.3"
 Write-Verbose "========================================="
 
 #endregion

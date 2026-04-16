@@ -94,7 +94,7 @@ Each export produces two files:
     "recordCount": 30, "violationCount": 5
   },
   "summary": {
-    "overallStatus": "NonCompliant",
+    "overallStatus": "Failed",
     "totalScans": 30,
     "criticalViolations": 2,
     "highViolations": 3

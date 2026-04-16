@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.3'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -91,7 +91,7 @@
 - Export-AgentAccessEvidence.ps1 — Zone-based filtering, date range, SHA-256 hashes
 - Get-AAMValidationResults.ps1 — Dataverse query helper with OData pagination
 - Test-EvidenceIntegrity.ps1 — SHA-256 hash verification utility
-- SCHEMA.md, EVIDENCE_EXPORT.md, TROUBLESHOOTING.md documentation
+- dataverse-schema.md, evidence-export.md, troubleshooting.md documentation
 - Framework integration: Control 3.8 tip, solutions-index.md catalog entry
 
 ### Known Limitations

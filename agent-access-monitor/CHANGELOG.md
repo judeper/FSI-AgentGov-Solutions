@@ -2,6 +2,21 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.0.3] - 2026-04-08
+
+### Fixed
+
+- Critical: Zone filter OData query in Get-AAMValidationResults used wrong hashtable keys (`Zone1`/`Zone2`/`Zone3` instead of `1`/`2`/`3`), causing zone filtering to never match
+- Critical: Evidence export severity/zone summary stats always zero — added label mapping from Dataverse option set integers to human-readable strings
+- High: `fsi_zone` in fsi_accessvalidationhistory schema changed from ApplicationRequired to optional (None) since aggregate runs span multiple zones
+- High: Version strings synchronized to 1.0.2 across agent-access-monitor.psd1, Export-AgentAccessEvidence.ps1, Test-AgentAccessCompliance.ps1, Compare-ZoneCompliance.ps1, and AAMClient.psm1
+- Medium: Added `#Requires -Modules MSAL.PS` to Invoke-AccessBaselineCapture.ps1 and Export-AgentAccessEvidence.ps1
+- Medium: Added `#Requires -Version 7.0` to Compare-ZoneCompliance.ps1
+- Medium: Updated adaptive card driftWarning to reference docs/flow-configuration.md instead of removed access-validation-flow.json
+- Medium: Corrected primary control IDs in Test-AgentAccessCompliance.ps1 .NOTES from 2.5/2.6 to 3.8
+- Medium: Fixed evidence-export.md sample JSON `overallStatus` from "NonCompliant" to "Failed"
+- Low: Updated stale documentation references (SCHEMA.md → dataverse-schema.md) in agent-access-monitor.psd1 and .ralph-config.json
+
 ## [1.0.2] - 2026-04-15
 
 ### Fixed

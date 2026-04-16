@@ -31,7 +31,7 @@ Immutable audit trail of validation run results. Each record represents one comp
 |--------|------|-------------|
 | `fsi_name` | String | Run display name (auto-generated) |
 | `fsi_runid` | String | Unique GUID identifying the validation run |
-| `fsi_zone` | OptionSet | Governance zone at time of validation (null for aggregate cross-zone runs; per-zone detail available in `fsi_summaryjson`) |
+| `fsi_zone` | OptionSet | Governance zone at time of validation (optional; null for aggregate cross-zone runs; per-zone detail available in `fsi_summaryjson`) |
 | `fsi_severity` | OptionSet | Overall validation result severity (maps OverallStatus via `fsi_acv_severity`: Passed→100000000, Warning→100000001, Failed→100000003, Error→100000004) |
 | `fsi_validationtime` | DateTime | Timestamp of validation execution (UTC) |
 | `fsi_totalenvironments` | Integer | Number of environments scanned |

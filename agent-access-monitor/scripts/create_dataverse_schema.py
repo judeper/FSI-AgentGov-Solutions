@@ -292,8 +292,8 @@ HISTORY_TABLE_COLUMNS = [
         "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
         "SchemaName": "fsi_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
-        "Description": {"LocalizedLabels": [{"Label": "Governance zone at time of validation", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "ApplicationRequired"},
+        "Description": {"LocalizedLabels": [{"Label": "Governance zone at time of validation (null for aggregate cross-zone runs)", "LanguageCode": 1033}]},
+        "RequiredLevel": {"Value": "None"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     {
