@@ -3,7 +3,7 @@
 
 Deploys six connection references that Power Automate flows use to
 interact with Dataverse, Microsoft Teams, Power Automate Approvals,
-HTTP with Azure AD, SharePoint, and Word Online. All operations are
+HTTP with Microsoft Entra ID, SharePoint, and Word Online. All operations are
 idempotent -- safe to re-run.
 
 Connection References:
@@ -65,10 +65,10 @@ CONNECTION_REF_DEFINITIONS = [
     },
     {
         "logical_name": "fsi_cr_http_mrm",
-        "display_name": "HTTP with Azure AD - Model Risk Management",
+        "display_name": "HTTP with Microsoft Entra ID - Model Risk Management",
         "connector_id": "shared_webcontents",
         "description": (
-            "HTTP with Azure AD connection for MRM. Used for Power "
+            "HTTP with Microsoft Entra ID connection for MRM. Used for Power "
             "Platform Bots API, Microsoft Graph API calls for user "
             "profile resolution and Entra Agent Registry."
         ),
@@ -146,7 +146,7 @@ def create_connection_references(
     """Deploy all MRM connection references to Dataverse.
 
     Creates six connection references for Dataverse, Teams, Approvals,
-    HTTP with Azure AD, SharePoint, and Word Online connectors. All
+    HTTP with Microsoft Entra ID, SharePoint, and Word Online connectors. All
     operations are idempotent -- safe to re-run.
 
     Args:
@@ -206,7 +206,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("MRM_TENANT_ID"),
-        help="Azure AD tenant ID (or set MRM_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set MRM_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

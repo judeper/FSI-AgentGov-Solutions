@@ -49,7 +49,7 @@ Post-Deployment Steps
    - fsi_cr_dataverse_mrm    -> Select Dataverse connection
    - fsi_cr_teams_mrm        -> Select Teams connection
    - fsi_cr_approvals_mrm    -> Select Approvals connection
-   - fsi_cr_http_mrm         -> Select HTTP with Azure AD connection
+   - fsi_cr_http_mrm         -> Select HTTP with Microsoft Entra ID connection
    - fsi_cr_sharepoint_mrm   -> Select SharePoint connection
    - fsi_cr_wordonline_mrm   -> Select Word Online (Business) connection
 
@@ -199,7 +199,7 @@ def main():
             "  # Deploy only connection references\n"
             "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  MRM_TENANT_ID        Azure AD tenant ID\n"
+            "  MRM_TENANT_ID        Microsoft Entra ID tenant ID\n"
             "  MRM_CLIENT_ID        Service principal app ID\n"
             "  MRM_CLIENT_SECRET    Service principal secret\n"
             "  MRM_ENVIRONMENT_URL  Dataverse environment URL\n"
@@ -210,7 +210,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("MRM_TENANT_ID"),
-        help="Azure AD tenant ID (or set MRM_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set MRM_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",
