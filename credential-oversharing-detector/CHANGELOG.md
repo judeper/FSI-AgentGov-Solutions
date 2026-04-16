@@ -2,6 +2,16 @@
 
 All notable changes to this solution are documented here.
 
+## [1.0.1] — 2026-04-16
+
+### Added
+
+- Created `.ralph-config.json` documenting critical schema-script mismatches for future fix
+
+### Notes
+
+- Council review identified critical Dataverse column mismatches between scripts and schema. See .ralph-config.json for details. Full alignment required before production deployment.
+
 ## [1.0.0] — 2026-04-01
 
 ### Added
