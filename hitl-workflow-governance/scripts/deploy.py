@@ -180,7 +180,7 @@ def main():
             "  # Deploy only connection references\n"
             "  python deploy.py --conn-refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  HWG_TENANT_ID        Azure AD tenant ID\n"
+            "  HWG_TENANT_ID        Microsoft Entra ID tenant ID\n"
             "  HWG_CLIENT_ID        Service principal app ID\n"
             "  HWG_CLIENT_SECRET    Service principal secret\n"
             "  HWG_ENVIRONMENT_URL  Dataverse environment URL\n"
@@ -191,7 +191,7 @@ def main():
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("HWG_TENANT_ID"),
-        help="Azure AD tenant ID (or set HWG_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set HWG_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",

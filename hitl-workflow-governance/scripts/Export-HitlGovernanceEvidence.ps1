@@ -31,10 +31,10 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER ClientSecret
     Client secret for service principal authentication.
