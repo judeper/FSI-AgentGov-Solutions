@@ -2,6 +2,22 @@
 
 All notable changes to the Agent Communication Restriction Detector are documented in this file.
 
+## [1.0.1] - 2026-04-16
+
+### Fixed
+
+- Fixed Dataverse column name mismatches in ACRDClient.psm1: fsi_scantime → fsi_validationtime, fsi_commscanruns → fsi_commscanrun
+- Fixed violation column names to match schema: fsi_environmentguid → fsi_callingenvironmentid, fsi_targetagentid → fsi_calledagentid, fsi_sourcezone → fsi_callingagentzone, fsi_targetzone → fsi_calledagentzone, fsi_skillname → fsi_skillmanifesturl, fsi_targetenvironmentid → fsi_calledenvironmentid
+- Removed fsi_compliantcount from scan run write (column not in schema)
+
+### Added
+
+- Created `.ralph-config.json` with domain facts from council review
+
+### Updated
+
+- Product name: "Azure AD" → "Microsoft Entra ID" across 8 script files
+
 ## [1.0.0] - 2026-02-24
 
 ### Added
