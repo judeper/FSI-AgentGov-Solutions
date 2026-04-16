@@ -8,7 +8,7 @@ All notable changes to the Content Moderation Monitor.
 
 - Critical: Test-ContentModerationCompliance Write-Output changed to Write-Host in Object mode to prevent pipeline contamination (string was mixed into scan results, corrupting counts in runbook)
 
-## [1.0.2] - 2025-07-14
+## [1.0.2] - 2026-07-14
 
 ### Changed
 - Moved `src/adaptive-card-moderation-alert.json` to `templates/` per solution content policy

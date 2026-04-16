@@ -270,7 +270,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   "metadata": {
     "exportedAt": "2026-02-14T15:30:00Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.0.2",
+    "solutionVersion": "1.0.3",
     "fromDate": "2025-11-14T00:00:00Z",
     "toDate": "2026-02-14T15:30:00Z",
     "runId": null,
@@ -607,7 +607,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
+**Solution Version:** 1.0.3
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -618,7 +618,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 - Coordinate moderation policy updates with business stakeholders
 
 **Version History:**
-- **v1.0.2 (July 2025):** Removed `src/` directory per solution content policy — moved adaptive card to `templates/`, replaced flow JSON with manual build instructions in `docs/FLOW_SETUP.md`, removed empty Dataverse scaffolding
+- **v1.0.2 (July 2026):** Removed `src/` directory per solution content policy — moved adaptive card to `templates/`, replaced flow JSON with manual build instructions in `docs/FLOW_SETUP.md`, removed empty Dataverse scaffolding
 - **v1.0.1 (February 2026):** Corrected primary control reference from 1.14 to 1.27, fixed Related Controls URL slug, fixed FSI language compliance, removed empty `flows/` directory
 - **v1.0.0 (February 2026):** Initial release with per-agent validation, drift detection, and evidence export
 

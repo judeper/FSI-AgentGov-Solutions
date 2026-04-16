@@ -129,6 +129,9 @@ $severityPriority = @{
     'Passed'      = 1
 }
 
+# Picklist integer-to-label mapping for fsi_overall_severity (fsi_acv_severity option set)
+$severityLabels = @{ 100000000='Passed'; 100000001='Warning'; 100000002='GracePeriod'; 100000003='Failed'; 100000004='Error' }
+
 # --- Banner ---
 Write-Host ('=' * 60) -ForegroundColor Cyan
 Write-Host 'CAA Compliance Evidence Export' -ForegroundColor Cyan
@@ -235,15 +238,16 @@ if ($IncludeBaselines) {
 }
 
 # --- Compute summary ---
-$passedCount  = @($validations | Where-Object { $_.fsi_overallstatus -eq 'Passed' }).Count
-$failedCount  = @($validations | Where-Object { $_.fsi_overallstatus -in @('Failed', 'Error') }).Count
-$warningCount = @($validations | Where-Object { $_.fsi_overallstatus -in @('Warning', 'GracePeriod') }).Count
+# fsi_overall_severity is a picklist (integer) — resolve to label for comparison
+$passedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -eq 'Passed' }).Count
+$failedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -in @('Failed', 'Error') }).Count
+$warningCount = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -in @('Warning', 'GracePeriod') }).Count
 
 # Determine overall status (worst severity across all validation records)
 $overallStatus = 'Passed'
 $highestPriority = 0
 foreach ($v in $validations) {
-    $status = $v.fsi_overallstatus
+    $status = $severityLabels[[int]$v.fsi_overall_severity]
     if ($status -and $severityPriority.ContainsKey($status)) {
         $priority = $severityPriority[$status]
         if ($priority -gt $highestPriority) {
@@ -261,7 +265,7 @@ foreach ($v in $validations) {
         $zoneBreakdown[$zone] = @{ passed = 0; failed = 0; warning = 0; total = 0 }
     }
     $zoneBreakdown[$zone].total++
-    switch ($v.fsi_overallstatus) {
+    switch ($severityLabels[[int]$v.fsi_overall_severity]) {
         'Passed'      { $zoneBreakdown[$zone].passed++ }
         { $_ -in @('Failed', 'Error') } { $zoneBreakdown[$zone].failed++ }
         { $_ -in @('Warning', 'GracePeriod') } { $zoneBreakdown[$zone].warning++ }
@@ -294,7 +298,7 @@ $evidence = [ordered]@{
         toDate         = $ToDate.ToUniversalTime().ToString('o')
         runId          = if ($RunId) { $RunId } else { $null }
         exportVersion  = '1.0.0'
-        solutionVersion = '1.2.0'
+        solutionVersion = '1.2.1'
         recordCount    = $validations.Count
         violationCount = $violations.Count
         baselineCount  = $baselines.Count

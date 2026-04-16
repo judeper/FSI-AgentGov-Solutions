@@ -4,7 +4,7 @@
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
-> **Security Context:** This solution implements Zero Trust access controls for AI applications, ensuring consistent MFA enforcement and risk-based authentication across all governance zones.
+> **Security Context:** This solution implements Zero Trust access controls for AI applications, supporting consistent MFA enforcement and risk-based authentication across all governance zones.
 
 ## Prerequisites
 
@@ -100,6 +100,7 @@ The solution is organized in two tiers:
 | `CA-CopilotStudio-Zone1.json` | Copilot Studio | Zone 1 | Risk-based |
 | `CA-CopilotStudio-Zone2.json` | Copilot Studio | Zone 2 | Always required |
 | `CA-CopilotStudio-Zone3.json` | Copilot Studio | Zone 3 | Always + Compliant device |
+| `CA-AgentBuilder-Zone1.json` | Agent Builder | Zone 1 | Risk-based |
 | `CA-AgentBuilder-Zone2.json` | Agent Builder | Zone 2 | Always required |
 | `CA-AgentBuilder-Zone3.json` | Agent Builder | Zone 3 | Always + Compliant device |
 | `CA-M365Copilot-AllZones.json` | M365 Copilot | All | Risk-based minimum |
