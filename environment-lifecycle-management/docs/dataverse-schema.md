@@ -192,7 +192,7 @@ Action: Set fsi_approvalcomments to Business Required
 | **Lookup Column** | `fsi_environmentrequest` |
 | **Delete Behavior** | Restrict |
 
-> **Restrict Delete** ensures EnvironmentRequest records cannot be deleted if ProvisioningLog entries exist.
+> **Restrict Delete** helps prevent EnvironmentRequest records from being deleted if ProvisioningLog entries exist.
 
 ### Column Definitions
 
