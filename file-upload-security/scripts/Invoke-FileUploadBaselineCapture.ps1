@@ -12,7 +12,7 @@
     dry-run mode by default to preview changes before committing.
 
 .PARAMETER TenantId
-    Azure AD tenant ID.
+    Microsoft Entra ID tenant ID.
 
 .PARAMETER ClientId
     Service principal application (client) ID for non-interactive auth.
