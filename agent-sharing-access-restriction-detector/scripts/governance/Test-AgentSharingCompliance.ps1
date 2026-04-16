@@ -71,7 +71,7 @@
 
 .NOTES
     File: Test-AgentSharingCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -216,44 +216,8 @@ function Test-AgentSharingCompliance {
 
     #region Persist Summary to Dataverse
 
-    if ($PersistResults -and $DataverseUrl -and $DataverseToken) {
-        Write-Host "Persisting compliance summary to Dataverse..." -ForegroundColor Cyan
-
-        try {
-            $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-            $dvHeaders = @{
-                'Authorization'    = "Bearer $DataverseToken"
-                'Content-Type'     = 'application/json'
-                'OData-MaxVersion' = '4.0'
-                'OData-Version'    = '4.0'
-            }
-
-            $summaryRecord = @{
-                'fsi_name'             = "ASARD-Summary-$runId".Substring(0, [Math]::Min(100, "ASARD-Summary-$runId".Length))
-                'fsi_scanrunid'        = $runId
-                'fsi_scanstartedat'    = $scanStartTime
-                'fsi_totalagents'      = $totalAgents
-                'fsi_compliantcount'   = $compliantCount
-                'fsi_noncompliantcount' = $nonCompliantCount
-                'fsi_overallstatus'    = $overallStatus
-                'fsi_summaryjson'      = ($zoneBreakdown | ConvertTo-Json -Depth 5 -Compress)
-            }
-
-            Invoke-RestMethod `
-                -Uri "$apiBase/fsi_agentsharingcompliances" `
-                -Headers $dvHeaders `
-                -Method Post `
-                -Body ($summaryRecord | ConvertTo-Json -Compress) `
-                -ErrorAction Stop | Out-Null
-
-            Write-Host "  Summary persisted successfully." -ForegroundColor Green
-        }
-        catch {
-            Write-Warning "Failed to persist summary: $($_.Exception.Message)"
-        }
-    }
-    elseif ($PersistResults) {
-        Write-Warning "PersistResults requires -DataverseUrl and -DataverseToken"
+    if ($PersistResults -and $DataverseUrl) {
+        Write-Warning "Summary-level Dataverse persistence is not yet supported. Violation records are persisted by the scan script. Use -ExportPath for summary output."
     }
 
     #endregion
@@ -325,5 +289,3 @@ function Test-AgentSharingCompliance {
 
     #endregion
 }
-
-exit 0

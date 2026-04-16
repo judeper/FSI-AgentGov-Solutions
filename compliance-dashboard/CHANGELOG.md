@@ -4,16 +4,16 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
-## [1.0.2] - 2026-04-16
+## [1.0.2] - 2026-04-15
 
 ### Fixed
 
-- Fixed prohibited compliance language: "Ensures" → "Helps keep" in power-bi-template-spec.md
-- Fixed product name: "Azure AD" → "Microsoft Entra ID" in Get-ExchangeComplianceData.ps1
+- Removed stale ZIP import instructions from README and dataverse-schema.md (package was removed in v1.0.1)
+- Updated Get-ExchangeComplianceData.ps1 version strings to v1.0.2
 
 ---
 
-## [1.0.1] - 2026-07-15
+## [1.0.1] - 2026-03-15
 
 ### Removed
 

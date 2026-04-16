@@ -2,13 +2,10 @@
 
 All notable changes to this solution are documented in this file.
 
-## [1.1.1] - 2026-04-16
+## [1.1.1] - 2026-04-15
 
 ### Fixed
-
-- Fixed KQL bug: outcome-by-agent.kql ResolutionRate now counts both "Resolved" and "Success" outcomes (was always 0% for autonomous agents)
-- Fixed GenericTimeSaving default in methodology doc: 3 minutes → 5 minutes (matches code/config/KQL defaults)
-- Fixed README troubleshooting: removed non-existent `--full-sync` flag reference, replaced with correct watermark deletion procedure
+- Updated dataverse-data-sources.md to v1.1.0 and aligned session column names (msdyn_startedon/msdyn_endedon → msdyn_sessioncreatedon/msdyn_sessionclosedon to match sync script)
 
 ## [1.1.0] - 2026-04-01
 

@@ -98,7 +98,7 @@ def create_connection_references(client: ACVClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create connection references for ACV",

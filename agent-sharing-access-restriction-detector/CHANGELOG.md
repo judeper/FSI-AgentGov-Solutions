@@ -2,19 +2,18 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
-## [1.0.4] — 2026-04-16
+## [1.0.4] — 2026-04-15
 
 ### Fixed
 
-- Fixed Dataverse column names in Invoke-SharingComplianceScan.ps1 and Export-SharingComplianceEvidence.ps1: fsi_groupid → fsi_securitygroupid, fsi_groupname → fsi_securitygroupname
-- Fixed snake_case column names in flow-configuration.md: fsi_compliance_status → fsi_compliancestatus, fsi_agent_id → fsi_agentid, fsi_exception_expires_at → fsi_exceptionexpiresat
-- Fixed role naming in README.md: "Global Admin" → "Entra Global Admin"
+- Critical: Zone filters now use integer option set values instead of string literals in Export and Scan scripts
+- Critical: Compliance record primary field changed from fsi_name to fsi_complianceid (matches schema)
+- Critical: Added missing fsi_compliancestatus field to compliance record writes
+- Policy column fsi_name changed to fsi_policyname (matches schema)
+- Policy filter uses fsi_isactive instead of statecode for business-level active check
+- Sharing type persists label text instead of raw numeric value
 
-### Added
-
-- Updated `.ralph-config.json` with additional domain facts from council review
-
-## [1.0.3] — April 2026
+## [1.0.3] — 2026-04-10
 
 ### Added
 - Dataverse schema script with 2 tables, 3 option sets, and `--output-docs` support
@@ -23,8 +22,17 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - PowerShell governance scripts: Invoke-SharingComplianceScan, Test-AgentSharingCompliance, Get-ExpectedSharingPolicy, Export-SharingComplianceEvidence, Test-EvidenceIntegrity
 - Python zone rules engine (asard_zone_rules.py) with zone policy evaluation
 - Auto-generated Dataverse schema documentation
+- Seven new columns on AgentSharingCompliance table: SharingType, ViolationType, Severity, Description, ScanRunId, SharedGroupIds, RegulatoryContext
 
-## [1.0.2] — July 2025
+### Fixed
+- Aligned PS script column references with Dataverse schema (`fsi_groupid` → `fsi_securitygroupid`, `fsi_groupname` → `fsi_securitygroupname`)
+- Removed `exit 0` from Invoke-SharingComplianceScan.ps1 and Test-AgentSharingCompliance.ps1 (broke dot-sourcing)
+- Fixed snake_case column names in docs and adaptive card templates to match Dataverse logical names
+- Fixed ComplianceStatus option set values in docs (was 0–3, corrected to 100000000–100000003)
+- Fixed CHANGELOG date ordering (v1.0.2 was incorrectly dated July 2025)
+- Added MSAL.PS deprecation notice in Export-SharingComplianceEvidence.ps1
+
+## [1.0.2] — 2026-03-20
 
 ### Changed
 - Restructured solution to follow standard layout
@@ -32,7 +40,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Removed exported Power Automate flow JSON from `src/` (per content policy)
 - Added `docs/` with `flow-configuration.md` and `prerequisites.md`
 
-## [1.0.1] — March 2026
+## [1.0.1] — 2026-03-10
 
 ### Fixed
 - **CRITICAL**: ApprovalTimeoutDays null guard now uses `coalesce()` in both branches of the ternary, preventing null from producing an invalid ISO 8601 duration (`"PD"`)
@@ -44,7 +52,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 - Added N+1 approved groups query pattern to README Known Limitations
 - Updated exception query pagination documentation to reflect 5,000 record limit
 
-## [1.0.0] — February 2026
+## [1.0.0] — 2026-02-15
 
 ### Added
 - Remediation approval workflow (`asard-remediation-approval-workflow.json`) for governance-gated sharing corrections

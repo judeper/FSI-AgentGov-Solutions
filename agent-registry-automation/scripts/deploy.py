@@ -33,7 +33,7 @@ Post-Deployment Steps
 
 1. SECURITY \u2014 Configure fsi_agentcomplianceevent security role:
    - Navigate to Settings > Security > Security Roles
-   - Remove Delete privileges for fsi_AgentComplianceEvent
+   - Remove Delete privileges for fsi_agentcomplianceevent
    - This supports immutable audit records (FINRA 4511, SEC 17a-3)
 
 2. LTR \u2014 Enable Dataverse Long-Term Retention:
@@ -164,7 +164,7 @@ def run_deployment(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for ARA deployment orchestrator."""
     parser = argparse.ArgumentParser(
         description=(

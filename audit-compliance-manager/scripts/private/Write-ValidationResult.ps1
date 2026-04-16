@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -89,7 +89,7 @@
     Creates an environment-level validation record with Failed severity.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     This function only creates records (append-only). No update or delete operations are supported.
 
     Option set mappings (MUST match Dataverse schema):

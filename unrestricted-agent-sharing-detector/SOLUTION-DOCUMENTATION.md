@@ -34,7 +34,7 @@ The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated
 **Business Value:**
 - Supports reduction of security incident risk through proactive violation detection
 - Helps reduce manual audit overhead with automated compliance validation
-- Support regulatory examinations with complete audit trails and evidence export
+- Supports regulatory examinations with complete audit trails and evidence export
 - Enable controlled exceptions for legitimate business cases without compromising governance
 
 ---

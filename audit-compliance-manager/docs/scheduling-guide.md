@@ -15,7 +15,7 @@ Configure automated scheduling for detection and optional remediation runbooks.
 | **Day** | Monday |
 | **Time** | 6:00 AM ET (11:00 UTC) |
 | **Timezone** | (UTC-05:00) Eastern Time |
-| **Linked Runbook** | `Check-AuditLoggingCompliance` |
+| **Linked Runbook** | `Test-AuditLoggingCompliance` |
 
 **Setup steps:**
 
@@ -30,7 +30,7 @@ Configure automated scheduling for detection and optional remediation runbooks.
 
 ### Link Schedule to Runbook
 
-1. Navigate to **Runbooks** → **Check-AuditLoggingCompliance** → **Schedules** → **+ Add a schedule**
+1. Navigate to **Runbooks** → **Test-AuditLoggingCompliance** → **Schedules** → **+ Add a schedule**
 2. Select **Link a schedule to your runbook** → Choose `Weekly-Audit-Compliance-Check`
 3. Click **Configure parameters and run settings**
 4. Enter:
@@ -56,7 +56,7 @@ For organizations requiring more frequent monitoring:
 | **Name** | `Daily-Audit-Validation` |
 | **Frequency** | Daily |
 | **Time** | 7:00 AM ET (12:00 UTC) |
-| **Linked Runbook** | `Check-AuditLoggingCompliance` |
+| **Linked Runbook** | `Test-AuditLoggingCompliance` |
 
 **Setup:** Follow the same steps as the weekly schedule, but set:
 - **Recurrence:** Recurring — Every 1 day
@@ -67,7 +67,7 @@ For organizations requiring more frequent monitoring:
 
 ## Parameter Reference
 
-### Check-AuditLoggingCompliance Parameters
+### Test-AuditLoggingCompliance Parameters
 
 | Parameter | Required | Type | Default | Description |
 |-----------|----------|------|---------|-------------|
@@ -120,4 +120,4 @@ Configure Azure Monitor alerts for failed runbook jobs:
 
 ---
 
-*Updated: February 2026 | Version: v1.0.0*
+*Updated: February 2026 | Version: v1.0.2*

@@ -697,7 +697,7 @@ function Test-HitlCheckpointConfiguration {
                     CompliantCount  = $compliantAgents.Count
                     ViolationCount  = $violationAgents.Count
                 }
-                Write-HWGValidationHistory -ValidationResult $validationSummary -RunId $runId
+                Write-HitlScanRun -ValidationResult $validationSummary -RunId $runId
                 Write-Verbose "Validation history written with RunId: $runId"
             } catch {
                 Write-Warning "Failed to write validation history: $($_.Exception.Message)"

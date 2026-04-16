@@ -4,7 +4,15 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [1.2.0] - April 2026
+## [1.2.1] - 2026-04-15
+
+### Fixed
+
+- Critical: Save-TestResult now includes required fsi_name primary attribute (was omitted, causing Dataverse writes to fail)
+
+---
+
+## [1.2.0] - 2026-04-10
 
 ### Added
 - Environment variables deployment script (6 variables: RTO/RPO targets, notifications)
@@ -21,7 +29,7 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [1.1.0] - April 2026
+## [1.1.0] - 2026-04-10
 
 ### Added
 
@@ -38,7 +46,7 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [1.0.2] - March 2026
+## [1.0.2] - 2026-03-15
 
 ### Fixed
 
@@ -56,7 +64,7 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [1.0.1] - March 2026
+## [1.0.1] - 2026-03-15
 
 ### Fixed
 
@@ -76,7 +84,7 @@ All notable changes to the DR Testing Framework.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 

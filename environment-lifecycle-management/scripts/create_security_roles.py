@@ -252,7 +252,7 @@ def create_roles(client: ELMClient, dry_run: bool = False) -> bool:
     return len(failed_operations) == 0
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create security roles for ELM",

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 
 <#
@@ -63,7 +63,7 @@
     Uses service principal authentication and exports results to JSON file.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
 
     IMPORTANT: Power Platform Administrator or Global Administrator role is required

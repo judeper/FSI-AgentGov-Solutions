@@ -31,9 +31,6 @@
 .PARAMETER ExcludeSandbox
     Exclude sandbox-type environments from the scan.
 
-.PARAMETER ExcludeTrial
-    Exclude trial-type environments from the scan.
-
 .PARAMETER IncludeCompliant
     Include compliant agents in output. Default: violations only.
 
@@ -60,9 +57,9 @@
     settings and table output.
 
 .EXAMPLE
-    .\Test-CredentialCompliance.ps1 -OutputFormat JSON -ExcludeSandbox -ExcludeTrial
+    .\Test-CredentialCompliance.ps1 -OutputFormat JSON -ExcludeSandbox
 
-    Scans production environments only with JSON output.
+    Scans non-sandbox environments with JSON output.
 
 .EXAMPLE
     .\Test-CredentialCompliance.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
@@ -81,7 +78,7 @@
     - ZoneSummary: Per-zone compliance breakdown
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b)
@@ -97,9 +94,6 @@ param(
 
     [Parameter()]
     [switch]$ExcludeSandbox,
-
-    [Parameter()]
-    [switch]$ExcludeTrial,
 
     [Parameter()]
     [switch]$IncludeCompliant,
@@ -142,16 +136,14 @@ if (-not (Test-Path $policyScriptPath)) {
 
 # Resolve baseline policy path
 if (-not $BaselinePath) {
-    $BaselinePath = Join-Path (Split-Path $scriptRoot -Parent) "templates" "zone-credential-policy.json"
+    $BaselinePath = Join-Path (Split-Path (Split-Path $scriptRoot -Parent) -Parent) "templates" "zone-credential-policy.json"
 }
 
 if (-not (Test-Path $BaselinePath)) {
     Write-Warning "Zone credential policy not found at $BaselinePath. Using script-level defaults."
-    $policyFile = $null
 }
 else {
     Write-Host "  Policy baseline: $BaselinePath" -ForegroundColor Gray
-    $policyFile = Get-Content -Path $BaselinePath -Raw | ConvertFrom-Json
 }
 
 #endregion
@@ -271,13 +263,14 @@ if ($PersistResults -and $DataverseUrl) {
     $dvApiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
     $complianceRecord = @{
-        fsi_name              = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        fsi_scanid            = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_scanrunid         = $scanResult.ScanRunId
+        fsi_scanstatus        = if ($scanResult.TotalViolations -eq 0) { 100000000 } else { 100000001 }
         fsi_overallstatus     = $overallStatus
-        fsi_totalagents       = $scanResult.TotalAgents
+        fsi_agentsscanned     = $scanResult.TotalAgents
         fsi_compliantagents   = $totalCompliant
-        fsi_totalviolations   = $scanResult.TotalViolations
-        fsi_scantimestamp     = $scanResult.ScanTimestamp
+        fsi_violationsfound   = $scanResult.TotalViolations
+        fsi_scanstartedat     = $scanResult.ScanTimestamp
         fsi_zonesummary       = ($zoneSummary | ConvertTo-Json -Depth 5 -Compress)
     }
 

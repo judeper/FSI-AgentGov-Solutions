@@ -53,7 +53,7 @@ The executing identity (user or service principal) requires the following roles:
 
 | Role | Environment | Purpose |
 |------|-------------|---------|
-| Power Platform Administrator | Tenant-level | Environment operations and agent management |
+| Power Platform Admin | Tenant-level | Environment operations and agent management |
 | System Administrator | Dataverse environment | Write DR test results to `fsi_drtestresult` table |
 | Backup Operator | Azure (optional) | Azure Backup access for environment backups |
 

@@ -2,22 +2,30 @@
 
 All notable changes to agent-knowledge-source-scanner will be documented in this file.
 
-## [1.0.2] - 2026-04-16
+## [1.0.3] - 2026-04-15
 
 ### Fixed
 
-- Updated `Get-PnPAzureADGroupMember` → `Get-PnPEntraIDGroupMember` (current PnP cmdlet name)
-- Updated PnP.PowerShell minimum version from 2.5.0 to 3.0.0 and PowerShell from 7.0 to 7.2
-- Updated cmdlet references in prerequisites.md and troubleshooting.md
-- Updated template version from 1.0.0 to 1.0.2
+- GUID validation for AgentUserGroupId now case-insensitive (accepts uppercase hex)
+- Added per-item error handling for HasUniqueRoleAssignments property load (one bad item no longer fails entire library scan)
+- Aligned script version banner with solution version
+- Updated template metadata version
+
+## [1.0.2] - 2026-04-10
 
 ### Added
+- `-ClientId` parameter for PnP.PowerShell 3.x tenant-specific app registration support
+- Runtime detection of PnP.PowerShell 3.x with clear error when `-ClientId` is missing
+- PnP.PowerShell 3.x prerequisites section in docs/prerequisites.md
+- `Register-PnPEntraIDApp` setup instructions for tenant-specific app registration
 
-- Regulatory Context section in README.md with GLBA 501(b), FINRA 4511, SEC 17a-3/4 citations
-- WORM storage guidance for scan evidence retention
-- Created `.ralph-config.json` with domain facts from council review
+### Changed
+- `Get-PnPEntraIDGroupMember` used as primary cmdlet with `Get-PnPAzureADGroupMember` fallback for PnP 2.x backward compatibility
+- `Connect-PnPOnline` now uses splatting to conditionally pass `-ClientId`
+- Updated quick start examples to show both PnP 2.x and 3.x usage
+- Updated troubleshooting guidance for PnP 3.x cmdlet renames and authentication changes
 
-## [1.0.1] - April 2026
+## [1.0.1] - 2026-04-10
 
 ### Added
 - Documentation suite: docs/prerequisites.md, docs/troubleshooting.md

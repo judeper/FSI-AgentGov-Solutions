@@ -262,6 +262,8 @@ HITL_CHECKPOINT_RESULT_COLUMNS = [
     _integer_col("fsi_InputCount", "Input Count",
                  required=False,
                  description="Number of RFI inputs configured"),
+    _boolean_col("fsi_HasHitlCheckpoint", "Has HITL Checkpoint", default=False,
+                 description="Whether agent flow has at least one HITL checkpoint"),
     _picklist_col("fsi_ViolationStatus", "Violation Status",
                   "fsi_HWG_violationstatus",
                   description="Current violation lifecycle status"),
@@ -310,12 +312,24 @@ HITL_CHECKPOINT_EXCEPTION_COLUMNS = [
 HITL_SCAN_RUN_COLUMNS = [
     _string_col("fsi_RunId", "Run ID", 36,
                 description="GUID correlating all records in one scan run"),
-    _datetime_col("fsi_ValidationTime", "Validation Time",
+    _datetime_col("fsi_ScanTime", "Scan Time",
                   description="When scan executed"),
     _integer_col("fsi_TotalAgents", "Total Agents",
                  description="Total agents scanned"),
     _integer_col("fsi_TotalFlows", "Total Flows",
                  description="Total agent flows evaluated"),
+    _integer_col("fsi_AgentsWithHitl", "Agents With HITL",
+                 required=False,
+                 description="Agents with at least one HITL checkpoint"),
+    _integer_col("fsi_AgentsMissingHitl", "Agents Missing HITL",
+                 required=False,
+                 description="Agents missing required HITL checkpoints"),
+    _integer_col("fsi_TotalCheckpoints", "Total Checkpoints",
+                 required=False,
+                 description="Total HITL checkpoints found across all agents"),
+    _integer_col("fsi_CompliantCount", "Compliant Count",
+                 required=False,
+                 description="Number of compliant agents in this scan run"),
     _integer_col("fsi_CheckpointsFound", "Checkpoints Found",
                  description="HITL checkpoints detected"),
     _integer_col("fsi_CheckpointsMissing", "Checkpoints Missing",
@@ -371,8 +385,7 @@ TABLES = {
         ),
         "ownership": "OrganizationOwned",
         "columns": HITL_SCAN_RUN_COLUMNS,
-        # Explicit EntitySetName avoids auto-plural 'fsi_hitlscanruns'
-        "entity_set_name": "fsi_hitlscanrun",
+        "entity_set_name": None,
     },
 }
 
@@ -628,7 +641,7 @@ def create_schema(client: HWGClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for HITL Workflow Governance",

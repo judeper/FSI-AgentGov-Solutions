@@ -536,7 +536,7 @@ def create_schema(client: SSCClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Session Security Configurator",
         formatter_class=argparse.RawDescriptionHelpFormatter,

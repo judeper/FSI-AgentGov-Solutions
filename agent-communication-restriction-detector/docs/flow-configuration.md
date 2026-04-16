@@ -21,7 +21,7 @@ Before creating the flows, confirm you have:
   - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with ACRD schema deployed:
-  - 5 tables: `fsi_CommScanRun`, `fsi_CommViolation`, `fsi_CommApprovedRoute`, `fsi_CommException`, `fsi_CommSkillInventory`
+  - 5 tables: `fsi_CommScanRun`, `fsi_AgentCommViolation`, `fsi_ApprovedCommRoute`, `fsi_CommException`, `fsi_AgentSkillRegistration`
   - 9 environment variables configured
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
@@ -164,9 +164,10 @@ Add these **Initialize variable** actions immediately after the trigger:
 | `OverallStatus` | `fsi_overallstatus` | String | Passed, Failed, or Error |
 | `ViolationCount` | `fsi_violationcount` | Integer | Number of violations detected |
 | `TotalAgents` | `fsi_totalagents` | Integer | Total agents scanned |
+| `TotalSkills` | `fsi_totalskills` | Integer | Total skill registrations scanned |
 | `string(TotalEnvironments)` | `fsi_environmentsscanned` | String | Environments scanned |
 | Full JSON output | `fsi_summaryjson` | Memo | Complete runbook output |
-| `Timestamp` | `fsi_scantime` | DateTime | Scan execution timestamp |
+| `Timestamp` | `fsi_validationtime` | DateTime | Scan execution timestamp |
 
 5. Rename action: `Write_Scan_Run`
 
@@ -278,7 +279,7 @@ Provides a structured approval workflow when agents require exceptions to blocke
 1. Add action: **Dataverse** > **Get a row by ID**
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
-4. Select columns: `fsi_name, fsi_sourceagentid, fsi_sourceagentname, fsi_targetagentid, fsi_targetagentname, fsi_sourcezone, fsi_targetzone, fsi_communicationpattern, fsi_justification, fsi_requestedby, fsi_requestedon`
+4. Select columns: `fsi_name, fsi_callingagentid, fsi_calledagentid, fsi_sourcezone, fsi_targetzone, fsi_justification`
 5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
 6. Rename action: `Get_Exception_Details`
 
@@ -287,20 +288,17 @@ Provides a structured approval workflow when agents require exceptions to blocke
 1. Add action: **Approvals** > **Start and wait for an approval**
 2. Configure:
    - Approval type: **Approve/Reject - First to respond**
-   - Title: `[ACRD Exception] @{fsi_sourceagentname} -> @{fsi_targetagentname} (@{fsi_communicationpattern})`
+   - Title: `[ACRD Exception] @{fsi_callingagentid} -> @{fsi_calledagentid}`
    - Assigned to: `{{COMPLIANCE_EMAIL}}`
    - Details (HTML):
      ```
      <h3>Communication Exception Request</h3>
      <table>
-       <tr><td><b>Source Agent:</b></td><td>@{fsi_sourceagentname} (@{fsi_sourceagentid})</td></tr>
-       <tr><td><b>Target Agent:</b></td><td>@{fsi_targetagentname} (@{fsi_targetagentid})</td></tr>
+       <tr><td><b>Calling Agent:</b></td><td>@{fsi_callingagentid}</td></tr>
+       <tr><td><b>Called Agent:</b></td><td>@{fsi_calledagentid}</td></tr>
        <tr><td><b>Source Zone:</b></td><td>@{fsi_sourcezone}</td></tr>
        <tr><td><b>Target Zone:</b></td><td>@{fsi_targetzone}</td></tr>
-       <tr><td><b>Pattern:</b></td><td>@{fsi_communicationpattern}</td></tr>
        <tr><td><b>Justification:</b></td><td>@{fsi_justification}</td></tr>
-       <tr><td><b>Requested By:</b></td><td>@{fsi_requestedby}</td></tr>
-       <tr><td><b>Requested On:</b></td><td>@{fsi_requestedon}</td></tr>
      </table>
      ```
    - Item link: Link to the Dataverse record
@@ -346,7 +344,7 @@ After either branch (use a common action after the condition):
    - `fsi_name`: `"ExceptionDecision-" + utcNow()`
    - `fsi_overallstatus`: `"Info"`
    - `fsi_summaryjson`: JSON object with exception ID, decision (Approved/Denied), approver, comments, source/target agent details
-   - `fsi_scantime`: `utcNow()`
+   - `fsi_validationtime`: `utcNow()`
 4. Rename: `Log_Exception_Decision`
 
 ### Step 9: Send Notification to Requester
@@ -354,8 +352,8 @@ After either branch (use a common action after the condition):
 1. Add action: **Office 365 Outlook** > **Send an email (V2)**
 2. Connection reference: `fsi_cr_office365_commrestrictiondetector`
 3. Configure:
-   - To: `fsi_requestedby`(requester email from exception record)
-   - Subject: `[ACRD Exception @{Outcome}] @{fsi_sourceagentname} -> @{fsi_targetagentname}`
+   - To: Exception requester (from `createdby` system field or distribution list)
+   - Subject: `[ACRD Exception @{Outcome}] @{fsi_callingagentid} -> @{fsi_calledagentid}`
    - Body: HTML with decision details, approver comments, and next steps
    - Importance: Normal
 4. Rename action: `Send_Requester_Notification`
@@ -423,4 +421,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Agent Communication Restriction Detector -- Flow Setup Guide v1.0.0*
+*Agent Communication Restriction Detector -- Flow Setup Guide v1.0.2*

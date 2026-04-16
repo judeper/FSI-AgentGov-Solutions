@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.1.0] - April 2026
+## [1.1.0] - 2026-04-10
 
 ### Security Hardening & Compliance Improvements
 
@@ -65,7 +65,7 @@ File paths changed in v1.0.9 and v1.1.0. For audit trail continuity:
 
 ---
 
-## [1.0.9] - April 2026
+## [1.0.9] - 2026-04-10
 
 ### Changed
 
@@ -76,7 +76,7 @@ File paths changed in v1.0.9 and v1.1.0. For audit trail continuity:
 
 ---
 
-## [1.0.8] - January 2026
+## [1.0.8] - 2026-01-15
 
 ### Documentation Accuracy Fixes
 
@@ -115,9 +115,9 @@ This release addresses three documentation inaccuracies that could cause confusi
 
 ---
 
-## [1.0.7] - January 2026
+## [1.0.7] - 2026-01-15
 
-### Second Review Corrections (January 2026)
+### Second Review Corrections (2026-01-15)
 
 Minor documentation clarifications addressing 6 findings from external review:
 
@@ -148,7 +148,7 @@ Minor documentation clarifications addressing 6 findings from external review:
   - What happens if host environment is deleted
   - Recovery options and FSI retention recommendations
 - **Managed Environment licensing** implications note in LIMITATIONS.md (Section 8)
-  - February 2026 requirement documentation
+  - 2026-02-15 requirement documentation
   - Licensing considerations for FSI
 - **Service principal setup guide** for unattended automation in AUTOMATION_GUIDE.md
   - App registration steps
@@ -190,7 +190,7 @@ Minor documentation clarifications addressing 6 findings from external review:
 
 ---
 
-## [1.0.6] - January 2026
+## [1.0.6] - 2026-01-15
 
 ### Added
 - Part 0 in PORTAL_WALKTHROUGH.md: Identify Your Pipelines Host Environment
@@ -203,7 +203,7 @@ Minor documentation clarifications addressing 6 findings from external review:
 - Clarified that Force Link controls environment-host association (affects both to/from deployments)
 - Documented "Deployment pipeline default" role for controlling personal pipeline creation
 - Enhanced troubleshooting with PAC CLI diagnostic commands (must auth to HOST)
-- Added Managed Environment prerequisite note (February 2026 requirement)
+- Added Managed Environment prerequisite note (2026-02-15 requirement)
 
 ### Fixed
 - Documentation gap for customers using platform host (infrastructure-managed default)
@@ -215,7 +215,7 @@ Minor documentation clarifications addressing 6 findings from external review:
 
 ---
 
-## [1.0.5] - January 2026
+## [1.0.5] - 2026-01-15
 
 ### Critical Bug Fixes - Technical Review Remediation
 
@@ -253,7 +253,7 @@ This release fixes critical bugs identified during external technical review tha
 
 **PORTAL_WALKTHROUGH.md - Missing Prerequisite (LOW)**
 - Added Managed Environment requirement for target environments
-- Starting February 2026, Microsoft requires all pipeline targets to be Managed Environments
+- Starting 2026-02-15, Microsoft requires all pipeline targets to be Managed Environments
 - Added link to Microsoft Learn documentation
 
 #### Changed
@@ -281,7 +281,7 @@ If you implemented v1.0.3 or v1.0.4:
 
 ---
 
-## [1.0.4] - January 2026
+## [1.0.4] - 2026-01-15
 
 ### Post-Review Enhancements
 
@@ -332,7 +332,7 @@ Excluded from scope: Azure Automation integration, Azure Monitor integration, vi
 
 ---
 
-## [1.0.3] - January 2026
+## [1.0.3] - 2026-01-15
 
 ### Executive Feedback Remediation
 
@@ -392,7 +392,7 @@ If you implemented v1.0.2:
 
 ---
 
-## [1.0.2] - January 2026
+## [1.0.2] - 2026-01-15
 
 ### Fixed
 
@@ -421,7 +421,7 @@ The following were verified as accurate and unchanged:
 
 ---
 
-## [1.0.1] - January 2026
+## [1.0.1] - 2026-01-15
 
 ### Critical Corrections
 
@@ -466,7 +466,7 @@ If you implemented v1.0.0:
 
 ---
 
-## [1.0.0] - January 2026
+## [1.0.0] - 2026-01-15
 
 ### Added
 

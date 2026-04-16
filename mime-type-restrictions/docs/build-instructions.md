@@ -50,4 +50,4 @@ Step-by-step guide to build the Dataverse plugin DLL from source.
 
 ## Next Steps
 
-Register the built DLL using the Plugin Registration Tool. See SOLUTION-DOCUMENTATION.md § Step 2: Register Dataverse Plugin for detailed registration instructions.
+Register the built DLL using the Plugin Registration Tool. See docs/flow-configuration.md § Step 2: Register Dataverse Plugin for detailed registration instructions.

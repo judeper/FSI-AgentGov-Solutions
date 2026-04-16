@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -55,7 +55,7 @@
     fsi_severity, fsi_validationtype, fsi_rawvalue, fsi_reason, fsi_timestamp.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     This is a private helper function for internal use by Export-AuditValidationEvidence.
 
     Option set mappings (must match Dataverse schema):

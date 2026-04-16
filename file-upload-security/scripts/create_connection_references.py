@@ -95,7 +95,7 @@ def deploy_connection_references(client: FUSClient) -> None:
 
 # ── CLI Entry Point ──────────────────────────────────────────────
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create connection references for File Upload Security Configurator"
     )

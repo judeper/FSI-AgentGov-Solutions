@@ -1,9 +1,11 @@
 # Cross-Tenant and External Sharing Governance
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments.
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Overview
 
@@ -171,7 +173,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 
 ## Version
 
-- **Current:** v1.0.0
+- **Current:** v1.0.1
 - **Framework:** FSI-AgentGov v1.1
 
 ## License

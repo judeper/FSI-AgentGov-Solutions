@@ -48,6 +48,8 @@ $script:GenAIFeatureTypeToInt = @{
     'SearchAndSummarize'     = 100000003
     'GenerativeActions'      = 100000004
     'KnowledgeSource'        = 100000005
+    'ModelKnowledge'         = 100000006
+    'SemanticSearch'         = 100000007
 }
 $script:IntToGenAIFeatureType = @{
     100000000 = 'AzureOpenAIIntegration'
@@ -56,6 +58,8 @@ $script:IntToGenAIFeatureType = @{
     100000003 = 'SearchAndSummarize'
     100000004 = 'GenerativeActions'
     100000005 = 'KnowledgeSource'
+    100000006 = 'ModelKnowledge'
+    100000007 = 'SemanticSearch'
 }
 
 # Orchestration mode picklist mapping
@@ -179,6 +183,7 @@ function Get-GACConnection {
 
     [PSCustomObject]@{
         DataverseUrl = $script:DataverseUrl
+        AccessToken  = $script:AccessToken
         IsConnected  = $null -ne $script:DataverseUrl -and $null -ne $script:AccessToken
     }
 }
@@ -1039,7 +1044,7 @@ function Get-ApprovedConnections {
             } else { 'Unknown' }
 
             [PSCustomObject]@{
-                ConnectionId   = $_.fsi_gacapprovedconnectionid
+                ConnectionId   = $_.fsi_connectionid
                 ConnectionName = $_.fsi_connectionname
                 Zone           = $zoneName
                 AoaiEndpoint   = $_.fsi_aoaiendpoint

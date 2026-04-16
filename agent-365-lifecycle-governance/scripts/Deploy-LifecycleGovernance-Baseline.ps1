@@ -1,3 +1,5 @@
+#Requires -Modules Az.Accounts
+
 <#
 .SYNOPSIS
     Deploys baseline configuration for Agent 365 Lifecycle Governance.
@@ -12,9 +14,13 @@
 
 .PARAMETER DataverseEnvironmentUrl
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
+    Reserved for future Dataverse schema validation during baseline deployment.
 
 .PARAMETER DefaultSponsorUPN
     Fallback sponsor UPN for agents without identified owners.
+
+.PARAMETER DryRun
+    Preview baseline results without writing the report file.
 
 .EXAMPLE
     .\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@contoso.com"
@@ -37,26 +43,25 @@ param(
 try {
     Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
     $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
-    $ppToken    = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com" -ErrorAction Stop).Token
 } catch {
-    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has AgentRegistry.ReadWrite.All and Dataverse access. Error: $($_.Exception.Message)"
+    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
 }
 
 $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "application/json" }
-$ppHeaders    = @{ Authorization = "Bearer $ppToken";    "Content-Type" = "application/json" }
 
 Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cyan
 
 # Retrieve all agents — filter client-side for unsponsored agents
 # Server-side sponsor filter syntax must be validated in test tenant
-# NOTE: The Agent Registry API (graph.microsoft.com/beta/agentRegistry) is in beta.
-# TODO: verify — Agent 365 GA may change this to agentIdentity or agentRegistry/agentInstances.
-# Verify current availability at https://learn.microsoft.com/en-us/graph/api/resources/agenttypes-overview
+# NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
+# The /beta/agentRegistry endpoint may now have a v1.0 equivalent.
+# Test with v1.0 in your tenant before migrating.
+# Autonomous agents with full Entra identities remain in Frontier preview.
 try {
     $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
 } catch {
-    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has AgentRegistry.ReadWrite.All. Error: $($_.Exception.Message)"
+    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
     exit 1
 }
 if (-not $registryAgents) { $registryAgents = @() }
@@ -86,6 +91,10 @@ if (-not $DryRun) {
     $baseline | ConvertTo-Json -Depth 5 | Write-Host
 }
 
+# DataverseEnvironmentUrl is reserved for future Dataverse schema validation.
+# When Dataverse validation is implemented, it will verify that the ALG tables
+# and columns exist in the target environment before baseline population.
+Write-Host "Dataverse environment (for future validation): $DataverseEnvironmentUrl" -ForegroundColor DarkGray
 Write-Host "Review unsponsored agents and set IsAgent365LifecycleEnabled to 'true' to activate flows." -ForegroundColor Yellow
 Write-Host "Confirm DefaultSponsorUPN environment variable is set to: $DefaultSponsorUPN" -ForegroundColor Cyan
 

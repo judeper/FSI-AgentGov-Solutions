@@ -160,7 +160,7 @@ def run_deployment(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for ACRD deployment orchestrator."""
     parser = argparse.ArgumentParser(
         description=(

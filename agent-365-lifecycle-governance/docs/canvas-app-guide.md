@@ -86,7 +86,7 @@ Navigate(scrAgentDetail, ScreenTransition.None, { selectedAgent: ThisItem })
 - **Gallery** showing recent events from `fsi_lifecyclecomplianceevent`
 - **Filter controls:**
   - Dropdown: Event Type
-  - Dropdown: Compliance Impact (Informational / Low / Medium / High / Critical)
+  - Dropdown: Compliance Impact (None / Low / Medium / High / Critical)
   - Date picker: Date Range (start/end)
 - **Export functionality:** Button to export filtered gallery data to CSV
 
@@ -140,4 +140,4 @@ ClearCollect(colExport, Filter(fsi_lifecyclecomplianceevents, ...));
 
 ---
 
-*Agent 365 Lifecycle Governance v1.0.0*
+*Agent 365 Lifecycle Governance v1.1.1*

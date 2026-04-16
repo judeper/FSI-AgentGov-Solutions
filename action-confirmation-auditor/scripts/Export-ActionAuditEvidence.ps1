@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -29,7 +30,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Microsoft Entra ID tenant ID. Required for authentication.
+    Azure AD tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -59,7 +60,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for service principal authentication.
+    Azure AD application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-ActionAuditEvidence.ps1 `
@@ -107,7 +108,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
     Requires:
@@ -313,7 +314,7 @@ if ($RunId) {
     $violationFilter += " and fsi_runid eq '$RunId'"
 }
 if ($Zone -ne 'All') {
-    $violationFilter += " and fsi_zone eq 'Zone$Zone'"
+    $violationFilter += " and fsi_zone eq $Zone"
 }
 
 try {
@@ -366,7 +367,7 @@ $validationsReadable = $validations | ForEach-Object {
         scanTime             = $_.fsi_validationtime
         totalAgents          = $_.fsi_totalagents
         totalActions         = $_.fsi_totalactions
-        compliantCount       = $_.fsi_compliantcount
+        actionsWithConfirmation = $_.fsi_actionswithconfirmation
         violationCount       = $_.fsi_violationcount
         overallStatus        = $_.fsi_overallstatus
         environmentsScanned  = $_.fsi_environmentsscanned
@@ -385,7 +386,6 @@ $violationsReadable = $violations | ForEach-Object {
         zone               = $_.fsi_zone
         actionName         = $_.fsi_actionname
         actionType         = $_.fsi_actiontype
-        actionCategory     = $_.fsi_violationtype  # Action category derived from violation type
         connectorName      = $_.fsi_connectorname
         confirmationStatus = $_.fsi_confirmationstatus
         violationType      = $_.fsi_violationtype
@@ -403,11 +403,10 @@ if ($IncludeExceptions -and $exceptionRecords.Count -gt 0) {
     $exceptionsReadable = $exceptionRecords | ForEach-Object {
         [PSCustomObject]@{
             agentId            = $_.fsi_agentid
-            agentName          = $_.fsi_agentname
             actionName         = $_.fsi_actionname
             actionType         = $_.fsi_actiontype
             zone               = $_.fsi_zone
-            reason             = $_.fsi_justification
+            justification      = $_.fsi_justification
             approvedBy         = $_.fsi_approvedby
             approvedAt         = $_.fsi_approvedat
             expiresAt          = $_.fsi_expiresat
@@ -470,7 +469,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Action Confirmation Auditor"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.0.2"
     control         = "1.23"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

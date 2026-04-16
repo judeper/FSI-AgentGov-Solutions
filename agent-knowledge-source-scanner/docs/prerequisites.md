@@ -6,17 +6,62 @@ Requirements for deploying the Agent Knowledge Source Scanner solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime (`#Requires -Version 7.0`) |
-| PnP.PowerShell | 3.0.0+ | SharePoint Online item enumeration, permission reads, sensitivity label retrieval |
+| PowerShell | 7.0+ (7.4+ for PnP 3.x) | Core runtime (`#Requires -Version 7.0`) |
+| PnP.PowerShell | 2.5.0+ or 3.x | SharePoint Online item enumeration, permission reads, sensitivity label retrieval |
 
 ## Installation
 
+### PnP.PowerShell 2.x
+
 ```powershell
-# Install PnP.PowerShell module
+# Install PnP.PowerShell module (2.x — uses built-in multi-tenant app)
+Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
+```
+
+> **Note:** PnP.PowerShell 2.5.0+ requires PowerShell 7.0 or later. Windows PowerShell 5.1 is not supported.
+
+### PnP.PowerShell 3.x
+
+PnP.PowerShell 3.x introduces breaking changes that affect authentication:
+
+| Change | Detail |
+|--------|--------|
+| **PowerShell 7.4+** required | Minimum runtime raised from 7.0 to 7.4 |
+| **.NET 8.0** required | Runtime dependency upgraded from .NET 6.0 |
+| **Multi-tenant app removed** | The PnP multi-tenant app registration (`31359c7f-bd7e-475c-86db-fdb8c937548e`) was removed in September 2024 |
+| **`-ClientId` mandatory** | `Connect-PnPOnline` now requires a tenant-specific Entra app registration |
+| **Cmdlet renames** | `Get-PnPAzureADGroupMember` renamed to `Get-PnPEntraIDGroupMember` (this script handles both automatically) |
+
+```powershell
+# Install PnP.PowerShell 3.x
 Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentUser
 ```
 
-> **Note:** PnP.PowerShell 3.0.0+ requires PowerShell 7.2 or later. Windows PowerShell 5.1 is not supported.
+#### Register a Tenant-Specific Entra App
+
+PnP.PowerShell 3.x requires a tenant-specific Entra app registration. Use the built-in registration command:
+
+```powershell
+# Register the PnP app in your tenant (requires Entra Global Admin consent)
+Register-PnPEntraIDApp -ApplicationName "PnP.PowerShell - AgentGov" `
+    -Tenant "contoso.onmicrosoft.com" `
+    -Interactive `
+    -SharePointDelegatePermissions "AllSites.Read" `
+    -GraphDelegatePermissions "Group.Read.All"
+```
+
+Record the **Client ID** from the output. Pass it to the scanner with `-ClientId`:
+
+```powershell
+.\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
+    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
+    -LibraryName "Documents" `
+    -AgentName "HR-Agent" `
+    -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
+    -ClientId "your-client-id-here"
+```
+
+> **Note:** The script detects PnP.PowerShell 3.x at runtime and produces a clear error if `-ClientId` is not provided.
 
 ## Permissions
 
@@ -28,7 +73,7 @@ The executing user must have permission to read item-level details and role assi
 |------|--------------|
 | **Site Collection Admin** or **Site Member** (with read access) | Enumerate items and read role assignments in knowledge source libraries |
 
-The script uses `Connect-PnPOnline -Interactive` which triggers a delegated (user) authentication flow. The signed-in user must have at least read access to the target SharePoint site and library.
+The script uses `Connect-PnPOnline -Interactive` which triggers a delegated (user) authentication flow. For PnP.PowerShell 3.x, the `-ClientId` parameter is also required (see [PnP.PowerShell 3.x](#pnppowershell-3x) above). The signed-in user must have at least read access to the target SharePoint site and library.
 
 ### Entra ID (Optional — Group Resolution)
 
@@ -36,7 +81,7 @@ When using the `-AgentUserGroupId` parameter to resolve agent user scope from a 
 
 | Permission | Type | Required For |
 |------------|------|--------------|
-| **GroupMember.Read.All** or **Group.Read.All** | Delegated | Resolve security group members via `Get-PnPEntraIDGroupMember` |
+| **GroupMember.Read.All** or **Group.Read.All** | Delegated | Resolve security group members via `Get-PnPEntraIDGroupMember` (PnP 3.x) or `Get-PnPAzureADGroupMember` (PnP 2.x) |
 | **Entra ID Reader** role | Directory | Alternative: read group membership via directory role |
 
 If group resolution fails, the script logs a warning and continues without agent user scope comparison.

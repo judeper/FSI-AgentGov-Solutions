@@ -6,8 +6,8 @@ Detects unauthorized agent-to-agent communication patterns, zone boundary violat
 
 | Property | Value |
 |----------|-------|
-| Status | In Development |
-| Version | 1.0.0 |
+| Status | Released |
+| Version | 1.0.2 |
 | Primary Control | [2.17 -- Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) |
 | Regulatory Context | FINRA 3110, GLBA 501(b), SOX 404 |
 
@@ -149,6 +149,8 @@ The following placeholder values in solution files must be replaced with your or
 - [Prerequisites](docs/prerequisites.md) -- Module and permission requirements
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table, column, and option set reference
 - [Flow Setup](docs/flow-configuration.md) -- Power Automate deployment guide
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## License
 

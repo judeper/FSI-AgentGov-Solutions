@@ -16,7 +16,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 | **Supporting evidence** | The query provides supplementary evidence alongside other controls |
 | **Partial coverage** | The query provides some evidence but additional artifacts are needed |
 
-> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or query "ensures" or "guarantees" compliance. Implementation, validation, and ongoing maintenance are required for compliance.
+> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or query should be described as independently satisfying a compliance obligation. Implementation, validation, and ongoing maintenance are required for compliance.
 
 ---
 

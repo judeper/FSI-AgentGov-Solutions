@@ -30,10 +30,10 @@ SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
         "name": "fsi_acv_zone",
         "options": [
-            ("Unclassified", 0),
-            ("Zone 1", 1),
-            ("Zone 2", 2),
-            ("Zone 3", 3),
+            ("Unclassified", 100000000),
+            ("Zone 1", 100000001),
+            ("Zone 2", 100000002),
+            ("Zone 3", 100000003),
         ],
     },
 }
@@ -46,54 +46,54 @@ ARA_OPTIONSETS = {
     "fsi_ara_registrationstatus": {
         "name": "fsi_ara_registrationstatus",
         "options": [
-            ("Unregistered", 0),
-            ("PendingApproval", 1),
-            ("Registered", 2),
-            ("Rejected", 3),
-            ("Decommissioned", 4),
+            ("Unregistered", 100000000),
+            ("PendingApproval", 100000001),
+            ("Registered", 100000002),
+            ("Rejected", 100000003),
+            ("Decommissioned", 100000004),
         ],
     },
     "fsi_ara_publishedstatus": {
         "name": "fsi_ara_publishedstatus",
         "options": [
-            ("Published", 0),
-            ("Draft", 1),
-            ("Quarantined", 2),
-            ("Disabled", 3),
+            ("Published", 100000000),
+            ("Draft", 100000001),
+            ("Quarantined", 100000002),
+            ("Disabled", 100000003),
         ],
     },
     "fsi_ara_riskrating": {
         "name": "fsi_ara_riskrating",
         "options": [
-            ("Low", 0),
-            ("Medium", 1),
-            ("High", 2),
-            ("Critical", 3),
+            ("Low", 100000000),
+            ("Medium", 100000001),
+            ("High", 100000002),
+            ("Critical", 100000003),
         ],
     },
     "fsi_ara_eventtype": {
         "name": "fsi_ara_eventtype",
         "options": [
-            ("Discovered", 0),
-            ("Registered", 1),
-            ("Approved", 2),
-            ("Rejected", 3),
-            ("Quarantined", 4),
-            ("SLA_Escalated", 5),
-            ("OrphanDetected", 6),
-            ("OwnerChanged", 7),
-            ("Decommissioned", 8),
-            ("EntraSynced", 9),
+            ("Discovered", 100000000),
+            ("Registered", 100000001),
+            ("Approved", 100000002),
+            ("Rejected", 100000003),
+            ("Quarantined", 100000004),
+            ("SLA_Escalated", 100000005),
+            ("OrphanDetected", 100000006),
+            ("OwnerChanged", 100000007),
+            ("Decommissioned", 100000008),
+            ("EntraSynced", 100000009),
         ],
     },
     "fsi_ara_approvalstatus": {
         "name": "fsi_ara_approvalstatus",
         "options": [
-            ("Pending", 0),
-            ("Approved", 1),
-            ("Rejected", 2),
-            ("Escalated", 3),
-            ("Expired", 4),
+            ("Pending", 100000000),
+            ("Approved", 100000001),
+            ("Rejected", 100000002),
+            ("Escalated", 100000003),
+            ("Expired", 100000004),
         ],
     },
 }
@@ -636,7 +636,7 @@ def create_schema(client: ARAClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Registry Automation",

@@ -1,6 +1,6 @@
 # Agent Registry Automation
 
-> **Status:** Production Ready (v1.0.0)
+> **Status:** Production Ready (v1.0.2)
 
 Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform environments, supporting FSI agent inventory and record-keeping requirements.
 
@@ -114,7 +114,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 | Connection reference deployment | `scripts/create_connection_references.py` | Python |
 | Deployment orchestrator | `scripts/deploy.py` | Python |
 | Baseline inventory export | `scripts/Deploy-AgentRegistry-Baseline.ps1` | PowerShell |
-| Compliance validation | `scripts/Validate-AgentRegistry-Compliance.ps1` | PowerShell |
+| Compliance validation | `scripts/Test-AgentRegistryCompliance.ps1` | PowerShell |
 | Flow build instructions | `docs/flow-configuration.md` | Documentation |
 | Dataverse schema reference | `docs/dataverse-schema.md` | Documentation |
 
@@ -125,7 +125,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 ```powershell
 # Deploy tables, option sets, and alternate keys
 python scripts/create_dataverse_schema.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id" `
     --client-id "your-client-id" `
     --client-secret "your-client-secret"
@@ -136,7 +136,7 @@ python scripts/create_dataverse_schema.py `
 ```powershell
 # Create environment variables in the target environment
 python scripts/create_environment_variables.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id"
 ```
 
@@ -145,7 +145,7 @@ python scripts/create_environment_variables.py `
 ```powershell
 # Create connection references for the 4 flows
 python scripts/create_connection_references.py `
-    --environment "https://your-org.crm.dynamics.com" `
+    --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id"
 ```
 
@@ -158,22 +158,20 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 ```powershell
 # Export existing agents to seed the inventory
 .\scripts\Deploy-AgentRegistry-Baseline.ps1 `
-    -TenantId "your-tenant-id" `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com"
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
 
 ### 6. Validate Deployment
 
 ```powershell
 # Verify schema, variables, connections, and flow status
-.\scripts\Validate-AgentRegistry-Compliance.ps1 `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com" `
-    -TenantId "your-tenant-id"
+.\scripts\Test-AgentRegistryCompliance.ps1 `
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
 
 ## Key Configuration Notes
 
-- **Entra Agent Registry (Flow 3):** Disabled by default via the `fsi_ARA_EntraRegistrySyncEnabled` environment variable. Enable only after confirming Entra Agent Registry API availability (requires Agent 365 / Frontier licensing).
+- **Entra Agent Registry (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming Entra Agent Registry API availability (requires Agent 365 / Frontier licensing).
 - **BotFrameworkEndpoint field name:** The `properties.botFrameworkEndpoint` field from the Bots API response needs live API confirmation. Verify the exact field path in your environment before enabling Flow 1.
 - **Office 365 connector for SLA:** The SLA calculation in Flow 2 uses the Office 365 Users connector to determine the approver's time zone for business-day calculations. If DLP policies block this connector, configure a fallback time zone in the `fsi_ARA_DefaultTimeZone` environment variable.
 - **7-year retention (LTR):** The `fsi_agentcomplianceevent` table is designed for Dataverse Long-Term Retention. Enable LTR policies after deployment to support SEC 17a-3/4 retention requirements.
@@ -231,9 +229,13 @@ Future enhancements should consider:
 
 ## Version History
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.0 | March 2026 | Initial release |
+| 1.0.2 | 2026-04-16 | Data integrity fixes, parameter corrections |
+| 1.0.1 | 2026-04-15 | Schema alignment fixes, verb corrections |
+| 1.0.0 | 2026-03-15 | Initial release |
 
 ## Support
 
@@ -245,4 +247,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Agent Registry Automation v1.0.0*
+*FSI Agent Governance Framework — Agent Registry Automation v1.0.2*

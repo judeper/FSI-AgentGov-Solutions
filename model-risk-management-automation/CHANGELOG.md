@@ -6,13 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.1] — 2026-04-15
+
+### Fixed
+
+- Fixed option set default values for Dataverse picklist columns
+- Renamed Validate-MRM-Compliance.ps1 to Test-MRMCompliance.ps1 (approved PowerShell verb)
+
+---
+
 ## [1.0.0] — 2026-03-20
 
 ### Added
 
 - **Dataverse Schema** — 6 custom tables: `fsi_modelinventory` (master MRM record with alternate key), `fsi_mrmriskrating` (risk scoring evidence), `fsi_validationcycle` (validation tracking), `fsi_validationfinding` (individual findings), `fsi_monitoringrecord` (ongoing monitoring), `fsi_mrmcomplianceevent` (immutable audit log)
 - **Python Deployment Scripts** — `mrm_client.py` (Dataverse Web API client), `create_mrm_dataverse_schema.py` (6 tables + ~20 option sets + alternate key), `create_mrm_environment_variables.py` (27 variables), `create_mrm_connection_references.py` (6 connection references), `deploy.py` (orchestrated deployment)
-- **PowerShell Scripts** — `Deploy-MRM-Baseline.ps1` (initial agent inventory export), `Validate-MRM-Compliance.ps1` (examiner-ready compliance posture report)
+- **PowerShell Scripts** — `Deploy-MRM-Baseline.ps1` (initial agent inventory export), `Test-MRMCompliance.ps1` (examiner-ready compliance posture report)
 - **Flow Documentation** — Step-by-step build instructions for 6 Power Automate flows: Sync-AgentInventory-ToMRM (daily), Score-ModelRisk-OnSubmission (instant), Execute-ValidationWorkflow (approval-gated), Monitor-ModelPerformance-Scheduled (weekly), Generate-AgentCard-OnChange (instant), Trigger-Revalidation-OnThreshold (instant)
 - **Power Apps Documentation** — Build guides for MRM Submission Portal (Canvas app, 4 screens) and Validation Workbench (Model-Driven app)
 - **Power BI Documentation** — MRM Compliance Dashboard build guide with data model, DAX measures, and 5 report pages

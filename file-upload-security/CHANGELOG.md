@@ -2,7 +2,13 @@
 
 All notable changes to the File Upload Security Configurator will be documented in this file.
 
-## [1.0.1] — 2025-07-14
+## [1.0.2] — 2026-04-15
+
+### Fixed
+
+- Critical: Entity set name corrected from fsi_fileuploadvalidationhistorys to fsi_fileuploadvalidationhistories (was malformed plural)
+
+## [1.0.1] — 2026-03-01
 
 ### Changed
 - Moved `src/adaptive-card-fileupload-alert.json` to `templates/` per solution content policy
@@ -24,7 +30,7 @@ All notable changes to the File Upload Security Configurator will be documented 
 - `FUSClient.psm1` — Dataverse client module for file upload metadata queries
 - Content moderation cross-check for file-upload-enabled agents
 - Zone policy model: Zone 1 (Allowed), Zone 2 (Restricted), Zone 3 (Disabled)
-- Dataverse schema: fsi_fileupload_baseline, fsi_fileupload_validationhistory, fsi_fileupload_violation tables
+- Dataverse schema: fsi_fileuploadbaseline, fsi_fileuploadvalidationhistory, fsi_fileuploadviolation tables
 - Power Automate daily validation flow with Teams adaptive card alerts
 - Azure Automation runbook wrapper for unattended execution
 - SHA-256 integrity-hashed evidence export for SEC 17a-4(f) support

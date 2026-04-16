@@ -1,5 +1,6 @@
 # Audit Compliance Manager (ACM)
 
+> **Version:** v1.0.2
 > **Status:** Completed
 
 Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the Audit Configuration Validator (ACV) and Audit Logging Compliance Automation (ALCA) into a single solution that validates audit configurations, detects compliance gaps, and remediates non-compliant environments.
@@ -22,7 +23,7 @@ Unified audit compliance solution for Microsoft 365 and Power Platform environme
 
 | Role | Purpose |
 |------|---------|
-| Exchange Online Admin | Unified Audit Log configuration, Search-UnifiedAuditLog |
+| Exchange Administrator | Unified Audit Log configuration, Search-UnifiedAuditLog |
 | Purview Compliance Admin | Purview retention policy access |
 | Power Platform Admin | Environment enumeration, audit configuration |
 | Entra Global Admin | Managed Identity role assignments |
@@ -157,7 +158,7 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
 
 ```powershell
 # Detect audit logging compliance gaps across environments
-.\scripts\Check-AuditLoggingCompliance.ps1 `
+.\scripts\Test-AuditLoggingCompliance.ps1 `
     -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
     -TenantDomain "contoso.onmicrosoft.com"
 ```
@@ -302,14 +303,14 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 | Environment Runbook | `scripts/Start-EnvironmentValidationRunbook.ps1` | ACV | Azure Automation wrapper |
 | Helper Module | `scripts/AuditComplianceHelpers.psm1` | ALCA | Shared functions (retry, MI auth, Dataverse, email) |
 | Module Manifest | `scripts/AuditComplianceHelpers.psd1` | ALCA | Module metadata and exports |
-| Detection Runbook | `scripts/Check-AuditLoggingCompliance.ps1` | ALCA | Scan environments for audit compliance |
+| Detection Runbook | `scripts/Test-AuditLoggingCompliance.ps1` | ALCA | Scan environments for audit compliance |
 | Remediation Runbook | `scripts/Enable-AuditLogging.ps1` | ALCA | Enable auditing on non-compliant environments |
 | Unified Audit Log Check | `scripts/Test-UnifiedAuditLog.ps1` | ACV | Validates unified audit log configuration |
 | Mailbox Audit Check | `scripts/Test-MailboxAudit.ps1` | ACV | Validates mailbox audit settings |
 | Purview Retention Check | `scripts/Test-PurviewRetention.ps1` | ACV | Validates Purview retention policies |
 | Environment Audit Check | `scripts/Test-EnvironmentAudit.ps1` | ACV | Validates environment audit settings |
 | Environment Retention Check | `scripts/Test-EnvironmentRetention.ps1` | ACV | Validates environment retention policies |
-| Security Role Config | `scripts/Configure-SecurityRoles.ps1` | ACV | Configures required security roles |
+| Security Role Config | `scripts/Set-SecurityRoles.ps1` | ACV | Configures required security roles |
 | Validator Tests | `scripts/Validators.Tests.ps1` | ACV | Pester 5 tests for validator scripts |
 | Unit Tests | `scripts/AuditComplianceHelpers.Tests.ps1` | ALCA | Pester 5 tests for helper module |
 | Connect Audit Services | `scripts/private/Connect-AuditServices.ps1` | ACV | Authenticates to M365 audit services |
@@ -323,11 +324,8 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 
 | Template | Origin | Purpose |
 |----------|--------|---------|
-| `templates/tenant-validation-flow.json` | ACV | Daily tenant validation Power Automate flow |
-| `templates/environment-validation-flow.json` | ACV | Daily environment validation Power Automate flow |
 | `templates/adaptive-card-tenant-alert.json` | ACV | Teams card for tenant drift alerts |
 | `templates/adaptive-card-environment-alert.json` | ACV | Teams card for environment drift alerts |
-| `templates/audit-remediation-approval-flow.json` | ALCA | Approval-gated remediation Power Automate flow |
 
 ## Architecture
 
@@ -359,14 +357,14 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 │  - Invoke-WithRetry, Get-ManagedIdentityToken                   │
 │  - Invoke-DataverseRequest, Send-ComplianceNotification         │
 │                                                                 │
-│  Detection: Check-AuditLoggingCompliance.ps1                    │
+│  Detection: Test-AuditLoggingCompliance.ps1                    │
 │  - MI Auth, environment scanning, Dataverse upsert              │
 │                                                                 │
 │  Remediation: Enable-AuditLogging.ps1                           │
 │  - Org-level + entity-level audit enablement, WhatIf support    │
 │                                                                 │
-│  Approval: audit-remediation-approval-flow.json                 │
-│  - Governance-approved remediation via Power Automate            │
+│  Approval: ALCA Audit Remediation Approval flow                 │
+│  - Governance-approved remediation (see docs/FLOW_SETUP.md)     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -380,9 +378,9 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 | Tenant-level validation | **Automated** | PowerShell scripts |
 | Environment discovery | **Automated** | `Invoke-EnvironmentDiscovery.ps1` |
 | Environment validation | **Automated** | `Invoke-EnvironmentAuditValidation.ps1` |
-| Compliance detection (ALCA) | **Automated** | `Check-AuditLoggingCompliance.ps1` |
+| Compliance detection (ALCA) | **Automated** | `Test-AuditLoggingCompliance.ps1` |
 | Remediation (ALCA) | **Automated** | `Enable-AuditLogging.ps1` |
-| Power Automate flows | **Template** | Import from JSON templates |
+| Power Automate flows | **Manual** | Build using docs/FLOW_SETUP.md instructions |
 | Alerting configuration | **Template** | Configured via Power Automate flows |
 | Evidence export | **Automated** | `Export-AuditValidationEvidence.ps1` |
 | ALCA Dataverse schema | **Automated** | `create_audit_compliance_schema.py` |
@@ -402,11 +400,11 @@ The following placeholder values in solution files must be replaced with your or
 
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json`, `templates/audit-remediation-approval-flow.json` |
-| `compliance-alerts@example.com` | Your compliance team email | `templates/environment-validation-flow.json`, `templates/tenant-validation-flow.json` |
-| `governance-lead@example.com` | Your governance lead email | `templates/audit-remediation-approval-flow.json` |
-| `compliance-team@example.com` | Your compliance team email | `templates/audit-remediation-approval-flow.json` |
-| `https://YOUR-ORG.crm.dynamics.com` | Your Dataverse environment URL | `templates/audit-remediation-approval-flow.json` |
+| `contoso.onmicrosoft.com` | Your tenant domain | Flow variables (see `docs/FLOW_SETUP.md`) |
+| `compliance-alerts@example.com` | Your compliance team email | Flow variables (see `docs/FLOW_SETUP.md`) |
+| `governance-lead@example.com` | Your governance lead email | Flow variables (see `docs/FLOW_SETUP.md`) |
+| `compliance-team@example.com` | Your compliance team email | Flow variables (see `docs/FLOW_SETUP.md`) |
+| `https://YOUR-ORG.crm.dynamics.com` | Your Dataverse environment URL | Flow variables (see `docs/FLOW_SETUP.md`) |
 
 ## Security Considerations
 

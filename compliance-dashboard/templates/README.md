@@ -2,27 +2,21 @@
 
 This directory contains deployment artifacts for the Compliance Dashboard.
 
-## Required Files
+## Files
 
 | File | Description | How to Create |
 |------|-------------|---------------|
-| `ComplianceDashboard_1_0_0.zip` | Power Platform solution package | Export from Power Apps: **Solutions** > **Compliance Dashboard** > **Export** > **As unmanaged** |
 | `ComplianceDashboard.pbit` | Power BI template file | Follow [Power BI Template Specification](../docs/power-bi-template-spec.md) to create manually in Power BI Desktop |
+| `exchange-config.sample.json` | Exchange compliance scan configuration | Copy and customize for your environment |
 
-## Creating the Solution Package
+## Deployment
 
-1. Build the Dataverse schema and flows manually using [Flow Configuration](../docs/flow-configuration.md)
-2. Navigate to [Power Apps maker portal](https://make.powerapps.com)
-3. Select **Solutions** > **Compliance Dashboard**
-4. Click **Export** > **As unmanaged**
-5. Save the `.zip` file to this directory as `ComplianceDashboard_1_0_0.zip`
+This solution does not ship a packaged `.zip` file. Build all Dataverse tables, columns, and flows manually:
 
-## Creating the Power BI Template
-
-See [docs/power-bi-template-spec.md](../docs/power-bi-template-spec.md) for complete step-by-step instructions.
-
-After creating the template, save `ComplianceDashboard.pbit` to this directory.
+1. Create the Dataverse schema following [Dataverse Schema](../docs/dataverse-schema.md)
+2. Build Power Automate flows following [Flow Configuration](../docs/flow-configuration.md)
+3. Create the Power BI template following [Power BI Template Specification](../docs/power-bi-template-spec.md) and save `ComplianceDashboard.pbit` to this directory
 
 ---
 
-*Compliance Dashboard v1.0.0*
+*Compliance Dashboard v1.0.2*

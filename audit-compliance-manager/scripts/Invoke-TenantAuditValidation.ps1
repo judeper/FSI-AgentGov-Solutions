@@ -98,7 +98,7 @@
     - Reason: Summary of overall status
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires:
     - ExchangeOnlineManagement module v3.7.0 or later
     - PowerShell 7.0 or later

@@ -60,8 +60,8 @@ No planned changes. Solution is feature-complete for v4 milestone.
   - First run treats non-Passed as drift (no baseline suppression)
 
 #### Power Automate Flows
-- **tenant-validation-flow.json** - Daily tenant validation at 6 AM UTC
-- **environment-validation-flow.json** - Daily environment validation at 7 AM UTC
+- Tenant validation flow — Daily tenant validation at 6 AM UTC (see `docs/FLOW_SETUP.md`)
+- Environment validation flow — Daily environment validation at 7 AM UTC (see `docs/FLOW_SETUP.md`)
 - Severity-based alert routing (Failed/Error → Teams + email, Warning → email only)
 - Scope Try-Catch error handling pattern
 

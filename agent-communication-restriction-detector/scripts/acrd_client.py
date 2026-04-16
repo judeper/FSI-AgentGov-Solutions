@@ -560,7 +560,7 @@ class ACRDClient:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for ACRDClient standalone testing."""
     parser = argparse.ArgumentParser(
         description="ACRDClient - Dataverse Web API client for Agent Communication Restriction Detector",

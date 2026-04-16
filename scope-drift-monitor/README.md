@@ -1,6 +1,6 @@
 # Scope Drift Monitor
 
-> **Status:** Completed (v1.1.1)
+> **Status:** Completed (v1.1.2)
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
@@ -209,7 +209,7 @@ If Denied: Remediate Access → Close Violation
 
 > Personal data shall be adequate, relevant and limited to what is necessary.
 
-**Coverage:** Scope definitions ensure agents only access necessary data.
+**Coverage:** Scope definitions help limit agent access to declared data sources.
 
 ### GLBA 501(b)
 
@@ -221,7 +221,7 @@ If Denied: Remediate Access → Close Violation
 
 > Data collected for specified purposes cannot be used for incompatible purposes.
 
-**Coverage:** Scope enforcement ensures purpose-limited data access.
+**Coverage:** Scope monitoring supports purpose-limited data access requirements.
 
 ## Related Controls
 
@@ -246,6 +246,7 @@ Microsoft is introducing [sensitivity label visibility in Copilot Studio](https:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.2 | April 2026 | Fixed Write-Output pipeline contamination, prohibited language, PnP 3.x compatibility |
 | 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
 | 1.0.0 | February 2026 | Initial schema and concept |
@@ -256,4 +257,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.1.1*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.1.2*

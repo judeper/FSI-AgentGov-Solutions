@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -277,7 +278,7 @@ if ($Severity -ne 'All') {
 }
 
 $filter = $filterParts -join ' and '
-$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,createdon,modifiedon"
+$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_reportname,fsi_isresolved,fsi_resolvedby,fsi_resolvedat,createdon,modifiedon"
 
 $queryUrl = "$apiBase/fsi_hallucinationreports?`$select=$select&`$filter=$filter&`$orderby=createdon desc"
 
@@ -368,7 +369,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Hallucination Feedback Tracker"
-    solutionVersion = "0.1.0-preview"
+    solutionVersion = "1.0.0"
     fromDate        = $fromDate
     daysBack        = $DaysBack
     severityFilter  = $Severity

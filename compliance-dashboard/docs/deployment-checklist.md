@@ -18,7 +18,7 @@ Verify all prerequisites are met before starting deployment.
 ### Permissions
 
 - [ ] User has **Purview Compliance Admin** role (required for Purview Compliance Manager API access)
-- [ ] User has **Power Platform Administrator** role (required for environment access and DLP policy data)
+- [ ] User has **Power Platform Admin** role (required for environment access and DLP policy data)
 - [ ] User has **Power BI Admin** role (required for workspace creation and sharing)
 - [ ] User has **System Administrator** role in target Dataverse environment (required for table creation)
 
@@ -30,53 +30,21 @@ Verify all prerequisites are met before starting deployment.
 
 ---
 
-## Solution Import Checklist
+## Schema and Flow Deployment
 
-### Download Solution Package
+This solution does not ship a packaged `.zip` file. Create all Dataverse tables, columns, option sets, and flows manually using the guides below.
 
-- [ ] Download `ComplianceDashboard_1_0_0.zip` from `templates/` directory
-- [ ] Verify file size (expected: ~200 KB for unmanaged solution)
-- [ ] Confirm file is not corrupted (can open in archive tool)
+### Create Dataverse Schema
 
-### Import to Power Apps
+- [ ] Follow [Dataverse Schema](dataverse-schema.md) to create all 5 tables (`fsi_controlmaster`, `fsi_controlassessment`, `fsi_compliancescore`, `fsi_complianceexception`, `fsi_complianceevidence`) with columns and option sets
+- [ ] Verify all relationships between tables are created
+- [ ] Create the 3 security roles (CD Viewer, CD Assessor, CD Admin) as documented in [Dataverse Schema](dataverse-schema.md)
 
-- [ ] Navigate to [Power Apps maker portal](https://make.powerapps.com)
-- [ ] Select target environment from environment picker
-- [ ] Navigate to **Solutions** > **Import solution**
-- [ ] Click **Browse** and select `ComplianceDashboard_1_0_0.zip`
-- [ ] Click **Next**
+### Build Power Automate Flows
 
-### Configure Connection References
-
-- [ ] **Dataverse connection:**
-  - [ ] Select existing connection or click **New connection**
-  - [ ] Authenticate with organizational account
-  - [ ] Verify connection shows as "Connected"
-- [ ] **Office 365 Outlook connection:**
-  - [ ] Select existing connection or create new
-  - [ ] Authenticate with service account or user account
-  - [ ] Verify connection for exception notification emails
-- [ ] **Microsoft Teams connection (optional):**
-  - [ ] Select existing connection or create new
-  - [ ] Required only if using Teams notifications
-
-### Configure Environment Variables
-
-- [ ] **CD_NotificationEmail:**
-  - [ ] Enter compliance administrator email address
-  - [ ] Format: `compliance@contoso.com`
-  - [ ] This address receives exception SLA notifications
-- [ ] **CD_TeamsWebhook (not currently used):**
-  - [ ] This variable is **not referenced by any flow action** — Teams notifications use the `shared_teams` connector (`PostMessageToConversation`), not incoming webhooks
-  - [ ] Leave blank; setting a value has no effect
-  - [ ] Retained in the schema for potential future webhook-based integration
-
-### Complete Import
-
-- [ ] Click **Import**
-- [ ] Wait for import process to complete (typically 2-5 minutes)
-- [ ] Verify "Solution imported successfully" message appears
-- [ ] No errors or warnings displayed
+- [ ] Follow [Flow Configuration](flow-configuration.md) to manually build CD-ScoreCalculator and CD-ExceptionMonitor flows in Power Automate designer
+- [ ] Configure connection references (Dataverse, Office 365 Outlook, Microsoft Teams) during flow creation
+- [ ] Set the `CD_NotificationEmail` environment variable to the compliance administrator email address
 
 ---
 
@@ -457,4 +425,4 @@ After successful deployment:
 
 ---
 
-*Compliance Dashboard v1.0.0 - Deployment Checklist*
+*Compliance Dashboard v1.0.2 - Deployment Checklist*

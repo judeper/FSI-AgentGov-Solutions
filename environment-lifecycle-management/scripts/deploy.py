@@ -46,7 +46,7 @@ from create_views import create_views
 from create_field_security import create_field_security
 
 
-def print_banner():
+def print_banner() -> None:
     """Print deployment banner."""
     print()
     print("=" * 70)
@@ -197,9 +197,12 @@ def deploy(
             print(f"  Connected to: {org.get('name', 'Unknown')}")
             print()
 
+        failed_phases = []
+
         if roles_only:
             # Only deploy security roles
-            create_roles(client, dry_run=dry_run)
+            if create_roles(client, dry_run=dry_run) is False:
+                failed_phases.append("Security Roles")
 
         elif tables_only:
             # Only deploy schema (option sets, tables, columns)
@@ -217,25 +220,38 @@ def deploy(
             print("\n" + "=" * 70)
             print("  PHASE 2: Security Roles")
             print("=" * 70)
-            create_roles(client, dry_run=dry_run)
+            if create_roles(client, dry_run=dry_run) is False:
+                failed_phases.append("Phase 2: Security Roles")
 
             # Phase 3: Business Rules
             print("\n" + "=" * 70)
             print("  PHASE 3: Business Rules")
             print("=" * 70)
-            create_business_rules(client, dry_run=dry_run)
+            if create_business_rules(client, dry_run=dry_run) is False:
+                failed_phases.append("Phase 3: Business Rules")
 
             # Phase 4: Views
             print("\n" + "=" * 70)
             print("  PHASE 4: Model-Driven App Views")
             print("=" * 70)
-            create_views(client, dry_run=dry_run)
+            if create_views(client, dry_run=dry_run) is False:
+                failed_phases.append("Phase 4: Views")
 
             # Phase 5: Field Security
             print("\n" + "=" * 70)
             print("  PHASE 5: Field Security Profiles")
             print("=" * 70)
-            create_field_security(client, dry_run=dry_run)
+            if create_field_security(client, dry_run=dry_run) is False:
+                failed_phases.append("Phase 5: Field Security")
+
+        if failed_phases:
+            success = False
+            print("\n" + "!" * 70)
+            print("  WARNING: The following phases reported failures:")
+            for phase in failed_phases:
+                print(f"    - {phase}")
+            print("  Review output above for details.")
+            print("!" * 70)
 
         # Final summary
         print("\n" + "=" * 70)
@@ -274,7 +290,7 @@ def deploy(
     return success
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy ELM components to Dataverse",

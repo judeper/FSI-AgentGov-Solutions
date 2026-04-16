@@ -94,7 +94,7 @@
     - Violations: Array of violation detail objects
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b), OCC 2011-12
@@ -292,9 +292,9 @@ foreach ($env in $environments) {
             if ($zoneResponse.value -and $zoneResponse.value.Count -gt 0) {
                 $zoneValue = $zoneResponse.value[0].fsi_zoneclassification
                 $zone = switch ($zoneValue) {
-                    0 { "Zone1" }
-                    1 { "Zone2" }
-                    2 { "Zone3" }
+                    100000001 { "Zone1" }
+                    100000002 { "Zone2" }
+                    100000003 { "Zone3" }
                     default { "Unknown" }
                 }
             }
@@ -581,15 +581,38 @@ if ($DataverseUrl -and $dvHeaders) {
 
     $dvApiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
+    # Option set integer mappings (from create_cod_dataverse_schema.py)
+    $zoneMap = @{
+        "Zone1"   = 100000001
+        "Zone2"   = 100000002
+        "Zone3"   = 100000003
+        "Unknown" = 100000000
+    }
+    $violationTypeMap = @{
+        "OverprivilegedConnector"    = 100000000
+        "ExcessiveOAuthScope"        = 100000001
+        "UnauthorizedServiceAccount" = 100000002
+        "CrossEnvironmentCredential" = 100000003
+        "SharedCredentialMisuse"     = 100000004
+        "StaleCredentialAccess"      = 100000005
+    }
+    $severityMap = @{
+        "Critical"      = 100000000
+        "High"          = 100000001
+        "Medium"        = 100000002
+        "Low"           = 100000003
+        "Informational" = 100000004
+    }
+
     # Write scan record
     $scanRecord = @{
-        fsi_name                = "COD-Scan-$scanRunId"
-        fsi_scanrunid           = $scanRunId
-        fsi_scantimestamp       = $scanTimestamp
-        fsi_totalenvironments   = $envCount
-        fsi_totalagents         = $agentCount
-        fsi_totalviolations     = $violations.Count
-        fsi_scanstatus          = if ($violations.Count -eq 0) { "Compliant" } else { "ViolationsDetected" }
+        fsi_scanid            = "COD-Scan-$scanRunId"
+        fsi_scanrunid         = $scanRunId
+        fsi_scanstartedat     = $scanTimestamp
+        fsi_totalenvironments = $envCount
+        fsi_agentsscanned     = $agentCount
+        fsi_violationsfound   = $violations.Count
+        fsi_scanstatus        = if ($violations.Count -eq 0) { 100000000 } else { 100000001 }
     }
 
     try {
@@ -604,15 +627,16 @@ if ($DataverseUrl -and $dvHeaders) {
     # Write violation records
     foreach ($v in $violations) {
         $violationRecord = @{
-            fsi_name            = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))"
+            fsi_violationid     = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))"
             fsi_scanrunid       = $scanRunId
             fsi_agentid         = $v.AgentId
             fsi_agentname       = $v.AgentName
             fsi_environmentid   = $v.EnvironmentId
             fsi_environmentname = $v.EnvironmentName
-            fsi_zone            = $v.Zone
-            fsi_violationtype   = $v.ViolationType
-            fsi_severity        = $v.Severity
+            fsi_zone            = $zoneMap[$v.Zone]
+            fsi_violationtype   = $violationTypeMap[$v.ViolationType]
+            fsi_severity        = $severityMap[$v.Severity]
+            fsi_violationstatus = 100000000  # Open
             fsi_description     = $v.Description
             fsi_detectedat      = $v.DetectedAt
         }
@@ -656,9 +680,18 @@ if ($violations.Count -gt 0) {
     if ($severityCounts.Informational -gt 0) { Write-Host "    Informational: $($severityCounts.Informational)" -ForegroundColor Gray }
 }
 
-$allResults = @($violations)
+$summaryResult = [PSCustomObject]@{
+    ScanRunId           = $scanRunId
+    ScanTimestamp       = $scanTimestamp
+    TotalEnvironments   = $envCount
+    TotalAgents         = $agentCount
+    TotalViolations     = $violations.Count
+    ViolationsBySeverity = $severityCounts
+    Violations          = @($violations)
+}
+
 if ($IncludeCompliant) {
-    $allResults += @($compliantAgents)
+    $summaryResult | Add-Member -NotePropertyName 'CompliantAgents' -NotePropertyValue @($compliantAgents)
 }
 
 switch ($OutputFormat) {
@@ -690,7 +723,7 @@ switch ($OutputFormat) {
         $jsonOutput | ConvertTo-Json -Depth 10
     }
     'Object' {
-        $allResults
+        # Return handled by #region Return Summary below
     }
 }
 

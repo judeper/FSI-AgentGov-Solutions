@@ -8,9 +8,11 @@ Automated validation of Copilot Studio agent content moderation levels against z
 
 The Content Moderation Monitor detects when Copilot Studio agents have insufficient content moderation settings for their governance zone. Unlike environment-level solutions, this monitor performs **per-agent validation** — examining each bot deployed across your Power Platform environments.
 
-It supports Control 1.27 (Content Moderation Enforcement) and related controls by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
+It supports Controls 1.8 (Runtime Protection) and 1.14 (Content Moderation Enforcement) by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements.
 
-**Version:** 1.0.2
+**Version:** 1.0.3
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Quick Start
 
@@ -133,8 +135,8 @@ Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com
 
 | Control | Relationship |
 |---------|--------------|
-| [1.27 - Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/) | Primary — Agent content moderation levels |
-| [1.8 - Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-security-monitoring/) | Related — Runtime security monitoring |
+| [1.8 - Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-security-monitoring/) | Primary — Runtime security monitoring and content moderation |
+| [1.14 - Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-content-moderation-enforcement/) | Primary — Agent content moderation levels |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
 

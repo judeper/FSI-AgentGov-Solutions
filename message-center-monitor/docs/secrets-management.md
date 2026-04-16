@@ -7,7 +7,7 @@ This guide explains how to securely store and access the client secret for the M
 - **Security:** Secrets are encrypted at rest and in transit
 - **Auditing:** All access is logged
 - **Rotation:** Easy to rotate secrets without updating flows
-- **Compliance:** Meets security requirements for secret storage
+- **Compliance:** Helps meet security requirements for secret storage
 
 ## Overview
 

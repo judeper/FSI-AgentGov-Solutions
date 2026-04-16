@@ -92,7 +92,7 @@ def create_connection_references(client: DataverseClient, dry_run: bool = False)
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create connection references for Inactivity Timeout Enforcement",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -11,9 +11,14 @@
     - fsi_actionscanrun: Immutable audit trail of scan run summaries
     - fsi_actionconfirmationexceptions: Approved exception records for specific actions
 
+.EXAMPLE
+    Import-Module .\ACAClient.psm1
+    Connect-ACADataverse -DataverseUrl "https://org.crm.dynamics.com"
+    $history = Get-ACALastValidation -Top 5
+
 .NOTES
     Module: ACAClient.psm1
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: PowerShell 7.0+
     Author: FSI Agent Governance Team
 #>
@@ -162,6 +167,8 @@ function Connect-ACADataverse {
             Write-Verbose "Acquired Dataverse token via Az.Accounts"
         } catch {
             Write-Warning "No access token provided and Az.Accounts token acquisition failed. Use Connect-EnvironmentDataverse for authenticated access."
+            $script:DataverseUrl = $null
+            return
         }
     }
 
@@ -284,6 +291,7 @@ function Write-ACAValidationHistory {
             fsi_totalactions                = $ValidationResult.TotalActions
             fsi_actionswithconfirmation     = $ValidationResult.ActionsWithConfirmation
             fsi_actionsmissingconfirmation  = $ValidationResult.ActionsMissingConfirmation
+            fsi_violationcount              = $ValidationResult.ViolationCount
             fsi_overallstatus               = $ValidationResult.OverallStatus
             fsi_environmentsscanned         = $ValidationResult.EnvironmentsScanned
             fsi_summaryjson                 = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
@@ -366,6 +374,7 @@ function Write-ACAViolation {
             fsi_agentname         = $Violation.AgentName
             fsi_zone              = $zoneInt
             fsi_actionname        = $Violation.ActionName
+            fsi_risklevel         = if ($Violation.ActionCategory) { $Violation.ActionCategory } else { 'Unknown' }
             fsi_severity          = $Violation.Severity
             fsi_regulatorycontext = $Violation.RegulatoryContext
             fsi_violationstatus   = $violationStatusInt
@@ -390,10 +399,7 @@ function Write-ACAViolation {
             $record['fsi_topicid'] = $Violation.TopicId
         }
 
-        # Add connector/action identifier fields
-        if ($Violation.ConnectorId) {
-            $record['fsi_connectorid'] = $Violation.ConnectorId
-        }
+        # Add connector name if available
         if ($Violation.ConnectorName) {
             $record['fsi_connectorname'] = $Violation.ConnectorName
         }
@@ -443,7 +449,7 @@ function Get-ACALastValidation {
     }
 
     try {
-        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_totalagents,fsi_totalactions,fsi_actionswithconfirmation,fsi_actionsmissingconfirmation,fsi_summaryjson,fsi_validationtime"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_totalactions,fsi_actionswithconfirmation,fsi_actionsmissingconfirmation,fsi_summaryjson,fsi_validationtime"
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_actionscanrun?" +
                "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
@@ -577,10 +583,9 @@ function Get-ActionConfirmationExceptions {
                 ActionName  = $_.fsi_actionname
                 ActionType  = $actionTypeName
                 AgentId     = $_.fsi_agentid
-                AgentName   = $_.fsi_agentname
                 Zone        = $zoneName
                 ApprovedBy  = $_.fsi_approvedby
-                Reason      = $_.fsi_justification
+                Justification = $_.fsi_justification
                 ExpiresAt   = $_.fsi_expiresat
                 IsActive    = $_.fsi_isactive
             }
@@ -682,7 +687,7 @@ function Get-BotActionSettings {
         - name: Component display name
         - componenttype: Type of component (action, trigger, topic, etc.)
         - content: JSON blob containing action configuration
-        - _parentbotid_value: Reference to parent bot
+        - _botid_value: Reference to parent bot
 
     .PARAMETER DataverseUrl
         The Dataverse URL for the environment to query.
@@ -716,8 +721,8 @@ function Get-BotActionSettings {
         }
 
         $baseUrl = $DataverseUrl.TrimEnd('/')
-        $select = "botcomponentid,name,componenttype,content,_parentbotid_value"
-        $filter = "_parentbotid_value eq '$BotId' and statecode eq 0"
+        $select = "botcomponentid,name,componenttype,content,_botid_value"
+        $filter = "_botid_value eq '$BotId' and statecode eq 0"
 
         $uri = "$baseUrl/api/data/v9.2/botcomponents?`$select=$select&`$filter=$filter"
 
@@ -838,7 +843,7 @@ function Get-BotActionSettings {
                     $actionSettings += [PSCustomObject]@{
                         ComponentId     = $component.botcomponentid
                         ComponentName   = $component.name
-                        BotId           = $component._parentbotid_value
+                        BotId           = $component._botid_value
                         ActionType      = $actionType
                         ActionName      = $actionName
                         ConnectorId     = $connectorId

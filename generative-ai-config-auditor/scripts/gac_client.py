@@ -560,7 +560,7 @@ class GACClient:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for GACClient standalone testing."""
     parser = argparse.ArgumentParser(
         description="GACClient - Dataverse Web API client for Generative AI Config Auditor",

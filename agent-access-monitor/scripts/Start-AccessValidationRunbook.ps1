@@ -321,7 +321,7 @@ try {
         try {
             # NOTE: Per-environment baseline query (N+1 pattern). A batch approach
             # would reduce HTTP calls but requires careful pagination handling and
-            # replicating per-environment $orderby=fsi_captured_at desc semantics.
+            # replicating per-environment $orderby=fsi_capturedat desc semantics.
             # Profile actual environment counts before optimizing.
             $baseline = Get-AAMActiveBaseline -EnvironmentId $envId
 
@@ -333,9 +333,9 @@ try {
                 $bl = $baseline | Select-Object -First 1
 
                 # Check for stale baseline
-                if ($bl.fsi_captured_at) {
+                if ($bl.fsi_capturedat) {
                     try {
-                        $capturedAt = [datetime]$bl.fsi_captured_at
+                        $capturedAt = [datetime]$bl.fsi_capturedat
                         $ageInDays = ((Get-Date).ToUniversalTime() - $capturedAt).TotalDays
                         if ($ageInDays -gt $baselineMaxAgeDays) {
                             Write-Verbose "Stale baseline for ${envName}: $([math]::Round($ageInDays, 1)) days old (max: $baselineMaxAgeDays)"
@@ -351,17 +351,17 @@ try {
                 $settingsToCheck = @(
                     @{
                         Name     = 'bot-limitSharingMode'
-                        Baseline = if ($null -eq $bl.fsi_bot_limit_sharing_mode) { '' } else { [string]$bl.fsi_bot_limit_sharing_mode }
+                        Baseline = if ($null -eq $bl.fsi_botlimitsharingmode) { '' } else { [string]$bl.fsi_botlimitsharingmode }
                         Current  = if ($null -eq $env.BotLimitSharingMode) { '' } else { [string]$env.BotLimitSharingMode }
                     },
                     @{
                         Name     = 'bot-authoringSharingDisabled'
-                        Baseline = if ($null -eq $bl.fsi_bot_authoring_sharing_disabled) { '' } else { [string]$bl.fsi_bot_authoring_sharing_disabled }
+                        Baseline = if ($null -eq $bl.fsi_botauthoringsharingdisabled) { '' } else { [string]$bl.fsi_botauthoringsharingdisabled }
                         Current  = if ($null -eq $env.BotAuthoringSharingDisabled) { '' } else { [string]$env.BotAuthoringSharingDisabled }
                     },
                     @{
                         Name     = 'bot-publishedBotLimitSharingMode'
-                        Baseline = if ($null -eq $bl.fsi_bot_published_bot_limit_sharing_mode) { '' } else { [string]$bl.fsi_bot_published_bot_limit_sharing_mode }
+                        Baseline = if ($null -eq $bl.fsi_botpublishedbotlimitsharingmode) { '' } else { [string]$bl.fsi_botpublishedbotlimitsharingmode }
                         Current  = if ($null -eq $env.BotPublishedLimitSharingMode) { '' } else { [string]$env.BotPublishedLimitSharingMode }
                     }
                 )

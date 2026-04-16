@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1] - 2026-04-15
+
+### Fixed
+
+- Critical: Write-HWGValidationHistory -> Write-HitlScanRun, Write-HWGViolation -> Write-HitlViolation (function names now match module exports)
+- Write-Output contamination in Object output mode changed to Write-Host
+
 ## [1.0.0] - 2026-04-01
 
 ### Added

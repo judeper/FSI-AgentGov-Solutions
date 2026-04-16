@@ -46,7 +46,7 @@
         -TenantId "guid" -Solutions ACV,SSC -StartDate "2026-01-01" -Interactive
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Date: 2026-02-10
     Requires: IntegrationConfig.psm1
 #>
@@ -207,6 +207,9 @@ function Get-DataverseRecords {
                 }
             }
         }
+        if (-not $success) {
+            $url = $null
+        }
     } while ($url)
 
     return $allRecords
@@ -254,7 +257,7 @@ if ($DryRun) {
     Write-Host "`n[DryRun] Export plan:" -ForegroundColor Yellow
     foreach ($sol in $Solutions) {
         $tables = $SolutionEvidence[$sol]
-        Write-Host "  $sol:" -ForegroundColor Yellow
+        Write-Host "  $($sol):" -ForegroundColor Yellow
         Write-Host "    Validations: $($tables.Validations.EntitySet)" -ForegroundColor Yellow
         Write-Host "    Violations:  $($tables.Violations.EntitySet)" -ForegroundColor Yellow
     }

@@ -22,6 +22,7 @@
 | fsi_StartDateTime | fsi_startdatetime | DateTime | No | Start date and time of the message |  |
 | fsi_ActionRequiredByDateTime | fsi_actionrequiredbydatetime | DateTime | No | Deadline for required action |  |
 | fsi_LastModifiedDateTime | fsi_lastmodifieddatetime | DateTime | No | When the Message Center post was last modified |  |
+| fsi_EndDateTime | fsi_enddatetime | DateTime | No | End date and time of the message |  |
 | fsi_IsMajorChange | fsi_ismajorchange | Boolean | No | Whether the post represents a major change | `1` = Yes, `0` = No |
 | fsi_Body | fsi_body | Memo | No | Full message body of the Message Center post |  |
 | fsi_AssessmentStatus | fsi_assessmentstatus | Picklist | No | Current assessment status for agent impact | **fsi_MCM_assessmentstatus**: `100000000` = NotAssessed, `100000001` = Reviewed, `100000002` = ImpactsAgents, `100000003` = NoImpact |

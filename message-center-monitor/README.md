@@ -76,14 +76,17 @@ Create a table named `MessageCenterLog` with these columns:
 | startDateTime | DateTime | When post was published |
 | actionRequiredByDateTime | DateTime | Deadline for action (if any) |
 | lastModifiedDateTime | DateTime | When Microsoft last updated this post |
+| endDateTime | DateTime | When the post ends |
 | isMajorChange | Yes/No | Microsoft's flag for significant changes |
 | body | Multiline Text (max length: 100,000+) | Full post content (HTML). Set the maximum length to at least 100,000 characters to avoid silent truncation of long posts (Dataverse defaults to 2,000 in some creation paths). |
 | assessmentStatus | Choice | Not Assessed, Reviewed, Impacts Agents, No Impact |
 | assessment | Multiline Text | Your team's assessment notes |
 | impactsAgents | Yes/No | Does this affect your agents? |
-| assessedBy | Lookup (User) | Who reviewed this post |
+| assessedBy | Text (200) | Who reviewed this post |
 | assessedDate | DateTime | When it was reviewed |
 | actionsTaken | Multiline Text | Notes on response/remediation |
+| tags | Text (1000) | Comma-separated tags |
+| hasAttachments | Yes/No | Whether the post has attachments |
 | notifiedOn | DateTime | When Teams notification was sent (prevents duplicates) |
 
 > **Naming Convention Note:**Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [Teams Integration](docs/teams-integration.md#finding-your-publisher-prefix) for how to find it.
@@ -158,13 +161,16 @@ MessageCenterLog
 ├── services (comma-separated)
 ├── startDateTime
 ├── actionRequiredByDateTime
+├── endDateTime
 ├── body (HTML)
 ├── assessmentStatus (enum)
 ├── assessment (notes)
 ├── impactsAgents (boolean)
-├── assessedBy (User lookup)
+├── assessedBy (text)
 ├── assessedDate
 ├── actionsTaken (notes)
+├── tags (comma-separated)
+├── hasAttachments (boolean)
 └── notifiedOn (duplicate prevention)
 ```
 
@@ -233,7 +239,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.1.3 - April 2026
+2.2.0 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

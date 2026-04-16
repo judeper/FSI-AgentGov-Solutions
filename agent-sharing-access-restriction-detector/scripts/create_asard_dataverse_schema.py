@@ -289,6 +289,69 @@ COLUMNS = {
             "MaxLength": 100000,
             "Format": "Text",
         },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_SharingType",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Sharing Type", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Agent sharing type (SpecificUsers, OrgWide, Public)", "LanguageCode": 1033}]},
+            "MaxLength": 100,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ViolationType",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Violation Type", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Type of sharing policy violation detected", "LanguageCode": 1033}]},
+            "MaxLength": 200,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_Severity",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Violation severity code (100000000=Critical, 100000001=High, 100000002=Medium, 100000003=Low, 100000004=Informational)", "LanguageCode": 1033}]},
+            "MinValue": 0,
+            "MaxValue": 2147483647,
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_Description",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Description", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Human-readable description of the violation or compliance assessment", "LanguageCode": 1033}]},
+            "MaxLength": 100000,
+            "Format": "Text",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ScanRunId",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Scan Run ID", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Unique identifier for the scan run that produced this record", "LanguageCode": 1033}]},
+            "MaxLength": 100,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_SharedGroupIds",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Shared Group IDs", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "JSON array of security group IDs the agent is shared with", "LanguageCode": 1033}]},
+            "MaxLength": 100000,
+            "Format": "Text",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_RegulatoryContext",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Regulatory Context", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Applicable regulatory context for this compliance record", "LanguageCode": 1033}]},
+            "MaxLength": 500,
+            "FormatName": {"Value": "Text"},
+        },
     ],
     "fsi_approvedsecuritygrouppolicy": [
         {
@@ -622,7 +685,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     """CLI entry point for ASARD Dataverse schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Sharing Access Restriction Detector",

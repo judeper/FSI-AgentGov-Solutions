@@ -1,8 +1,10 @@
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.1 — Pre-GA (Agent 365 target GA: May 1, 2026)
+> **Status:** v1.1.2 — GA (Agent 365 GA: May 1, 2026)
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Overview
 
@@ -10,7 +12,7 @@ As FSI organizations deploy AI agents at scale through Copilot Studio, Agent Bui
 
 This solution automates enforcement on top of Agent 365 and Entra ID Governance to address the core FSI examiner question: *"How do you verify that every AI agent has an accountable owner, operates under least-privilege access, is reviewed on a defined cadence, and is decommissioned when no longer needed?"*
 
-> **Important:** All Entra Agent 365 API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"false"` until Agent 365 GA and tenant licensing are confirmed. When disabled, flows terminate gracefully without calling external APIs.
+> **Important:** All Entra Agent 365 API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"true"` after deployment validation — Agent 365 is now GA for OBO agents (May 2026). When disabled, flows terminate gracefully without calling external APIs.
 >
 > **Boundary:** This solution complements the native Agent 365 Admin Center governance surfaces. Use the Agent 365 Admin Center and the related FSI framework guidance for Agent Registry inventory, pending requests, ownerless-agent queues, and overview analytics. There is no separate live Agent 365 governance-monitor solution in this repository. Use this solution for automated sponsor enforcement, access reviews, inactivity handling, deactivation workflows, and deletion holds.
 
@@ -24,7 +26,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 | **Deactivation Workflows** | Approval-gated agent disabling with zone-based deletion hold periods (30 or 90 days) |
 | **Sponsor Monitoring** | Weekly validation of sponsor account status with auto-reassignment on departure |
 | **Deletion Hold Enforcement** | Daily enforcement of mandatory hold periods before permanent identity deletion |
-| **Immutable Audit Trail** | All lifecycle events logged to append-only Dataverse table with 7-year LTR |
+| **Audit Trail** | All lifecycle events logged to append-only Dataverse table (requires no-delete security roles and 7-year LTR configuration for immutability) |
 
 ## Architecture
 
@@ -47,13 +49,13 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 │                 PERSISTENCE LAYER                                │
 │              Dataverse — 5 Custom Tables                         │
 │  AgentLifecycleRecord · SponsorAssignment · AccessReview         │
-│  DeactivationRequest · LifecycleComplianceEvent (immutable)      │
+│  DeactivationRequest · LifecycleComplianceEvent (append-only)    │
 └────────────────────────┬─────────────────────────────────────────┘
                          │
 ┌────────────────────────▼─────────────────────────────────────────┐
 │                    ACTION LAYER                                  │
 │  Teams Notifications · Power Automate Approvals                  │
-│  Entra Lifecycle Workflows · Power Apps Admin Portal             │
+│  Entra Lifecycle Workflows · Power Platform Admin                │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -82,7 +84,7 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 | `fsi_sponsorassignment` | Sponsor history and accountability | fsi_sponsorupn, fsi_assignmentreason, fsi_iscurrent |
 | `fsi_accessreview` | Access review records and decisions | fsi_entrareviewid, fsi_reviewstatus, fsi_certifierdecision |
 | `fsi_deactivationrequest` | Deactivation approvals and outcomes | fsi_triggerreason, fsi_approvalstatus, fsi_deletionholduntil |
-| `fsi_lifecyclecomplianceevent` | Immutable lifecycle event log | fsi_eventtype, fsi_complianceimpact, fsi_timestamp |
+| `fsi_lifecyclecomplianceevent` | Append-only lifecycle event log (configure no-delete security roles for immutability) | fsi_eventtype, fsi_complianceimpact, fsi_timestamp |
 
 Full schema reference: [docs/dataverse-schema.md](./docs/dataverse-schema.md)
 
@@ -105,19 +107,19 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 2. Create Entra security groups and lifecycle workflows ([docs/prerequisites.md](./docs/prerequisites.md))
 3. Deploy Dataverse schema:
    ```bash
-   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --interactive
-   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --interactive
-   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --interactive
+   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
+   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
+   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
    ```
 4. Run baseline assessment:
    ```powershell
    .\scripts\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@contoso.com"
    ```
 5. Build flows in Power Automate designer following [docs/flow-configuration.md](./docs/flow-configuration.md)
-6. Set `IsAgent365LifecycleEnabled` to `"true"` after validation
+6. Set `IsAgent365LifecycleEnabled` to `"true"` after deployment validation (Agent 365 is now GA for OBO agents)
 7. Validate compliance:
    ```powershell
-   .\scripts\Validate-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
+   .\scripts\Test-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
    ```
 
 ## Regulatory Alignment
@@ -126,7 +128,7 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 |-----------|-------------|------------------------|
 | **OCC 2011-12 / Fed SR 11-7** | Model risk management — models must have designated owners | Sponsor assignment enforced at onboarding; access reviews on defined cadence |
 | **FINRA Rule 3110** | Supervisory procedures for all systems | Lifecycle workflow automation helps maintain active supervisors for every agent |
-| **FINRA Rule 4511** | Books and records — lifecycle events must be logged and retained | Immutable Dataverse compliance event log with 7-year LTR |
+| **FINRA Rule 4511** | Books and records — lifecycle events must be logged and retained | Append-only Dataverse compliance event log (supports 7-year LTR when no-delete security roles configured) |
 | **SEC 17a-3/4** | 7-year retention for broker-dealer records | Dataverse Long-Term Retention policy on lifecycle event table |
 | **GLBA 501(b)** | Access to customer data must be controlled and revoked when no longer needed | Automated access expiration and deactivation workflows |
 | **SOX 302/404** | Access rights must be periodically reviewed and certified | Zone-based access review workflows with certifier accountability |
@@ -149,7 +151,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 | Limitation | Impact | Mitigation |
 |-----------|--------|------------|
-| Agent 365 in Frontier preview pre-GA | Lifecycle workflow tasks may not be available | Feature flag disables gracefully; Dataverse-only tracking remains active |
+| Agent 365 GA for OBO agents (May 2026); autonomous agents with full Entra identities remain in Frontier preview | Lifecycle workflow tasks may not be available for autonomous agents | Feature flag disables gracefully; Dataverse-only tracking remains active |
 | `AuditLog.Read.All` may be restricted | Inactivity detection falls back to PPAC timestamps | Flow 3 handles gracefully — sets source to "Unknown", does not trigger deactivation |
 | Daily polling scales poorly past 100 agents | Flow 2 Part C may run long | Consider Graph change notifications (webhooks) as agent count grows |
 | Agentic user deletion is automatic | Deleting agent instance also deletes mailbox and OneDrive | 90-day deletion hold for Zone 3 provides investigation window |
@@ -184,7 +186,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Version
 
-1.1.0
+1.1.2
 
 ## License
 

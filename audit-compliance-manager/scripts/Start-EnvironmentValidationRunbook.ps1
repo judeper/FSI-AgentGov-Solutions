@@ -1,5 +1,7 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+# NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
+# Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.
 
 <#
 .SYNOPSIS
@@ -73,7 +75,7 @@
     - SkippedTrialDev: Array of Trial/Developer environment names
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
 
     Azure Automation setup:
     1. Import this script as a runbook

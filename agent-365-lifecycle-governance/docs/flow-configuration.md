@@ -1,5 +1,7 @@
 # Power Automate Flow Configuration
 
+> **Note:** All choice/option-set field filters in OData expressions use integer values, not string labels. Refer to [dataverse-schema.md](./dataverse-schema.md) for the integer↔label mapping.
+
 Detailed specifications for building the six lifecycle governance flows in Power Automate designer.
 
 ## Flow Architecture
@@ -73,7 +75,7 @@ Detailed specifications for building the six lifecycle governance flows in Power
 
 ## Feature Flag
 
-> **CRITICAL:** Every flow must check the `IsAgent365LifecycleEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_lifecyclecomplianceevent` and terminate with `Cancelled` status and message `"Agent 365 Lifecycle not enabled"`. This gate prevents API calls to Agent 365 endpoints before GA availability.
+> **CRITICAL:** Every flow must check the `IsAgent365LifecycleEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_lifecyclecomplianceevent` and terminate with `Cancelled` status and message `"Agent 365 Lifecycle not enabled"`. This gate allows flows to be disabled independently of deployment status.
 
 ---
 
@@ -110,7 +112,13 @@ Initialize at flow start:
 
 **If true:**
 
-1. Log skip event to `fsi_lifecyclecomplianceevent` with `fsi_eventtype` = `"Feature Flag Skip"`
+1. Log skip event to `fsi_lifecyclecomplianceevent`:
+   - `fsi_name`: `"Feature Flag Skip — Flow 1 — @{utcNow()}"`
+   - `fsi_eventtype`: `100000013` (Zone Assigned)
+   - `fsi_eventdetails`: `"Flow skipped — IsAgent365LifecycleEnabled is false"`
+   - `fsi_complianceimpact`: `100000000` (None)
+   - `fsi_triggeredby`: `"Flow 1: Enforce-SponsorAssignment-OnOnboard"`
+   - `fsi_timestamp`: `utcNow()`
 2. **Terminate** with status `Cancelled` and message `"Agent 365 Lifecycle not enabled"`
 
 ### Step 2: Get All Agents from Entra
@@ -202,8 +210,9 @@ zone = if(empty(body('Get_Zone_Policy')?['value']), 2, first(body('Get_Zone_Poli
 // Inactivity threshold (days)
 inactivityThreshold = if(equals(zone, 1), 180, if(equals(zone, 2), 90, 30))
 
-// Review cadence
-reviewCadence = if(equals(zone, 1), 'Annual', if(equals(zone, 2), 'Semi-Annual', 'Quarterly'))
+// Review cadence (integer for Dataverse, display text for notifications)
+reviewCadence = if(equals(zone, 1), 100000000, if(equals(zone, 2), 100000001, 100000002))
+reviewCadenceLabel = if(equals(zone, 1), 'Annual', if(equals(zone, 2), 'Semi-Annual', 'Quarterly'))
 
 // Next review due (days from now)
 nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
@@ -225,15 +234,15 @@ nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 {
   "fsi_agentname": "@{items('For_Each_Agent')?['displayName']}",
   "fsi_governancezone": @{variables('zone')},
-  "fsi_lifecyclestage": "@{if(empty(items('For_Each_Agent')?['sponsor']), 'Onboarding', 'Active')}",
+  "fsi_lifecyclestage": @{if(empty(items('For_Each_Agent')?['sponsor']), 100000000, 100000001)},
   "fsi_sponsorupn": "@{body('Resolve_Default_Sponsor')?['mail']}",
   "fsi_sponsorobjectid": "@{body('Resolve_Default_Sponsor')?['id']}",
   "fsi_sponsoractive": true,
   "fsi_sponsorassigneddate": "@{utcNow()}",
   "fsi_inactivitythreshold": @{variables('inactivityThreshold')},
-  "fsi_accessreviewstatus": "Not Started",
+  "fsi_accessreviewstatus": 100000000,
   "fsi_nextreviewdue": "@{addDays(utcNow(), variables('nextReviewDays'))}",
-  "fsi_reviewcadence": "@{variables('reviewCadence')}",
+  "fsi_reviewcadence": @{variables('reviewCadence')},
   "fsi_capolicyassigned": false,
   "fsi_deactivationrequested": false,
   "fsi_firstregistered": "@{utcNow()}",
@@ -250,12 +259,14 @@ nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_sponsorassignment` |
-| `fsi_agentid` | Agent ID from loop |
 | `fsi_sponsorupn` | Resolved sponsor UPN |
 | `fsi_sponsorobjectid` | Resolved sponsor Object ID |
+| `fsi_sponsordisplayname` | `body('Resolve_Default_Sponsor')?['displayName']` |
 | `fsi_assignmentdate` | `utcNow()` |
-| `fsi_assignmentreason` | `"Auto"` or `"Default"` |
+| `fsi_assignmentreason` | `100000000` (Initial Onboarding) or `100000003` (Manual Reassignment) |
+| `fsi_assignedby` | `"Flow 1: Enforce-SponsorAssignment-OnOnboard"` |
 | `fsi_iscurrent` | `true` |
+| `fsi_AgentLifecycleRecordLookup@odata.bind` | `/fsi_agentlifecyclerecords(<lifecycle record GUID>)` |
 
 #### Step 3g: Add Agent to Security Groups
 
@@ -286,14 +297,15 @@ nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_lifecyclecomplianceevent` |
-| `fsi_eventtype` | `"Sponsor Assigned"` |
+| `fsi_name` | `"Sponsor Assigned — @{items('For_Each_Agent')?['displayName']} — @{utcNow()}"` |
+| `fsi_eventtype` | `100000000` (Sponsor Assigned) |
 | `fsi_agentid` | Agent ID |
 | `fsi_agentname` | Agent display name |
-| `fsi_sponsorupn` | Assigned sponsor UPN |
-| `fsi_eventdetails` | JSON with assignment method and zone |
-| `fsi_complianceimpact` | `"None"` |
+| `fsi_eventdetails` | JSON with assignment method, zone, and sponsor UPN |
+| `fsi_complianceimpact` | `100000000` (None) |
+| `fsi_triggeredby` | `"Flow 1: Enforce-SponsorAssignment-OnOnboard"` |
 | `fsi_timestamp` | `utcNow()` |
-| `fsi_runid` | `workflow()?['run']?['name']` |
+| `fsi_relatedrecordid` | `workflow()?['run']?['name']` |
 
 #### Step 3i: Send Teams Notification to Sponsor
 
@@ -324,7 +336,7 @@ Send an Adaptive Card (v1.2) to the sponsor with:
       "facts": [
         { "title": "Agent", "value": "@{items('For_Each_Agent')?['displayName']}" },
         { "title": "Zone", "value": "Zone @{variables('zone')}" },
-        { "title": "Review Cadence", "value": "@{variables('reviewCadence')}" },
+        { "title": "Review Cadence", "value": "@{variables('reviewCadenceLabel')}" },
         { "title": "Assigned", "value": "@{utcNow()}" }
       ]
     },
@@ -370,7 +382,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_agentlifecyclerecord` |
-| Filter rows | `fsi_nextreviewdue le @{utcNow()} and fsi_lifecyclestage eq 'Active'` |
+| Filter rows | `fsi_nextreviewdue le @{utcNow()} and fsi_lifecyclestage eq 100000001` |
 
 #### Step A2: For Each Agent Due
 
@@ -455,14 +467,16 @@ Extract: `first(body('Get_Review_Instances')?['value'])?['id']`
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_accessreview` |
-| `fsi_agentid` | Agent ID |
+| `fsi_name` | `"Access Review — @{items('For_Each_Due')?['fsi_agentname']} — @{formatDateTime(utcNow(), 'yyyy-MM-dd')}"` |
 | `fsi_reviewtype` | Zone-based cadence |
-| `fsi_reviewstatus` | `"In Progress"` |
+| `fsi_zonecadence` | `@{items('For_Each_Due')?['fsi_reviewcadence']}` (integer from lifecycle record) |
+| `fsi_reviewstatus` | `100000001` (In Progress) |
 | `fsi_reviewstartdate` | `utcNow()` |
 | `fsi_reviewduedate` | `addDays(utcNow(), 14)` |
 | `fsi_certifierupn` | Certifier UPN |
 | `fsi_entrareviewid` | `body('Create_Access_Review')?['id']` |
 | `fsi_entrareviewinstanceid` | Instance ID from Step A2d |
+| `fsi_AgentLifecycleRecordLookup@odata.bind` | `/fsi_agentlifecyclerecords(<lifecycle record GUID>)` |
 
 ##### Step A2f: Update Lifecycle Record
 
@@ -471,13 +485,18 @@ Extract: `first(body('Get_Review_Instances')?['value'])?['id']`
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_agentlifecyclerecord` |
-| `fsi_accessreviewstatus` | `"In Progress"` |
+| `fsi_accessreviewstatus` | `100000001` (In Progress) |
 | `fsi_nextreviewdue` | Calculate from zone cadence (Annual/Semi-Annual/Quarterly) |
 | `fsi_lastupdated` | `utcNow()` |
 
 ##### Step A2g: Log Compliance Event
 
-Log `fsi_eventtype` = `"Access Review Started"` with `fsi_complianceimpact` = `"None"`.
+Log compliance event:
+- `fsi_name`: `"Access Review Started — @{items('For_Each_Due')?['fsi_agentname']} — @{utcNow()}"`
+- `fsi_eventtype`: `100000003` (Access Review Started)
+- `fsi_complianceimpact`: `100000000` (None)
+- `fsi_triggeredby`: `"Flow 2: Schedule-AccessReview-ZoneBased"`
+- `fsi_timestamp`: `utcNow()`
 
 ### Part B — Check Overdue Reviews (Scope)
 
@@ -488,13 +507,13 @@ Log `fsi_eventtype` = `"Access Review Started"` with `fsi_complianceimpact` = `"
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_accessreview` |
-| Filter rows | `fsi_reviewstatus eq 'In Progress' and fsi_reviewduedate lt @{utcNow()}` |
+| Filter rows | `fsi_reviewstatus eq 100000001 and fsi_reviewduedate lt @{utcNow()}` |
 
 #### Step B2: For Each Overdue Review
 
-1. **Update review status:** Set `fsi_reviewstatus` to `"Overdue"`
+1. **Update review status:** Set `fsi_reviewstatus` to `100000003` (Overdue)
 2. **Send Teams escalation:** Post message to `EscalationApproverUPN` with agent name, original due date, and days overdue
-3. **Log compliance event:** `fsi_eventtype` = `"Access Review Overdue"`, `fsi_complianceimpact` = `"High"`
+3. **Log compliance event:** `fsi_eventtype` = `100000005` (Access Review Overdue), `fsi_complianceimpact` = `100000003` (High)
 
 ### Part C — Poll Completed Reviews (Scope)
 
@@ -505,7 +524,7 @@ Log `fsi_eventtype` = `"Access Review Started"` with `fsi_complianceimpact` = `"
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_accessreview` |
-| Filter rows | `fsi_reviewstatus eq 'In Progress' and fsi_entrareviewinstanceid ne null` |
+| Filter rows | `fsi_reviewstatus eq 100000001 and fsi_entrareviewinstanceid ne null` |
 
 #### Step C2: For Each Review — Check Decisions
 
@@ -519,11 +538,11 @@ Log `fsi_eventtype` = `"Access Review Started"` with `fsi_complianceimpact` = `"
 **Post-action logic:**
 
 1. If decisions array is non-empty and all decisions are present:
-   - Mark `fsi_reviewstatus` = `"Completed"`
+   - Mark `fsi_reviewstatus` = `100000002` (Completed)
    - Set `fsi_decisiondate` = `utcNow()`
-   - Store `fsi_certifierdecision` = decision summary
+   - Store `fsi_certifierdecision` = decision value (`100000000` Approved, `100000001` Denied, or `100000002` Not Reviewed)
 2. If **any** decision is `"Deny"`:
-   - Log compliance event: `fsi_eventtype` = `"Access Review Denied"`, `fsi_complianceimpact` = `"Critical"`
+   - Log compliance event: `fsi_eventtype` = `100000004` (Access Review Completed), `fsi_complianceimpact` = `100000004` (Critical), with `fsi_certifierdecision` = `100000001` (Denied)
    - **Trigger Flow 4** (Execute-DeactivationWorkflow) with agent ID and reason `"Access Review Denied"`
 
 ---
@@ -550,7 +569,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_agentlifecyclerecord` |
-| Filter rows | `fsi_lifecyclestage eq 'Active'` |
+| Filter rows | `fsi_lifecyclestage eq 100000001` |
 
 ### Step 3: For Each Active Agent
 
@@ -611,18 +630,18 @@ zoneThreshold = items('For_Each_Active')?['fsi_inactivitythreshold']
 **If true:**
 
 1. Update `fsi_agentlifecyclerecord`:
-   - `fsi_lifecyclestage` = `"Inactive"`
+   - `fsi_lifecyclestage` = `100000003` (Inactive)
    - `fsi_lastactivitydate` = `lastActivityDate`
    - `fsi_lastupdated` = `utcNow()`
 
-2. Log compliance event: `fsi_eventtype` = `"Inactivity Detected"`, `fsi_complianceimpact` = `"Medium"`
+2. Log compliance event: `fsi_eventtype` = `100000007` (Inactivity Detected), `fsi_complianceimpact` = `100000002` (Medium)
 
 3. **Trigger Flow 4** (Execute-DeactivationWorkflow) with agent ID and reason `"Inactivity Threshold Exceeded (X days)"`
 
 **If false (or source is Unknown):**
 
 1. Update `fsi_lastactivitydate` if a valid date was found
-2. If source is `"Unknown"`, log compliance event: `fsi_eventtype` = `"Activity Data Unavailable"`, `fsi_complianceimpact` = `"Low"`
+2. If source is `"Unknown"`, log compliance event: `fsi_eventtype` = `100000007` (Inactivity Detected), `fsi_complianceimpact` = `100000001` (Low), with `fsi_eventdetails` = `"Activity data unavailable — all sources returned null. No deactivation triggered."`
 
 ---
 
@@ -649,33 +668,44 @@ zoneThreshold = items('For_Each_Active')?['fsi_inactivitythreshold']
 
 Same pattern as Flow 1, Step 1. Terminate if disabled.
 
-### Step 2: Check for Duplicate Request
+### Step 2: Resolve Lifecycle Record
+
+**Action:** Dataverse — List rows (or GET by alternate key)
+
+| Parameter | Value |
+|-----------|-------|
+| Table | `fsi_agentlifecyclerecord` |
+| URI | `/api/data/v9.2/fsi_agentlifecyclerecords(fsi_agentid='@{triggerBody()?['agentId']}',fsi_environmentid='@{triggerBody()?['environmentId']}')` |
+
+Store the lifecycle record GUID in a variable `lifecycleRecordId`.
+
+### Step 3: Check for Duplicate Request
 
 **Action:** Dataverse — List rows
 
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| Filter rows | `fsi_agentid eq '@{triggerBody()?['agentId']}' and fsi_approvalstatus eq 'Pending'` |
+| Filter rows | `_fsi_agentlifecyclerecordlookup_value eq '@{variables('lifecycleRecordId')}' and fsi_approvalstatus eq 100000000` |
 | Top count | `1` |
 
-**Condition:** If result is non-empty, log `"Duplicate Request Skipped"` and terminate with `Cancelled` status.
+**Condition:** If result is non-empty, log compliance event with `fsi_eventtype` = `100000008` (Deactivation Requested) and `fsi_eventdetails` = `"Duplicate deactivation request skipped for agent @{triggerBody()?['agentId']}"`, then terminate with `Cancelled` status.
 
-### Step 3: Create Deactivation Request Record
+### Step 4: Create Deactivation Request Record
 
 **Action:** Dataverse — Add a new row
 
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| `fsi_agentid` | `triggerBody()?['agentId']` |
-| `fsi_agentname` | `triggerBody()?['agentName']` |
-| `fsi_reason` | `triggerBody()?['reason']` |
+| `fsi_name` | `"Deactivation — @{triggerBody()?['agentName']} — @{utcNow()}"` |
+| `fsi_triggerreason` | Map from `triggerBody()?['reason']`: Inactivity=`100000000`, Sponsor Departed=`100000001`, Access Review Denied=`100000002`, Manual=`100000003` |
 | `fsi_requestedby` | `triggerBody()?['requestedBy']` |
-| `fsi_approvalstatus` | `"Pending"` |
+| `fsi_approvalstatus` | `100000000` (Pending) |
 | `fsi_requestdate` | `utcNow()` |
+| `fsi_AgentLifecycleRecordLookup@odata.bind` | `/fsi_agentlifecyclerecords(<lifecycle record GUID>)` |
 
-### Step 4: Send Deactivation Approval
+### Step 5: Send Deactivation Approval
 
 **Action:** Approvals — Start and wait for an approval
 
@@ -691,13 +721,13 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 
 **On timeout:** Escalate to `EscalationApproverUPN` with a second approval request.
 
-### Step 5: Condition — Approved?
+### Step 6: Condition — Approved?
 
 **Condition:** `outcome eq 'Approve'`
 
 #### If Approved:
 
-##### Step 5a: Disable Agent Service Principal
+##### Step 6a: Disable Agent Service Principal
 
 **Action:** HTTP with Microsoft Entra ID
 
@@ -715,7 +745,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 }
 ```
 
-##### Step 5b: Calculate Deletion Hold Period
+##### Step 6b: Calculate Deletion Hold Period
 
 ```
 // Zone-based hold periods
@@ -724,57 +754,57 @@ holdDays = if(equals(zone, 3), 90, 30)
 deletionHoldExpiry = addDays(utcNow(), holdDays)
 ```
 
-##### Step 5c: Update Deactivation Request
+##### Step 6c: Update Deactivation Request
 
 **Action:** Dataverse — Update a row
 
 | Parameter | Value |
 |-----------|-------|
-| `fsi_approvalstatus` | `"Approved"` |
+| `fsi_approvalstatus` | `100000001` (Approved) |
 | `fsi_approverupn` | Approver identity |
 | `fsi_approvaldate` | `utcNow()` |
 | `fsi_approvalnotes` | Approval response comments |
+| `fsi_disabledate` | `utcNow()` |
 | `fsi_deletionholduntil` | Calculated hold expiry |
-| `fsi_deletiondate` | `false` |
 
-##### Step 5d: Update Lifecycle Record
+##### Step 6d: Update Lifecycle Record
 
 **Action:** Dataverse — Update a row
 
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_agentlifecyclerecord` |
-| `fsi_lifecyclestage` | `"Deactivated"` |
+| `fsi_lifecyclestage` | `100000005` (Deactivated) |
 | `fsi_deactivationrequested` | `true` |
 | `fsi_lastupdated` | `utcNow()` |
 
-##### Step 5e: Log Compliance Event
+##### Step 6e: Log Compliance Event
 
-Log `fsi_eventtype` = `"Agent Disabled"`, `fsi_complianceimpact` = `"High"`.
+Log `fsi_eventtype` = `100000011` (Agent Disabled), `fsi_complianceimpact` = `100000003` (High).
 
-##### Step 5f: Notify Sponsor
+##### Step 6f: Notify Sponsor
 
 Send Teams message confirming deactivation with deletion hold expiry date.
 
 #### If Rejected:
 
-##### Step 5g: Update Deactivation Request
+##### Step 6g: Update Deactivation Request
 
-Set `fsi_approvalstatus` = `"Rejected"`, record rejection comments.
+Set `fsi_approvalstatus` = `100000002` (Rejected), record rejection comments in `fsi_approvalnotes`.
 
-##### Step 5h: Restore Lifecycle Record
+##### Step 6h: Restore Lifecycle Record
 
 **Action:** Dataverse — Update a row
 
 | Parameter | Value |
 |-----------|-------|
-| `fsi_lifecyclestage` | `"Active"` |
+| `fsi_lifecyclestage` | `100000001` (Active) |
 | `fsi_deactivationrequested` | `false` |
 | `fsi_lastupdated` | `utcNow()` |
 
-##### Step 5i: Log Compliance Event
+##### Step 6i: Log Compliance Event
 
-Log `fsi_eventtype` = `"Deactivation Rejected"`, `fsi_complianceimpact` = `"None"`.
+Log `fsi_eventtype` = `100000010` (Deactivation Rejected), `fsi_complianceimpact` = `100000000` (None).
 
 > **CRITICAL:** This flow must never call the DELETE API on a service principal. Permanent deletion is exclusively the responsibility of Flow 6 (Check-DeletionHold-Daily) after the hold period expires and a final confirmation is obtained.
 
@@ -803,7 +833,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_agentlifecyclerecord` |
-| Filter rows | `fsi_sponsoractive eq true and fsi_lifecyclestage ne 'Deleted'` |
+| Filter rows | `fsi_sponsoractive eq true and fsi_lifecyclestage ne 100000006` |
 
 ### Step 3: Initialize Summary Variables
 
@@ -855,13 +885,13 @@ For each candidate, verify `accountEnabled` = `true` before assignment.
 1. Increment `reassignmentsCompleted`
 2. Create new `fsi_sponsorassignment` record
 3. Update lifecycle record with new sponsor
-4. Log compliance event: `fsi_eventtype` = `"Sponsor Assigned"`, `fsi_complianceimpact` = `"Medium"`
+4. Log compliance event: `fsi_eventtype` = `100000000` (Sponsor Assigned), `fsi_complianceimpact` = `100000002` (Medium), with `fsi_eventdetails` = `"Sponsor reassigned due to previous sponsor departure"`
 5. Send Teams notification to new sponsor
 
 #### Step 4d: If All Fallbacks Fail
 
 1. Increment `orphansDetected`
-2. Log compliance event: `fsi_eventtype` = `"Orphan Detected"`, `fsi_complianceimpact` = `"Critical"`
+2. Log compliance event: `fsi_eventtype` = `100000002` (Orphan Detected), `fsi_complianceimpact` = `100000004` (Critical)
 3. Send Teams alert to `GovernanceCommitteeUPN`
 4. **Trigger Flow 4** (Execute-DeactivationWorkflow) with reason `"Sponsor Departed — No Fallback Available"`
 
@@ -914,7 +944,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| Filter rows | `fsi_approvalstatus eq 'Approved' and fsi_deletionholduntil lt @{utcNow()} and fsi_deletiondate eq false` |
+| Filter rows | `fsi_approvalstatus eq 100000001 and fsi_deletionholduntil lt @{utcNow()} and fsi_deletiondate eq null` |
 
 ### Step 3: For Each Expired Hold
 
@@ -927,7 +957,7 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Approval type | Approve/Reject — First to respond |
-| Title | `FINAL DELETION: @{items('For_Each_Expired')?['fsi_agentname']}` |
+| Title | `FINAL DELETION: @{items('For_Each_Expired')?['fsi_name']}` |
 | Assigned to | `GovernanceCommitteeUPN` (environment variable) |
 | Details | Include agent name, original deactivation reason, hold period, and warning that this action is irreversible |
 
@@ -946,7 +976,9 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Method | `DELETE` |
-| URI | `/v1.0/servicePrincipals/@{items('For_Each_Expired')?['fsi_agentid']}` |
+| URI | `/v1.0/servicePrincipals/@{body('Get_Lifecycle_Record_For_Expired')?['fsi_agentid']}` |
+
+> **Note:** Retrieve the linked `fsi_agentlifecyclerecord` via the `fsi_AgentLifecycleRecordLookup` lookup to obtain `fsi_agentid` for the DELETE call.
 
 **Error handling:**
 
@@ -958,15 +990,15 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 
 ##### Step 3b-ii: Update Deactivation Request
 
-Set `fsi_deletiondate` = `true`, `fsi_deletiondate` = `utcNow()`.
+Set `fsi_deletiondate` = `utcNow()`.
 
 ##### Step 3b-iii: Update Lifecycle Record
 
-Set `fsi_lifecyclestage` = `"Deleted"`, `fsi_lastupdated` = `utcNow()`.
+Set `fsi_lifecyclestage` = `100000006` (Deleted), `fsi_lastupdated` = `utcNow()`.
 
 ##### Step 3b-iv: Log Compliance Event
 
-Log `fsi_eventtype` = `"Agent Deleted"`, `fsi_complianceimpact` = `"Critical"`.
+Log `fsi_eventtype` = `100000012` (Agent Deleted), `fsi_complianceimpact` = `100000004` (Critical).
 
 **If rejected (extend hold):**
 
@@ -980,7 +1012,7 @@ Log `fsi_eventtype` = `"Agent Deleted"`, `fsi_complianceimpact` = `"Critical"`.
 
 ##### Step 3b-vi: Log Compliance Event
 
-Log `fsi_eventtype` = `"Deletion Hold Extended"`, `fsi_complianceimpact` = `"Medium"`.
+Log `fsi_eventtype` = `100000009` (Deactivation Approved), `fsi_complianceimpact` = `100000002` (Medium), with `fsi_eventdetails` = `"Deletion hold extended by 30 days — final deletion rejected"`.
 
 ---
 
@@ -1008,7 +1040,7 @@ The `Retry-After` header from Microsoft Graph is honored automatically by the HT
 
 All flows terminate gracefully when `IsAgent365LifecycleEnabled` = `"false"`:
 
-1. Log a `"Feature Flag Skip"` event to `fsi_lifecyclecomplianceevent`
+1. Log a compliance event with `fsi_eventtype` = `100000013` (Zone Assigned) and `fsi_eventdetails` = `"Flow skipped — feature flag disabled"` to `fsi_lifecyclecomplianceevent`
 2. Terminate with `Cancelled` status (not `Failed`)
 3. No error alerts are generated
 
@@ -1023,10 +1055,10 @@ All flows terminate gracefully when `IsAgent365LifecycleEnabled` = `"false"`:
 Flows 3, 4, and 5 must check for existing open deactivation requests before creating new ones:
 
 ```
-Filter: fsi_agentid eq '{agentId}' and fsi_approvalstatus eq 'Pending'
+Filter: _fsi_agentlifecyclerecordlookup_value eq '{lifecycleRecordId}' and fsi_approvalstatus eq 100000000
 ```
 
-If a pending request exists, skip creation and log `"Duplicate Request Skipped"`.
+If a pending request exists, skip creation and log a compliance event with `fsi_eventtype` = `100000008` (Deactivation Requested) and `fsi_eventdetails` = `"Duplicate deactivation request skipped"`.
 
 ### Scope-Based Error Wrapping
 

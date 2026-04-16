@@ -5,11 +5,13 @@ All notable changes to the Audit Compliance Manager solution will be documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2] - 2026-04-16
+## [1.0.2] - 2026-04-15
 
 ### Fixed
 
-- Fixed 4 prohibited compliance language violations: "ensures" → hedging language in SOLUTION-DOCUMENTATION.md
+- Critical: Dataverse token cache bug — $script:dvToken now initialized at first acquisition, preventing null-token writes for first 50 minutes
+- Standardized role naming to "Exchange Administrator" across README and deployment guide (was inconsistently "Exchange Online Admin")
+- Updated deployment-guide.md footer version to v1.0.2
 
 ## [1.0.1] - 2026-03-12
 

@@ -42,7 +42,7 @@
     Boolean - $true if hash matches (file integrity verified), $false if mismatch.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Requires PowerShell 5.1 or later (Get-FileHash cmdlet availability).
 #>

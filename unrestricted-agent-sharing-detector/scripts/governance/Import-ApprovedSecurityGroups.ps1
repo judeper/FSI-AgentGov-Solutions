@@ -113,14 +113,14 @@ foreach ($group in $groups) {
     }
 
     if ($groupId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
-        Write-Host "  Skipping $groupName: GroupId '$groupId' is not a valid GUID" -ForegroundColor Yellow
+        Write-Host "  Skipping $($groupName): GroupId '$groupId' is not a valid GUID" -ForegroundColor Yellow
         $errors++
         continue
     }
 
     $zoneValue = $zoneMap[$zone]
     if (-not $zoneValue) {
-        Write-Host "  Warning: Invalid zone '$zone' for $groupName, defaulting to Zone 2" -ForegroundColor Yellow
+        Write-Warning "Invalid zone '$zone' for $groupName, defaulting to Zone 2"
         $zoneValue = 100000001
     }
 

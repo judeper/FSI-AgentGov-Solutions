@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS  # Deprecated: migrating to Azure.Identity; MSAL.PS still required for Dataverse token acquisition
 
 <#
 .SYNOPSIS
@@ -352,7 +353,7 @@ if ($IncludeApprovedConnections) {
     Write-Host "Querying approved AOAI connections..." -ForegroundColor Cyan
 
     try {
-        $connResults = Get-GACApprovedConnections
+        $connResults = Get-ApprovedConnections
         if ($connResults) {
             $approvedConns = @($connResults)
         }
@@ -396,9 +397,9 @@ $violationsReadable = $violations | ForEach-Object {
         agentId           = $_.fsi_agentid
         agentName         = $_.fsi_agentname
         zone              = $_.fsi_zone
-        violationType     = $_.fsi_violationtype
-        aoaiEnabled       = $_.fsi_aoaienabled
-        orchestrationMode = $_.fsi_orchestrationmode
+        featureType       = $_.fsi_featuretype
+        expectedState     = $_.fsi_expectedstate
+        actualState       = $_.fsi_actualstate
         severity          = $_.fsi_severity
         regulatoryContext  = $_.fsi_regulatorycontext
         detectedAt        = $_.fsi_detectedat
@@ -492,7 +493,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Generative AI Config Auditor"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.0.1"
     control         = "2.24"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

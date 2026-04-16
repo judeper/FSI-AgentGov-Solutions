@@ -142,6 +142,8 @@ function Get-AgentGenAISettings {
         [int]$Top = 0
     )
 
+    try {
+
     #region Import Private Helpers
 
     $privateRoot = Join-Path $PSScriptRoot 'private'
@@ -620,4 +622,9 @@ function Get-AgentGenAISettings {
     return $results.ToArray()
 
     #endregion
+
+    } catch {
+        Write-Error "Failed to retrieve agent GenAI settings: $($_.Exception.Message)"
+        throw
+    }
 }

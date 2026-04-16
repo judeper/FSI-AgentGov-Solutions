@@ -326,7 +326,7 @@ TABLES = {
         "SchemaName": "fsi_LifecycleComplianceEvent",
         "DisplayName": {"LocalizedLabels": [{"Label": "Lifecycle Compliance Event", "LanguageCode": 1033}]},
         "DisplayCollectionName": {"LocalizedLabels": [{"Label": "Lifecycle Compliance Events", "LanguageCode": 1033}]},
-        "Description": {"LocalizedLabels": [{"Label": "Immutable event log for agent lifecycle compliance auditing", "LanguageCode": 1033}]},
+        "Description": {"LocalizedLabels": [{"Label": "Append-only event log for agent lifecycle compliance auditing", "LanguageCode": 1033}]},
         "OwnershipType": "OrganizationOwned",
         "IsActivity": False,
         "IsAuditEnabled": {"Value": True},
@@ -1303,7 +1303,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent 365 Lifecycle Governance",
         formatter_class=argparse.RawDescriptionHelpFormatter,

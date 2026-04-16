@@ -27,13 +27,13 @@ Per-agent generative AI configuration snapshots used for drift detection. Each r
 | `fsi_Zone` | Picklist (fsi_acv_zone) | Yes | Zone classification |
 | `fsi_AgentId` | String(100) | Yes | Copilot Studio bot GUID |
 | `fsi_AgentName` | String(500) | Yes | Agent display name |
-| `fsi_AzureOpenAIEnabled` | Boolean (default: false) | Yes | Whether Azure OpenAI integration is enabled |
+| `fsi_AoaiEnabled` | Boolean (default: false) | Yes | Whether Azure OpenAI integration is enabled |
 | `fsi_OrchestrationMode` | Picklist (fsi_GAC_orchestrationmode) | Yes | Agent orchestration mode (Classic/Generative/Custom) |
 | `fsi_KnowledgeSourceCount` | Integer | No | Number of knowledge sources configured |
 | `fsi_GenerativeAnswersNodeCount` | Integer | No | Number of generative answers nodes in topic tree |
 | `fsi_AoaiConnectionId` | String(200) | No | Azure OpenAI connection reference identifier |
-| `fsi_AoaiEndpoint` | String(500) | No | Azure OpenAI endpoint URL |
-| `fsi_KnowledgeSources` | Memo(10000) | No | JSON array of knowledge source configurations |
+| `fsi_ModelKnowledgeEnabled` | Boolean (default: false) | No | Whether model knowledge feature is enabled |
+| `fsi_SemanticSearchEnabled` | Boolean (default: false) | No | Whether semantic search feature is enabled |
 | `fsi_IsActive` | Boolean (default: true) | Yes | Current active baseline flag (one active per agent) |
 | `fsi_CapturedAt` | DateTime | Yes | When baseline was captured (UTC) |
 | `fsi_CapturedBy` | String(200) | No | UPN of capturing operator |
@@ -195,6 +195,8 @@ Types of generative AI features tracked by the auditor.
 | 100000003 | SearchAndSummarize | Search and summarize content capability |
 | 100000004 | GenerativeActions | Generative plugin/action execution |
 | 100000005 | KnowledgeSource | External knowledge source integration |
+| 100000006 | ModelKnowledge | Model knowledge feature |
+| 100000007 | SemanticSearch | Semantic search feature |
 
 #### fsi_GAC_connectionstatus
 
@@ -222,7 +224,7 @@ All environment variables use the `fsi_GAC_` prefix. Values are read by PowerShe
 | `fsi_GAC_BaselineMaxAgeDays` | Integer | 30 | Days before an active baseline is flagged as stale |
 | `fsi_GAC_TeamsGroupId` | String | -- | Microsoft 365 Group ID for Teams alert channel |
 | `fsi_GAC_TeamsChannelId` | String | -- | Teams channel ID for alert delivery |
-| `fsi_GAC_AoaiWhitelistEnforced` | Boolean | true | Whether unapproved AOAI connections generate violations (vs. warnings only) |
+| `fsi_GAC_AoaiWhitelistMode` | String | advisory | Connection whitelist enforcement mode (advisory or enforced) |
 
 ---
 
@@ -232,10 +234,10 @@ Power Automate connection references for the GAC flows.
 
 | Schema Name | Connector | Purpose |
 |-------------|-----------|---------|
-| `fsi_cr_dataverse_gacmonitor` | Microsoft Dataverse | Read/write validation results, baselines, violations, approved connections |
-| `fsi_cr_office365_gacmonitor` | Office 365 Outlook | Email alerts for high/critical violations |
-| `fsi_cr_teams_gacmonitor` | Microsoft Teams | Teams adaptive card alert delivery |
-| `fsi_cr_azureautomation_gacmonitor` | Azure Automation | Invoke validation runbook from Power Automate flow |
+| `fsi_cr_dataverse_genaiconfigauditor` | Microsoft Dataverse | Read/write validation results, baselines, violations, approved connections |
+| `fsi_cr_office365_genaiconfigauditor` | Office 365 Outlook | Email alerts for high/critical violations |
+| `fsi_cr_teams_genaiconfigauditor` | Microsoft Teams | Teams adaptive card alert delivery |
+| `fsi_cr_azureautomation_genaiconfigauditor` | Azure Automation | Invoke validation runbook from Power Automate flow |
 
 ---
 
@@ -249,7 +251,7 @@ Power Automate connection references for the GAC flows.
 │  fsi_AgentId ◄───────────────┼──────────────────────────┐
 │  fsi_EnvironmentGuid         │                          │
 │  fsi_OrchestrationMode       │                          │
-│  fsi_AzureOpenAIEnabled      │                          │
+│  fsi_AoaiEnabled             │                          │
 │  fsi_AoaiConnectionId        │                          │
 │  fsi_IsActive                │                          │
 │  fsi_Zone (fsi_acv_zone)     │                          │
@@ -295,4 +297,4 @@ Power Automate connection references for the GAC flows.
 
 ---
 
-*Generative AI Config Auditor -- Dataverse Schema Reference v1.0.0*
+*Generative AI Config Auditor -- Dataverse Schema Reference v1.0.1*

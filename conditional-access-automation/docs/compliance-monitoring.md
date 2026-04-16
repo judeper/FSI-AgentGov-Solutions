@@ -271,7 +271,7 @@ The manifest includes SHA-256 hashes:
 {
   "exportInfo": {
     "timestamp": "2026-04-01T00:00:00Z",
-    "exportedBy": "Export-CAAComplianceEvidence.ps1 v1.0.0"
+    "exportedBy": "Export-CAAComplianceEvidence.ps1 v1.2.1"
   },
   "files": [
     {

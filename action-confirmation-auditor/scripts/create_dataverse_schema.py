@@ -640,7 +640,7 @@ def create_schema(client: ACAClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Action Confirmation Auditor",

@@ -79,7 +79,7 @@
 
 .NOTES
     File: Export-SharingComplianceEvidence.ps1
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -155,6 +155,9 @@ $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
 if ($Interactive) {
     try {
+        # NOTE: MSAL.PS is archived and no longer maintained.
+        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
+        # See https://github.com/AzureAD/MSAL.PS for archive notice.
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
             throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
         }
@@ -184,6 +187,8 @@ else {
     }
 
     try {
+        # NOTE: MSAL.PS is archived and no longer maintained.
+        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
             throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
         }
@@ -228,13 +233,16 @@ $headers = @{
 $fromDateUtc = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateUtc   = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
-$select = 'fsi_name,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,' +
-          'fsi_zone,fsi_sharingtype,fsi_violationtype,fsi_severity,fsi_description,' +
+$select = 'fsi_complianceid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,' +
+          'fsi_zone,fsi_sharingtype,fsi_violationtype,fsi_severity,fsi_compliancestatus,fsi_description,' +
           'fsi_detectedat,fsi_scanrunid,fsi_sharedgroupids,fsi_regulatorycontext'
 
 $filter = "fsi_detectedat ge $fromDateUtc and fsi_detectedat le $toDateUtc"
 if ($Zone -ne 'All') {
-    $filter += " and fsi_zone eq 'Zone$Zone'"
+    # Map zone name to option set integer
+    $zoneIntMap = @{ '1' = 1; '2' = 2; '3' = 3 }
+    $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
+    $filter += " and fsi_zone eq $zoneInt"
 }
 
 $complianceUrl = "$apiBase/fsi_agentsharingcompliances?`$select=$select&`$filter=$filter&`$orderby=fsi_detectedat desc"
@@ -264,10 +272,10 @@ Write-Host "  Compliance records retrieved: $($complianceRecords.Count)" -Foregr
 
 Write-Host "Querying approved security group policies..." -ForegroundColor Cyan
 
-$policySelect = 'fsi_name,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
-$policyFilter = 'statecode eq 0'
+$policySelect = 'fsi_policyname,fsi_securitygroupid,fsi_securitygroupname,fsi_zone,fsi_approvedby,fsi_approvedat'
+$policyFilter = 'fsi_isactive eq true'
 if ($Zone -ne 'All') {
-    $policyFilter += " and fsi_zone eq 'Zone$Zone'"
+    $policyFilter += " and fsi_zone eq $zoneInt"
 }
 
 $policyUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$select=$policySelect&`$filter=$policyFilter&`$orderby=fsi_zone asc"
@@ -314,7 +322,7 @@ elseif ($violationRecords -gt 0) { $overallStatus = 'Review' }
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Agent Sharing Access Restriction Detector'
-    solutionVersion = '1.0.2'
+    solutionVersion = '1.0.4'
     controls        = @('1.18', '2.8')
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
@@ -420,5 +428,3 @@ $result = [PSCustomObject]@{
 return $result
 
 #endregion
-
-exit 0

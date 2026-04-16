@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -83,7 +83,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b)
@@ -235,10 +235,10 @@ Write-Host "    To: $($ToDate.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor
 $fromDateStr = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $toDateStr = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
-$scanSelect = "fsi_name,fsi_scanrunid,fsi_scantimestamp,fsi_totalenvironments,fsi_totalagents,fsi_totalviolations,fsi_scanstatus,fsi_overallstatus,fsi_compliantagents,fsi_zonesummary"
-$scanFilter = "fsi_scantimestamp ge $fromDateStr and fsi_scantimestamp le $toDateStr"
+$scanSelect = "fsi_scanid,fsi_scanrunid,fsi_scanstartedat,fsi_totalenvironments,fsi_agentsscanned,fsi_violationsfound,fsi_scanstatus,fsi_overallstatus,fsi_compliantagents,fsi_zonesummary"
+$scanFilter = "fsi_scanstartedat ge $fromDateStr and fsi_scanstartedat le $toDateStr"
 
-$scanUrl = "$apiBase/fsi_credentialscans?`$select=$scanSelect&`$filter=$scanFilter&`$orderby=fsi_scantimestamp desc"
+$scanUrl = "$apiBase/fsi_credentialscans?`$select=$scanSelect&`$filter=$scanFilter&`$orderby=fsi_scanstartedat desc"
 
 $scans = [System.Collections.ArrayList]::new()
 while ($scanUrl) {
@@ -264,12 +264,15 @@ Write-Host "    Scan records retrieved: $($scans.Count)" -ForegroundColor Green
 Write-Host "  Querying violation records..." -ForegroundColor Cyan
 
 # Build violation filter based on scan run IDs
-$violationSelect = "fsi_name,fsi_scanrunid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_severity,fsi_description,fsi_detectedat"
+$violationSelect = "fsi_violationid,fsi_scanrunid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_severity,fsi_description,fsi_detectedat"
 $violationFilter = "fsi_detectedat ge $fromDateStr and fsi_detectedat le $toDateStr"
 
 if ($Zone -ne 'All') {
     $zoneName = "Zone$Zone"
-    $violationFilter += " and fsi_zone eq '$zoneName'"
+    # Map zone name to option set integer for Dataverse choice filter
+    $zoneIntMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003 }
+    $zoneInt = if ($zoneIntMap.ContainsKey($zoneName)) { $zoneIntMap[$zoneName] } else { $zoneName }
+    $violationFilter += " and fsi_zone eq $zoneInt"
 }
 
 $violationUrl = "$apiBase/fsi_credentialviolations?`$select=$violationSelect&`$filter=$violationFilter&`$orderby=fsi_detectedat desc"
@@ -300,11 +303,13 @@ Write-Host "`n  Building evidence package..." -ForegroundColor Cyan
 $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 # Compute summary statistics
+$severityLabels = @{ 100000000 = 'Critical'; 100000001 = 'High'; 100000002 = 'Medium'; 100000003 = 'Low'; 100000004 = 'Info' }
+
 $totalViolations = $violations.Count
-$criticalCount = @($violations | Where-Object { $_.fsi_severity -eq "Critical" }).Count
-$highCount = @($violations | Where-Object { $_.fsi_severity -eq "High" }).Count
-$mediumCount = @($violations | Where-Object { $_.fsi_severity -eq "Medium" }).Count
-$lowCount = @($violations | Where-Object { $_.fsi_severity -eq "Low" }).Count
+$criticalCount = @($violations | Where-Object { $_.fsi_severity -eq 100000000 }).Count
+$highCount = @($violations | Where-Object { $_.fsi_severity -eq 100000001 }).Count
+$mediumCount = @($violations | Where-Object { $_.fsi_severity -eq 100000002 }).Count
+$lowCount = @($violations | Where-Object { $_.fsi_severity -eq 100000003 }).Count
 
 $overallStatus = "Compliant"
 if ($criticalCount -gt 0) { $overallStatus = "Critical" }
@@ -317,7 +322,7 @@ $evidence = [PSCustomObject]@{
     metadata   = [PSCustomObject]@{
         exportedAt      = $exportTimestamp
         solution        = "Credential Oversharing Detector"
-        solutionVersion = "1.0.0"
+        solutionVersion = "1.0.1"
         fromDate        = $fromDateStr
         toDate          = $toDateStr
         zoneFilter      = $Zone

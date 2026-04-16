@@ -9,7 +9,6 @@ Actual connections are bound post-deployment during solution import or runtime.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from aam_client import AAMClient
 
@@ -115,7 +114,7 @@ def create_connection_references(client: AAMClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create connection references for Agent Access Governance Monitor",

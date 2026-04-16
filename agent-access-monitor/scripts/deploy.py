@@ -30,7 +30,6 @@ Usage:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from aam_client import AAMClient
 from create_dataverse_schema import create_schema
@@ -161,7 +160,7 @@ def _print_post_deployment(is_dry_run: bool):
     print()
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy AAM components to Dataverse",

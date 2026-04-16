@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.2
+**Version:** 1.0.5
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -104,7 +104,7 @@ ITE operates as a single Power Automate cloud flow with daily scheduled executio
 ### Solution Components
 
 #### Detect Inactivity Timeout Non-Compliance Flow
-**File:** `detect-inactivity-timeout-noncompliance.json`
+**Flow Name:** Detect Inactivity Timeout Non-Compliance
 
 **Purpose:** Continuous monitoring of inactivity timeout configurations across all Power Platform environments with zone-based policy evaluation.
 
@@ -264,7 +264,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeoutcomplianceid` | GUID | Primary key |
-| `fsi_name` | String(200) | Auto-generated name: `{EnvironmentId} - {Timestamp}` |
+| `fsi_compliancename` | String(200) | Auto-generated name: `{EnvironmentId} - {Timestamp}` |
 | `fsi_environmentid` | String(100) | Canonical environment name |
 | `fsi_environmentname` | String(200) | Environment display name |
 | `fsi_zone` | Choice | Governance zone (from policy) |
@@ -288,7 +288,7 @@ Diagnostic logs for API errors and missing policy issues.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeouterrorlogid` | GUID | Primary key |
-| `fsi_name` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
+| `fsi_errorname` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
 | `fsi_environmentid` | String(100) | Canonical environment name where error occurred |
 | `fsi_errortype` | String(50) | Error classification: `MissingPolicy`, `Unauthorized`, `Forbidden`, `NotFound`, `Throttled`, `ParseError`, `DataverseError` |
 | `fsi_errorraw` | Memo | Raw error response from BAP API or policy lookup. **Security note:** may contain internal URLs, tenant identifiers, and correlation IDs — configure Dataverse column-level security to restrict read access to authorized roles. |
@@ -338,7 +338,7 @@ The solution requires the following connection references:
 
 The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
 - MSI is enabled for the Power Platform environment
-- MSI service principal is added as a **member** of the Power Platform Administrator role in Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members
+- MSI service principal is added as a **member** of the Power Platform Admin role in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
 
 #### Configuration Steps
 
@@ -349,8 +349,8 @@ The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
 1. Enable MSI for the Power Platform environment:
    - Navigate to Azure Portal → Managed Identities → Create
    - Assign identity to Power Platform environment
-2. Grant Power Platform Administrator role to MSI:
-   - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Administrator → Members**
+2. Grant Power Platform Admin role to MSI:
+   - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Admin → Members**
    - Add the MSI service principal as a member
 3. Verify the role assignment is active before proceeding to Step 2
 
@@ -378,13 +378,11 @@ Execute the following in Dataverse (via Power Apps maker portal → Tables → N
    - Primary Column: Auto-number (e.g., `ERR-{SEQNUM:5}`)
    - Add columns per Data Model section
 
-**Step 3: Import Solution**
+**Step 3: Build the Cloud Flow**
 
-1. Download the flow JSON: `detect-inactivity-timeout-noncompliance.json`
-2. Navigate to Power Platform Admin Center → Environments
-3. Select your governance environment (recommended: dedicated governance environment)
-4. Navigate to Solutions → Import
-5. Import the JSON file as a cloud flow
+1. Navigate to Power Automate → Cloud flows → + New → Scheduled cloud flow
+2. Build the flow manually following the configuration steps in the sections below
+3. The flow should follow the architecture pattern described in the Architecture Overview above
 
 **Step 4: Configure Connection References**
 
@@ -512,7 +510,7 @@ For **Unknown** environments (missing policy):
 
 For **Unknown** environments (API error):
 1. Check `fsi_inactivitytimeouterrorlogs` table for error type
-2. **Unauthorized (401):** Verify MSI has Power Platform Administrator role
+2. **Unauthorized (401):** Verify MSI has Power Platform Admin role
 3. **Forbidden (403):** Verify MSI permissions on specific environment
 4. **NotFound (404):** Environment may have been deleted → Remove policy record
 5. **Throttled (429):** BAP API rate limit exceeded → Contact Microsoft Support
@@ -522,10 +520,10 @@ For **Unknown** environments (API error):
 
 **Issue: Flow fails with "Unauthorized" error**
 
-**Cause:** Managed Service Identity lacks Power Platform Administrator role
+**Cause:** Managed Service Identity lacks Power Platform Admin role
 
 **Resolution:**
-1. Navigate to Microsoft 365 Admin Center → Roles → Power Platform Administrator
+1. Navigate to Microsoft 365 Admin Center → Roles → Power Platform Admin
 2. Add MSI service principal as member
 3. Wait 15 minutes for role propagation
 4. Re-run flow to verify success
@@ -800,7 +798,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 **ITE Support:**
 - Validates inactivity timeout termination is enabled across all environments
-- Supports termination within regulatory timeframes (≤ 120 minutes)
+- Supports verification that termination occurs within regulatory timeframes (≤ 120 minutes)
 - Provides evidence of automated session termination enforcement
 
 ---
@@ -817,8 +815,8 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
-**Release Date:** March 2026
+**Solution Version:** 1.0.5
+**Release Date:** April 2026
 **License:** MIT License
 
 **Change Management:**

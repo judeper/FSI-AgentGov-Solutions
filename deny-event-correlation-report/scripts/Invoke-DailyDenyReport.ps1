@@ -240,6 +240,8 @@ function Send-ToBlobStorage {
     # Get storage context using connected identity
     $context = New-AzStorageContext -StorageAccountName $StorageAccount -UseConnectedAccount
 
+    $script:BlobUploadFailures = 0
+
     foreach ($filePath in $FilePaths) {
         if (Test-Path $filePath) {
             $fileName = Split-Path $filePath -Leaf
@@ -257,6 +259,7 @@ function Send-ToBlobStorage {
             }
             catch {
                 Write-Warning "  Failed to upload $fileName`: $_"
+                $script:BlobUploadFailures++
             }
         }
     }
@@ -456,15 +459,20 @@ try {
                 -FilePaths $filesToUpload `
                 -DateFolder $dateStamp
 
-            # Clean up local CSV files after successful blob upload (data hygiene — CSVs contain PII)
-            foreach ($csvFile in $filesToUpload) {
-                try {
-                    Remove-Item -Path $csvFile -Force -ErrorAction Stop
-                    Write-Host "  Cleaned up local file: $(Split-Path $csvFile -Leaf)" -ForegroundColor Gray
+            # Clean up local CSV files only if all blob uploads succeeded (data hygiene — CSVs contain PII)
+            if ($script:BlobUploadFailures -eq 0) {
+                foreach ($csvFile in $filesToUpload) {
+                    try {
+                        Remove-Item -Path $csvFile -Force -ErrorAction Stop
+                        Write-Host "  Cleaned up local file: $(Split-Path $csvFile -Leaf)" -ForegroundColor Gray
+                    }
+                    catch {
+                        Write-Warning "  Failed to remove local CSV $csvFile`: $_"
+                    }
                 }
-                catch {
-                    Write-Warning "  Failed to remove local CSV $csvFile`: $_"
-                }
+            }
+            else {
+                Write-Warning "  Skipping local file cleanup — $($script:BlobUploadFailures) blob upload(s) failed. Local CSVs retained for manual upload."
             }
         }
         else {

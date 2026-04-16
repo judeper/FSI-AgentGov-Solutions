@@ -35,13 +35,13 @@
     If specified, shows what would be changed without making modifications.
 
 .EXAMPLE
-    ./Configure-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token
+    ./Set-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token
 
 .EXAMPLE
-    ./Configure-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token -WhatIf
+    ./Set-SecurityRoles.ps1 -DataverseUrl "https://org.crm.dynamics.com" -AccessToken $token -WhatIf
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: System Administrator role on the target Dataverse environment.
     The created role should be assigned to the automation Managed Identity
     INSTEAD OF System Administrator for production environments.
@@ -141,21 +141,8 @@ if (-not $roleId -and -not $WhatIfPreference) {
 }
 
 # Step 4: Configure privileges on AuditValidationHistory
-# Privilege depth: 1=User, 2=BusinessUnit, 3=ParentChild, 4=Organization
-# For org-owned entities, only Organization depth is valid
-$privilegeDepthOrg = 4
-
 # Resolve privilege IDs for the entity
 Write-Host "Configuring privileges for AuditValidationHistory..." -ForegroundColor Gray
-
-$privilegeNames = @{
-    Create = "prvCreatefsi_auditvalidationhistory"
-    Read   = "prvReadfsi_auditvalidationhistory"
-    Write  = "prvWritefsi_auditvalidationhistory"
-    Delete = "prvDeletefsi_auditvalidationhistory"
-    Append = "prvAppendfsi_auditvalidationhistory"
-    AppendTo = "prvAppendTofsi_auditvalidationhistory"
-}
 
 # Query all privileges for this entity
 $privFilter = "name eq 'prvCreatefsi_auditvalidationhistory' or name eq 'prvReadfsi_auditvalidationhistory' or name eq 'prvWritefsi_auditvalidationhistory' or name eq 'prvDeletefsi_auditvalidationhistory' or name eq 'prvAppendfsi_auditvalidationhistory' or name eq 'prvAppendTofsi_auditvalidationhistory'"

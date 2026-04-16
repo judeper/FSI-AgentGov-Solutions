@@ -77,7 +77,7 @@ The executing user or service principal must have one of:
 
 - Power Platform Admin role
 - Dynamics 365 Service Admin role
-- Global Admin role
+- Entra Global Admin role
 
 These roles are required to enumerate environments and query agent skill registrations across the tenant.
 
@@ -145,10 +145,10 @@ For Dataverse persistence features (scan history, violation tracking, approved c
 | Table | Purpose |
 |-------|---------|
 | `fsi_CommScanRun` | Per-scan summary records with agent and environment counts |
-| `fsi_CommViolation` | Per-agent communication violations with severity |
-| `fsi_CommApprovedRoute` | Approved agent-to-agent communication routes |
+| `fsi_AgentCommViolation` | Per-agent communication violations with severity |
+| `fsi_ApprovedCommRoute` | Approved agent-to-agent communication routes |
 | `fsi_CommException` | Exception requests for blocked communication patterns |
-| `fsi_CommSkillInventory` | Per-agent skill registration tracking |
+| `fsi_AgentSkillRegistration` | Per-agent skill registration tracking |
 
 ### Deployment Scripts
 

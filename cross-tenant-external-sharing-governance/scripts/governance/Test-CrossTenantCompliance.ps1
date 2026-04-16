@@ -30,7 +30,7 @@
 
 .PARAMETER FindingStatusResolved
     OptionSet integer value for Resolved finding status.
-    WARNING: Confirm against deployed solution XML. Default assumes 1.
+    WARNING: Confirm against deployed solution XML. Default assumes 2.
 
 .PARAMETER SeverityCritical
     OptionSet integer value for Critical severity.
@@ -57,10 +57,10 @@
     WARNING: Confirm against deployed solution XML. Default assumes 2.
 
 .EXAMPLE
-    .\Validate-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com"
+    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com"
 
 .EXAMPLE
-    .\Validate-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 0 -SeverityHigh 1
+    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 0 -SeverityHigh 1
 
 .NOTES
     FSI Agent Governance Framework - Cross-Tenant External Sharing Governance
@@ -87,7 +87,7 @@ param(
     [int]$FindingStatusOpen = 0,
 
     [Parameter()]
-    [int]$FindingStatusResolved = 1,
+    [int]$FindingStatusResolved = 2,
 
     [Parameter()]
     [int]$SeverityCritical = 0,
@@ -389,7 +389,7 @@ try {
         $expiredRequests | Select-Object fsi_tenantname, createdon | Format-Table -AutoSize
     }
 } catch {
-    $onboardingSection.Errors += "Failed to query compliance events: $($_.Exception.Message)"
+    $onboardingSection.Errors += "Failed to query expired onboarding requests: $($_.Exception.Message)"
     Write-Warning "Failed to query $($EntitySets.ComplianceEvents): $($_.Exception.Message)"
 }
 
@@ -454,7 +454,7 @@ $ctaSection = @{
 try {
     $ctaRecords = Get-DVRecords `
         -EntitySet $EntitySets.EntraCTA `
-        -Select "fsi_compliancestatus,fsi_unapprovedcount,createdon" `
+        -Select "fsi_compliancestatus,fsi_unapprovedpartnercount,createdon" `
         -OrderBy "createdon desc" `
         -Top 1
 
@@ -462,14 +462,14 @@ try {
         $latestCta = $ctaRecords[0]
         $ctaSection.LatestRecord = $latestCta.createdon
         $ctaSection.ComplianceStatus = $latestCta.fsi_compliancestatus
-        $ctaSection.UnapprovedCount = $latestCta.fsi_unapprovedcount
+        $ctaSection.UnapprovedCount = $latestCta.fsi_unapprovedpartnercount
 
         Write-Host "  Latest snapshot: $($latestCta.createdon)"
         Write-Host "  Compliance status: $($latestCta.fsi_compliancestatus)"
-        Write-Host "  Unapproved partners: $($latestCta.fsi_unapprovedcount)" `
-            -ForegroundColor $(if ($latestCta.fsi_unapprovedcount -gt 0) { "Red" } else { "Green" })
+        Write-Host "  Unapproved partners: $($latestCta.fsi_unapprovedpartnercount)" `
+            -ForegroundColor $(if ($latestCta.fsi_unapprovedpartnercount -gt 0) { "Red" } else { "Green" })
     } else {
-        Write-Warning "No Entra CTA records found. Flow 2 may not have run yet."
+        Write-Warning "No Entra CTA records found. Flow 3 may not have run yet."
     }
 } catch {
     $ctaSection.Errors += "Failed to query Entra CTA records: $($_.Exception.Message)"

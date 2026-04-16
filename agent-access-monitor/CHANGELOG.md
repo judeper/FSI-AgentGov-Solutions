@@ -2,18 +2,36 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
-## [1.0.2] - 2026-04-16
+## [1.0.3] - 2026-04-08
 
 ### Fixed
 
-- Fixed control mapping in Test-AgentAccessCompliance.ps1: added primary control 3.8 (Copilot Hub) to .NOTES
-- Fixed hardcoded version strings in Export-AgentAccessEvidence.ps1 (1.0.0 → 1.0.1)
+- Critical: Zone filter OData query in Get-AAMValidationResults used wrong hashtable keys (`Zone1`/`Zone2`/`Zone3` instead of `1`/`2`/`3`), causing zone filtering to never match
+- Critical: Evidence export severity/zone summary stats always zero — added label mapping from Dataverse option set integers to human-readable strings
+- High: `fsi_zone` in fsi_accessvalidationhistory schema changed from ApplicationRequired to optional (None) since aggregate runs span multiple zones
+- High: Version strings synchronized to 1.0.2 across agent-access-monitor.psd1, Export-AgentAccessEvidence.ps1, Test-AgentAccessCompliance.ps1, Compare-ZoneCompliance.ps1, and AAMClient.psm1
+- Medium: Added `#Requires -Modules MSAL.PS` to Invoke-AccessBaselineCapture.ps1 and Export-AgentAccessEvidence.ps1
+- Medium: Added `#Requires -Version 7.0` to Compare-ZoneCompliance.ps1
+- Medium: Updated adaptive card driftWarning to reference docs/flow-configuration.md instead of removed access-validation-flow.json
+- Medium: Corrected primary control IDs in Test-AgentAccessCompliance.ps1 .NOTES from 2.5/2.6 to 3.8
+- Medium: Fixed evidence-export.md sample JSON `overallStatus` from "NonCompliant" to "Failed"
+- Low: Updated stale documentation references (SCHEMA.md → dataverse-schema.md) in agent-access-monitor.psd1 and .ralph-config.json
+
+## [1.0.2] - 2026-04-15
+
+### Fixed
+
+- Critical: Save-AAMBaseline now maps zone integers (1/2/3) to Dataverse option set values (100000001+) before writing
+- Critical: Get-AAMValidationResults zone filter now uses correct option set integers
+- Export-AgentAccessEvidence: fixed status comparison from "Compliant" to "Passed" to match validation writer
+- Get-ZoneClassification: fixed `fsi_environment_id` → `fsi_environmentid` (Dataverse naming convention)
+- dataverse-schema.md: corrected fsi_zone type from Integer to OptionSet, fsi_severity from String to OptionSet, fsi_summaryjson from String to Memo
 
 ## [1.0.1] - 2026-07-15
 
 ### Changed
 - Moved adaptive card templates from `src/` to `templates/` (repository content policy alignment)
-- Removed `src/access-validation-flow.json` flow export (see `docs/FLOW_SETUP.md` for manual build instructions)
+- Removed `src/access-validation-flow.json` flow export (see `docs/flow-configuration.md` for manual build instructions)
 - Removed `src/` directory — solutions provide documentation and scripts, not Power Platform runtime artifacts
 
 ## [1.0.0] - 2026-02-19
@@ -38,9 +56,9 @@ All notable changes to the Agent Access Governance Monitor.
   - Cross-platform hash format compatibility (shasum, certutil)
 
 #### Documentation
-- **SCHEMA.md** — Dataverse schema reference (3 tables, option sets, environment variables)
-- **EVIDENCE_EXPORT.md** — Evidence export operations guide with verification procedures
-- **TROUBLESHOOTING.md** — Common issues and resolutions (6 categories)
+- **dataverse-schema.md** — Dataverse schema reference (3 tables, option sets, environment variables)
+- **evidence-export.md** — Evidence export operations guide with verification procedures
+- **troubleshooting.md** — Common issues and resolutions (6 categories)
 
 #### Framework Integration
 - Control 3.8 tip admonition linking to Agent Access Governance Monitor solution
@@ -53,7 +71,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Invoke-AccessBaselineCapture.ps1 - Operator-initiated baseline capture writing environment access settings to Dataverse with active baseline management
 - adaptive-card-access-alert.json - Teams adaptive card template for agent access violation and drift alerts with severity classification
 - access-validation-flow.json - Power Automate cloud flow for daily scheduled validation, Dataverse persistence, and conditional Teams/email alerting
-- FLOW_SETUP.md - Step-by-step guide for flow import, configuration, connection reference binding, and testing
+- flow-configuration.md - Step-by-step guide for flow import, configuration, connection reference binding, and testing
 - Save-AAMBaseline function in AAMClient.psm1 for writing access baseline records with active baseline rotation
 - Get-AAMLastValidation function in AAMClient.psm1 for querying validation history (drift detection support)
 
@@ -76,7 +94,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Graceful fallback when Dataverse is unavailable
 
 ### Changed
-- Write-AAMValidationHistory: added `-RunId` parameter, sets `fsi_name` and `fsi_run_id`
+- Write-AAMValidationHistory: added `-RunId` parameter, sets `fsi_name` and `fsi_runid`
 - Write-AAMViolation: added `-RunId` parameter, sets `fsi_name`
 
 ## [0.1.0] - 2026-02-09

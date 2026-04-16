@@ -79,4 +79,4 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 ## Version
 
-v1.0.0 — February 2026
+v1.0.2 — February 2026

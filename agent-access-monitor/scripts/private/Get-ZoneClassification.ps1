@@ -26,7 +26,7 @@ if ($DataverseUrl -and $AccessToken) {
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
         }
-        $filter = "fsi_environment_id eq '$($EnvironmentId -replace "'", "''")'"
+        $filter = "fsi_environmentid eq '$($EnvironmentId -replace "'", "''")'"
         $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentlifecycles?" +
                "`$filter=$filter&`$select=fsi_zone&`$top=1"
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop

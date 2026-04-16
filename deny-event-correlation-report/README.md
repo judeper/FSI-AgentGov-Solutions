@@ -145,4 +145,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*Deny Event Correlation Report v2.0.1 - April 2026*

@@ -4,14 +4,13 @@ All notable changes to the COI Testing Framework.
 
 ---
 
-## [1.0.2] - 2026-04-16
+## [1.0.2] - 2026-04-15
 
 ### Fixed
 
-- Fixed prohibited compliance language: "ensure" → "help support" in README.md
-- Fixed product name: "Azure AD" → "Microsoft Entra ID" in prerequisites.md
-- Fixed version mismatch in README footer (v1.0.0 → v1.0.2)
-- Removed unused imports (hashlib, Path) from run_coi_tests.py
+- Status persistence now correctly maps SKIPPED/WARN/ERROR to distinct Dataverse values (was coercing all non-PASS to FAIL)
+- Added SKIPPED count to test report generation
+- Updated README version footer to match current version
 
 ---
 
@@ -23,7 +22,7 @@ All notable changes to the COI Testing Framework.
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 

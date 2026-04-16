@@ -251,7 +251,7 @@ The `--interactive` flag uses MSAL's interactive auth flow, which opens a browse
 
 ### 6.3 PowerShell Scripts (ALCA Runbooks)
 
-ALCA scripts (`Check-AuditLoggingCompliance.ps1`, `Enable-AuditLogging.ps1`) are designed for Azure Automation and use Managed Identity by default. For local testing outside Azure Automation, authentication is not directly supported — use the ACV validators for local validation, and test ALCA runbooks via the Azure Automation **Test pane**.
+ALCA scripts (`Test-AuditLoggingCompliance.ps1`, `Enable-AuditLogging.ps1`) are designed for Azure Automation and use Managed Identity by default. For local testing outside Azure Automation, authentication is not directly supported — use the ACV validators for local validation, and test ALCA runbooks via the Azure Automation **Test pane**.
 
 ## 7. Troubleshooting
 
@@ -284,6 +284,6 @@ Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $mi.Id | Format-Tabl
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Last Updated:** 2026-02-16
 **Solution:** Audit Compliance Manager (ACM)

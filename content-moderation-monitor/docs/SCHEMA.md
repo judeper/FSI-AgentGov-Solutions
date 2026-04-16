@@ -21,18 +21,18 @@ Per-agent moderation level snapshots used for drift detection comparison. Each r
 |--------|------|----------|-------------|
 | `fsi_moderationbaselineid` | Uniqueidentifier | Auto | Primary key |
 | `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Timestamp}`) |
-| `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
-| `fsi_environment_name` | String (500) | Yes | Environment display name |
+| `fsi_environmentguid` | String (100) | Yes | Power Platform environment GUID |
+| `fsi_environmentname` | String (500) | Yes | Environment display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Yes | Zone classification |
-| `fsi_agent_id` | String (100) | Yes | Copilot Studio bot GUID |
-| `fsi_agent_name` | String (500) | Yes | Agent display name |
-| `fsi_moderation_level` | String (50) | Yes | Captured moderation level (Low/Medium/High) |
-| `fsi_is_active` | Boolean | Yes | Current active baseline flag (one active per agent) |
-| `fsi_captured_at` | DateTime | Yes | When baseline was captured (UTC) |
-| `fsi_captured_by` | String (200) | No | UPN of capturing operator |
-| `fsi_raw_json` | Memo (100000) | No | Full JSON snapshot of moderation settings |
+| `fsi_agentid` | String (100) | Yes | Copilot Studio bot GUID |
+| `fsi_agentname` | String (500) | Yes | Agent display name |
+| `fsi_moderationlevel` | String (50) | Yes | Captured moderation level (Low/Medium/High) |
+| `fsi_isactive` | Boolean | Yes | Current active baseline flag (one active per agent) |
+| `fsi_capturedat` | DateTime | Yes | When baseline was captured (UTC) |
+| `fsi_capturedby` | String (200) | No | UPN of capturing operator |
+| `fsi_rawjson` | Memo (100000) | No | Full JSON snapshot of moderation settings |
 
-**Key behavior:** Only one baseline per agent should be active at a time. When a new baseline is captured, the previous active baseline is deactivated (`fsi_is_active = false`).
+**Key behavior:** Only one baseline per agent should be active at a time. When a new baseline is captured, the previous active baseline is deactivated (`fsi_isactive = false`).
 
 ### fsi_moderationvalidationhistory
 
@@ -46,14 +46,14 @@ Organization-owned immutable scan summary records. Each record represents one co
 |--------|------|----------|-------------|
 | `fsi_moderationvalidationhistoryid` | Uniqueidentifier | Auto | Primary key |
 | `fsi_name` | String (500) | Yes | Record name (`{Status}-{Timestamp}`) |
-| `fsi_run_id` | String (36) | Yes | GUID correlating all records from one scan |
-| `fsi_validation_time` | DateTime | Yes | When scan executed (UTC) |
-| `fsi_total_agents` | Integer | Yes | Total agents scanned |
-| `fsi_compliant_count` | Integer | Yes | Agents passing moderation checks |
-| `fsi_violation_count` | Integer | Yes | Agents with moderation violations |
-| `fsi_overall_status` | String (50) | Yes | Passed, Failed, Warning, or Critical |
-| `fsi_environments_scanned` | String (2000) | No | Comma-separated environment list |
-| `fsi_summary_json` | Memo (100000) | No | Full JSON summary blob |
+| `fsi_runid` | String (36) | Yes | GUID correlating all records from one scan |
+| `fsi_validationtime` | DateTime | Yes | When scan executed (UTC) |
+| `fsi_totalagents` | Integer | Yes | Total agents scanned |
+| `fsi_compliantcount` | Integer | Yes | Agents passing moderation checks |
+| `fsi_violationcount` | Integer | Yes | Agents with moderation violations |
+| `fsi_overallstatus` | String (50) | Yes | Passed, Failed, Warning, or Critical |
+| `fsi_environmentsscanned` | String (2000) | No | Comma-separated environment list |
+| `fsi_summaryjson` | Memo (100000) | No | Full JSON summary blob |
 
 ### fsi_moderationviolations
 
@@ -66,17 +66,17 @@ Per-agent violation records with severity classification and regulatory context.
 |--------|------|----------|-------------|
 | `fsi_moderationviolationid` | Uniqueidentifier | Auto | Primary key |
 | `fsi_name` | String (500) | Yes | Record name (`{AgentName}-{Zone}-{Date}`) |
-| `fsi_environment_guid` | String (100) | Yes | Power Platform environment GUID |
-| `fsi_environment_name` | String (500) | Yes | Environment display name |
-| `fsi_agent_id` | String (100) | Yes | Violating agent's bot GUID |
-| `fsi_agent_name` | String (500) | Yes | Agent display name |
+| `fsi_environmentguid` | String (100) | Yes | Power Platform environment GUID |
+| `fsi_environmentname` | String (500) | Yes | Environment display name |
+| `fsi_agentid` | String (100) | Yes | Violating agent's bot GUID |
+| `fsi_agentname` | String (500) | Yes | Agent display name |
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Yes | Zone classification |
-| `fsi_expected_level` | String (50) | Yes | Zone-required moderation level |
-| `fsi_actual_level` | String (50) | Yes | Agent's current moderation level |
+| `fsi_expectedlevel` | String (50) | Yes | Zone-required moderation level |
+| `fsi_actuallevel` | String (50) | Yes | Agent's current moderation level |
 | `fsi_severity` | String (50) | Yes | Violation severity (Critical/High/Medium/Warning) |
-| `fsi_regulatory_context` | String (2000) | No | FINRA/SOX/GLBA regulatory impact context |
-| `fsi_detected_at` | DateTime | Yes | When violation was detected (UTC) |
-| `fsi_run_id` | String (36) | No | Correlating scan run GUID |
+| `fsi_regulatorycontext` | String (2000) | No | FINRA/SOX/GLBA regulatory impact context |
+| `fsi_detectedat` | DateTime | Yes | When violation was detected (UTC) |
+| `fsi_runid` | String (36) | No | Correlating scan run GUID |
 
 ---
 
@@ -90,10 +90,10 @@ Zone classification for governance grouping.
 
 | Value | Label |
 |-------|-------|
-| 0 | Unclassified |
-| 1 | Zone 1 (Personal Productivity) |
-| 2 | Zone 2 (Team Collaboration) |
-| 3 | Zone 3 (Enterprise Managed) |
+| 100000000 | Unclassified |
+| 100000001 | Zone 1 (Personal Productivity) |
+| 100000002 | Zone 2 (Team Collaboration) |
+| 100000003 | Zone 3 (Enterprise Managed) |
 
 ### fsi_acv_severity
 
@@ -101,11 +101,11 @@ Severity classification for validation outcomes. Shared with the Audit Configura
 
 | Value | Label |
 |-------|-------|
-| 1 | Passed |
-| 2 | Warning |
-| 3 | GracePeriod |
-| 4 | Failed |
-| 5 | Error |
+| 100000000 | Passed |
+| 100000001 | Warning |
+| 100000002 | GracePeriod |
+| 100000003 | Failed |
+| 100000004 | Error |
 
 ---
 
@@ -145,10 +145,10 @@ Power Automate connection references for the CMM flow.
 │  fsi_moderationbaselines    │
 │  (per-agent snapshots)      │
 │  ─────────────────────────  │
-│  fsi_agent_id ◄─────────────┼────────────────────────┐
-│  fsi_environment_guid       │                        │
-│  fsi_moderation_level       │                        │
-│  fsi_is_active              │                        │
+│  fsi_agentid ◄──────────────┼────────────────────────┐
+│  fsi_environmentguid        │                        │
+│  fsi_moderationlevel        │                        │
+│  fsi_isactive               │                        │
 │  fsi_zone (fsi_acv_zone)    │                        │
 └─────────────────────────────┘                        │
                                                        │ (agent_id
@@ -157,23 +157,23 @@ Power Automate connection references for the CMM flow.
 │       history               │                        │
 │  (immutable scan summaries) │      ┌─────────────────┴───────────┐
 │  ─────────────────────────  │      │  fsi_moderationviolations   │
-│  fsi_run_id ◄───────────────┼──────┤  (per-agent violations)     │
-│  fsi_total_agents           │      │  ─────────────────────────  │
-│  fsi_compliant_count        │ run  │  fsi_agent_id               │
-│  fsi_violation_count        │  id  │  fsi_agent_name             │
-│  fsi_overall_status         │      │  fsi_expected_level         │
-│  fsi_summary_json           │      │  fsi_actual_level           │
+│  fsi_runid ◄────────────────┼──────┤  (per-agent violations)     │
+│  fsi_totalagents            │      │  ─────────────────────────  │
+│  fsi_compliantcount         │ run  │  fsi_agentid                │
+│  fsi_violationcount         │  id  │  fsi_agentname              │
+│  fsi_overallstatus          │      │  fsi_expectedlevel          │
+│  fsi_summaryjson            │      │  fsi_actuallevel            │
 └─────────────────────────────┘      │  fsi_severity (string)       │
-                                     │  fsi_run_id                 │
+                                     │  fsi_runid                  │
                                      │  fsi_zone (fsi_acv_zone)    │
                                      └─────────────────────────────┘
 ```
 
 **Relationships:**
 
-- `fsi_moderationvalidationhistory` → `fsi_moderationviolations`: Correlated by `fsi_run_id` (logical, not Dataverse lookup)
-- `fsi_moderationbaselines` → `fsi_moderationviolations`: Correlated by `fsi_agent_id` (logical, for drift detection comparison)
+- `fsi_moderationvalidationhistory` → `fsi_moderationviolations`: Correlated by `fsi_runid` (logical, not Dataverse lookup)
+- `fsi_moderationbaselines` → `fsi_moderationviolations`: Correlated by `fsi_agentid` (logical, for drift detection comparison)
 
 ---
 
-*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.0*
+*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.3*

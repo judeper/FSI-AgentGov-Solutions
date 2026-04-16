@@ -63,10 +63,10 @@
     Boolean - $true if hash matches (file integrity verified), $false if mismatch.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
-    Requires PowerShell 5.1 or later (Get-FileHash cmdlet availability).
+    Requires PowerShell 5.1 or later(Get-FileHash cmdlet availability).
 
     Evidence file naming convention:
     - acrd-evidence-{zone}-{timestamp}.json

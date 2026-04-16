@@ -106,7 +106,7 @@ def create_connection_references(
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create connection references for DR Testing Framework",
         formatter_class=argparse.RawDescriptionHelpFormatter,

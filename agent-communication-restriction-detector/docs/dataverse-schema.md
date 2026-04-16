@@ -46,6 +46,8 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_RegulatoryContext | String(2000) | No | FINRA/SOX/GLBA regulatory impact context |
 | fsi_DetectedAt | DateTime | Yes | When the violation was detected |
 | fsi_RunId | String(36) | No | Correlating scan GUID |
+| fsi_SkillName | String(500) | No | Name of the skill triggering the violation |
+| fsi_EnvironmentName | String(500) | No | Display name of the calling agent environment |
 | fsi_Notes | Memo(5000) | No | Additional notes or remediation context |
 
 ### Approved Comm Route (`fsi_ApprovedCommRoute`)
@@ -120,6 +122,7 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_TotalAgents | Integer | Yes | Total agents scanned |
 | fsi_TotalSkills | Integer | Yes | Total skills discovered across all agents |
 | fsi_ViolationCount | Integer | Yes | Communication restriction violations detected |
+| fsi_CompliantCount | Integer | No | Number of compliant skill registrations in this scan |
 | fsi_OverallStatus | String(50) | Yes | Passed/Failed/Warning/Critical |
 | fsi_EnvironmentsScanned | String(2000) | No | Comma-separated environments covered |
 | fsi_SummaryJson | Memo(100000) | No | Full JSON summary blob |

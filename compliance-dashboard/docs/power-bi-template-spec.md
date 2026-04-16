@@ -595,7 +595,7 @@ Switch to **Report** view (icon on left sidebar).
 3. Fields:
    - `ComplianceException[fsi_name]`
    - `ComplianceException[fsi_severity]`
-   - `ComplianceException[fsi_status]`
+   - `ComplianceException[fsi_exceptionstatus]`
    - `ComplianceException[fsi_owner]`
    - `ComplianceException[fsi_daysopen]`
    - `ComplianceException[fsi_targetdate]`
@@ -883,4 +883,4 @@ Update the .pbit template when:
 
 ---
 
-*Compliance Dashboard v1.0.0 - Power BI Template Specification*
+*Compliance Dashboard v1.0.2 - Power BI Template Specification*

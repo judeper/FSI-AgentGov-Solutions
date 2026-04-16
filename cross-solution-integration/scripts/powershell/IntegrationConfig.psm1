@@ -12,7 +12,7 @@
     (ACV, SSC, AAM, CMM, FUS, CAA) and the Compliance Dashboard.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Date: 2026-02-10
     Solution: Cross-Solution Integration
 #>
@@ -27,7 +27,7 @@ $script:ZoneValues = @{
     'Unclassified' = 0
 }
 
-# Canonical severity values (fsi_acv_severity)
+# Canonical severity values (fsi_acvseverity)
 $script:SeverityValues = @{
     'Passed'      = 1
     'Warning'     = 2

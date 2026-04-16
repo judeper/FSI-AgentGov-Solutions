@@ -21,7 +21,7 @@
 
 .NOTES
     File: Test-ActionConfirmationCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -168,7 +168,7 @@ function Test-ActionConfirmationCompliance {
     $runId = [guid]::NewGuid().ToString()
 
     Write-Verbose "========================================="
-    Write-Verbose "Action Confirmation Auditor v1.0.0"
+    Write-Verbose "Action Confirmation Auditor v1.0.2"
     Write-Verbose "RunId: $runId"
     Write-Verbose "========================================="
 
@@ -405,10 +405,10 @@ function Test-ActionConfirmationCompliance {
     $exceptions = @{}
     if ($dataverseConnected) {
         try {
-            $exceptionRecords = Get-ACAExceptions
+            $exceptionRecords = Get-ActionConfirmationExceptions
             if ($exceptionRecords) {
                 foreach ($exc in $exceptionRecords) {
-                    $key = "$($exc.fsi_agentid)|$($exc.fsi_actionname)"
+                    $key = "$($exc.AgentId)|$($exc.ActionName)"
                     $exceptions[$key] = $exc
                 }
             }
@@ -442,15 +442,15 @@ function Test-ActionConfirmationCompliance {
                 $requiresConfirm = $true
             }
 
-            # Check for exceptions (including expiration validation)
+            # Check for exceptions (must be active, unexpired, and match zone)
             $exceptionKey = "$($agent.AgentId)|$($action.ActionName)"
             if ($exceptions.ContainsKey($exceptionKey)) {
                 $exc = $exceptions[$exceptionKey]
-                # Validate exception has not expired (FINRA 3110(b)(1) — expired exceptions must not suppress violations)
-                if ($exc.fsi_expiresat -and [datetime]$exc.fsi_expiresat -lt (Get-Date).ToUniversalTime()) {
-                    Write-Verbose "Exception expired for $($agent.AgentName) action $($action.ActionName) (expired: $($exc.fsi_expiresat))"
-                } else {
-                    Write-Verbose "Active exception found for $($agent.AgentName) action $($action.ActionName)"
+                $isActive = $exc.IsActive -eq $true
+                $isUnexpired = -not $exc.ExpiresAt -or ([datetime]$exc.ExpiresAt -gt (Get-Date).ToUniversalTime())
+                $zoneMatches = -not $exc.Zone -or $exc.Zone -eq $agent.Zone
+                if ($isActive -and $isUnexpired -and $zoneMatches) {
+                    Write-Verbose "Exception found for $($agent.AgentName) action $($action.ActionName)"
                     continue
                 }
             }
@@ -458,7 +458,7 @@ function Test-ActionConfirmationCompliance {
             # Determine severity
             $severity = Get-ActionSeverity -Policy $policy -ActionCategory $category
 
-            if ($requiresConfirm -and $action.ConfirmationStatus -in @('Missing', 'Partial', 'Unable to Determine')) {
+            if ($requiresConfirm -and $action.ConfirmationStatus -in @('Missing', 'Partial', 'UnableToDetermine')) {
                 $agentIsCompliant = $false
                 $agentViolations += [PSCustomObject]@{
                     ActionName         = $action.ActionName
@@ -572,7 +572,7 @@ function Test-ActionConfirmationCompliance {
     } elseif ($highCount -gt 0) {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $warningCount -gt 0) {
-        $overallStatus = 'Review'
+        $overallStatus = 'Warning'
     }
 
     #endregion
@@ -637,12 +637,13 @@ function Test-ActionConfirmationCompliance {
             ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
 
         $validationSummary = @{
-            OverallStatus        = $overallStatus
-            TotalAgents          = $agentSettings.Count
-            TotalActions         = $totalActions
-            CompliantCount       = $compliantAgentCount
-            ViolationCount       = $violationAgentCount
-            EnvironmentsScanned  = $environmentNameList
+            OverallStatus               = $overallStatus
+            TotalAgents                 = $agentSettings.Count
+            TotalActions                = $totalActions
+            ActionsWithConfirmation     = $totalWithConfirm
+            ActionsMissingConfirmation  = $totalMissingConfirm
+            ViolationCount              = $violationAgentCount
+            EnvironmentsScanned         = $environmentNameList
         }
 
         if ($PSCmdlet.ShouldProcess("Dataverse validation history", "Write scan results")) {

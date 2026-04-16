@@ -320,17 +320,32 @@ function Write-HitlScanRun {
     }
 
     try {
-        $record = @{
-            fsi_name                  = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-            fsi_runid                 = $RunId
-            fsi_scantime              = (Get-Date).ToUniversalTime().ToString('o')
-            fsi_totalagents           = $ValidationResult.TotalAgents
-            fsi_agentswithhitl        = $ValidationResult.AgentsWithHitl
-            fsi_agentsmissinghitl     = $ValidationResult.AgentsMissingHitl
-            fsi_totalcheckpoints      = $ValidationResult.TotalCheckpoints
-            fsi_overallstatus         = $ValidationResult.OverallStatus
-            fsi_environmentsscanned   = $ValidationResult.EnvironmentsScanned
-            fsi_summaryjson           = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
+        $body = @{
+            fsi_name                = "HITL Scan - $($RunId.Substring(0,8))"
+            fsi_runid               = $RunId
+            fsi_scantime            = (Get-Date).ToUniversalTime().ToString("o")
+            fsi_totalagents         = [int]($ValidationResult.TotalAgents ?? 0)
+            fsi_totalflows          = [int]($ValidationResult.TotalFlows ?? 0)
+            fsi_checkpointsfound    = [int]($ValidationResult.FlowsWithHitl ?? $ValidationResult.CheckpointsFound ?? 0)
+            fsi_checkpointsmissing  = [int](($ValidationResult.TotalFlows ?? 0) - ($ValidationResult.FlowsWithHitl ?? $ValidationResult.CheckpointsFound ?? 0))
+            fsi_violationcount      = [int]($ValidationResult.ViolationCount ?? 0)
+            fsi_overallstatus       = $ValidationResult.OverallStatus
+            fsi_summaryjson         = ($ValidationResult | ConvertTo-Json -Depth 5 -Compress)
+        }
+        if ($null -ne $ValidationResult.CompliantCount) {
+            $body['fsi_compliantcount'] = [int]$ValidationResult.CompliantCount
+        }
+        if ($null -ne $ValidationResult.AgentsWithHitl) {
+            $body['fsi_agentswithhitl'] = [int]$ValidationResult.AgentsWithHitl
+        }
+        if ($null -ne $ValidationResult.AgentsMissingHitl) {
+            $body['fsi_agentsmissinghitl'] = [int]$ValidationResult.AgentsMissingHitl
+        }
+        if ($null -ne $ValidationResult.TotalCheckpoints) {
+            $body['fsi_totalcheckpoints'] = [int]$ValidationResult.TotalCheckpoints
+        }
+        if ($null -ne $ValidationResult.EnvironmentsScanned) {
+            $body['fsi_environmentsscanned'] = $ValidationResult.EnvironmentsScanned
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_hitlscanruns"
@@ -341,7 +356,7 @@ function Write-HitlScanRun {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($body | ConvertTo-Json) -Headers $headers
         Write-Verbose "HWG scan run record created"
         return $response
     } catch {
@@ -365,19 +380,20 @@ function Write-HitlCheckpointResult {
 
     .PARAMETER Result
         Hashtable containing checkpoint result details:
-        - EnvironmentId: Environment GUID
-        - EnvironmentDisplayName: Display name
+        - EnvironmentGuid: Environment GUID
+        - EnvironmentName: Display name
         - AgentId: Agent/bot GUID
         - AgentName: Agent display name
         - Zone: Governance zone (Zone1/Zone2/Zone3/Unknown)
-        - ActionName: Name of the action being validated
+        - FlowName: Name of the flow being validated
+        - FlowId: Optional flow identifier
         - ActionCategory: Category (Write/Financial/ExternalSharing/PiiProcessing/CustomerFacing/InternalReadOnly)
         - CheckpointType: Type of HITL checkpoint found (or expected)
         - CheckpointStatus: Present/Missing/Partial/UnableToDetermine
         - Severity: Critical/High/Medium/Low/Warning
         - RegulatoryContext: Regulatory citation string
-        - TopicName: Optional topic name
-        - TopicId: Optional topic ID
+        - HasHitlCheckpoint: Boolean checkpoint indicator
+        - ViolationStatus: Open/Acknowledged/Excepted/Resolved
 
     .PARAMETER RunId
         Optional GUID correlating this result to a scan execution.
@@ -417,17 +433,32 @@ function Write-HitlCheckpointResult {
 
         # Convert action category string (used locally for policy evaluation, not persisted as a column)
 
+        $hasHitlCheckpoint = if ($null -ne $Result.HasHitlCheckpoint) {
+            [bool]$Result.HasHitlCheckpoint
+        } else {
+            $Result.CheckpointStatus -eq 'Present'
+        }
+        $violationStatusInt = if ($Result.ViolationStatus -and $script:ViolationStatusToInt.ContainsKey($Result.ViolationStatus)) {
+            $script:ViolationStatusToInt[$Result.ViolationStatus]
+        } elseif ($hasHitlCheckpoint) {
+            $script:ViolationStatusToInt['Resolved']
+        } else {
+            $script:ViolationStatusToInt['Open']
+        }
+
         $record = @{
-            fsi_name              = "$($Result.AgentName)-$($Result.ActionName)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environmentguid   = $Result.EnvironmentId
-            fsi_environmentname   = $Result.EnvironmentDisplayName
+            fsi_name              = "$($Result.AgentName)-$($Result.FlowName)-$(Get-Date -Format 'yyyy-MM-dd')"
+            fsi_environmentguid   = $Result.EnvironmentGuid
+            fsi_environmentname   = $Result.EnvironmentName
             fsi_agentid           = $Result.AgentId
             fsi_agentname         = $Result.AgentName
             fsi_zone              = $zoneInt
-            fsi_actionname        = $Result.ActionName
+            fsi_flowname          = $Result.FlowName
             fsi_severity          = $Result.Severity
             fsi_regulatorycontext = $Result.RegulatoryContext
             fsi_checkpointstatus  = $checkpointStatusInt
+            fsi_hashitlcheckpoint = $hasHitlCheckpoint
+            fsi_violationstatus   = $violationStatusInt
             fsi_detectedat        = (Get-Date).ToUniversalTime().ToString('o')
         }
 
@@ -438,12 +469,8 @@ function Write-HitlCheckpointResult {
 
         # Note: ActionCategory is a local classification for policy evaluation, not a Dataverse column
 
-        # Add optional topic fields
-        if ($Result.TopicName) {
-            $record['fsi_topicname'] = $Result.TopicName
-        }
-        if ($Result.TopicId) {
-            $record['fsi_topicid'] = $Result.TopicId
+        if ($Result.FlowId) {
+            $record['fsi_flowid'] = $Result.FlowId
         }
 
         if ($RunId) {
@@ -459,7 +486,7 @@ function Write-HitlCheckpointResult {
         }
 
         $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
-        Write-Verbose "HWG checkpoint result record created for $($Result.AgentName) - $($Result.ActionName)"
+        Write-Verbose "HWG checkpoint result record created for $($Result.AgentName) - $($Result.FlowName)"
         return $response
     } catch {
         Write-Error "CRITICAL: Failed to write checkpoint result record for '$($Result.AgentName)': $($_.Exception.Message)"
@@ -483,19 +510,17 @@ function Write-HitlViolation {
 
     .PARAMETER Violation
         Hashtable containing violation details:
-        - EnvironmentId: Environment GUID
-        - EnvironmentDisplayName: Display name
+        - EnvironmentGuid: Environment GUID
+        - EnvironmentName: Display name
         - AgentId: Agent/bot GUID
         - AgentName: Agent display name
         - Zone: Governance zone
-        - ActionName: Name of the action missing HITL
-        - ActionCategory: Category of the action
+        - FlowName: Name of the flow missing HITL
+        - FlowId: Optional flow identifier
         - Severity: Critical/High/Medium/Low/Warning
         - RegulatoryContext: Regulatory citation string
-        - ViolationStatus: Open/Acknowledged/Excepted/Resolved (default: Open)
-        - Description: Human-readable violation description
-        - TopicName: Optional topic name
-        - TopicId: Optional topic ID
+        - CheckpointType: Optional checkpoint type
+        - ViolationType: Violation classification
 
     .PARAMETER RunId
         Optional GUID correlating this violation to a scan execution.
@@ -519,49 +544,44 @@ function Write-HitlViolation {
 
     try {
         # Convert zone string to picklist integer for Dataverse
-        $zoneInt = if ($script:ZoneToInt.ContainsKey($Violation.Zone)) {
+        $zoneValue = if ($script:ZoneToInt.ContainsKey($Violation.Zone)) {
             $script:ZoneToInt[$Violation.Zone]
         } else { 0 }
 
-        # Note: ActionCategory is used locally for policy evaluation, not persisted as a Dataverse column
+        # Convert checkpoint type string to picklist integer for Dataverse
+        $checkpointTypeValue = if ($Violation.CheckpointType -and $script:CheckpointTypeToInt.ContainsKey($Violation.CheckpointType)) {
+            $script:CheckpointTypeToInt[$Violation.CheckpointType]
+        } else { $null }
 
-        # Convert violation status string to picklist integer for Dataverse
-        $violationStatusInt = if ($Violation.ViolationStatus -and $script:ViolationStatusToInt.ContainsKey($Violation.ViolationStatus)) {
-            $script:ViolationStatusToInt[$Violation.ViolationStatus]
-        } else {
-            $script:ViolationStatusToInt['Open']  # Default to Open
-        }
-
-        $record = @{
-            fsi_name              = "$($Violation.AgentName)-$($Violation.ActionName)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environmentguid   = $Violation.EnvironmentId
-            fsi_environmentname   = $Violation.EnvironmentDisplayName
+        $body = @{
+            fsi_name              = "Violation - $($Violation.AgentName ?? $Violation.AgentId) - $($RunId.Substring(0,8))"
+            fsi_environmentguid   = $Violation.EnvironmentGuid
+            fsi_environmentname   = $Violation.EnvironmentName
             fsi_agentid           = $Violation.AgentId
             fsi_agentname         = $Violation.AgentName
-            fsi_zone              = $zoneInt
-            fsi_actionname        = $Violation.ActionName
+            fsi_zone              = $zoneValue
+            fsi_checkpointtype    = $checkpointTypeValue
+            fsi_checkpointstatus  = 100000002
+            fsi_hashitlcheckpoint = $false
+            fsi_violationstatus   = 100000000
             fsi_severity          = $Violation.Severity
-            fsi_regulatorycontext = $Violation.RegulatoryContext
-            fsi_violationstatus   = $violationStatusInt
-            fsi_description       = $Violation.Description
-            fsi_detectedat        = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_detectedat        = (Get-Date).ToUniversalTime().ToString("o")
+            fsi_runid             = $RunId
+        }
+        if ($Violation.FlowName) {
+            $body['fsi_flowname'] = $Violation.FlowName
+        }
+        if ($Violation.FlowId) {
+            $body['fsi_flowid'] = $Violation.FlowId
+        }
+        if ($Violation.ViolationType) {
+            $body['fsi_violationtype'] = $Violation.ViolationType
+        }
+        if ($Violation.RegulatoryContext) {
+            $body['fsi_regulatorycontext'] = $Violation.RegulatoryContext
         }
 
-        # Note: ActionCategory is used locally for policy evaluation but not persisted as a Dataverse column
-
-        # Add optional topic fields
-        if ($Violation.TopicName) {
-            $record['fsi_topicname'] = $Violation.TopicName
-        }
-        if ($Violation.TopicId) {
-            $record['fsi_topicid'] = $Violation.TopicId
-        }
-
-        if ($RunId) {
-            $record['fsi_runid'] = $RunId
-        }
-
-        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_hitlcheckpointexceptions"
+        $uri = "$script:DataverseUrl/api/data/v9.2/fsi_hitlcheckpointresults"
 
         $headers = @{
             'Authorization' = "Bearer $script:AccessToken"
@@ -569,8 +589,8 @@ function Write-HitlViolation {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
-        Write-Verbose "HWG violation record created for $($Violation.AgentName) - $($Violation.ActionName)"
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($body | ConvertTo-Json) -Headers $headers
+        Write-Verbose "HWG violation record created for $($Violation.AgentName) - $($Violation.FlowName)"
         return $response
     } catch {
         Write-Error "CRITICAL: Failed to write violation record for '$($Violation.AgentName)': $($_.Exception.Message)"
@@ -731,21 +751,13 @@ function Get-HitlCheckpointExceptions {
                 $script:IntToZone[[int]$zoneValue]
             } else { 'Unknown' }
 
-            # Convert action category integer back to string
-            $actionCatValue = $_.fsi_actioncategory
-            $actionCatName = if ($null -ne $actionCatValue -and $script:IntToActionCategory.ContainsKey([int]$actionCatValue)) {
-                $script:IntToActionCategory[[int]$actionCatValue]
-            } else { 'Unknown' }
-
             [PSCustomObject]@{
                 ExceptionId    = $_.fsi_hitlcheckpointexceptionid
-                ActionName     = $_.fsi_actionname
-                ActionCategory = $actionCatName
                 AgentId        = $_.fsi_agentid
                 AgentName      = $_.fsi_agentname
                 Zone           = $zoneName
                 ApprovedBy     = $_.fsi_approvedby
-                Reason         = $_.fsi_reason
+                Justification  = $_.fsi_justification
                 ExpiresAt      = $_.fsi_expiresat
                 IsActive       = $_.fsi_isactive
             }

@@ -253,7 +253,7 @@ function Get-KnowledgeSources {
     }
 
     $results = [System.Collections.Generic.List[object]]::new()
-    $selectColumns = "fsi_knowledgesourceid,fsi_name,fsi_sourcetype,fsi_sourceuri,fsi_currenthash,fsi_baselinehash,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
+    $selectColumns = "fsi_knowledgesourceid,fsi_sourcename,fsi_sourcetype,fsi_sourceuri,fsi_currenthash,fsi_baselinehash,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
     $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$select=$selectColumns&`$filter=$filter"
     while ($nextLink) {
         $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
@@ -356,6 +356,7 @@ function New-SourceChange {
 
     $change = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($SourceId)"
+        fsi_changename = "$ChangeType-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_changetype = $ChangeType
         fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_previousvalue = $PreviousValue
@@ -430,12 +431,13 @@ $stale = 0
 
 foreach ($source in $sources) {
     Write-Host ""
-    Write-Host "Validating: $($source.fsi_name)" -ForegroundColor White
+    Write-Host "Validating: $($source.fsi_sourcename)" -ForegroundColor White
 
     $startTime = Get-Date
     $sourceUpdated = $false
     $result = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($($source.fsi_knowledgesourceid))"
+        fsi_resultname = "Validation-$($source.fsi_sourcename)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_validationtime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_validationtype = 2  # On-Demand
         fsi_previoushash = $source.fsi_currenthash
@@ -449,33 +451,33 @@ foreach ($source in $sources) {
                 $content = Get-SharePointContent -Token (Get-ValidToken -Scope $graphScope) -Uri $source.fsi_sourceuri
             }
             4 { # Dataverse Table
-                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_name)'. Marking as 'Not Implemented'."
+                Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_sourcename)'. Marking as 'Not Implemented'."
                 $result.fsi_result = 7  # Skipped - Not Implemented
                 $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
                 Write-Host "  SKIPPED - Dataverse validation not yet implemented" -ForegroundColor Yellow
-                Write-Log "SKIPPED: $($source.fsi_name) - Dataverse validation not yet implemented" -Level "WARN"
+                Write-Log "SKIPPED: $($source.fsi_sourcename) - Dataverse validation not yet implemented" -Level "WARN"
                 $skipped++
                 # Skip hash comparison for unsupported types
                 $content = $null
             }
             {$_ -in 2,3,5,6,7,8} { # Planned types: SharePoint List, SharePoint Page, Azure Blob Container, Azure Blob File, External API, Database Query
-                Write-Warning "Source type $_ validation not yet implemented for source '$($source.fsi_name)'. Marking as 'Not Implemented'."
+                Write-Warning "Source type $_ validation not yet implemented for source '$($source.fsi_sourcename)'. Marking as 'Not Implemented'."
                 $result.fsi_result = 7  # Skipped - Not Implemented
                 $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
                 Write-Host "  SKIPPED - Source type $_ validation not yet implemented" -ForegroundColor Yellow
-                Write-Log "SKIPPED: $($source.fsi_name) - source type $_ validation not yet implemented" -Level "WARN"
+                Write-Log "SKIPPED: $($source.fsi_sourcename) - source type $_ validation not yet implemented" -Level "WARN"
                 $skipped++
                 $content = $null
             }
             default {
-                Write-Warning "Source type $($source.fsi_sourcetype) is unsupported for source '$($source.fsi_name)'. Marking as 'Unsupported Type'."
+                Write-Warning "Source type $($source.fsi_sourcetype) is unsupported for source '$($source.fsi_sourcename)'. Marking as 'Unsupported Type'."
                 $result.fsi_result = 8  # Skipped - Unsupported Type
                 $result.fsi_currenthash = $null
                 $result.fsi_hashchanged = $false
                 Write-Host "  SKIPPED - Unsupported source type" -ForegroundColor Yellow
-                Write-Log "SKIPPED: $($source.fsi_name) - unsupported source type $($source.fsi_sourcetype)" -Level "WARN"
+                Write-Log "SKIPPED: $($source.fsi_sourcename) - unsupported source type $($source.fsi_sourcetype)" -Level "WARN"
                 $skipped++
                 $content = $null
             }
@@ -492,14 +494,14 @@ foreach ($source in $sources) {
                     $result.fsi_result = 1  # Passed
                     $result.fsi_hashchanged = $false
                     Write-Host "  PASSED - Hash matches baseline" -ForegroundColor Green
-                    Write-Log "PASSED: $($source.fsi_name) - hash matches baseline"
+                    Write-Log "PASSED: $($source.fsi_sourcename) - hash matches baseline"
                     $passed++
                 } else {
                     $result.fsi_result = 2  # Failed - Hash Mismatch
                     $result.fsi_hashchanged = $true
                     $result.fsi_changedetails = "Current hash '$currentHash' does not match baseline '$($source.fsi_baselinehash)'"
                     Write-Host "  CHANGED - Hash mismatch detected" -ForegroundColor Yellow
-                    Write-Log "CHANGED: $($source.fsi_name) - hash mismatch" -Level "WARN"
+                    Write-Log "CHANGED: $($source.fsi_sourcename) - hash mismatch" -Level "WARN"
                     $changed++
 
                     # Record change in the fsi_sourcechange audit trail (skip if hash unchanged since last validation)
@@ -510,25 +512,25 @@ foreach ($source in $sources) {
                                 -PreviousValue $source.fsi_currenthash -NewValue $currentHash `
                                 -ChangedBy "RAG Source Validator"
                         } catch {
-                            Write-Warning "Failed to record source change for '$($source.fsi_name)': $($_.Exception.Message)"
-                            Write-Log "AUDIT GAP: Source change record not created for '$($source.fsi_name)'. Error: $($_.Exception.Message)" -Level "ERROR"
+                            Write-Warning "Failed to record source change for '$($source.fsi_sourcename)': $($_.Exception.Message)"
+                            Write-Log "AUDIT GAP: Source change record not created for '$($source.fsi_sourcename)'. Error: $($_.Exception.Message)" -Level "ERROR"
                         }
                     }
 
                     # fsi_alertonchange: alert delivery is not yet implemented
                     if ($source.fsi_alertonchange) {
-                        Write-Warning "Source '$($source.fsi_name)' has alerting enabled but alert delivery is not yet implemented."
+                        Write-Warning "Source '$($source.fsi_sourcename)' has alerting enabled but alert delivery is not yet implemented."
                     }
                 }
             } else {
                 # Trust-on-first-use: no prior baseline exists, so current hash becomes the baseline.
                 # WARNING: If the source is already compromised, the tampered content becomes the trusted baseline.
-                Write-Warning "No baseline exists for '$($source.fsi_name)'. Current hash will be captured as baseline (trust-on-first-use)."
+                Write-Warning "No baseline exists for '$($source.fsi_sourcename)'. Current hash will be captured as baseline (trust-on-first-use)."
                 $result.fsi_result = 1
                 $result.fsi_validationtype = 4  # Baseline Capture
                 $result.fsi_hashchanged = $false
                 Write-Host "  BASELINE CAPTURED (trust-on-first-use)" -ForegroundColor Cyan
-                Write-Log "BASELINE CAPTURED: $($source.fsi_name) - trust-on-first-use, current hash set as baseline" -Level "WARN"
+                Write-Log "BASELINE CAPTURED: $($source.fsi_sourcename) - trust-on-first-use, current hash set as baseline" -Level "WARN"
                 $passed++
             }
 
@@ -539,11 +541,11 @@ foreach ($source in $sources) {
                 $daysSinceModified = ((Get-Date).ToUniversalTime() - ([datetime]$source.fsi_lastmodified).ToUniversalTime()).TotalDays
                 if ($daysSinceModified -gt $source.fsi_freshnessthreshold) {
                     Write-Host "  STALE - Last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -ForegroundColor Yellow
-                    Write-Log "STALE: $($source.fsi_name) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
+                    Write-Log "STALE: $($source.fsi_sourcename) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
                     if ($result.fsi_result -eq 2) {
                         # Preserve hash-mismatch result — integrity violations must not be
                         # reclassified as staleness (SEC 17a-4, FINRA 4511).
-                        Write-Warning "Source '$($source.fsi_name)' is also stale, but hash-mismatch result is preserved as the higher-severity finding."
+                        Write-Warning "Source '$($source.fsi_sourcename)' is also stale, but hash-mismatch result is preserved as the higher-severity finding."
                         $stale++  # Count staleness independently; counters represent conditions, not a partition
                     } else {
                         $result.fsi_result = 4  # Failed - Stale Content
@@ -564,8 +566,8 @@ foreach ($source in $sources) {
                 Update-SourceHash -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam -Status $newStatus
                 $sourceUpdated = $true
             } catch {
-                Write-Warning "Failed to update source hash for '$($source.fsi_name)': $($_.Exception.Message)"
-                Write-Log "AUDIT GAP: Source hash update failed for '$($source.fsi_name)' (hash=$currentHash). Error: $($_.Exception.Message)" -Level "ERROR"
+                Write-Warning "Failed to update source hash for '$($source.fsi_sourcename)': $($_.Exception.Message)"
+                Write-Log "AUDIT GAP: Source hash update failed for '$($source.fsi_sourcename)' (hash=$currentHash). Error: $($_.Exception.Message)" -Level "ERROR"
             }
         }
 
@@ -575,7 +577,7 @@ foreach ($source in $sources) {
             $daysSinceModified = ((Get-Date).ToUniversalTime() - ([datetime]$source.fsi_lastmodified).ToUniversalTime()).TotalDays
             if ($daysSinceModified -gt $source.fsi_freshnessthreshold) {
                 Write-Host "  STALE - Last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -ForegroundColor Yellow
-                Write-Log "STALE: $($source.fsi_name) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
+                Write-Log "STALE: $($source.fsi_sourcename) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
                 $result.fsi_result = 4  # Failed - Stale Content
                 $stale++
                 $skipped--
@@ -587,14 +589,14 @@ foreach ($source in $sources) {
         $result.fsi_hashchanged = $false
         $result.fsi_errordetails = $_.Exception.Message
         Write-Host "  FAILED - Source unavailable: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Log "FAILED: $($source.fsi_name) - source unavailable: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "FAILED: $($source.fsi_sourcename) - source unavailable: $($_.Exception.Message)" -Level "ERROR"
         $failed++
     } catch {
         $result.fsi_result = 6  # Failed - Unexpected Error (generic)
         $result.fsi_hashchanged = $false
         $result.fsi_errordetails = "Unexpected error ($($_.Exception.GetType().Name)): $($_.Exception.Message)"
         Write-Host "  FAILED - $($result.fsi_errordetails)" -ForegroundColor Red
-        Write-Log "FAILED: $($source.fsi_name) - $($result.fsi_errordetails)" -Level "ERROR"
+        Write-Log "FAILED: $($source.fsi_sourcename) - $($result.fsi_errordetails)" -Level "ERROR"
         $failed++
     }
 
@@ -608,8 +610,8 @@ foreach ($source in $sources) {
             try {
                 Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
             } catch {
-                Write-Warning "Failed to update source status for '$($source.fsi_name)': $($_.Exception.Message)"
-                Write-Log "AUDIT GAP: Source status update failed for '$($source.fsi_name)' (status=$newStatus). Error: $($_.Exception.Message)" -Level "ERROR"
+                Write-Warning "Failed to update source status for '$($source.fsi_sourcename)': $($_.Exception.Message)"
+                Write-Log "AUDIT GAP: Source status update failed for '$($source.fsi_sourcename)' (status=$newStatus). Error: $($_.Exception.Message)" -Level "ERROR"
             }
         }
     }
@@ -618,8 +620,8 @@ foreach ($source in $sources) {
     try {
         New-ValidationResult -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -Result $result
     } catch {
-        Write-Warning "Failed to record validation result for '$($source.fsi_name)': $($_.Exception.Message)"
-        Write-Log "AUDIT GAP: Validation result record not created for '$($source.fsi_name)' (result=$($result.fsi_result)). Status was updated but no fsi_validationresult exists. Error: $($_.Exception.Message)" -Level "ERROR"
+        Write-Warning "Failed to record validation result for '$($source.fsi_sourcename)': $($_.Exception.Message)"
+        Write-Log "AUDIT GAP: Validation result record not created for '$($source.fsi_sourcename)' (result=$($result.fsi_result)). Status was updated but no fsi_validationresult exists. Error: $($_.Exception.Message)" -Level "ERROR"
     }
 }
 

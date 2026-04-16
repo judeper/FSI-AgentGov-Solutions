@@ -64,7 +64,7 @@ The solution stores test results in a custom Dataverse table. The following colu
 | `fsi_scenarioid` | Text | Test scenario identifier (e.g., `PB-001`) |
 | `fsi_scenarioname` | Text | Human-readable scenario name |
 | `fsi_category` | Text | Test category (`proprietary_bias`, `suitability`, `fee_transparency`, `cross_selling`) |
-| `fsi_status` | Choice | `1` = Pass, `2` = Fail |
+| `fsi_status` | Choice | `1` = Pass, `2` = Fail, `3` = Skipped, `4` = Warn, `5` = Error |
 | `fsi_executedon` | DateTime | UTC timestamp of test execution |
 | `fsi_findings` | Text (multiline) | JSON array of finding details |
 

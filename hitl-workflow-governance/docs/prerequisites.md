@@ -94,8 +94,8 @@ pip install msal requests
    - Store securely in Azure Key Vault or Azure Automation credentials
 
 4. **Record Values**
-   - Application (client) ID → `fsi_HITL_ClientId`
-   - Directory (tenant) ID → `fsi_HITL_TenantId`
+   - Application (client) ID → `fsi_HWG_ClientId`
+   - Directory (tenant) ID → `fsi_HWG_TenantId`
    - Client secret → Store in Azure Automation credential asset or Key Vault
 
 ---
@@ -107,7 +107,7 @@ pip install msal requests
 - Deploy schema using:
 
 ```bash
-python scripts/create_hitl_dataverse_schema.py \
+python scripts/create_hwg_dataverse_schema.py \
   --dataverse-url https://yourorg.crm.dynamics.com \
   --client-id <app-id> \
   --client-secret <secret> \
@@ -199,4 +199,4 @@ This solution provides governance tooling for these preview actions. Administrat
 
 ---
 
-*HITL Workflow Governance v1.0.0*
+*HITL Workflow Governance v1.0.1*

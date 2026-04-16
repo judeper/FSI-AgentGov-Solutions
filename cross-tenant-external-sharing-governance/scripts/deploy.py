@@ -3,7 +3,8 @@
 CTSG Deployment Orchestrator.
 
 Creates all Dataverse components for Cross-Tenant External Sharing Governance:
-- Tables (AllowedTenant, CrossTenantViolation, RemediationAction, AnnualReview)
+- Tables (ApprovedExternalTenant, ExternalShareFinding, TenantIsolationRecord,
+  EntraCTARecord, CrossTenantComplianceEvent)
 - Columns on each table
 - Environment variables (feature flags, CTA baselines, notification targets)
 - Connection references (Dataverse, Teams, Approvals, Graph, Power Platform Admin)
@@ -29,7 +30,6 @@ Usage:
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
@@ -47,8 +47,9 @@ def print_banner():
     print("=" * 70)
     print()
     print("  This script deploys CTSG components to Dataverse:")
-    print("    - Tables (AllowedTenant, CrossTenantViolation,")
-    print("      RemediationAction, AnnualReview)")
+    print("    - Tables (ApprovedExternalTenant, ExternalShareFinding,")
+    print("      TenantIsolationRecord, EntraCTARecord,")
+    print("      CrossTenantComplianceEvent)")
     print("    - Environment variables (feature flags, CTA baselines,")
     print("      notification targets)")
     print("    - Connection references (Dataverse, Teams, Approvals,")
@@ -160,7 +161,7 @@ def _print_post_deployment(is_dry_run: bool):
     print()
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Deploy CTSG components to Dataverse",

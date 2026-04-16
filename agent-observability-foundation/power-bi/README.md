@@ -232,10 +232,10 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 
 **Contributing:**
 - See the repository root for contribution guidelines
-- Language rules: Use hedging language ("helps support", "aids in") — never "ensures compliance" or "guarantees"
+- Language rules: Use hedging language ("helps support", "aids in") — avoid absolute compliance claims
 
 ---
 
 *Power BI Solution Version: 1.0.0*
 *Last Updated: February 2026*
-*Part of Agent Observability Foundation v1.1.0*
+*Part of Agent Observability Foundation v1.1.1*

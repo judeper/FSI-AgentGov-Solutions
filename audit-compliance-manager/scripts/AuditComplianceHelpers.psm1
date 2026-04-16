@@ -5,7 +5,7 @@
     Shared helper module for Audit Logging Compliance Automation (ALCA) runbooks.
 
 .DESCRIPTION
-    Provides common functions used by both the detection (Check-AuditLoggingCompliance)
+    Provides common functions used by both the detection (Test-AuditLoggingCompliance)
     and remediation (Enable-AuditLogging) runbooks. All functions use Managed Identity
     authentication — NEVER interactive auth or hardcoded credentials.
 
@@ -18,7 +18,7 @@
     - Send-ComplianceNotification: Graph sendMail via shared mailbox
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: PowerShell 7.2+, Azure Automation with System-Assigned Managed Identity
 #>
 

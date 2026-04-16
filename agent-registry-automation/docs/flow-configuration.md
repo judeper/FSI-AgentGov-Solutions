@@ -51,17 +51,17 @@ Configure these connection references before building the flows.
 
 | Connection Reference | Connector | Purpose |
 |---------------------|-----------|---------|
-| `fsi_cr_ara_dataverse` | Dataverse | Read/write agent inventory and compliance events |
-| `fsi_cr_ara_http_azuread` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Entra Agent Registry calls |
-| `fsi_cr_ara_teams` | Microsoft Teams | Post adaptive cards and notifications |
-| `fsi_cr_ara_approvals` | Approvals | Process registration approvals |
+| `fsi_cr_dataverse_agentregistry` | Dataverse | Read/write agent inventory and compliance events |
+| `fsi_cr_http_agentregistry` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Entra Agent Registry calls |
+| `fsi_cr_teams_agentregistry` | Microsoft Teams | Post adaptive cards and notifications |
+| `fsi_cr_office365_agentregistry` | Office 365 | Business day calculation for SLA deadlines |
 
 ### Setting Up Connection References
 
 1. Navigate to **Power Apps** > **Solutions** > **Agent Registry Automation**
 2. Select **Connection References**
 3. For each reference, click **Edit** and select or create an active connection
-4. For `fsi_cr_ara_http_azuread`:
+4. For `fsi_cr_http_agentregistry`:
    - **Base Resource URL:** `https://api.powerplatform.com`
    - **Microsoft Entra ID Resource URI:** `https://api.powerplatform.com`
 
@@ -74,12 +74,15 @@ Configure these values before enabling the flows.
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
 | `fsi_ARA_TenantId` | String | Microsoft Entra ID tenant ID | `12345678-1234-1234-1234-123456789012` |
-| `fsi_ARA_DataverseEnvironment` | String | Dataverse environment URL | `https://contoso.crm.dynamics.com` |
+| `fsi_ARA_DataverseEnvironmentUrl` | String | Dataverse environment URL | `https://contoso.crm.dynamics.com` |
 | `fsi_ARA_GovernanceTeamEmail` | String | Governance team email for approvals and notifications | `ai-governance@contoso.com` |
 | `fsi_ARA_TeamsChannelId` | String | Teams channel ID for notifications | `19:xxxxx@thread.tacv2` |
 | `fsi_ARA_ApprovalDeadlineDays` | String | Number of business days for approval SLA | `5` |
-| `fsi_ARA_EntraRegistrySyncEnabled` | String | Feature flag for Entra Agent Registry sync | `false` |
+| `fsi_ARA_IsEntraRegistrySyncEnabled` | String | Feature flag for Entra Agent Registry sync | `false` |
 | `fsi_ARA_DefaultTimeZone` | String | Fallback time zone for SLA calculations | `Eastern Standard Time` |
+| `fsi_ARA_FrameworkVersion` | String | FSI-AgentGov framework version tag | `FSI-AgentGov-v1.1` |
+| `fsi_ARA_EscalationApproverUPN` | String | Skip-level approver UPN for SLA escalation | `ciso@contoso.com` |
+| `fsi_ARA_FlowAdministrators` | String | Email for flow error notifications | `platform-admins@contoso.com` |
 
 ### Finding Teams Channel ID
 
@@ -131,7 +134,7 @@ Add **HTTP with Microsoft Entra ID** action:
 
 - **Method:** GET
 - **URI:** `https://api.powerplatform.com/appmanagement/environments?api-version=2022-03-01-preview&$filter=properties/environmentSku ne 'Developer'`
-- **Authentication:** Use `fsi_cr_ara_http_azuread` connection reference
+- **Authentication:** Use `fsi_cr_http_agentregistry` connection reference
 - **Headers:**
   - `Content-Type`: `application/json`
 
@@ -386,7 +389,7 @@ Syncs registered agent metadata to the Entra Agent Registry. This flow is **feat
 
 #### Step 2: Feature Flag Gate
 
-Add **Condition** — check if `@{parameters('fsi_ARA_EntraRegistrySyncEnabled')}` equals `true`.
+Add **Condition** — check if `@{parameters('fsi_ARA_IsEntraRegistrySyncEnabled')}` equals `true`.
 
 **No branch:** Add **Terminate** with status `Succeeded` and message `Entra sync disabled by feature flag`.
 
@@ -555,4 +558,4 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 
 ---
 
-*Agent Registry Automation v1.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*

@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 0.1.0
+    Version: 1.0.3
     Author: FSI Agent Governance Team
 #>
 
@@ -225,13 +225,13 @@ function Get-AAMActiveBaseline {
     }
     
     try {
-        $filter = "fsi_is_active eq true"
+        $filter = "fsi_isactive eq true"
         if ($EnvironmentId) {
-            $filter += " and fsi_environment_guid eq '$($EnvironmentId -replace "'", "''")'"
+            $filter += " and fsi_environmentguid eq '$($EnvironmentId -replace "'", "''")'"
         }
         
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?" +
-               "`$filter=$filter&`$orderby=fsi_captured_at desc"
+               "`$filter=$filter&`$orderby=fsi_capturedat desc"
         
         $headers = @{
             'Authorization' = "Bearer $(Get-ValidToken)"
@@ -278,23 +278,23 @@ function Write-AAMValidationHistory {
     try {
         $record = @{
             fsi_name              = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
-            fsi_run_id            = $RunId
-            fsi_validation_time   = (Get-Date).ToUniversalTime().ToString('o')
-            fsi_total_environments = $ValidationResult.TotalEnvironments
-            fsi_compliant_count   = $ValidationResult.CompliantCount
-            fsi_violation_count   = $ValidationResult.ViolationCount
-            fsi_overall_status    = $ValidationResult.OverallStatus
-            fsi_summary_json      = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
+            fsi_runid             = $RunId
+            fsi_validationtime    = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_totalenvironments = $ValidationResult.TotalEnvironments
+            fsi_compliantcount    = $ValidationResult.CompliantCount
+            fsi_violationcount    = $ValidationResult.ViolationCount
+            fsi_overallstatus     = $ValidationResult.OverallStatus
+            fsi_summaryjson       = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
             fsi_severity          = switch ($ValidationResult.OverallStatus) {
-                'Passed'  { 1 }
-                'Warning' { 2 }
-                'Failed'  { 4 }
-                'Error'   { 5 }
-                default   { 2 }
+                'Passed'  { 100000000 }
+                'Warning' { 100000001 }
+                'Failed'  { 100000003 }
+                'Error'   { 100000004 }
+                default   { 100000001 }
             }
         }
         # fsi_zone is intentionally omitted: aggregate validation records span
-        # multiple zones. Per-zone detail is available in fsi_summary_json.
+        # multiple zones. Per-zone detail is available in fsi_summaryjson.
         
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory"
         
@@ -344,39 +344,39 @@ function Write-AAMViolation {
     
     try {
         $zoneMap = @{
-            "Zone1" = 1
-            "Zone2" = 2
-            "Zone3" = 3
+            "Zone1" = 100000001
+            "Zone2" = 100000002
+            "Zone3" = 100000003
         }
         $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { $Violation.Zone }
 
         # Map severity strings to fsi_acv_severity picklist integers
-        # Note: Critical and High both map to 4 (Failed) per the shared fsi_acv_severity
-        # option set. Use fsi_severity_label column to distinguish Critical from High.
+        # Note: Critical and High both map to 100000003 (Failed) per the shared fsi_acv_severity
+        # option set. Use fsi_severitylabel column to distinguish Critical from High.
         $severityMap = @{
-            "Critical" = 4  # Failed (use fsi_severity_label to distinguish from High)
-            "High"     = 4  # Failed (use fsi_severity_label to distinguish from Critical)
-            "Warning"  = 2  # Warning
-            "Info"     = 1  # Passed
+            "Critical" = 100000003  # Failed (use fsi_severitylabel to distinguish from High)
+            "High"     = 100000003  # Failed (use fsi_severitylabel to distinguish from Critical)
+            "Warning"  = 100000001  # Warning
+            "Info"     = 100000000  # Passed
         }
-        $severityValue = if ($severityMap.ContainsKey($Violation.Severity)) { $severityMap[$Violation.Severity] } else { 5 }
+        $severityValue = if ($severityMap.ContainsKey($Violation.Severity)) { $severityMap[$Violation.Severity] } else { 100000004 }
 
         $record = @{
             fsi_name              = "$($Violation.Zone)-$($Violation.ViolationType)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_environment_guid  = $Violation.EnvironmentId
-            fsi_environment_name  = $Violation.EnvironmentDisplayName
+            fsi_environmentguid   = $Violation.EnvironmentId
+            fsi_environmentname   = $Violation.EnvironmentDisplayName
             fsi_zone              = $zoneValue
-            fsi_violation_type    = $Violation.ViolationType
-            fsi_expected_value    = $Violation.Expected
-            fsi_actual_value      = $Violation.Actual
+            fsi_violationtype     = $Violation.ViolationType
+            fsi_expectedvalue     = $Violation.Expected
+            fsi_actualvalue       = $Violation.Actual
             fsi_severity          = $severityValue
-            fsi_severity_label    = $Violation.Severity
-            fsi_regulatory_context = $Violation.RegulatoryContext
-            fsi_detected_at       = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_severitylabel     = $Violation.Severity
+            fsi_regulatorycontext = $Violation.RegulatoryContext
+            fsi_detectedat        = (Get-Date).ToUniversalTime().ToString('o')
         }
         
         if ($RunId) {
-            $record['fsi_run_id'] = $RunId
+            $record['fsi_runid'] = $RunId
         }
         
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessviolations"
@@ -440,6 +440,14 @@ function Save-AAMBaseline {
     }
 
     try {
+        # Map zone integer to Dataverse option set value
+        $zoneMap = @{
+            1 = 100000001
+            2 = 100000002
+            3 = 100000003
+        }
+        $zoneValue = if ($zoneMap.ContainsKey($Zone)) { $zoneMap[$Zone] } else { 100000000 }
+
         $headers = @{
             'Authorization'    = "Bearer $(Get-ValidToken)"
             'Content-Type'     = 'application/json'
@@ -449,7 +457,7 @@ function Save-AAMBaseline {
         }
 
         # Deactivate existing active baselinefor this environment
-        $filter = "fsi_is_active eq true and fsi_environment_guid eq '$($EnvironmentGuid -replace "'", "''")'"
+        $filter = "fsi_isactive eq true and fsi_environmentguid eq '$($EnvironmentGuid -replace "'", "''")'"
         $queryUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines?`$filter=$filter&`$select=fsi_accessbaselineid"
 
         $existing = Invoke-DataverseRequest -Uri $queryUri -Method Get -Headers $headers
@@ -458,7 +466,7 @@ function Save-AAMBaseline {
             $baselineId = $baseline.fsi_accessbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $baselineId", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines($baselineId)"
-                $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json
+                $patchBody = @{ fsi_isactive = $false } | ConvertTo-Json
                 Invoke-DataverseRequest -Uri $patchUri -Method Patch -Body $patchBody -Headers $headers | Out-Null
                 Write-Verbose "Deactivated previous baseline: $baselineId"
             }
@@ -471,16 +479,16 @@ function Save-AAMBaseline {
 
         $record = @{
             fsi_name                             = "$EnvironmentName-Zone$Zone-$timestamp"
-            fsi_environment_guid                 = $EnvironmentGuid
-            fsi_environment_name                 = $EnvironmentName
-            fsi_zone                             = $Zone
-            fsi_bot_limit_sharing_mode           = $BotLimitSharingMode
-            fsi_bot_authoring_sharing_disabled   = $BotAuthoringSharingDisabled
-            fsi_bot_published_bot_limit_sharing_mode = $BotPublishedBotLimitSharingMode
-            fsi_captured_by                      = $capturedByValue
-            fsi_captured_at                      = $timestamp
-            fsi_is_active                        = $true
-            fsi_raw_json                         = $rawJsonValue
+            fsi_environmentguid                  = $EnvironmentGuid
+            fsi_environmentname                  = $EnvironmentName
+            fsi_zone                             = $zoneValue
+            fsi_botlimitsharingmode              = $BotLimitSharingMode
+            fsi_botauthoringsharingdisabled       = $BotAuthoringSharingDisabled
+            fsi_botpublishedbotlimitsharingmode   = $BotPublishedBotLimitSharingMode
+            fsi_capturedby                       = $capturedByValue
+            fsi_capturedat                       = $timestamp
+            fsi_isactive                         = $true
+            fsi_rawjson                          = $rawJsonValue
         }
 
         if ($PSCmdlet.ShouldProcess("$EnvironmentName (Zone $Zone)", "Save new access baseline")) {
@@ -518,9 +526,9 @@ function Get-AAMLastValidation {
     }
 
     try {
-        $select = "fsi_name,fsi_run_id,fsi_overall_status,fsi_violation_count,fsi_total_environments,fsi_summary_json,fsi_validation_time"
+        $select = "fsi_name,fsi_runid,fsi_overallstatus,fsi_violationcount,fsi_totalenvironments,fsi_summaryjson,fsi_validationtime"
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory?" +
-               "`$orderby=fsi_validation_time desc&`$top=$Top&`$select=$select"
+               "`$orderby=fsi_validationtime desc&`$top=$Top&`$select=$select"
 
         $headers = @{
             'Authorization'    = "Bearer $(Get-ValidToken)"
@@ -535,12 +543,12 @@ function Get-AAMLastValidation {
             return $response.value | ForEach-Object {
                 [PSCustomObject]@{
                     Name              = $_.fsi_name
-                    RunId             = $_.fsi_run_id
-                    OverallStatus     = $_.fsi_overall_status
-                    ViolationCount    = $_.fsi_violation_count
-                    TotalEnvironments = $_.fsi_total_environments
-                    SummaryJson       = $_.fsi_summary_json
-                    Timestamp         = $_.fsi_validation_time
+                    RunId             = $_.fsi_runid
+                    OverallStatus     = $_.fsi_overallstatus
+                    ViolationCount    = $_.fsi_violationcount
+                    TotalEnvironments = $_.fsi_totalenvironments
+                    SummaryJson       = $_.fsi_summaryjson
+                    Timestamp         = $_.fsi_validationtime
                 }
             }
         }

@@ -135,7 +135,7 @@ def create_environment_variables(client: ACVClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create environment variables for ACV",

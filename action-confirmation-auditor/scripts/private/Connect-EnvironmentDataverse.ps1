@@ -28,6 +28,10 @@
 .PARAMETER Force
     Bypass token cache and acquire a fresh token.
 
+.EXAMPLE
+    $token = .\Connect-EnvironmentDataverse.ps1 -DataverseUrl "https://org.crm.dynamics.com" -Interactive
+    Acquires a token interactively via Az.Accounts for the specified environment.
+
 .OUTPUTS
     String - Bearer access token for the specified Dataverse environment.
 

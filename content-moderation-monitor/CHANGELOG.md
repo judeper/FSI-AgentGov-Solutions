@@ -2,13 +2,13 @@
 
 All notable changes to the Content Moderation Monitor.
 
-## [1.0.3] - 2026-04-16
+## [1.0.3] - 2026-04-15
 
 ### Fixed
 
-- Fixed 3 prohibited compliance language violations: "ensures" → hedging language in SOLUTION-DOCUMENTATION.md, DELIVERY-CHECKLIST.md
+- Critical: Test-ContentModerationCompliance Write-Output changed to Write-Host in Object mode to prevent pipeline contamination (string was mixed into scan results, corrupting counts in runbook)
 
-## [1.0.2] - 2025-07-14
+## [1.0.2] - 2026-07-14
 
 ### Changed
 - Moved `src/adaptive-card-moderation-alert.json` to `templates/` per solution content policy

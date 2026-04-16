@@ -15,6 +15,21 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
 5. Remediate-UnauthorizedExternalAccess (Instant Cloud Flow)
 6. Send-AnnualReviewReminders-Daily (Scheduled Cloud Flow)
 
+## ⚠️ Option Set Value Reference
+
+All choice/option-set fields in OData expressions use **integer values**, not string labels. The schema source of truth is `scripts/create_ctsg_dataverse_schema.py`. This solution uses **0-based** option set values. Key mappings:
+
+| Option Set | Values |
+|-----------|--------|
+| `fsi_ctsg_approvalstatus` | 0=Pending, 1=Approved, 2=Expired, 3=Suspended, 4=Revoked |
+| `fsi_ctsg_findingstatus` | 0=Open, 1=Under Review, 2=Remediated, 3=Approved Exception, 4=False Positive |
+| `fsi_ctsg_severity` | 0=Critical, 1=High, 2=Medium, 3=Low |
+| `fsi_ctsg_findingtype` | 0=Unapproved Tenant Isolation Exception, 1=Unapproved Guest Share, 2=Unapproved B2B Access, 3=Tenant Isolation Disabled, 4=Approved Tenant - Review Required |
+| `fsi_ctsg_governancelayer` | 0=Layer 1 (Tenant Isolation), 1=Layer 2 (Entra CTA), 2=Layer 3 (Agent Share) |
+| `fsi_ctsg_remediationstatus` | 0=Pending, 1=Approved for Auto-Remediation, 2=Manually Remediated, 3=Deferred |
+| `fsi_ctsg_eventtype` | 0–16 (see `create_ctsg_dataverse_schema.py` for full mapping) |
+| `fsi_acv_zone` | 0=Unclassified, 1=Zone 1, 2=Zone 2, 3=Zone 3 |
+
 ## Prerequisites
 
 - All Dataverse tables deployed via `create_ctsg_dataverse_schema.py`
@@ -91,7 +106,7 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    - **Condition:** Response body contains `tenantIsolationEnabled` property
    - **If false (schema validation failed):**
      1. Send Teams alert to `FlowAdministrators` channel: `"API Schema Validation Failed — tenantSettings endpoint does not contain tenantIsolationEnabled property. API may have changed."`
-     2. Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"API Schema Validation Failed"`, `fsi_details` = full response body
+     2. Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"API Schema Validation Failed"`, `fsi_eventdetails` = full response body
      3. Terminate with status `Failed`
    - **If true:** Continue
 
@@ -125,10 +140,13 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
      1. Set `findingsCount` = `findingsCount + 1`
      2. Create `fsi_externalsharefinding` record:
         - `fsi_findingtype`: `"Tenant Isolation Disabled"` (Critical)
-        - `fsi_severity`: `100000003` (Critical)
-        - `fsi_findingstatus`: `100000000` (Open)
-        - `fsi_detectedat`: Variable `timestamp`
-        - `fsi_details`: `"Power Platform tenant isolation is disabled. All external tenants can access resources without restriction."`
+        - `fsi_severity`: `0` (Critical)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
+        - `fsi_detecteddate`: Variable `timestamp`
+        - `fsi_remediationnotes`: `"Power Platform tenant isolation is disabled. All external tenants can access resources without restriction."`
      3. Trigger Flow 5 (`Remediate-UnauthorizedExternalAccess`) with finding ID
    - **If false:** Continue
 
@@ -136,11 +154,11 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
    - Action: "List rows" (Dataverse)
    - Table: `fsi_approvedexternaltenants`
    - Filter: `fsi_approvalstatus eq 1`
-   - Select: `fsi_tenantid,fsi_tenantname,fsi_primarydomain,fsi_approveddirection,fsi_approvalstatus`
+   - Select: `fsi_tenantid,fsi_tenantname,fsi_primarydomain,fsi_ppisolationdirection,fsi_approvalstatus`
 
 8. **Build Approved Tenant Index**
    - Action: Select — build a lookup array of approved tenant IDs for quick comparison
-   - Map `fsi_tenantid` → full record (including `fsi_approveddirection`)
+   - Map `fsi_tenantid` → full record (including `fsi_ppisolationdirection`)
 
 9. **For Each Allow-List Entry**
    - Action: Apply to each on cross-tenant policy entries from Step 5
@@ -152,19 +170,25 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
         - `fsi_findingtype`: `"Unapproved Tenant Isolation Exception"`
-        - `fsi_severity`: `100000002` (High)
-        - `fsi_findingstatus`: `100000000` (Open)
-        - `fsi_sourcetenantid`: Entry `tenantId`
-        - `fsi_details`: Expression `concat('Tenant ', tenantId, ' found in PPAC allow-list but not in approved registry')`
+        - `fsi_severity`: `1` (High)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
+        - `fsi_externaltenanttenantid`: Entry `tenantId`
+        - `fsi_remediationnotes`: Expression `concat('Tenant ', tenantId, ' found in PPAC allow-list but not in approved registry')`
 
    9b. **Check Direction Match**
-   - **Condition:** Entry `direction` matches approved record `fsi_approveddirection`
+   - **Condition:** Entry `direction` matches approved record `fsi_ppisolationdirection`
    - **If false (direction mismatch):**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
-        - `fsi_findingtype`: `"Tenant Isolation Direction Mismatch"`
-        - `fsi_severity`: `100000001` (Medium)
-        - `fsi_findingstatus`: `100000000` (Open)
+        - `fsi_findingtype`: `"Unapproved Tenant Isolation Exception"`
+        - `fsi_severity`: `2` (Medium)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Validate-TenantIsolation-Daily"`
+        - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_remediationnotes`: Expression `concat('Approved direction: ', approvedDirection, '; Actual direction: ', actualDirection)`
 
 10. **Create Tenant Isolation Record**
@@ -172,25 +196,24 @@ This guide provides step-by-step instructions for building the six Cross-Tenant 
     - Table: `fsi_tenantisolationrecord`
     - Fields:
       - `fsi_name`: Expression `concat('TI-Snapshot-', variables('runId'))`
-      - `fsi_runid`: Variable `runId`
       - `fsi_isolationenabled`: Variable `tenantIsolationEnabled`
       - `fsi_allowlistcount`: Length of cross-tenant policy entries
-      - `fsi_findingscount`: Variable `findingsCount`
-      - `fsi_snapshotjson`: Full response body from Steps 4 and 5 serialized
-      - `fsi_scannedat`: Variable `timestamp`
+      - `fsi_findingscreated`: Variable `findingsCount`
+      - `fsi_allowlistsnapshot`: Full response body from Steps 4 and 5 serialized
+      - `fsi_auditdate`: Variable `timestamp`
 
 11. **Log Compliance Event**
     - **Condition:** `findingsCount` equals `0`
     - **If true:**
-      - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Isolation Validated"`, `fsi_details` = `"All allow-list entries match approved tenant registry"`
+      - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Isolation Validated"`, `fsi_eventdetails` = `"All allow-list entries match approved tenant registry"`
     - **If false:**
-      - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Isolation Findings"`, `fsi_details` = Expression `concat(variables('findingsCount'), ' finding(s) detected')`
+      - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Isolation Violation"`, `fsi_eventdetails` = Expression `concat(variables('findingsCount'), ' finding(s) detected')`
 
 ### Error Handling
 
 Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Catch** configured with **Run after** → Failed, Timed out, Cancelled:
 
-1. Log error to `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Flow Error"`, `fsi_details` = error message
+1. Log error to `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Flow Error"`, `fsi_eventdetails` = error message
 2. Send Teams alert to `FlowAdministrators` with flow name, run ID, and error details
 3. Terminate with status `Failed`
 
@@ -357,11 +380,11 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
         - **If false:** Continue to create finding
 
      2. **Deduplication Check**
-        - Query `fsi_externalsharefindings` for existing Open finding matching same `fsi_agentid`, `fsi_sourcetenantdomain`, and `fsi_findingtype`:
+        - Query `fsi_externalsharefindings` for existing Open finding matching same `fsi_agentid`, `fsi_externaltenanttenantid`, and `fsi_findingtype`:
           ```
-          fsi_externalsharefindings?$filter=fsi_agentid eq '{agentId}' and fsi_sourcetenantdomain eq '{homeTenantDomain}' and fsi_findingtype eq 'Unapproved Guest Agent Share' and fsi_findingstatus eq 100000000&$top=1
+          fsi_externalsharefindings?$filter=fsi_agentid eq '{agentId}' and fsi_externaltenanttenantid eq '{homeTenantDomain}' and fsi_findingtype eq 1 and fsi_findingstatus eq 0&$top=1
           ```
-        - If match exists: Update `fsi_detectedat` to current timestamp, skip creation
+        - If match exists: Update `fsi_detecteddate` to current timestamp, skip creation
 
      3. **Determine Severity from Agent Zone**
         - Query `fsi_agentinventory` for agent's `fsi_zone` value:
@@ -372,25 +395,28 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
 
           | `fsi_zone` Value | Severity | Code |
           |------------------|----------|------|
-          | `10003` (Zone 3) | Critical | `100000003` |
-          | `10002` (Zone 2) | High | `100000002` |
-          | `10001` (Zone 1) | Medium | `100000001` |
-          | `null` or not found | High (conservative) | `100000002` |
+          | `3` (Zone 3) | Critical | `0` |
+          | `2` (Zone 2) | High | `1` |
+          | `1` (Zone 1) | Medium | `2` |
+          | `null` or not found | High (conservative) | `1` |
 
      4. **Create Finding**
         - Action: "Create a new record" (Dataverse)
         - Table: `fsi_externalsharefinding`
         - Fields:
-          - `fsi_findingtype`: `"Unapproved Guest Agent Share"`
+          - `fsi_findingtype`: `"Unapproved Guest Share"`
           - `fsi_severity`: Severity code from zone mapping
-          - `fsi_findingstatus`: `100000000` (Open)
+          - `fsi_findingstatus`: `0` (Open)
+          - `fsi_detectedby`: `"Detect-ExternalAgentShares-Daily"`
+          - `fsi_governancelayer`: `2` (Layer 3 — Agent Shares)
+          - `fsi_remediationstatus`: `0` (Pending)
           - `fsi_agentid`: Agent GUID
           - `fsi_agentname`: Agent display name
           - `fsi_environmentid`: Environment GUID
-          - `fsi_sourcetenantdomain`: `homeTenantDomain` from guest index
-          - `fsi_guestupn`: Guest `userPrincipalName`
+          - `fsi_externaltenantname`: `homeTenantDomain` from guest index
+          - `fsi_externaluserupn`: Guest `userPrincipalName`
           - `fsi_guestdetectionmethod`: Detection method string from Step 6
-          - `fsi_detectedat`: Variable `timestamp`
+          - `fsi_detecteddate`: Variable `timestamp`
           - `fsi_remediationnotes`: Any accumulated notes from detection
         - Increment `findingsCount`
 
@@ -484,18 +510,21 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - **If true:**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
-        - `fsi_findingtype`: `"CTA Default Inbound B2B Drift"`
-        - `fsi_severity`: `100000001` (Medium)
-        - `fsi_findingstatus`: `100000000` (Open)
-        - `fsi_details`: Expression `concat('Expected inbound B2B blocked=', baselineInboundBlocked, '; Actual=', actualValue)`
+        - `fsi_findingtype`: `"Unapproved B2B Access"`
+        - `fsi_severity`: `2` (Medium)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
+        - `fsi_remediationnotes`: Expression `concat('Expected inbound B2B blocked=', baselineInboundBlocked, '; Actual=', actualValue)`
 
    5b. **Check Outbound B2B**
    - Same pattern — compare against `baselineOutboundBlocked`
-   - Finding type: `"CTA Default Outbound B2B Drift"`
+   - Finding type: `"Unapproved B2B Access"`
 
    5c. **Check Direct Connect**
    - Same pattern — compare against `baselineDirectConnectBlocked`
-   - Finding type: `"CTA Default Direct Connect Drift"`
+   - Finding type: `"Unapproved B2B Access"`
 
 6. **Get All Partner CTA Policies**
    - Action: HTTP with Microsoft Entra ID
@@ -522,20 +551,26 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - **If false (unapproved partner):**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
-        - `fsi_findingtype`: `"Unapproved CTA Partner Policy"`
-        - `fsi_severity`: `100000001` (Medium)
-        - `fsi_findingstatus`: `100000000` (Open)
-        - `fsi_sourcetenantid`: Partner `tenantId`
-        - `fsi_details`: `"Partner CTA policy exists for tenant not in approved registry"`
+        - `fsi_findingtype`: `"Unapproved B2B Access"`
+        - `fsi_severity`: `2` (Medium)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
+        - `fsi_externaltenanttenantid`: Partner `tenantId`
+        - `fsi_remediationnotes`: `"Partner CTA policy exists for tenant not in approved registry"`
 
    8b. **Check Scope Against Approval**
    - **Condition:** Partner entry exists in approved registry but scope exceeds approved level (e.g., approved for inbound-only but outbound also enabled)
    - **If true:**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
-        - `fsi_findingtype`: `"CTA Partner Scope Exceeds Approval"`
-        - `fsi_severity`: `100000001` (Medium)
-        - `fsi_findingstatus`: `100000000` (Open)
+        - `fsi_findingtype`: `"Unapproved B2B Access"`
+        - `fsi_severity`: `2` (Medium)
+        - `fsi_findingstatus`: `0` (Open)
+        - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
+        - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
+        - `fsi_remediationstatus`: `0` (Pending)
         - `fsi_remediationnotes`: Expression detailing approved vs. actual scope
 
 9. **Create Entra CTA Record**
@@ -543,16 +578,15 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - Table: `fsi_entractarecord`
    - Fields:
      - `fsi_name`: Expression `concat('CTA-Audit-', variables('runId'))`
-     - `fsi_runid`: Variable `runId`
-     - `fsi_defaultpolicyjson`: Serialized default policy response from Step 4
-     - `fsi_partnercount`: Count of partner policies from Step 6
-     - `fsi_findingscount`: Variable `findingsCount`
-     - `fsi_auditedat`: Variable `timestamp`
+     - `fsi_partnersnapshot`: Serialized default policy response from Step 4
+     - `fsi_partnerentrycount`: Count of partner policies from Step 6
+     - `fsi_findingscreated`: Variable `findingsCount`
+     - `fsi_auditdate`: Variable `timestamp`
 
 10. **Log Compliance Event**
     - Create `fsi_crosstenantcomplianceevent`:
-      - `fsi_eventtype`: If `findingsCount` = 0 → `"Entra CTA Audit Passed"` else `"Entra CTA Audit Findings"`
-      - `fsi_details`: Expression `concat('Partner policies audited: ', partnerCount, '; Findings: ', findingsCount)`
+      - `fsi_eventtype`: If `findingsCount` = 0 → `"Entra CTA Audited"` else `"Entra CTA Violation"`
+      - `fsi_eventdetails`: Expression `concat('Partner policies audited: ', partnerCount, '; Findings: ', findingsCount)`
 
 ### Error Handling
 
@@ -633,16 +667,15 @@ Same scope-based try/catch pattern as Flow 1.
      - `fsi_tenantid`: `requestedTenantId`
      - `fsi_tenantname`: Resolved `displayName` (or `requestedTenantDomain` if resolution failed)
      - `fsi_primarydomain`: `requestedTenantDomain`
-     - `fsi_approveddirection`: `requestedDirection`
-     - `fsi_approvalstatus`: `100000000` (Pending)
+     - `fsi_ppisolationdirection`: `requestedDirection`
+     - `fsi_approvalstatus`: `0` (Pending)
      - `fsi_businessjustification`: `businessJustification`
-     - `fsi_requestorupn`: `requestorUpn`
-     - `fsi_requestorteam`: `requestorTeam`
+     - `fsi_notes`: `requestorUpn` (include requestor UPN with prefix "Requestor: ")
+     - `fsi_requestingteam`: `requestorTeam`
      - `fsi_annualreviewdue`: Variable `annualReviewDate`
-     - `fsi_createdat`: Variable `timestamp`
 
 8. **Log Compliance Event**
-   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Initiated"`, `fsi_details` = Expression `concat('Tenant: ', requestedTenantDomain, ' requested by ', requestorUpn)`
+   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Initiated"`, `fsi_eventdetails` = Expression `concat('Tenant: ', requestedTenantDomain, ' requested by ', requestorUpn)`
 
 9. **Send Parallel Approval Requests**
 
@@ -668,9 +701,9 @@ Same scope-based try/catch pattern as Flow 1.
     - Configure **Run after** → Has timed out on both approval branches
     - **If timed out:**
       1. Update `fsi_approvedexternaltenant`:
-         - `fsi_approvalstatus`: `100000004` (Expired)
+         - `fsi_approvalstatus`: `2` (Expired)
          - `fsi_expirynotes`: `"Approval request expired after 10 business days without response from all required approvers"`
-      2. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Expired"`
+      2. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Expired"`
       3. Send Teams notification to requestor, security team, and governance committee: `"External tenant onboarding request has expired due to incomplete approvals"`
       4. Terminate with status `Cancelled`
 
@@ -681,23 +714,23 @@ Same scope-based try/catch pattern as Flow 1.
     **If both approved:**
     1. Update `fsi_approvedexternaltenant`:
        - `fsi_approvalstatus`: `1` (Approved)
-       - `fsi_approvedat`: Expression `utcNow()`
+       - `fsi_approvaldate`: Expression `utcNow()`
        - `fsi_approvedby`: Expression `concat(securityApprover, '; ', governanceApprover)`
     2. Update PPAC tenant isolation allow-list (if applicable):
        - Action: HTTP with Microsoft Entra ID — PATCH to add tenant to allow-list
     3. Update Entra CTA partner policy (if applicable):
        - Action: HTTP with Microsoft Entra ID — create or update partner CTA policy
     4. Close any open findings for this tenant:
-       - Query `fsi_externalsharefindings` where `fsi_sourcetenantid eq '{tenantId}' and fsi_findingstatus eq 100000000`
-       - Update each to `fsi_findingstatus` = `100000002` (Resolved), `fsi_resolvedby` = `"Onboarding Approval"`, `fsi_resolvedat` = `utcNow()`
-    5. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Approved"`
+       - Query `fsi_externalsharefindings` where `fsi_externaltenanttenantid eq '{tenantId}' and fsi_findingstatus eq 0`
+       - Update each to `fsi_findingstatus` = `2` (Remediated), `fsi_assignedto` = `"Onboarding Approval"`, `fsi_remediationdate` = `utcNow()`
+    5. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Approved"`
     6. Send Teams notification to requestor: `"External tenant onboarding approved"`
 
     **If either rejected:**
     1. Update `fsi_approvedexternaltenant`:
-       - `fsi_approvalstatus`: `100000003` (Revoked)
-       - `fsi_revocationreason`: Rejection comments from the rejecting approver
-    2. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Onboarding Rejected"`
+       - `fsi_approvalstatus`: `4` (Revoked)
+       - `fsi_expirynotes`: Rejection comments from the rejecting approver
+    2. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Tenant Revoked"`
     3. Send Teams notification to requestor with rejection reason
 
 ### Error Handling
@@ -737,22 +770,22 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
    - Row ID: Trigger input `findingId`
 
 4. **Check for Duplicate Processing**
-   - **Condition:** `fsi_findingstatus` is NOT `100000000` (Open)
+   - **Condition:** `fsi_findingstatus` is NOT `0` (Open)
    - **If true (already handled):**
-     1. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Duplicate Remediation Skipped"`, `fsi_details` = Expression `concat('Finding ', findingId, ' already in status ', currentStatus)`
+     1. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Duplicate Remediation Skipped"`, `fsi_eventdetails` = Expression `concat('Finding ', findingId, ' already in status ', currentStatus)`
      2. Terminate with status `Cancelled`
 
 5. **Set Status to Under Review**
    - Action: "Update a record" (Dataverse)
    - Table: `fsi_externalsharefinding`
    - Fields:
-     - `fsi_findingstatus`: `100000001` (Under Review)
+     - `fsi_findingstatus`: `1` (Under Review)
 
 6. **Check Finding Type — Tenant Isolation Disabled**
    - **Condition:** `fsi_findingtype` equals `"Tenant Isolation Disabled"`
    - **If true (cannot auto-remediate):**
      1. Update finding:
-        - `fsi_remediationstatus`: `"Deferred"`
+        - `fsi_remediationstatus`: `3` (Deferred)
         - `fsi_remediationnotes`: `"Tenant isolation cannot be enabled via automation. Manual action required in Power Platform Admin Center → Tenant Settings → Tenant Isolation → Enable."`
      2. Send **CRITICAL** Teams alert to `FlowAdministrators` and `SecurityTeamUPN`:
         - Use Adaptive Card with red banner: `"CRITICAL: Power Platform tenant isolation is DISABLED"`
@@ -763,7 +796,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
 7. **Send Remediation Approval Request**
    - Action: Approvals → Start and wait for an approval
    - Approval type: Approve/Reject — First to respond
-   - Title: Expression `concat('Remediation Approval: ', fsi_findingtype, ' — ', fsi_sourcetenantdomain)`
+   - Title: Expression `concat('Remediation Approval: ', fsi_findingtype, ' — ', fsi_externaltenantname)`
    - Assigned to: Environment variable `SecurityTeamUPN`
    - Details: Remediation approval Adaptive Card (see [Template 2](#template-2-remediation-approval-request))
    - **Timeout:** `P3D` (3 days)
@@ -773,7 +806,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
    **If Approved:**
 
    8a. **Layer 3 — Remove Role Assignment**
-   - **Condition:** Finding has associated `fsi_agentid` and `fsi_guestupn`
+   - **Condition:** Finding has associated `fsi_agentid` and `fsi_externaluserupn`
    - **If true:**
      - Action: HTTP with Microsoft Entra ID
 
@@ -806,32 +839,32 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
    - **If true:**
      - Attempt to remove tenant from allow-list via PPAC API
      - If API supports deletion: Execute and log
-     - If API does not support automated removal: Set `fsi_remediationstatus` = `"Deferred"` with manual instructions
+     - If API does not support automated removal: Set `fsi_remediationstatus` = `3` (Deferred) with manual instructions
      - Append to `fsi_remediationnotes`: Layer 1 action taken or deferred
 
    8d. **Update Finding — Remediated**
    - Action: "Update a record" (Dataverse)
    - Table: `fsi_externalsharefinding`
    - Fields:
-     - `fsi_findingstatus`: `100000002` (Resolved)
-     - `fsi_remediationstatus`: `"Remediated"`
-     - `fsi_resolvedby`: Approver email
-     - `fsi_resolvedat`: Expression `utcNow()`
+     - `fsi_findingstatus`: `2` (Remediated)
+     - `fsi_remediationstatus`: `2` (Manually Remediated)
+     - `fsi_assignedto`: Approver email
+     - `fsi_remediationdate`: Expression `utcNow()`
 
    8e. **Log Compliance Event**
-   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Remediation Completed"`
+   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"External Share Remediated"`
 
    **If Rejected:**
 
    8f. **Update Finding — Deferred**
    - Action: "Update a record" (Dataverse)
    - Fields:
-     - `fsi_remediationstatus`: `"Deferred"`
+     - `fsi_remediationstatus`: `3` (Deferred)
      - `fsi_remediationnotes`: Rejection reason from approver
    - Finding remains in `Open` status
 
    8g. **Log to Immutable Audit**
-   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Remediation Rejected"`, `fsi_details` = Rejection reason
+   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Remediation Rejected"`, `fsi_eventdetails` = Rejection reason
    - This event record serves as the immutable audit trail of the decision
 
 ### Error Handling
@@ -878,7 +911,7 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
    - Action: "List rows" (Dataverse)
    - Table: `fsi_approvedexternaltenants`
    - Filter: `fsi_approvalstatus eq 1`
-   - Select: `fsi_tenantid,fsi_tenantname,fsi_primarydomain,fsi_annualreviewdue,fsi_requestorupn,fsi_requestorteam`
+   - Select: `fsi_tenantid,fsi_tenantname,fsi_primarydomain,fsi_annualreviewdue,fsi_notes,fsi_requestingteam`
 
 5. **For Each Approved Tenant**
    - Action: Apply to each on approved tenants from Step 4
@@ -889,21 +922,21 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
      1. **Deduplication Check:**
         - Query `fsi_crosstenantcomplianceevent`:
           ```
-          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 'Annual Review 90-Day Reminder' and fsi_details eq '{tenantId}' and fsi_createdat ge {thirtyDaysAgo}&$top=1
+          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 11 and fsi_eventdetails eq '{tenantId}' and createdon ge {thirtyDaysAgo}&$top=1
           ```
         - **If reminder already sent in past 30 days:** Skip
      2. **If no recent reminder:**
-        - Send Teams notification to `governanceTeamEmail` and requesting team (`fsi_requestorupn`):
+        - Send Teams notification to `governanceTeamEmail` and requesting team (`fsi_notes`):
           - Use Annual Review Reminder Adaptive Card (see [Template 3](#template-3-annual-review-reminder))
           - Set urgency indicator: `"Upcoming"`
-        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Annual Review 90-Day Reminder"`, `fsi_details` = `fsi_tenantid`
+        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Annual Review Due"`, `fsi_eventdetails` = `fsi_tenantid`
         - Increment `remindersQueued`
 
    5b. **Evaluate 30-Day Threshold**
    - **Condition:** `fsi_annualreviewdue` is less than or equal to `thirtyDayWindow` AND `fsi_annualreviewdue` is greater than `today`
    - **If true:**
      1. **Deduplication Check:**
-        - Query for `"Annual Review 30-Day Reminder"` events for this tenant in past 7 days
+        - Query for `"Annual Review Due"` events for this tenant in past 7 days
         - **If already sent:** Skip
      2. **If no recent reminder:**
         - Send **URGENT** Teams notification to `governanceTeamEmail`, requesting team, AND `governanceCommitteeUpn`
@@ -918,23 +951,26 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
         - Action: "Create a new record" (Dataverse)
         - Table: `fsi_externalsharefinding`
         - Fields:
-          - `fsi_findingtype`: `"Approved Tenant — Review Required"`
-          - `fsi_severity`: `100000000` (Low)
-          - `fsi_findingstatus`: `100000000` (Open)
-          - `fsi_sourcetenantid`: `fsi_tenantid`
-          - `fsi_sourcetenantdomain`: `fsi_primarydomain`
-          - `fsi_details`: Expression `concat('Annual review overdue since ', fsi_annualreviewdue, ' for tenant ', fsi_tenantname)`
+          - `fsi_findingtype`: `"Approved Tenant - Review Required"`
+          - `fsi_severity`: `3` (Low)
+          - `fsi_findingstatus`: `0` (Open)
+          - `fsi_detectedby`: `"Monitor-AnnualTenantReviews-Daily"`
+          - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
+          - `fsi_remediationstatus`: `0` (Pending)
+          - `fsi_externaltenanttenantid`: `fsi_tenantid`
+          - `fsi_externaltenantname`: `fsi_primarydomain`
+          - `fsi_remediationnotes`: Expression `concat('Annual review overdue since ', fsi_annualreviewdue, ' for tenant ', fsi_tenantname)`
      2. Send **OVERDUE** Teams notification to all three groups (`governanceTeamEmail`, requesting team, `governanceCommitteeUpn`)
      3. Use Adaptive Card with urgency: `"Overdue"` and red accent
      4. Create compliance event with `fsi_eventtype` = `"Annual Review Overdue"`
 
 6. **Check for Expired Onboarding Requests**
-   - Query `fsi_approvedexternaltenants` where `fsi_approvalstatus eq 100000004` (Expired)
+   - Query `fsi_approvedexternaltenants` where `fsi_approvalstatus eq 2` (Expired)
    - This data is for alert banner context only — no remediation actions
    - If expired requests exist: Include count in daily summary
 
 7. **Log Daily Summary Event**
-   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Annual Review Check Completed"`, `fsi_details` = Expression `concat('Reminders sent: ', remindersQueued)`
+   - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Annual Review Completed"`, `fsi_eventdetails` = Expression `concat('Reminders sent: ', remindersQueued)`
 
 ### Error Handling
 
@@ -946,14 +982,14 @@ Same scope-based try/catch pattern as Flow 1.
 
 | Finding Type | Severity | Code |
 |---|---|---|
-| Tenant Isolation Disabled | Critical | `100000003` |
-| Unapproved Tenant Isolation Exception | High | `100000002` |
-| Unapproved Guest Share on Zone 3 agent | Critical | `100000003` |
-| Unapproved Guest Share on Zone 2 agent | High | `100000002` |
-| Unapproved Guest Share on Zone 1 agent | Medium | `100000001` |
-| Unapproved Guest Share — zone unknown | High (conservative) | `100000002` |
-| Unapproved B2B Access setting drift | Medium | `100000001` |
-| Approved Tenant — Annual Review Overdue | Low | `100000000` |
+| Tenant Isolation Disabled | Critical | `0` |
+| Unapproved Tenant Isolation Exception | High | `1` |
+| Unapproved Guest Share on Zone 3 agent | Critical | `0` |
+| Unapproved Guest Share on Zone 2 agent | High | `1` |
+| Unapproved Guest Share on Zone 1 agent | Medium | `2` |
+| Unapproved Guest Share — zone unknown | High (conservative) | `1` |
+| Unapproved B2B Access setting drift | Medium | `2` |
+| Approved Tenant — Annual Review Overdue | Low | `3` |
 
 > **Note:** Zone-based severity is derived from `fsi_agentinventory.fsi_zone` (from `agent-registry-automation`). When the zone value is null or the agent is not found in the registry, apply High severity as a conservative default.
 
@@ -1429,5 +1465,5 @@ After building all flows:
 - **Resolution:** Adjust the timeout value in Flow 4 Step 9 based on your organization's approval SLA. Consider `P14D` for organizations with slower approval cycles.
 
 **Issue: Annual review reminders send repeatedly for the same tenant**
-- **Cause:** Deduplication check query may not match if `fsi_details` content changed between runs
-- **Resolution:** Verify the `fsi_details` field in the deduplication query uses the exact `fsi_tenantid` value. The 90-day check uses a 30-day deduplication window; the 30-day check uses a 7-day window.
+- **Cause:** Deduplication check query may not match if `fsi_eventdetails` content changed between runs
+- **Resolution:** Verify the `fsi_eventdetails` field in the deduplication query uses the exact `fsi_tenantid` value. The 90-day check uses a 30-day deduplication window; the 30-day check uses a 7-day window.

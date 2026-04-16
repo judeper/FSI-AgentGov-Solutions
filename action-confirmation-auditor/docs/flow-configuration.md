@@ -33,19 +33,19 @@ This guide provides step-by-step instructions for manually building the Action C
 2. **Initialize Variables**
    - `timestamp`: Expression `utcNow()`
    - `runId`: Expression `guid()`
-   - `tenantId`: Environment variable `fsi_ACA_TenantId`
-   - `dataverseUrl`: Environment variable `fsi_ACA_DataverseUrl`
    - `scanFrequencyHours`: Environment variable `fsi_ACA_ScanFrequencyHours` (default: 24)
-   - `dryRunMode`: Environment variable `fsi_ACA_DryRunMode` (default: `"true"`)
-   - `alertSeverityThreshold`: Environment variable `fsi_ACA_AlertSeverityThreshold` (default: `"Medium"`)
+   - `includeSandbox`: Environment variable `fsi_ACA_IncludeSandbox` (default: `"false"`)
+   - `includeDrafts`: Environment variable `fsi_ACA_IncludeDrafts` (default: `"false"`)
+   - `confirmationPatternMode`: Environment variable `fsi_ACA_ConfirmationPatternMode` (default: `"standard"`)
 
 3. **Execute Azure Automation Runbook**
    - Action: "Create job" (Azure Automation)
    - Runbook: `Start-ActionConfirmationValidationRunbook`
    - Parameters:
-     - `TenantId`: Variable `tenantId`
-     - `DataverseUrl`: Variable `dataverseUrl`
-     - `DryRun`: Variable `dryRunMode`
+     - `TenantId`: Tenant GUID (configure directly or from environment variable)
+     - `ClientId`: Service principal app registration client ID
+     - `CertificateThumbprint`: Certificate thumbprint for authentication
+     - `DataverseUrl`: Dataverse environment URL
    - Wait for completion: Yes
 
 4. **Wait for Runbook Completion**
@@ -75,8 +75,14 @@ This guide provides step-by-step instructions for manually building the Action C
            "items": {
              "type": "object",
              "properties": {
+               "EnvironmentId": { "type": "string" },
+               "EnvironmentName": { "type": "string" },
+               "Zone": { "type": "string" },
+               "AgentId": { "type": "string" },
+               "AgentName": { "type": "string" },
                "ActionName": { "type": "string" },
                "ActionType": { "type": "string" },
+               "ActionCategory": { "type": "string" },
                "ConfirmationStatus": { "type": "string" },
                "Severity": { "type": "string" }
              }
@@ -98,7 +104,9 @@ This guide provides step-by-step instructions for manually building the Action C
      - `fsi_overallstatus`: Parsed `OverallStatus`
      - `fsi_totalagents`: Parsed `TotalAgents`
      - `fsi_totalactions`: Parsed `TotalActions`
+     - `fsi_actionswithconfirmation`: Expression `sub(body('Parse_JSON')?['TotalActions'], body('Parse_JSON')?['ActionsMissingConfirmation'])`
      - `fsi_actionsmissingconfirmation`: Parsed `ActionsMissingConfirmation`
+     - `fsi_violationcount`: Parsed violations array length
      - `fsi_summaryjson`: Full JSON output
 
 8. **For Each Violation**
@@ -107,10 +115,17 @@ This guide provides step-by-step instructions for manually building the Action C
    - Table: `fsi_ActionAuditResult`
    - Fields:
      - `fsi_name`: Expression `take(concat(items('Apply_to_each')?['ActionName'], ' - Missing Confirmation'), 100)`
+     - `fsi_environmentguid`: Parsed `EnvironmentId` from violation item
+     - `fsi_environmentname`: Parsed `EnvironmentName` from violation item
+     - `fsi_zone`: Parsed `Zone` — map to option set integer: Zone 1 = 1, Zone 2 = 2, Zone 3 = 3
+     - `fsi_agentid`: Parsed `AgentId` from violation item
+     - `fsi_agentname`: Parsed `AgentName` from violation item
      - `fsi_actionname`: `ActionName`
-     - `fsi_actiontype`: `ActionType`
-     - `fsi_confirmationstatus`: `ConfirmationStatus`
-     - `fsi_severity`: `Severity` (mapped to option set value)
+     - `fsi_actiontype`: Map to option set integer: ConnectorAction = 100000000, CloudFlowAction = 100000001, PluginAction = 100000002, CustomAction = 100000003, HttpRequest = 100000004
+     - `fsi_risklevel`: `ActionCategory` from violation (Write/Delete/Read/ExternalTransfer/Execute)
+     - `fsi_confirmationstatus`: Map to option set integer: Present = 100000000, Missing = 100000001, Partial = 100000002, UnableToDetermine = 100000003
+     - `fsi_violationstatus`: 100000000 (Open)
+     - `fsi_severity`: `Severity` (string value: Critical/High/Medium/Warning)
      - `fsi_runid`: Variable `runId`
      - `fsi_detectedat`: Variable `timestamp`
 
@@ -169,9 +184,9 @@ This guide provides step-by-step instructions for manually building the Action C
 4. **Send Approval Request**
    - Action: "Start and wait for an approval"
    - Approval type: Approve/Reject
-   - Title: Expression `concat('ACA Exception: ', triggerOutputs()?['body/fsi_actionname'], ' - ', triggerOutputs()?['body/fsi_agentname'])`
+   - Title: Expression `concat('ACA Exception: ', triggerOutputs()?['body/fsi_actionname'])`
    - Assigned to: Compliance team (configure the approver email address directly in the approval action — e.g., `compliance-team@contoso.com` or a mail-enabled security group)
-   - Details: Include action name, action type, agent name, environment, business justification, requestor
+   - Details: Include action name, action type, agent ID, environment, business justification
    - **Timeout:** Configure 14-day timeout (ISO 8601: `P14D`). Add a **Run after > Has timed out** branch to update `fsi_isactive` to `false` with note `"Timed out: no approver response within 14 days"` and notify the requestor.
 
 5. **Process Approval Response**
@@ -183,7 +198,7 @@ This guide provides step-by-step instructions for manually building the Action C
      - `fsi_isactive`: `true`
      - `fsi_approvedby`: Approver email from approval response
      - `fsi_approvedat`: Expression `utcNow()`
-     - `fsi_approvalnotes`: Approver comments from approval response
+     - `fsi_justification`: Append approver comments to existing justification text
    - Send notification to requestor: "Exception approved"
    - Post Teams message to compliance channel: Exception approval summary
 
@@ -192,8 +207,7 @@ This guide provides step-by-step instructions for manually building the Action C
    - Table: `fsi_ActionConfirmationException`
    - Fields:
      - `fsi_isactive`: `false`
-     - `fsi_rejectedby`: Approver email from approval response
-     - `fsi_rejectionnotes`: Approver comments (rejection reason)
+     - `fsi_justification`: Append rejection reason from approver comments
    - Send notification to requestor: "Exception rejected" with reason
    - Post Teams message to compliance channel: Exception rejection summary
 
@@ -256,7 +270,6 @@ Before deploying flows, create connection references in Power Automate:
 | `fsi_cr_teams_actionconfirmationauditor` | Microsoft Teams | Current User |
 | `fsi_cr_office365_actionconfirmationauditor` | Office 365 Outlook | Current User |
 | `fsi_cr_azureautomation_actionconfirmationauditor` | Azure Automation | Service Principal |
-| `fsi_cr_approvals_actionconfirmationauditor` | Approvals | Current User |
 
 **Steps to Create Connection Reference:**
 1. Power Automate > Solutions > ACA
@@ -266,7 +279,7 @@ Before deploying flows, create connection references in Power Automate:
 5. Create connection > Select authentication
 6. Save
 
-Repeat for Teams, Office 365 Outlook, Azure Automation, and Approvals connectors.
+Repeat for Teams, Office 365 Outlook, and Azure Automation connectors.
 
 ---
 
@@ -311,12 +324,12 @@ After building all flows:
 ## Troubleshooting
 
 **Issue: Azure Automation runbook fails with authentication error**
-- **Cause:** Service principal credentials expired or insufficient permissions
-- **Resolution:** Verify the Azure Automation Run As account or Managed Identity has Power Platform Admin permissions. Check `fsi_ACA_ClientId` and `fsi_ACA_TenantId` environment variables.
+- **Cause:** Service principal certificate expired or insufficient permissions
+- **Resolution:** Verify the certificate uploaded to the Azure Automation account has not expired. Confirm the service principal has Power Platform Admin permissions. Ensure `ClientId` and `CertificateThumbprint` runbook parameters are correct.
 
 **Issue: Flow fails with "Invalid URI" error**
 - **Cause:** Dataverse URL or API endpoint malformed
-- **Resolution:** Verify `fsi_ACA_DataverseUrl` environment variable format (should be `https://org.crm.dynamics.com/`)
+- **Resolution:** Verify the Dataverse URL format (should be `https://org.crm.dynamics.com/`)
 
 **Issue: Trigger not firing when exception record created**
 - **Cause:** Trigger filter may be excluding records
@@ -340,9 +353,8 @@ After building all flows:
 
 After completing flow deployment:
 1. Configure environment variables (see main deployment guide)
-2. Set `fsi_ACA_DryRunMode` to `"false"` when ready for production
-3. Enable flows in Power Automate
-4. Monitor ACA-Scanner flow runs for scan results
-5. Train compliance team on exception approval workflow
+2. Enable flows in Power Automate
+3. Monitor ACA-Scanner flow runs for scan results
+4. Train compliance team on exception approval workflow
 
 For comprehensive operational guidance, see the main README.md.

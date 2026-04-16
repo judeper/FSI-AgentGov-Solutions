@@ -6,7 +6,7 @@ No-op since this repository doesn't use the researcher package.
 
 import sys
 
-def main():
+def main() -> None:
     # No action needed for this repository
     sys.exit(0)
 

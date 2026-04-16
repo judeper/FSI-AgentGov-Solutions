@@ -1,6 +1,6 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.0.1
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
@@ -22,9 +22,9 @@ The Action Confirmation Auditor (ACA) scans Power Platform environments for Copi
 
 | Regulation | Relevance |
 |------------|-----------|
-| **FINRA 3110** | Supervisory system requirements for automated trading and client-facing operations |
-| **GLBA 501(b)** | Safeguards for customer information accessed by automated agents |
-| **SOX 404** | Internal control over financial reporting workflows executed by agents |
+| **FINRA Rule 3110** | Supervisory system requirements for automated trading and client-facing operations |
+| **GLBA Section 501(b)** | Safeguards for customer information accessed by automated agents |
+| **SOX Section 404** | Internal control over financial reporting workflows executed by agents |
 
 ACA supports compliance with these regulations by providing auditable evidence that agent actions include appropriate human-in-the-loop confirmation steps.
 
@@ -56,7 +56,7 @@ When a required confirmation is missing, severity is classified as:
 - **User-Defined Action Messages** -- Validates that agents have user-defined action messages configured per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional)
 - **Zone Compliance** -- Enforces zone-specific confirmation requirements using ELM zone classification
 - **Exception Management** -- Approval workflow for legitimate confirmation bypasses
-- **Multiple Output Formats** -- Console, JSON, CSV evidence export
+- **Multiple Output Formats** -- Console and JSON evidence export
 - **Dry-Run Mode** -- Preview scan results without writing to Dataverse
 - **Severity Classification** -- Zone-aware severity assignment for each violation
 - **Regulatory Context** -- Maps violations to FINRA 3110, GLBA 501(b), SOX 404 requirements
@@ -116,7 +116,7 @@ See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
 
 ```bash
 python scripts/create_dataverse_schema.py \
-  --dataverse-url https://yourorg.crm.dynamics.com \
+  --environment-url https://yourorg.crm.dynamics.com \
   --client-id <app-id> \
   --client-secret <secret> \
   --tenant-id <tenant-id>
@@ -126,52 +126,39 @@ python scripts/create_dataverse_schema.py \
 
 ```powershell
 # Preview scan results without writing to Dataverse
-./scripts/private/Get-ExpectedConfirmationPolicy.ps1 `
-  -DataverseUrl "https://yourorg.crm.dynamics.com" `
-  -WhatIf
+. ./scripts/Test-ActionConfirmationCompliance.ps1
+Test-ActionConfirmationCompliance -WhatIf
 ```
 
 ### 3. Export Evidence
 
 ```powershell
 # Export SHA-256 hashed evidence for regulatory examination
-# (Evidence export is performed through the ACA-Scanner flow output)
+./scripts/Export-ActionAuditEvidence.ps1 `
+  -DataverseUrl "https://yourorg.crm.dynamics.com" `
+  -TenantId "contoso.onmicrosoft.com" `
+  -OutputDirectory ".\evidence" `
+  -Interactive
 ```
 
 ## Configuration
 
 | Environment Variable | Purpose | Default |
 |---------------------|---------|---------|
-| `fsi_ACA_DataverseUrl` | Target Dataverse organization URL | -- |
-| `fsi_ACA_TenantId` | Microsoft Entra ID tenant identifier | -- |
-| `fsi_ACA_ClientId` | App registration client ID | -- |
+| `fsi_ACA_GracePeriodHours` | Hours to exclude newly provisioned environments | 48 |
 | `fsi_ACA_ScanFrequencyHours` | Hours between scheduled scans | 24 |
+| `fsi_ACA_IncludeSandbox` | Include sandbox environments in scans | false |
+| `fsi_ACA_IncludeDrafts` | Include draft/unpublished agents in scans | false |
+| `fsi_ACA_ConfirmationPatternMode` | Detection mode: standard, strict, permissive | standard |
 | `fsi_ACA_TeamsGroupId` | Teams group for alert notifications | -- |
 | `fsi_ACA_TeamsChannelId` | Teams channel for alert notifications | -- |
-| `fsi_ACA_AlertSeverityThreshold` | Minimum severity for Teams alerts | Medium |
-| `fsi_ACA_DryRunMode` | Enable dry-run mode (true/false) | true |
 
 ## Documentation
 
 - [Prerequisites](docs/prerequisites.md) -- Licensing, permissions, and setup requirements
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table and column reference (auto-generated)
 - [Flow Configuration](docs/flow-configuration.md) -- Manual build instructions for Power Automate flows
-
-## Evidence Retention
-
-Financial services organizations should configure Dataverse retention policies to meet regulatory record-keeping requirements:
-
-| Regulation | Minimum Retention | Notes |
-|------------|------------------|-------|
-| **FINRA Rule 4511** | 6 years | Books and records; 3 years readily accessible |
-| **SEC Rule 17a-4** | 6 years (3+3) | 3 years readily accessible + 3 years archival |
-| **SOX Section 802** | 7 years | Audit workpapers |
-
-**Recommended configuration:**
-- Enable Dataverse auditing on `fsi_ActionScanRun`, `fsi_ActionAuditResult`, and `fsi_ActionConfirmationException` tables
-- Configure Dataverse long-term retention (LTR) for a minimum 7-year period to cover all applicable regulations
-- `fsi_ActionScanRun` is OrganizationOwned to prevent user-level deletion; enable admin audit logging for change tracking
-- Export evidence files (via `Export-ActionAuditEvidence.ps1`) to immutable storage (e.g., Azure Blob with WORM policy) for SEC 17a-4(f) non-rewriteable requirements
+- See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## License
 

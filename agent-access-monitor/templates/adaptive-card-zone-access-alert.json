@@ -333,6 +333,6 @@
       ]
     },
     "flowIntegrationNotes": "The findingsSection container has a template findingItem. The Power Automate flow should: (1) Replace scalar variables via string substitution, (2) Build finding card elements by iterating failed/warning checks using AppendToArrayVariable, (3) Set findingsSection visibility based on FailedCount + WarningCount > 0, (4) Build drift section by iterating drift records, (5) Set driftSection visibility based on DriftCount > 0. Map status to severity: Fail=Attention, Warning=Warning, Skip=Accent, Pass=Good.",
-    "driftWarning": "The flow JSON (access-validation-flow.json) embeds adaptive card templates as inline strings. Changes to this file must be manually synchronized with the inline templates in the flow, and vice versa."
+    "driftWarning": "The flow is built manually in Power Automate designer (see docs/flow-configuration.md). Changes to this adaptive card template must be manually synchronized with the inline templates in the flow."
   }
 }

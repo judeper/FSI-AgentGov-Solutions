@@ -259,6 +259,46 @@ COLUMNS = {
             "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_ITE_compliancestatus')",
         },
         {
+            "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TimeoutDurationMinutes",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Timeout Duration (Minutes)", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Actual configured timeout duration in minutes", "LanguageCode": 1033}]},
+            "MinValue": 0,
+            "MaxValue": 999999,
+            "Format": "None",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TimeoutRequired",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Timeout Required", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Whether inactivity timeout is required per zone policy", "LanguageCode": 1033}]},
+            "DefaultValue": False,
+            "OptionSet": {
+                "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+                "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+            },
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_Severity",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Severity level of the compliance result", "LanguageCode": 1033}]},
+            "MaxLength": 50,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_RegulatoryContext",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Regulatory Context", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Applicable regulatory references for this compliance result", "LanguageCode": 1033}]},
+            "MaxLength": 100000,
+            "Format": "Text",
+        },
+        {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_Notes",
             "RequiredLevel": {"Value": "None"},
@@ -293,6 +333,32 @@ COLUMNS = {
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Environment ID", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "Power Platform environment identifier", "LanguageCode": 1033}]},
+            "MaxLength": 100,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_EnvironmentName",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Environment Name", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Display name of the environment", "LanguageCode": 1033}]},
+            "MaxLength": 200,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_Zone",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
+            "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ScanRunId",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Scan Run ID", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "GUID correlating all records in one scan run", "LanguageCode": 1033}]},
             "MaxLength": 100,
             "FormatName": {"Value": "Text"},
         },
@@ -603,7 +669,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Inactivity Timeout Enforcement",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -353,4 +353,4 @@ Recommended custom visuals:
 
 ---
 
-*Compliance Dashboard v1.0.0*
+*Compliance Dashboard v1.0.2*

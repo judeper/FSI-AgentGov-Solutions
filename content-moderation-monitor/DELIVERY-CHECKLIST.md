@@ -55,7 +55,7 @@
 **Option A: Create ZIP Archive**
 ```bash
 # From the content-moderation-monitor directory:
-zip -r Content-Moderation-Monitor-v1.0.2.zip \
+zip -r Content-Moderation-Monitor-v1.0.3.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/*.ps1 \
   scripts/private/*.ps1 \
@@ -73,14 +73,14 @@ zip -r Content-Moderation-Monitor-v1.0.2.zip \
 
 ### 4. Email Template
 
-**Subject:** Content Moderation Monitor - Solution Delivery v1.0.2
+**Subject:** Content Moderation Monitor - Solution Delivery v1.0.3
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Content Moderation Monitor solution package, version 1.0.2.
+Please find attached the Content Moderation Monitor solution package, version 1.0.3.
 
 This solution provides automated per-agent validation of content moderation levels across
 all Copilot Studio agents with zone-based compliance requirements, drift detection, and
@@ -91,7 +91,6 @@ Package Contents:
 - 12 PowerShell Scripts (validation, evidence export, Dataverse integration)
 - 5 Python Scripts (Dataverse schema/variable/connection deployment)
 - 1 requirements.txt (Python dependencies)
-- 1 Power Automate flow (daily scheduled orchestration)
 - 2 Templates (zone requirements, Teams alert card)
 - 5 Supporting Documentation Files
 
@@ -177,7 +176,7 @@ Best regards,
 - [ ] PowerShell scripts have no syntax errors (use PSScriptAnalyzer)
 - [ ] moderation-baseline.json is valid JSON
 - [ ] No sensitive data in files (tenant IDs, emails = placeholders)
-- [ ] Version numbers consistent (v1.0.2)
+- [ ] Version numbers consistent (v1.0.3)
 
 ### 6. Files NOT to Include
 
@@ -259,6 +258,6 @@ Evidence Export:
 
 ---
 
-**Package Version:** v1.0.2
+**Package Version:** v1.0.3
 **Release Date:** February 2026
 **Solution:** Content Moderation Monitor

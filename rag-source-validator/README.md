@@ -1,12 +1,12 @@
 # RAG Source Validator
 
-> **Status:** Work In Progress
+> **Status:** Completed (v1.1.1)
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
 ## Overview
 
-The RAG Source Validator helps maintain AI agents use trusted, verified knowledge sources by continuously validating content integrity, detecting unauthorized modifications, and tracking changes over time.
+The RAG Source Validator helps verify AI agents use trusted, verified knowledge sources by continuously validating content integrity, detecting unauthorized modifications, and tracking changes over time.
 
 ## Features
 
@@ -154,7 +154,7 @@ For structured data sources, validates schema hasn't changed.
 
 ### Freshness Validation
 
-helps maintain content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
+Validates that content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
 
 > **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, or manual updates in the model-driven app).
 
@@ -196,7 +196,7 @@ For documents with references, validates all links are accessible.
 
 > Records must be preserved in a non-rewriteable, non-erasable format.
 
-**Coverage:** Hash validation helps maintain records haven't been altered.
+**Coverage:** Hash validation helps verify records haven't been altered.
 
 > **Limitation:** Validation results are currently stored in standard mutable Dataverse records, which do not satisfy WORM (Write Once Read Many) requirements. Production deployments requiring full SEC 17a-4 compliance should integrate an immutable audit trail (e.g., Azure Immutable Blob Storage, or a third-party WORM-compliant archive) to store validation results alongside Dataverse records.
 
@@ -227,7 +227,9 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.1 | March 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
+| 1.1.1 | April 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
+| 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity); sovereign cloud support |
+| 1.0.1 | March 2026 | Binary-safe SHA-256 hashing for non-text content |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
@@ -289,4 +291,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.0.1*
+*FSI Agent Governance Framework - RAG Source Validator v1.1.1*

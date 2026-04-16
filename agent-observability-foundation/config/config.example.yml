@@ -31,7 +31,7 @@ location: "eastus"
 # Data retention period in days
 # Default: 730 (2 years) for SEC 17a-4(b)(4) compliance
 # - SEC 17a-4(b)(4) requires 2-year retention for broker-dealer communications
-# - For longer retention (SEC 17a-4(a) 6 years), use ADLS Gen2 export
+# - For longer retention (SEC 17a-4(a) 6 years), use StorageV2 export
 retention_days: 730
 
 # -----------------------------------------------------------------------------
@@ -82,13 +82,13 @@ log_analytics:
 
 # Storage account for telemetry export via diagnostic settings
 # IMPORTANT: StorageV2 WITHOUT hierarchical namespace - required for diagnostic
-# settings export. ADLS Gen2 with hierarchical namespace is NOT supported for
+# settings export. Azure Blob Storage (StorageV2) with hierarchical namespace is NOT supported for
 # diagnostic settings export as of Feb 2026.
 storage:
   # Account name (globally unique, 3-24 lowercase alphanumeric)
   # Leave empty to auto-generate from naming_prefix
   name: "staofsec17a4export"
-  # Account kind - MUST be StorageV2 (not BlobStorage or ADLS Gen2)
+  # Account kind - MUST be StorageV2 (not BlobStorage or StorageV2 with HNS enabled)
   account_kind: "StorageV2"
   # Replication type (GRS recommended for compliance workloads)
   replication: "Standard_GRS"

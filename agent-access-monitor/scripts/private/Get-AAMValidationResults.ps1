@@ -129,22 +129,22 @@ function Get-AAMValidationResults {
         # Date range filters (convert to ISO 8601 UTC)
         $fromDateUtc = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         $toDateUtc = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        $historyFilters += "fsi_validation_time ge $fromDateUtc"
-        $historyFilters += "fsi_validation_time le $toDateUtc"
+        $historyFilters += "fsi_validationtime ge $fromDateUtc"
+        $historyFilters += "fsi_validationtime le $toDateUtc"
 
         # Optional RunId filter
         if ($RunId) {
-            $historyFilters += "fsi_run_id eq '$($RunId -replace "'", "''")'"
+            $historyFilters += "fsi_runid eq '$($RunId -replace "'", "''")'"
         }
 
         # Combine filters
         $historyFilterString = $historyFilters -join ' and '
 
         # Select fields for validation history
-        $historySelect = "fsi_name,fsi_run_id,fsi_validation_time,fsi_total_environments,fsi_compliant_count,fsi_violation_count,fsi_overall_status,fsi_summary_json"
+        $historySelect = "fsi_name,fsi_runid,fsi_validationtime,fsi_totalenvironments,fsi_compliantcount,fsi_violationcount,fsi_overallstatus,fsi_summaryjson"
 
         # Build query URL
-        $historyUrl = "$DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory?`$filter=$historyFilterString&`$orderby=fsi_validation_time desc&`$select=$historySelect"
+        $historyUrl = "$DataverseUrl/api/data/v9.2/fsi_accessvalidationhistory?`$filter=$historyFilterString&`$orderby=fsi_validationtime desc&`$select=$historySelect"
 
         Write-Verbose "Querying validation history: FromDate=$fromDateUtc, ToDate=$toDateUtc"
         if ($RunId) { Write-Verbose "RunId filter: $RunId" }
@@ -198,27 +198,30 @@ function Get-AAMValidationResults {
             $violationFilters = @()
 
             # Date range on detected_at
-            $violationFilters += "fsi_detected_at ge $fromDateUtc"
-            $violationFilters += "fsi_detected_at le $toDateUtc"
+            $violationFilters += "fsi_detectedat ge $fromDateUtc"
+            $violationFilters += "fsi_detectedat le $toDateUtc"
 
             # Optional RunId filter
             if ($RunId) {
-                $violationFilters += "fsi_run_id eq '$($RunId -replace "'", "''")'"
+                $violationFilters += "fsi_runid eq '$($RunId -replace "'", "''")'"
             }
 
             # Optional zone filter (not applied when 'All')
             if ($Zone -ne 'All') {
-                $violationFilters += "fsi_zone eq $Zone"
+                # Map zone name to Dataverse option set integer
+                $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
+                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
+                $violationFilters += "fsi_zone eq $zoneInt"
             }
 
             # Combine filters
             $violationFilterString = $violationFilters -join ' and '
 
             # Select fields for violations
-            $violationSelect = "fsi_name,fsi_environment_guid,fsi_environment_name,fsi_zone,fsi_violation_type,fsi_expected_value,fsi_actual_value,fsi_severity,fsi_regulatory_context,fsi_detected_at,fsi_run_id"
+            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_expectedvalue,fsi_actualvalue,fsi_severity,fsi_regulatorycontext,fsi_detectedat,fsi_runid"
 
             # Build query URL
-            $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_accessviolations?`$filter=$violationFilterString&`$orderby=fsi_detected_at desc&`$select=$violationSelect"
+            $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_accessviolations?`$filter=$violationFilterString&`$orderby=fsi_detectedat desc&`$select=$violationSelect"
 
             Write-Verbose "Querying violations: Zone=$Zone"
 

@@ -19,9 +19,9 @@
     and audit trail metadata.
 
     CMM operates at the agent level: violation records include per-agent detail
-    (fsi_agent_id, fsi_agent_name, fsi_expected_level, fsi_actual_level) for
+    (fsi_agentid, fsi_agentname, fsi_expectedlevel, fsi_actuallevel) for
     content moderation governance. This script supports FSI-AgentGov Controls
-    1.27 (AI Agent Content Moderation Enforcement) and 1.8 (Runtime Protection)
+    1.8 (Runtime Protection) and 1.14 (Content Moderation Enforcement)
     evidence collection requirements for content moderation governance.
 
 .PARAMETER DataverseUrl
@@ -341,14 +341,14 @@ Write-Host "Building evidence package..." -ForegroundColor Cyan
 $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
         name                 = $_.fsi_name
-        runId                = $_.fsi_run_id
-        validationTime       = $_.fsi_validation_time
-        totalAgents          = $_.fsi_total_agents
-        compliantCount       = $_.fsi_compliant_count
-        violationCount       = $_.fsi_violation_count
-        overallStatus        = $_.fsi_overall_status
-        environmentsScanned  = $_.fsi_environments_scanned
-        summaryJson          = $_.fsi_summary_json
+        runId                = $_.fsi_runid
+        validationTime       = $_.fsi_validationtime
+        totalAgents          = $_.fsi_totalagents
+        compliantCount       = $_.fsi_compliantcount
+        violationCount       = $_.fsi_violationcount
+        overallStatus        = $_.fsi_overallstatus
+        environmentsScanned  = $_.fsi_environmentsscanned
+        summaryJson          = $_.fsi_summaryjson
     }
 }
 
@@ -356,17 +356,17 @@ $validationsReadable = $validations | ForEach-Object {
 $violationsReadable = $violations | ForEach-Object {
     [PSCustomObject]@{
         name              = $_.fsi_name
-        environmentGuid   = $_.fsi_environment_guid
-        environmentName   = $_.fsi_environment_name
-        agentId           = $_.fsi_agent_id
-        agentName         = $_.fsi_agent_name
+        environmentGuid   = $_.fsi_environmentguid
+        environmentName   = $_.fsi_environmentname
+        agentId           = $_.fsi_agentid
+        agentName         = $_.fsi_agentname
         zone              = $_.fsi_zone
-        expectedLevel     = $_.fsi_expected_level
-        actualLevel       = $_.fsi_actual_level
+        expectedLevel     = $_.fsi_expectedlevel
+        actualLevel       = $_.fsi_actuallevel
         severity          = $_.fsi_severity
-        regulatoryContext = $_.fsi_regulatory_context
-        detectedAt        = $_.fsi_detected_at
-        runId             = $_.fsi_run_id
+        regulatoryContext = $_.fsi_regulatorycontext
+        detectedAt        = $_.fsi_detectedat
+        runId             = $_.fsi_runid
     }
 }
 
@@ -429,7 +429,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Content Moderation Governance Monitor"
-    solutionVersion = "1.0.1"
+    solutionVersion = "1.0.3"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }

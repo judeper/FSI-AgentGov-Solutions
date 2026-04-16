@@ -2,7 +2,13 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
-## [1.0.4] — April 2026
+## [1.0.5] — 2026-04-15
+
+### Fixed
+
+- Fixed zone filter to use option set integer values instead of string literals
+
+## [1.0.4] — 2026-04-10
 
 ### Added
 - Dataverse schema script with 3 tables, 2 option sets, and `--output-docs` support
@@ -13,7 +19,7 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 - Auto-generated Dataverse schema documentation
 - Python requirements.txt
 
-## [1.0.3] — April 2026
+## [1.0.3] — 2026-04-10
 
 ### Changed
 
@@ -22,7 +28,7 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 - Renamed SOLUTION-DOCUMENTATION.md to docs/flow-configuration.md
 - Removed exported Power Automate flow JSON from `src/` (per solution content policy — manual build instructions preserved in docs/flow-configuration.md)
 
-## [1.0.2] — March 2026
+## [1.0.2] — 2026-03-15
 
 ### Fixed
 - **CRITICAL:** Fix false-compliant classification when `inactivityTimeoutEnabled=true` but `inactivityTimeoutDuration` is null (BAP API data inconsistency). Added `Check_Duration_Is_Null` guard action; `Evaluate_Compliance` now classifies this indeterminate state as `Unknown` (status=2) instead of `Compliant` (status=0). This aligns with the existing pattern where API errors and missing policies produce Unknown status.
@@ -35,7 +41,7 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 - **SOLUTION-DOCUMENTATION:** Add null-duration to Unknown criteria in compliance status tables, appendix, and remediation guidance
 - **SOLUTION-DOCUMENTATION:** Add Known Limitations section documenting BAP API version (2016-11-01), Condition_Has_Issues run-after gap, and List_Environments pagination limitation
 
-## [1.0.1] — February 2026
+## [1.0.1] — 2026-02-15
 
 ### Fixed
 - **CRITICAL:** Wire `NotificationRecipients` and `ConcurrencyLimit` to read from Power Platform environment variables via `@environmentVariables()` — previously initialized as empty/hardcoded and never populated
@@ -53,7 +59,7 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 - **SOLUTION-DOCUMENTATION:** Correct HTTP 429 troubleshooting to reference flow JSON `runtimeConfiguration` instead of unused env var
 - **README.md:** Fix deployment step to reference JSON file import instead of solution ZIP
 
-## [1.0.0] — February 2026
+## [1.0.0] — 2026-02-15
 
 ### Added
 - Daily compliance detection flow (`detect-inactivity-timeout-noncompliance.json`) for inactivity timeout settings

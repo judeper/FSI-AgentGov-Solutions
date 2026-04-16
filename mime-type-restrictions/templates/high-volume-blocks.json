@@ -4,9 +4,8 @@
   "metadata": {
     "controlReference": "1.25",
     "framework": "FSI Agent Governance",
-    "version": "1.0.1",
-    "description": "Microsoft Sentinel scheduled analytics rule that detects high-volume blocked file upload attempts (>10 per user per hour). Supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12 by surfacing persistent attempts to upload unauthorized file types through Power Platform environments.",
-    "_needsHumanReview": "Verify OCC 2011-12 reference — OCC Bulletin 2011-12 covers model risk management, not file upload restrictions. Consider OCC 2023-35 (third-party risk) or omit pending compliance team confirmation."
+    "version": "1.0.2",
+    "description": "Microsoft Sentinel scheduled analytics rule that detects high-volume blocked file upload attempts (>10 per user per hour). Supports compliance with FINRA 4511 and SEC 17a-4 by surfacing persistent attempts to upload unauthorized file types through Power Platform environments."
   },
   "parameters": {
     "workspaceName": {
@@ -37,7 +36,7 @@
       "tags": {
         "controlReference": "1.25",
         "framework": "FSI Agent Governance",
-        "version": "1.0.1"
+        "version": "1.0.2"
       },
       "properties": {
         "displayName": "FSI-MIME: High-Volume Blocked Upload Attempts",

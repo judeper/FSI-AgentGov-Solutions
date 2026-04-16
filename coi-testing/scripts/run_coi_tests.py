@@ -14,6 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime
+import logging
 from typing import Dict, List, Optional
 
 try:
@@ -251,8 +252,7 @@ class COITestRunner:
             "finra_rule": scenario.get("finra_rule"),
             "executed_at": datetime.utcnow().isoformat(),
             "status": "PASS",
-            "findings": [],
-            "response_hash": None
+            "findings": []
         }
 
         try:
@@ -262,7 +262,6 @@ class COITestRunner:
                 print(f"    Input: {json.dumps(scenario['input'], indent=2)}")
 
             # FIXME: No agent interaction implemented — test cannot validate COI behavior
-            import logging
             logging.warning(
                 "COI test '%s' skipped: Direct Line API integration not yet implemented",
                 scenario["id"]
@@ -279,6 +278,7 @@ class COITestRunner:
 
     def run_tests(self, category: Optional[str] = None, verbose: bool = False) -> List[Dict]:
         """Run all tests for specified category."""
+        self.results = []
         scenarios = self.get_scenarios(category)
         print(f"\nRunning {len(scenarios)} test scenarios...")
 
@@ -288,6 +288,7 @@ class COITestRunner:
             status_color = {
                 "PASS": "\033[92m",  # Green
                 "FAIL": "\033[91m",  # Red
+                "SKIPPED": "\033[96m",  # Cyan
                 "WARN": "\033[93m",  # Yellow
                 "ERROR": "\033[91m"  # Red
             }.get(result["status"], "")
@@ -309,11 +310,12 @@ class COITestRunner:
         }
 
         for result in self.results:
+            status_map = {"PASS": 1, "FAIL": 2, "SKIPPED": 3, "WARN": 4, "ERROR": 5}
             record = {
                 "fsi_scenarioid": result["scenario_id"],
                 "fsi_scenarioname": result["scenario_name"],
                 "fsi_category": result["category"],
-                "fsi_status": 1 if result["status"] == "PASS" else 2,
+                "fsi_status": status_map.get(result["status"], 3),
                 "fsi_executedon": result["executed_at"],
                 "fsi_findings": json.dumps(result.get("findings", []))
             }
@@ -335,13 +337,14 @@ class COITestRunner:
         failed = sum(1 for r in self.results if r["status"] == "FAIL")
         warnings = sum(1 for r in self.results if r["status"] == "WARN")
         errors = sum(1 for r in self.results if r["status"] == "ERROR")
+        skipped = sum(1 for r in self.results if r["status"] == "SKIPPED")
 
         if format == "json":
             return json.dumps(self.results, indent=2, default=str)
         elif format == "html":
             html = "<html><body><h1>COI Test Results</h1>"
             html += f"<p>Execution Time: {datetime.utcnow().isoformat()}</p>"
-            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Warn: {warnings} | Error: {errors}</p>"
+            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Skipped: {skipped} | Warn: {warnings} | Error: {errors}</p>"
             html += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
             for r in self.results:
                 html += f"<tr><td>{r.get('scenario_id','')} - {r.get('scenario_name','')}</td>"
@@ -361,6 +364,7 @@ Total Scenarios: {len(self.results)}
 Results:
   PASS:    {passed}
   FAIL:    {failed}
+  SKIPPED: {skipped}
   WARN:    {warnings}
   ERROR:   {errors}
 
@@ -377,7 +381,7 @@ Pass Rate: {(passed / len(self.results) * 100) if self.results else 0:.1f}%
         return report
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="COI Testing Framework")
     parser.add_argument("--environment", required=True, help="Dataverse environment URL")
     parser.add_argument("--category", help="Test category to run")

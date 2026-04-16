@@ -144,7 +144,7 @@ def create_connection_references(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Create connection references for "

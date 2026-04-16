@@ -132,7 +132,7 @@ def create_environment_variables(client: SSCClient, dry_run: bool = False) -> di
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create environment variables for Session Security Configurator",
         formatter_class=argparse.RawDescriptionHelpFormatter,

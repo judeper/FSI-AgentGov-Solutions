@@ -1,3 +1,5 @@
+#Requires -Version 7.1
+
 <#
 .SYNOPSIS
     Imports conflict rules into the Segregation of Duties Detector.
@@ -48,8 +50,6 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
 )
-
-#Requires -Version 7.1
 
 $ErrorActionPreference = "Stop"
 

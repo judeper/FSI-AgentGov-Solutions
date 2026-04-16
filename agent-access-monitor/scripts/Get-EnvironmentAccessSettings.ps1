@@ -260,7 +260,7 @@ if ($DataverseUrl -and $AccessToken) {
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
         }
-        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_accessbaselines?`$filter=fsi_is_active eq true&`$select=fsi_environment_guid,fsi_zone"
+        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_accessbaselines?`$filter=fsi_isactive eq true&`$select=fsi_environmentguid,fsi_zone"
         $maxRetries = 3
         $allRecords = @()
         $currentUri = $uri
@@ -286,10 +286,10 @@ if ($DataverseUrl -and $AccessToken) {
             }
             $currentUri = $response.'@odata.nextLink'
         } while ($currentUri)
-        $zoneMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
+        $zoneMap = @{ 100000001 = 'Zone1'; 100000002 = 'Zone2'; 100000003 = 'Zone3' }
         if ($allRecords) {
             foreach ($record in $allRecords) {
-                $envGuid = $record.fsi_environment_guid
+                $envGuid = $record.fsi_environmentguid
                 $zoneValue = $record.fsi_zone
                 if ($envGuid -and $zoneMap.ContainsKey([int]$zoneValue)) {
                     $zoneLookup[$envGuid] = $zoneMap[[int]$zoneValue]

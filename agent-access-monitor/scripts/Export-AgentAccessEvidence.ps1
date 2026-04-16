@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -102,7 +103,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.0.3
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -334,30 +335,39 @@ Write-Host "Building evidence package..." -ForegroundColor Cyan
 $validationsReadable = $validations | ForEach-Object {
     [PSCustomObject]@{
         name              = $_.fsi_name
-        runId             = $_.fsi_run_id
-        validationTime    = $_.fsi_validation_time
-        totalEnvironments = $_.fsi_total_environments
-        compliantCount    = $_.fsi_compliant_count
-        violationCount    = $_.fsi_violation_count
-        overallStatus     = $_.fsi_overall_status
-        summaryJson       = $_.fsi_summary_json
+        runId             = $_.fsi_runid
+        validationTime    = $_.fsi_validationtime
+        totalEnvironments = $_.fsi_totalenvironments
+        compliantCount    = $_.fsi_compliantcount
+        violationCount    = $_.fsi_violationcount
+        overallStatus     = $_.fsi_overallstatus
+        summaryJson       = $_.fsi_summaryjson
     }
 }
 
+# Map Dataverse option set integers to human-readable labels
+$severityLabels = @{ 100000000='Passed'; 100000001='Warning'; 100000002='GracePeriod'; 100000003='Failed'; 100000004='Error' }
+$zoneLabels = @{ 100000000='Unclassified'; 100000001='Zone 1'; 100000002='Zone 2'; 100000003='Zone 3' }
+
 # Convert violation records to readable format
 $violationsReadable = $violations | ForEach-Object {
+    $severityRaw = $_.fsi_severity
+    $zoneRaw = $_.fsi_zone
+    $severityText = if ($severityLabels.ContainsKey([int]$severityRaw)) { $severityLabels[[int]$severityRaw] } else { $severityRaw }
+    $zoneText = if ($zoneLabels.ContainsKey([int]$zoneRaw)) { $zoneLabels[[int]$zoneRaw] } else { $zoneRaw }
+
     [PSCustomObject]@{
         name              = $_.fsi_name
-        environmentGuid   = $_.fsi_environment_guid
-        environmentName   = $_.fsi_environment_name
-        zone              = $_.fsi_zone
-        violationType     = $_.fsi_violation_type
-        expectedValue     = $_.fsi_expected_value
-        actualValue       = $_.fsi_actual_value
-        severity          = $_.fsi_severity
-        regulatoryContext = $_.fsi_regulatory_context
-        detectedAt        = $_.fsi_detected_at
-        runId             = $_.fsi_run_id
+        environmentGuid   = $_.fsi_environmentguid
+        environmentName   = $_.fsi_environmentname
+        zone              = $zoneText
+        violationType     = $_.fsi_violationtype
+        expectedValue     = $_.fsi_expectedvalue
+        actualValue       = $_.fsi_actualvalue
+        severity          = $severityText
+        regulatoryContext = $_.fsi_regulatorycontext
+        detectedAt        = $_.fsi_detectedat
+        runId             = $_.fsi_runid
     }
 }
 
@@ -365,31 +375,34 @@ $violationsReadable = $violations | ForEach-Object {
 $baselinesReadable = @()
 if ($IncludeBaselines -and $baselines.Count -gt 0) {
     $baselinesReadable = $baselines | ForEach-Object {
+        $zoneRaw = $_.fsi_zone
+        $zoneText = if ($zoneLabels.ContainsKey([int]$zoneRaw)) { $zoneLabels[[int]$zoneRaw] } else { $zoneRaw }
+
         [PSCustomObject]@{
-            environmentGuid                = $_.fsi_environment_guid
-            environmentName                = $_.fsi_environment_name
-            zone                           = $_.fsi_zone
-            botLimitSharingMode            = $_.fsi_bot_limit_sharing_mode
-            botAuthoringSharingDisabled     = $_.fsi_bot_authoring_sharing_disabled
-            botPublishedLimitSharingMode   = $_.fsi_bot_published_bot_limit_sharing_mode
-            capturedBy                     = $_.fsi_captured_by
-            capturedAt                     = $_.fsi_captured_at
-            isActive                       = $_.fsi_is_active
+            environmentGuid                = $_.fsi_environmentguid
+            environmentName                = $_.fsi_environmentname
+            zone                           = $zoneText
+            botLimitSharingMode            = $_.fsi_botlimitsharingmode
+            botAuthoringSharingDisabled     = $_.fsi_botauthoringsharingdisabled
+            botPublishedLimitSharingMode   = $_.fsi_botpublishedbotlimitsharingmode
+            capturedBy                     = $_.fsi_capturedby
+            capturedAt                     = $_.fsi_capturedat
+            isActive                       = $_.fsi_isactive
         }
     }
 }
 
 # Compute summary statistics
 $totalScans = $validationsReadable.Count
-$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Compliant' }).Count
+$scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Passed' }).Count
 $scansWithViolations = ($validationsReadable | Where-Object { $_.violationCount -gt 0 }).Count
 $totalViolations = $violationsReadable.Count
-$criticalViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Critical' }).Count
-$highViolations = ($violationsReadable | Where-Object { $_.severity -eq 'High' }).Count
-$warningViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Warning' }).Count
+$criticalViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Failed' }).Count
+$highViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Warning' }).Count
+$warningViolations = ($violationsReadable | Where-Object { $_.severity -eq 'GracePeriod' }).Count
 
 # Compute overall status (worst-case across all scans)
-$overallStatus = "Compliant"
+$overallStatus = "Passed"
 $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStatus -ErrorAction SilentlyContinue
 if ($statusValues -contains "Failed") {
     $overallStatus = "Failed"
@@ -410,12 +423,12 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Agent Access Governance Monitor"
-    solutionVersion = "1.0.1"
+    solutionVersion = "1.0.3"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
     zoneFilter      = $Zone
-    exportVersion   = "1.0.1"
+    exportVersion   = "1.0.0"
     recordCount     = $totalScans
     violationCount  = $totalViolations
     organizationUrl = $DataverseUrl

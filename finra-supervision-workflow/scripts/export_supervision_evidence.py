@@ -189,7 +189,7 @@ def generate_sla_metrics(queue_records: list) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Export FINRA Supervision Workflow evidence")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
     parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID (GUID format: 12345678-1234-1234-1234-123456789abc)")

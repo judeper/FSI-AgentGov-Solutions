@@ -18,25 +18,25 @@
 
 .PARAMETER ValidationStatusValidated
     OptionSet integer value for fsi_validationstatus = Validated.
-    Confirm against deployed solution XML. Expected default: 6.
+    Default: 100000006 (per create_mrm_dataverse_schema.py).
 
 .PARAMETER FindingSeverityCritical
     OptionSet integer value for fsi_severity = Critical.
-    Confirm against deployed solution XML. Expected default: 1.
+    Default: 100000001 (per create_mrm_dataverse_schema.py).
 
 .PARAMETER FindingStatusClosed
     OptionSet integer value for fsi_remediationstatus = Closed.
-    Confirm against deployed solution XML. Expected default: 4.
+    Default: 100000004 (per create_mrm_dataverse_schema.py).
 
 .PARAMETER MRMTierTier1
     OptionSet integer value for fsi_mrmtier = Tier 1.
-    Confirm against deployed solution XML. Expected default: 1.
+    Default: 100000001 (per create_mrm_dataverse_schema.py).
 
 .EXAMPLE
-    .\Validate-MRM-Compliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com"
+    .\Test-MRMCompliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com"
 
 .EXAMPLE
-    .\Validate-MRM-Compliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com" -ValidationStatusValidated 6 -FindingSeverityCritical 1
+    .\Test-MRMCompliance.ps1 -DataverseEnvironmentUrl "https://contoso.crm.dynamics.com" -ValidationStatusValidated 6 -FindingSeverityCritical 1
 #>
 
 #Requires -Modules Az.Accounts
@@ -48,16 +48,16 @@ param(
     [string]$DataverseEnvironmentUrl,
 
     [Parameter(Mandatory = $false)]
-    [int]$ValidationStatusValidated = 6,
+    [int]$ValidationStatusValidated = 100000006,
 
     [Parameter(Mandatory = $false)]
-    [int]$FindingSeverityCritical = 1,
+    [int]$FindingSeverityCritical = 100000001,
 
     [Parameter(Mandatory = $false)]
-    [int]$FindingStatusClosed = 4,
+    [int]$FindingStatusClosed = 100000004,
 
     [Parameter(Mandatory = $false)]
-    [int]$MRMTierTier1 = 1
+    [int]$MRMTierTier1 = 100000001
 )
 
 Set-StrictMode -Version Latest

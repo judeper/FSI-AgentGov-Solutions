@@ -254,6 +254,7 @@ function Compare-CommRestrictionCompliance {
     }
 
     process {
+        try {
         $reg = $InputObject
         $counters.TotalProcessed++
 
@@ -552,6 +553,9 @@ function Compare-CommRestrictionCompliance {
         }
 
         #endregion
+        } catch {
+            Write-Warning "Failed to evaluate registration for agent '$($InputObject.AgentName)' skill '$($InputObject.SkillName)': $($_.Exception.Message)"
+        }
     }
 
     end {

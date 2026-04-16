@@ -205,7 +205,8 @@ class TestAgentIdDisplayTruncation(unittest.TestCase):
     def test_long_agent_id_truncated(self):
         feedback = [{"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "very-long-agent-identifier"}]
         report = self.analyzer.generate_report(feedback)
-        self.assertIn("very-lon...:", report)
+        # Code truncates at 20 chars: "very-long-agent-iden" + "..."
+        self.assertIn("very-long-agent-iden...:", report)
 
 
 class TestMainErrorPaths(unittest.TestCase):

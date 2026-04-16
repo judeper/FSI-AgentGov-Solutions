@@ -69,6 +69,7 @@ pip install -r scripts/requirements.txt
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive \
     --dry-run
 
@@ -76,6 +77,7 @@ python scripts/deploy.py \
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
+    --client-id <your-client-id> \
     --interactive
 ```
 
@@ -224,11 +226,12 @@ python scripts/register_service_principal.py \
 
 ### Step 6: Create Power Automate Flows (Manual)
 
-Create three flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
+Create four flows per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
 1. **Main Provisioning Flow** - Triggered on approval
 2. **Security Group Binding Flow** - Post-creation binding
 3. **Baseline Configuration Flow** - Child flow for settings
+4. **Approval Routing Flow** - Manager and compliance approvals
 
 ### Step 7: Validate Setup
 
@@ -411,7 +414,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.1.2 - January 2026
+1.1.3 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

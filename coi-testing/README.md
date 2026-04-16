@@ -141,6 +141,8 @@ python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com
 | [Test Scenarios](docs/test-scenarios.md) | All 10 built-in COI test scenarios with expected behaviors and fail indicators |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues with environment setup, authentication, and test execution |
 
+See [CHANGELOG](./CHANGELOG.md) for version history.
+
 ## Test Execution
 
 ### Scheduled Testing
@@ -224,13 +226,15 @@ COI test results feed into the Compliance Dashboard for Control 2.18 status.
 | [2.11 - Bias Testing](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.11-bias-testing-and-fairness-assessment.md) | Broader fairness testing |
 | [2.18 - Automated Conflict of Interest Testing](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.18-automated-conflict-of-interest-testing.md) | Primary control for COI testing |
 | [2.5 - Testing and Validation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.5-testing-validation-and-quality-assurance.md) | Testing framework |
-| [2.21 - AI Marketing Claims](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.21-ai-marketing-claims-and-substantiation.md) | Recommendation substantiation |
-
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.2 | April 2026 | Fixed status persistence mapping; added SKIPPED count to reports |
+| 1.0.1 | April 2026 | Added documentation suite (prerequisites, test scenarios, troubleshooting) |
 | 1.0.0 | February 2026 | Initial release |
+
+See [CHANGELOG.md](./CHANGELOG.md) for full version history.
 
 ## Support
 

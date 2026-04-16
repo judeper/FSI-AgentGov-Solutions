@@ -74,7 +74,7 @@
 
 .NOTES
     File: Invoke-SharingComplianceScan.ps1
-    Version: 1.0.0
+    Version: 1.0.4
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -123,7 +123,7 @@ function Invoke-SharingComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Sharing Access Restriction Detector v1.0.0"
+    Write-Verbose "Agent Sharing Access Restriction Detector v1.0.4"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -140,7 +140,7 @@ function Invoke-SharingComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Agent Sharing Access Restriction Detector v1.0.0" -ForegroundColor Cyan
+    Write-Host "Agent Sharing Access Restriction Detector v1.0.4" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -290,7 +290,9 @@ function Invoke-SharingComplianceScan {
         if ($DvUrl -and $DvToken) {
             try {
                 $apiBase = "$($DvUrl.TrimEnd('/'))/api/data/v9.2"
-                $filter = "fsi_zone eq '$Zone' and statecode eq 0"
+                $zoneIntMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3 }
+                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { 0 }
+                $filter = "fsi_zone eq $zoneInt and fsi_isactive eq true"
                 $select = "fsi_securitygroupid,fsi_securitygroupname,fsi_zone"
                 $queryUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$filter=$filter&`$select=$select"
 
@@ -352,7 +354,11 @@ function Invoke-SharingComplianceScan {
                 return 'GroupSharing'
             }
 
-            if ($Policy.RequireApprovedGroups -and $ApprovedGroupIds) {
+            if ($Policy.RequireApprovedGroups) {
+                if (-not $ApprovedGroupIds -or $ApprovedGroupIds.Count -eq 0) {
+                    return 'UnapprovedGroup'
+                }
+
                 foreach ($groupId in $SharedGroupIds) {
                     if ($groupId -notin $ApprovedGroupIds) {
                         return 'UnapprovedGroup'
@@ -403,6 +409,7 @@ function Invoke-SharingComplianceScan {
         $envId   = $environment.EnvironmentName
         $envName = $environment.DisplayName
         $envOrgUrl = $environment.Internal.properties.linkedEnvironmentMetadata.instanceApiUrl
+        $envDataverseToken = $null
 
         Write-Verbose "Scanning environment: $envName ($envId)"
 
@@ -425,12 +432,29 @@ function Invoke-SharingComplianceScan {
         }
         $approvedGroups = $approvedGroupCache[$zone]
 
+        if ($envOrgUrl -and $ClientId) {
+            try {
+                $envTokenBody = @{
+                    grant_type    = 'client_credentials'
+                    client_id     = $ClientId
+                    client_secret = $plainSecret
+                    scope         = "$($envOrgUrl.TrimEnd('/'))/.default"
+                }
+                $envTokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -Method POST -Body $envTokenBody -ErrorAction Stop
+                $envDataverseToken = $envTokenResponse.access_token
+            }
+            catch {
+                Write-Warning "Could not acquire token for $envOrgUrl - skipping environment: $_"
+                continue
+            }
+        }
+
         # Query bots in this environment
         try {
             $botApiUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/bots"
             $selectCols = 'botid,name,statecode,sharingtype,createdon'
             $botHeaders = @{
-                'Authorization'    = "Bearer $dataverseToken"
+                'Authorization'    = "Bearer $envDataverseToken"
                 'Accept'           = 'application/json'
                 'OData-MaxVersion' = '4.0'
                 'OData-Version'    = '4.0'
@@ -512,7 +536,7 @@ function Invoke-SharingComplianceScan {
                 Zone            = $zone
                 SharingType     = $sharingType
                 SharingLabel    = $sharingLabel
-                SharedGroupIds  = ($sharedGroupIds -join ',')
+                SharedGroupIds  = ($sharedGroupIds | ConvertTo-Json -Compress)
                 ViolationType   = $violationType
                 Severity        = $severity
                 RegulatoryContext = $policy.RegulatoryContext
@@ -533,6 +557,7 @@ function Invoke-SharingComplianceScan {
 
     if (-not $DryRun) {
         if ($DataverseUrl -and $dataverseToken -and $violations.Count -gt 0) {
+            $zoneMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3; 'Unknown' = 0 }
             $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
             $dvHeaders = @{
                 'Authorization'    = "Bearer $dataverseToken"
@@ -545,15 +570,16 @@ function Invoke-SharingComplianceScan {
             foreach ($v in $violations) {
                 try {
                     $record = @{
-                        'fsi_name'              = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
+                        'fsi_complianceid'      = "ASARD-$($v.AgentName)-$runId".Substring(0, [Math]::Min(100, "ASARD-$($v.AgentName)-$runId".Length))
                         'fsi_agentid'           = $v.AgentId
                         'fsi_agentname'         = $v.AgentName
                         'fsi_environmentid'     = $v.EnvironmentId
                         'fsi_environmentname'   = $v.EnvironmentName
-                        'fsi_zone'              = $v.Zone
-                        'fsi_sharingtype'       = $v.SharingType
+                        'fsi_zone'              = if ($zoneMap.ContainsKey($v.Zone)) { $zoneMap[$v.Zone] } else { 0 }
+                        'fsi_sharingtype'       = $v.SharingLabel
                         'fsi_violationtype'     = $v.ViolationType
                         'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
+                        'fsi_compliancestatus'  = 100000001  # NonCompliant
                         'fsi_detectedat'        = $v.DetectedAt
                         'fsi_description'       = $v.Details
                         'fsi_scanrunid'         = $runId
@@ -634,5 +660,3 @@ function Invoke-SharingComplianceScan {
 
     #endregion
 }
-
-exit 0

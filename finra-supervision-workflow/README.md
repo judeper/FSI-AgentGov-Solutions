@@ -34,6 +34,11 @@ Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 c
 | Control 1.10 (Communication Compliance) | Flags content requiring review |
 | Microsoft Purview API | Retrieves flagged items |
 
+> ⚠️ **API Risk:** The `compliance.microsoft.com/api/SupervisoryReview/alerts` endpoint
+> is undocumented and not officially supported by Microsoft. It may change or be removed
+> without notice. As a fallback, consider using `Connect-IPPSSession` with
+> `Get-SupervisoryReviewPolicyV2` cmdlets for programmatic access.
+
 ## What This Solution Does
 
 - **Routes** flagged AI agent outputs to designated supervisory principals

@@ -9,8 +9,8 @@
     Supports SEC 17a-4(f) compliance by providing tamper-evident evidence packages
     with cryptographic integrity verification.
 
-    IMPORTANT: The SHA-256 hash file provides integrity detection but not tamper-proof
-    guarantees. An actor with filesystem access can modify the evidence and regenerate
+    IMPORTANT: The SHA-256 hash file provides integrity detection but does not offer
+    tamper-proof protection. An actor with filesystem access can modify the evidence and regenerate
     the hash. For full SEC 17a-4(f) compliance, store evidence files on immutable/WORM
     storage or apply a detached CMS/PKCS#7 digital signature.
 
@@ -104,6 +104,8 @@ Import-Module MSAL.PS -ErrorAction Stop
 Import-Module (Join-Path $scriptRoot 'private' 'FUSClient.psm1') -Force
 
 # ── Authenticate ──────────────────────────────────────────────────
+try {
+
 Write-Host 'Authenticating to Dataverse...' -ForegroundColor Cyan
 
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
@@ -139,14 +141,14 @@ Write-Host '  Connected.' -ForegroundColor Green
 $filters = @()
 
 if ($StartDate) {
-    $filters += "fsi_validation_time ge $($StartDate.ToUniversalTime().ToString('o'))"
+    $filters += "fsi_validationtime ge $($StartDate.ToUniversalTime().ToString('o'))"
 }
 if ($EndDate) {
-    $filters += "fsi_validation_time le $($EndDate.ToUniversalTime().ToString('o'))"
+    $filters += "fsi_validationtime le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
     $safeRunId = $RunId -replace "'", "''"
-    $filters += "fsi_run_id eq '$safeRunId'"
+    $filters += "fsi_runid eq '$safeRunId'"
 }
 
 $filterString = if ($filters.Count -gt 0) { $filters -join ' and ' } else { '' }
@@ -165,7 +167,7 @@ $headers = @{
 
 $baseUrl = "$($connection.DataverseUrl)/api/data/v9.2"
 
-$historyUrl = "$baseUrl/fsi_fileupload_validationhistorys"
+$historyUrl = "$baseUrl/fsi_fileuploadvalidationhistories"
 if ($filterString) {
     $historyUrl += "?`$filter=$filterString"
 }
@@ -186,19 +188,19 @@ Write-Host 'Querying violations...' -ForegroundColor Cyan
 
 $violationFilters = @()
 if ($StartDate) {
-    $violationFilters += "fsi_detected_on ge $($StartDate.ToUniversalTime().ToString('o'))"
+    $violationFilters += "fsi_detectedon ge $($StartDate.ToUniversalTime().ToString('o'))"
 }
 if ($EndDate) {
-    $violationFilters += "fsi_detected_on le $($EndDate.ToUniversalTime().ToString('o'))"
+    $violationFilters += "fsi_detectedon le $($EndDate.ToUniversalTime().ToString('o'))"
 }
 if ($RunId) {
     $safeRunId = $RunId -replace "'", "''"
-    $violationFilters += "fsi_run_id eq '$safeRunId'"
+    $violationFilters += "fsi_runid eq '$safeRunId'"
 }
 
 $violationFilterString = if ($violationFilters.Count -gt 0) { $violationFilters -join ' and ' } else { '' }
 
-$violationUrl = "$baseUrl/fsi_fileupload_violations"
+$violationUrl = "$baseUrl/fsi_fileuploadviolations"
 if ($violationFilterString) {
     $violationUrl += "?`$filter=$violationFilterString"
 }
@@ -218,7 +220,7 @@ Write-Host "  Found $($violations.Count) violation(s)." -ForegroundColor Green
 $baselines = @()
 if ($IncludeBaselines) {
     Write-Host 'Querying baselines...' -ForegroundColor Cyan
-    $baselineUrl = "$baseUrl/fsi_fileupload_baselines"
+    $baselineUrl = "$baseUrl/fsi_fileuploadbaselines"
     $baselineRecords = @()
     $nextBaselineLink = $baselineUrl
 
@@ -233,7 +235,7 @@ if ($IncludeBaselines) {
 
 # ── Apply Zone Filter ────────────────────────────────────────────
 if ($Zone) {
-    $zoneMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3 }
+    $zoneMap = @{ 'Zone1' = 100000000; 'Zone2' = 100000001; 'Zone3' = 100000002 }
     $zoneValues = $Zone | ForEach-Object { $zoneMap[$_] }
     $violations = $violations | Where-Object { $_.fsi_zone -in $zoneValues }
     if ($IncludeBaselines) {
@@ -253,7 +255,7 @@ $evidencePackage = [ordered]@{
         generatedAt    = $timestamp
         generatedBy    = $env:USERNAME
         solution       = 'File Upload Security Configurator'
-        solutionVersion = '1.0.0'
+        solutionVersion = '1.0.2'
         control        = '1.14 - Data Minimization and Agent Scope Control'
         framework      = 'FSI Agent Governance Framework'
         tenantId       = $TenantId
@@ -270,8 +272,8 @@ $evidencePackage = [ordered]@{
         violationCount   = $violations.Count
         baselineCount    = $baselines.Count
         dateRange        = [ordered]@{
-            earliest = ($validations | Sort-Object fsi_validation_time | Select-Object -First 1).fsi_validation_time
-            latest   = ($validations | Sort-Object fsi_validation_time -Descending | Select-Object -First 1).fsi_validation_time
+            earliest = ($validations | Sort-Object fsi_validationtime | Select-Object -First 1).fsi_validationtime
+            latest   = ($validations | Sort-Object fsi_validationtime -Descending | Select-Object -First 1).fsi_validationtime
         }
     }
     validations = $validations
@@ -319,4 +321,10 @@ Write-Host $summary -ForegroundColor Cyan
     ViolationCount = $violations.Count
     BaselineCount  = $baselines.Count
     GeneratedAt    = $timestamp
+}
+
+} catch {
+    Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  At: $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    throw
 }

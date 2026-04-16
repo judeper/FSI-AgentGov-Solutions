@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 
 <#
@@ -111,7 +111,7 @@
     - SkippedTrialDev: Array of Trial/Developer environment names (excluded by policy)
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module v2.0 or later
     - PowerShell 7.0 or later
@@ -416,7 +416,7 @@ foreach ($env in $validationSet) {
         $envToken = $envAuth.DataverseAccessToken
     }
     catch {
-        Write-Warning "  ✗ Failed to acquire token for $envName: $($_.Exception.Message)"
+        Write-Warning "  ✗ Failed to acquire token for $($envName): $($_.Exception.Message)"
         $envResult.OverallStatus = "Error"
         $envResult.AuditStatus = "Error"
         $envResult.RetentionStatus = "Error"

@@ -175,7 +175,7 @@ def generate_sample_assessments(controls: list, days: int = 90) -> list:
     return assessments
 
 
-def generate_sample_scores(days: int = 90) -> list:
+def generate_sample_scores(days: int = 90, num_controls: int = 78) -> list:
     """Generate sample daily compliance scores for trend analysis."""
     random.seed(42)  # Reproducible data
     scores = []
@@ -200,13 +200,13 @@ def generate_sample_scores(days: int = 90) -> list:
         zone2 = round(min(100, max(0, overall + random.uniform(-3, 3))), 1)
         zone3 = round(min(100, max(0, overall + random.uniform(-10, -5))), 1)
 
-        # Calculate counts based on score (62 total control-zone pairs counted)
+        # Calculate counts based on score (control-zone pairs counted)
         # Score formula: (compliant*100 + partial*50 + noncompliant*0) / total
         # Work backwards from overall score
-        compliant_count = int(62 * overall / 100)
-        remaining = 62 - compliant_count
+        compliant_count = int(num_controls * overall / 100)
+        remaining = num_controls - compliant_count
         noncompliant_count = random.randint(max(1, int(remaining * 0.2)), max(2, int(remaining * 0.4)))
-        partial_count = max(0, 62 - compliant_count - noncompliant_count)
+        partial_count = max(0, num_controls - compliant_count - noncompliant_count)
 
         score = {
             "fsi_scoredate": date.strftime("%Y-%m-%d"),
@@ -329,7 +329,7 @@ def export_sample_data(controls: list, output_dir: Path) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Load sample data for Compliance Dashboard")
     parser.add_argument("--environment", help="Dataverse environment URL")
     parser.add_argument("--controls-only", action="store_true", help="Load only control master data")

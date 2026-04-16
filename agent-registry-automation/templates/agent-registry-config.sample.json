@@ -1,6 +1,6 @@
 {
   "solutionName": "agent-registry-automation",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sample configuration for Agent Registry Automation. Customize values for your environment.",
   "zonePolicy": {
     "zone1": {

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.2
 
 <#
 .SYNOPSIS
@@ -47,7 +47,7 @@
     - ErrorMessage: Error details if Status = Failed
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires an active Exchange Online PowerShell connection.
 
     The canary event typically appears in Search-UnifiedAuditLog within 5-10 minutes,

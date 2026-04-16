@@ -1,6 +1,6 @@
 # Solution Documentation — Model Risk Management Automation
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Solution Name:** `model-risk-management-automation`
 **Repository:** FSI-AgentGov-Solutions
 
@@ -169,7 +169,7 @@ Build instructions are in [docs/powerbi-dashboard.md](docs/powerbi-dashboard.md)
 | Script | Purpose | Location |
 |--------|---------|----------|
 | Deploy-MRM-Baseline.ps1 | Initial agent inventory export for MRM team review | scripts/ |
-| Validate-MRM-Compliance.ps1 | Examiner-ready compliance posture report | scripts/ |
+| Test-MRMCompliance.ps1 | Examiner-ready compliance posture report | scripts/ |
 
 Both scripts authenticate via System-Assigned Managed Identity and parameterize OptionSet integer values.
 
@@ -199,7 +199,7 @@ model-risk-management-automation/
 │   ├── deploy.py
 │   ├── requirements.txt
 │   ├── Deploy-MRM-Baseline.ps1
-│   └── Validate-MRM-Compliance.ps1
+│   └── Test-MRMCompliance.ps1
 └── templates/
     ├── mrm-config.sample.json
     ├── agent-card-content.sample.json

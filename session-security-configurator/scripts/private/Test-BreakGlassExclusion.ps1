@@ -168,7 +168,7 @@ function Test-BreakGlassExclusion {
                 }
             }
             catch {
-                Write-Warning "Failed to resolve group membership for $groupId: $($_.Exception.Message)"
+                Write-Warning "Failed to resolve group membership for $($groupId): $($_.Exception.Message)"
             }
         }
 

@@ -1,15 +1,15 @@
 # Agent Observability Foundation
 
-> **Version:** v1.1.0
+> **Version:** v1.1.1
 > **Status:** Completed
 
 FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
 
 ## Architecture Overview
 
-The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2 with hierarchical namespace disabled — required for Diagnostic Settings compatibility), supporting Control 2.8 (Access Control and Segregation of Duties).
+The Agent Observability Foundation deploys a production-ready telemetry pipeline that captures Copilot Studio agent interactions and stores them with retention periods that help support SEC Rule 17a-4 compliance requirements. The solution establishes a clear separation between operational monitoring (real-time queries via Log Analytics) and compliance audit paths (Azure Blob Storage export via StorageV2 with hierarchical namespace disabled — required for Diagnostic Settings compatibility), supporting Control 2.8 (Access Control and Segregation of Duties).
 
-This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that satisfy FINRA 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
+This architecture addresses the unique challenges of AI agent observability in regulated financial services: capturing conversation telemetry without exposing PII, maintaining audit trails that help satisfy FINRA Rule 4511 books and records requirements, and providing cost-effective storage tiers that balance operational needs with long-term retention mandates. The solution supports Control 1.7 (Comprehensive Audit Logging), Control 3.2 (Usage Analytics and Activity Monitoring), and Control 2.9 (Agent Performance Monitoring).
 
 All Azure resources are provisioned via Python scripts using the Azure SDK for Python, enabling repeatable lab deployments and teardown cycles. WORM (Write Once Read Many) policy configuration for SEC 17a-4(f) compliance is deliberately excluded from automation to prevent accidental immutable lockdown in production environments.
 
@@ -152,7 +152,7 @@ For comprehensive pre-deployment prerequisites and post-deployment verification 
 
 The validation checklist covers:
 - Azure infrastructure verification (Application Insights, Log Analytics, Storage)
-- Software requirements (PowerShell 7.0+, Azure CLI 2.50+)
+- Software requirements (PowerShell 7.0+, Azure CLI 2.60+)
 - ARM template file verification
 - Workbook deployment validation with idempotency testing
 - Alert deployment validation with 3-phase dependency checks
@@ -180,8 +180,6 @@ agent-observability-foundation/
 │   ├── deploy-alerts.ps1              # Alert infrastructure deployment (PowerShell 7.0+)
 │   ├── validation-checklist.md        # Pre/post-deployment verification checklist
 │   └── requirements.txt               # Python dependencies
-├── src/
-│   └── agent-usage-workbook.json      # Agent usage workbook source
 ├── queries/
 │   ├── README.md                      # KQL query library overview
 │   ├── performance/                   # Core operational queries (2 queries)
@@ -255,14 +253,12 @@ This solution supports the following FSI-AgentGov framework controls:
 
 ## Version
 
-**v1.1.0** - February 2026
+**v1.1.1** - 2026-04-15
 
-**What's New in v1.1.0:**
-- Azure Monitor Workbooks (3 workbooks with 14 tabs total)
-- Dynamic threshold alert rules (3 alerts across 9 zone-specific rules)
-- Zone-based notification routing via Teams and email
-- Alert tuning guide for sensitivity and baseline period optimization
-- KQL query library with 14 production queries
+**What's New in v1.1.1:**
+- Removed instrumentation key logging from `verify_telemetry.py` and now log the resource ID instead
+- Updated architecture guidance to use Azure Blob Storage (StorageV2, HNS disabled) terminology consistently
+- Corrected the Azure CLI minimum version to 2.60+ for alert deployment
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 

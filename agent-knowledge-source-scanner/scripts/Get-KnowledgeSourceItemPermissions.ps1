@@ -66,6 +66,11 @@
     Scans a single library for the HR Agent's knowledge source.
 
 .EXAMPLE
+    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "your-client-id-here"
+
+    Scans a single library using a tenant-specific app registration (required for PnP.PowerShell 3.x).
+
+.EXAMPLE
     .\Get-KnowledgeSourceItemPermissions.ps1 -LibraryList "./output/agent-knowledge-sources.csv" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -OutputPath "./output/item-risk-report.csv"
 
     Scans all libraries from a prior knowledge source scan output.
@@ -81,10 +86,10 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.0.1
+    Version:    1.0.3
     Author:     FSI Agent Governance
-    Requires:   PnP.PowerShell 2.5.0+
-    Requires:   PowerShell 7.0+
+    Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
+    Requires:   PowerShell 7.0+ (7.4+ for PnP.PowerShell 3.x)
     Framework:  FSI Agent Governance
     Controls:   4.3, 1.4, 1.5
 #>
@@ -108,11 +113,14 @@ param(
     [string]$AgentName = "Unknown",
 
     [Parameter(Mandatory = $false)]
-    [ValidatePattern('^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
+    [ValidatePattern('(?i)^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$')]
     [string]$AgentUserGroupId,
 
     [Parameter(Mandatory = $false)]
     [string[]]$AgentUserGroupMembers,
+
+    [Parameter(Mandatory = $false, HelpMessage = "Entra app registration Client ID for PnP.PowerShell authentication. Required for PnP.PowerShell 3.x.")]
+    [string]$ClientId,
 
     [Parameter(Mandatory = $false)]
     [string]$ConfigPath,
@@ -261,7 +269,12 @@ function Get-AgentUserScope {
 
     if ($GroupId) {
         try {
-            $groupMembers = Get-PnPEntraIDGroupMember -Identity $GroupId
+            try {
+                $groupMembers = Get-PnPEntraIDGroupMember -Identity $GroupId
+            } catch [System.Management.Automation.CommandNotFoundException] {
+                # Fallback for PnP.PowerShell 2.x
+                $groupMembers = Get-PnPAzureADGroupMember -Identity $GroupId
+            }
             foreach ($member in $groupMembers) {
                 if ($member.UserPrincipalName) {
                     [void]$scope.Add($member.UserPrincipalName)
@@ -456,7 +469,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.1                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.3                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -467,7 +480,7 @@ try {
     }
     $config = Get-ScanConfig -Path $configFilePath
 
-    if ($MaxItemsPerLibrary -ne 10000) {
+    if ($PSBoundParameters.ContainsKey('MaxItemsPerLibrary')) {
         $config.maxItemsPerLibrary = $MaxItemsPerLibrary
     }
 
@@ -502,6 +515,13 @@ try {
         ErrorCount     = 0
     }
 
+    # Detect PnP.PowerShell version once before scanning
+    $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
+        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
+        throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
+    }
+
     # Scan each library
     $libraryIndex = 0
     foreach ($target in $targets) {
@@ -511,7 +531,9 @@ try {
 
         if ($PSCmdlet.ShouldProcess("$($target.SiteUrl)/$($target.LibraryName)", "Scan item permissions")) {
             try {
-                Connect-PnPOnline -Url $target.SiteUrl -Interactive -ErrorAction Stop
+                $connectParams = @{ Url = $target.SiteUrl; Interactive = $true }
+                if ($ClientId) { $connectParams['ClientId'] = $ClientId }
+                Connect-PnPOnline @connectParams -ErrorAction Stop
                 Write-AuditLog "Connected to $($target.SiteUrl)" "SUCCESS"
 
                 $items = Get-PnPListItem -List $target.LibraryName `
@@ -531,7 +553,12 @@ try {
                     }
 
                     # Only scan items with unique permissions (HasUniqueRoleAssignments)
-                    Get-PnPProperty -ClientObject $item -Property "HasUniqueRoleAssignments" | Out-Null
+                    try {
+                        Get-PnPProperty -ClientObject $item -Property "HasUniqueRoleAssignments" | Out-Null
+                    } catch {
+                        Write-Verbose "Could not load permissions for item $($item.Id): $($_.Exception.Message)"
+                        continue
+                    }
 
                     if (-not $item.HasUniqueRoleAssignments -and -not $IncludeCompliant) {
                         continue

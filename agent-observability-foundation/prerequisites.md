@@ -11,7 +11,7 @@ This document lists all requirements for deploying the Agent Observability Found
 | Application Insights | Contributor | Azure Monitor (included) | 730-day retention may incur additional cost |
 | Log Analytics Workspace | Log Analytics Contributor | Azure Monitor (included) | PerGB2018 pricing tier; 730-day retention |
 | Storage Account (StorageV2) | Storage Account Contributor | Standard | For Diagnostic Settings export to Azure Blob Storage |
-| RBAC Assignments | User Access Administrator | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
+| RBAC Assignments | User Access Admin | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
 
 ### Cost Considerations
 
@@ -49,7 +49,7 @@ For lab deployments, `az login` is the simplest method. For production CI/CD, co
 |----------|---------|---------|
 | Python | 3.9+ | Provisioning scripts |
 | pip | Latest | Package management |
-| Azure CLI (optional) | 2.50+ | Interactive authentication via `az login` |
+| Azure CLI (optional) | 2.60+ | Interactive authentication via `az login`; required for alert deployment |
 
 ### Python Packages
 

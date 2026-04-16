@@ -49,7 +49,7 @@
     .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -ClientId "app-guid" -ClientSecret $secret
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.1
     Date: 2026-02-10
     Requires: IntegrationConfig.psm1
 #>
@@ -397,13 +397,81 @@ function Register-SolutionEvidence {
         [string]$Solution,
         [string]$EvidenceDirectory,
         [string]$AssessmentGuid,
+        [psobject]$Manifest,
         [switch]$DryRun
     )
 
-    $evidenceScripts = Get-EvidenceExportScripts
     $cdConfig = Get-DashboardTableConfig
 
-    # Look for evidence files matching the solution
+    # Manifest-aware mode: use Export-UnifiedComplianceEvidence output format
+    if ($Manifest) {
+        $solKey = $Solution.ToLower()
+        $manifestFiles = $Manifest.fileHashes.PSObject.Properties |
+            Where-Object { $_.Name -like "$solKey/*" }
+
+        if (-not $manifestFiles -or $manifestFiles.Count -eq 0) {
+            Write-Verbose "No manifest entries found for $solKey"
+            return $null
+        }
+
+        # Build file list and combined hash from manifest
+        $fileNames = ($manifestFiles | ForEach-Object { Split-Path $_.Name -Leaf }) -join ', '
+        $combinedHash = ($manifestFiles | Sort-Object Name |
+            ForEach-Object { $_.Value }) -join ''
+        $packageHash = [System.BitConverter]::ToString(
+            [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+                [System.Text.Encoding]::UTF8.GetBytes($combinedHash)
+            )
+        ).Replace('-', '')
+
+        # Verify files exist on disk
+        foreach ($entry in $manifestFiles) {
+            $filePath = Join-Path $EvidenceDirectory ($entry.Name -replace '/', [IO.Path]::DirectorySeparatorChar)
+            if (-not (Test-Path $filePath)) {
+                Write-Warning "  [Evidence] Manifest references missing file: $($entry.Name)"
+                return $null
+            }
+        }
+
+        # Use manifest export timestamp
+        $exportDate = if ($Manifest.solutions.$solKey.exportedAt) {
+            $Manifest.solutions.$solKey.exportedAt
+        } elseif ($Manifest.exportDate) {
+            $Manifest.exportDate
+        } else {
+            (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
+
+        $evidenceRecord = @{
+            'fsi_name'          = "$Solution Evidence Package — $($exportDate.Substring(0,10))"
+            'fsi_evidencetype'  = Get-EvidenceTypeId
+            'fsi_description'   = "Automated evidence package from $((Get-SolutionTableConfig)[$Solution].SolutionName). Files: $fileNames. SHA-256 verified via manifest."
+            'fsi_collecteddate' = $exportDate
+            'fsi_hash'          = $packageHash
+        }
+
+        if ($AssessmentGuid) {
+            $evidenceRecord['fsi_controlassessmentid@odata.bind'] = "/fsi_controlassessments($AssessmentGuid)"
+        }
+
+        if ($DryRun) {
+            Write-Host "  [DryRun] Evidence package: $fileNames (Hash: $($packageHash.Substring(0,16))...)" -ForegroundColor Yellow
+            return $null
+        }
+
+        try {
+            $created = New-DataverseRecord -Connection $Connection `
+                -EntitySet $cdConfig.Evidence.EntitySet `
+                -Record $evidenceRecord
+            Write-Host "  [Evidence] Registered package: $fileNames" -ForegroundColor Cyan
+            return $created
+        } catch {
+            Write-Warning "  [Error] Evidence registration failed: $($_.Exception.Message)"
+            return $null
+        }
+    }
+
+    # Legacy mode: per-solution JSON files with optional sidecar hashes
     $solutionDirs = Get-SolutionDirectories
     $solDir = $solutionDirs[$Solution]
     $evidencePath = Join-Path $EvidenceDirectory $solDir
@@ -432,7 +500,6 @@ function Register-SolutionEvidence {
         $hashContent = Get-Content $hashFile -Raw
         $hash = ($hashContent -split '\s+')[0]
     } else {
-        # Calculate hash directly
         $hash = (Get-FileHash -Path $evidenceFile.FullName -Algorithm SHA256).Hash
     }
 
@@ -493,6 +560,23 @@ if ($controlGuids.Count -eq 0) {
 
 Write-Host "Found $($controlGuids.Count) controls in dashboard`n" -ForegroundColor Green
 
+# Load evidence manifest once (if evidence registration is requested)
+$evidenceManifest = $null
+if ($RegisterEvidence -and $EvidenceDirectory) {
+    $manifestPath = Join-Path $EvidenceDirectory 'manifest.json'
+    if (Test-Path $manifestPath) {
+        try {
+            $evidenceManifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+            Write-Host "Loaded evidence manifest: $($evidenceManifest.exportId ?? 'unknown')" -ForegroundColor Green
+        } catch {
+            Write-Warning "Evidence manifest found but could not be parsed: $($_.Exception.Message)"
+            Write-Warning "Falling back to legacy per-solution evidence lookup."
+        }
+    } else {
+        Write-Verbose "No manifest.json found — using legacy per-solution evidence lookup"
+    }
+}
+
 # Process each solution
 $allResults = @()
 $solutionControlMapping = Get-SolutionControlMapping
@@ -527,7 +611,7 @@ foreach ($solution in $Solutions) {
         foreach ($result in $results) {
             if ($result.Action -in @('Created', 'Updated', 'DryRun — would create assessment')) {
                 Register-SolutionEvidence -Connection $connection -Solution $solution `
-                    -EvidenceDirectory $EvidenceDirectory `
+                    -EvidenceDirectory $EvidenceDirectory -Manifest $evidenceManifest `
                     -AssessmentGuid $result.AssessmentGuid -DryRun:$DryRun
             }
         }

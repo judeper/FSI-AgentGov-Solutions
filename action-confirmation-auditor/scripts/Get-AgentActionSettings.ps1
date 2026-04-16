@@ -16,7 +16,7 @@
 
 .NOTES
     File: Get-AgentActionSettings.ps1
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
 #>
@@ -320,7 +320,7 @@ function Get-AgentActionSettings {
                         $actionName = 'Unknown'
                         $connectorName = $null
                         $httpMethod = $null
-                        $confirmationStatus = 'Unable to Determine'
+        $confirmationStatus = 'UnableToDetermine'
 
                         # Try to extract action name from nearby JSON context
                         # Look backwards from the action position for a name field
@@ -537,7 +537,7 @@ function Get-AgentActionSettings {
             # Calculate confirmation statistics
             $totalActions = $actionList.Count
             $withConfirmation = @($actionList | Where-Object { $_.ConfirmationStatus -eq 'Present' }).Count
-            $missingConfirmation = @($actionList | Where-Object { $_.ConfirmationStatus -eq 'Missing' }).Count
+            $missingConfirmation = @($actionList | Where-Object { $_.ConfirmationStatus -ne 'Present' }).Count
 
             # Build result object
             $agentResult = [PSCustomObject]@{

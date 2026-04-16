@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules MSAL.PS
 
 <#
 .SYNOPSIS
@@ -282,6 +283,7 @@ $reports = $allReports | ForEach-Object {
         severity   = if ($null -ne $_.fsi_severity) { $SeverityMap[[int]$_.fsi_severity] } else { 'Unknown' }
         agentId    = $_.fsi_agentid
         source     = if ($null -ne $_.fsi_source) { $SourceMap[[int]$_.fsi_source] } else { 'Unknown' }
+        isResolved = $_.fsi_isresolved
         createdOn  = $_.createdon
         modifiedOn = $_.modifiedon
     }
@@ -289,9 +291,17 @@ $reports = $allReports | ForEach-Object {
 
 $totalReports = $reports.Count
 
-# Resolved vs unresolved: use fsi_isresolved column (schema source of truth)
-$resolvedCount = ($reports | Where-Object { $_.isResolved -eq $true }).Count
-$unresolvedCount = $totalReports - $resolvedCount
+# Resolved vs unresolved based on the fsi_isresolved flag
+$resolvedCount = 0
+$unresolvedCount = 0
+foreach ($report in $reports) {
+    if ($report.isResolved -eq $true) {
+        $resolvedCount++
+    }
+    else {
+        $unresolvedCount++
+    }
+}
 
 # Category distribution
 $categoryDistribution = @{}

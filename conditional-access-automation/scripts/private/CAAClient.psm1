@@ -635,7 +635,7 @@ function Save-CAABaseline {
     .DESCRIPTION
         Captures current CA policy configuration as a baseline snapshot. Deactivates
         any existing active baseline for the same policy_id before creating the new
-        one, ensuring a single active baseline per policy for drift detection.
+        one, maintaining a single active baseline per policy for drift detection.
 
     .PARAMETER Baseline
         Hashtable containing the baseline snapshot. Expected keys include:

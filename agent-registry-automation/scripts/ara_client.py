@@ -7,12 +7,10 @@ browser and service principal authentication via MSAL.
 """
 
 import argparse
-import json
 import os
 import re
 import sys
 from typing import Any, Optional
-from urllib.parse import urljoin
 
 import msal
 import requests
@@ -560,7 +558,7 @@ class ARAClient:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for ARAClient standalone testing."""
     parser = argparse.ArgumentParser(
         description="ARAClient - Dataverse Web API client for Agent Registry Automation",

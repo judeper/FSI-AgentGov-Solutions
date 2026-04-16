@@ -1,7 +1,7 @@
 # Flow Configuration Guide
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v1.0.2
+> **Version:** v1.0.4
 
 This document provides an overview of the two Power Automate cloud flows required by the ASARD solution. For detailed step-by-step build instructions, see the [README](../README.md) and the [ASARD Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) in FSI-AgentGov.
 
@@ -31,7 +31,7 @@ This document provides an overview of the two Power Automate cloud flows require
 
 - Runs daily via recurrence trigger
 - Queries exceptions expiring within the next 14 days → sends warning notification via Teams adaptive card
-- Queries exceptions past their expiration date → resets `fsi_compliancestatus` from `Exception` (2) to `NonCompliant` (1), clears expiration fields (preserves justification and audit trail), and sends expired notification
+- Queries exceptions past their expiration date → resets `fsi_compliancestatus` from `Exception` (100000002) to `NonCompliant` (100000001), clears expiration fields (preserves justification and audit trail), and sends expired notification
 - Loads adaptive card templates via HTTP GET from configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`)
 - Retrieves up to 5,000 records per query (Dataverse maximum per request)
 

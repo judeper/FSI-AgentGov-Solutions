@@ -60,13 +60,13 @@ Assign these Entra ID roles to the Managed Identity:
 | Role | Purpose | How to Assign |
 |------|---------|---------------|
 | **Power Platform Administrator** | Environment enumeration, audit config access | Entra ID → Roles and administrators |
-| **Exchange Online Admin** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
+| **Exchange Administrator** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
 
 > **Least-Privilege Consideration:** The roles above are tenant-wide administrative roles,
 > which is broader than needed for audit compliance scanning (read-only operations).
 > For production deployments, consider these alternatives:
 >
-> - **Compliance Administrator** instead of Exchange Online Admin — provides read access
+> - **Compliance Administrator** instead of Exchange Administrator — provides read access
 >   to audit logs and compliance data without full Exchange administration rights.
 > - **Power Platform Administrator** can be scoped using Entra ID Administrative Units
 >   if your organization has segmented governance.
@@ -85,7 +85,7 @@ Assign these Entra ID roles to the Managed Identity:
 3. Click **+ Add assignments** → **Select members**
 4. Search for the Automation Account's system-assigned managed identity by its display name (the Automation Account name) or by its Object (principal) ID from the Azure portal
 5. Click **Select** → **Next** → **Assign**
-6. Repeat for **Exchange Online Admin**
+6. Repeat for **Exchange Administrator**
 
 ### 2.2 Microsoft Graph API Permission (Mail.Send)
 
@@ -253,12 +253,12 @@ Import these modules from the PowerShell Gallery:
 
 1. Navigate to **Automation Account** → **Runbooks** → **+ Create a runbook**
 2. Configure:
-   - **Name:** `Check-AuditLoggingCompliance`
+   - **Name:** `Test-AuditLoggingCompliance`
    - **Runbook type:** PowerShell
    - **Runtime version:** 7.2
    - **Description:** Scans all Power Platform environments for Purview unified audit and Dataverse audit compliance
 3. Click **Create**
-4. In the editor, paste the contents of `scripts/Check-AuditLoggingCompliance.ps1`
+4. In the editor, paste the contents of `scripts/Test-AuditLoggingCompliance.ps1`
 5. Click **Save** → **Publish**
 
 ### 5.2 Create Remediation Runbook
@@ -286,7 +286,7 @@ Both runbooks should show:
 
 After completing all 5 phases, run the detection runbook in Test mode:
 
-1. Navigate to **Check-AuditLoggingCompliance** runbook → **Test pane**
+1. Navigate to **Test-AuditLoggingCompliance** runbook → **Test pane**
 2. Enter parameters:
    - **DataverseEnvironmentUrl:** `https://your-org.crm.dynamics.com`
    - **TenantDomain:** `yourdomain.onmicrosoft.com`
@@ -303,4 +303,4 @@ See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedure
 
 ---
 
-*Updated: February 2026 | Version: v1.0.0*
+*Updated: April 2026 | Version: v1.0.2*

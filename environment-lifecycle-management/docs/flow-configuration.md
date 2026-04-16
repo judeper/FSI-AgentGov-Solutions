@@ -614,9 +614,9 @@ Routes environment requests through manager and compliance approvals, transition
 
 | Setting | Value |
 |---------|-------|
-| Type | Dataverse - When a row is added |
+| Type | Dataverse - When a row is modified |
 | Table | EnvironmentRequest |
-| Filter rows | `fsi_state eq 1` (Submitted) |
+| Filter rows | `fsi_state eq 2` (Submitted) |
 
 ### Step 1: Update State to PendingApproval
 

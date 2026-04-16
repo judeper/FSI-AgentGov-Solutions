@@ -448,7 +448,7 @@ def create_schema(client: ACVClient, dry_run: bool = False) -> None:
     print("=" * 60)
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for ACV",

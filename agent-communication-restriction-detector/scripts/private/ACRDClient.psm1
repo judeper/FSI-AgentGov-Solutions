@@ -293,7 +293,7 @@ function Get-ACRDSkillRegistration {
             if ($EnvironmentId -notmatch $guidPattern) {
                 throw "EnvironmentId '$EnvironmentId' is not a valid GUID format."
             }
-            $filter += " and fsi_callingenvironmentid eq '$EnvironmentId'"
+            $filter += " and fsi_environmentid eq '$EnvironmentId'"
         }
         if ($AgentId) {
             if ($AgentId -notmatch $guidPattern) {
@@ -301,10 +301,6 @@ function Get-ACRDSkillRegistration {
             }
             $filter += " and fsi_agentid eq '$AgentId'"
         }
-        if ($ActiveOnly) {
-            $filter += " and fsi_isactive eq true"
-        }
-
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_agentskillregistrations?" +
                "`$filter=$filter&`$orderby=createdon desc"
 
@@ -323,13 +319,13 @@ function Get-ACRDSkillRegistration {
         }
 
         return $allRecords | ForEach-Object {
-            # Convert picklist integers back to zone strings
-            $sourceZoneValue = $_.fsi_callingagentzone
+            # Convert picklist integer back to zone string
+            $sourceZoneValue = $_.fsi_zone
             $sourceZoneName = if ($null -ne $sourceZoneValue -and $script:IntToZone.ContainsKey([int]$sourceZoneValue)) {
                 $script:IntToZone[[int]$sourceZoneValue]
             } else { 'Unknown' }
 
-            $targetZoneValue = $_.fsi_calledagentzone
+            $targetZoneValue = $_.fsi_zone
             $targetZoneName = if ($null -ne $targetZoneValue -and $script:IntToZone.ContainsKey([int]$targetZoneValue)) {
                 $script:IntToZone[[int]$targetZoneValue]
             } else { 'Unknown' }
@@ -337,19 +333,17 @@ function Get-ACRDSkillRegistration {
             [PSCustomObject]@{
                 RegistrationId        = $_.fsi_agentskillregistrationid
                 Name                  = $_.fsi_name
-                EnvironmentGuid       = $_.fsi_callingenvironmentid
-                EnvironmentName       = $_.fsi_callingenvironmentname
+                EnvironmentGuid       = $_.fsi_environmentid
+                EnvironmentName       = $_.fsi_environmentname
                 SourceZone            = $sourceZoneName
                 AgentId               = $_.fsi_agentid
                 AgentName             = $_.fsi_agentname
-                SkillName             = $_.fsi_skillmanifesturl
-                TargetAgentId         = $_.fsi_calledagentid
-                TargetAgentName       = $_.fsi_calledagentname
-                TargetEnvironmentId   = $_.fsi_calledenvironmentid
+                SkillName             = $_.fsi_skillname
+                TargetAgentId         = $_.fsi_targetagentid
+                TargetAgentName       = $_.fsi_targetagentname
+                TargetEnvironmentId   = $_.fsi_targetenvironmentid
                 TargetZone            = $targetZoneName
                 ManifestUrl           = $_.fsi_manifesturl
-                OwnerId               = $_.fsi_ownerid
-                IsActive              = $_.fsi_isactive
                 CapturedAt            = $_.fsi_capturedat
             }
         }
@@ -392,9 +386,10 @@ function Write-ACRDScanRun {
         $record = @{
             fsi_name                 = "$($ScanResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
             fsi_runid                = $RunId
-            fsi_validationtime             = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_validationtime       = (Get-Date).ToUniversalTime().ToString('o')
             fsi_totalagents          = $ScanResult.TotalAgents
             fsi_totalskills          = $ScanResult.TotalSkills
+            fsi_compliantcount       = $ScanResult.CompliantCount
             fsi_violationcount       = $ScanResult.ViolationCount
             fsi_overallstatus        = $ScanResult.OverallStatus
             fsi_environmentsscanned  = $ScanResult.EnvironmentsScanned
@@ -469,14 +464,14 @@ function Write-ACRDViolation {
 
         $record = @{
             fsi_name                  = "$($Violation.CallingAgentName)->$($Violation.TargetAgentName)-$(Get-Date -Format 'yyyy-MM-dd')"
-            fsi_callingenvironmentid       = $Violation.EnvironmentId
-            fsi_callingenvironmentname       = $Violation.EnvironmentDisplayName
+            fsi_callingenvironmentid  = $Violation.EnvironmentId
+            fsi_environmentname       = $Violation.EnvironmentDisplayName
             fsi_callingagentid        = $Violation.CallingAgentId
             fsi_callingagentname      = $Violation.CallingAgentName
             fsi_calledagentid         = $Violation.TargetAgentId
             fsi_calledagentname       = $Violation.TargetAgentName
-            fsi_callingagentzone            = $sourceZoneInt
-            fsi_calledagentzone            = $targetZoneInt
+            fsi_callingagentzone      = $sourceZoneInt
+            fsi_calledagentzone       = $targetZoneInt
             fsi_violationstatus       = $violationStatusInt
             fsi_severity              = $Violation.Severity
             fsi_regulatorycontext     = $Violation.RegulatoryContext
@@ -490,7 +485,7 @@ function Write-ACRDViolation {
 
         # Add optional fields
         if ($Violation.SkillName) {
-            $record['fsi_skillmanifesturl'] = $Violation.SkillName
+            $record['fsi_skillname'] = $Violation.SkillName
         }
         if ($Violation.TargetEnvironmentId) {
             $record['fsi_calledenvironmentid'] = $Violation.TargetEnvironmentId
@@ -560,7 +555,7 @@ function Get-ApprovedCommRoutes {
         $filter = "statecode eq 0"
         if ($Zone) {
             $zoneInt = $script:ZoneToInt[$Zone]
-            $filter += " and fsi_callingagentzone eq $zoneInt"
+            $filter += " and fsi_sourcezone eq $zoneInt"
         }
         if ($ActiveOnly) {
             $filter += " and fsi_isactive eq true"
@@ -587,12 +582,12 @@ function Get-ApprovedCommRoutes {
 
         return $allRecords | ForEach-Object {
             # Convert zone integers back to strings
-            $sourceZoneValue = $_.fsi_callingagentzone
+            $sourceZoneValue = $_.fsi_sourcezone
             $sourceZoneName = if ($null -ne $sourceZoneValue -and $script:IntToZone.ContainsKey([int]$sourceZoneValue)) {
                 $script:IntToZone[[int]$sourceZoneValue]
             } else { 'Unknown' }
 
-            $targetZoneValue = $_.fsi_calledagentzone
+            $targetZoneValue = $_.fsi_targetzone
             $targetZoneName = if ($null -ne $targetZoneValue -and $script:IntToZone.ContainsKey([int]$targetZoneValue)) {
                 $script:IntToZone[[int]$targetZoneValue]
             } else { 'Unknown' }
@@ -682,12 +677,12 @@ function Get-CommExceptions {
 
         return $allRecords | ForEach-Object {
             # Convert zone integers back to strings
-            $sourceZoneValue = $_.fsi_callingagentzone
+            $sourceZoneValue = $_.fsi_sourcezone
             $sourceZoneName = if ($null -ne $sourceZoneValue -and $script:IntToZone.ContainsKey([int]$sourceZoneValue)) {
                 $script:IntToZone[[int]$sourceZoneValue]
             } else { 'Unknown' }
 
-            $targetZoneValue = $_.fsi_calledagentzone
+            $targetZoneValue = $_.fsi_targetzone
             $targetZoneName = if ($null -ne $targetZoneValue -and $script:IntToZone.ContainsKey([int]$targetZoneValue)) {
                 $script:IntToZone[[int]$targetZoneValue]
             } else { 'Unknown' }

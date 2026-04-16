@@ -133,7 +133,7 @@ CloudAppEvents
 
 **Recommended:** Azure Blob Storage with immutable retention policy
 
-- Supports SEC 17a-4 compliance
+- Supports SEC 17a-4 compliance when configured with WORM-compliant immutable policies. Organizations should verify configuration meets their specific obligations.
 - Enables long-term retention (7+ years)
 - Compatible with Power BI data source
 

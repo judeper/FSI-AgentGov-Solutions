@@ -89,7 +89,7 @@
   - Partner tenant ID, display name, inbound/outbound status
   - Registry match status (Approved / Not in Registry / Expired)
   - Last modified date
-- Manual refresh button that triggers Flow 2 (Entra CTA Audit) on demand
+- Manual refresh button that triggers Flow 3 (Entra CTA Audit) on demand
 
 ### Conditional Formatting
 
@@ -106,7 +106,7 @@
 2. **Link to Power Automate flows**:
    - Action > Power Automate > Add flow
    - Connect Flow 1 (Tenant Isolation Audit) to Screen 3 refresh button
-   - Connect Flow 2 (Entra CTA Audit) to Screen 4 refresh button
+   - Connect Flow 3 (Entra CTA Audit) to Screen 4 refresh button
    - Connect Flow 4 (External Tenant Onboarding) to Screen 1 "New Request" button
    - Connect Flow 5 (Auto-Remediation) to Screen 2 "Remediate" button
 

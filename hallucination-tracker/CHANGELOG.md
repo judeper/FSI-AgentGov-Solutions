@@ -4,7 +4,7 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-## [1.0.0] - April 2026
+## [1.0.0] - 2026-04-10
 
 ### Added
 - Dataverse schema deployment script with 1 table, 3 option sets, and `--output-docs` support
@@ -18,7 +18,7 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-## [0.1.0-preview] - February 2026
+## [0.1.0-preview] - 2026-02-15
 
 ### Added
 
@@ -56,4 +56,4 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-*Hallucination Feedback Tracker v0.1.0-preview - FSI Agent Governance Framework*
+*Hallucination Feedback Tracker v1.0.0 - FSI Agent Governance Framework*

@@ -64,7 +64,7 @@ from azure.mgmt.storage import StorageManagementClient
 MIN_RETENTION_DAYS_SEC17A4 = 2555  # ~7 years for SEC 17a-4(a) long-term retention
 
 
-def print_banner():
+def print_banner() -> None:
     """Print verification banner with warnings."""
     print()
     print("=" * 70)
@@ -410,7 +410,7 @@ def print_compliance_summary(
     return 0
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Verify WORM policy on telemetry export storage (READ-ONLY)",

@@ -190,7 +190,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
     return success
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Create field security profiles for ELM",

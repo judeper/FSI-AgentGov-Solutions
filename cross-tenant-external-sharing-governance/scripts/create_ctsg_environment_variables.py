@@ -9,7 +9,6 @@ policies, and administrative URLs for cross-tenant governance flows.
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
@@ -183,7 +182,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create environment variables for Cross-Tenant External Sharing Governance",
         formatter_class=argparse.RawDescriptionHelpFormatter,

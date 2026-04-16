@@ -150,6 +150,15 @@ COLUMNS = {
             "DateTimeBehavior": {"Value": "UserLocal"},
         },
         {
+            "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_EndDateTime",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "End Date Time", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "End date and time of the message", "LanguageCode": 1033}]},
+            "Format": "DateAndTime",
+            "DateTimeBehavior": {"Value": "UserLocal"},
+        },
+        {
             "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_IsMajorChange",
             "RequiredLevel": {"Value": "None"},
@@ -510,7 +519,7 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Message Center Monitor",
         formatter_class=argparse.RawDescriptionHelpFormatter,

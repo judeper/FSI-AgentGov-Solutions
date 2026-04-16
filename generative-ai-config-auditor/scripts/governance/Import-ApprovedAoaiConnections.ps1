@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules Az.Accounts
 
 <#
 .SYNOPSIS
@@ -286,6 +287,7 @@ foreach ($row in $csvData) {
         'fsi_isactive'       = $true
         'fsi_notes'          = $notes
         'fsi_name'           = "$connectionName ($zone)"
+        'fsi_approvedat'     = (Get-Date).ToUniversalTime().ToString('o')
     }
 
     if ($rowApprovedBy) {
@@ -293,7 +295,7 @@ foreach ($row in $csvData) {
     }
 
     if ($expirationDate) {
-        $record['fsi_expirationdate'] = $expirationDate
+        $record['fsi_expiresat'] = $expirationDate
     }
 
     try {

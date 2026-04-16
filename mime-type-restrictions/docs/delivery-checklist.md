@@ -3,73 +3,74 @@
 ## Files to Include in Customer Package
 
 ### 1. Documentation
-- [ ] **SOLUTION-DOCUMENTATION.md** — Main technical documentation (Executive Summary + Technical Details)
+- [ ] **docs/flow-configuration.md** — Main technical documentation (Executive Summary + Technical Details)
 
 ### 2. Solution Components (Source Files)
 
-All files located in the `src/` directory:
+Files located in `src/`, `docs/`, `scripts/`, and `templates/` directories:
 
 **Server-Side Validation:**
-- [ ] **ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
-- [ ] **BUILD-INSTRUCTIONS.md** — Step-by-step guide to build the plugin DLL from source
-- [ ] **MimeConfig.json** — MIME type allowlist/blocklist configuration
+- [ ] **src/ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
+- [ ] **docs/build-instructions.md** — Step-by-step guide to build the plugin DLL from source
+- [ ] **templates/mime-config.json** — MIME type allowlist/blocklist configuration
 
 **DLP Policy:**
-- [ ] **dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
+- [ ] **templates/dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
 
 **Sentinel Monitoring:**
-- [ ] **query-mime-blocks.kql** — KQL query for blocked upload events (30-day summary)
-- [ ] **high-volume-blocks.json** — Sentinel alert rule for high-volume block patterns
-- [ ] **query-exception-usage.kql** — KQL query for exception usage tracking
+- [ ] **scripts/query-mime-blocks.kql** — KQL query for blocked upload events (30-day summary)
+- [ ] **templates/high-volume-blocks.json** — Sentinel alert rule for high-volume block patterns
+- [ ] **scripts/query-exception-usage.kql** — KQL query for exception usage tracking
 
 ### 3. Packaging Instructions
 
 **Option A: Create ZIP Archive**
 ```bash
 # From the mime-type-restrictions directory:
-zip -r MIME-Type-Restrictions-v1.0.1.zip \
-  SOLUTION-DOCUMENTATION.md \
-  src/BUILD-INSTRUCTIONS.md \
+zip -r MIME-Type-Restrictions-v1.0.2.zip \
+  docs/flow-configuration.md \
+  docs/build-instructions.md \
   src/ValidateMimeTypePlugin.cs \
-  src/MimeConfig.json \
-  src/dlp-policy-template.json \
-  src/query-mime-blocks.kql \
-  src/high-volume-blocks.json \
-  src/query-exception-usage.kql
+  templates/mime-config.json \
+  templates/dlp-policy-template.json \
+  scripts/query-mime-blocks.kql \
+  templates/high-volume-blocks.json \
+  scripts/query-exception-usage.kql
 ```
 
 **Option B: Create Structured Folder**
 ```
-MIME-Type-Restrictions-v1.0.1/
-├── SOLUTION-DOCUMENTATION.md
-├── Dataverse-Plugin/
-│   ├── BUILD-INSTRUCTIONS.md
-│   ├── ValidateMimeTypePlugin.cs
-│   └── MimeConfig.json
-├── DLP-Policy/
-│   └── dlp-policy-template.json
-└── Sentinel-Monitoring/
+MIME-Type-Restrictions-v1.0.2/
+├── docs/
+│   ├── flow-configuration.md
+│   └── build-instructions.md
+├── src/
+│   └── ValidateMimeTypePlugin.cs
+├── templates/
+│   ├── mime-config.json
+│   ├── dlp-policy-template.json
+│   └── high-volume-blocks.json
+└── scripts/
     ├── query-mime-blocks.kql
-    ├── high-volume-blocks.json
     └── query-exception-usage.kql
 ```
 
 ### 4. Email Template
 
-**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.1
+**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.2
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.0.1.
+Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.0.2.
 
 This solution provides defense-in-depth validation of file uploads in Copilot Studio agents
 through server-side magic byte inspection, DLP policy enforcement, and Sentinel monitoring.
 
 Package Contents:
-- SOLUTION-DOCUMENTATION.md — Complete technical documentation with:
+- docs/flow-configuration.md — Complete technical documentation with:
   • Executive Summary (problem statement, solution overview, business value)
   • Technical Details (architecture, 3-layer enforcement, components)
   • Configuration and Prerequisites (plugin registration, DLP deployment)
@@ -97,8 +98,8 @@ Architecture:
 • Layer 3: Sentinel Monitoring (blocked event aggregation and alerting)
 
 Business Value:
-• Reduce malware distribution risk by 95%+ through multi-layered validation
-• Prevent data exfiltration via file-based steganography
+• Significantly reduces malware distribution risk through multi-layered validation
+• Helps prevent data exfiltration via file-based steganography
 • Enable security operations teams to detect upload abuse patterns
 • Support regulatory examinations with automated MIME restriction evidence
 
@@ -108,7 +109,7 @@ Regulatory Support:
 • SEC 17a-4 — Recordkeeping
 
 Next Steps:
-1. Review the SOLUTION-DOCUMENTATION.md file (Section 2: Technical Details)
+1. Review the docs/flow-configuration.md file (Section 2: Technical Details)
 2. Build Dataverse plugin DLL from C# source (Visual Studio required)
 3. Register plugin using Plugin Registration Tool:
    - Entity: annotation (Note)
@@ -159,11 +160,11 @@ Best regards,
 Before sending to customer, verify:
 
 - [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
-- [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
+- [ ] docs/flow-configuration.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)
-- [ ] Version numbers are consistent (v1.0.1) across all files
+- [ ] Version numbers are consistent (v1.0.2) across all files
 
 ### 6. Files NOT to Include
 
@@ -309,6 +310,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.1
-**Release Date:** February 2026
+**Package Version:** v1.0.2
+**Release Date:** April 2026
 **Solution:** MIME Type Restrictions for File Uploads

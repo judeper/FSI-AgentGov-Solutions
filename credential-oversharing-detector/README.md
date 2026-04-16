@@ -1,12 +1,14 @@
 # Credential Oversharing Detector
 
-> **Version:** v1.0.0 | **Controls:** 1.14, 1.4, 1.18 | **Status:** Public Preview
+> **Version:** v1.0.1 | **Controls:** 1.14, 1.4, 1.18 | **Status:** Public Preview
 >
 > ⚠️ **Preview Feature Dependency:** This solution leverages the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, which entered public preview in April 2026. Verify current feature status at the [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) before production deployment.
 
 ## Overview
 
 Configuration-time governance scanner that detects Copilot Studio agents with credentials broader than their approved operating scope. Identifies overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment credential sharing, and stale credentials — per governance zone policy.
+
+See [CHANGELOG](./CHANGELOG.md) for version history.
 
 **What this solution does:**
 - Scans agent connector configurations against zone-based credential policies
@@ -177,7 +179,7 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.0.0 | April 2026 | Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation, and templates |
+| v1.0.1 | April 2026 | Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation, and templates |
 | v0.1.0-preview | March 2026 | Initial documentation-only placeholder |
 
 ## License

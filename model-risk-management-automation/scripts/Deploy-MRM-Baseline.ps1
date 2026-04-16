@@ -40,10 +40,8 @@ $ErrorActionPreference = 'Stop'
 # Authenticate via Managed Identity
 Connect-AzAccount -Identity
 
-$ppToken = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com").Token
 $dvToken = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl).Token
 
-$ppHeaders = @{ Authorization = "Bearer $ppToken"; "Content-Type" = "application/json" }
 $dvHeaders = @{ Authorization = "Bearer $dvToken"; "Content-Type" = "application/json" }
 
 Write-Host "Retrieving registered agents from fsi_agentinventory..." -ForegroundColor Cyan

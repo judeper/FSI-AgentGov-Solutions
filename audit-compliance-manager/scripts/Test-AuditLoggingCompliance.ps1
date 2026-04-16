@@ -40,14 +40,14 @@
     and CSV attachment. Requires NotificationFromAddress and NotificationToAddresses.
 
 .EXAMPLE
-    .\Check-AuditLoggingCompliance.ps1 `
+    .\Test-AuditLoggingCompliance.ps1 `
         -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
         -TenantDomain "contoso.onmicrosoft.com"
 
     Scans all environments and writes results to Dataverse. No email notification.
 
 .EXAMPLE
-    .\Check-AuditLoggingCompliance.ps1 `
+    .\Test-AuditLoggingCompliance.ps1 `
         -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
         -TenantDomain "contoso.onmicrosoft.com" `
         -SendEmail `
@@ -57,7 +57,7 @@
     Scans all environments, writes to Dataverse, and sends email with CSV attachment.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Requires: Azure Automation with System-Assigned Managed Identity
     Permissions: Power Platform Administrator, Exchange Administrator, Dataverse Application User, Mail.Send
 #>
@@ -121,7 +121,8 @@ try {
     # Get Dataverse token for compliance record writes
     # Token refreshed periodically for long-running scans (50+ environments)
     $script:dvTokenAcquiredAt = Get-Date
-    $dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+    $script:dvToken = Get-DataverseToken -DataverseEnvironmentUrl $DataverseEnvironmentUrl
+    $dvToken = $script:dvToken
     Write-Output "  [OK] Dataverse authentication successful"
 }
 catch {

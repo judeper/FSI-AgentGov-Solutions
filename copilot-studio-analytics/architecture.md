@@ -120,7 +120,7 @@ When implemented, Tier 2 will provide granular topic and action data for deeper 
 
 ## Watermark Sync Mechanism
 
-The sync pipeline uses a Dataverse tracking table (`fsi_csawatermark`) to implement incremental synchronization.
+The sync pipeline uses a Dataverse tracking table (`fsi_csasyncwatermark`) to implement incremental synchronization.
 
 ### Sync Flow
 

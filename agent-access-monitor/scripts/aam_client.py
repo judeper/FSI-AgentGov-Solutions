@@ -7,10 +7,9 @@ Includes retry logic and dry-run mode for safe deployments.
 """
 
 import argparse
-import json
 import os
 import sys
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urljoin
 
 import msal
@@ -470,7 +469,7 @@ class AAMClient:
         return self.create_attribute(entity_logical_name, column_metadata)
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Dataverse Web API client for Agent Access Governance Monitor",

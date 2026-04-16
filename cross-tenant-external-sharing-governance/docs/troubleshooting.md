@@ -10,7 +10,7 @@
 
 **Resolution:**
 1. Open the solution's `create_ctsg_dataverse_schema.py` and confirm the `SchemaName` for each column
-2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_ExternalTenantId` → `fsi_externaltenantid`)
+2. Lowercase the `SchemaName` to get the correct logical name (e.g., `fsi_externaltenanttenantid`)
 3. Update the flow action to use the correct logical names
 4. Refer to the DELIVERY-CHECKLIST.md for confirmed field names if available
 
@@ -30,7 +30,7 @@
 
 **Symptom:** Finding record shows "Unknown" for the external tenant domain. Flow logs show all three resolution methods attempted.
 
-**Cause:** The three-method fallback chain (UPN parsing → mail property → proxyAddresses) yielded no domain for the guest user. This can occur with service accounts or programmatically-created guest users that lack standard mail attributes.
+**Cause:** The three-method fallback chain (EXT# UPN parsing → mail field → creationType) yielded no domain for the guest user. This can occur with service accounts or programmatically-created guest users that lack standard mail attributes.
 
 **Resolution:**
 1. Open the guest user record in Entra ID and check for a valid `mail` or `otherMails` attribute
@@ -60,7 +60,7 @@
 **Resolution:**
 1. Search `fsi_externalsharefindings` for existing records matching the agent and tenant combination
 2. If an open finding already exists, it should be remediated or closed before a new detection creates a fresh record
-3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to "Resolved" — only resolved or closed findings allow new detections for the same combination
+3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to one of the terminal states (Remediated, Approved Exception, or False Positive) — only terminal-status findings allow new detections for the same combination. Valid `fsi_findingstatus` values: Open (0), Under Review (1), Remediated (2), Approved Exception (3), False Positive (4)
 
 ### Tenant Isolation Disabled Cannot Be Auto-Remediated
 
@@ -123,7 +123,7 @@
 - **Issue:** Historical comparison fails on first run
   - **Expected:** The first run creates a baseline record. Comparison logic activates from the second run onward.
 
-### Flow 2: Entra CTA Policy Audit
+### Flow 3: Entra CTA Policy Audit
 
 - **Issue:** Partner policies return empty array
   - **Check:** Verify `MI-CrossTenantReadOnly` has `Policy.Read.All` permission
@@ -133,7 +133,7 @@
   - **Check:** Verify `CrossTenantInformation.ReadBasic.All` permission is assigned
   - **Note:** Some tenant IDs may not resolve if the remote tenant has restricted directory visibility
 
-### Flow 3: Agent Share External Detection
+### Flow 2: External Agent Share Detection
 
 - **Issue:** No agent shares detected despite known external sharing
   - **Check:** Verify the Power Platform API returns share data for the target environment

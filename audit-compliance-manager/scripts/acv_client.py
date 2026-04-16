@@ -501,7 +501,7 @@ class ACVClient:
         response.raise_for_status()
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Dataverse Web API client for ACV",

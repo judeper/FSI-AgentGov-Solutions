@@ -275,6 +275,12 @@ VIOLATION_COLUMNS = [
                   description="When the violation was detected"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
                 description="Correlating scan GUID"),
+    _string_col("fsi_SkillName", "Skill Name", 500,
+                required=False,
+                description="Name of the skill triggering the violation"),
+    _string_col("fsi_EnvironmentName", "Environment Name", 500,
+                required=False,
+                description="Display name of the calling agent environment"),
     _memo_col("fsi_Notes", "Notes", 5000,
               description="Additional notes or remediation context"),
 ]
@@ -370,6 +376,8 @@ SCAN_RUN_COLUMNS = [
                  description="Total skills discovered across all agents"),
     _integer_col("fsi_ViolationCount", "Violation Count",
                  description="Communication restriction violations detected"),
+    _integer_col("fsi_CompliantCount", "Compliant Count", required=False,
+                 description="Number of compliant skill registrations in this scan"),
     _string_col("fsi_OverallStatus", "Overall Status", 50,
                 description="Passed/Failed/Warning/Critical"),
     _string_col("fsi_EnvironmentsScanned", "Environments Scanned", 2000,
@@ -681,7 +689,6 @@ def create_schema(client: ACRDClient, dry_run: bool = False) -> None:
         )
 
     # Summary
-    all_optionsets = {**SHARED_OPTIONSETS, **ACRD_OPTIONSETS}
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")
@@ -700,7 +707,7 @@ def create_schema(client: ACRDClient, dry_run: bool = False) -> None:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for schema deployment."""
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent Communication Restriction Detector",

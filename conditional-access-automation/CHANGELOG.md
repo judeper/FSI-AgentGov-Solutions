@@ -2,16 +2,12 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
-## [1.2.1] - 2026-04-16
+## [1.2.1] - 2026-04-15
 
 ### Fixed
 
-- Fixed prohibited compliance language: "ensuring" → "supporting" in README.md
-- Fixed version references in README.md (v1.1.1 → v1.1.2, footer version updated)
-
-### Added
-
-- Created `.ralph-config.json` with domain facts from council review
+- Critical: Export-CAAComplianceEvidence now reads correct token variable ($script:CAAAccessToken, was $script:AccessToken)
+- Updated EVIDENCE_EXPORT.md version references from 1.1.0 to 1.2.0
 
 ## [1.2.0] - 2026-04-02
 
@@ -68,7 +64,7 @@ All notable changes to the Conditional Access Automation solution are documented
 - Register-ServicePrincipal.ps1 modernized with Key Vault integration
 - Module manifest updated with Tier 2 function exports
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-15
 
 ### Added
 

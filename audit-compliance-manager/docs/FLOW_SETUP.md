@@ -2,14 +2,15 @@
 
 ## Overview
 
-This guide covers creating two Power Automate flows that provide automated orchestration and alerting for the Audit Configuration Validator solution.
+This guide covers creating three Power Automate flows that provide automated orchestration, alerting, and approval-gated remediation for the Audit Compliance Manager solution.
 
 **Flows:**
 
 1. **ACV - Tenant Audit Validation (Daily)** — Runs tenant-level validation at 6:00 AM UTC daily
 2. **ACV - Environment Audit Validation (Daily)** — Runs environment-level validation at 7:00 AM UTC daily
+3. **ALCA - Audit Remediation Approval (Weekly)** — Queries non-compliant environments every Monday at 7:00 AM ET, requests governance approval, then triggers remediation
 
-Both flows execute Azure Automation runbooks, detect drift from baseline configurations, and route alerts to Microsoft Teams and email based on severity.
+The validation flows execute Azure Automation runbooks, detect drift from baseline configurations, and route alerts to Microsoft Teams and email based on severity. The remediation flow adds an approval gate before enabling audit logging on non-compliant environments.
 
 **Phase 3 requirements addressed:**
 
@@ -137,16 +138,6 @@ See [deployment-guide.md](deployment-guide.md) for detailed permission configura
 ## Step 2: Power Automate Flow Creation
 
 ### 2.1 Create Tenant Validation Flow
-
-#### Option A: Import from JSON (Recommended)
-
-1. Download **templates/tenant-validation-flow.json** from the solution repository
-2. Go to [make.powerautomate.com](https://make.powerautomate.com)
-3. Click **My flows** > **Import** > **Import Package (Legacy)**
-4. Upload the JSON file
-5. Review imported flow and configure connections (see Step 2.3)
-
-#### Option B: Manual Creation
 
 1. Go to [make.powerautomate.com](https://make.powerautomate.com)
 2. Click **Create** > **Scheduled cloud flow**
@@ -331,13 +322,49 @@ Follow the same pattern as the tenant validation flow with these differences:
 }
 ```
 
-**Parse JSON schema:** Use schema from templates/environment-validation-flow.json (includes PerEnvironmentResults array)
+**Parse JSON schema:** Define a schema that includes a `PerEnvironmentResults` array with per-environment validation fields (environment name, audit enabled status, compliance status, severity).
 
 **Alert routing:** After parsing results, use **Apply to each** on `@body('Parse_Results')?['AlertsRequired']` array and send per-environment Teams cards and emails.
 
-Alternatively, import **templates/environment-validation-flow.json** directly using the import method described in section 2.1.
+### 2.4 Create Audit Remediation Approval Flow
 
-### 2.4 Configure Alert Destinations
+This ALCA flow queries Dataverse for non-compliant environments and requests governance approval before triggering remediation.
+
+**Flow name:** `ALCA - Audit Remediation Approval (Weekly)`
+
+**Schedule:** Weekly on **Monday** at **7:00 AM Eastern** (1 hour after detection runbook)
+
+1. Go to [make.powerautomate.com](https://make.powerautomate.com)
+2. Click **Create** > **Scheduled cloud flow**
+3. Name: `ALCA - Audit Remediation Approval (Weekly)`
+4. Set schedule: Repeat every **1 Week**, on **Monday** at **7:00 AM** (Eastern Standard Time)
+
+**Add variable initializations:**
+
+| Variable | Type | Value |
+|----------|------|-------|
+| `DataverseEnvironmentUrl` | String | `https://YOUR-ORG.crm.dynamics.com` |
+| `TenantDomain` | String | Your tenant domain |
+| `GovernanceLeadEmail` | String | Governance lead email address |
+| `AutomationAccountName` | String | Azure Automation account name |
+| `ResourceGroupName` | String | Azure resource group name |
+| `SubscriptionId` | String | Azure subscription ID |
+| `NonCompliantCount` | Integer | `0` |
+| `RemediationStatus` | String | (empty) |
+
+**Flow actions:**
+
+1. **Query Dataverse** — HTTP GET to `{DataverseEnvironmentUrl}/api/data/v9.2/fsi_auditenvironmentcompliances` with OData filter `$filter=fsi_compliancestatus eq 100000001` to retrieve non-compliant environments
+2. **Parse response** and set `NonCompliantCount` to the number of results
+3. **Build summary table** — Use a **Select** action to extract environment name, audit status, and last checked timestamp, then a **Create HTML Table** action
+4. **Condition: NonCompliantCount > 0** — if no non-compliant environments, skip approval
+5. **Start and wait for an approval** — Title: `[AUDIT] Remediation Required — {NonCompliantCount} environment(s)`, Assigned to: `GovernanceLeadEmail`, Details: include the HTML summary table and describe the remediation actions (enable Dataverse org-level and entity-level auditing)
+6. **If Approved** — Create an Azure Automation job to run the `Enable-AuditLogging` runbook, then send a confirmation email to the compliance team
+7. **If Rejected** — Send a notification email indicating remediation was declined
+
+> **Note:** This flow uses a single-approver model. For regulated environments requiring separation of duties, customize the OData filter to scope by governance zone and assign zone-specific approvers.
+
+### 2.5 Configure Alert Destinations
 
 #### Teams Channel Setup
 
@@ -364,7 +391,7 @@ The adaptive card templates are provided in the `templates/` directory:
 - **adaptive-card-tenant-alert.json** — Tenant drift alert card
 - **adaptive-card-environment-alert.json** — Environment drift alert card
 
-These templates use `${placeholder}` syntax. In Power Automate, use the `replace()` function to substitute placeholders with actual values from the runbook output. See the flow JSON files for complete examples.
+These templates use `${placeholder}` syntax. In Power Automate, use the `replace()` function to substitute placeholders with actual values from the runbook output.
 
 ## Step 3: Testing
 
@@ -601,7 +628,7 @@ This table defines the alert behavior based on validation status:
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Last Updated:** 2026-02-06
 **Solution:** Audit Configuration Validator
 **Phase:** 3 - Automated Orchestration & Alerting

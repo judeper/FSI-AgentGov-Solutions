@@ -77,12 +77,20 @@ $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $script:MaxRetries = 3
 
 $script:ZoneOptionSet = @{
-    1 = 100000000  # Zone 1 - Personal
-    2 = 100000001  # Zone 2 - Team
-    3 = 100000002  # Zone 3 - Enterprise
+    1 = 100000001  # Zone 1 - Personal
+    2 = 100000002  # Zone 2 - Team
+    3 = 100000003  # Zone 3 - Enterprise
 }
 
 $script:RegistrationStatusUnregistered = 100000000
+
+# fsi_ara_publishedstatus option set values (from create_dataverse_schema.py)
+$script:PublishedStatusMap = @{
+    'Published'   = 100000000
+    'Draft'       = 100000001
+    'Quarantined' = 100000002
+    'Disabled'    = 100000003
+}
 
 # --- Helper Functions ------------------------------------------------------------
 
@@ -310,15 +318,31 @@ function Write-ComplianceEvent {
         [string]$Details
     )
 
-    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    # fsi_ara_eventtype option set values:
+    #   100000000 = Discovered, 100000001 = Registered, 100000002 = Approved,
+    #   100000003 = Rejected, 100000004 = Quarantined, 100000005 = SLA_Escalated,
+    #   100000006 = OrphanDetected, 100000007 = OwnerChanged,
+    #   100000008 = Decommissioned, 100000009 = EntraSynced
+    $eventTypeMap = @{
+        "Discovered"      = 100000000
+        "Registered"      = 100000001
+        "Approved"        = 100000002
+        "Rejected"        = 100000003
+        "Quarantined"     = 100000004
+        "SLA_Escalated"   = 100000005
+        "OrphanDetected"  = 100000006
+        "OwnerChanged"    = 100000007
+        "Decommissioned"  = 100000008
+        "EntraSynced"     = 100000009
+    }
 
     $payload = @{
-        fsi_agentid       = $AgentId
-        fsi_environmentid = $EnvironmentId
-        fsi_eventtype     = $EventType
-        fsi_eventdetails  = $Details
-        fsi_createdon     = $timestamp
-        fsi_correlationid = $script:CorrelationId
+        fsi_name           = "Discovery - $AgentId"
+        fsi_agentid        = $AgentId
+        fsi_environmentid  = $EnvironmentId
+        fsi_eventtype      = $eventTypeMap[$EventType]
+        fsi_details        = $Details
+        fsi_eventtimestamp  = (Get-Date).ToUniversalTime().ToString('o')
     }
 
     $uri = "$script:DataverseApiBase/fsi_agentcomplianceevents"
@@ -388,7 +412,7 @@ $zoneValue = $script:ZoneOptionSet[$Zone]
 $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 foreach ($env in $environments) {
-    $envId = $env.id
+    $envId = $env.name  # GUID — $env.id is the ARM resource path
     $envName = $env.properties.displayName
     $counters.EnvironmentsScanned++
 
@@ -410,13 +434,14 @@ foreach ($env in $environments) {
             $botName = $bot.properties.displayName
 
             $agentRecord = @{
+                fsi_name               = $botName
                 fsi_agentid            = $botId
                 fsi_agentname          = $botName
                 fsi_environmentid      = $envId
                 fsi_environmentname    = $envName
                 fsi_registrationstatus = $script:RegistrationStatusUnregistered
                 fsi_zone               = $zoneValue
-                fsi_lastscamnedat      = $timestamp
+                fsi_lastscannedat      = $timestamp
                 fsi_isorphaned         = $false
             }
 
@@ -425,9 +450,14 @@ foreach ($env in $environments) {
                 $agentRecord["fsi_ownerupn"] = $bot.properties.owner.userPrincipalName
             }
 
-            # Include published status if available
+            # Include published status if available — map string to option-set integer
             if ($bot.properties.publishedStatus) {
-                $agentRecord["fsi_publishedstatus"] = $bot.properties.publishedStatus
+                $mappedStatus = $script:PublishedStatusMap[$bot.properties.publishedStatus]
+                if ($null -ne $mappedStatus) {
+                    $agentRecord["fsi_publishedstatus"] = $mappedStatus
+                } else {
+                    Write-AuditLog "  Unknown publishedStatus '$($bot.properties.publishedStatus)' for $botName — skipping field" -Level WARN
+                }
             }
 
             if ($PSCmdlet.ShouldProcess("$botName ($botId) in $envName", "Upsert agent inventory record")) {

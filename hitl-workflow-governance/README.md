@@ -1,6 +1,6 @@
 # HITL Workflow Governance
 
-> **Version:** v1.0.0
+> **Version:** v1.0.1
 > **Status:** Completed
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `advancedapprovals` connector.
@@ -82,7 +82,7 @@ hitl-workflow-governance/
     ├── create_hwg_dataverse_schema.py      # Dataverse table/column deployment
     ├── create_hwg_environment_variables.py  # Environment variable deployment
     ├── create_hwg_connection_references.py  # Connection reference deployment
-    ├── deploy_hwg.py                       # Orchestrator (schema + env vars + connections)
+    ├── deploy.py                           # Orchestrator (schema + env vars + connections)
     ├── requirements.txt                    # Python dependencies
     ├── Test-HitlWorkflowCompliance.ps1         # Scan orchestrator
     ├── Export-HitlGovernanceEvidence.ps1        # SHA-256 evidence export
@@ -99,7 +99,7 @@ hitl-workflow-governance/
     │   ├── Test-ParameterValidation.ps1    # Parameter validators
     │   └── Connect-EnvironmentDataverse.ps1 # Per-env Dataverse auth
     └── templates/
-        ├── zone-hitl-policy.json               # Zone policy configuration
+        ├── hitl-zone-policy.json               # Zone policy configuration
         └── adaptive-card-hitl-alert.json       # Teams alert template
 ```
 
@@ -138,14 +138,14 @@ Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force
 
 ```bash
 # Dry run first
-python scripts/deploy_hwg.py \
+python scripts/deploy.py \
   --dataverse-url https://yourorg.crm.dynamics.com \
   --tenant-id <tenant-id> \
   --interactive \
   --dry-run
 
 # Full deployment
-python scripts/deploy_hwg.py \
+python scripts/deploy.py \
   --dataverse-url https://yourorg.crm.dynamics.com \
   --tenant-id <tenant-id> \
   --interactive
@@ -195,7 +195,7 @@ Deploy the Azure Automation runbook for recurring scans:
 | `fsi_HWG_AlertSeverityThreshold` | Minimum severity for Teams alerts | Medium |
 | `fsi_HWG_DryRunMode` | Enable dry-run mode (true/false) | true |
 
-Zone policy thresholds are configured in `templates/zone-hitl-policy.json`. See [docs/flow-configuration.md](docs/flow-configuration.md) for Azure Automation setup details.
+Zone policy thresholds are configured in `templates/hitl-zone-policy.json`. See [docs/flow-configuration.md](docs/flow-configuration.md) for Azure Automation setup details.
 
 ## Boundary with Existing Solutions
 
@@ -225,7 +225,7 @@ Zone policy thresholds are configured in `templates/zone-hitl-policy.json`. See 
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.0.0 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
+| v1.0.1 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

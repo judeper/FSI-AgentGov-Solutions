@@ -4,6 +4,15 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
+## [1.1.2] - 2026-04-15
+
+### Fixed
+
+- Fixed Write-Output pipeline contamination in drift scan scripts
+- Remediated prohibited FSI language, PnP 3.x compatibility, stale references
+
+---
+
 ## [1.1.1] - 2026-07-15
 
 ### Removed
@@ -17,7 +26,7 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-## [1.1.0] - February 2026
+## [1.1.0] - 2026-02-15
 
 ### Added
 
@@ -66,7 +75,7 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-## [1.0.0] - February 2026
+## [1.0.0] - 2026-02-01
 
 ### Added
 
@@ -100,4 +109,4 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-*Scope Drift Monitor v1.1.1 - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.1.2 - FSI Agent Governance Framework*

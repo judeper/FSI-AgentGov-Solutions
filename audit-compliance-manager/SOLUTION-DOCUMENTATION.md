@@ -1,7 +1,7 @@
 # Automating Audit Logging Compliance for AI Agent Environments
 ## Audit Compliance Manager (ACM) — ALCA + ACV
 
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Solution Type:** Automated Detection and Remediation
 **Platform:** Azure Automation + Power Platform with Dataverse
 
@@ -33,8 +33,8 @@ The **Audit Logging Compliance Automation (ALCA)** solution provides enterprise-
 - **Email Notifications:** HTML notifications with CSV attachments showing compliance summary
 
 **Business Value:**
-- Eliminate manual audit configuration overhead (95%+ time savings)
-- Ensure continuous audit coverage across all Power Platform environments
+- Reduce manual audit configuration overhead (95%+ time savings)
+- Help maintain continuous audit coverage across all Power Platform environments
 - Support regulatory examinations with automated compliance evidence
 - Detect and remediate audit gaps within 24 hours (or faster with daily scheduling)
 - Enable security incident response with comprehensive audit trails
@@ -118,7 +118,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 | `Send-ComplianceNotification` | Send email via Graph sendMail | Shared mailbox support, CSV attachments, HTML body |
 
 **Module Manifest:** `scripts/AuditComplianceHelpers.psd1`
-- Version: 1.0.0
+- Version: 1.0.2
 - PowerShell Version: 7.2+
 - Exported Functions: 6 functions listed above
 
@@ -127,8 +127,8 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 - Mock-based testing for MI authentication
 - Retry logic validation with simulated failures
 
-#### 2. Detection Runbook — Check-AuditLoggingCompliance.ps1
-**File:** `scripts/Check-AuditLoggingCompliance.ps1`
+#### 2. Detection Runbook — Test-AuditLoggingCompliance.ps1
+**File:** `scripts/Test-AuditLoggingCompliance.ps1`
 
 **Purpose:** Azure Automation runbook that scans all Power Platform environments for audit logging compliance and writes results to Dataverse.
 
@@ -189,7 +189,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 
 **Example Execution:**
 ```powershell
-.\Check-AuditLoggingCompliance.ps1 `
+.\Test-AuditLoggingCompliance.ps1 `
     -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
     -TenantDomain "contoso.onmicrosoft.com" `
     -SendEmail `
@@ -346,8 +346,8 @@ python create_audit_compliance_schema.py \
     --dry-run
 ```
 
-#### 5. Power Automate Approval Flow — audit-remediation-approval-flow.json
-**File:** `templates/audit-remediation-approval-flow.json`
+#### 5. Power Automate Approval Flow — Audit Remediation Approval
+**Build instructions:** See `docs/FLOW_SETUP.md`, section 2.4
 
 **Purpose:** Power Automate cloud flow template for approval-gated remediation workflow.
 
@@ -398,7 +398,7 @@ python create_audit_compliance_schema.py \
 **Purpose:** Tracks current audit compliance status for each Power Platform environment. Updated via upsert pattern (by environment ID) on each compliance check.
 
 **Table Properties:**
-- **Schema Name:** `fsi_AuditEnvironmentCompliance`
+- **Schema Name:** `fsi_auditenvironmentcompliance`
 - **Logical Name:** `fsi_auditenvironmentcompliance`
 - **Ownership:** Organization-owned
 - **Auditing:** Enabled
@@ -562,11 +562,11 @@ For each Power Platform environment with Dataverse:
 **Step 5: Create Detection Runbook**
 
 1. Navigate to **Azure Automation Account** → **Runbooks** → **+ Create a runbook**
-2. **Name:** `ALCA-Check-AuditLoggingCompliance`
+2. **Name:** `ALCA-Test-AuditLoggingCompliance`
 3. **Runbook type:** PowerShell
 4. **Runtime version:** 7.2
 5. Click **Create**
-6. **Edit PowerShell Runbook:** Paste contents of `Check-AuditLoggingCompliance.ps1`
+6. **Edit PowerShell Runbook:** Paste contents of `Test-AuditLoggingCompliance.ps1`
 7. Click **Save** → **Publish**
 
 **Step 6: Create Remediation Runbook**
@@ -600,7 +600,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 8: Schedule Detection Runbook**
 
-1. Navigate to **ALCA-Check-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
+1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
 2. **Create schedule:**
    - **Name:** `Weekly-Audit-Compliance-Scan`
    - **Starts:** Next Monday 06:00 UTC
@@ -616,7 +616,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 9: Test Detection Runbook**
 
-1. Navigate to **ALCA-Check-AuditLoggingCompliance** runbook → **Start**
+1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Start**
 2. **Parameters:**
    - `DataverseEnvironmentUrl`: `https://governance.crm.dynamics.com`
    - `TenantDomain`: `contoso.onmicrosoft.com`
@@ -645,7 +645,7 @@ For each Power Platform environment with Dataverse:
 **Test 1: Detection Runbook — Authentication**
 
 ```powershell
-# In Azure Automation → Runbooks → ALCA-Check-AuditLoggingCompliance → Test pane
+# In Azure Automation → Runbooks → ALCA-Test-AuditLoggingCompliance → Test pane
 
 # Expected output:
 # [Step 1/6] Authenticating via Managed Identity...
@@ -1029,9 +1029,9 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules and the Exchange Act, including electronic records of system configurations and audit trails.
 
 **ALCA Support:**
-- Continuous monitoring helps maintain audit logging enabled across all environments
+- Continuous monitoring helps keep audit logging enabled across all environments
 - Entity-level audit on Copilot Studio entities (bot, botcomponent, workflow) tracks agent changes
-- Automated remediation prevents prolonged audit gaps
+- Automated remediation helps prevent prolonged audit gaps
 - Compliance records provide evidence of supervisory controls effectiveness
 
 ### SEC 17a-3 / 17a-4 — Recordkeeping
@@ -1041,7 +1041,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Purview unified audit log captures all M365 and Power Platform activities
 - Dataverse audit log captures entity changes, field modifications, and API calls
-- Entity-level audit aids in recording Copilot Studio agent changes
+- Entity-level audit helps ensure Copilot Studio agent changes are recorded
 - Compliance table provides immutable evidence of audit configuration history
 
 ### SOX 404 — Internal Controls over Financial Reporting
@@ -1050,7 +1050,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 
 **ALCA Support:**
 - Automated detection validates audit controls remain effective (preventive control)
-- Remediation workflow supports correction of non-compliant environments (detective and corrective control)
+- Remediation workflow helps correct non-compliant environments (detective and corrective control)
 - Dataverse compliance table provides audit trail of control effectiveness
 - Email notifications enable timely management review of control deficiencies
 
@@ -1061,8 +1061,8 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **ALCA Support:**
 - Audit logging captures access to environments containing customer data
 - Entity-level audit on systemuser entity tracks user access and permission changes
-- Continuous monitoring helps maintain active audit controls
-- Remediation prevents audit gaps that could obscure unauthorized access
+- Continuous monitoring helps keep audit controls active
+- Remediation helps prevent audit gaps that could obscure unauthorized access
 
 ---
 
@@ -1075,8 +1075,6 @@ The ACM solution includes the **Audit Configuration Validator (ACV)** subsystem,
 | Component | Description |
 |-----------|-------------|
 | `scripts/acv_client.py` | Dataverse Web API client with MSAL authentication (interactive browser or service principal), retry logic, and dry-run mode |
-| `templates/tenant-validation-flow.json` | Power Automate flow for tenant-level audit configuration drift detection with Teams and email alerting |
-| `templates/environment-validation-flow.json` | Power Automate flow for per-environment audit validation within an `Apply_To_Each_Alert` loop |
 | `templates/adaptive-card-tenant-alert.json` | Adaptive Card v1.4 template for tenant-level drift alerts posted to Teams |
 | `templates/adaptive-card-environment-alert.json` | Adaptive Card v1.4 template for environment-level drift alerts posted to Teams |
 | `scripts/create_dataverse_schema.py` | Creates the `fsi_auditenvironmentcompliance` Dataverse table and columns |
@@ -1095,7 +1093,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.0
+**Solution Version:** 1.0.2
 **Release Date:** February 2026
 **License:** MIT License
 
@@ -1106,7 +1104,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - Coordinate tenant-wide audit enablement with M365 admin team (impacts all services)
 
 **Version History:**
-- **v1.0.0 (February 2026):** Initial release with detection, remediation, MI authentication, and approval workflow
+- **v1.0.2 (February 2026):** Initial release with detection, remediation, MI authentication, and approval workflow
 
 ---
 

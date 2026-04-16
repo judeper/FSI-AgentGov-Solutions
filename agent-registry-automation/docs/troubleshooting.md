@@ -14,7 +14,7 @@ Common issues and resolutions for the Agent Registry Automation solution.
 
 | Cause | Resolution |
 |-------|------------|
-| Token expired | Re-authorize the `fsi_cr_ara_http_azuread` connection reference |
+| Token expired | Re-authorize the `fsi_cr_http_agentregistry` connection reference |
 | Missing API permissions | Grant `Environment.Read.All` and `Bot.Read.All` on Power Platform API |
 | Admin consent not granted | Navigate to Entra ID > App registrations > API permissions > Grant admin consent |
 | Wrong resource URI | Verify connection reference uses `https://api.powerplatform.com` as the resource URI |
@@ -22,7 +22,7 @@ Common issues and resolutions for the Agent Registry Automation solution.
 **Verify connection reference:**
 
 1. Navigate to **Power Apps** > **Solutions** > **Agent Registry Automation**
-2. Select **Connection References** > `fsi_cr_ara_http_azuread`
+2. Select **Connection References** > `fsi_cr_http_agentregistry`
 3. Verify **Base Resource URL** is `https://api.powerplatform.com`
 4. Click **Edit** and re-select or re-create the connection
 
@@ -34,7 +34,7 @@ Common issues and resolutions for the Agent Registry Automation solution.
 
 | Cause | Resolution |
 |-------|------------|
-| Insufficient role | The service principal or user must have Power Platform Admin role |
+| Insufficient role | The service principal or user must have Power Platform Admin |
 | Environment-level restriction | Some environments may restrict API access — verify environment security settings |
 | Sovereign cloud mismatch | GCC/GCC High environments use different API endpoints |
 
@@ -176,12 +176,10 @@ This connector is **required** for the solution to function. Work with your DLP 
 
 ```powershell
 .\scripts\Deploy-AgentRegistry-Baseline.ps1 `
-    -TenantId "your-tenant-id" `
-    -EnvironmentUrl "https://your-org.crm.dynamics.com" `
-    -ClientId "your-client-id" `
-    -ClientSecret "your-client-secret" `
-    -AuthMode ServicePrincipal
+    -DataverseUrl "https://your-org.crm.dynamics.com"
 ```
+
+> **Note:** This script uses Managed Identity authentication exclusively. It must run in an Azure Automation context with a system-assigned Managed Identity.
 
 ---
 
@@ -239,7 +237,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 
 1. Navigate to **Power Apps** > **Solutions** > **Agent Registry Automation**
 2. Select **Environment Variables**
-3. Verify all 7 variables exist and have current values set
+3. Verify all 10 variables exist and have current values set
 
 ### Environment Variable Has No Current Value
 
@@ -250,7 +248,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 1. Environment variables have a **Default value** and a **Current value**
 2. The **Current value** overrides the default in the target environment
 3. Set the current value for each variable in the target environment
-4. For `fsi_ARA_EntraRegistrySyncEnabled`, the default is `false` — this is intentional
+4. For `fsi_ARA_IsEntraRegistrySyncEnabled`, the default is `false` — this is intentional
 
 ---
 
@@ -291,7 +289,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 | Cause | Resolution |
 |-------|------------|
 | Wrong channel ID | Verify `fsi_ARA_TeamsChannelId` matches the target channel |
-| Teams connection expired | Re-authorize the `fsi_cr_ara_teams` connection |
+| Teams connection expired | Re-authorize the `fsi_cr_teams_agentregistry` connection |
 | Bot blocked in channel | Ensure the Power Automate bot is not blocked in the Teams channel |
 | Channel archived or deleted | Use an active channel |
 
@@ -306,7 +304,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 | Approvals app not installed | Install the Power Automate Approvals app in Teams |
 | Wrong approver email | Verify `fsi_ARA_GovernanceTeamEmail` is a valid individual or group mailbox |
 | Shared mailbox limitations | Approvals to shared mailboxes require additional configuration |
-| Connection expired | Re-authorize the `fsi_cr_ara_approvals` connection |
+| Connection expired | Re-authorize the Approvals connection in Power Automate |
 
 ---
 
@@ -349,4 +347,4 @@ $response.value | Format-Table fsi_name, fsi_requeststatus, fsi_approvaldeadline
 
 ---
 
-*Agent Registry Automation v1.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v1.0.2 — FSI Agent Governance Framework*

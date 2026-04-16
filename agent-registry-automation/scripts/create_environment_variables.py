@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create Dataverse environment variables for Agent Registry Automation.
 
-Deploys seven environment variables with fsi_ARA_* prefix that control
+Deploys ten environment variables with fsi_ARA_* prefix that control
 sync behavior, SLA escalation, and alerting configuration. All operations
 are idempotent — safe to re-run.
 
@@ -13,6 +13,9 @@ Variables consumed by Power Automate flows:
   - fsi_ARA_FlowAdministrators: Email for flow error notifications
   - fsi_ARA_TenantId: Entra ID tenant ID for service principal auth
   - fsi_ARA_DataverseEnvironmentUrl: Target Dataverse environment URL
+  - fsi_ARA_TeamsChannelId: Teams channel ID for governance notifications
+  - fsi_ARA_ApprovalDeadlineDays: Business days for approval SLA deadline
+  - fsi_ARA_DefaultTimeZone: Fallback time zone for SLA calculations
 """
 
 import argparse
@@ -104,6 +107,36 @@ ENV_VAR_DEFINITIONS = [
             "(e.g., https://contoso.crm.dynamics.com) for API operations."
         ),
     },
+    {
+        "schema_name": "fsi_ARA_TeamsChannelId",
+        "display_name": "ARA - Teams Channel ID",
+        "type": 100000000,  # String
+        "default_value": "",
+        "description": (
+            "Microsoft Teams channel ID for governance notifications "
+            "and approval adaptive cards."
+        ),
+    },
+    {
+        "schema_name": "fsi_ARA_ApprovalDeadlineDays",
+        "display_name": "ARA - Approval Deadline Days",
+        "type": 100000000,  # String
+        "default_value": "5",
+        "description": (
+            "Number of business days allowed for registration approval "
+            "before SLA escalation is triggered."
+        ),
+    },
+    {
+        "schema_name": "fsi_ARA_DefaultTimeZone",
+        "display_name": "ARA - Default Time Zone",
+        "type": 100000000,  # String
+        "default_value": "Eastern Standard Time",
+        "description": (
+            "Fallback time zone for SLA deadline calculations when "
+            "the Office 365 Users connector is unavailable."
+        ),
+    },
 ]
 
 
@@ -172,7 +205,7 @@ def create_environment_variables(
 ) -> None:
     """Deploy all ARA environment variables to Dataverse.
 
-    Creates seven fsi_ARA_* environment variables with their default
+    Creates ten fsi_ARA_* environment variables with their default
     values. All operations are idempotent — safe to re-run.
 
     Args:
@@ -207,7 +240,7 @@ def create_environment_variables(
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for environment variable deployment."""
     parser = argparse.ArgumentParser(
         description=(

@@ -171,6 +171,8 @@ function Test-GenAIConfigCompliance {
         [int]$Top = 0
     )
 
+    try {
+
     #region Script Initialization
 
     $ErrorActionPreference = 'Stop'
@@ -314,9 +316,17 @@ function Test-GenAIConfigCompliance {
     if ($IncludeCompliant) {
         $compareParams['IncludeCompliant'] = $true
     }
-    if ($DataverseUrl -and $DataverseToken) {
+    if ($DataverseUrl) {
         $compareParams['DataverseUrl'] = $DataverseUrl
-        $compareParams['DataverseToken'] = $DataverseToken
+        if ($DataverseToken) {
+            $compareParams['DataverseToken'] = $DataverseToken
+        } else {
+            # Try to retrieve token from GACClient module connection
+            $storedToken = Get-GACConnection
+            if ($storedToken) {
+                $compareParams['DataverseToken'] = $storedToken.AccessToken
+            }
+        }
     }
 
     #endregion
@@ -540,7 +550,7 @@ function Test-GenAIConfigCompliance {
             }
         }
 
-        Write-Output "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))"
+        Write-Host "Results persisted to Dataverse (RunId: $runId, Violations: $($violationResults.Count))" -ForegroundColor Green
     } elseif ($PersistResults -and -not $dataverseConnected) {
         Write-Warning "PersistResults requested but Dataverse not connected. Results not persisted."
     }
@@ -643,4 +653,9 @@ function Test-GenAIConfigCompliance {
     }
 
     #endregion
+
+    } catch {
+        Write-Error "GenAI config compliance scan failed: $($_.Exception.Message)"
+        throw
+    }
 }

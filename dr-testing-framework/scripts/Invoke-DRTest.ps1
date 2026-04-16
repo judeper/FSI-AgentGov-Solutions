@@ -627,6 +627,7 @@ function Save-TestResult {
     }
 
     $record = @{
+        fsi_name = "DR-$($Result.TestType)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_testtype = $Result.TestType
         fsi_executedon = $Result.ExecutedOn
         fsi_actualrto = $Result.ActualRTO

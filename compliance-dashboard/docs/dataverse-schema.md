@@ -327,17 +327,9 @@ Full administrative access.
 
 ## Deployment
 
-### Option 1: Solution Import
+### Manual Creation
 
-Import the unmanaged solution:
-
-```powershell
-pac solution import --path ./templates/ComplianceDashboard_1_0_0.zip
-```
-
-### Option 2: Manual Creation
-
-Use the Power Apps maker portal to create tables manually following the schema above.
+Use the Power Apps maker portal or PAC CLI to create tables manually following the schema above. The solution does not ship a packaged `.zip` file — see [templates/README.md](../templates/README.md) for guidance.
 
 ### Post-Deployment
 
@@ -347,4 +339,4 @@ Use the Power Apps maker portal to create tables manually following the schema a
 
 ---
 
-*Compliance Dashboard v1.0.0*
+*Compliance Dashboard v1.0.2*

@@ -560,7 +560,7 @@ class HWGClient:
 # =============================================================================
 
 
-def main():
+def main() -> None:
     """CLI entry point for HWGClient standalone testing."""
     parser = argparse.ArgumentParser(
         description="HWGClient - Dataverse Web API client for HITL Workflow Governance",

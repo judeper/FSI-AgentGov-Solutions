@@ -12,7 +12,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **PowerShell Components (ALCA):**
 - [ ] **AuditComplianceHelpers.psm1** — Shared helper module (MI auth, retry, Dataverse, email)
 - [ ] **AuditComplianceHelpers.psd1** — Module manifest
-- [ ] **Check-AuditLoggingCompliance.ps1** — Detection runbook
+- [ ] **Test-AuditLoggingCompliance.ps1** — Detection runbook
 - [ ] **Enable-AuditLogging.ps1** — Remediation runbook
 - [ ] **AuditComplianceHelpers.Tests.ps1** — Pester unit tests (optional, for validation)
 
@@ -23,7 +23,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 - [ ] **Start-TenantValidationRunbook.ps1** — Azure Automation runbook wrapper (tenant)
 - [ ] **Start-EnvironmentValidationRunbook.ps1** — Azure Automation runbook wrapper (environment)
 - [ ] **Export-AuditValidationEvidence.ps1** — Compliance evidence export
-- [ ] **Configure-SecurityRoles.ps1** — Security role configuration
+- [ ] **Set-SecurityRoles.ps1** — Security role configuration
 - [ ] **Test-EnvironmentAudit.ps1** — Environment audit validator
 - [ ] **Test-EnvironmentRetention.ps1** — Environment retention validator
 - [ ] **Test-MailboxAudit.ps1** — Mailbox audit validator
@@ -50,10 +50,10 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 - [ ] **deploy.py** — ACV deployment orchestrator
 - [ ] **requirements.txt** — Python dependencies
 
-**Power Automate:**
-- [ ] **audit-remediation-approval-flow.json** — ALCA approval workflow template
-- [ ] **environment-validation-flow.json** — ACV environment validation flow template
-- [ ] **tenant-validation-flow.json** — ACV tenant validation flow template
+**Power Automate (manual build — see docs/FLOW_SETUP.md):**
+- [ ] **Tenant Validation Flow** — ACV daily tenant validation
+- [ ] **Environment Validation Flow** — ACV daily environment validation
+- [ ] **Audit Remediation Approval Flow** — ALCA approval workflow
 
 **Adaptive Card Templates:**
 - [ ] **adaptive-card-environment-alert.json** — Environment alert adaptive card
@@ -71,11 +71,11 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **Option A: Create ZIP Archive**
 ```bash
 # From the audit-compliance-manager directory:
-zip -r ACM-Solution-v1.0.0.zip \
+zip -r ACM-Solution-v1.0.2.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
-  scripts/Check-AuditLoggingCompliance.ps1 \
+  scripts/Test-AuditLoggingCompliance.ps1 \
   scripts/Enable-AuditLogging.ps1 \
   scripts/Invoke-TenantAuditValidation.ps1 \
   scripts/Invoke-EnvironmentAuditValidation.ps1 \
@@ -83,7 +83,7 @@ zip -r ACM-Solution-v1.0.0.zip \
   scripts/Start-TenantValidationRunbook.ps1 \
   scripts/Start-EnvironmentValidationRunbook.ps1 \
   scripts/Export-AuditValidationEvidence.ps1 \
-  scripts/Configure-SecurityRoles.ps1 \
+  scripts/Set-SecurityRoles.ps1 \
   scripts/Test-EnvironmentAudit.ps1 \
   scripts/Test-EnvironmentRetention.ps1 \
   scripts/Test-MailboxAudit.ps1 \
@@ -104,9 +104,6 @@ zip -r ACM-Solution-v1.0.0.zip \
   scripts/create_connection_references.py \
   scripts/deploy.py \
   scripts/requirements.txt \
-  templates/audit-remediation-approval-flow.json \
-  templates/environment-validation-flow.json \
-  templates/tenant-validation-flow.json \
   templates/adaptive-card-environment-alert.json \
   templates/adaptive-card-tenant-alert.json \
   docs/deployment-guide.md \
@@ -118,13 +115,13 @@ zip -r ACM-Solution-v1.0.0.zip \
 
 **Option B: Create Structured Folder**
 ```
-ACM-Solution-v1.0.0/
+ACM-Solution-v1.0.2/
 ├── SOLUTION-DOCUMENTATION.md
 ├── PowerShell-Components/
 │   ├── ALCA/
 │   │   ├── AuditComplianceHelpers.psm1
 │   │   ├── AuditComplianceHelpers.psd1
-│   │   ├── Check-AuditLoggingCompliance.ps1
+│   │   ├── Test-AuditLoggingCompliance.ps1
 │   │   └── Enable-AuditLogging.ps1
 │   └── ACV/
 │       ├── Invoke-TenantAuditValidation.ps1
@@ -133,7 +130,7 @@ ACM-Solution-v1.0.0/
 │       ├── Start-TenantValidationRunbook.ps1
 │       ├── Start-EnvironmentValidationRunbook.ps1
 │       ├── Export-AuditValidationEvidence.ps1
-│       ├── Configure-SecurityRoles.ps1
+│       ├── Set-SecurityRoles.ps1
 │       ├── Test-EnvironmentAudit.ps1
 │       ├── Test-EnvironmentRetention.ps1
 │       ├── Test-MailboxAudit.ps1
@@ -157,9 +154,6 @@ ACM-Solution-v1.0.0/
 │   ├── deploy.py
 │   └── requirements.txt
 ├── Power-Automate/
-│   ├── audit-remediation-approval-flow.json
-│   ├── environment-validation-flow.json
-│   ├── tenant-validation-flow.json
 │   ├── adaptive-card-environment-alert.json
 │   └── adaptive-card-tenant-alert.json
 └── Deployment-Guides/
@@ -172,7 +166,7 @@ ACM-Solution-v1.0.0/
 
 ### 4. Email Template
 
-**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.1
+**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.2
 
 **Body:**
 
@@ -226,8 +220,8 @@ Architecture:
 • Exponential backoff retry logic for API resilience
 
 Business Value:
-• Eliminate manual audit configuration overhead (95%+ time savings)
-• Ensure continuous audit coverage across all Power Platform environments
+• Reduce manual audit configuration overhead (95%+ time savings)
+• Help maintain continuous audit coverage across all Power Platform environments
 • Support regulatory examinations with automated compliance evidence
 • Detect and remediate audit gaps within 24 hours (weekly scan) or faster (daily scan)
 
@@ -283,7 +277,7 @@ Before sending to customer, verify:
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `example.com`)
-- [ ] Version numbers are consistent (v1.0.0) across all files
+- [ ] Version numbers are consistent (v1.0.2) across all files
 - [ ] Placeholder values documented clearly (see Configuration Placeholders section in README)
 
 ### 6. Files NOT to Include
@@ -394,7 +388,7 @@ Dataverse Schema:
 □ Alternate key fsi_environmentid_key created
 
 Runbooks:
-□ ACM-Check-AuditLoggingCompliance runbook created and published
+□ ACM-Test-AuditLoggingCompliance runbook created and published
 □ ACM-Enable-AuditLogging runbook created and published
 □ Helper module referenced correctly in both runbooks
 
@@ -425,6 +419,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.1
+**Package Version:** v1.0.2
 **Release Date:** February 2026
 **Solution:** Audit Compliance Manager (ACM)

@@ -61,6 +61,9 @@ $zonePolicies = @{
         WhitelistEnforcement             = 'Advisory'
         ModelKnowledgePolicy             = 'Allowed'
         SemanticSearchPolicy             = 'Allowed'
+        AoaiAllowed                      = $true
+        AllowedOrchestrationModes        = @('Classic', 'Generative')
+        GenerativeAnswersAllowed         = $true
         # Violation severities per feature type
         AoaiViolationSeverity            = 'Warning'
         OrchestrationViolationSeverity   = 'Warning'
@@ -81,6 +84,9 @@ $zonePolicies = @{
         WhitelistEnforcement             = 'Enforced'
         ModelKnowledgePolicy             = 'RequiresApproval'
         SemanticSearchPolicy             = 'AllowedWithLogging'
+        AoaiAllowed                      = $true
+        AllowedOrchestrationModes        = @('Classic', 'Generative')
+        GenerativeAnswersAllowed         = $true
         # Violation severities per feature type
         AoaiViolationSeverity            = 'High'
         OrchestrationViolationSeverity   = 'Medium'
@@ -101,6 +107,9 @@ $zonePolicies = @{
         WhitelistEnforcement             = 'Enforced'
         ModelKnowledgePolicy             = 'Disabled'
         SemanticSearchPolicy             = 'RequiresApproval'
+        AoaiAllowed                      = $true
+        AllowedOrchestrationModes        = @('Classic')
+        GenerativeAnswersAllowed         = $false
         # Violation severities per feature type
         AoaiViolationSeverity            = 'Critical'
         OrchestrationViolationSeverity   = 'Critical'
@@ -121,6 +130,9 @@ $zonePolicies = @{
         WhitelistEnforcement             = 'Advisory'
         ModelKnowledgePolicy             = 'RequiresClassification'
         SemanticSearchPolicy             = 'RequiresClassification'
+        AoaiAllowed                      = $false
+        AllowedOrchestrationModes        = @('Classic')
+        GenerativeAnswersAllowed         = $false
         # Violation severities per feature type
         AoaiViolationSeverity            = 'Warning'
         OrchestrationViolationSeverity   = 'Warning'

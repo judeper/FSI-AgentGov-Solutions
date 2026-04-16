@@ -173,15 +173,15 @@ try {
 
     Import-Module "$scriptRoot/private/CAAClient.psm1" -Force
 
-    # CAAClient functions are Phase 2 stubs — wrap all Dataverse calls in
-    # try/catch so the runbook still produces valid output when stubs throw.
+    # Wrap all Dataverse calls in try/catch so the runbook still produces
+    # valid output when the CAAClient connection is unavailable.
     $dataverseAvailable = $false
     try {
         Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $TenantId -AccessToken $dataverseToken
         $dataverseAvailable = $true
         Write-Verbose "Dataverse connection established"
     } catch {
-        Write-Verbose "CAAClient not available (Phase 2 pending): $($_.Exception.Message)"
+        Write-Verbose "CAAClient not available: $($_.Exception.Message)"
     }
 
     # Read operational parameters from Dataverse environment variables (with defaults)
@@ -346,6 +346,7 @@ try {
             $gaps.Add(@{
                 type           = "PolicyNotEnabled"
                 policy         = $policy.DisplayName
+                policyId       = $policy.Id
                 currentState   = $policy.State
                 zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
                 recommendation = "Enable policy for enforcement"
@@ -355,6 +356,7 @@ try {
             $gaps.Add(@{
                 type           = "PolicyDisabled"
                 policy         = $policy.DisplayName
+                policyId       = $policy.Id
                 currentState   = $policy.State
                 zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
                 recommendation = "Review and enable policy"
@@ -387,6 +389,7 @@ try {
                 $gaps.Add(@{
                     type           = "MissingBreakGlassExclusion"
                     policy         = $policy.DisplayName
+                    policyId       = $policy.Id
                     zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
                     recommendation = "Add all break-glass accounts to exclusion list"
                 })
@@ -407,6 +410,7 @@ try {
             $gaps.Add(@{
                 type           = "NoMFARequirement"
                 policy         = $policy.DisplayName
+                policyId       = $policy.Id
                 zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
                 recommendation = "Add MFA to grant controls"
             })
@@ -430,6 +434,7 @@ try {
                 $gaps.Add(@{
                     type           = "SessionControlMisconfigured"
                     policy         = $policy.DisplayName
+                    policyId       = $policy.Id
                     zone           = "Zone3"
                     detail         = "persistentBrowser.mode is '$($sc.PersistentBrowser.Mode)', expected 'never'"
                     recommendation = "Set persistentBrowser.mode to 'never' for Zone3 policies"
@@ -439,6 +444,7 @@ try {
                 $gaps.Add(@{
                     type           = "MissingSessionControl"
                     policy         = $policy.DisplayName
+                    policyId       = $policy.Id
                     zone           = "Zone3"
                     detail         = "Zone3 policy should have persistentBrowser set to 'never'"
                     recommendation = "Add persistentBrowser session control with mode 'never'"
@@ -451,6 +457,7 @@ try {
             $gaps.Add(@{
                 type           = "MissingSessionControl"
                 policy         = $policy.DisplayName
+                policyId       = $policy.Id
                 zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
                 detail         = "signInFrequency not configured or not enabled"
                 recommendation = "Configure sign-in frequency for session timeout enforcement"
@@ -565,6 +572,7 @@ try {
     foreach ($gap in $gaps) {
         $violations.Add([PSCustomObject]@{
             PolicyName = if ($gap.ContainsKey('policy')) { $gap.policy } else { $gap.pattern }
+            PolicyId   = if ($gap.ContainsKey('policyId')) { $gap.policyId } else { '' }
             Zone       = if ($gap.ContainsKey('zone')) { $gap.zone } else { '' }
             Type       = $gap.type
             Detail     = if ($gap.ContainsKey('detail')) { $gap.detail } else { $gap.recommendation }
@@ -625,6 +633,8 @@ try {
                 DriftCount     = $driftCount
                 ScanScope      = $Scope
                 ComplianceRate = $complianceRate
+                ValidatedBy    = "$ClientId (runbook)"
+                TenantId       = $TenantId
             }
             Write-Verbose "Validation history persisted to Dataverse"
         } catch {
@@ -637,11 +647,13 @@ try {
                 Write-CAAViolation -Violation @{
                     RunId         = $runId
                     PolicyName    = $v.PolicyName
+                    PolicyId      = $v.PolicyId
                     Zone          = $v.Zone
                     ViolationType = $v.Type
                     Expected      = $v.Expected
                     Actual        = $v.Actual
                     Severity      = $v.Severity
+                    TenantId      = $TenantId
                 }
             } catch {
                 Write-Verbose "Failed to write violation for $($v.PolicyName): $($_.Exception.Message)"

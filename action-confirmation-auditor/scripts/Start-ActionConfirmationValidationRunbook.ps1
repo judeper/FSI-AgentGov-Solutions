@@ -87,7 +87,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 1.23 (Step-Up Authentication for Agent Operations)
 
@@ -259,7 +259,6 @@ try {
 
     $driftDetails = @()
     $globalIsFirstRun = $false
-    $previousScanFailed = $false
 
     # Query the most recent scan run from Dataverse
     $baseUrl = $DataverseUrl.TrimEnd('/')
@@ -311,7 +310,6 @@ try {
         }
     } catch {
         Write-Verbose "Previous scan query failed: $($_.Exception.Message). Failing open -- no drift detection."
-        $previousScanFailed = $true
         $globalIsFirstRun = $true
     }
 

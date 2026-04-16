@@ -32,6 +32,13 @@ This module is optional — the core solution operates independently without it.
 |---------|--------------|
 | [1.25 - MIME Type Restrictions](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) | Primary — File upload type enforcement |
 | [1.5 - DLP and Sensitivity Labels](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels/) | DLP policy integration |
+| [1.10 - Communication Compliance Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.10-communication-compliance-monitoring/) | Upload event monitoring supports supervision requirements |
+| [1.11 - Conditional Access and MFA](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-mfa/) | Zone-based enforcement aligned with conditional access policies |
+| [1.13 - File and Attachment Controls](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.13-file-and-attachment-controls/) | Server-side validation of file attachment types |
+| [1.14 - Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.14-content-moderation-enforcement/) | MIME type filtering as content moderation layer |
+| [3.3 - Compliance Reporting and Attestation](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.3-compliance-reporting-and-attestation/) | Blocked upload reporting for compliance evidence |
+| [3.7 - Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.7-monitoring/) | Continuous upload monitoring and alerting |
+| [4.3 - SharePoint Oversharing Prevention](https://judeper.github.io/FSI-AgentGov/controls/pillar-4-sharepoint/4.3-sharepoint-oversharing-prevention-for-agents/) | Knowledge source file type governance |
 
 ## Documentation
 

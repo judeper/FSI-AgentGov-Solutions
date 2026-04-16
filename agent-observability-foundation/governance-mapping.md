@@ -14,7 +14,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | **Supporting evidence** | The artifact provides supplementary evidence alongside other controls |
 | **Partial coverage** | The artifact provides some evidence but additional artifacts are needed (often from future phases) |
 
-> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or artifact "ensures" or "guarantees" compliance. Implementation, validation, and ongoing maintenance are required for compliance.
+> **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or artifact should be described as independently satisfying a compliance obligation. Implementation, validation, and ongoing maintenance are required for compliance.
 
 ---
 
@@ -197,8 +197,8 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Regulation | Requirement | Phase 1 Coverage | Future Phase |
 |------------|-------------|------------------|--------------|
-| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + StorageV2 (with immutability policies) with WORM capability | Phase 5: Validation testing |
-| **FINRA 4511** | 6-year record retention | StorageV2 (with immutability policies) with WORM policy | Phase 2: Audit trail KQL queries |
+| **SEC 17a-4** | 730-day retention + immutable storage (f) | App Insights + Log Analytics + Azure Blob Storage (StorageV2, HNS disabled) with WORM capability | Phase 5: Validation testing |
+| **FINRA 4511** | 6-year record retention | Azure Blob Storage (StorageV2, HNS disabled) with WORM policy | Phase 2: Audit trail KQL queries |
 | **FINRA 3110** | Supervisory procedures | Telemetry foundation | Phase 2: Decision audit KQL queries |
 | **SOX 302/404** | Internal controls evidence | RBAC separation + immutable storage | Phase 2: Control evidence collection |
 | **SR 11-7** | Model risk management and ongoing monitoring | Performance telemetry foundation | Phase 2: Risk monitoring KQL queries |
@@ -214,7 +214,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | 1.3 | SharePoint Content Governance | PII Sanitization Guidance | Primary |
 | 1.4 | Advanced Connector Policies | RBAC Separation | Supporting |
 | 1.6 | DSPM for AI | RBAC Separation, Log Analytics, PII Guidance | Primary + Supporting |
-| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, StorageV2 (with immutability policies) | Primary |
+| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, Azure Blob Storage (StorageV2) | Primary |
 | 2.6 | Model Risk Management | App Insights (telemetry available) | Partial |
 | 2.8 | Access Control and Segregation of Duties | RBAC Separation | Supporting |
 | 2.9 | Agent Performance Monitoring | App Insights, Sampling Configuration | Primary + Supporting |
@@ -223,5 +223,5 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ---
 
-*Governance Mapping version: 1.1.0*
+*Governance Mapping version: 1.1.1*
 *Last updated: February 2026*

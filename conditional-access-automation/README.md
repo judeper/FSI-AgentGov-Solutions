@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v1.1.2
+> **Status:** Completed | **Version:** v1.2.1
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
@@ -100,6 +100,7 @@ The solution is organized in two tiers:
 | `CA-CopilotStudio-Zone1.json` | Copilot Studio | Zone 1 | Risk-based |
 | `CA-CopilotStudio-Zone2.json` | Copilot Studio | Zone 2 | Always required |
 | `CA-CopilotStudio-Zone3.json` | Copilot Studio | Zone 3 | Always + Compliant device |
+| `CA-AgentBuilder-Zone1.json` | Agent Builder | Zone 1 | Risk-based |
 | `CA-AgentBuilder-Zone2.json` | Agent Builder | Zone 2 | Always required |
 | `CA-AgentBuilder-Zone3.json` | Agent Builder | Zone 3 | Always + Compliant device |
 | `CA-M365Copilot-AllZones.json` | M365 Copilot | All | Risk-based minimum |
@@ -493,7 +494,7 @@ The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve
 
 ## Version
 
-1.1.2 - April 2026
+1.2.1 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

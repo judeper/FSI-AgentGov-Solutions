@@ -15,7 +15,7 @@
 
 .NOTES
     File: Get-AgentSkillRegistrations.ps1
-    Version: 1.0.0
+    Version: 1.0.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
@@ -266,7 +266,7 @@ function Get-AgentSkillRegistrations {
                     if ($component.content) {
                         try {
                             $contentStr = $component.content
-                            $componentJson = $contentStr | ConvertFrom-Json -ErrorAction Stop
+                            $null = $contentStr | ConvertFrom-Json -ErrorAction Stop
 
                             # Look for skill manifest URL patterns
                             if ($contentStr -match '"manifestUrl"\s*:\s*"([^"]+)"') {

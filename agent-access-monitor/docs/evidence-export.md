@@ -94,7 +94,7 @@ Each export produces two files:
     "recordCount": 30, "violationCount": 5
   },
   "summary": {
-    "overallStatus": "NonCompliant",
+    "overallStatus": "Failed",
     "totalScans": 30,
     "criticalViolations": 2,
     "highViolations": 3
@@ -138,7 +138,7 @@ sha256sum -c aam-evidence-All-20260209-143022.json.sha256
 | Quarterly | Regulatory examination preparation (FINRA, SEC) |
 | On-demand | Incident investigations and ad-hoc auditor requests |
 
-> **Tip:** Use service principal authentication with Azure Automation for scheduled exports. See [FLOW_SETUP.md](FLOW_SETUP.md) for automation patterns.
+> **Tip:** Use service principal authentication with Azure Automation for scheduled exports. See [flow-configuration.md](flow-configuration.md) for automation patterns.
 
 ## Troubleshooting
 
@@ -152,6 +152,6 @@ sha256sum -c aam-evidence-All-20260209-143022.json.sha256
 
 ## Related Documentation
 
-- [SCHEMA.md](SCHEMA.md) — Dataverse table and column definitions
-- [PREREQUISITES.md](PREREQUISITES.md) — Module and permission requirements
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Extended troubleshooting guide
+- [dataverse-schema.md](dataverse-schema.md) — Dataverse table and column definitions
+- [prerequisites.md](prerequisites.md) — Module and permission requirements
+- [troubleshooting.md](troubleshooting.md) — Extended troubleshooting guide
