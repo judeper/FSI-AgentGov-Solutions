@@ -13,7 +13,7 @@
 
 .NOTES
     File: Test-FileUploadCompliance.ps1
-    Version: 1.0.0
+    Version: 1.0.2
     Solution: File Upload Security Configurator (v8)
 #>
 
@@ -93,7 +93,7 @@ $scriptRoot = $PSScriptRoot
 $banner = @"
 
 ╔══════════════════════════════════════════════════════════════╗
-║           File Upload Security Configurator v1.0.0          ║
+║           File Upload Security Configurator v1.0.2          ║
 ║         FSI Agent Governance Framework - Control 1.14       ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -257,7 +257,7 @@ switch ($OutputFormat) {
                 runId          = $runId
                 timestamp      = (Get-Date).ToUniversalTime().ToString('o')
                 solution       = 'File Upload Security Configurator'
-                version        = '1.0.0'
+                version        = '1.0.2'
                 control        = '1.14'
                 totalAgents    = $totalAgents
                 compliant      = $compliant

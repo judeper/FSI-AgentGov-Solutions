@@ -8,7 +8,7 @@ All notable changes to the File Upload Security Configurator will be documented 
 
 - Critical: Entity set name corrected from fsi_fileuploadvalidationhistorys to fsi_fileuploadvalidationhistories (was malformed plural)
 
-## [1.0.1] — 2025-07-14
+## [1.0.1] — 2026-03-01
 
 ### Changed
 - Moved `src/adaptive-card-fileupload-alert.json` to `templates/` per solution content policy

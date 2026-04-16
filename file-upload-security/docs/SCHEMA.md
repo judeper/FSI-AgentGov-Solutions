@@ -88,6 +88,7 @@ These option sets are shared across ACV/SSC/AAM/CMM/FUS solutions:
 | 100000002 | Medium |
 | 100000003 | High |
 | 100000004 | Critical |
+| 100000005 | Warning |
 
 ## Environment Variables
 

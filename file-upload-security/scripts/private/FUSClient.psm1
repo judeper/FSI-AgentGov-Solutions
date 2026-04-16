@@ -8,7 +8,7 @@
 
 .NOTES
     Module: FUSClient.psm1
-    Version: 1.0.0
+    Version: 1.0.2
     Author: FSI Agent Governance Team
     Solution: File Upload Security Configurator (v8)
 #>
@@ -649,6 +649,8 @@ function Write-FileUploadValidationHistory {
             fsi_fileuploadenabledcount = $ValidationResult.FileUploadEnabledCount
             fsi_overallstatus          = $ValidationResult.OverallStatus
             fsi_environmentsscanned    = $ValidationResult.EnvironmentsScanned
+            fsi_runtimestamp            = (Get-Date).ToUniversalTime().ToString('o')
+            fsi_compliancerate         = [math]::Round(($ValidationResult.CompliantCount / [math]::Max($ValidationResult.TotalAgents, 1)) * 100, 2)
             fsi_summaryjson            = ($ValidationResult | ConvertTo-Json -Depth 10 -Compress)
         }
 

@@ -1,7 +1,7 @@
 {
     "metadata": {
         "solution": "file-upload-security",
-        "version": "1.0.0",
+        "version": "1.0.2",
         "description": "Zone-specific file upload governance policies for Copilot Studio agents",
         "lastUpdated": "2026-02-10"
     },
