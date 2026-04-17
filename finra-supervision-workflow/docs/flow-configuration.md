@@ -66,13 +66,24 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 
    4.3 If Yes:
        4.3.1 HTTP - Get Agent Details
-             URI: https://api.powerplatform.com/...
+             URI: <agent metadata source — see note below>
+              # NOTE: Power Automate has no single `get agent metadata` endpoint.
+              # Recommended sources of agent zone/tier:
+              #   (a) `agent-registry-automation` Dataverse table `fsi_agentinventory` —
+              #       List rows: filter `fsi_agentid eq '<agent.id>'` to get fsi_zone.
+              #   (b) `environment-lifecycle-management` `fsi_environment` zone classification.
+              #   (c) Static mapping table maintained by the supervision team.
+              # Use `Get rows` (Dataverse connector) to look up zone/tier; do not call
+              # api.powerplatform.com directly without a documented endpoint.
 
        4.3.2 Look up matching config from cached SupervisionConfig
              Filter (in-memory): fsi_zone eq @{agent.zone} and fsi_tier eq @{agent.tier}
 
        4.3.3 Condition: Random sampling (Zone 1-2)
-             - If Zone 3 OR rand(1, 100) <= reviewPercent
+             - If Zone 3 OR rand(1, 101) <= reviewPercent
+              # NOTE: Power Automate `rand(min, max)` upper bound is exclusive
+              # (per Microsoft docs). Use `rand(1, 101)` to get inclusive 1..100,
+              # otherwise reviewPercent=99 samples 100% (off-by-one).
 
        4.3.4 Condition: Duplicate check
               - Filter SupervisionQueue: fsi_sourceid eq @{alert.id}
@@ -148,7 +159,7 @@ Triggered when a new SupervisionQueue row is created. Assigns to appropriate sup
 4. Create SupervisionLog
    - Queue Item: @{triggerBody().id}
    - Action: Assigned
-   - Actor: System
+   - `fsi_actor@odata.bind`: "/systemusers(<service-principal-app-user-guid>)"    // resolve at flow design time; lookup column requires a valid systemuser GUID
    - Timestamp: @{utcNow()}
    - Details: Assigned to @{assignedPrincipal.fullname}
 
@@ -293,7 +304,8 @@ Triggered when a supervisor completes a review (State changes to Approved/Reject
 1. Create SupervisionLog
    - Queue Item: @{triggerBody().id}
    - Action: Map reviewOutcome to action value (Approved=1→5, Rejected=2→6, Escalated=3→7 per dataverse-schema.md Action picklist)
-   - Actor: @{triggerBody().reviewedBy.fullname}
+   - `fsi_actor@odata.bind`: "/systemusers(@{triggerBody().reviewedBy.id})"   // requires reviewer Entra object ID resolved to systemuserid; do not pass display names to Lookup columns
+             - `fsi_queueitem@odata.bind`: "/fsi_supervisionqueues(@{triggerBody().queueItemId})"    // lookup to the SupervisionQueue row
    - Timestamp: @{utcNow()}
    - Details: @{triggerBody().reviewNotes}
 

@@ -31,7 +31,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [DR Testing Framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | v1.2.1 | 2.4, 2.1, 1.9 |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated environment provisioning with zone-based governance classification | v1.1.3 | 2.1, 2.2, 2.3, 2.8, 1.7 |
 | [File Upload Security Configurator](./file-upload-security/) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.2 | 1.14, 1.8, 1.4 |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.0 | 2.12, 1.10, 1.7 |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.1 | 2.12, 1.10, 1.7 |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.0.1 | 2.24 |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.0.0 | 3.10, 2.9, 2.12 |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.0.1 | 2.12, 2.17, 1.10 |

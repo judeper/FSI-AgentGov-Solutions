@@ -1,8 +1,10 @@
 # FINRA Supervision Workflow
 
-> **Status:** Validated
+> **Status:** Preview (v1.0.1)
 
-Automated supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations.
+Automated **retrospective** supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance.
+
+> **Scope of this solution:** This is the **retrospective supervision** arm of Control 2.12. It does **not** replace pre-delivery Human-in-the-Loop (HITL) review, which Control 2.12 requires for Zone 3 / customer-facing (retail communication) agents. For pre-delivery HITL on Zone 3 agents, deploy [hitl-workflow-governance](../hitl-workflow-governance/) alongside this solution.
 
 > **Regulatory Context:** FINRA Rule 3110 requires member firms to establish and maintain a system to supervise the activities of each associated person that is reasonably designed to achieve compliance. This solution automates the routing and tracking of AI agent outputs requiring supervisory review.
 
@@ -79,7 +81,7 @@ Primary queue table for items requiring supervisory review.
 | Column | Type | Purpose |
 |--------|------|---------|
 | `fsi_queuenumber` | Auto Number | SUP-00001 format |
-| `fsi_sourcetype` | Choice | Communication Compliance, Audit Log, Manual |
+| `fsi_sourcetype` | Choice | Communication Compliance, Audit Log, Manual Entry |
 | `fsi_sourceid` | Text | Source record identifier |
 | `fsi_agentid` | Text | Agent ID that generated content |
 | `fsi_agentname` | Text | Agent display name |
@@ -148,6 +150,10 @@ python scripts/deploy.py \
     --tenant-id <your-tenant-id> \
     --interactive
 ```
+
+### Step 1.5: Create Columns and Option Sets Manually
+
+Using `docs/dataverse-schema.md` as the spec, create every column on the three tables (`fsi_supervisionqueue`, `fsi_supervisionlog`, `fsi_supervisionconfig`) in the Power Apps maker portal. **For Choice columns, set the option-set values explicitly to the integers documented in the schema (1, 2, 3 …) rather than accepting the auto-generated 100000000+ defaults.** All scripts and DAX measures in this solution assume the small-integer values from the schema doc.
 
 ### Step 2: Configure Communication Compliance
 
@@ -273,13 +279,14 @@ Exports include:
 - `SupervisionQueue-Week04-2026.json` - All queue items with outcomes
 - `SupervisionLog-Week04-2026.json` - Complete audit trail
 - `SLACompliance-Week04-2026.json` - SLA metrics
+- `SupervisionConfig-{period}.json` - Effective supervision rules at export time
 - `manifest-{period}.json` - SHA-256 hashes for integrity (e.g., `manifest-Week04-2026.json`)
+- `manifest-{period}.sha256` - Manifest checksum for tamper-evident packaging
 
 ### FINRA 3120 Testing Evidence
 
 Quarterly testing reports per FINRA Rule 3120:
 
-<!-- TODO: generate_3120_report.py is planned for a future release -->
 
 > **Planned — not yet implemented.** A `generate_3120_report.py` script for automated quarterly report generation is planned for a future release. In the interim, use the weekly supervision evidence exports to compile quarterly testing evidence manually.
 
@@ -291,7 +298,8 @@ Quarterly testing reports per FINRA Rule 3120:
 | **FINRA 3120** | Testing supervisory controls | Quarterly evidence export, SLA metrics |
 | **FINRA 24-09** *(Regulatory Notice — guidance)* | Gen AI communication supervision | AI agent output review workflow |
 | **SEC 17a-3** | Recordkeeping | Immutable SupervisionLog |
-| **SEC 17a-4** | Record preservation | 6-year retention via Dataverse; **WORM storage required** — export to compliant archival storage (see `scripts/export_supervision_evidence.py`) |
+| **SEC 17a-4(b)(4)** | Record preservation — communications | **3-year retention** for communications under SEC 17a-4(b)(4) (first 2 years readily accessible). Export to WORM/compliant archival storage via `scripts/export_supervision_evidence.py` |
+| **FINRA Rule 4511(b)** | Record retention — supervisory designations | **6-year retention** for FINRA-required records when no other period is specified by SEA Rule 17a-4 (e.g., supervisory system designations, written supervisory procedures). Firm policy may extend retention beyond regulatory minimums |
 
 ## Platform Update Notes
 
@@ -327,7 +335,7 @@ Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com
 
 This solution supports:
 
-- [Control 2.12: Supervision and Oversight](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight.md)
+- [Control 2.12: Supervision and Oversight (FINRA Rule 3110)](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110.md)
 - [Control 1.10: Communication Compliance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.10-communication-compliance-monitoring.md)
 - [Control 1.7: Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md)
 

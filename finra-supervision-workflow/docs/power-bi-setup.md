@@ -304,4 +304,4 @@ For regulatory examinations, export compliance evidence:
 
 - [Power BI Documentation](https://learn.microsoft.com/en-us/power-bi/)
 - [Dataverse Connector](https://learn.microsoft.com/en-us/power-bi/connect-data/service-connect-to-dataverse)
-- [Control 3.3: Compliance Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.3-compliance-reporting-and-regulatory-evidence.md)
+- [Control 3.3: Compliance Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.3-compliance-and-regulatory-reporting.md)

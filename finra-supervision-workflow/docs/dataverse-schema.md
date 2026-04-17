@@ -24,7 +24,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 | Display Name | Schema Name | Type | Required | Description |
 |--------------|-------------|------|----------|-------------|
 | Queue Number | `fsi_queuenumber` | Auto Number | Yes | SUP-{SEQNUM:5} format |
-| Source Type | `fsi_sourcetype` | Choice | Yes | Communication Compliance, Audit Log, Manual |
+| Source Type | `fsi_sourcetype` | Choice | Yes | Communication Compliance, Audit Log, Manual Entry |
 | Source ID | `fsi_sourceid` | Text (200) | No | Source record identifier |
 | Agent ID | `fsi_agentid` | Text (100) | No | Copilot Studio agent ID |
 | Agent Name | `fsi_agentname` | Text (200) | Yes | Agent display name |
