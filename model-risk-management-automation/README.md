@@ -1,12 +1,12 @@
 # Model Risk Management Automation
 
-> **Status:** Production Ready (v1.0.1)
+> **Status:** Production Ready (v1.0.2)
 
-Automated OCC 2011-12 / Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-ready Agent Card generation.
+Automated OCC 2011-12 / Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
 ## Overview
 
-OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at US financial institutions. Both have been confirmed to apply to AI and machine learning systems, including large language models and agentic AI.
+OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at US financial institutions. The 2021 Interagency Request for Information confirmed these frameworks apply to traditional machine learning systems; their application to large language models and agentic AI is an active area of supervisory guidance and institutions should consult their legal and compliance teams when applying MRM to LLM-based agents.
 
 This solution addresses three operational gaps that examiners consistently cite:
 
@@ -43,7 +43,7 @@ This solution addresses three operational gaps that examiners consistently cite:
                          │
 ┌────────────────────────▼─────────────────────────────────────────┐
 │                    EVIDENCE LAYER                                │
-│  SharePoint — Agent Card Library (examiner-ready documents)      │
+│  SharePoint — Agent Card Library (examiner-facing documents)     │
 │  Power BI — MRM Compliance Dashboard                             │
 │  Teams Notifications — Validation workflow actions               │
 └──────────────────────────────────────────────────────────────────┘
@@ -58,7 +58,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 | **2.9** | Agent Performance Monitoring | Secondary |
 | **2.11** | Bias Testing and Fairness Assessment | Secondary |
 | **2.13** | Documentation and Record Keeping | Secondary |
-| **3.1** | Audit Logging | Secondary |
+| **3.1** | Agent Inventory and Metadata Management | Secondary |
 | **1.2** | Agent Registry | Secondary |
 
 ## SR 11-7 Three-Pillar Coverage
@@ -84,7 +84,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 |------------|------------------------|
 | OCC 2011-12 / Fed SR 11-7 | Supports comprehensive model inventory, independent validation, and ongoing monitoring automation |
 | SOX 302/404 | Aids in documenting IT model controls with 7-year retention via Dataverse LTR and versioned Agent Cards |
-| FINRA Rule 3110 | Supports supervision and oversight of AI systems with three-lines-of-defense role enforcement |
+| FINRA Rule 3110 | Supports supervision and oversight of AI systems by separating maker (model owner), checker (independent validator), and approver (MRM officer) roles in the validation workflow |
 | NIST AI RMF | Helps address risk identification, measurement, and management for AI systems |
 
 > **Note:** No single control or solution satisfies a regulation in isolation. Organizations should verify that their overall control environment meets specific regulatory obligations.
@@ -151,7 +151,9 @@ python scripts/create_mrm_dataverse_schema.py `
 ```powershell
 python scripts/create_mrm_environment_variables.py `
     --environment-url "https://your-org.crm.dynamics.com" `
-    --tenant-id "your-tenant-id"
+    --tenant-id "your-tenant-id" `
+    --client-id "your-client-id" `
+    --client-secret "your-client-secret"
 ```
 
 ### 3. Deploy Connection References
@@ -159,7 +161,9 @@ python scripts/create_mrm_environment_variables.py `
 ```powershell
 python scripts/create_mrm_connection_references.py `
     --environment-url "https://your-org.crm.dynamics.com" `
-    --tenant-id "your-tenant-id"
+    --tenant-id "your-tenant-id" `
+    --client-id "your-client-id" `
+    --client-secret "your-client-secret"
 ```
 
 ### 4. Configure SharePoint
@@ -199,12 +203,12 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 
 | Control | Relationship |
 |---------|--------------|
-| [2.6 — Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.6-model-risk-management.md) | Primary — model inventory, risk scoring, validation workflow |
-| [2.5 — Testing, Validation, and Quality Assurance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.5-testing-validation-and-quality-assurance.md) | Secondary — independent validation cycles |
-| [2.9 — Agent Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.9-agent-performance-monitoring.md) | Secondary — ongoing monitoring with threshold detection |
-| [2.11 — Bias Testing and Fairness Assessment](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.11-bias-testing-and-fairness-assessment.md) | Secondary — finding category includes Bias/Fairness |
-| [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.13-documentation-and-record-keeping.md) | Secondary — Agent Cards and immutable compliance events |
-| [3.1 — Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-regulatory-audit-logging.md) | Secondary — fsi_mrmcomplianceevent immutable audit log |
+| [2.6 — Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management.md) | Primary — model inventory, risk scoring, validation workflow |
+| [2.5 — Testing, Validation, and Quality Assurance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.5-testing-validation-and-quality-assurance.md) | Secondary — independent validation cycles |
+| [2.9 — Agent Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring.md) | Secondary — ongoing monitoring with threshold detection |
+| [2.11 — Bias Testing and Fairness Assessment](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.11-bias-testing-and-fairness-assessment.md) | Secondary — finding category includes Bias/Fairness |
+| [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Secondary — Agent Cards and immutable compliance events |
+| [3.1 — Agent Inventory and Metadata Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Secondary — fsi_modelinventory + fsi_mrmcomplianceevent provide MRM-scoped inventory and metadata |
 | [1.2 — Agent Registry](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.2-agent-registry-and-integrated-apps-management.md) | Secondary — reads from agent-registry-automation inventory |
 
 ## Platform Update Notes
@@ -234,7 +238,9 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0.1 | March 2026 | Initial release |
+| 1.0.0 | March 2026 | Initial release |
+| 1.0.1 | April 2026 | Option set defaults + PowerShell verb rename |
+| 1.0.2 | April 2026 | AI Council technical-accuracy review — column-drift fixes (lookup columns, picklist integers), regulatory language softening (FINRA 25-07 framing, examiner-facing wording), control mapping corrections (3.1 title + pillar paths), Agent Card schema alignment, deployment script auth parameters |
 
 ## Support
 

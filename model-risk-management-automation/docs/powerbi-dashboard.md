@@ -2,7 +2,7 @@
 
 ## Overview
 
-Examiner-ready dashboard for model inventory status, validation coverage, risk distribution, and monitoring trends. This dashboard supports compliance with Fed SR 11-7 and OCC 2011-12 reporting expectations by providing centralized visibility into MRM program metrics.
+Examiner-facing dashboard for model inventory status, validation coverage, risk distribution, and monitoring trends. This dashboard supports compliance with Fed SR 11-7 and OCC 2011-12 reporting expectations by providing centralized visibility into MRM program metrics.
 
 > **Note:** This dashboard aids in meeting regulatory reporting requirements. Organizations should verify that dashboard content and refresh cadence meet their specific examination obligations.
 
@@ -21,11 +21,13 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 
 ### Relationships
 
-- `fsi_modelinventory` 1:N → `fsi_mrmriskrating` (on `fsi_modelid`)
-- `fsi_modelinventory` 1:N → `fsi_validationcycle` (on `fsi_modelid`)
-- `fsi_validationcycle` 1:N → `fsi_validationfinding` (on `fsi_validationcycleid`)
-- `fsi_modelinventory` 1:N → `fsi_monitoringrecord` (on `fsi_modelid`)
-- `fsi_modelinventory` 1:N → `fsi_mrmcomplianceevent` (on `fsi_modelid`)
+- `fsi_modelinventory` 1:N → `fsi_mrmriskrating` (on lookup column `fsi_modelinventory_lookup`; in Power BI, join on `fsi_modelinventory_lookup_value`)
+- `fsi_modelinventory` 1:N → `fsi_validationcycle` (on lookup column `fsi_modelinventory_lookup`)
+- `fsi_validationcycle` 1:N → `fsi_validationfinding` (on lookup column `fsi_validationcycle_lookup`)
+- `fsi_modelinventory` 1:N → `fsi_monitoringrecord` (on lookup column `fsi_modelinventory_lookup`)
+- `fsi_modelinventory` 1:N → `fsi_mrmcomplianceevent` (on lookup column `fsi_modelinventory_lookup`)
+
+> **Note:** Child tables reference the parent via Dataverse lookup columns (suffix `_Lookup`), not direct FK columns. The Dataverse Power BI connector exposes these as `<lookupname>_value` GUID columns. `fsi_modelid` is the alternate-key text on the parent (e.g., `MRM-2026-00001`); use it for display, not joins.
 
 ## Dashboard Pages
 
@@ -34,8 +36,8 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 | Visual | Type | Description |
 |--------|------|-------------|
 | Total Agents in MRM Inventory | Card | `COUNTROWS(fsi_modelinventory)` |
-| Agents Pending Submission | Card | Count where `fsi_mrmstatus = "Registered"` |
-| Agents Validated | Card | Count where `fsi_validationstatus = "Validated"` |
+| Agents Pending Submission | Card | Count where `fsi_mrmstatus` = 100000000 (Pending Submission). Note: `Registered` is the agent-registry-automation status, not an mrmstatus value. |
+| Agents Validated | Card | Count where `fsi_validationstatus` = 100000006 (Validated). Use the integer value or join the `_Label` shadow column added by Power BI for the Choice type. |
 | Agents by MRM Tier | Bar chart | X-axis: `fsi_mrmtier` (Tier 1–4), Y-axis: count |
 | Risk Rating Distribution | Pie chart | Segments: Critical, High, Medium, Low from `fsi_currentriskrating` |
 | Agent Inventory Detail | Table | Columns: Model ID, Name, Tier, Rating, Status, Next Validation Due |
@@ -46,11 +48,11 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 
 | Visual | Type | Description |
 |--------|------|-------------|
-| Open Validation Cycles | Card | Count where `fsi_cyclestatus` is not Completed or Rejected |
+| Open Validation Cycles | Card | Count where `fsi_cyclestatus` not in (100000006 [Validated], 100000007 [Rejected]) |
 | Overdue Validations | Card | Uses `Overdue Validations` DAX measure (see below) |
 | SLA Breaches | Card | Count of cycles where any SLA phase is breached |
 | Validation Status by Tier | Stacked bar | X-axis: Tier, segments: cycle status values |
-| Validation Cycle Durations | Timeline | Start: `fsi_submitteddate`, End: `fsi_completeddate` |
+| Validation Cycle Durations | Timeline | Start: `fsi_submitteddate`, End: `fsi_validationcompleteddate` |
 | Active Cycles Detail | Table | Cycle ID, Model Name, Phase, Assigned Validator, SLA Status, Days Remaining |
 
 ### Page 3: Findings & Remediation
@@ -78,7 +80,7 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 |--------|------|-------------|
 | Total Events (Last 30 Days) | Card | Filtered count of `fsi_mrmcomplianceevent` |
 | Events by Type | Bar chart | X-axis: `fsi_eventtype`, Y-axis: count |
-| Events by SR 11-7 Pillar | Pie chart | Segments from `fsi_regulatorypillar` |
+| Events by SR 11-7 Pillar | Pie chart | Segments from `fsi_sr117pillar` (option set `fsi_mrm_sr117pillar`: 100000000=Pillar 1, 100000001=Pillar 2, 100000002=Pillar 3) |
 | Recent Compliance Events | Table | Event ID, Model Name, Event Type, Impact Level, Date, Details |
 
 ## Key DAX Measures
@@ -87,16 +89,16 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 Agents Not Validated = 
 CALCULATE(
     COUNTROWS(fsi_modelinventory),
-    fsi_modelinventory[fsi_validationstatus] <> "Validated"
+    fsi_modelinventory[fsi_validationstatus] <> 100000006   -- 100000006 = Validated
 )
 
 Tier 1 Coverage = 
 DIVIDE(
     CALCULATE(COUNTROWS(fsi_modelinventory), 
-        fsi_modelinventory[fsi_mrmtier] = "Tier 1",
-        fsi_modelinventory[fsi_validationstatus] = "Validated"),
+        fsi_modelinventory[fsi_mrmtier] = 100000001,   -- Tier 1
+        fsi_modelinventory[fsi_validationstatus] = 100000006), -- Validated
     CALCULATE(COUNTROWS(fsi_modelinventory),
-        fsi_modelinventory[fsi_mrmtier] = "Tier 1"),
+        fsi_modelinventory[fsi_mrmtier] = 100000001),
     0
 )
 
@@ -104,20 +106,20 @@ Overdue Validations =
 CALCULATE(
     COUNTROWS(fsi_modelinventory),
     fsi_modelinventory[fsi_nextvalidationdue] < TODAY(),
-    fsi_modelinventory[fsi_validationstatus] = "Validated"
+    fsi_modelinventory[fsi_validationstatus] = 100000006   -- Validated
 )
 
 Avg Cycle Duration Days = 
 AVERAGEX(
-    FILTER(fsi_validationcycle, NOT(ISBLANK(fsi_validationcycle[fsi_completeddate]))),
-    DATEDIFF(fsi_validationcycle[fsi_submitteddate], fsi_validationcycle[fsi_completeddate], DAY)
+    FILTER(fsi_validationcycle, NOT(ISBLANK(fsi_validationcycle[fsi_validationcompleteddate]))),
+    DATEDIFF(fsi_validationcycle[fsi_submitteddate], fsi_validationcycle[fsi_validationcompleteddate], DAY)
 )
 
 Open Critical Findings = 
 CALCULATE(
     COUNTROWS(fsi_validationfinding),
-    fsi_validationfinding[fsi_severity] = "Critical",
-    fsi_validationfinding[fsi_findingstatus] <> "Closed"
+    fsi_validationfinding[fsi_severity] = 100000001,   -- Critical (severity is 1-based)
+    fsi_validationfinding[fsi_remediationstatus] <> 100000004   -- Closed (column is fsi_remediationstatus, not fsi_findingstatus)
 )
 ```
 

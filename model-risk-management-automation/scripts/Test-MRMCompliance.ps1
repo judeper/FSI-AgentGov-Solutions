@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Generates an examiner-ready MRM compliance posture report.
+    Generates an examiner-facing MRM compliance posture report.
 
 .DESCRIPTION
     Queries Dataverse for model inventory status, validation coverage, open

@@ -22,17 +22,17 @@ Dataverse auto-generates entity set names (plural forms) at deployment time. Con
 
 ### OptionSet Integer Value Confirmation
 
-OptionSet integer values are assigned at deployment time. Confirm each value against the deployed solution and update flow conditions and script parameters.
+OptionSet integer values are defined in `scripts/create_mrm_dataverse_schema.py` (source of truth). The values below match that schema and start at 100000000 (Dataverse global option set base). Confirm against the deployed solution before going live.
 
 | Choice Column | Expected Values | Confirmed |
 |--------------|-----------------|-----------|
-| fsi_cyclestatus | Not Started=1, Submitted=2, In Progress=3, Findings Issued=4, Remediated=5, Validated=6, Rejected=7 | [ ] |
-| fsi_severity | Critical=1, High=2, Medium=3, Low=4 | [ ] |
-| fsi_remediationstatus | Open=1, In Progress=2, Submitted for Review=3, Closed=4 | [ ] |
-| fsi_validationstatus | Not Started=1, Submitted=2, In Progress=3, Findings Issued=4, Remediated=5, Validated=6 | [ ] |
-| fsi_mrmtier | Tier 1=1, Tier 2=2, Tier 3=3, Tier 4=4 | [ ] |
-| fsi_mrmstatus | Pending Submission=0, Submitted=1, Risk Scored=2, ... (9 values) | [ ] |
-| fsi_compositerating | Critical=0, High=1, Medium=2, Low=3 | [ ] |
+| fsi_cyclestatus | Not Started=100000001, Submitted=100000002, In Progress=100000003, Findings Issued=100000004, Remediated=100000005, Validated=100000006, Rejected=100000007 (option set `fsi_mrm_cyclestatus`, 1-based) | [ ] |
+| fsi_severity | Critical=100000001, High=100000002, Medium=100000003, Low=100000004 (option set `fsi_mrm_severity`, 1-based) | [ ] |
+| fsi_remediationstatus | Open=100000001, In Progress=100000002, Submitted for Review=100000003, Closed=100000004 (option set `fsi_mrm_remediationstatus`, 1-based) | [ ] |
+| fsi_validationstatus | Not Started=100000001, Submitted=100000002, In Progress=100000003, Findings Issued=100000004, Remediated=100000005, Validated=100000006 (option set `fsi_mrm_validationstatus`, 1-based) | [ ] |
+| fsi_mrmtier | Tier 1=100000001, Tier 2=100000002, Tier 3=100000003, Tier 4=100000004 (option set `fsi_mrm_mrmtier`, 1-based) | [ ] |
+| fsi_mrmstatus | Pending Submission=100000000, Submitted=100000001, Risk Scored=100000002, Validation Scheduled=100000003, In Validation=100000004, Validated=100000005, Conditionally Approved=100000006, Rejected=100000007, Retired=100000008 (option set `fsi_mrm_mrmstatus`, 0-based) | [ ] |
+| fsi_compositerating | Critical=100000000, High=100000001, Medium=100000002, Low=100000003 (option set `fsi_mrm_compositerating`, 0-based — note: DIFFERENT BASE from `fsi_severity` which is 1-based) | [ ] |
 
 **How to confirm:** Navigate to Power Platform admin center → Tables → select table → Columns → select Choice column → View options with integer values.
 

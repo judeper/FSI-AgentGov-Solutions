@@ -50,9 +50,9 @@ Write-Warning "DELIVERY-CHECKLIST ITEM: Confirm entity set name 'fsi_agentinvent
 # Query agent inventory from agent-registry-automation
 $agentEntitySet = "fsi_agentinventories"
 $agentQuery = "$DataverseEnvironmentUrl/api/data/v9.2/$agentEntitySet" +
-              "?`$filter=fsi_registrationstatus eq 'Registered'" +
-              "&`$select=fsi_agentid,fsi_agentname,fsi_environmentid," +
-              "fsi_ownerupn,fsi_governancezone,fsi_lastactivitydate"
+              "?$filter=fsi_registrationstatus eq 100000002" +     # 100000002 = Registered (option set fsi_ara_registrationstatus is 0-based: NotRegistered=100000000, PendingApproval=100000001, Registered=100000002, Quarantined=100000003)
+              "&$select=fsi_agentid,fsi_agentname,fsi_environmentid," +
+              "fsi_ownerupn,fsi_zone,fsi_lastscannedat"    # agent-registry-automation columns: fsi_zone (not fsi_governancezone); fsi_lastscannedat (no fsi_lastactivitydate column exists)
 
 try {
     $agents = (Invoke-RestMethod -Uri $agentQuery -Headers $dvHeaders).value
@@ -99,7 +99,7 @@ $baseline = @{
                                                     fsi_agentid,
                                                     fsi_environmentid,
                                                     fsi_ownerupn,
-                                                    fsi_governancezone
+                                                    fsi_zone
 }
 
 if (-not (Test-Path $OutputPath)) {

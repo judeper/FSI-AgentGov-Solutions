@@ -116,11 +116,17 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 
 3. List rows: Get all registered agents
    Table: fsi_agentinventory (from agent-registry-automation solution)
-   Filter: fsi_registrationstatus eq 'Registered'
-            and fsi_status in ('Active', 'Under Review')
-   Note: Cross-solution dependency — the agent-registry-automation solution
-         must be deployed first. If fsi_agentinventory does not exist, step 2
-         catches the failure.
+   Filter: fsi_registrationstatus eq 100000002
+            and fsi_publishedstatus ne 100000003
+   Note: fsi_registrationstatus is a picklist — 100000002 = "Registered" per the
+         option set fsi_ara_registrationstatus in agent-registry-automation/
+         scripts/create_dataverse_schema.py. fsi_publishedstatus values:
+         100000000=Published, 100000001=Draft, 100000002=Quarantined,
+         100000003=Disabled (option set fsi_ara_publishedstatus). Excluding
+         Disabled scopes the sync to actively-usable agents.
+   Cross-solution dependency: the agent-registry-automation solution must be
+         deployed first. If fsi_agentinventory does not exist, step 2 catches
+         the failure.
 
 4. Apply to each: Process Agent
    Input: Value from step 3
@@ -163,8 +169,8 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
                   Compare against fsi_MRM_MaterialChangeTextDiffThreshold env var
                c. Data inputs changed:
                   @{not(equals(enrichedAgent.dataInputs, existingRecord.fsi_datainputs))}
-               d. Governance zone changed:
-                  @{not(equals(agent.zone, existingRecord.fsi_governancezone))}
+               d. Zone changed:
+                  @{not(equals(agent.fsi_zone, existingRecord.fsi_zone))}  // agent-registry-automation column is fsi_zone (option set fsi_acv_zone)
                e. Owner changed:
                   @{not(equals(agent.ownerid, existingRecord.fsi_ownerupn))}
 
@@ -175,18 +181,21 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
        Action: Update or create row (Dataverse)
        Table: fsi_modelinventories
        Alternate Key: fsi_agentid (match on agent ID)
-       Values:
-         - fsi_agentname: @{agent.displayName}
-         - fsi_agentid: @{agent.agentid}
-         - fsi_environmentid: @{agent.environmentid}
-         - fsi_environmentname: @{agent.environmentname}
-         - fsi_governancezone: @{agent.zone}
+       Values (use only columns that exist on fsi_modelinventory — see
+       docs/dataverse-schema.md and scripts/create_mrm_dataverse_schema.py):
+         - fsi_modelname: @{agent.fsi_agentname}
+         - fsi_agentid: @{agent.fsi_agentid}
+         - fsi_environmentid: @{agent.fsi_environmentid}
+         - fsi_zone: @{agent.fsi_zone}
          - fsi_ownerupn: @{graphUser.userPrincipalName}
-         - fsi_ownerdisplayname: @{graphUser.displayName}
          - fsi_ownerdepartment: @{graphUser.department}
          - fsi_modelprovider: @{enrichedAgent.modelProvider} (if available)
          - fsi_datainputs: @{enrichedAgent.dataInputs} (if available)
-       Note: Preserve MRM-managed fields on update (do NOT overwrite):
+       Note 1: Display names (owner display name, environment name, validator
+             display name) are NOT persisted on the MRM record — resolve them
+             at read time from Microsoft Graph or the agent-registry record
+             (fsi_agentinventories) when needed for Power BI / Agent Cards.
+       Note 2: Preserve MRM-managed fields on update (do NOT overwrite):
              fsi_mrmtier, fsi_currentriskrating, fsi_validationcadence,
              fsi_validationstatus, fsi_mrmstatus (except as set below)
 
@@ -194,7 +203,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
        If Yes:
          4.7.1 Update row: fsi_modelinventories
                - fsi_firstsubmitted: @{utcNow()}
-               - fsi_mrmstatus: Pending Submission
+             - fsi_mrmstatus: 100000000    // Pending Submission
          4.7.2 Create row: fsi_mrmcomplianceevents
                - fsi_eventtype: Inventory Submitted
                - fsi_complianceimpact: Low
@@ -299,9 +308,9 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
        to rationale: "Data sensitivity scored by keyword match — manual
        review recommended to verify classification."
 
-   3.3 User Population Score (based on fsi_governancezone)
-       @{if(equals(model.fsi_governancezone, 'Zone 3'), 5,
-         if(equals(model.fsi_governancezone, 'Zone 2'), 3, 1))}
+   3.3 User Population Score (based on fsi_zone)
+       @{if(equals(model.fsi_zone, 'Zone 3'), 5,
+         if(equals(model.fsi_zone, 'Zone 2'), 3, 1))}
 
    3.4 Model Complexity Score (based on fsi_modelprovider)
        @{if(or(
@@ -324,13 +333,13 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
          if(equals(model.fsi_decisionoutputtype, 'Information Retrieval'), 2,
          1)))}
 
-   3.6 Regulatory Exposure Score (based on fsi_governancezone)
-       @{if(equals(model.fsi_governancezone, 'Zone 3'), 5,
-         if(equals(model.fsi_governancezone, 'Zone 2'), 3, 1))}
+   3.6 Regulatory Exposure Score (based on fsi_zone)
+       @{if(equals(model.fsi_zone, 'Zone 3'), 5,
+         if(equals(model.fsi_zone, 'Zone 2'), 3, 1))}
 
    3.7 Change Frequency Score
        - List rows: fsi_mrmcomplianceevents
-         Filter: fsi_modelinventoryid eq '@{model.id}'
+         Filter: _fsi_validationcycle_lookup_value eq @{cycle.id}  // child tables use lookup column, not parent PK
                  and fsi_eventtype in (Material Change Detected, Risk Rating Changed)
                  and fsi_eventtimestamp ge @{addDays(utcNow(), -90)}
        - Count results
@@ -386,13 +395,13 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
 
 7. Mark Previous Ratings as Not Current
    - List rows: fsi_mrmriskratings
-     Filter: fsi_modelinventoryid eq '@{model.id}' and fsi_iscurrent eq true
+     Filter: _fsi_modelinventory_lookup_value eq @{model.id} and fsi_iscurrent eq true  // child tables use lookup column, not parent PK
    - Apply to each: Update row
      - fsi_iscurrent: false
 
 8. Create Risk Rating Record
    Create row: fsi_mrmriskratings
-   - fsi_modelinventoryid: @{model.id} (lookup)
+   - "fsi_ModelInventory_Lookup@odata.bind": "/fsi_modelinventories(@{model.id})"
    - fsi_compositerating: @{CompositeRating}
    - fsi_totalscore: @{TotalScore}
    - fsi_score_decisionimpact: @{decisionImpact}
@@ -416,7 +425,7 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
    - fsi_mrmtier: @{mrmTier}
    - fsi_validationcadence: @{cadence}
    - fsi_nextvalidationdue: @{addMonths(utcNow(), cadenceMonths)}
-   - fsi_mrmstatus: Risk Scored
+   - fsi_mrmstatus: 100000002    // Risk Scored
 
 10. Send Teams Notification
     Connection: fsi_cr_teams_mrm
@@ -484,9 +493,13 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
 2. Scope: Check for Existing Open Validation Cycle
    - List rows: fsi_validationcycles
-     Filter: fsi_modelinventoryid eq '@{ModelInventoryRecordId}'
+     Filter: _fsi_modelinventory_lookup_value eq @{ModelInventoryRecordId}
              and fsi_cyclestatus ne 100000006    // not Validated
              and fsi_cyclestatus ne 100000007    // not Rejected
+     Note: The parent reference on child tables is the lookup column
+           `fsi_modelinventory_lookup` (per create_mrm_dataverse_schema.py).
+           In Dataverse OData filters, lookup values use the
+           `_<logicalname>_value` form, with the GUID supplied without quotes.
    - Condition: length(results) > 0
      If Yes:
        - Create row: fsi_mrmcomplianceevents
@@ -501,17 +514,23 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
 4. Create Validation Cycle
    Create row: fsi_validationcycles
-   - fsi_modelinventoryid: @{ModelInventoryRecordId} (lookup)
+   - "fsi_ModelInventory_Lookup@odata.bind":
+       "/fsi_modelinventories(@{ModelInventoryRecordId})"
    - fsi_validationtype: @{ValidationType}
    - fsi_mrmtieratstart: @{model.fsi_mrmtier}
    - fsi_ratingatstart: @{model.fsi_currentriskrating}
-   - fsi_cyclestatus: Not Started
-   - fsi_cycleopeneddate: @{utcNow()}
+   - fsi_cyclestatus: 100000001    // Not Started
+   - fsi_submitteddate: @{utcNow()}
+   Note: Per schema, the cycle's open-time column is `fsi_submitteddate`
+         (not `fsi_cycleopeneddate`). Other lifecycle timestamps:
+         fsi_assigneddate, fsi_validationstartdate, fsi_findingsissueddate,
+         fsi_remediationduedate, fsi_remediationsubmitteddate,
+         fsi_validationcompleteddate.
 
 5. Update Model Inventory Status
    Update row: fsi_modelinventories
-   - fsi_mrmstatus: Validation Scheduled
-   - fsi_validationstatus: Submitted
+   - fsi_mrmstatus: 100000003    // Validation Scheduled
+   - fsi_validationstatus: 100000002    // Submitted
 
 6. STEP A — Validator Assignment
    6.1 Send approval (Start and wait for an approval)
@@ -555,12 +574,12 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
                If BOTH pass:
                  6.2.4 Update cycle:
                        - fsi_validatorupn: @{validatorUPN}
-                       - fsi_validatordisplayname: @{validatorDisplayName}
-                       - fsi_cyclestatus: In Progress
+                       - fsi_validatordepartment: @{validatorDepartment}  // schema has no fsi_validatordisplayname; resolve via Graph from fsi_validatorupn
+                       - fsi_cyclestatus: 100000003    // In Progress (option set fsi_mrm_cyclestatus is 1-based)
                        - fsi_assigneddate: @{utcNow()}
                  6.2.5 Update model inventory:
-                       - fsi_validationstatus: In Progress
-                       - fsi_mrmstatus: In Validation
+                       - fsi_validationstatus: 100000003    // In Progress
+                       - fsi_mrmstatus: 100000004    // In Validation
                  6.2.6 Send Teams notification to validator
                        Subject: "[MRM] Validation Assignment —
                                 @{model.fsi_agentname}"
@@ -577,12 +596,19 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
    7.1 Update cycle:
        - fsi_findingsissueddate: @{utcNow()}
-       - fsi_cyclestatus: Findings Issued
+       - fsi_cyclestatus: 100000004    // Findings Issued
 
    7.2 Count critical findings
        - List rows: fsi_validationfindings
-         Filter: fsi_validationcycleid eq '@{cycle.id}'
+         Filter: _fsi_validationcycle_lookup_value eq @{cycle.id}
                  and fsi_severity eq 100000001  // Critical
+         Note: Severity option set fsi_mrm_severity values are 1-based
+               (Critical=100000001, High=100000002, Medium=100000003,
+               Low=100000004). NOTE this differs from
+               fsi_mrm_compositerating which is 0-based
+               (Critical=100000000, High=100000001, Medium=100000002,
+               Low=100000003). Verify against
+               scripts/create_mrm_dataverse_schema.py before flow build.
 
    7.3 Condition: Critical findings count > 0
        If Yes:
@@ -596,7 +622,7 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
        Body: Finding count by severity, remediation SLA deadline,
              MRM Submission Portal link
 
-   7.5 Update model inventory: fsi_validationstatus = Findings Issued
+   7.5 Update model inventory: fsi_validationstatus = 100000004    // Findings Issued
 
 8. STEP C — Remediation Submitted (triggered by MRM Submission Portal)
    Note: Implement as trigger on fsi_validationcycles when
@@ -604,9 +630,9 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
    8.1 Update cycle:
        - fsi_remediationsubmitteddate: @{utcNow()}
-       - fsi_cyclestatus: Remediated
+       - fsi_cyclestatus: 100000005    // Remediated
 
-   8.2 Update model inventory: fsi_validationstatus = Remediated
+   8.2 Update model inventory: fsi_validationstatus = 100000005    // Remediated
 
    8.3 Send Teams notification to validator
        Subject: "[MRM] Remediation Submitted for Review —
@@ -621,11 +647,11 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
        If Yes (Validated/Conditionally Approved):
          9.1.1 Update cycle:
-               - fsi_cyclecloseddate: @{utcNow()}
-               - fsi_cyclestatus: Validated
+               - fsi_validationcompleteddate: @{utcNow()}
+               - fsi_cyclestatus: 100000006    // Validated
          9.1.2 Update model inventory:
-               - fsi_validationstatus: Validated
-               - fsi_mrmstatus: @{if(outcome == 'Conditionally Approved',
+               - fsi_validationstatus: 100000006    // Validated
+               - fsi_mrmstatus: @{if(equals(outcome, 'Conditionally Approved'), 100000006, 100000005)}    // 100000006 = Conditionally Approved, 100000005 = Validated
                    'Conditionally Approved', 'Validated')}
                - fsi_lastvalidateddate: @{utcNow()}
                - fsi_materialchangeflag: false  // reset
@@ -636,13 +662,13 @@ Orchestrates the end-to-end validation lifecycle: validator assignment with dual
 
        If No (Rejected):
          9.1.5 Update cycle:
-               - fsi_cyclecloseddate: @{utcNow()}
-               - fsi_cyclestatus: Rejected
+               - fsi_validationcompleteddate: @{utcNow()}
+               - fsi_cyclestatus: 100000007    // Rejected
                Note: Do NOT modify any other fields on the rejected
                cycle record — preserve it as-is for audit trail
          9.1.6 Update model inventory:
-               - fsi_validationstatus: Not Started
-               - fsi_mrmstatus: Rejected
+               - fsi_validationstatus: 100000001    // Not Started
+               - fsi_mrmstatus: 100000007    // Rejected
                Note: Reset validationstatus to Not Started so a new
                cycle can be opened. Do NOT reset materialchangeflag.
          9.1.7 Create compliance event: Validation Rejected
@@ -718,12 +744,12 @@ Performs weekly performance monitoring across all validated models, checks monit
 
    4.1 Create Monitoring Record (always — even with no data)
        Create row: fsi_monitoringrecords
-       - fsi_modelinventoryid: @{model.id}
+       - "fsi_ModelInventory_Lookup@odata.bind": "/fsi_modelinventories(@{model.id})"
        - fsi_monitoringdate: @{utcNow()}
        - fsi_datasource: @{if(dataAvailable, sourceType, 'Not Available')}
        - fsi_errorrate: @{errorRate} (null if unavailable)
        - fsi_escalationrate: @{escalationRate} (null if unavailable)
-       - fsi_outofscopecount: @{outOfScopeCount} (null if unavailable)
+       - fsi_outofscopetriggers: @{outOfScopeCount} (null if unavailable)
        Note: Always create a record — null metrics indicate data
        unavailability, which is itself a monitoring signal.
 
@@ -763,7 +789,7 @@ Performs weekly performance monitoring across all validated models, checks monit
                     @{breachedMetric} = @{value} (threshold: @{threshold})"
 
    4.5 Update monitoring record with threshold evaluation results
-       - fsi_thresholdbreached: @{ThresholdBreached} (or null)
+       - fsi_thresholdbreachflag: @{ThresholdBreached} (or null)
 
 5. Scope: SLA Breach Detection
    5.1 List rows: fsi_validationcycles
@@ -777,7 +803,7 @@ Performs weekly performance monitoring across all validated models, checks monit
 
        5.2.2 Check Assignment SLA
              Condition: fsi_assigneddate is null
-                        AND dateDiff('Day', fsi_cycleopeneddate, utcNow())
+                        AND dateDiff('Day', fsi_submitteddate, utcNow())
                         > AssignmentSLA
              Note: Null-safe — a null assignment date when the deadline
              has passed IS a breach (validator was never assigned)
@@ -874,14 +900,14 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
    2.1 Get row: fsi_modelinventories(@{ModelInventoryRecordId})
 
    2.2 List rows: fsi_mrmriskratings
-       Filter: fsi_modelinventoryid eq '@{model.id}'
+       Filter: _fsi_modelinventory_lookup_value eq @{model.id}  // child tables use lookup column
                and fsi_iscurrent eq true
        Top: 1
 
    2.3 List rows: fsi_validationcycles
-       Filter: fsi_modelinventoryid eq '@{model.id}'
+       Filter: _fsi_modelinventory_lookup_value eq @{model.id}  // child tables use lookup column
                and fsi_cyclestatus eq 100000006  // Validated
-       Order by: fsi_cyclecloseddate desc
+       Order by: fsi_validationcompleteddate desc
        Top: 1
 
 3. Determine Agent Card Version
@@ -911,13 +937,13 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
      },
      "modelIdentification": {
        "agentName": "@{model.fsi_agentname}",
-       "agentId": "@{model.fsi_agentid}",
-       "environmentName": "@{model.fsi_environmentname}",
-       "governanceZone": "@{model.fsi_governancezone}",
+       "modelId": "@{model.fsi_modelid}",
+       "environmentName": "@{agentRegRecord.fsi_environmentid}",
+       "zone": "@{model.fsi_zone}",
        "mrmTier": "@{model.fsi_mrmtier}",
        "modelProvider": "@{model.fsi_modelprovider}",
        "decisionOutputType": "@{model.fsi_decisionoutputtype}",
-       "owner": "@{model.fsi_ownerdisplayname}",
+       "ownerUpn": "@{model.fsi_ownerupn}",
        "ownerDepartment": "@{model.fsi_ownerdepartment}"
      },
      "pillar1_Development": {
@@ -929,7 +955,7 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
          Identical inputs may yield different responses across
          invocations. Validation and monitoring account for this
          inherent variability.",
-       "limitations": "@{model.fsi_limitations}"
+       "knownLimitations": "@{model.fsi_knownlimitations}"
      },
      "pillar2_Validation": {
        "riskRating": "@{rating.fsi_compositerating}",
@@ -945,7 +971,7 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
        },
        "lastValidatedDate": "@{model.fsi_lastvalidateddate}",
        "validationOutcome": "@{cycle.fsi_validationoutcome}",
-       "validatorName": "@{cycle.fsi_validatordisplayname}",
+       "validatorUpn": "@{cycle.fsi_validatorupn}",
        "validationCadence": "@{model.fsi_validationcadence}",
        "nextValidationDue": "@{model.fsi_nextvalidationdue}"
      },
@@ -968,8 +994,8 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
    5.2 Create file: Upload generated document to SharePoint
        Connection: fsi_cr_sharepoint_mrm
        Site Address: @{env.fsi_MRM_MRMSiteUrl}
-       Folder Path: /@{env.fsi_MRM_MRMAgentCardLibrary}/@{model.fsi_agentid}
-       File Name: AgentCard-@{model.fsi_agentid}-@{NewVersion}.docx
+       Folder Path: /@{env.fsi_MRM_MRMAgentCardLibrary}/@{model.fsi_modelid}  // canonical: fsi_modelid (e.g., MRM-2026-00001) per sharepoint-setup.md
+       File Name: @{model.fsi_modelid}-AgentCard-@{NewVersion}.docx
        File Content: @{outputs('Populate_Word_Template')?['body']}
 
    5.3 Set AgentCardFormat = "Word"
@@ -980,8 +1006,8 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
    6.1 Create file: Upload JSON to SharePoint
        Connection: fsi_cr_sharepoint_mrm
        Site Address: @{env.fsi_MRM_MRMSiteUrl}
-       Folder Path: /@{env.fsi_MRM_MRMAgentCardLibrary}/@{model.fsi_agentid}
-       File Name: AgentCard-@{model.fsi_agentid}-@{NewVersion}.json
+       Folder Path: /@{env.fsi_MRM_MRMAgentCardLibrary}/@{model.fsi_modelid}  // canonical: fsi_modelid (e.g., MRM-2026-00001) per sharepoint-setup.md
+       File Name: @{model.fsi_modelid}-AgentCard-@{NewVersion}.json
        File Content: @{outputs('Compose_AgentCard_JSON')}
 
    6.2 Set AgentCardFormat = "JSON"
@@ -1001,7 +1027,7 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
    - fsi_agentcardversion: @{NewVersion}
    - fsi_agentcardurl: @{uploadedFileUrl}
    - fsi_agentcardformat: @{AgentCardFormat}
-   - fsi_agentcardgenerateddate: @{utcNow()}
+   Note: The schema does not define a generated-date column for the Agent Card. Use the compliance event timestamp (step 8) for audit trail.
 
 8. Create Compliance Event
    Create row: fsi_mrmcomplianceevents
@@ -1061,9 +1087,7 @@ Sends an approval request to the MRM officer when a monitoring threshold is brea
 
 3. Scope: Check for Existing Open Validation Cycle
    - List rows: fsi_validationcycles
-     Filter: fsi_modelinventoryid eq '@{ModelInventoryRecordId}'
-             and fsi_cyclestatus ne 100000006    // not Validated
-             and fsi_cyclestatus ne 100000007    // not Rejected
+     Filter: _fsi_modelinventory_lookup_value eq @{ModelInventoryRecordId} and fsi_cyclestatus ne 100000006 and fsi_cyclestatus ne 100000007  // not Validated, not Rejected
    - Condition: length(results) > 0
      If Yes:
        - Create row: fsi_mrmcomplianceevents
@@ -1221,4 +1245,4 @@ Flow 5 requires a pre-deployed Word template at `/Templates/AgentCard-Template.d
 
 ---
 
-*Model Risk Management Automation v1.0.0*
+*Model Risk Management Automation v1.0.2*

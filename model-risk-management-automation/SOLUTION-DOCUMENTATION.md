@@ -1,6 +1,6 @@
 # Solution Documentation — Model Risk Management Automation
 
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Solution Name:** `model-risk-management-automation`
 **Repository:** FSI-AgentGov-Solutions
 
@@ -10,7 +10,7 @@
 
 ### 1.1 Problem Statement
 
-OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at all US banks and many insurance companies. Both have been explicitly confirmed to apply to AI and machine learning systems, including large language models and agentic AI deployed in customer-facing or decision-support roles.
+OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at all US banks and many insurance companies. The 2021 Interagency Request for Information confirmed these frameworks apply to traditional machine learning systems; their application to large language models and agentic AI is an active area of supervisory guidance and institutions should consult their legal and compliance teams when applying MRM to LLM-based agents.
 
 This solution automates three operational gaps examiners consistently cite:
 
@@ -35,7 +35,7 @@ This solution automates three operational gaps examiners consistently cite:
 | **Primary Control** | Control 2.6 — Model Risk Management (OCC 2011-12 / SR 11-7) |
 | **Secondary Controls** | 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
 | **Pillar** | Pillar 2: Management |
-| **Solution Type** | Detective + Preventive |
+| **Solution Type** | Detective (with optional preventive controls — e.g., gating production deployment until risk scoring is complete or validation findings are remediated) |
 | **Automation Level** | Event-Triggered + Scheduled + Approval-Gated |
 
 ### 1.4 MRM Scope Decision Matrix
@@ -71,7 +71,7 @@ This solution automates three operational gaps examiners consistently cite:
 | Table 6 | fsi_mrmcomplianceevent | Dataverse | Immutable audit log |
 | App 1 | MRM Submission Portal | Canvas App | Owner submission and MRM team management |
 | App 2 | Validation Workbench | Model-Driven App | Independent validator interface |
-| Dashboard | MRM Compliance Dashboard | Power BI | Examiner-ready reporting |
+| Dashboard | MRM Compliance Dashboard | Power BI | Examiner-facing reporting |
 
 ### 2.2 Dependencies
 
@@ -91,7 +91,11 @@ This solution requires `agent-registry-automation` to be deployed in the same Da
 
 ### Authentication
 
-All flows and scripts use **System-Assigned Managed Identity**. No client secrets, no personal tokens. Tokens acquired via `Get-AzAccessToken`.
+**Power Automate flows** use Power Platform connection references (Dataverse, SharePoint, Microsoft Teams, Office 365 Outlook). Service principal or delegated user authentication is configured per environment.
+
+**PowerShell scripts** (e.g., `Deploy-MRM-Baseline.ps1`, `Test-MRMCompliance.ps1`) use Azure managed identity in production (`Get-AzAccessToken`); for local development, run `Connect-AzAccount` first.
+
+**Python deployment scripts** (`create_mrm_*.py`) use MSAL with three supported auth modes: interactive (`--interactive`), service principal (`--client-id` + `--client-secret`), or device code. See README Quick Start for examples.
 
 ---
 
@@ -169,7 +173,7 @@ Build instructions are in [docs/powerbi-dashboard.md](docs/powerbi-dashboard.md)
 | Script | Purpose | Location |
 |--------|---------|----------|
 | Deploy-MRM-Baseline.ps1 | Initial agent inventory export for MRM team review | scripts/ |
-| Test-MRMCompliance.ps1 | Examiner-ready compliance posture report | scripts/ |
+| Test-MRMCompliance.ps1 | examiner-facing compliance posture report | scripts/ |
 
 Both scripts authenticate via System-Assigned Managed Identity and parameterize OptionSet integer values.
 
@@ -220,7 +224,7 @@ model-risk-management-automation/
 - Flow 1 detects all 5 material change criteria; does not overwrite MRM-managed fields
 - Flow 2 produces complete 7-factor risk scores; handles all provider values
 - Flow 2 auto-triggers Flow 3 for Tier 1/2 agents
-- Flow 3 enforces dual AND independence check
+- Flow 3 applies dual AND independence check
 - Flow 3 validation status transitions are one-directional
 - Flow 4 creates monitoring records every week even with no data
 - Flow 4 SLA breach detection uses null-safe logic
