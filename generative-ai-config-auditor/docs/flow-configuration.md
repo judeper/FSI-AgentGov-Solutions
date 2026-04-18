@@ -154,7 +154,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 
 ### Step 7: Write Validation History to Dataverse
 
-> **Why this runs before alerting:** The audit trail record is created regardless of whether alerting succeeds or fails. This supports compliance with FINRA 4511 and SEC 17a-3 audit trail requirements.
+> **Why this runs before alerting:** The audit trail record is created regardless of whether alerting succeeds or fails. This supports compliance with FINRA Rule 4511 and SEC Rule 17a-3 audit trail requirements.
 
 1. Add action: **Dataverse** > **Add a new row**
 2. Table: `GAC Validation History` (`fsi_GACValidationHistory`)

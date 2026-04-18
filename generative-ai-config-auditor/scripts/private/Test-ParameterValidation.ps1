@@ -13,7 +13,7 @@
     Requires: PowerShell 7.0+
 #>
 
-#requires -Version 7.0
+#Requires -Version 7.4
 
 function Test-EnvironmentFilter {
     <#

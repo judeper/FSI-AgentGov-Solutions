@@ -20,7 +20,7 @@
     Control: 2.24 (Agent Feature Enablement Governance)
 #>
 
-#Requires -Version 7.0
+#Requires -Version 7.4
 
 function Compare-GenAIConfigCompliance {
     <#
@@ -198,7 +198,7 @@ function Compare-GenAIConfigCompliance {
                     ViolationType    = 'AoaiNotAllowed'
                     Description      = "Azure OpenAI is enabled but not permitted in $agentZone"
                     Severity         = $policy.AoaiViolationSeverity
-                    RegulatoryContext = "FINRA 3110 - supervisory controls for AI model usage; $($policy.RegulatoryContext)"
+                    RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI model usage; $($policy.RegulatoryContext)"
                 }
             }
 
@@ -210,7 +210,7 @@ function Compare-GenAIConfigCompliance {
                         ViolationType    = 'OrchestrationModeNotAllowed'
                         Description      = "Orchestration mode '$($agent.OrchestrationMode)' is not permitted in $agentZone (allowed: $($policy.AllowedOrchestrationModes -join ', '))"
                         Severity         = $policy.OrchestrationViolationSeverity
-                        RegulatoryContext = "GLBA 501(b) - safeguard controls for generative orchestration; $($policy.RegulatoryContext)"
+                        RegulatoryContext = "GLBA Section 501(b) - safeguard controls for generative orchestration; $($policy.RegulatoryContext)"
                     }
                 }
             }
@@ -221,20 +221,44 @@ function Compare-GenAIConfigCompliance {
                     ViolationType    = 'GenerativeAnswersNotAllowed'
                     Description      = "Agent has $($agent.GenerativeAnswersNodeCount) generative answers node(s) but generative answers are not permitted in $agentZone"
                     Severity         = $policy.GenAnswersViolationSeverity
-                    RegulatoryContext = "SOX 404 - internal control over generative content; $($policy.RegulatoryContext)"
+                    RegulatoryContext = "SOX Section 404 - internal control over generative content; $($policy.RegulatoryContext)"
                 }
             }
 
-            # Rule 4: AOAI connection whitelist validation
-            if ($agent.AoaiConnectionId -and $null -ne $approvedConnections) {
-                $approvalKey = "$($agent.AoaiConnectionId)|$agentZone"
-                if (-not $approvedConnections.ContainsKey($approvalKey)) {
-                    $violations += [PSCustomObject]@{
-                        ViolationType    = 'UnapprovedAoaiConnection'
-                        Description      = "AOAI connection '$($agent.AoaiConnectionId)' is not in the approved connections whitelist"
-                        Severity         = $policy.WhitelistViolationSeverity
-                        RegulatoryContext = "FINRA 3110 - approved vendor controls; $($policy.RegulatoryContext)"
+            # Rule 4: AOAI connection whitelist validation (fail-closed)
+            # If AOAI is enabled at the agent and we have a connection ID, the connection MUST appear
+            # in the approved-connections store. If the whitelist could not be loaded ($approvedConnections
+            # is $null) and the agent zone enforces the whitelist (Zone 2/3), emit a Critical violation
+            # rather than silently passing — this is an audit control bypass.
+            $whitelistEnforcedZones = @('Zone2', 'Zone3')
+            if ($agent.AoaiConnectionId) {
+                if ($null -eq $approvedConnections) {
+                    if ($whitelistEnforcedZones -contains $agentZone) {
+                        $violations += [PSCustomObject]@{
+                            ViolationType    = 'AuditControlBypass'
+                            Description      = "AOAI connection whitelist could not be loaded for $agentZone agent — fail-closed; connection '$($agent.AoaiConnectionId)' cannot be validated"
+                            Severity         = 'Critical'
+                            RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI vendor oversight; $($policy.RegulatoryContext)"
+                        }
                     }
+                } else {
+                    $approvalKey = "$($agent.AoaiConnectionId)|$agentZone"
+                    if (-not $approvedConnections.ContainsKey($approvalKey)) {
+                        $violations += [PSCustomObject]@{
+                            ViolationType    = 'UnapprovedAoaiConnection'
+                            Description      = "AOAI connection '$($agent.AoaiConnectionId)' is not in the approved connections whitelist for $agentZone"
+                            Severity         = $policy.WhitelistViolationSeverity
+                            RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI vendor oversight; $($policy.RegulatoryContext)"
+                        }
+                    }
+                }
+            } elseif ($agent.AzureOpenAIEnabled -eq 'Yes' -and ($whitelistEnforcedZones -contains $agentZone)) {
+                # AOAI enabled but no connection ID extracted in a whitelist-enforced zone — fail-closed.
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'UnresolvedAoaiConnection'
+                    Description      = "AOAI is enabled in $agentZone but the connection ID could not be extracted from agent configuration; whitelist validation cannot proceed"
+                    Severity         = $policy.WhitelistViolationSeverity
+                    RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI vendor oversight; $($policy.RegulatoryContext)"
                 }
             }
 
@@ -244,7 +268,7 @@ function Compare-GenAIConfigCompliance {
                     ViolationType    = 'UnauthorizedModelKnowledge'
                     Description      = "Model Knowledge (AI general knowledge) is enabled but policy is '$($policy.ModelKnowledgePolicy)' in $agentZone"
                     Severity         = $policy.ModelKnowledgeViolationSeverity
-                    RegulatoryContext = "FINRA 3110 - supervisory controls for AI knowledge sources; $($policy.RegulatoryContext)"
+                    RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI knowledge sources; $($policy.RegulatoryContext)"
                 }
             }
 
@@ -254,7 +278,7 @@ function Compare-GenAIConfigCompliance {
                     ViolationType    = 'UnauthorizedSemanticSearch'
                     Description      = "Semantic Search (Dataverse vector search) is enabled but requires explicit approval in $agentZone"
                     Severity         = $policy.SemanticSearchViolationSeverity
-                    RegulatoryContext = "SOX 404 - internal control over data search capabilities; $($policy.RegulatoryContext)"
+                    RegulatoryContext = "SOX Section 404 - internal control over data search capabilities; $($policy.RegulatoryContext)"
                 }
             }
 

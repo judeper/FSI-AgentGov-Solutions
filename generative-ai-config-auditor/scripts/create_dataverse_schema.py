@@ -405,7 +405,7 @@ TABLES = {
         "plural": "GAC Validation History",
         "description": (
             "Immutable scan summary records for regulatory evidence "
-            "(supports compliance with FINRA 4511, SEC 17a-3)"
+            "(supports compliance with FINRA Rule 4511, SEC Rule 17a-3)"
         ),
         "ownership": "OrganizationOwned",
         "columns": HISTORY_COLUMNS,

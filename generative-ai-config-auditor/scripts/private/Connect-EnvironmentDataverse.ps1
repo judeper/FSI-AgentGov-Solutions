@@ -46,7 +46,7 @@
     Requires: PowerShell 7.0+
 #>
 
-#requires -Version 7.0
+#Requires -Version 7.4
 
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
@@ -165,7 +165,11 @@ try {
 
     Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
 
-    $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    try {
+        $tokenResult = Get-AzAccessToken -ResourceUri $normalizedUrl -ErrorAction Stop
+    } catch [System.Management.Automation.ParameterBindingException] {
+        $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    }
 
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime

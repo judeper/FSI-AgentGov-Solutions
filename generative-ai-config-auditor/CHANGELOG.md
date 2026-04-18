@@ -2,6 +2,25 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [1.1.0] - 2026-04-17
+
+### Fixed
+
+- **Critical:** Save-GACBaseline boolean coercion bug — `[bool]$AzureOpenAIEnabled` parameter received string values ("Yes"/"No") which PowerShell coerced to `$true` for any non-empty string, causing baselines to falsely record AOAI as enabled. Caller now converts string state to `[bool]` before invocation.
+- **Critical:** Baseline persistence omitted ModelKnowledgeEnabled and SemanticSearchEnabled toggles even though schema columns exist; runbook drift detection compared only AOAI/orchestration/genanswers. Both toggles are now persisted via `fsi_modelknowledgeenabled`/`fsi_semanticsearchenabled` and surfaced in drift detection.
+- **Critical:** Compliance scan returned a green PASS when zero agents enumerated — masking authentication or Dataverse failures. Test-GenAIConfigCompliance now throws unless `-AllowEmptyResultSet` is supplied. Runbook wraps the scan in a fail-closed catch that records an `AuditControlBypass` Critical run when the scan fails.
+- **Critical:** AOAI connection whitelist validation silently skipped when the approved-connections store could not be loaded. Compare-GenAIConfigCompliance now emits a Critical `AuditControlBypass` violation in Zone 2/3 when the whitelist is unavailable, and an `UnresolvedAoaiConnection` violation when AOAI is enabled but the connection ID could not be extracted.
+- **High:** Az.Accounts cmdlet `Get-AzAccessToken -ResourceUrl` is deprecated in newer module versions. Connect-EnvironmentDataverse, Import-ApprovedAoaiConnections, and GACClient.psm1 now use `-ResourceUri` with a backward-compatible `-ResourceUrl` fallback.
+- **High:** Import-ApprovedAoaiConnections idempotency key was ConnectionId-only; the same connection approved for multiple zones with different policies created duplicate or overwriting records. Idempotency key is now (ConnectionId, Zone).
+- **High:** `ApprovedBy` is required by the Dataverse schema but the importer treated it as optional and silently omitted it. Importer now fails-closed per row when neither `-ApprovedBy` nor an `ApprovedBy` CSV column is provided.
+- **High:** AgentId GUID values surfaced from Power Platform APIs occasionally include enclosing braces `{}` which Dataverse rejects. Save-GACBaseline now trims braces.
+- Regulatory citations standardized: `FINRA 3110` → `FINRA Rule 3110(a)(1)` (with "supports supervisory expectations" qualifier), `SEC 17a-3`/`17a-4` → `SEC Rule 17a-3`/`17a-4`, `SOX 404` → `SOX Section 404`, `GLBA 501(b)` → `GLBA Section 501(b)`.
+
+### Changed
+
+- `#Requires -Version` bumped from 7.0 to 7.4 across all entry-point scripts to align with `Get-Date -AsUTC` and shared module expectations.
+- `bot_botsettings` query in Get-AgentGenAISettings clarified as an optional extension table — fall-through behavior is expected when customers have not added platform-side fsi_* columns.
+
 ## [1.0.1] - 2026-04-15
 
 ### Fixed

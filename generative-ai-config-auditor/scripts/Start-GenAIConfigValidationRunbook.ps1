@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
@@ -225,6 +225,32 @@ function Get-GenAIConfigDriftDirection {
         if ($direction -eq 'Decreased') { $hasStrengthened = $true }
     }
 
+    # Check Model Knowledge toggle drift (Yes/No comparison; Yes-after-No is Weakened)
+    if ($null -ne $Baseline.ModelKnowledgeEnabled -and $null -ne $Current.ModelKnowledgeEnabled -and
+        $Baseline.ModelKnowledgeEnabled -ne $Current.ModelKnowledgeEnabled) {
+        $direction = if ($Current.ModelKnowledgeEnabled -eq 'Yes') { 'Weakened' } else { 'Strengthened' }
+        $changes += [PSCustomObject]@{
+            Field     = 'ModelKnowledgeEnabled'
+            Baseline  = $Baseline.ModelKnowledgeEnabled
+            Current   = $Current.ModelKnowledgeEnabled
+            Direction = $direction
+        }
+        if ($direction -eq 'Weakened') { $hasWeakened = $true } else { $hasStrengthened = $true }
+    }
+
+    # Check Semantic Search toggle drift
+    if ($null -ne $Baseline.SemanticSearchEnabled -and $null -ne $Current.SemanticSearchEnabled -and
+        $Baseline.SemanticSearchEnabled -ne $Current.SemanticSearchEnabled) {
+        $direction = if ($Current.SemanticSearchEnabled -eq 'Yes') { 'Weakened' } else { 'Strengthened' }
+        $changes += [PSCustomObject]@{
+            Field     = 'SemanticSearchEnabled'
+            Baseline  = $Baseline.SemanticSearchEnabled
+            Current   = $Current.SemanticSearchEnabled
+            Direction = $direction
+        }
+        if ($direction -eq 'Weakened') { $hasWeakened = $true } else { $hasStrengthened = $true }
+    }
+
     # Overall direction
     $overallDirection = if ($hasWeakened -and $hasStrengthened) {
         'Mixed'
@@ -330,7 +356,30 @@ try {
     if (-not $IncludeSandbox) { $scanParams['ExcludeSandbox'] = $true }
     if ($IncludeDrafts)       { $scanParams['IncludeDrafts'] = $true }
 
-    $scanResult = Test-GenAIConfigCompliance @scanParams
+    try {
+        $scanResult = Test-GenAIConfigCompliance @scanParams
+    } catch {
+        # Fail-closed: if the scan throws (auth failure, empty result without -AllowEmptyResultSet,
+        # Dataverse outage), record a Critical AuditControlBypass run and surface it.
+        Write-Warning "Test-GenAIConfigCompliance failed: $($_.Exception.Message). Recording fail-closed AuditControlBypass run."
+        return [PSCustomObject]@{
+            RunId             = [guid]::NewGuid().ToString()
+            OverallStatus     = 'Error'
+            AlertRequired     = $true
+            AlertSeverity     = 'Critical'
+            ViolationType     = 'AuditControlBypass'
+            ErrorMessage      = $_.Exception.Message
+            TotalAgents       = 0
+            EnvironmentsScanned = 0
+            ViolationCount    = 0
+            CompliantCount    = 0
+            CriticalCount     = 1
+            HighCount         = 0
+            MediumCount       = 0
+            ScanTimestamp     = (Get-Date).ToUniversalTime().ToString('o')
+            RegulatoryContext = 'Supports supervisory expectations under FINRA Rule 3110(a)(1) — scan execution failure recorded for audit traceability'
+        }
+    }
 
     # Wrap single result in array
     if ($null -eq $scanResult) {

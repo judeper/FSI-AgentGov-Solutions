@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules Az.Accounts
 
 <#
@@ -113,7 +113,11 @@ function Get-DataverseToken {
     }
 
     $resource = $EnvironmentUrl.TrimEnd('/')
-    $tokenResult = Get-AzAccessToken -ResourceUrl $resource -ErrorAction Stop
+    try {
+        $tokenResult = Get-AzAccessToken -ResourceUri $resource -ErrorAction Stop
+    } catch [System.Management.Automation.ParameterBindingException] {
+        $tokenResult = Get-AzAccessToken -ResourceUrl $resource -ErrorAction Stop
+    }
 
     if (-not $tokenResult.Token) {
         throw "Failed to acquire Dataverse access token for $resource"
@@ -183,16 +187,20 @@ function Invoke-DataverseRequest {
 function Find-ExistingConnection {
     <#
     .SYNOPSIS
-        Checks if an approved connection record already exists by ConnectionId.
+        Checks if an approved connection record already exists by ConnectionId AND Zone.
+    .DESCRIPTION
+        Idempotency key is (ConnectionId, Zone) — the same connection can be approved for
+        multiple zones with different policies, so the lookup must include both.
     #>
     param(
         [string]$BaseUrl,
         [string]$Token,
-        [string]$ConnectionId
+        [string]$ConnectionId,
+        [int]$Zone
     )
 
-    $filter = "`$filter=fsi_connectionid eq '$ConnectionId'"
-    $select = "`$select=fsi_gacapprovedconnectionid,fsi_connectionid,fsi_connectionname,fsi_isactive"
+    $filter = "`$filter=fsi_connectionid eq '$ConnectionId' and fsi_zone eq $Zone"
+    $select = "`$select=fsi_gacapprovedconnectionid,fsi_connectionid,fsi_connectionname,fsi_zone,fsi_isactive"
     $uri = "$BaseUrl/api/data/$ApiVersion/${TableName}?${filter}&${select}"
 
     $result = Invoke-DataverseRequest -Method 'GET' -Uri $uri -Token $Token
@@ -290,6 +298,13 @@ foreach ($row in $csvData) {
         'fsi_approvedat'     = (Get-Date).ToUniversalTime().ToString('o')
     }
 
+    # ApprovedBy is required by schema — fail-closed if neither CSV nor parameter provides it.
+    if (-not $rowApprovedBy) {
+        Write-Warning "Skipping row '$connectionId': ApprovedBy is required (provide -ApprovedBy or include ApprovedBy column)."
+        $skipped++
+        continue
+    }
+
     if ($rowApprovedBy) {
         $record['fsi_approvedby'] = $rowApprovedBy
     }
@@ -299,8 +314,8 @@ foreach ($row in $csvData) {
     }
 
     try {
-        # Check for existing record (idempotent)
-        $existing = Find-ExistingConnection -BaseUrl $BaseUrl -Token $DataverseToken -ConnectionId $connectionId
+        # Check for existing record (idempotent on ConnectionId + Zone)
+        $existing = Find-ExistingConnection -BaseUrl $BaseUrl -Token $DataverseToken -ConnectionId $connectionId -Zone $ZoneOptionSetMap[$zone]
 
         if ($existing) {
             # Update existing record

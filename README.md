@@ -32,7 +32,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated environment provisioning with zone-based governance classification | v1.2.0 | 2.1, 2.2, 2.8, 1.7 |
 | [File Upload Security Configurator](./file-upload-security/) | Per-agent file upload validation against zone governance policies with drift detection | v1.1.0 | 1.14, 1.8, 1.4 |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.1 | 2.12, 1.10, 1.7 |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.0.1 | 2.24 |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.1.0 | 2.24 |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.0.0 | 3.10, 2.9, 2.12 |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.0.1 | 2.12, 2.17, 1.10 |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.5 | 2.22, 1.23, 3.7, 3.8 |

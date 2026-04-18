@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules MSAL.PS  # Deprecated: migrating to Azure.Identity; MSAL.PS still required for Dataverse token acquisition
 
 <#
@@ -371,15 +371,24 @@ try {
             RetrievedAt                = $agent.RetrievedAt
         } | ConvertTo-Json -Compress
 
+        # Coerce string toggle values ('Yes'/'No'/'Unable to Determine') to real booleans.
+        # PowerShell's auto-coerce of non-empty strings to $true would otherwise turn 'No' into $true.
+        $aoaiBool             = $agent.AzureOpenAIEnabled    -eq 'Yes'
+        $modelKnowledgeBool   = $agent.ModelKnowledgeEnabled -eq 'Yes'
+        $semanticSearchBool   = $agent.SemanticSearchEnabled -eq 'Yes'
+
         $saveResult = Save-GACBaseline `
             -EnvironmentGuid $envId `
             -EnvironmentName $envName `
             -Zone $agentZone `
             -AgentId $agent.AgentId `
             -AgentName $agent.AgentName `
-            -AzureOpenAIEnabled $agent.AzureOpenAIEnabled `
+            -AzureOpenAIEnabled $aoaiBool `
             -OrchestrationMode $agent.OrchestrationMode `
             -GenerativeAnswersNodeCount $agent.GenerativeAnswersNodeCount `
+            -ModelKnowledgeEnabled $modelKnowledgeBool `
+            -SemanticSearchEnabled $semanticSearchBool `
+            -AoaiConnectionId $agent.AoaiConnectionId `
             -CapturedBy $CapturedBy `
             -RawJson $rawJson
 

@@ -9,7 +9,7 @@ Validates generative AI feature configurations (Azure OpenAI integration, genera
 | Status | In Development |
 | Version | 1.0.1 |
 | Primary Control | [2.24 -- Agent Feature Enablement Governance](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-governance/) |
-| Regulatory Context | FINRA 3110, GLBA 501(b), SOX 404 |
+| Regulatory Context | FINRA Rule 3110, GLBA Section 501(b), SOX Section 404 |
 
 ## Overview
 
@@ -51,7 +51,7 @@ Each governance zone defines which generative AI features are permitted and unde
 | **Multiple Output Formats** | Table (human-readable), JSON (archival), Object (pipeline) |
 | **Dry-Run Mode** | Preview violations without persisting results |
 | **Severity Classification** | Critical/High/Medium/Warning per zone and violation type |
-| **Regulatory Context** | FINRA 3110, SOX 404, GLBA 501(b) context for each violation |
+| **Regulatory Context** | FINRA Rule 3110, SOX Section 404, GLBA Section 501(b) context for each violation |
 | **Environment Filtering** | Exclude sandbox, trial, default, or newly provisioned environments |
 | **Baseline Drift Detection** | Daily baseline comparison detects generative AI configuration changes |
 | **Teams/Email Alerting** | Adaptive card alerts with severity classification and regulatory context |
@@ -155,7 +155,7 @@ Copilot Studio generative AI feature governance controls have moved from **Envir
 Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice enablement introduces additional governance considerations:
 
 - **Zone 3 agents** with voice capabilities may require explicit approval before enabling real-time voice mode, due to telephony channel exposure
-- Voice-enabled agents generate speech transcripts that may fall under FINRA 4511 and SEC 17a-4 record-keeping requirements
+- Voice-enabled agents generate speech transcripts that may fall under FINRA Rule 4511 and SEC Rule 17a-4 record-keeping requirements
 - Organizations should evaluate whether voice feature toggles require the same zone-based governance as other GenAI features audited by this solution
 
 > **Note:** Voice configuration governance is not yet automated in GAC scripts. Organizations should include voice enablement in their manual feature governance reviews until automated support is added.

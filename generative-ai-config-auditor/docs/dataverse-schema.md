@@ -47,7 +47,7 @@ Organization-owned immutable scan summary records. Each record represents one co
 
 **Ownership:** OrganizationOwned
 **Primary Name Column:** `fsi_Name`
-**Immutability:** Records are created once and never updated. This supports audit trail requirements for FINRA 4511 and SEC 17a-3/4.
+**Immutability:** Records are created once and never updated. This supports audit trail requirements for FINRA Rule 4511 and SEC Rule 17a-3/4.
 **Description:** Immutable scan summary records for regulatory evidence
 
 | Column (SchemaName) | Type | Required | Description |

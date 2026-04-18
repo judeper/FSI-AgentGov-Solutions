@@ -21,7 +21,7 @@
     Control: 2.24 (Agent Feature Enablement Governance)
 #>
 
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Get-AgentGenAISettings {
@@ -277,7 +277,12 @@ function Get-AgentGenAISettings {
             'OData-Version'    = '4.0'
         }
 
-        #region Query bot_botsetting for AOAI toggle and orchestration mode
+        #region Query bot_botsetting for AOAI toggle and orchestration mode (optional extension table)
+        # NOTE: This block reads fsi_* columns that customers may have added as extension columns
+        # on the platform `bot_botsettings` table. If those columns are not present, Dataverse
+        # returns 400 Bad Request and we fall through to the bot.configuration JSON parser below.
+        # Most deployments will rely on the JSON parser path; the extension table is an optional
+        # accelerator and not required for the auditor to function.
 
         try {
             $settingsUri = "$baseUrl/api/data/v9.2/bot_botsettings?" +
@@ -315,8 +320,9 @@ function Get-AgentGenAISettings {
                 }
             }
         } catch {
-            # bot_botsetting may not exist in all environments -- fall back gracefully
-            Write-Verbose "bot_botsetting query failed for $($Bot.name): $($_.Exception.Message)"
+            # Optional extension columns not present (or platform table inaccessible) — fall through
+            # to the bot.configuration JSON parser. This is the expected default path.
+            Write-Verbose "bot_botsetting extension query unavailable for $($Bot.name): $($_.Exception.Message). Falling back to bot.configuration JSON parser."
         }
 
         #endregion

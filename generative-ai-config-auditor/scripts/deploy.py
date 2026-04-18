@@ -34,7 +34,7 @@ Post-Deployment Steps
 1. SECURITY — Configure fsi_GACValidationHistory security role:
    - Navigate to Settings > Security > Security Roles
    - Remove Write and Delete privileges for fsi_GACValidationHistory
-   - This supports immutable audit records (FINRA 4511, SEC 17a-3)
+   - This supports immutable audit records (FINRA Rule 4511, SEC Rule 17a-3)
 
 2. CONNECTIONS — Bind connection references in Power Automate:
    - fsi_cr_dataverse_genaiconfigauditor       → Select Dataverse connection

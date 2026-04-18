@@ -19,7 +19,7 @@
     Author: FSI Agent Governance Team
 #>
 
-#requires -Version 7.0
+#Requires -Version 7.4
 
 #region Module Variables
 
@@ -158,7 +158,11 @@ function Connect-GACDataverse {
     } else {
         # Attempt to get token via Az.Accounts
         try {
+            try {
+            $token = Get-AzAccessToken -ResourceUri "$script:DataverseUrl" -ErrorAction Stop
+        } catch [System.Management.Automation.ParameterBindingException] {
             $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
+        }
             if ($token.Token -is [System.Security.SecureString]) {
                 $script:AccessToken = $token.Token | ConvertFrom-SecureString -AsPlainText
             } else {
@@ -342,10 +346,12 @@ function Get-GACBaseline {
                 Zone                       = $zoneName
                 AgentId                    = $_.fsi_agentid
                 AgentName                  = $_.fsi_agentname
-                AzureOpenAIEnabled         = $_.fsi_aoaienabled
+                AzureOpenAIEnabled         = if ($null -ne $_.fsi_aoaienabled) { if ($_.fsi_aoaienabled) { 'Yes' } else { 'No' } } else { $null }
                 OrchestrationMode          = $orchName
                 KnowledgeSourceCount       = $_.fsi_knowledgesourcecount
                 GenerativeAnswersNodeCount = $_.fsi_generativeanswersnodecount
+                ModelKnowledgeEnabled      = if ($null -ne $_.fsi_modelknowledgeenabled) { if ($_.fsi_modelknowledgeenabled) { 'Yes' } else { 'No' } } else { $null }
+                SemanticSearchEnabled      = if ($null -ne $_.fsi_semanticsearchenabled) { if ($_.fsi_semanticsearchenabled) { 'Yes' } else { 'No' } } else { $null }
                 AoaiConnectionId           = $_.fsi_aoaiconnectionid
                 CapturedBy                 = $_.fsi_capturedby
                 CapturedAt                 = $_.fsi_capturedat
@@ -559,6 +565,12 @@ function Save-GACBaseline {
         [int]$GenerativeAnswersNodeCount = 0,
 
         [Parameter()]
+        [bool]$ModelKnowledgeEnabled,
+
+        [Parameter()]
+        [bool]$SemanticSearchEnabled,
+
+        [Parameter()]
         [string]$AoaiConnectionId,
 
         [Parameter()]
@@ -582,7 +594,9 @@ function Save-GACBaseline {
             'OData-Version'    = '4.0'
         }
 
-        # Validate GUID format to prevent OData injection
+        # Validate GUID format to prevent OData injection.
+        # Trim curly braces in case Dataverse returns botid in {guid} form.
+        $AgentId = $AgentId.Trim('{','}')
         $guidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
         if ($AgentId -notmatch $guidPattern) {
             throw "AgentId '$AgentId' is not a valid GUID format."
@@ -638,6 +652,15 @@ function Save-GACBaseline {
         # Add orchestration mode if resolved
         if ($null -ne $orchInt) {
             $record['fsi_orchestrationmode'] = $orchInt
+        }
+
+        # Persist Model Knowledge / Semantic Search toggles so drift detection
+        # can compare them on subsequent runs (Rules 5 & 6 in Compare-GenAIConfigCompliance).
+        if ($PSBoundParameters.ContainsKey('ModelKnowledgeEnabled')) {
+            $record['fsi_modelknowledgeenabled'] = $ModelKnowledgeEnabled
+        }
+        if ($PSBoundParameters.ContainsKey('SemanticSearchEnabled')) {
+            $record['fsi_semanticsearchenabled'] = $SemanticSearchEnabled
         }
 
         # Add AOAI connection ID if provided

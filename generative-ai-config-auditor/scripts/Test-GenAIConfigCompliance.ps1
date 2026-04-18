@@ -24,12 +24,12 @@
     Version: 1.0.0
     Solution: Generative AI Config Auditor (GAC)
     Control: 2.24 (Agent Feature Enablement Governance)
-    Regulations: FINRA 3110, GLBA 501(b), SOX 404
+    Regulations: FINRA Rule 3110, GLBA Section 501(b), SOX Section 404
 
     Part of FSI Agent Governance Framework
 #>
 
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Test-GenAIConfigCompliance {
@@ -129,6 +129,9 @@ function Test-GenAIConfigCompliance {
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
+        [Parameter()]
+        [switch]$AllowEmptyResultSet,
+
         [Parameter()]
         [ValidateSet('Table', 'Json', 'Object')]
         [string]$OutputFormat = 'Table',
@@ -343,7 +346,13 @@ function Test-GenAIConfigCompliance {
     }
 
     if (-not $agentSettings -or $agentSettings.Count -eq 0) {
-        Write-Warning "No agents found matching the specified criteria."
+        # Fail-closed: zero agents may indicate a real result OR an upstream auth/connectivity failure.
+        # Throwing here prevents the runbook from recording a green PASS for a misconfigured scan.
+        if (-not $AllowEmptyResultSet) {
+            throw "No agents enumerated across the targeted environments. This may indicate authentication failure, connectivity issues, or a genuine empty result. Pass -AllowEmptyResultSet to opt in to recording an empty scan as a successful run."
+        }
+
+        Write-Warning "No agents found matching the specified criteria. -AllowEmptyResultSet specified; recording an empty scan as PASS."
 
         Write-Host "`n=== Generative AI Config Compliance Scan ===" -ForegroundColor Cyan
         Write-Host "Environments scanned: 0"
