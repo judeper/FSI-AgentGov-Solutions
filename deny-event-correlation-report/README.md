@@ -21,11 +21,20 @@ This solution provides automated extraction, correlation, and visualization of d
 
 This solution supports compliance evidence for:
 
-- **FINRA 4511** - Records retention (enforceable rule)
-- **SEC 17a-3/4** - Supervision evidence (enforceable rule)
-- **GLBA 501(b)** - Safeguards evidence (enforceable rule)
-- **FINRA Regulatory Notice 24-09** - Generative AI governance (supervisory guidance, not an enforceable rule)
-- **OCC 2011-12** - Model risk controls (supervisory guidance, not an enforceable rule)
+- **FINRA 4511** - Books and records (enforceable rule); helps support
+  retention of supervisory artifacts when paired with WORM storage and a
+  retention schedule.
+- **SEC 17a-3 / 17a-4** - Records to be made / records preservation
+  (enforceable rules); the deny-event CSVs and KQL outputs can serve as
+  ancillary supervisory records when stored on a 17a-4(f)-compliant
+  electronic storage system. This solution does not by itself constitute a
+  full 17a-4 compliance program — engage qualified counsel.
+- **GLBA 501(b)** - Safeguards (enforceable rule); helps demonstrate
+  monitoring of access denials on customer NPI.
+- **FINRA Regulatory Notice 24-09** - Generative AI governance
+  (supervisory guidance, not an enforceable rule)
+- **OCC 2011-12 / Fed SR 11-7** - Model risk management (supervisory
+  guidance, not enforceable rules)
 
 ## Contents
 
@@ -69,9 +78,12 @@ deny-event-correlation-report/
 
 ```powershell
 # Install required modules
-Install-Module ExchangeOnlineManagement -Force
+Install-Module ExchangeOnlineManagement -MinimumVersion 3.0.0 -Force
+Install-Module Az.Accounts -MinimumVersion 2.17.0 -Force
 Install-Module Az.Storage -Force
 Install-Module Az.KeyVault -Force
+# Optional — only required when extracting Defender CloudAppEvents:
+# Install-Module Microsoft.Graph.Security -Force
 
 # Connect to Exchange Online
 Connect-ExchangeOnline
@@ -80,8 +92,11 @@ Connect-ExchangeOnline
 .\scripts\Export-CopilotDenyEvents.ps1 -OutputPath ".\CopilotDeny.csv"
 .\scripts\Export-DlpCopilotEvents.ps1 -OutputPath ".\DlpEvents.csv"
 
-# Or run the orchestration script
-.\scripts\Invoke-DailyDenyReport.ps1 -OutputDirectory ".\reports"
+# Or run the orchestration script (Defender extraction is optional and
+# requires Microsoft.Graph.Security + Connect-MgGraph -Scopes ThreatHunting.Read.All).
+# Use -SkipDefenderEvents the first time you run end-to-end if Graph auth
+# isn't configured yet:
+.\scripts\Invoke-DailyDenyReport.ps1 -OutputDirectory ".\reports" -SkipDefenderEvents
 ```
 
 ### 3. Application Insights RAI Telemetry
@@ -145,4 +160,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*Deny Event Correlation Report v2.0.1 - April 2026*
+*Deny Event Correlation Report v2.0.2 - 2026*

@@ -93,10 +93,12 @@ function Invoke-AppInsightsQuery {
         [string]$Query
     )
 
-    # Get access token for Application Insights API
-    # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026)
+    # Get access token for Application Insights API.
+    # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026).
+    # Az.Accounts >=2.17 returns SecureString by default; >=5.0 emits a deprecation
+    # warning unless `-AsSecureString` is explicitly requested with `-ResourceUrl`.
     try {
-        $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
+        $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io" -AsSecureString -ErrorAction Stop
         if (-not $token) {
             throw "Failed to acquire access token. Ensure you have authenticated with Connect-AzAccount."
         }
@@ -105,11 +107,11 @@ function Invoke-AppInsightsQuery {
         throw "Authentication failed: $_. Run Connect-AzAccount before executing this script."
     }
 
-    # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+    # Convert SecureString token to plaintext for HTTP header (defensive — older Az returns string)
     $tokenString = if ($token.Token -is [System.Security.SecureString]) {
         $token.Token | ConvertFrom-SecureString -AsPlainText
     } else {
-        $token.Token
+        [string]$token.Token
     }
 
     $headers = @{
@@ -122,13 +124,17 @@ function Invoke-AppInsightsQuery {
 
     $uri = "https://api.applicationinsights.io/v1/apps/$AppId/query?query=$encodedQuery"
 
-    try {
-        $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-        return $response
-    }
-    catch {
-        if ($_.Exception.Response) {
-            $statusCode = $_.Exception.Response.StatusCode.value__
+    $maxRetries = 3
+    $attempt = 0
+    while ($true) {
+        try {
+            return Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
+        }
+        catch {
+            if (-not $_.Exception.Response) {
+                throw "API request failed: $_"
+            }
+            $statusCode = [int]$_.Exception.Response.StatusCode
             $statusDesc = $_.Exception.Response.StatusDescription
 
             switch ($statusCode) {
@@ -136,38 +142,37 @@ function Invoke-AppInsightsQuery {
                 403 { throw "Access denied. Ensure your account has Monitoring Reader role on the Application Insights resource." }
                 404 { throw "Application Insights resource not found. Check AppInsightsAppId." }
                 429 {
-                    # Rate limited — retry with bounded backoff
+                    $attempt++
+                    if ($attempt -gt $maxRetries) {
+                        throw "Rate limit retry exhausted after $maxRetries attempts."
+                    }
+                    # Retry-After header (in seconds). Use HttpResponseHeaders.GetValues — the
+                    # `Headers[name]` indexer is not implemented on .NET HttpResponseHeaders.
                     $retryAfter = 60
-                    if ($_.Exception.Response.Headers -and $_.Exception.Response.Headers["Retry-After"]) {
-                        $parsedRetry = 0
-                        if ([int]::TryParse($_.Exception.Response.Headers["Retry-After"], [ref]$parsedRetry) -and $parsedRetry -gt 0 -and $parsedRetry -le 300) {
-                            $retryAfter = $parsedRetry
-                        }
-                    }
-                    if (-not (Get-Variable -Name '_retryDepth' -Scope Script -ErrorAction SilentlyContinue)) {
-                        $script:_retryDepth = 0
-                    }
-                    $script:_retryDepth++
-                    if ($script:_retryDepth -gt 3) {
-                        $script:_retryDepth = 0
-                        throw "Rate limit retry exhausted after 3 attempts."
-                    }
-                    Write-Warning "Rate limited by Application Insights API. Retry $($script:_retryDepth)/3 in ${retryAfter}s..."
-                    Start-Sleep -Seconds $retryAfter
                     try {
-                        $result = Invoke-AppInsightsQuery -AppId $AppId -Query $Query
-                        $script:_retryDepth = 0
-                        return $result
+                        $values = $_.Exception.Response.Headers.GetValues('Retry-After')
+                        $parsed = 0
+                        if ($values -and [int]::TryParse($values[0], [ref]$parsed) -and $parsed -gt 0 -and $parsed -le 300) {
+                            $retryAfter = $parsed
+                        }
+                    } catch { }
+                    Write-Warning "Rate limited by Application Insights API. Retry $attempt/$maxRetries in ${retryAfter}s..."
+                    Start-Sleep -Seconds $retryAfter
+                    continue
+                }
+                { $_ -ge 500 -and $_ -le 599 } {
+                    $attempt++
+                    if ($attempt -gt $maxRetries) {
+                        throw "Server error ($statusCode) after $maxRetries retries: $statusDesc"
                     }
-                    catch {
-                        $script:_retryDepth = 0
-                        throw
-                    }
+                    $backoff = 5 * $attempt
+                    Write-Warning "Server error ($statusCode). Retry $attempt/$maxRetries in ${backoff}s..."
+                    Start-Sleep -Seconds $backoff
+                    continue
                 }
                 default { throw "API request failed: $statusCode - $statusDesc" }
             }
         }
-        throw "API request failed: $_"
     }
 }
 
@@ -272,9 +277,15 @@ customEvents
     # Execute query using Entra ID authentication
     $response = Invoke-AppInsightsQuery -AppId $AppInsightsAppId -Query $kqlQuery
 
-    # Check for truncation — App Insights API silently caps results at ~10K rows
-    if ($response.tables -and $response.tables[0].rows.Count -ge 10000) {
-        Write-Warning "App Insights query returned 10,000 rows — results may be truncated. Consider narrowing the date range."
+    # Check for truncation. The App Insights Logs API hard limits a query
+    # response to 500,000 rows or 64MB (whichever comes first); the documented
+    # row cap of 10K applies to the Direct Query path used by the portal.
+    # Warn at 10K to surface narrowing opportunities, and again at 500K.
+    if ($response.tables -and $response.tables[0].rows.Count -ge 500000) {
+        Write-Warning "App Insights query returned 500,000 rows — hard API limit reached and results ARE truncated. Narrow the date range or split the query."
+    }
+    elseif ($response.tables -and $response.tables[0].rows.Count -ge 10000) {
+        Write-Warning "App Insights query returned >=10,000 rows — consider narrowing the date range. Hard API limit is 500K rows / 64MB."
     }
 
     # Convert response

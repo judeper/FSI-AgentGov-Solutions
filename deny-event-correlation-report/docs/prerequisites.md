@@ -88,7 +88,7 @@ $PasswordProfile = @{
     ForceChangePasswordNextSignIn = $true
 }
 New-MgUser `
-    -UserPrincipalName "svc-deny-report@contoso.com" `
+    -UserPrincipalName "svc-deny-report@example.com" `
     -DisplayName "Deny Report Service Account" `
     -UsageLocation "US" `
     -PasswordProfile $PasswordProfile `
@@ -96,7 +96,7 @@ New-MgUser `
     -MailNickname "svc-deny-report"
 
 # Assign minimum required license (E5 Compliance)
-Set-MgUserLicense -UserId "svc-deny-report@contoso.com" `
+Set-MgUserLicense -UserId "svc-deny-report@example.com" `
     -AddLicenses @(@{SkuId = "<E5-Compliance-SkuId>"}) `
     -RemoveLicenses @()
 ```
@@ -105,11 +105,11 @@ Set-MgUserLicense -UserId "svc-deny-report@contoso.com" `
 
 ```powershell
 # Connect to Security & Compliance PowerShell
-Connect-IPPSSession
+Connect-IPPSSession  # Requires ExchangeOnlineManagement v3.0+
 
 # Add to View-Only Audit Logs role group
 Add-RoleGroupMember -Identity "View-Only Audit Logs" `
-    -Member "svc-deny-report@contoso.com"
+    -Member "svc-deny-report@example.com"
 ```
 
 ### 3. Configure Application Insights Access
@@ -129,11 +129,12 @@ Starting **March 31, 2026**, API key authentication will no longer work. Configu
 3. Store the service principal credentials in Azure Key Vault
 4. Use `Connect-AzAccount` with service principal in automation
 
-#### Option B: API Key (Deprecated - Ends March 31, 2026)
+#### Option B: API Key (Historical Reference - Removed March 31, 2026)
 
-> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
->
-> ⚠️ **Deprecated:** This method will stop working on March 31, 2026.
+> **Removed:** As of March 31, 2026 the `x-api-key` authentication path no
+> longer functions on the Application Insights REST API. New deployments must
+> use Entra ID authentication (Option A above). The steps below are retained
+> only for context when migrating older runbooks.
 
 1. Navigate to Azure Portal > Application Insights resource
 2. Go to **Configure** > **API Access**
@@ -155,7 +156,7 @@ az keyvault create `
 az keyvault secret set `
     --vault-name "kv-deny-report" `
     --name "ExoServiceAccount" `
-    --value "svc-deny-report@contoso.com"
+    --value "svc-deny-report@example.com"
 
 # NOTE: AppInsightsApiKey no longer needed after Entra ID migration.
 # Store service principal credentials instead — see Authentication Migration section below.

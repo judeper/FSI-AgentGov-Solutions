@@ -11,10 +11,20 @@
 //   - DLP policies configured for "Microsoft 365 Copilot and Copilot Chat" location
 //   - Microsoft 365 E5 or E5 Compliance license
 //
-// IMPORTANT: These queries use parse_json(OfficeObjectId) to extract audit data.
-// Depending on your M365 audit connector configuration, the full audit JSON
-// may be in the AuditData or RawEventData column instead of OfficeObjectId.
-// Verify your schema and adjust the column name if queries return empty results.
+// IMPORTANT — INGESTION PATTERN ASSUMPTION:
+//   The `OfficeActivity` table in Log Analytics flattens Office 365 Management
+//   API audit records into typed columns; it does NOT preserve the raw audit
+//   JSON body. `parse_json(OfficeObjectId)` will yield a string scalar and
+//   downstream JSON-path extractions return empty.
+//
+//   To run these queries successfully, ingest the raw Office 365 Management
+//   Activity API JSON into a custom Log Analytics table (e.g. `CopilotDlpAudit_CL`)
+//   and replace `OfficeActivity` / `OfficeObjectId` with the custom table and
+//   raw-JSON column names.
+//
+//   The companion PowerShell script `Export-DlpCopilotEvents.ps1` does the
+//   correct extraction directly from the Unified Audit Log and is the
+//   recommended path for daily reports.
 // ============================================================================
 
 // -----------------------------------------------------------------------------
@@ -24,7 +34,7 @@ OfficeActivity
 | where TimeGenerated > ago(24h)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
     PolicyDetails = AuditData.PolicyDetails,
@@ -57,7 +67,7 @@ OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
 | mv-expand PolicyDetails
@@ -77,7 +87,7 @@ OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend SensitiveInfoTypes = AuditData.SensitiveInfoTypeData
 | mv-expand SensitiveInfoTypes
@@ -100,7 +110,7 @@ OfficeActivity
 | where TimeGenerated > ago(1h)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
 | mv-expand PolicyDetails
@@ -126,7 +136,7 @@ OfficeActivity
 | where TimeGenerated > ago(30d)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend
     HasOverride = isnotempty(AuditData.ExceptionInfo),
@@ -148,7 +158,7 @@ OfficeActivity
 | where TimeGenerated > ago(30d)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
 | mv-expand PolicyDetails
@@ -170,7 +180,7 @@ OfficeActivity
 | where TimeGenerated > ago(7d)
 | where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
 | extend AuditData = parse_json(OfficeObjectId)
-| where AuditData.Workload == "MicrosoftCopilot"
+| where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
 | extend PolicyDetails = AuditData.PolicyDetails
 | mv-expand PolicyDetails

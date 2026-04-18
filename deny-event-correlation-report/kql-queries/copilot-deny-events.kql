@@ -10,10 +10,25 @@
 //   - Azure Log Analytics workspace with Office 365 audit data connector
 //   - Microsoft 365 E5 or E5 Compliance license
 //
-// IMPORTANT: These queries use parse_json(OfficeObjectId) to extract audit data.
-// Depending on your M365 audit connector configuration, the full audit JSON
-// may be in the AuditData or RawEventData column instead of OfficeObjectId.
-// Verify your schema and adjust the column name if queries return empty results.
+// IMPORTANT — INGESTION PATTERN ASSUMPTION:
+//   The `OfficeActivity` table in Log Analytics flattens Office 365 Management
+//   API audit records into typed columns; it does NOT preserve the raw audit
+//   JSON body. Specifically, `OfficeObjectId` is a single resource identifier
+//   string, not the full audit payload, so `parse_json(OfficeObjectId)` will
+//   yield a string scalar and downstream `.AccessedResources` / `.PolicyDetails`
+//   extractions return empty.
+//
+//   To run these queries successfully you must ingest the raw Office 365
+//   Management Activity API JSON into a custom Log Analytics table (e.g.
+//   `CopilotAudit_CL`) via Azure Function or Data Collection Rule, then
+//   replace `OfficeActivity` with that custom table name and `OfficeObjectId`
+//   with the column that holds the raw JSON (`RawData_s`, etc.).
+//
+//   The companion PowerShell scripts (`Export-CopilotDenyEvents.ps1` /
+//   `Export-DlpCopilotEvents.ps1`) do correct extraction directly against the
+//   Unified Audit Log and are the recommended path for daily deny-event reports.
+//   These KQL queries are provided for advanced analytics on a custom-ingested
+//   table and require the customer to wire up that ingestion themselves.
 // ============================================================================
 
 // -----------------------------------------------------------------------------

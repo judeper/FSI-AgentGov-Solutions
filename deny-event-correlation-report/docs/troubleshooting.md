@@ -30,11 +30,11 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
-> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments. As of March 31, 2026 the x-api-key path is no longer functional.
 >
-> **⚠️ Warning: x-api-key Deprecated - March 31, 2026**
+> **⚠️ Warning: x-api-key Removed (March 31, 2026)**
 >
-> If you are troubleshooting API key authentication issues, note that this authentication method is **deprecated** and will **stop working on March 31, 2026**. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
+> If you are troubleshooting API key authentication issues, note that this authentication method is **no longer functional** as of March 31, 2026. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
 >
 > **Migration Path:**
 >
@@ -183,7 +183,7 @@ Get-AzStorageContainer -Context $context
 Connect-ExchangeOnline `
     -CertificateThumbprint "your-cert-thumbprint" `
     -AppId "your-app-id" `
-    -Organization "contoso.onmicrosoft.com"
+    -Organization "example.onmicrosoft.com"
 ```
 
 ## Performance Issues

@@ -77,23 +77,29 @@ try {
     }
     Write-Host "Authenticated as: $($context.Account)" -ForegroundColor Green
 
-    # Build KQL query for Advanced Hunting
-    # Note: This query uses broad string matching (RawEventData has "PromptInjection")
-    # while the standalone KQL (cloud-app-events.kql) uses precise boolean field checks
-    # (parsedFields.XPIADetected == true). See cloud-app-events.kql lines 15-19 for details.
-    $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
-    $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss\Z")
+    # Build KQL query for Advanced Hunting.
+    # NOTE: The published Defender XDR `CloudAppEvents` schema for Microsoft 365
+    # Copilot exposes:
+    #   - ActionType: `CopilotInteraction` (Copilot prompt/response activity)
+    # The `CopilotMessageCreated` ActionType referenced in earlier docs is not
+    # part of the public schema. Threat enrichment is exposed via
+    # `RawEventData.ThreatCategory` (string values include `PromptInjection`,
+    # `Jailbreak`, `XPIA`). The legacy boolean fields `XPIADetected`/
+    # `JailbreakDetected` are not in the public schema and are NOT used here.
+    $startIso = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $endIso = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
     $kqlQuery = @"
 CloudAppEvents
 | where Timestamp between (datetime('$startIso') .. datetime('$endIso'))
-| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
-| where RawEventData has "PromptInjection" or RawEventData has "Jailbreak" or RawEventData has "XPIA"
+| where ActionType == "CopilotInteraction"
+| extend Parsed = parse_json(RawEventData)
+| extend ThreatCategory = tostring(Parsed.ThreatCategory)
+| where ThreatCategory in ("PromptInjection", "Jailbreak", "XPIA")
 | extend
-    ThreatCategory = tostring(parse_json(RawEventData).ThreatCategory),
-    AgentId = tostring(parse_json(RawEventData).AgentId),
-    AgentName = tostring(parse_json(RawEventData).AgentName),
-    AppHost = tostring(parse_json(RawEventData).AppHost)
+    AgentId = tostring(Parsed.AgentId),
+    AgentName = tostring(Parsed.AgentName),
+    AppHost = tostring(Parsed.AppHost)
 | project
     Timestamp,
     AccountDisplayName,
@@ -110,7 +116,11 @@ CloudAppEvents
     Write-Host "Querying Defender Advanced Hunting..." -ForegroundColor Cyan
     Write-Host "  Time Range: $startIso to $endIso" -ForegroundColor Gray
 
-    # Execute Advanced Hunting query with retry logic
+    # Execute Advanced Hunting query with retry logic.
+    # Invoke-MgGraphRequest surfaces errors as Microsoft.Graph.PowerShell.AuthenticationException
+    # or HttpRequestException; the response body (if any) is on $_.ErrorDetails.Message
+    # as a JSON string. Status code is parsed from $_.Exception.Response.StatusCode
+    # when available, falling back to ErrorDetails JSON inspection.
     $body = @{ Query = $kqlQuery } | ConvertTo-Json
     $maxRetries = 3
     $attempt = 0
@@ -123,25 +133,36 @@ CloudAppEvents
         }
         catch {
             $statusCode = $null
-            # Invoke-MgGraphRequest wraps errors in Microsoft.Graph.PowerShell exceptions
-            if ($_.Exception.Response) {
+            $errorCode = $null
+            if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
                 $statusCode = [int]$_.Exception.Response.StatusCode
             }
-            elseif ($_.Exception.Message -match 'HTTP (\d{3})') {
-                $statusCode = [int]$Matches[1]
+            if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+                try {
+                    $errBody = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+                    if ($errBody.error.code) { $errorCode = $errBody.error.code }
+                } catch { }
             }
 
-            if ($statusCode -eq 429 -or ($statusCode -ge 500 -and $statusCode -le 599)) {
+            $isRetryable = ($statusCode -eq 429) -or
+                ($statusCode -ge 500 -and $statusCode -le 599) -or
+                ($errorCode -in @('TooManyRequests', 'ServiceUnavailable', 'InternalServerError'))
+
+            if ($isRetryable) {
                 $attempt++
                 if ($attempt -ge $maxRetries) {
-                    throw "Graph API error (HTTP $statusCode) after $maxRetries retries: $_"
+                    throw "Graph API error (HTTP $statusCode / code $errorCode) after $maxRetries retries: $_"
                 }
                 $retryAfter = 30 * $attempt
-                if ($statusCode -eq 429 -and $_.Exception.Response.Headers) {
-                    $retryHeader = $_.Exception.Response.Headers | Where-Object { $_.Key -eq 'Retry-After' }
-                    if ($retryHeader) { $retryAfter = [int]$retryHeader.Value[0] }
+                if ($_.Exception.Response -and $_.Exception.Response.Headers) {
+                    try {
+                        $retryValues = $_.Exception.Response.Headers.GetValues('Retry-After')
+                        if ($retryValues -and [int]::TryParse($retryValues[0], [ref]$null)) {
+                            $retryAfter = [int]$retryValues[0]
+                        }
+                    } catch { }
                 }
-                Write-Warning "Graph API error (HTTP $statusCode). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
+                Write-Warning "Graph API error (HTTP $statusCode / code $errorCode). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
                 Start-Sleep -Seconds $retryAfter
                 continue
             }

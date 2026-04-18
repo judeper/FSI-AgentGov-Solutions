@@ -3,42 +3,38 @@
 // FSI Agent Governance Framework
 // ============================================================================
 //
-// Purpose: Query Defender CloudAppEvents for Copilot XPIA (Cross-Prompt
-//          Injection Attack) and Jailbreak detections
+// Purpose: Query Defender CloudAppEvents for Copilot prompt injection (XPIA),
+//          jailbreak, and other prompt-shield threat detections.
 // Data Source: CloudAppEvents table in Microsoft Defender Advanced Hunting
 //
 // Prerequisites:
 //   - Microsoft Defender for Cloud Apps license
 //   - Advanced Hunting access in Microsoft 365 Defender portal
+//
+// SCHEMA NOTES (verify against your tenant before relying on results):
+//   - Public ActionType for Copilot prompt activity is `CopilotInteraction`.
+//     The `CopilotMessageCreated` literal in earlier docs is not part of the
+//     public schema and is omitted.
+//   - Threat enrichment lives in `RawEventData.ThreatCategory` (string).
+//     Known values include: PromptInjection, Jailbreak, XPIA. Boolean fields
+//     `XPIADetected`/`JailbreakDetected` are NOT part of the public schema
+//     and are not used in these queries.
 // ============================================================================
 
-// Note: The PowerShell extraction script (Export-DefenderCopilotEvents.ps1) uses
-// ActionType ("CopilotInteraction", "CopilotMessageCreated") with string-based
-// content matching (RawEventData has "PromptInjection"). This KQL uses boolean
-// field checks (parsedFields.XPIADetected) which may differ depending on Defender
-// schema version. Align ActionType filters with the PS1 script if results diverge.
 // -----------------------------------------------------------------------------
-// Query 1: XPIA and Jailbreak Detections (Last 24 Hours)
+// Query 1: Prompt-shield detections (Last 24 Hours)
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(24h)
-| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where ActionType == "CopilotInteraction"
 | extend parsedFields = parse_json(RawEventData)
-| where parsedFields.XPIADetected == true
-    or parsedFields.JailbreakDetected == true
+| extend ThreatCategory = tostring(parsedFields.ThreatCategory)
+| where ThreatCategory in ("PromptInjection", "Jailbreak", "XPIA")
 | extend
     UserId = tostring(parsedFields.UserId),
     AgentId = tostring(parsedFields.AgentId),
     AgentName = tostring(parsedFields.AgentName),
-    AppHost = tostring(parsedFields.AppHost),
-    XPIADetected = tobool(parsedFields.XPIADetected),
-    JailbreakDetected = tobool(parsedFields.JailbreakDetected),
-    ThreatType = case(
-        parsedFields.XPIADetected == true and parsedFields.JailbreakDetected == true, "XPIA+Jailbreak",
-        parsedFields.XPIADetected == true, "XPIA",
-        parsedFields.JailbreakDetected == true, "Jailbreak",
-        "Unknown"
-    )
+    AppHost = tostring(parsedFields.AppHost)
 | project
     Timestamp,
     UserId,
@@ -46,48 +42,39 @@ CloudAppEvents
     AgentName,
     AppHost,
     ActionType,
-    XPIADetected,
-    JailbreakDetected,
-    ThreatType
+    ThreatCategory
 | order by Timestamp desc
 
 // -----------------------------------------------------------------------------
-// Query 2: XPIA/Jailbreak Summary by Agent (Last 7 Days)
+// Query 2: Threat summary by Agent (Last 7 Days)
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(7d)
-| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where ActionType == "CopilotInteraction"
 | extend parsedFields = parse_json(RawEventData)
-| where parsedFields.XPIADetected == true
-    or parsedFields.JailbreakDetected == true
+| extend ThreatCategory = tostring(parsedFields.ThreatCategory)
+| where ThreatCategory in ("PromptInjection", "Jailbreak", "XPIA")
 | extend
     AgentId = tostring(parsedFields.AgentId),
     AgentName = tostring(parsedFields.AgentName),
-    XPIADetected = tobool(parsedFields.XPIADetected),
-    JailbreakDetected = tobool(parsedFields.JailbreakDetected)
+    UserId = tostring(parsedFields.UserId)
 | summarize
     TotalEvents = count(),
-    XPIACount = countif(XPIADetected),
-    JailbreakCount = countif(JailbreakDetected),
-    UniqueUsers = dcount(tostring(parse_json(RawEventData).UserId))
+    PromptInjectionCount = countif(ThreatCategory == "PromptInjection"),
+    JailbreakCount = countif(ThreatCategory == "Jailbreak"),
+    XPIACount = countif(ThreatCategory == "XPIA"),
+    UniqueUsers = dcount(UserId)
     by AgentId, AgentName, bin(Timestamp, 1d)
 | order by TotalEvents desc
 
 // -----------------------------------------------------------------------------
-// Query 3: Hourly Trend of XPIA/Jailbreak Events (Last 24 Hours)
+// Query 3: Hourly Trend (Last 24 Hours)
 // -----------------------------------------------------------------------------
 CloudAppEvents
 | where Timestamp > ago(24h)
-| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where ActionType == "CopilotInteraction"
 | extend parsedFields = parse_json(RawEventData)
-| where parsedFields.XPIADetected == true
-    or parsedFields.JailbreakDetected == true
-| extend
-    ThreatType = case(
-        parsedFields.XPIADetected == true and parsedFields.JailbreakDetected == true, "XPIA+Jailbreak",
-        parsedFields.XPIADetected == true, "XPIA",
-        parsedFields.JailbreakDetected == true, "Jailbreak",
-        "Unknown"
-    )
-| summarize EventCount = count() by ThreatType, bin(Timestamp, 1h)
+| extend ThreatCategory = tostring(parsedFields.ThreatCategory)
+| where ThreatCategory in ("PromptInjection", "Jailbreak", "XPIA")
+| summarize EventCount = count() by ThreatCategory, bin(Timestamp, 1h)
 | order by Timestamp asc

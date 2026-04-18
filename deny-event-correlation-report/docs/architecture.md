@@ -43,7 +43,7 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 │                                                                                          │
 │  ┌─────────────────────────────────────────────────────────────────────────────────┐     │
 │  │                          Azure Blob Storage                                      │     │
-│  │                          (or SharePoint)                                         │     │
+│  │                          (immutable / WORM)                                      │     │
 │  │                                                                                  │     │
 │  │  /deny-events/                                                                   │     │
 │  │  └── 2026-01-26/                                                                 │     │
@@ -131,13 +131,20 @@ CloudAppEvents
 
 ### 3. Storage Layer
 
-**Recommended:** Azure Blob Storage with immutable retention policy
+**Recommended:** Azure Blob Storage with immutable (WORM) retention policy
 
-- Supports SEC 17a-4 compliance when configured with WORM-compliant immutable policies. Organizations should verify configuration meets their specific obligations.
-- Enables long-term retention (7+ years)
+- Helps support SEC 17a-4(f) electronic-record retention requirements when
+  configured with immutable storage and time-based retention policies, in
+  combination with administrative controls and access reviews. Organizations
+  should engage qualified counsel to confirm their specific obligations and
+  whether SharePoint with preservation hold (FINRA 4511 / SEC 17a-3) or Blob
+  immutable storage best fits their record-keeping program.
+- Enables long-term retention (consult firm's retention schedule)
 - Compatible with Power BI data source
 
-**Alternative:** SharePoint Document Library with preservation hold
+**Alternative:** SharePoint Document Library with preservation hold (note: the
+delivered automation only writes to Blob Storage; SharePoint integration is
+left as a customer-built option using the upload connector of choice)
 
 ### 4. Visualization Layer
 
@@ -179,7 +186,7 @@ Task Scheduler
 Power Automate Flow
 ├── Trigger: Recurrence (Daily)
 ├── Action 1: Run PowerShell script (via on-premises data gateway)
-├── Action 2: Upload files to SharePoint
+├── Action 2: Upload files to Azure Blob Storage
 └── Action 3: Notify compliance team
 ```
 

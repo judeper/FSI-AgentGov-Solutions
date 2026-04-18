@@ -32,7 +32,12 @@
 .NOTES
     Author: FSI Agent Governance Framework
     Version: 1.0
-    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
+    Requires: ExchangeOnlineManagement module 3.0+, Purview Audit Reader role
+
+    DEPRECATION NOTICE: Microsoft has announced that `Search-UnifiedAuditLog` will be
+    retired in favor of the Microsoft Graph `auditLogQueries` API. Track the
+    Microsoft 365 roadmap and plan migration. As of 2026-Q2, the cmdlet remains
+    supported but new tenants are encouraged to use the Graph API path.
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -53,11 +58,24 @@ param(
     [int]$MaxResults = 50000,
 
     [Parameter()]
-    [string]$PolicyNameFilter = "*"
+    [string]$PolicyNameFilter = "*",
+
+    # App-only certificate auth (Azure Automation / unattended)
+    [Parameter()]
+    [string]$AppId,
+
+    [Parameter()]
+    [string]$CertificateThumbprint,
+
+    [Parameter()]
+    [string]$Organization,
+
+    [Parameter()]
+    [switch]$ManagedIdentity
 )
 
 #Requires -Version 7.0
-#Requires -Modules ExchangeOnlineManagement
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0' }
 
 $ErrorActionPreference = "Stop"
 
@@ -147,10 +165,13 @@ function ConvertTo-CopilotDlpEvent {
         try {
             $auditData = $AuditRecord.AuditData | ConvertFrom-Json
 
-            # Check if this is a Copilot-related DLP event (workload or policy name only)
+            # Check if this is a Copilot-related DLP event (workload or policy name only).
+            # Microsoft 365 Unified Audit Log Workload literals for Copilot are
+            # `Copilot` (M365 Copilot in Word/Excel/Teams/etc.) and
+            # `MicrosoftCopilotStudio`. The historical literal `MicrosoftCopilot`
+            # is NOT used in current production records.
             $isCopilotRelated = (
-                $auditData.Workload -eq "MicrosoftCopilot" -or
-                $auditData.Workload -match "Copilot" -or
+                $auditData.Workload -in @("Copilot", "MicrosoftCopilotStudio") -or
                 ($auditData.PolicyDetails | Where-Object { $_.PolicyName -match "Copilot" })
             )
 
@@ -232,8 +253,17 @@ try {
         throw "StartDate must be before EndDate."
     }
 
-    # Connect to Exchange Online
-    Connect-ToExchangeOnline
+    # Connect to Exchange Online (interactive by default; cert/MI when params supplied)
+    if ($ManagedIdentity) {
+        if (-not $Organization) { throw "Organization is required for ManagedIdentity auth." }
+        Connect-ToExchangeOnline -ManagedIdentity -Organization $Organization
+    }
+    elseif ($AppId -and $CertificateThumbprint -and $Organization) {
+        Connect-ToExchangeOnline -AppId $AppId -CertificateThumbprint $CertificateThumbprint -Organization $Organization
+    }
+    else {
+        Connect-ToExchangeOnline
+    }
 
     # Retrieve DLP audit events
     $dlpEvents = Get-DlpAuditEvents -Start $StartDate -End $EndDate -MaxRecords $MaxResults
@@ -249,7 +279,7 @@ try {
 
     if (-not $copilotDlpEvents -or @($copilotDlpEvents).Count -eq 0) {
         Write-Host "No Copilot-related DLP events found." -ForegroundColor Yellow
-        Write-Host "Note: Events are identified by Workload='MicrosoftCopilot' or policy names containing 'Copilot'." -ForegroundColor Gray
+        Write-Host "Note: Events are identified by Workload in ('Copilot','MicrosoftCopilotStudio') or policy names containing 'Copilot'." -ForegroundColor Gray
         exit 0
     }
 

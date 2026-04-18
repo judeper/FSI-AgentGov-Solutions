@@ -36,7 +36,12 @@
 .NOTES
     Author: FSI Agent Governance Framework
     Version: 1.0
-    Requires: ExchangeOnlineManagement module, Purview Audit Reader role
+    Requires: ExchangeOnlineManagement module 3.0+, Purview Audit Reader role
+
+    DEPRECATION NOTICE: Microsoft has announced that `Search-UnifiedAuditLog` will be
+    retired in favor of the Microsoft Graph `auditLogQueries` API. Track the
+    Microsoft 365 roadmap and plan migration. As of 2026-Q2, the cmdlet remains
+    supported but new tenants are encouraged to use the Graph API path.
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -54,11 +59,24 @@ param(
     [string]$OutputPath = ".\CopilotDenyEvents-$(Get-Date -Format 'yyyy-MM-dd').csv",
 
     [Parameter()]
-    [int]$MaxResults = 50000
+    [int]$MaxResults = 50000,
+
+    # App-only certificate auth (Azure Automation / unattended)
+    [Parameter()]
+    [string]$AppId,
+
+    [Parameter()]
+    [string]$CertificateThumbprint,
+
+    [Parameter()]
+    [string]$Organization,
+
+    [Parameter()]
+    [switch]$ManagedIdentity
 )
 
 #Requires -Version 7.0
-#Requires -Modules ExchangeOnlineManagement
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0' }
 
 $ErrorActionPreference = "Stop"
 
@@ -234,8 +252,17 @@ try {
         throw "StartDate must be before EndDate."
     }
 
-    # Connect to Exchange Online
-    Connect-ToExchangeOnline
+    # Connect to Exchange Online (interactive by default; cert/MI when params supplied)
+    if ($ManagedIdentity) {
+        if (-not $Organization) { throw "Organization is required for ManagedIdentity auth." }
+        Connect-ToExchangeOnline -ManagedIdentity -Organization $Organization
+    }
+    elseif ($AppId -and $CertificateThumbprint -and $Organization) {
+        Connect-ToExchangeOnline -AppId $AppId -CertificateThumbprint $CertificateThumbprint -Organization $Organization
+    }
+    else {
+        Connect-ToExchangeOnline
+    }
 
     # Retrieve audit events
     $auditEvents = Get-CopilotAuditEvents -Start $StartDate -End $EndDate -MaxRecords $MaxResults

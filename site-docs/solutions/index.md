@@ -52,7 +52,7 @@ Solutions for observability, analytics, event correlation, and drift detection.
 |----------|-------------|---------|----------|
 | [Agent Observability Foundation](agent-observability-foundation/index.md) | Foundational observability infrastructure for agent monitoring and diagnostics | v1.1.0 | 1.7, 2.8, 2.9, 3.2 |
 | [Copilot Studio Analytics](copilot-studio-analytics/index.md) | Business impact analytics for Copilot Studio agents | v1.1.0 | 3.2 |
-| [Deny Event Correlation Report](deny-event-correlation-report/index.md) | Daily deny event correlation across Purview, DLP, App Insights | v2.0.0 | 1.5, 1.7, 1.8, 3.4 |
+| [Deny Event Correlation Report](deny-event-correlation-report/index.md) | Daily deny event correlation across Purview, DLP, App Insights | v2.0.2 | 1.5, 1.7, 1.8, 3.4 |
 | [Scope Drift Monitor](scope-drift-monitor/index.md) | Detect agent data access beyond declared operational scope | v1.1.1 | 1.14, 1.4, 1.5 |
 | [Hallucination Feedback Tracker](hallucination-tracker/index.md) | Feedback aggregation for hallucination pattern analysis | v0.1.0-preview | 3.10, 2.9, 2.12 |
 
