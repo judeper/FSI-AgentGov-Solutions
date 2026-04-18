@@ -14,11 +14,11 @@ jobs:
         with:
           path: solutions
 
-      - name: Checkout framework v1.4 (controls.json source of truth)
+      - name: Checkout framework (controls.json source of truth)
         uses: actions/checkout@v4
         with:
-          repository: judeper/fsi-agentgov
-          ref: feat/v1.4-assessment-unification
+          repository: judeper/FSI-AgentGov
+          ref: main
           path: fsi-agentgov
 
       - uses: actions/setup-python@v5
