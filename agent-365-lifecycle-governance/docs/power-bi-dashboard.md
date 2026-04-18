@@ -114,18 +114,27 @@ DIVIDE(
     0
 )
 
+// NOTE: Dataverse choice (option set) columns expose two fields in Power BI:
+//   - integer column (e.g. fsi_accessreviewstatus) holding the option value
+//   - text alias column (e.g. fsi_accessreviewstatus_label or fsi_accessreviewstatusname)
+// Compare to the integer for stable filters; compare to the label only if you bind to the *_label column.
+// Option-set values used below:
+//   fsi_ALG_accessreviewstatus: NotStarted=100000000, InProgress=100000001, Completed=100000002, Overdue=100000003
+//   fsi_ALG_lifecyclestage:    Onboarding=100000000, Active=100000001, UnderReview=100000002, Inactive=100000003, Deactivated=100000004, Deleted=100000005
+//   fsi_ALG_governancezone:    Zone1=100000000, Zone2=100000001, Zone3=100000002
+
 Review Completion % =
 DIVIDE(
     COUNTROWS(
         FILTER(
             fsi_agentlifecyclerecord,
-            fsi_agentlifecyclerecord[fsi_accessreviewstatus] = "Completed"
+            fsi_agentlifecyclerecord[fsi_accessreviewstatus] = 100000002  // Completed
         )
     ),
     COUNTROWS(
         FILTER(
             fsi_agentlifecyclerecord,
-            fsi_agentlifecyclerecord[fsi_lifecyclestage] = "Active"
+            fsi_agentlifecyclerecord[fsi_lifecyclestage] = 100000001  // Active
         )
     ),
     0
@@ -135,7 +144,7 @@ Overdue Review Count =
 COUNTROWS(
     FILTER(
         fsi_agentlifecyclerecord,
-        fsi_agentlifecyclerecord[fsi_accessreviewstatus] = "Overdue"
+        fsi_agentlifecyclerecord[fsi_accessreviewstatus] = 100000003  // Overdue
     )
 )
 
@@ -143,7 +152,7 @@ Inactive Agent Count =
 COUNTROWS(
     FILTER(
         fsi_agentlifecyclerecord,
-        fsi_agentlifecyclerecord[fsi_lifecyclestage] = "Inactive"
+        fsi_agentlifecyclerecord[fsi_lifecyclestage] = 100000003  // Inactive
     )
 )
 ```
@@ -164,7 +173,7 @@ COUNTROWS(
 If zone-based access restriction is required:
 
 1. Create RLS roles in Power BI Desktop (Modeling → Manage Roles)
-2. Define DAX filters per zone (e.g., `[fsi_governancezone] = "Zone 3"`)
+2. Define DAX filters per zone using the integer option-set value (e.g., `[fsi_governancezone] = 100000002` for Zone 3)
 3. Assign users to roles in Power BI Service after publishing
 
 ### Sharing
@@ -175,4 +184,4 @@ If zone-based access restriction is required:
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.1*
+*Agent 365 Lifecycle Governance v1.1.3*

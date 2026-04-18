@@ -34,8 +34,9 @@ Create these before deploying flows:
 
 | Permission | Type | Scope | Purpose |
 |-----------|------|-------|---------|
-| `AgentRegistry.ReadWrite.All` | Application | Graph | Read/update agent identities and sponsors |
-| `IdentityGovernance.ReadWrite.All` | Application | Graph | Create access reviews, trigger lifecycle workflows |
+| `AgentRegistry.ReadWrite.All` | Application | Graph | Read/update agent identities and sponsors (Microsoft Agent 365 / Entra agent registry) |
+| `AccessReview.ReadWrite.All` | Application | Graph | Required for `POST /identityGovernance/accessReviews/definitions` (access review CRUD) |
+| `LifecycleWorkflows.ReadWrite.All` | Application | Graph | Required for activating Entra ID Governance lifecycle workflows (`POST /identityGovernance/lifecycleWorkflows/workflows/{id}/activate`) — `LifecycleWorkflows-Workflow.Activate` is also acceptable for activate-only scenarios |
 | `AuditLog.Read.All` | Application | Graph | Read agent sign-in logs for inactivity detection |
 | `Application.ReadWrite.All` | Application | Graph | Disable and delete agent service principals |
 | `User.Read.All` | Application | Graph | Validate sponsor accounts, resolve UPNs |
@@ -44,32 +45,38 @@ Create these before deploying flows:
 
 > **Note:** `AuditLog.Read.All` may be restricted in some FSI tenants. The solution handles this gracefully — inactivity detection falls back to PPAC timestamps when sign-in log access is unavailable.
 
+> **Note:** All application permissions require admin consent. The previously documented `IdentityGovernance.ReadWrite.All` is a broader legacy scope; the more specific `AccessReview.ReadWrite.All` + `LifecycleWorkflows.ReadWrite.All` pair is preferred per Microsoft Graph guidance.
+
 ### Entra Lifecycle Workflows
+
+> **Important — applicability:** Entra ID Governance lifecycle workflows operate against **user** principals (joiner/mover/leaver), not service principals or agent identities. The workflows below are intended to fire on **sponsor user** lifecycle events (a sponsor moving departments or leaving the company), not on the agent identity itself. Flow 5 then reads the sponsor change and updates the agent's lifecycle record. Do not attempt to scope a lifecycle workflow directly to an agent service principal.
 
 Two workflows must be created manually in the Entra Admin Center. See [Flow Configuration](./flow-configuration.md) for step-by-step configuration.
 
 **Workflow 1: Agent-Sponsor-Mover-Notification**
 
 - Template: Mover
-- Scope: FSI-AllAgentIdentities group
-- Trigger: Sponsor attribute change
-- Store workflow ID in `SponsorMoverWorkflowId` environment variable
+- Scope: Sponsor users (e.g., a security group containing all designated agent sponsors)
+- Trigger: Sponsor user attribute change (department/manager move)
+- Store workflow ID in `fsi_ALG_SponsorMoverWorkflowId` environment variable
 
 **Workflow 2: Agent-Sponsor-Leaver-Deactivation**
 
 - Template: Leaver
-- Scope: FSI-AllAgentIdentities group
-- Trigger: Sponsor account disabled/deleted
-- Store workflow ID in `SponsorLeaverWorkflowId` environment variable
+- Scope: Sponsor users
+- Trigger: Sponsor user account disabled/deleted
+- Store workflow ID in `fsi_ALG_SponsorLeaverWorkflowId` environment variable
 
-### Conditional Access Policy (Zone 3 Only)
+### Conditional Access Policy (Zone 3 Only) — Workload Identity policy
 
-Create `FSI-Zone3-Agent-Conditional-Access` in Entra Admin Center:
+> **Important:** Agent identities are **service principals / workload identities**, not user accounts. Standard user-targeted Conditional Access policies do **not** apply to service principals, and group assignment is **not enforced** for workload identities (see [Microsoft docs — Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)). Use a **Conditional Access policy for workload identities** and assign the policy directly to the `FSI-Zone3-Agents` service principals.
 
-- Assignments: FSI-Zone3-Agents group
-- Grant: Compliant managed devices
-- Session: Sign-in frequency 1 hour, continuous access evaluation enabled
-- Note: Agent identities are exempt from MFA by default
+Create `FSI-Zone3-Agent-Conditional-Access` in Entra Admin Center as a **workload identity** Conditional Access policy:
+
+- License: requires the **Workload Identities Premium** add-on license.
+- Assignments: select **Workload identities** and pick the Zone 3 service principals (group assignment is not enforced for service principals — pick them individually or maintain the list as part of onboarding).
+- Conditions: scope by location and (optionally) service-principal risk.
+- Grant: only controls supported for service principals — typically **Block access** outside permitted locations or **Require multifactor authentication** where the service principal supports it. Device-compliance and sign-in-frequency controls are user-session controls and **do not apply** to service-principal sign-ins.
 
 ## Dataverse Environment
 
@@ -79,9 +86,9 @@ Create `FSI-Zone3-Agent-Conditional-Access` in Entra Admin Center:
 | **Managed Environment** | Required |
 | **Dataverse Database** | Required |
 | **System Administrator** | Required for schema deployment |
-| **Long-Term Retention** | Required for 7-year SEC 17a-3/4 compliance |
+| **Long-Term Retention** | Recommended; configure per the firm's record schedule (FINRA 4511 / SEC 17a-4 retention varies by record category — typically 3 years for communications, 6 years for books and records). |
 
-> **Note:** Dataverse Long-Term Retention (LTR) is configured post-deployment via the Power Platform Admin Center. LTR is only available in Managed Environments.
+> **Note:** Dataverse Long-Term Retention (LTR) is configured post-deployment via the Power Platform Admin Center. LTR is only available in Managed Environments. LTR alone is not equivalent to a SEC 17a-4-compliant electronic recordkeeping system; firms should validate format/storage requirements with legal/compliance and use a compliant archive where required.
 
 ## Network Requirements
 

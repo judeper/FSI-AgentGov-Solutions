@@ -36,9 +36,9 @@ Connect to the following Dataverse tables:
 
 - **Gallery** showing all agents from `fsi_agentlifecyclerecord`
 - **Filter controls:**
-  - Dropdown: Governance Zone (Zone 1 / Zone 2 / Zone 3)
+  - Dropdown: Governance Zone (Zone 1 (Personal) / Zone 2 (Team/Departmental) / Zone 3 (Enterprise/Customer-Facing))
   - Dropdown: Lifecycle Stage (Onboarding / Active / Under Review / Inactive / Deactivated / Deleted)
-  - Dropdown: Access Review Status (Pending / In Progress / Completed / Overdue / Escalated)
+  - Dropdown: Access Review Status (Not Started / In Progress / Completed / Overdue) — values must match the `fsi_ALG_accessreviewstatus` option set used by `fsi_agentlifecyclerecord.fsi_accessreviewstatus`. The "Pending"/"Escalated" labels exist only on `fsi_ALG_reviewstatus` (used by `fsi_accessreview.fsi_reviewstatus`); use a separate dropdown when binding to that table.
 - **Gallery columns:** Agent Name, Zone, Stage, Sponsor, Inactivity Days, Next Review Due
 - **Color coding:**
   - Green: Active
@@ -48,11 +48,14 @@ Connect to the following Dataverse tables:
 **Gallery formula example:**
 
 ```
+// Note: fsi_governancezone and fsi_lifecyclestage are choice (option set) columns.
+// In Power Apps, compare against the choice record (e.g. ddZone.Selected) directly,
+// not against .Value. If you use a static dropdown with text Items, compare to .Value.
 SortByColumns(
     Filter(
         fsi_agentlifecyclerecords,
-        (IsBlank(ddZone.Selected.Value) || fsi_governancezone = ddZone.Selected.Value),
-        (IsBlank(ddStage.Selected.Value) || fsi_lifecyclestage = ddStage.Selected.Value)
+        (IsBlank(ddZone.Selected) || fsi_governancezone = ddZone.Selected),
+        (IsBlank(ddStage.Selected) || fsi_lifecyclestage = ddStage.Selected)
     ),
     "fsi_agentname",
     SortOrder.Ascending
@@ -140,4 +143,4 @@ ClearCollect(colExport, Filter(fsi_lifecyclecomplianceevents, ...));
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.1*
+*Agent 365 Lifecycle Governance v1.1.3*

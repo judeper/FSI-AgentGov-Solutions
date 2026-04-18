@@ -1,40 +1,23 @@
 {
-  "_comment": "Sample configuration values for Agent 365 Lifecycle Governance environment variables",
-  "IsAgent365LifecycleEnabled": "false",
-  "DefaultSponsorUPN": "ai-governance@contoso.com",
-  "GovernanceTeamEmail": "fsi-ai-governance@contoso.com",
-  "GovernanceCommitteeUPN": "fsi-governance-committee@contoso.com",
-  "EscalationApproverUPN": "ciso@contoso.com",
-  "FlowAdministrators": "fsi-flow-admins@contoso.com",
-  "SponsorMoverWorkflowId": "",
-  "SponsorLeaverWorkflowId": "",
-  "FSIAllAgentIdentitiesGroupId": "",
-  "FSIZone3AgentsGroupId": "",
-  "DataverseEnvironmentUrl": "https://org.crm.dynamics.com",
-  "InactivityThreshold_Zone1": 180,
-  "InactivityThreshold_Zone2": 90,
-  "InactivityThreshold_Zone3": 30,
-  "ZoneSettings": {
-    "Zone1": {
-      "inactivityThresholdDays": 180,
-      "reviewCadence": "Annual",
-      "deletionHoldDays": 30,
-      "sponsorRequired": false,
-      "conditionalAccessRequired": false
-    },
-    "Zone2": {
-      "inactivityThresholdDays": 90,
-      "reviewCadence": "Semi-Annual",
-      "deletionHoldDays": 30,
-      "sponsorRequired": true,
-      "conditionalAccessRequired": false
-    },
-    "Zone3": {
-      "inactivityThresholdDays": 30,
-      "reviewCadence": "Quarterly",
-      "deletionHoldDays": 90,
-      "sponsorRequired": true,
-      "conditionalAccessRequired": true
-    }
+  "_comment": "Sample configuration values for Agent 365 Lifecycle Governance environment variables. Keys MUST match the schemaname values created by scripts/create_alg_environment_variables.py (all prefixed fsi_ALG_).",
+  "fsi_ALG_IsAgent365LifecycleEnabled": "false",
+  "fsi_ALG_DefaultSponsorUPN": "ai-governance@example.com",
+  "fsi_ALG_GovernanceTeamEmail": "fsi-ai-governance@example.com",
+  "fsi_ALG_GovernanceCommitteeUPN": "fsi-governance-committee@example.com",
+  "fsi_ALG_EscalationApproverUPN": "ciso@example.com",
+  "fsi_ALG_FlowAdministrators": "fsi-flow-admins@example.com",
+  "fsi_ALG_SponsorMoverWorkflowId": "",
+  "fsi_ALG_SponsorLeaverWorkflowId": "",
+  "fsi_ALG_FSIAllAgentIdentitiesGroupId": "",
+  "fsi_ALG_FSIZone3AgentsGroupId": "",
+  "fsi_ALG_DataverseEnvironmentUrl": "https://org.crm.dynamics.com",
+  "fsi_ALG_InactivityThresholdZone1": 180,
+  "fsi_ALG_InactivityThresholdZone2": 90,
+  "fsi_ALG_InactivityThresholdZone3": 30,
+  "_zoneSettingsReference": {
+    "_note": "Reference values that flows currently hard-code. Not deployed as separate environment variables.",
+    "Zone1": { "inactivityThresholdDays": 180, "reviewCadence": "Annual",       "deletionHoldDays": 30, "sponsorRequired": false, "conditionalAccessRequired": false },
+    "Zone2": { "inactivityThresholdDays": 90,  "reviewCadence": "Semi-Annual",  "deletionHoldDays": 30, "sponsorRequired": true,  "conditionalAccessRequired": false },
+    "Zone3": { "inactivityThresholdDays": 30,  "reviewCadence": "Quarterly",    "deletionHoldDays": 90, "sponsorRequired": true,  "conditionalAccessRequired": true }
   }
 }

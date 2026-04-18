@@ -13,8 +13,9 @@
     OCC 2011-12, FINRA 3110, and SOX 302 requirements for agent lifecycle management.
 
 .PARAMETER DataverseEnvironmentUrl
-    The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
+    Optional. The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
     Reserved for future Dataverse schema validation during baseline deployment.
+    Currently logged for traceability only — no Dataverse calls are made by this script.
 
 .PARAMETER DefaultSponsorUPN
     Fallback sponsor UPN for agents without identified owners.
@@ -23,13 +24,12 @@
     Preview baseline results without writing the report file.
 
 .EXAMPLE
-    .\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@contoso.com"
+    .\Deploy-LifecycleGovernance-Baseline.ps1 -DefaultSponsorUPN "governance@example.com"
 #>
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)]
-    [ValidateNotNullOrEmpty()]
+    [Parameter(Mandatory=$false)]
     [string]$DataverseEnvironmentUrl,
 
     [Parameter(Mandatory=$true)]
@@ -40,9 +40,21 @@ param(
 )
 
 # Authenticate via Managed Identity
+# NOTE: In Az.Accounts 5.x+, Get-AzAccessToken returns .Token as SecureString by default.
+# We pass -AsSecureString:$false to keep returning a plain-text string for use in Bearer headers.
+# If pinning to Az.Accounts <5, the -AsSecureString parameter does not exist and the call still
+# returns a plain string — the conditional below handles both shapes.
 try {
     Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
-    $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
+    $tokenParams = @{ ResourceUrl = "https://graph.microsoft.com"; ErrorAction = 'Stop' }
+    if ((Get-Command Get-AzAccessToken).Parameters.ContainsKey('AsSecureString')) {
+        $tokenParams['AsSecureString'] = $false
+    }
+    $graphToken = (Get-AzAccessToken @tokenParams).Token
+    if ($graphToken -is [System.Security.SecureString]) {
+        $graphToken = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($graphToken))
+    }
 } catch {
     Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
@@ -59,7 +71,13 @@ Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cy
 # Test with v1.0 in your tenant before migrating.
 # Autonomous agents with full Entra identities remain in Frontier preview.
 try {
-    $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
+    $next = "https://graph.microsoft.com/beta/agentRegistry/agents"
+    $registryAgents = @()
+    do {
+        $resp = Invoke-RestMethod -Uri $next -Headers $graphHeaders -ErrorAction Stop
+        if ($resp.value) { $registryAgents += $resp.value }
+        $next = $resp.'@odata.nextLink'
+    } while ($next)
 } catch {
     Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
     exit 1

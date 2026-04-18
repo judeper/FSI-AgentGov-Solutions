@@ -40,9 +40,9 @@ CONNECTION_REFS = [
     },
     {
         "logical_name": "fsi_cr_powerplatformadmin_lifecyclegov",
-        "display_name": "Power Platform for Admins - ALG",
-        "connector": "shared_powerappsforadmins",
-        "description": "Power Platform for Admins connector for agent activity data",
+        "display_name": "Power Platform for Admins V2 - ALG",
+        "connector": "shared_powerplatformforadmins",
+        "description": "Power Platform for Admins V2 connector for agent activity data",
     },
 ]
 

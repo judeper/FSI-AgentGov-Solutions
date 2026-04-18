@@ -104,7 +104,7 @@ The `entraReviewInstanceId` must be retrieved immediately after creating the acc
 
 ```json
 // WRONG - plain string
-{ "sponsor": "sponsor@contoso.com" }
+{ "sponsor": "sponsor@example.com" }
 
 // WRONG - object without @odata.bind
 { "sponsor": { "id": "00000000-0000-0000-0000-000000000000" } }
@@ -219,4 +219,4 @@ For issues not covered here:
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.1*
+*Agent 365 Lifecycle Governance v1.1.3*

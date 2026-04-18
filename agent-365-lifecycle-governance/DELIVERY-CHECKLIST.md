@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance — Delivery Checklist
 
-**Version:** v1.1.1
+**Version:** v1.1.3
 **Solution:** Agent 365 Lifecycle Governance
 
 Pre-deployment validation and post-deployment verification tasks. Complete each phase in order.
@@ -148,5 +148,5 @@ Do NOT include these repository management files:
 
 ---
 
-**Package Version:** v1.1.1
+**Package Version:** v1.1.3
 **Solution:** Agent 365 Lifecycle Governance

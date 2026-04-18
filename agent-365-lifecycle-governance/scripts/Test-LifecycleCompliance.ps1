@@ -33,8 +33,25 @@ param(
 
 try {
     Connect-AzAccount -Identity -ErrorAction Stop | Out-Null
-    $graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -ErrorAction Stop).Token
-    $dvToken    = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl -ErrorAction Stop).Token
+    # Normalize Dataverse URL — Dataverse OAuth audience requires trailing slash
+    $dvBase = $DataverseEnvironmentUrl.TrimEnd('/')
+    $dvResource = "$dvBase/"
+
+    $tokenParams = @{ ErrorAction = 'Stop' }
+    if ((Get-Command Get-AzAccessToken).Parameters.ContainsKey('AsSecureString')) {
+        $tokenParams['AsSecureString'] = $false
+    }
+    $graphToken = (Get-AzAccessToken @tokenParams -ResourceUrl "https://graph.microsoft.com").Token
+    $dvToken    = (Get-AzAccessToken @tokenParams -ResourceUrl $dvResource).Token
+
+    foreach ($t in @('graphToken','dvToken')) {
+        $val = Get-Variable -Name $t -ValueOnly
+        if ($val -is [System.Security.SecureString]) {
+            $plain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($val))
+            Set-Variable -Name $t -Value $plain
+        }
+    }
 } catch {
     Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
@@ -50,7 +67,13 @@ $queryErrors  = $false
 # Test with v1.0 in your tenant before migrating.
 # Autonomous agents with full Entra identities remain in Frontier preview.
 try {
-    $registryAgents = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/agentRegistry/agents" -Headers $graphHeaders -ErrorAction Stop).value
+    $next = "https://graph.microsoft.com/beta/agentRegistry/agents"
+    $registryAgents = @()
+    do {
+        $resp = Invoke-RestMethod -Uri $next -Headers $graphHeaders -ErrorAction Stop
+        if ($resp.value) { $registryAgents += $resp.value }
+        $next = $resp.'@odata.nextLink'
+    } while ($next)
 } catch {
     Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
     exit 1
@@ -66,12 +89,11 @@ Write-Host "Agents without sponsors:  $($noSponsor.Count)" `
     -ForegroundColor $(if ($noSponsor.Count -gt 0) { "Red" } else { "Green" })
 
 # Query Dataverse for overdue access reviews
-# NOTE: Verify fsi_reviewstatus choice integer values against deployed solution XML
-# Expected: Pending=100000000, In Progress=100000001, Completed=100000002, Overdue=100000003
+# fsi_ALG_accessreviewstatus option set: Not Started=100000000, In Progress=100000001, Completed=100000002, Overdue=100000003
 $overdueValue = 100000003
 $entitySetName = "fsi_accessreviews"
 
-$reviewQuery = "$DataverseEnvironmentUrl/api/data/v9.2/$entitySetName" +
+$reviewQuery = "$dvBase/api/data/v9.2/$entitySetName" +
                "?`$filter=fsi_reviewstatus eq $overdueValue"
 
 try {
@@ -87,9 +109,9 @@ try {
 }
 
 # Query Dataverse for inactive agents
-# NOTE: Verify fsi_lifecyclestage choice integer value for "Inactive"
+# fsi_ALG_lifecyclestage option set: ... Inactive=100000003
 $inactiveValue = 100000003
-$inactiveQuery = "$DataverseEnvironmentUrl/api/data/v9.2/fsi_agentlifecyclerecords" +
+$inactiveQuery = "$dvBase/api/data/v9.2/fsi_agentlifecyclerecords" +
                  "?`$filter=fsi_lifecyclestage eq $inactiveValue"
 try {
     $inactiveAgents = (Invoke-RestMethod -Uri $inactiveQuery -Headers $dvHeaders).value

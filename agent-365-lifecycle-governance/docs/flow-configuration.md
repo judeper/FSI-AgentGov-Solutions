@@ -2,6 +2,8 @@
 
 > **Note:** All choice/option-set field filters in OData expressions use integer values, not string labels. Refer to [dataverse-schema.md](./dataverse-schema.md) for the integer↔label mapping.
 
+> **Note:** All environment variable references throughout this document use the **display name** (e.g. `IsAgent365LifecycleEnabled`) for readability. In the Power Automate "Get environment variable" action, supply the **schema name** prefix `fsi_ALG_` (e.g. `fsi_ALG_IsAgent365LifecycleEnabled`). The schema names are defined in `scripts/create_alg_environment_variables.py`.
+
 Detailed specifications for building the six lifecycle governance flows in Power Automate designer.
 
 ## Flow Architecture
@@ -114,7 +116,7 @@ Initialize at flow start:
 
 1. Log skip event to `fsi_lifecyclecomplianceevent`:
    - `fsi_name`: `"Feature Flag Skip — Flow 1 — @{utcNow()}"`
-   - `fsi_eventtype`: `100000013` (Zone Assigned)
+   - `fsi_eventtype`: `100000015` (Feature Flag Skip)
    - `fsi_eventdetails`: `"Flow skipped — IsAgent365LifecycleEnabled is false"`
    - `fsi_complianceimpact`: `100000000` (None)
    - `fsi_triggeredby`: `"Flow 1: Enforce-SponsorAssignment-OnOnboard"`
@@ -201,21 +203,27 @@ Initialize at flow start:
 | Filter rows | `fsi_environmentid eq '@{items('For_Each_Agent')?['environmentId']}'` |
 | Top count | `1` |
 
-**Post-action:** Set zone variables based on result:
+**Post-action:** Set zone variables based on result.
+
+> **Important — option set integer mapping:** `fsi_environment_policy.fsi_governancezone` is the ELM-owned ``fsi_acv_zone`` option set whose integers are `100000000` (Zone 1), `100000001` (Zone 2), `100000002` (Zone 3). The local `fsi_ALG_governancezone` option set on `fsi_agentlifecyclerecord` uses the same integer space. Subtract `100000000` to get the human "1/2/3" zone number used in the conditional logic below, and write the original integer back to Dataverse.
 
 ```
-// If no policy record found, default to Zone 2
-zone = if(empty(body('Get_Zone_Policy')?['value']), 2, first(body('Get_Zone_Policy')?['value'])?['fsi_governancezone'])
+// Raw option-set integer from the ELM policy table (or 100000001 = Zone 2 default if no policy)
+zoneOption = if(empty(body('Get_Zone_Policy')?['value']), 100000001, first(body('Get_Zone_Policy')?['value'])?['fsi_governancezone'])
+
+// Human-readable zone number (1/2/3) used only for local branching
+zone = sub(zoneOption, 100000000)
 
 // Inactivity threshold (days)
-inactivityThreshold = if(equals(zone, 1), 180, if(equals(zone, 2), 90, 30))
+inactivityThreshold = if(equals(zone, 0), 180, if(equals(zone, 1), 90, 30))
 
 // Review cadence (integer for Dataverse, display text for notifications)
-reviewCadence = if(equals(zone, 1), 100000000, if(equals(zone, 2), 100000001, 100000002))
-reviewCadenceLabel = if(equals(zone, 1), 'Annual', if(equals(zone, 2), 'Semi-Annual', 'Quarterly'))
+// Cadence option set: Annual=100000000, Semi-Annual=100000001, Quarterly=100000002
+reviewCadence = if(equals(zone, 0), 100000000, if(equals(zone, 1), 100000001, 100000002))
+reviewCadenceLabel = if(equals(zone, 0), 'Annual', if(equals(zone, 1), 'Semi-Annual', 'Quarterly'))
 
 // Next review due (days from now)
-nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
+nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 ```
 
 #### Step 3e: Upsert Agent Lifecycle Record
@@ -228,12 +236,14 @@ nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 | URI | `/api/data/v9.2/fsi_agentlifecyclerecords(fsi_agentid='@{items('For_Each_Agent')?['id']}',fsi_environmentid='@{items('For_Each_Agent')?['environmentId']}')` |
 | Header | `If-Match: *` (upsert) |
 
+> **Prerequisite:** The composite alternate key (`fsi_agentid` + `fsi_environmentid`) on `fsi_agentlifecyclerecord` must be deployed by `scripts/create_alg_dataverse_schema.py`. If the key is missing, this PATCH returns `404 KeyAttributesDoesNotExist`.
+
 **Body:**
 
 ```json
 {
   "fsi_agentname": "@{items('For_Each_Agent')?['displayName']}",
-  "fsi_governancezone": @{variables('zone')},
+  "fsi_governancezone": @{variables('zoneOption')},
   "fsi_lifecyclestage": @{if(empty(items('For_Each_Agent')?['sponsor']), 100000000, 100000001)},
   "fsi_sponsorupn": "@{body('Resolve_Default_Sponsor')?['mail']}",
   "fsi_sponsorobjectid": "@{body('Resolve_Default_Sponsor')?['id']}",
@@ -597,7 +607,7 @@ Extract: `first(body('Get_SignIn_Logs')?['value'])?['createdDateTime']`
 | Method | `GET` |
 | Base Resource URL | `https://api.bap.microsoft.com` |
 | Microsoft Entra ID Resource URI | `https://api.bap.microsoft.com` |
-| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{items('For_Each_Active')?['fsi_environmentid']}/bots?api-version=2021-04-01` |
+| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{items('For_Each_Active')?['fsi_environmentid']}/bots?api-version=2022-03-01-preview` |
 
 Extract `lastModifiedTime` and `publishedOn` for the matching agent.
 
@@ -686,7 +696,7 @@ Store the lifecycle record GUID in a variable `lifecycleRecordId`.
 | Parameter | Value |
 |-----------|-------|
 | Table | `fsi_deactivationrequest` |
-| Filter rows | `_fsi_agentlifecyclerecordlookup_value eq '@{variables('lifecycleRecordId')}' and fsi_approvalstatus eq 100000000` |
+| Filter rows | `_fsi_agentlifecyclerecordlookup_value eq @{variables('lifecycleRecordId')} and fsi_approvalstatus eq 100000000` |
 | Top count | `1` |
 
 **Condition:** If result is non-empty, log compliance event with `fsi_eventtype` = `100000008` (Deactivation Requested) and `fsi_eventdetails` = `"Duplicate deactivation request skipped for agent @{triggerBody()?['agentId']}"`, then terminate with `Cancelled` status.
@@ -1040,7 +1050,7 @@ The `Retry-After` header from Microsoft Graph is honored automatically by the HT
 
 All flows terminate gracefully when `IsAgent365LifecycleEnabled` = `"false"`:
 
-1. Log a compliance event with `fsi_eventtype` = `100000013` (Zone Assigned) and `fsi_eventdetails` = `"Flow skipped — feature flag disabled"` to `fsi_lifecyclecomplianceevent`
+1. Log a compliance event with `fsi_eventtype` = `100000015` (Feature Flag Skip) and `fsi_eventdetails` = `"Flow skipped — feature flag disabled"` to `fsi_lifecyclecomplianceevent`
 2. Terminate with `Cancelled` status (not `Failed`)
 3. No error alerts are generated
 
@@ -1055,7 +1065,7 @@ All flows terminate gracefully when `IsAgent365LifecycleEnabled` = `"false"`:
 Flows 3, 4, and 5 must check for existing open deactivation requests before creating new ones:
 
 ```
-Filter: _fsi_agentlifecyclerecordlookup_value eq '{lifecycleRecordId}' and fsi_approvalstatus eq 100000000
+Filter: _fsi_agentlifecyclerecordlookup_value eq {lifecycleRecordId} and fsi_approvalstatus eq 100000000
 ```
 
 If a pending request exists, skip creation and log a compliance event with `fsi_eventtype` = `100000008` (Deactivation Requested) and `fsi_eventdetails` = `"Duplicate deactivation request skipped"`.
@@ -1083,24 +1093,27 @@ Wrap major flow sections in Scope actions for structured error handling:
 
 ## Environment Variables Reference
 
-All flows reference these solution-level environment variables:
+All flows reference these solution-level environment variables. Schema names are prefixed `fsi_ALG_`; display names below are shown for readability.
 
-| Variable | Type | Purpose |
-|----------|------|---------|
-| `IsAgent365LifecycleEnabled` | String | Feature flag — `"true"` or `"false"`. Gates all Agent 365 API calls. |
-| `DefaultSponsorUPN` | String | Fallback sponsor UPN when no sponsor is assigned or all fallbacks fail |
-| `FSIAllAgentIdentitiesGroupId` | String | Entra security group ID for all agent service principals |
-| `FSIZone3AgentsGroupId` | String | Entra security group ID for Zone 3 agent service principals |
-| `DataverseEnvironmentUrl` | String | Base URL for the Dataverse environment (e.g., `https://org.crm.dynamics.com`) |
-| `EscalationApproverUPN` | String | UPN for timeout and overdue review escalations |
-| `GovernanceCommitteeUPN` | String | UPN or group for final deletion confirmations |
-| `FlowAdministrators` | String | Teams channel or distribution list for flow error alerts |
-| `AgentRegistryApiVersion` | String | Graph API version for agent registry calls (default: `beta`) |
-| `InactivityThresholdZone1` | Integer | Days of inactivity before flagging (Zone 1 default: `180`) |
-| `InactivityThresholdZone2` | Integer | Days of inactivity before flagging (Zone 2 default: `90`) |
-| `InactivityThresholdZone3` | Integer | Days of inactivity before flagging (Zone 3 default: `30`) |
-| `DeletionHoldDaysDefault` | Integer | Days to hold before permanent deletion (default: `30`) |
-| `DeletionHoldDaysZone3` | Integer | Extended hold period for Zone 3 agents (default: `90`) |
+| Schema name | Display name | Type | Purpose |
+|-------------|--------------|------|---------|
+| `fsi_ALG_IsAgent365LifecycleEnabled` | IsAgent365LifecycleEnabled | String | Feature flag — `"true"` or `"false"`. Gates all Agent 365 API calls. |
+| `fsi_ALG_DefaultSponsorUPN` | DefaultSponsorUPN | String | Fallback sponsor UPN when no sponsor is assigned or all fallbacks fail |
+| `fsi_ALG_GovernanceTeamEmail` | GovernanceTeamEmail | String | Distribution list for compliance notifications |
+| `fsi_ALG_GovernanceCommitteeUPN` | GovernanceCommitteeUPN | String | UPN or group for deactivation/deletion approvals |
+| `fsi_ALG_EscalationApproverUPN` | EscalationApproverUPN | String | UPN for timeout and overdue review escalations |
+| `fsi_ALG_FlowAdministrators` | FlowAdministrators | String | Teams channel or distribution list for flow error alerts |
+| `fsi_ALG_SponsorMoverWorkflowId` | SponsorMoverWorkflowId | String | Entra Lifecycle Workflow ID for the sponsor-mover scenario (see prerequisites) |
+| `fsi_ALG_SponsorLeaverWorkflowId` | SponsorLeaverWorkflowId | String | Entra Lifecycle Workflow ID for the sponsor-leaver scenario (see prerequisites) |
+| `fsi_ALG_FSIAllAgentIdentitiesGroupId` | FSIAllAgentIdentitiesGroupId | String | Entra security group ID for all agent service principals |
+| `fsi_ALG_FSIZone3AgentsGroupId` | FSIZone3AgentsGroupId | String | Entra security group ID for Zone 3 agent service principals |
+| `fsi_ALG_DataverseEnvironmentUrl` | DataverseEnvironmentUrl | String | Base URL for the Dataverse environment (e.g., `https://org.crm.dynamics.com`) |
+| `fsi_ALG_InactivityThresholdZone1` | InactivityThresholdZone1 | Decimal | Days of inactivity before flagging (Zone 1 default: `180`) |
+| `fsi_ALG_InactivityThresholdZone2` | InactivityThresholdZone2 | Decimal | Days of inactivity before flagging (Zone 2 default: `90`) |
+| `fsi_ALG_InactivityThresholdZone3` | InactivityThresholdZone3 | Decimal | Days of inactivity before flagging (Zone 3 default: `30`) |
+
+> **Note:** Deletion-hold day counts (default 30, Zone 3 90) are currently hard-coded in Flow 4 Step 6b. To make them configurable, add `fsi_ALG_DeletionHoldDaysDefault` and `fsi_ALG_DeletionHoldDaysZone3` to `scripts/create_alg_environment_variables.py` before referencing them in flows.
+> **Note:** The Graph API version for the agent registry is currently hard-coded as `beta`. To make it configurable, add `fsi_ALG_AgentRegistryApiVersion` to the environment-variables script.
 
 ---
 
@@ -1131,7 +1144,7 @@ All components should be developed inside a Dataverse solution container for man
 | Display Name | Agent 365 Lifecycle Governance |
 | Unique Name | `fsi_Agent365LifecycleGovernance` |
 | Publisher | FSI Publisher (`fsi`) |
-| Version | `1.1.0.0` |
+| Version | `1.1.3.0` |
 
 ### Components to Include
 

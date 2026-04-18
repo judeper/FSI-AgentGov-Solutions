@@ -957,6 +957,7 @@ RELATIONSHIPS = [
         },
         "Lookup": {
             "SchemaName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
+            "ReferencingEntityNavigationPropertyName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Agent Lifecycle Record", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "Parent agent lifecycle record for this sponsor assignment", "LanguageCode": 1033}]},
@@ -977,6 +978,7 @@ RELATIONSHIPS = [
         },
         "Lookup": {
             "SchemaName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
+            "ReferencingEntityNavigationPropertyName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Agent Lifecycle Record", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "Parent agent lifecycle record for this access review", "LanguageCode": 1033}]},
@@ -997,6 +999,7 @@ RELATIONSHIPS = [
         },
         "Lookup": {
             "SchemaName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
+            "ReferencingEntityNavigationPropertyName": f"{PUBLISHER_PREFIX}_AgentLifecycleRecordLookup",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Agent Lifecycle Record", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "Parent agent lifecycle record for this deactivation request", "LanguageCode": 1033}]},
@@ -1288,18 +1291,70 @@ def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
     return {"created": created, "skipped": skipped}
 
 
+def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
+    """Create alternate keys for tables that need composite-key upserts.
+
+    Uses the shared client's underlying session and headers because the
+    generic ``request()`` helper is not exposed on DataverseClient.
+    """
+    print("\n[Creating Alternate Keys]")
+    from urllib.parse import urljoin
+    created = 0
+    skipped = 0
+    errors = 0
+    for key in ALTERNATE_KEYS:
+        entity = key["EntityLogicalName"]
+        schema_name = key["SchemaName"]
+        if dry_run:
+            print(f"  [DRY RUN] Would create alternate key: {entity}.{schema_name}")
+            created += 1
+            continue
+        # Existence check
+        try:
+            url = urljoin(client.api_url, f"EntityDefinitions(LogicalName='{entity}')/Keys")
+            resp = client._session.get(  # noqa: SLF001 — shared client has no public request()
+                url,
+                headers=client._get_headers(),  # noqa: SLF001
+                params={"$filter": f"SchemaName eq '{schema_name}'"},
+            )
+            if resp.ok and resp.json().get("value"):
+                print(f"  {schema_name}: Already exists")
+                skipped += 1
+                continue
+        except Exception:  # pragma: no cover
+            pass
+        print(f"  {schema_name}: Creating on {entity}")
+        payload = {
+            "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
+            "SchemaName": schema_name,
+            "DisplayName": key["DisplayName"],
+            "KeyAttributes": key["KeyAttributes"],
+        }
+        try:
+            url = urljoin(client.api_url, f"EntityDefinitions(LogicalName='{entity}')/Keys")
+            resp = client._session.post(url, headers=client._get_headers(), json=payload)  # noqa: SLF001
+            resp.raise_for_status()
+            created += 1
+        except Exception as ex:  # pragma: no cover
+            print(f"  {schema_name}: Error — {ex}")
+            errors += 1
+    return {"created": created, "skipped": skipped, "errors": errors}
+
+
 def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
     relationship_results = create_relationships(client, dry_run)
+    alternate_key_results = create_alternate_keys(client, dry_run)
     print("\n=== Schema Creation Complete ===")
     return {
         "errors": 0,
         "option_sets": option_set_results,
         "tables": table_results,
         "relationships": relationship_results,
+        "alternate_keys": alternate_key_results,
     }
 
 
