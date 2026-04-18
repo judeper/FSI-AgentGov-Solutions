@@ -27,7 +27,13 @@ jobs:
 
       - run: pip install pyyaml jsonschema
 
-      - name: Validate manifests + check generated artifacts
+      - name: Generate artifacts (writes gitignored site-docs)
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py
+
+      - name: Verify generator is deterministic and committed artifacts are in sync
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
