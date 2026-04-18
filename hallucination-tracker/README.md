@@ -291,4 +291,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - Hallucination Feedback Tracker v1.0.0*
+*FSI Agent Governance Framework - Hallucination Feedback Tracker v1.1.0*

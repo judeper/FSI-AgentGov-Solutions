@@ -275,4 +275,4 @@ See the [cross-solution integration guide](https://github.com/judeper/FSI-AgentG
 
 ---
 
-*Version: 1.2.1 | Last Updated: February 2026*
+*Version: 1.2.2 | Last Updated: February 2026*

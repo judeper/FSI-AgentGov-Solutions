@@ -68,4 +68,4 @@ Requirements for deploying the Scope Drift Monitor.
 
 ---
 
-*Scope Drift Monitor v1.1.2*
+*Scope Drift Monitor v1.2.0*

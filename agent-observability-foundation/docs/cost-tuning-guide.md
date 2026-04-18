@@ -230,5 +230,5 @@ If you need volume-based sampling, implement custom logic via Logic Apps or Azur
 
 ---
 
-*Cost Tuning Guide version: 0.1.0*
+*Cost Tuning Guide version: 1.2.0*
 *Last updated: February 2026*

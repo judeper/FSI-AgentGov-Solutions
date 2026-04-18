@@ -439,4 +439,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Agent Communication Restriction Detector -- Flow Setup Guide v1.0.2*
+*Agent Communication Restriction Detector -- Flow Setup Guide v1.1.0*

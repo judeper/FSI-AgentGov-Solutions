@@ -219,5 +219,5 @@ To verify PII handling configuration:
 
 ---
 
-*PII Sanitization Guide version: 0.1.0*
+*PII Sanitization Guide version: 1.2.0*
 *Last updated: February 2026*

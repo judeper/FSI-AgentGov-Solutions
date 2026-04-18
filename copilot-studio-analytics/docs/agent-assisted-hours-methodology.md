@@ -239,5 +239,5 @@ business_impact:
 
 ---
 
-*Agent Assisted Hours Methodology version: 1.0.0*
+*Agent Assisted Hours Methodology version: 2.0.0*
 *Last updated: February 2026*

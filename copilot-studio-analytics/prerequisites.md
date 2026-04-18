@@ -163,5 +163,5 @@ python scripts/validate_telemetry.py --config config/config.yml --verbose
 
 ---
 
-*Prerequisites version: 1.1.0*
+*Prerequisites version: 2.0.0*
 *Last updated: April 2026*

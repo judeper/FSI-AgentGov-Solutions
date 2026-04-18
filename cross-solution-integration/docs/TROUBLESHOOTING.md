@@ -126,4 +126,4 @@ Each flow logs errors to separate mechanisms: `CD-SolutionFeedCollector` writes 
 
 ---
 
-*Troubleshooting Guide v1.0.1 — March 2026*
+*Troubleshooting Guide v2.0.0 — March 2026*

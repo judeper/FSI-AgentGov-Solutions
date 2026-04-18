@@ -326,4 +326,4 @@ See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedure
 
 ---
 
-*Updated: April 2026 | Version: v1.0.2*
+*Updated: April 2026 | Version: v1.0.3*

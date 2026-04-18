@@ -291,4 +291,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.1.1*
+*FSI Agent Governance Framework - RAG Source Validator v1.2.0*

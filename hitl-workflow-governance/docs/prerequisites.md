@@ -200,4 +200,4 @@ This solution provides governance tooling for these preview actions. Administrat
 
 ---
 
-*HITL Workflow Governance v1.0.1*
+*HITL Workflow Governance v1.1.0*

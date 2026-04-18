@@ -257,4 +257,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.1.2*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.2.0*

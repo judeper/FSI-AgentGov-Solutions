@@ -238,5 +238,5 @@ Audit trail queries include a `CompletenessPercent` field indicating what percen
 
 ---
 
-*Query Library Version: 1.1.0*
+*Query Library Version: 1.2.0*
 *Last Updated: 2026-02-05*

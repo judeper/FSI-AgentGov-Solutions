@@ -347,4 +347,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Segregation of Duties Detector v1.0.0*
+*FSI Agent Governance Framework - Segregation of Duties Detector v1.1.0*

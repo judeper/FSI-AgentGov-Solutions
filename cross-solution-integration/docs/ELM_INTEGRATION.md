@@ -104,4 +104,4 @@ The integration flow logs its actions back to ELM's `fsi_provisioninglog` table:
 
 ---
 
-*ELM Integration Guide v1.0.0 — February 2026*
+*ELM Integration Guide v2.0.0 — February 2026*

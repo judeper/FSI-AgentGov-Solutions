@@ -197,4 +197,4 @@ When Tier 2 solutions export evidence packages, register them in `fsi_compliance
 
 ---
 
-*Status Mapping Reference v1.0.0 — February 2026*
+*Status Mapping Reference v2.0.0 — February 2026*

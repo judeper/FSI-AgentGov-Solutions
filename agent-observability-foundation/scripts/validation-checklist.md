@@ -410,6 +410,6 @@ This checklist helps support successful deployment by:
 
 ---
 
-*Validation Checklist Version: 1.0.0*
+*Validation Checklist Version: 1.2.0*
 *Part of FSI Agent Observability Foundation*
 *Last Updated: February 2026*

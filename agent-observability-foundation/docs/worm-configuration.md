@@ -277,5 +277,5 @@ Locked WORM storage has cost implications:
 
 ---
 
-*WORM Configuration Guide version: 0.1.0*
+*WORM Configuration Guide version: 1.2.0*
 *Last updated: February 2026*

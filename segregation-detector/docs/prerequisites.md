@@ -189,4 +189,4 @@ Before deployment, verify:
 
 ---
 
-*Segregation of Duties Detector v1.0.0*
+*Segregation of Duties Detector v1.1.0*

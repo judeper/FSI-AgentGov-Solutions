@@ -503,5 +503,5 @@ SOX 302/404 compliance requires evidence of effective IT general controls. This 
 
 ---
 
-*Governance Queries Mapping version: 1.0.0*
+*Governance Queries Mapping version: 1.2.0*
 *Last updated: February 2026*

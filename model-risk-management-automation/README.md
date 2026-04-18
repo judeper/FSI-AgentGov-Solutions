@@ -252,4 +252,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Model Risk Management Automation v1.0.1*
+*FSI Agent Governance Framework — Model Risk Management Automation v1.0.2*

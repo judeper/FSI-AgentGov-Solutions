@@ -203,5 +203,5 @@ CopilotSessionOutcome events inherit the Log Analytics workspace retention confi
 
 ---
 
-*Cost Tuning Guide version: 1.0.0*
+*Cost Tuning Guide version: 2.0.0*
 *Last updated: February 2026*

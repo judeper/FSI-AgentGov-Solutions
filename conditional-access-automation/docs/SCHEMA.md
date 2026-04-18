@@ -207,4 +207,4 @@ Manual deployment steps:
 
 ---
 
-*Schema Version: 1.2.1 | Publisher Prefix: fsi_ | Last Updated: April 2026*
+*Schema Version: 1.2.2 | Publisher Prefix: fsi_ | Last Updated: April 2026*

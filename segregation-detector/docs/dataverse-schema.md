@@ -285,4 +285,4 @@ Create tables using Power Apps maker portal following the schema above.
 
 ---
 
-*Segregation of Duties Detector v1.0.0*
+*Segregation of Duties Detector v1.1.0*

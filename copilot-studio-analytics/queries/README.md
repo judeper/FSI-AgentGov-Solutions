@@ -139,5 +139,5 @@ queries/
 
 ---
 
-*Query Library version: 1.0.0*
+*Query Library version: 2.0.0*
 *Last updated: February 2026*

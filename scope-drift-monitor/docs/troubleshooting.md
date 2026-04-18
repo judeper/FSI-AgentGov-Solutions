@@ -355,4 +355,4 @@ For issues not covered here:
 
 ---
 
-*Scope Drift Monitor v1.1.0*
+*Scope Drift Monitor v1.2.0*

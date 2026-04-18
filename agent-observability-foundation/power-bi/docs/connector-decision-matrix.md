@@ -431,4 +431,4 @@ Power BI Premium, PPU, and Fabric support **composite models** combining Import 
 ---
 
 *Last Updated: February 2026*
-*Version: 1.0.0*
+*Version: 1.2.0*

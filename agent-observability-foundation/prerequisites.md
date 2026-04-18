@@ -111,5 +111,5 @@ To capture telemetry from Copilot Studio agents, configure the Application Insig
 
 ---
 
-*Prerequisites version: 0.1.0*
+*Prerequisites version: 1.2.0*
 *Last updated: February 2026*

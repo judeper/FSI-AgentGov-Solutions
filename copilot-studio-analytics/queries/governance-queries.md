@@ -396,5 +396,5 @@ This document complements the solution-level governance mapping by providing gra
 
 ---
 
-*Governance Queries Mapping version: 1.0.0*
+*Governance Queries Mapping version: 2.0.0*
 *Last updated: February 2026*

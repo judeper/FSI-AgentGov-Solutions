@@ -7,7 +7,7 @@ Validates generative AI feature configurations (Azure OpenAI integration, genera
 | Property | Value |
 |----------|-------|
 | Status | In Development |
-| Version | 1.0.1 |
+| Version | 1.1.0 |
 | Primary Control | [2.24 -- Agent Feature Enablement Governance](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-governance/) |
 | Regulatory Context | FINRA Rule 3110, GLBA Section 501(b), SOX Section 404 |
 

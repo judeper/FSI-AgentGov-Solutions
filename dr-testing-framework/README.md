@@ -374,4 +374,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v1.2.1*
+*FSI Agent Governance Framework - DR Testing Framework v2.0.0*

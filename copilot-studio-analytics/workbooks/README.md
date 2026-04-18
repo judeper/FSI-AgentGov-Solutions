@@ -183,6 +183,6 @@ Workbook queries use parameter reference syntax like `{TimeRange:ms}`, `"{Zone}"
 
 ---
 
-*Version: 1.0.0*
+*Version: 2.0.0*
 *Last Updated: February 2026*
 *Part of FSI-AgentGov-Solutions*

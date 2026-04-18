@@ -230,4 +230,4 @@ For common issues and resolutions, see [Troubleshooting Guide](troubleshooting.m
 
 ---
 
-*Scope Drift Monitor v1.1.2*
+*Scope Drift Monitor v1.2.0*

@@ -113,5 +113,5 @@ Viva Insights provides analytics rolled up by organizational hierarchy (departme
 
 ---
 
-*Viva Insights Parity Matrix version: 1.0.0*
+*Viva Insights Parity Matrix version: 2.0.0*
 *Last updated: February 2026*

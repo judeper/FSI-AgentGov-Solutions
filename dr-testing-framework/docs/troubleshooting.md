@@ -71,4 +71,4 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 ---
 
-*DR Testing Framework — Troubleshooting Guide v1.2.1*
+*DR Testing Framework — Troubleshooting Guide v2.0.0*

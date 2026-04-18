@@ -188,4 +188,4 @@ Automate with Task Scheduler or Azure Automation using service principal authent
 
 ---
 
-*Evidence Export Guide v1.0.0 — February 2026*
+*Evidence Export Guide v2.0.0 — February 2026*

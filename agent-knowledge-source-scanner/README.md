@@ -254,4 +254,4 @@ This solution supports compliance with these regulations by providing auditable 
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.0.3*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.1.0*

@@ -143,6 +143,6 @@ Workbook queries use parameter reference syntax like `{TimeRange:default}` and `
 
 ---
 
-*Version: 1.0.0*
+*Version: 1.2.0*
 *Last Updated: February 2026*
 *Part of FSI-AgentGov-Solutions*

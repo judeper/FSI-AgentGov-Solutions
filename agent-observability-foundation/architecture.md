@@ -202,5 +202,5 @@ Phase 4 will deliver executive reporting via Power BI:
 
 ---
 
-*Architecture version: 1.1.1*
+*Architecture version: 1.2.0*
 *Last updated: February 2026*

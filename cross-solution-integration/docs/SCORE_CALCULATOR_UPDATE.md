@@ -79,4 +79,4 @@ Automated assessments naturally appear as the latest records since they run dail
 
 ---
 
-*Score Calculator Update Guide v1.0.0 — February 2026*
+*Score Calculator Update Guide v2.0.0 — February 2026*

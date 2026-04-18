@@ -182,4 +182,4 @@ Power Automate connection references for the CMM flow.
 
 ---
 
-*Content Moderation Governance Monitor — Dataverse Schema Reference v1.0.3*
+*Content Moderation Governance Monitor — Dataverse Schema Reference v1.1.0*

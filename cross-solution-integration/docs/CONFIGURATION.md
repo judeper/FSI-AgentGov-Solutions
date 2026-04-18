@@ -85,4 +85,4 @@ Import-Module .\IntegrationConfig.psm1
 
 ---
 
-*Configuration Guide v1.0.0 — February 2026*
+*Configuration Guide v2.0.0 — February 2026*
