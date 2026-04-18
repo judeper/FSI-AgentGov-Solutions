@@ -6,7 +6,7 @@ Requirements for deploying the Agent Knowledge Source Scanner solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ (7.4+ for PnP 3.x) | Core runtime (`#Requires -Version 7.0`) |
+| PowerShell | 7.2+ (7.4+ for PnP 3.x) | Core runtime (`#Requires -Version 7.2`) |
 | PnP.PowerShell | 2.5.0+ or 3.x | SharePoint Online item enumeration, permission reads, sensitivity label retrieval |
 
 ## Installation
@@ -18,7 +18,7 @@ Requirements for deploying the Agent Knowledge Source Scanner solution.
 Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
 ```
 
-> **Note:** PnP.PowerShell 2.5.0+ requires PowerShell 7.0 or later. Windows PowerShell 5.1 is not supported.
+> **Note:** PnP.PowerShell 2.5.0+ requires PowerShell 7.2 or later. Windows PowerShell 5.1 and PowerShell 7.0/7.1 are not supported.
 
 ### PnP.PowerShell 3.x
 
@@ -44,7 +44,7 @@ PnP.PowerShell 3.x requires a tenant-specific Entra app registration. Use the bu
 ```powershell
 # Register the PnP app in your tenant (requires Entra Global Admin consent)
 Register-PnPEntraIDApp -ApplicationName "PnP.PowerShell - AgentGov" `
-    -Tenant "contoso.onmicrosoft.com" `
+    -Tenant "example.onmicrosoft.com" `
     -Interactive `
     -SharePointDelegatePermissions "AllSites.Read" `
     -GraphDelegatePermissions "Group.Read.All"
@@ -54,7 +54,7 @@ Record the **Client ID** from the output. Pass it to the scanner with `-ClientId
 
 ```powershell
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
-    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
+    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
     -LibraryName "Documents" `
     -AgentName "HR-Agent" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `

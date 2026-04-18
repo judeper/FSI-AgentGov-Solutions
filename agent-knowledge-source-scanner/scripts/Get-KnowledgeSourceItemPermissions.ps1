@@ -13,10 +13,11 @@
     - Produces a risk-scored CSV report for compliance review
 
     Risk scoring (agent knowledge source context — stricter than general SharePoint):
-    - CRITICAL: High-sensitivity label AND accessible outside agent user group
-    - HIGH: Anyone link OR external user on any knowledge source item
-    - MEDIUM: Org-wide link with Edit access on a knowledge source item
-    - LOW: Item accessible to a broader internal group than agent's target audience
+    - CRITICAL: CRITICAL-tier sensitivity label AND accessible outside agent user group
+    - HIGH: Anyone link, external/guest user, OR HIGH-tier sensitivity label out-of-scope
+    - MEDIUM: Org-wide link with write-equivalent access (Edit/Contribute/Full Control)
+    - LOW: Item accessible to a broader internal group than agent's target audience,
+           read-only org-wide link, or FlexibleLink (per-recipient grants we cannot enumerate)
 
     An agent returns exact document content, not site-level summaries. Item-level
     oversharing in a knowledge source library creates a direct data exposure path
@@ -45,6 +46,13 @@
     Array of UPNs representing the agent's intended user audience.
     Alternative to -AgentUserGroupId when group membership is known.
 
+.PARAMETER ClientId
+    Entra app registration Client ID for PnP.PowerShell authentication.
+    REQUIRED for PnP.PowerShell 3.x (the multi-tenant PnP Management Shell app
+    was retired in September 2024). Create a tenant-specific app via
+    `Register-PnPEntraIDApp` and pass the resulting Client ID here. See
+    docs/prerequisites.md for full setup.
+
 .PARAMETER ConfigPath
     Path to the item-scope-config.json configuration file.
     Defaults to ../templates/item-scope-config.sample.json relative to script.
@@ -55,28 +63,25 @@
 
 .PARAMETER OutputPath
     Path for the output CSV report. Defaults to ./output/item-permissions-report.csv.
+    A header-only CSV is always written, even when no findings are detected,
+    so downstream automation can rely on the artifact existing.
 
 .PARAMETER IncludeCompliant
     When specified, includes compliant (no-risk) items in the output report.
     By default, only items with identified risks are included.
 
 .EXAMPLE
-    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001"
+    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://example.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "00000000-0000-0000-0000-000000000099"
 
-    Scans a single library for the HR Agent's knowledge source.
-
-.EXAMPLE
-    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "your-client-id-here"
-
-    Scans a single library using a tenant-specific app registration (required for PnP.PowerShell 3.x).
+    Scans a single library for the HR Agent's knowledge source using a tenant-specific app registration.
 
 .EXAMPLE
-    .\Get-KnowledgeSourceItemPermissions.ps1 -LibraryList "./output/agent-knowledge-sources.csv" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -OutputPath "./output/item-risk-report.csv"
+    .\Get-KnowledgeSourceItemPermissions.ps1 -LibraryList "./output/agent-knowledge-sources.csv" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "00000000-0000-0000-0000-000000000099" -OutputPath "./output/item-risk-report.csv"
 
     Scans all libraries from a prior knowledge source scan output.
 
 .EXAMPLE
-    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" -AgentUserGroupMembers @("user1@contoso.com","user2@contoso.com") -WhatIf
+    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://example.sharepoint.com/sites/AgentKB" -AgentUserGroupMembers @("user1@example.com","user2@example.com") -ClientId "00000000-0000-0000-0000-000000000099" -WhatIf
 
     Dry-run scan showing what would be checked without making changes.
 
@@ -86,15 +91,26 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.0.3
+    Version:    1.1.0
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
-    Requires:   PowerShell 7.0+ (7.4+ for PnP.PowerShell 3.x)
+    Requires:   PowerShell 7.2+ (7.4+ for PnP.PowerShell 3.x)
     Framework:  FSI Agent Governance
     Controls:   4.3, 1.4, 1.5
+
+    Known limitations (documented in .ralph-config.json and docs/troubleshooting.md):
+    - Group membership expansion uses Get-PnPEntraIDGroupMember which does NOT
+      resolve nested groups. Items granted to a parent group whose members are
+      themselves groups will report only direct members.
+    - SensitivityLabel comparison matches against display names. If your tenant
+      labels store as GUIDs in `_SensitivityLabel`, populate
+      `sensitivityLabelRiskTiers` with the GUID values rather than display names.
+    - App-only (certificate / managed identity) authentication is not currently
+      wired in this entry point — the script uses interactive auth. Add a parameter
+      set with cert/thumbprint for unattended execution.
 #>
 
-#Requires -Version 7.0
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName = "PnP.PowerShell"; ModuleVersion = "2.5.0" }
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -314,25 +330,40 @@ function Get-ItemRiskScore {
     param(
         [string]$PermissionType,
         [string]$SensitivityTier,
-        [bool]$OutsideAgentScope
+        [bool]$OutsideAgentScope,
+        [string]$BroadPermission
     )
 
-    # CRITICAL: High-sensitivity label AND accessible outside agent user group
-    if ($SensitivityTier -in @("CRITICAL", "HIGH") -and $OutsideAgentScope) {
+    # CRITICAL: high-sensitivity (CRITICAL tier) AND accessible outside the agent user group.
+    # Note: HIGH-tier labels with out-of-scope access are reported as HIGH below; only the
+    # CRITICAL tier escalates the finding to CRITICAL.
+    if ($SensitivityTier -eq "CRITICAL" -and $OutsideAgentScope) {
         return "CRITICAL"
     }
 
-    # HIGH: AnyoneLink OR ExternalUser on any knowledge source item
+    # HIGH: AnyoneLink / external grant / HIGH-sensitivity item exposed outside scope
     if ($PermissionType -in @("AnonymousLink", "ExternalUser", "GuestUser")) {
         return "HIGH"
     }
-
-    # MEDIUM: Org-wide link with Edit access
-    if ($PermissionType -eq "OrganizationLink") {
-        return "MEDIUM"
+    if ($SensitivityTier -eq "HIGH" -and $OutsideAgentScope) {
+        return "HIGH"
     }
 
-    # LOW: Item accessible to broader internal group than agent's target
+    # MEDIUM: Org-wide link only when it grants write-equivalent permission
+    if ($PermissionType -eq "OrganizationLink") {
+        $writeRoles = @("Edit", "Contribute", "Full Control", "Design", "Manage Hierarchy")
+        $isWrite = $false
+        if ($BroadPermission) {
+            foreach ($r in $writeRoles) {
+                if ($BroadPermission -match [regex]::Escape($r)) { $isWrite = $true; break }
+            }
+        }
+        if ($isWrite) { return "MEDIUM" }
+        # Read-only org-wide link: still oversharing, but not write-grade
+        return "LOW"
+    }
+
+    # LOW: any item accessible to a principal outside the agent user scope
     if ($OutsideAgentScope) {
         return "LOW"
     }
@@ -402,33 +433,84 @@ function Get-ItemPermissionDetails {
                 $affectedUsers = "Everyone except external users"
             }
 
-            # Check if outside agent scope
-            $outsideScope = $false
-            if ($AgentUserScope.Count -gt 0) {
-                if ($permissionType -in @("AnonymousLink", "OrganizationLink", "EveryoneExceptExternal")) {
-                    $outsideScope = $true
-                }
-                elseif ($permissionType -eq "DirectPermission" -and $member.PrincipalType -eq "User") {
-                    $upn = $memberLoginName -replace "^i:0#\.f\|membership\|", ""
-                    if (-not $AgentUserScope.Contains($upn)) {
-                        $outsideScope = $true
-                    }
-                }
-                elseif ($permissionType -in @("ExternalUser", "GuestUser")) {
-                    $outsideScope = $true
-                }
-            }
-
-            $riskScore = Get-ItemRiskScore -PermissionType $permissionType `
-                -SensitivityTier $sensitivityTier `
-                -OutsideAgentScope $outsideScope
-
             # Determine the permission level (Read, Edit, Full Control, etc.)
             $permLevels = @()
             foreach ($roleDef in $roleAssignment.RoleDefinitionBindings) {
                 $permLevels += $roleDef.Name
             }
             $broadPermission = $permLevels -join ", "
+
+            # Check if outside agent scope
+            $outsideScope = $false
+            if ($AgentUserScope.Count -gt 0) {
+                if ($permissionType -in @("AnonymousLink", "OrganizationLink", "EveryoneExceptExternal", "FlexibleLink")) {
+                    # FlexibleLink encapsulates per-recipient grants we cannot enumerate
+                    # without resolving the SharingLink object's grantees. Treat as out-of-scope
+                    # so scoring assigns at least LOW; documented limitation in .ralph-config.json.
+                    $outsideScope = $true
+                }
+                elseif ($permissionType -in @("ExternalUser", "GuestUser")) {
+                    $outsideScope = $true
+                }
+                elseif ($permissionType -eq "DirectPermission") {
+                    if ($member.PrincipalType -eq "User") {
+                        $upn = $memberLoginName -replace "^i:0#\.f\|membership\|", ""
+                        if (-not $AgentUserScope.Contains($upn)) {
+                            $outsideScope = $true
+                        }
+                    }
+                    elseif ($member.PrincipalType -eq "SecurityGroup" -or $member.PrincipalType -eq "FederatedUser") {
+                        # Entra ID security group assigned directly. Resolve direct members
+                        # only (nested groups not resolved — known limitation).
+                        $groupId = $null
+                        if ($memberLoginName -match "c:0[ot]\.t\|tenant\|([0-9a-f\-]{36})") { $groupId = $Matches[1] }
+                        if ($groupId) {
+                            try {
+                                $grpMembers = $null
+                                try {
+                                    $grpMembers = Get-PnPEntraIDGroupMember -Identity $groupId -ErrorAction Stop
+                                } catch [System.Management.Automation.CommandNotFoundException] {
+                                    $grpMembers = Get-PnPAzureADGroupMember -Identity $groupId -ErrorAction Stop
+                                }
+                                $allInScope = $true
+                                foreach ($gm in $grpMembers) {
+                                    if ($gm.UserPrincipalName -and -not $AgentUserScope.Contains($gm.UserPrincipalName)) {
+                                        $allInScope = $false; break
+                                    }
+                                }
+                                if (-not $allInScope) { $outsideScope = $true }
+                            } catch {
+                                Write-AuditLog "Could not enumerate Entra group $groupId for scope comparison: $($_.Exception.Message)" "WARN"
+                                $outsideScope = $true
+                            }
+                        } else {
+                            # Cannot extract group id — assume out-of-scope to err on side of disclosure
+                            $outsideScope = $true
+                        }
+                    }
+                    elseif ($member.PrincipalType -eq "SharePointGroup") {
+                        try {
+                            $spGroupMembers = Get-PnPGroupMember -Group $member.Title -ErrorAction Stop
+                            $allInScope = $true
+                            foreach ($gm in $spGroupMembers) {
+                                $upn = $gm.LoginName -replace "^i:0#\.f\|membership\|", ""
+                                if ($upn -and -not $AgentUserScope.Contains($upn)) {
+                                    $allInScope = $false; break
+                                }
+                            }
+                            if (-not $allInScope) { $outsideScope = $true }
+                        } catch {
+                            Write-AuditLog "Could not enumerate SharePoint group '$($member.Title)' for scope comparison: $($_.Exception.Message)" "WARN"
+                            $outsideScope = $true
+                        }
+                    }
+                }
+            }
+
+            $riskScore = Get-ItemRiskScore -PermissionType $permissionType `
+                -SensitivityTier $sensitivityTier `
+                -OutsideAgentScope $outsideScope `
+                -BroadPermission $broadPermission
 
             if ($riskScore -or $IncludeCompliant) {
                 $results.Add(@{
@@ -469,7 +551,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.3                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.1.0                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -490,7 +572,29 @@ try {
 
     Write-AuditLog "Scan targets: $($targets.Count) libraries"
 
-    # Resolve agent user scope
+    # Detect PnP.PowerShell version once before scanning
+    $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
+        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
+        throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
+    }
+
+    # Bootstrap a PnP connection BEFORE resolving the agent user scope. Get-PnPEntraIDGroupMember
+    # requires an active PnP/Graph context; calling it cold previously failed silently and produced
+    # an empty scope (disabling out-of-scope detection entirely).
+    $bootstrapTarget = $targets | Select-Object -First 1
+    if ($bootstrapTarget -and $AgentUserGroupId -and -not $AgentUserGroupMembers) {
+        try {
+            $bootstrapParams = @{ Url = $bootstrapTarget.SiteUrl; Interactive = $true }
+            if ($ClientId) { $bootstrapParams['ClientId'] = $ClientId }
+            Connect-PnPOnline @bootstrapParams -ErrorAction Stop
+            Write-AuditLog "Bootstrap connection established for scope resolution" "SUCCESS"
+        } catch {
+            Write-AuditLog "Bootstrap connection failed; agent user scope cannot be resolved from -AgentUserGroupId: $($_.Exception.Message)" "WARN"
+        }
+    }
+
+    # Resolve agent user scope (now with PnP context available if -AgentUserGroupId was used)
     $agentScope = Get-AgentUserScope -GroupId $AgentUserGroupId -Members $AgentUserGroupMembers
 
     if ($agentScope.Count -eq 0) {
@@ -513,13 +617,6 @@ try {
         MediumCount    = 0
         LowCount       = 0
         ErrorCount     = 0
-    }
-
-    # Detect PnP.PowerShell version once before scanning
-    $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
-        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
-        throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
     }
 
     # Scan each library
@@ -602,13 +699,24 @@ try {
         }
     }
 
-    # Export results
+    # Export results — always emit a CSV file (header-only when no findings) so downstream
+    # automation and audit packaging can rely on the artifact existing.
     if ($allResults.Count -gt 0) {
         $allResults | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
         Write-AuditLog "Report exported to $OutputPath" "SUCCESS"
     }
     else {
-        Write-AuditLog "No permission issues found across $($scanSummary.TotalItems) items" "SUCCESS"
+        $headerOnly = [PSCustomObject]@{
+            AgentName=''; KnowledgeSourceSite=''; LibraryName=''; ItemPath=''; ItemTitle='';
+            SensitivityLabel=''; BroadPermission=''; PermissionType=''; AffectedUsers=''; RiskScore=''
+        }
+        @($headerOnly) | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
+        # Strip the placeholder row, keep only the header
+        $csvLines = Get-Content -Path $OutputPath
+        if ($csvLines.Count -ge 1) {
+            Set-Content -Path $OutputPath -Value $csvLines[0] -Encoding UTF8
+        }
+        Write-AuditLog "No permission findings — wrote header-only CSV to $OutputPath ($($scanSummary.TotalItems) items scanned)" "SUCCESS"
     }
 
     # Summary

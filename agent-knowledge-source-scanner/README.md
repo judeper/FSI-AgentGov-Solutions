@@ -1,6 +1,6 @@
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.0.3
+> **Status:** Completed | **Version:** v1.1.0
 
 Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
 
@@ -39,10 +39,10 @@ Risk scoring is stricter than general SharePoint oversharing analysis because ag
 
 | Risk Level | Criteria | Rationale |
 |------------|----------|-----------|
-| **CRITICAL** | High-sensitivity label (Highly Confidential, Restricted) AND accessible outside agent user group | Sensitive content directly surfaceable by agent to unauthorized users |
-| **HIGH** | Anyone link OR external/guest user access on any knowledge source item | External data exposure through agent responses |
-| **MEDIUM** | Organization-wide link with Edit access on a knowledge source item | Broad internal access exceeding need-to-know |
-| **LOW** | Item accessible to a broader internal group than the agent's target audience | Potential scope creep beyond intended agent users |
+| **CRITICAL** | CRITICAL-tier sensitivity label (Highly Confidential, Restricted) AND accessible outside agent user group | Sensitive content directly surfaceable by agent to unauthorized users |
+| **HIGH** | Anyone link, external/guest user access, OR HIGH-tier sensitivity label out-of-scope | External data exposure or near-critical sensitivity exposed beyond intended audience |
+| **MEDIUM** | Organization-wide link with **write-equivalent** access (Edit / Contribute / Full Control) on a knowledge source item | Broad internal access with mutation rights exceeding need-to-know |
+| **LOW** | Item accessible to a broader internal group than the agent's target audience, read-only org-wide link, or `FlexibleLink` (per-recipient grants we cannot enumerate) | Potential scope creep beyond intended agent users |
 
 ## Architecture
 
@@ -127,14 +127,14 @@ Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentU
 ```powershell
 # PnP.PowerShell 2.x (no -ClientId needed)
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
-    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
+    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
     -LibraryName "Documents" `
     -AgentName "HR-Agent" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001"
 
 # PnP.PowerShell 3.x (requires -ClientId)
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
-    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
+    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
     -LibraryName "Documents" `
     -AgentName "HR-Agent" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
@@ -155,8 +155,8 @@ Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentU
 
 ```powershell
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
-    -SiteUrl "https://contoso.sharepoint.com/sites/AgentKB" `
-    -AgentUserGroupMembers @("user1@contoso.com", "user2@contoso.com") `
+    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
+    -AgentUserGroupMembers @("user1@example.com", "user2@example.com") `
     -WhatIf
 ```
 
