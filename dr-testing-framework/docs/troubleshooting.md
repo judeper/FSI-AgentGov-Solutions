@@ -9,7 +9,7 @@ Common issues and resolutions for the DR Testing Framework solution.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Token acquisition fails | Incorrect `TenantId` or `ClientId`, or expired client secret | Verify credentials in your configuration; regenerate the client secret in Entra ID |
-| 401 Unauthorized from Dataverse | Token audience does not match the target Dataverse organization | Verify the `-DataverseUrl` parameter matches the Dataverse environment URL (e.g., `https://contoso.crm.dynamics.com`) |
+| 401 Unauthorized from Dataverse | Token audience does not match the target Dataverse organization | Verify the `-Environment` parameter matches the Dataverse environment URL (e.g., `https://contoso.crm.dynamics.com`) |
 | Sovereign cloud auth failure | Script auto-selects auth endpoint based on Dataverse URL (`.dynamics.cn` → `login.chinacloudapi.cn`, `.microsoftdynamics.us` / `.appsplatform.us` → `login.microsoftonline.us`) | Verify the Dataverse URL uses the correct sovereign domain; the script selects the matching authority automatically |
 | `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 — the `-AsPlainText` parameter requires PowerShell 7.0+ | Install PowerShell 7+ and run scripts with `pwsh` (not `powershell`) |
 

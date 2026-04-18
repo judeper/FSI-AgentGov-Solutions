@@ -173,7 +173,7 @@ COLUMNS = {
                 ]
             },
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         # Actual recovery time in hours
         {

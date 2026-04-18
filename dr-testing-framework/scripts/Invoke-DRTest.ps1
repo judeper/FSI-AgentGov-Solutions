@@ -1,28 +1,37 @@
 <#
 .SYNOPSIS
-    Executes a disaster recovery test for AI agent infrastructure.
+    Runs post-recovery validation checks against an AI agent's Dataverse environment and writes structured evidence to Dataverse.
 
 .DESCRIPTION
-    Runs a DR test scenario, measures RTO/RPO, validates recovery,
-    and records results to Dataverse.
+    Performs read-only checks (agent component count, statecode, connection references, WhoAmI security context, Dataverse-row hash snapshot) against an environment that has already been restored, and persists each check as an `fsi_drtestresult` row for FFIEC BCP / FINRA 4370 / SEC 17a-4(f) evidence.
+
+    This script does NOT initiate a Power Platform environment restore, fail traffic to a paired region, or compute regulator-grade RTO/RPO. Power Platform / Copilot Studio environments are tenant-bound metadata managed by Microsoft — restore is performed via the Power Platform admin center (PPAC) or solution re-deployment, not by this script. Validation runs are timed (`ProbeDurationHours`) but that is the duration of the read-only checks, not actual recovery time. See the README for what each scenario produces and what additional evidence the customer must gather independently.
 
 .PARAMETER TestType
-    Type of DR test: AgentRestore, EnvironmentFailover, DataRecovery, FullDR
+    Validation scenario: AgentReadinessCheck, EnvironmentReachabilityCheck, DataverseAccessCheck, FullValidation.
+    The legacy values (AgentRestore, EnvironmentFailover, DataRecovery, FullDR) are accepted for backwards compatibility and mapped automatically.
 
 .PARAMETER AgentId
-    Target agent ID (for AgentRestore tests).
+    Target agent botid (required for AgentReadinessCheck and FullValidation).
 
 .PARAMETER Environment
     Dataverse environment URL.
 
+.PARAMETER AllowConnectivityOnly
+    Opt-in switch that permits the script to record only network reachability when no service-principal credentials are supplied. By default, missing credentials are an error so that an expired secret cannot silently produce a green PASS report.
+
 .EXAMPLE
-    .\Invoke-DRTest.ps1 -TestType "AgentRestore" -AgentId "guid" -Environment "https://contoso.crm.dynamics.com"
+    .\Invoke-DRTest.ps1 -TestType "AgentReadinessCheck" -AgentId "00000000-0000-0000-0000-000000000000" -Environment "https://your-org.crm.dynamics.com" -TenantId $tid -ClientId $cid -ClientSecret $sec
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("AgentRestore", "EnvironmentFailover", "DataRecovery", "FullDR")]
+    [ValidateSet(
+        "AgentReadinessCheck", "EnvironmentReachabilityCheck", "DataverseAccessCheck", "FullValidation",
+        # Backwards-compat aliases (mapped below)
+        "AgentRestore", "EnvironmentFailover", "DataRecovery", "FullDR"
+    )]
     [string]$TestType,
 
     [Parameter(Mandatory = $false)]
@@ -33,6 +42,9 @@ param(
 
     [Parameter(Mandatory = $false)]
     [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$AllowConnectivityOnly,
 
     [Parameter(Mandatory = $false)]
     [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
@@ -50,17 +62,29 @@ param(
     [string]$CorrelationId
 )
 
+#Requires -Version 7.1
+
+# Map legacy TestType values to the new validation labels for back-compat
+$TestTypeAliases = @{
+    'AgentRestore'        = 'AgentReadinessCheck'
+    'EnvironmentFailover' = 'EnvironmentReachabilityCheck'
+    'DataRecovery'        = 'DataverseAccessCheck'
+    'FullDR'              = 'FullValidation'
+}
+if ($TestTypeAliases.ContainsKey($TestType)) {
+    Write-Warning "TestType '$TestType' is a v1.x alias; v2.0.0 normalises it to '$($TestTypeAliases[$TestType])'."
+    $TestType = $TestTypeAliases[$TestType]
+}
+
 # Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
     $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
 }
 
-#Requires -Version 7.0
-
-# Validate AgentId is provided and well-formed for test types that require it
-if ($TestType -in @("AgentRestore", "FullDR")) {
+# Validate AgentId is provided and well-formed for scenarios that require it
+if ($TestType -in @("AgentReadinessCheck", "FullValidation")) {
     if ([string]::IsNullOrWhiteSpace($AgentId)) {
-        throw "AgentId is required for $TestType tests."
+        throw "AgentId is required for $TestType."
     }
     if ($AgentId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
         throw "AgentId must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789abc)."
@@ -77,6 +101,12 @@ if ($Environment -notmatch '^https://[\w\-]+\.(crm[\d]*\.dynamics\.com|crm\.micr
 
 $ErrorActionPreference = "Stop"
 
+# Fail closed on missing credentials unless the operator has opted in to a connectivity-only run.
+$HasCredentials = $TenantId -and $ClientId -and $ClientSecret
+if (-not $DryRun -and -not $HasCredentials -and -not $AllowConnectivityOnly) {
+    throw "Service-principal credentials (TenantId, ClientId, ClientSecret) are required for non-DryRun runs. Pass -AllowConnectivityOnly to opt in to a network-only check that records 'Probe' results without authenticated validation."
+}
+
 # Structured audit logging with file persistence for compliance evidence
 $script:AuditLogDir = Join-Path $PSScriptRoot ".." "logs"
 $script:AuditLogPath = $null
@@ -90,7 +120,6 @@ function Write-AuditLog {
     $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
     $entry = "[$timestamp] [$Level] [$CorrelationId] $Message"
     Write-Information $entry -InformationAction Continue
-    # Persist audit events to log file for tamper-evident compliance evidence
     if ($script:AuditLogPath) {
         try {
             Add-Content -Path $script:AuditLogPath -Value $entry -ErrorAction Stop
@@ -111,20 +140,19 @@ try {
     Write-Warning "Could not create audit log directory: $($_.Exception.Message). Audit events will only be written to stdout."
 }
 
-# RTO targets in hours
-$RTOTargets = @{
-    "AgentRestore" = 4
-    "EnvironmentFailover" = 2
-    "DataRecovery" = 4
-    "FullDR" = 8
+# Probe-time and last-result targets in hours / minutes (NOT regulator-grade RTO/RPO — see README).
+# These are operator-facing thresholds for the validation cadence, not a recovery-time guarantee.
+$ProbeDurationTargetHours = @{
+    "AgentReadinessCheck"          = 0.25  # validation should complete in 15 min
+    "EnvironmentReachabilityCheck" = 0.10
+    "DataverseAccessCheck"         = 0.25
+    "FullValidation"               = 0.75
 }
-
-# RPO targets in hours
-$RPOTargets = @{
-    "AgentRestore" = 24
-    "EnvironmentFailover" = 1
-    "DataRecovery" = 24
-    "FullDR" = 24
+$MaxMinutesSinceLastResultPerType = @{
+    "AgentReadinessCheck"          = 1440  # one validation per day
+    "EnvironmentReachabilityCheck" = 1440
+    "DataverseAccessCheck"         = 1440
+    "FullValidation"               = 10080 # one full validation per week
 }
 
 function Get-AuthEndpoint {
@@ -589,12 +617,14 @@ function Test-DataRecovery {
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
-                # Count records in the DR test results table
-                $countUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$select=fsi_drtestresultid"
-                $countResp = Invoke-RestMethod -Uri $countUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
-                $totalCount = ($countResp.value | Measure-Object).Count
-                Write-AuditLog "Record count: $totalCount DR test result(s)"
-                $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "$totalCount total record(s) in fsi_drtestresults"}
+                # Use $count=true&$top=0 for an authoritative server-side count (the value array is paged at 5000 by default).
+                $countHeaders = $dvHeaders.Clone()
+                $countHeaders["Prefer"] = "odata.include-annotations=*"
+                $countUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$count=true&`$top=0"
+                $countResp = Invoke-RestMethod -Uri $countUri -Headers $countHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
+                $totalCount = if ($null -ne $countResp.'@odata.count') { [int]$countResp.'@odata.count' } else { 0 }
+                Write-AuditLog "Record count: $totalCount DR validation result(s) (server-side @odata.count)"
+                $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "$totalCount total record(s) in fsi_drtestresults (true count via @odata.count)"}
             } else {
                 $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
@@ -630,9 +660,14 @@ function Save-TestResult {
         fsi_name = "DR-$($Result.TestType)-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         fsi_testtype = $Result.TestType
         fsi_executedon = $Result.ExecutedOn
-        fsi_actualrto = $Result.ActualRTO
-        fsi_targetrto = $Result.TargetRTO
-        fsi_rtomet = $Result.RTOMet
+        # NOTE (v2.0.0): the existing Dataverse columns are reused but their semantics changed:
+        #   fsi_actualrto  ← ProbeDurationHours       (wall-clock duration of the read-only validation, NOT recovery time)
+        #   fsi_targetrto  ← ProbeDurationTargetHours (validation budget, NOT regulator-grade RTO)
+        #   fsi_rtomet     ← ProbeWithinBudget        (was the validation budget honoured, NOT was RTO honoured)
+        # Schema column names are preserved for backwards compatibility; consumers should re-read the dashboard mapping.
+        fsi_actualrto = $Result.ProbeDurationHours
+        fsi_targetrto = $Result.ProbeDurationTargetHours
+        fsi_rtomet = $Result.ProbeWithinBudget
         fsi_status = if ($Result.Success) { 1 } else { 2 }
         fsi_validationchecks = (ConvertTo-Json -InputObject @($Result.ValidationChecks) -Compress)
         fsi_correlationid = $script:CorrelationId
@@ -683,60 +718,61 @@ if ($DryRun) {
 }
 
 Write-Host "Test Type: $TestType"
-Write-Host "Target RTO: $($RTOTargets[$TestType]) hours"
-Write-Host "Target RPO: $($RPOTargets[$TestType]) hours"
+Write-Host "Probe-duration target: $($ProbeDurationTargetHours[$TestType]) hours (NOTE: this is the validation script's wall-clock budget, NOT the regulator-grade RTO of the underlying recovery operation)"
+Write-Host "Max time since last result: $($MaxMinutesSinceLastResultPerType[$TestType]) minutes (NOTE: this is the cadence freshness threshold, NOT the regulator-grade RPO of the underlying data backup)"
 Write-Host ""
 
 $testStartTime = Get-Date
 Write-Host "Test started at: $($testStartTime.ToString('yyyy-MM-dd HH:mm:ss'))"
-Write-AuditLog "Starting $TestType test"
+Write-AuditLog "Starting $TestType validation"
 Write-Host ""
 
-# Execute appropriate test
-Write-Host "Executing recovery procedure..." -ForegroundColor White
+# Execute appropriate validation
+Write-Host "Executing validation procedure..." -ForegroundColor White
 $testResult = switch ($TestType) {
-    "AgentRestore" { Test-AgentRestore -AgentId $AgentId -DryRun $DryRun }
-    "EnvironmentFailover" { Test-EnvironmentFailover -DryRun $DryRun }
-    "DataRecovery" { Test-DataRecovery -DryRun $DryRun }
-    "FullDR" {
-        # Full DR combines all tests
+    "AgentReadinessCheck"          { Test-AgentRestore -AgentId $AgentId -DryRun $DryRun }
+    "EnvironmentReachabilityCheck" { Test-EnvironmentFailover -DryRun $DryRun }
+    "DataverseAccessCheck"         { Test-DataRecovery -DryRun $DryRun }
+    "FullValidation" {
         $agentResult = Test-AgentRestore -AgentId $AgentId -DryRun $DryRun
-        $envResult = Test-EnvironmentFailover -DryRun $DryRun
-        $dataResult = Test-DataRecovery -DryRun $DryRun
+        $envResult   = Test-EnvironmentFailover -DryRun $DryRun
+        $dataResult  = Test-DataRecovery -DryRun $DryRun
         @{
             ValidationChecks = $agentResult.ValidationChecks + $envResult.ValidationChecks + $dataResult.ValidationChecks
-            Success = $agentResult.Success -and $envResult.Success -and $dataResult.Success
-            RecoveryTime = $agentResult.RecoveryTime + $envResult.RecoveryTime + $dataResult.RecoveryTime
-            ActualRPO = $dataResult.ActualRPO
+            Success          = $agentResult.Success -and $envResult.Success -and $dataResult.Success
+            RecoveryTime     = $agentResult.RecoveryTime + $envResult.RecoveryTime + $dataResult.RecoveryTime
+            ActualRPO        = $dataResult.ActualRPO
         }
     }
 }
 
-$testEndTime = Get-Date
-$actualRTO = ($testEndTime - $testStartTime).TotalHours
-$rtoMet = $actualRTO -le $RTOTargets[$TestType]
+$testEndTime          = Get-Date
+$probeDurationHours   = ($testEndTime - $testStartTime).TotalHours
+$probeWithinBudget    = $probeDurationHours -le $ProbeDurationTargetHours[$TestType]
 
 # Prepare result summary
 $finalResult = @{
-    TestType = $TestType
-    ExecutedOn = $testStartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    ActualRTO = [math]::Round($actualRTO, 2)
-    TargetRTO = $RTOTargets[$TestType]
-    RTOMet = $rtoMet
-    ActualRPO = if ($testResult.ActualRPO) { [math]::Round($testResult.ActualRPO, 2) } else { $null }
-    TargetRPO = $RPOTargets[$TestType]
-    RPOMet = if ($null -ne $testResult.ActualRPO) { $testResult.ActualRPO -le $RPOTargets[$TestType] } else { $null }
-    RecoveryTime = $testResult.RecoveryTime
-    Success = $testResult.Success -and $rtoMet
-    ValidationChecks = $testResult.ValidationChecks
+    TestType                 = $TestType
+    ExecutedOn               = $testStartTime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    ProbeDurationHours       = [math]::Round($probeDurationHours, 4)
+    ProbeDurationTargetHours = $ProbeDurationTargetHours[$TestType]
+    ProbeWithinBudget        = $probeWithinBudget
+    MinutesSinceLastResult   = if ($testResult.ActualRPO) { [math]::Round($testResult.ActualRPO * 60, 2) } else { $null }
+    MaxMinutesSinceLastResult = $MaxMinutesSinceLastResultPerType[$TestType]
+    LastResultWithinThreshold = if ($null -ne $testResult.ActualRPO) {
+        ($testResult.ActualRPO * 60) -le $MaxMinutesSinceLastResultPerType[$TestType]
+    } else { $null }
+    RecoveryTime             = $testResult.RecoveryTime
+    Success                  = $testResult.Success
+    ValidationChecks         = $testResult.ValidationChecks
 }
 
-Write-AuditLog "Test completed — Result: $(if ($finalResult.Success) {'PASS'} else {'FAIL'})"
+Write-AuditLog "Validation completed — Result: $(if ($finalResult.Success) {'PASS'} else {'FAIL'})"
 
 # Display results
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Test Results" -ForegroundColor Cyan
+Write-Host "  Validation Results" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -746,11 +782,11 @@ foreach ($check in $testResult.ValidationChecks) {
 }
 
 Write-Host ""
-Write-Host "RTO Performance:"
-Write-Host "  Target:  $($RTOTargets[$TestType]) hours"
-Write-Host "  Actual:  $([math]::Round($actualRTO * 60, 1)) minutes"
-$rtoColor = if ($rtoMet) { "Green" } else { "Red" }
-Write-Host "  Status:  $(if ($rtoMet) {'MET'} else {'EXCEEDED'})" -ForegroundColor $rtoColor
+Write-Host "Probe duration (read-only validation only — NOT RTO):"
+Write-Host "  Target budget:  $($ProbeDurationTargetHours[$TestType]) hours"
+Write-Host "  Actual:         $([math]::Round($probeDurationHours * 60, 1)) minutes"
+$probeColor = if ($probeWithinBudget) { "Green" } else { "Yellow" }
+Write-Host "  Within budget:  $(if ($probeWithinBudget) {'YES'} else {'NO (exceeded validation budget — investigate slow API responses)'})" -ForegroundColor $probeColor
 
 Write-Host ""
 $overallColor = if ($finalResult.Success) { "Green" } else { "Red" }

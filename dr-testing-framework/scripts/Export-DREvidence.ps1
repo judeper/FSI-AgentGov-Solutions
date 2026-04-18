@@ -151,22 +151,36 @@ if ($TenantId -and $ClientId -and $ClientSecret) {
         $queryUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$select=fsi_drtestresultid,fsi_testtype,fsi_executedon,fsi_actualrto,fsi_targetrto,fsi_rtomet,fsi_status,fsi_validationchecks,fsi_correlationid&`$orderby=fsi_executedon desc"
         if ($filter) { $queryUri += "&`$filter=$filter" }
 
-        Write-Host "  Querying Dataverse for test results..." -ForegroundColor Gray
-        $queryResp = Invoke-RestMethod -Uri $queryUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 60
-        $rawResults = $queryResp.value
+        Write-Host "  Querying Dataverse for test results (paginated)..." -ForegroundColor Gray
+        $rawResults = @()
+        $pageCount = 0
+        $nextUri = $queryUri
+        while ($nextUri) {
+            $pageCount++
+            $queryResp = Invoke-RestMethod -Uri $nextUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 60
+            if ($queryResp.value) { $rawResults += $queryResp.value }
+            $nextUri = $queryResp.'@odata.nextLink'
+            if ($pageCount -gt 200) {
+                Write-Warning "Pagination exceeded 200 pages — aborting to avoid runaway. Narrow the query with -TestRunId."
+                break
+            }
+        }
+        Write-Verbose "Retrieved $($rawResults.Count) record(s) across $pageCount page(s)"
 
         if ($rawResults -and $rawResults.Count -gt 0) {
-            # Map results to evidence format
+            # Map results to evidence format. NOTE (v2.0.0): the Dataverse columns are reused but their semantics changed
+            # in v2.0.0 — fsi_actualrto now stores ProbeDurationHours (validation duration), fsi_targetrto stores
+            # ProbeDurationTargetHours (validation budget), and fsi_rtomet stores ProbeWithinBudget. See README and CHANGELOG.
             $testResults = @($rawResults | ForEach-Object {
                 @{
-                    Id            = $_.fsi_drtestresultid
-                    TestType      = $_.fsi_testtype
-                    ExecutedOn    = $_.fsi_executedon
-                    ActualRTO     = $_.fsi_actualrto
-                    TargetRTO     = $_.fsi_targetrto
-                    RTOMet        = $_.fsi_rtomet
-                    Status        = if ($_.fsi_status -eq 1) { "Pass" } else { "Fail" }
-                    CorrelationId = $_.fsi_correlationid
+                    Id                       = $_.fsi_drtestresultid
+                    TestType                 = $_.fsi_testtype
+                    ExecutedOn               = $_.fsi_executedon
+                    ProbeDurationHours       = $_.fsi_actualrto
+                    ProbeDurationTargetHours = $_.fsi_targetrto
+                    ProbeWithinBudget        = $_.fsi_rtomet
+                    Status                   = if ($_.fsi_status -eq 1) { "Pass" } else { "Fail" }
+                    CorrelationId            = $_.fsi_correlationid
                 }
             })
 
@@ -174,49 +188,60 @@ if ($TenantId -and $ClientId -and $ClientSecret) {
             $totalTests = $testResults.Count
             $passedTests = @($testResults | Where-Object { $_.Status -eq "Pass" }).Count
             $failedTests = $totalTests - $passedTests
-            $rtoValues = @($testResults | Where-Object { $null -ne $_.ActualRTO } | ForEach-Object { $_.ActualRTO })
-            $avgRecoveryTime = if ($rtoValues.Count -gt 0) { [math]::Round(($rtoValues | Measure-Object -Average).Average, 2) } else { $null }
-            $rtoCompliant = @($testResults | Where-Object { $_.RTOMet -eq $true }).Count
+            $probeValues = @($testResults | Where-Object { $null -ne $_.ProbeDurationHours } | ForEach-Object { $_.ProbeDurationHours })
+            $avgProbeDuration = if ($probeValues.Count -gt 0) { [math]::Round(($probeValues | Measure-Object -Average).Average, 4) } else { $null }
+            $probeWithinBudget = @($testResults | Where-Object { $_.ProbeWithinBudget -eq $true }).Count
 
             $metrics = @{
-                TotalTests       = $totalTests
-                Passed           = $passedTests
-                Failed           = $failedTests
-                PassRate         = if ($totalTests -gt 0) { [math]::Round(($passedTests / $totalTests) * 100, 1) } else { 0 }
-                AvgRecoveryTime  = $avgRecoveryTime
-                RTOCompliant     = $rtoCompliant
-                RTOComplianceRate = if ($totalTests -gt 0) { [math]::Round(($rtoCompliant / $totalTests) * 100, 1) } else { 0 }
+                TotalTests              = $totalTests
+                Passed                  = $passedTests
+                Failed                  = $failedTests
+                PassRate                = if ($totalTests -gt 0) { [math]::Round(($passedTests / $totalTests) * 100, 1) } else { 0 }
+                AvgProbeDurationHours   = $avgProbeDuration
+                ProbeWithinBudgetCount  = $probeWithinBudget
+                ProbeBudgetComplianceRate = if ($totalTests -gt 0) { [math]::Round(($probeWithinBudget / $totalTests) * 100, 1) } else { 0 }
             }
 
             # Identify gaps: failed tests and test types never run
             $gaps = @($testResults | Where-Object { $_.Status -eq "Fail" } | ForEach-Object {
                 @{
-                    TestType    = $_.TestType
-                    ExecutedOn  = $_.ExecutedOn
-                    ActualRTO   = $_.ActualRTO
-                    TargetRTO   = $_.TargetRTO
-                    Issue       = "Test failed — RTO target not met or validation checks failed"
+                    TestType                 = $_.TestType
+                    ExecutedOn               = $_.ExecutedOn
+                    ProbeDurationHours       = $_.ProbeDurationHours
+                    ProbeDurationTargetHours = $_.ProbeDurationTargetHours
+                    Issue                    = "Validation failed — see audit log for details"
                 }
             })
 
-            $allTestTypes = @("AgentRestore", "EnvironmentFailover", "DataRecovery", "FullDR")
+            # Test-type names accept both v1.x legacy values and v2.0.0 names
+            $allTestTypes = @(
+                "AgentReadinessCheck","EnvironmentReachabilityCheck","DataverseAccessCheck","FullValidation",
+                "AgentRestore","EnvironmentFailover","DataRecovery","FullDR"
+            )
             $executedTypes = @($testResults | ForEach-Object { $_.TestType } | Sort-Object -Unique)
-            $missingTypes = @($allTestTypes | Where-Object { $_ -notin $executedTypes })
+            # Collapse legacy names to their v2 equivalents for "missing" detection
+            $aliasMap = @{
+                "AgentRestore"="AgentReadinessCheck";"EnvironmentFailover"="EnvironmentReachabilityCheck";
+                "DataRecovery"="DataverseAccessCheck";"FullDR"="FullValidation"
+            }
+            $normalisedExecuted = @($executedTypes | ForEach-Object { if ($aliasMap.ContainsKey($_)) { $aliasMap[$_] } else { $_ } } | Sort-Object -Unique)
+            $expectedTypes = @("AgentReadinessCheck","EnvironmentReachabilityCheck","DataverseAccessCheck","FullValidation")
+            $missingTypes = @($expectedTypes | Where-Object { $_ -notin $normalisedExecuted })
             foreach ($missing in $missingTypes) {
                 $gaps += @{
                     TestType = $missing
-                    Issue    = "Test type never executed — required for compliance evidence"
+                    Issue    = "Validation type never executed in this evidence window — required for FFIEC BCP / FINRA 4370 evidence"
                 }
             }
 
-            $evidenceStatus = if ($failedTests -eq 0 -and $missingTypes.Count -eq 0) { "Compliant" }
-                              elseif ($failedTests -gt 0) { "NonCompliant" }
-                              else { "Incomplete" }
+            $evidenceStatus = if ($failedTests -eq 0 -and $missingTypes.Count -eq 0) { "Validated" }
+                              elseif ($failedTests -gt 0) { "ValidationFailures" }
+                              else { "IncompleteValidationCoverage" }
 
-            Write-Host "  Retrieved $totalTests test result(s) ($passedTests passed, $failedTests failed)" -ForegroundColor Green
+            Write-Host "  Retrieved $totalTests validation result(s) ($passedTests passed, $failedTests failed)" -ForegroundColor Green
         } else {
             $evidenceStatus = "NoData"
-            Write-Host "  No test results found in Dataverse" -ForegroundColor Yellow
+            Write-Host "  No validation results found in Dataverse" -ForegroundColor Yellow
         }
     } catch {
         $evidenceStatus = "QueryFailed"
@@ -261,10 +286,21 @@ if ($auditLogs.Count -gt 0) {
 
 Write-Host ""
 Write-Host "Evidence package written to: $outputPath" -ForegroundColor Green
-Write-Host "Status: $evidenceStatus" -ForegroundColor $(if ($evidenceStatus -eq 'Compliant') { 'Green' } elseif ($evidenceStatus -eq 'NonCompliant') { 'Red' } else { 'Yellow' })
+$statusColor = switch ($evidenceStatus) {
+    "Validated"                     { 'Green' }
+    "ValidationFailures"            { 'Red' }
+    "IncompleteValidationCoverage"  { 'Yellow' }
+    "NoData"                        { 'Yellow' }
+    "QueryFailed"                   { 'Red' }
+    default                         { 'Yellow' }
+}
+Write-Host "Status: $evidenceStatus" -ForegroundColor $statusColor
 Write-Host ""
 
-# Exit codes: 0=success/compliant, 1=non-compliant or query failure
-if ($evidenceStatus -eq "NonCompliant" -or $evidenceStatus -eq "QueryFailed") {
+# Exit codes: 0=Validated, 1=ValidationFailures or QueryFailed (hard failure), 2=NoData / IncompleteValidationCoverage (warning)
+if ($evidenceStatus -eq "ValidationFailures" -or $evidenceStatus -eq "QueryFailed") {
     exit 1
+}
+if ($evidenceStatus -eq "NoData" -or $evidenceStatus -eq "IncompleteValidationCoverage") {
+    exit 2
 }

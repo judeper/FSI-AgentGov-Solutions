@@ -1,22 +1,37 @@
-# DR Testing Framework
+# DR Readiness Validation Framework (DR-Testing-Framework)
 
-> **Version:** 1.2.1 | **Controls:** 2.4, 2.1, 1.9
+> **Version:** 2.0.0 | **Controls:** 2.4, 2.1, 1.9
 
-Automated disaster recovery testing workflows for AI agent infrastructure, supporting compliance with operational resilience requirements.
+Scheduled validation that the post-recovery state of an AI agent environment in Microsoft Power Platform is observable, reachable, and correctly configured — packaging structured evidence for FFIEC BCP, FINRA Rule 4370, OCC Heightened Standards, and SEC Rule 17a-4(f) supervisory review.
 
-## Overview
+## What this framework actually does (and does not do)
 
-The DR Testing Framework validates that AI agents and supporting infrastructure can be recovered within defined Recovery Time Objectives (RTO) and Recovery Point Objectives (RPO), supporting regulatory requirements for business continuity.
+This framework is **post-recovery validation and evidence packaging**, not recovery execution. Power Platform environments and Copilot Studio agents are tenant-bound metadata managed by Microsoft — a customer script cannot back them up, restore them point-in-time, or fail traffic to a paired region. Those operations are performed by Microsoft via the Power Platform admin center (PPAC) restore APIs and ALM solution re-deployment. Read the table below carefully before classifying outputs as recovery-test evidence.
+
+| Capability | This framework | What you still need |
+|------------|----------------|----------------------|
+| Verify a previously restored agent is reachable, has its components, and is in `Active` state | ✅ Yes (`AgentReadinessCheck`) | A separately performed restore via PPAC or solution re-import |
+| Verify a target Dataverse environment is reachable and authenticates a known service principal | ✅ Yes (`EnvironmentReachabilityCheck`) | Microsoft-side restore of the environment to a paired region (PPAC) |
+| Verify the DR-evidence Dataverse table is queryable, paginate it, and hash a snapshot for integrity | ✅ Yes (`DataverseAccessCheck`) | Backup-timestamp comparison for true RPO (Microsoft does not expose backup timestamps to customer queries) |
+| Initiate a Power Platform environment restore | ❌ No | PPAC UI / Power Platform admin REST API (out of scope) |
+| Fail traffic to a backup region | ❌ No | This is platform-level and customer-invisible |
+| Compute true RTO (incident → service-restored) | ❌ No | Manual recording of incident and restore timestamps |
+| Compute true RPO (last successful backup) | ❌ No | Backup timestamps are not exposed by Microsoft |
+
+The script writes an audit log on every run and appends a row to `fsi_drtestresult` — these rows are the *operational evidence* an examiner expects to see, but they prove the **validation occurred**, not that recovery was performed end-to-end. Treat the artifacts accordingly.
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Automated Testing** | Scheduled and on-demand DR test execution |
-| **RTO/RPO Measurement** | Track actual recovery times vs. targets (Note: RPO measurement is not yet implemented — requires backup timestamp comparison) |
-| **Validation Checks** | Verify agent functionality post-recovery |
-| **Evidence Collection** | Generate compliance artifacts (stub — `Export-DREvidence.ps1` packages audit logs; full Dataverse export planned) |
-| **Gap Tracking** | Identify and monitor recovery gaps (planned) |
+| **Scheduled or on-demand checks** | Run `Invoke-DRTest.ps1` from Azure Automation, GitHub Actions, or ad hoc |
+| **Probe-time tracking** | Records wall-clock time of each check and labels it as `ProbeDurationHours` (NOT recovery time) |
+| **Last-test-recency tracking** | `MinutesSinceLastResult` reports gap since the last DR-evidence row was written (NOT RPO) |
+| **Honest target presentation** | Each scenario lists its RTO target and a clear note that the script does not measure actual RTO |
+| **Validation checks** | Confirms agent component count, statecode, connection references, WhoAmI security context |
+| **Pagination-safe queries** | All Dataverse reads follow `@odata.nextLink` and use `$count=true` for true counts |
+| **Fail-closed auth** | Missing credentials are an error, not a silent PASS (use `-AllowConnectivityOnly` to opt in) |
+| **Evidence export** | `Export-DREvidence.ps1` paginates the full results history and emits a per-test JSON + summary |
 
 ## Architecture
 
@@ -88,23 +103,24 @@ Complete infrastructure recovery.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows |
-| **Dataverse capacity** | Test result storage |
-| **Azure Backup** | Environment backups (optional) |
+| **Power Platform per-app or per-user license** | Required for any Power Platform environment that hosts Copilot Studio agents under validation |
+| **Dataverse capacity** | Storage for `fsi_drtestresult` rows (one row per test run; budget for the long-tail retention period mandated by SEC 17a-4) |
+| **PowerShell 7.1+** | The script uses `Get-Date -AsUTC` (added in PowerShell 7.1). Earlier versions will fail at runtime |
+
+> Power Platform environment backups are managed by Microsoft and are not administered through Azure Backup. Restore is performed via the Power Platform admin center (PPAC), not by this framework.
 
 ### Permissions
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Environment operations |
-| **System Administrator** | Dataverse restore |
-| **Backup Operator** | Azure Backup access |
+| **Power Platform Admin** (Microsoft Entra ID) | Performing any environment restore from PPAC (out of scope of this script — listed for the operator) |
+| **Service Principal application user** in the target Dataverse environment with access to `bot`, `botcomponent`, `connectionreference`, `WhoAmI`, and the `fsi_drtestresult` table | Required for `Invoke-DRTest.ps1` to read agent state and write evidence rows |
 
 ### Dependencies
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.1.0+ | Environment context (informational — not imported or validated at runtime) |
+| Environment Lifecycle Management | v1.2.0+ | Environment context only (informational — not imported or validated at runtime) |
 
 ## Quick Start
 
@@ -131,9 +147,9 @@ python scripts/create_drt_dataverse_schema.py --dry-run --interactive
 
 Check test results in Dataverse.
 
-> **Note:** For recurring DR tests, configure scheduling via Power Automate or Azure Automation runbooks. `Export-DREvidence.ps1` packages audit log files into an evidence directory — see [Evidence Export](docs/evidence-export.md) for details.
+> **Note:** For recurring validation runs, schedule the script via Azure Automation or GitHub Actions. `Export-DREvidence.ps1` paginates the full Dataverse history of test rows and packages a per-row JSON + summary into a versioned evidence directory — see [Evidence Export](docs/evidence-export.md).
 
-> **Note:** Recovery steps in `Invoke-DRTest.ps1` are currently stub implementations using simulated timing (`Start-Sleep`). RTO/RPO measurements reflect simulated timing only. Replace `Start-Sleep` calls with actual backup/restore API calls for production use.
+> **Note (v2.0.0):** Earlier versions of this README claimed the script measures actual RTO/RPO. It does not — see [What this framework actually does](#what-this-framework-actually-does-and-does-not-do). The recorded `ProbeDurationHours` is the wall-clock duration of read-only API checks; the recorded `MinutesSinceLastResult` is the gap since the most recent prior evidence row was written. Neither of these is regulator-grade RTO or RPO on its own — pair them with the timestamps captured during the actual PPAC-initiated restore.
 
 ## Deployment
 
@@ -291,17 +307,17 @@ The framework generates compliance evidence:
 
 **Coverage:** Regular DR testing validates recovery capabilities.
 
-### FFIEC BCP
+### FFIEC BCP (Business Continuity Planning Booklet)
 
-> Financial institutions must test business continuity plans.
+> Financial institutions must test business continuity plans on a defined cadence and retain the test evidence.
 
-**Coverage:** Automated testing with documented results. (Note: RPO measurement is not yet implemented — actual RPO validation requires backup timestamp comparison.)
+**Coverage:** Scheduled validation runs with persisted, hashed Dataverse evidence rows and an exportable per-test JSON package, helping support FFIEC BCP testing-evidence requirements. RPO is **not** measured by this framework — Microsoft does not expose Dataverse backup timestamps to customer queries; pair the script's evidence rows with backup-timestamp documentation supplied by Microsoft via support requests.
 
-### SEC Rule 17a-4
+### SEC Rule 17a-4(f)
 
-> Records must be recoverable.
+> Records must be retained, indexed, and recoverable for a defined period in a non-rewritable, non-erasable format.
 
-**Coverage:** Data recovery validation with RPO measurement. (Note: RPO measurement is not yet implemented — currently tracks targets only. Actual RPO validation requires backup timestamp comparison.)
+**Coverage:** This framework writes evidence rows and exports per-test JSON packages to support 17a-4 evidence retention, but **the regulation's tamper-evidence requirement is satisfied only when the export is written to immutable storage** (Azure Blob immutability policy, Purview retention lock, or equivalent). The framework does not enforce immutability — that is the customer's responsibility downstream of `Export-DREvidence.ps1`.
 
 ### FINRA Rule 4370
 
@@ -313,15 +329,15 @@ The framework generates compliance evidence:
 
 | Control | Relationship |
 |---------|--------------|
-| [2.4 - Business Continuity and Disaster Recovery](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.4-business-continuity-and-disaster-recovery.md) | Primary control for DR testing |
-| [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Environment backup |
-| [2.13 - Documentation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Procedure documentation |
-| [1.9 - Data Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.9-data-retention-and-deletion-policies.md) | Backup retention |
+| [2.4 - Business Continuity and Disaster Recovery](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.4-business-continuity-and-disaster-recovery.md) | Primary — recovery validation and evidence-collection cadence |
+| [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Validates that a managed environment is reachable and correctly configured post-restore |
+| [1.9 - Data Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.9-data-retention-and-deletion-policies.md) | Evidence-row retention pairs with the long-tail retention requirements |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.0 | April 2026 | **BREAKING.** Renamed test scenarios to validation checks; relabeled `ActualRTO`→`ProbeDurationHours` and `ActualRPO`→`MinutesSinceLastResult` to stop misrepresenting the measurements; added `-AllowConnectivityOnly` for fail-closed auth; pagination via `@odata.nextLink`; switched record-count to `$count=true&$top=0`; bumped to PowerShell 7.1; dropped Azure Backup / Backup Operator from prereqs; corrected Decimal env-var type code; fixed `fsi_executedon` to `TimeZoneIndependent`; dropped Control 2.13 from Related Controls (catalog mismatch); aligned ELM dependency floor to v1.2.0 |
 | 1.2.1 | April 2026 | Save-TestResult fix: include required `fsi_name` primary attribute for Dataverse writes |
 | 1.2.0 | April 2026 | Environment variables, connection references, real Dataverse implementations in Invoke-DRTest and Export-DREvidence |
 | 1.1.0 | April 2026 | Dataverse schema script, documentation suite, prerequisites guide |
@@ -337,8 +353,8 @@ The framework generates compliance evidence:
 |-------|-------|------------|
 | Authentication failure | Expired token, insufficient permissions, or wrong auth endpoint for sovereign clouds | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles. For sovereign tenants, the script auto-selects the correct Entra ID endpoint (China: `login.chinacloudapi.cn`, GCC High: `login.microsoftonline.us`). |
 | RTO target exceeded | Recovery steps slower than expected | Review environment size; pre-stage backups closer to target region |
-| Validation checks fail | Agent or connectors not restored correctly | Verify backup integrity; re-run individual test scenario with `-Verbose` |
-| Dataverse save error | Missing schema or insufficient Dataverse capacity | Import solution package; check storage quota |
+| Validation checks fail | Agent or connectors not restored correctly post-restore | Verify the post-restore agent state in Power Platform admin center; re-run the individual scenario with `-Verbose` |
+| Dataverse save error | Missing schema or insufficient Dataverse capacity | Run `python scripts/create_drt_dataverse_schema.py --interactive` to create / verify the table; check storage quota in PPAC |
 
 ### Logs
 

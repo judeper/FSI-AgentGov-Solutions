@@ -1,6 +1,43 @@
 # Changelog
 
-All notable changes to the DR Testing Framework.
+All notable changes to the DR Readiness Validation Framework.
+
+---
+
+## [2.0.0] - 2026-04-16 — BREAKING
+
+### BREAKING CHANGES
+
+This release renames and reframes the framework as **post-recovery validation and evidence packaging** rather than recovery execution. The previous v1.x naming overstated what the script can do — Power Platform / Copilot Studio environments are tenant-bound metadata managed by Microsoft, and a customer script cannot back them up, restore them, or fail them over. v1.x readers should treat outputs as validation evidence, not recovery execution evidence. See README "What this framework actually does (and does not do)" for the full scope.
+
+- **TestType values renamed.** `AgentRestore` → `AgentReadinessCheck`, `EnvironmentFailover` → `EnvironmentReachabilityCheck`, `DataRecovery` → `DataverseAccessCheck`, `FullDR` → `FullValidation`. Legacy values are still accepted at the CLI and emit a deprecation warning, then map to the new names. Pipelines that hard-code the old strings continue to work for one minor cycle; please migrate.
+- **`ActualRTO` / `TargetRTO` / `RTOMet` retired in favour of `ProbeDurationHours` / `ProbeDurationTargetHours` / `ProbeWithinBudget`.** The Dataverse column names (`fsi_actualrto`, `fsi_targetrto`, `fsi_rtomet`) are preserved for v1.x compatibility but their **stored semantics changed** — they now represent the wall-clock duration of the read-only validation, NOT the recovery time of the underlying restore. Update any dashboards or downstream consumers accordingly.
+- **`ActualRPO` / `TargetRPO` / `RPOMet` retired in favour of `MinutesSinceLastResult` / `MaxMinutesSinceLastResult` / `LastResultWithinThreshold`.** These are cadence-freshness metrics, not regulator-grade RPO. The previous claim that `ActualRPO = "time since last DR-test row written"` was dressed up as a backup recency measurement and that was misleading.
+- **Fail-closed authentication.** Missing `TenantId`/`ClientId`/`ClientSecret` is now an error in non-DryRun runs. Pass the new `-AllowConnectivityOnly` switch to opt in to a network-only check that records "Probe" results without authenticated validation. v1.x silently fell through to PASS on auth failure, which produced false-positive evidence rows.
+- **PowerShell 7.1+ required.** `#Requires -Version` bumped from 7.0 to 7.1. The script always used `Get-Date -AsUTC`, which was added in 7.1; v1.x would crash at runtime on PS 7.0.
+- **`Export-DREvidence.ps1` exit codes.** Statuses `Compliant`/`NonCompliant`/`Incomplete` renamed to `Validated`/`ValidationFailures`/`IncompleteValidationCoverage`. New exit code `2` for `NoData` and `IncompleteValidationCoverage` (was `0`); failures still exit `1`.
+
+### Fixed
+
+- **Pagination on Dataverse reads.** `Export-DREvidence.ps1` now follows `@odata.nextLink` so evidence exports across more than 5000 rows no longer silently truncate.
+- **Authoritative record counts.** `Test-DataRecovery` (now `DataverseAccessCheck`) uses `?$count=true&$top=0` and reads `@odata.count` instead of returning the page-size of the value array.
+- **`fsi_executedon` `DateTimeBehavior` corrected to `TimeZoneIndependent`.** v1.x set `UserLocal`, which silently shifted timestamps based on the calling user's timezone — broken for cross-region audit.
+- **Environment-variable type code for `Decimal` corrected.** v1.x mapped `Decimal` to `100000001` (Number); environment variables have no native Decimal type, so v2.0.0 maps `Decimal` to `100000003` (JSON) and documents that flows must JSON-parse the value.
+
+### Removed
+
+- **Azure Backup / Backup Operator role from prereqs.** Power Platform environment backups are managed by Microsoft via PPAC; Azure Backup never applied.
+- **Control 2.13 (Documentation) from Related Controls.** Catalog mapping is `2.4, 2.1, 1.9` only — the README was drifting.
+- **OCC Bulletin 2011-12 references.** OCC 2011-12 governs model risk; replaced with the correct combination of FFIEC BCP, OCC Heightened Standards, FINRA Rule 4370, and SEC Rule 17a-4(f).
+- **Two unused environment variables (`fsi_DRT_TargetRTOMinutes` and `fsi_DRT_TargetRPOMinutes`)** retired. They were defined in minutes but the script hard-coded targets in hours and never read them. Replaced with `fsi_DRT_ProbeBudgetMinutes` and `fsi_DRT_MaxMinutesSinceLastResult` reserved for a future wiring.
+
+### Migration
+
+1. Re-deploy environment variables: `python scripts/create_drt_environment_variables.py --interactive`. The two old variables are not removed automatically — delete them manually from PPAC if no other process consumes them.
+2. Re-deploy the Dataverse schema: `python scripts/create_drt_dataverse_schema.py --interactive`. The DateTimeBehavior change requires recreating the column or asking Microsoft Support to flip the behavior in-place; existing rows retain their stored values.
+3. Update any callers of `Invoke-DRTest.ps1` that pass the legacy `TestType` values — the alias map preserves behaviour but emits warnings; clean up over the next minor release.
+4. Update dashboards / downstream consumers that read `fsi_actualrto`, `fsi_targetrto`, `fsi_rtomet` to relabel their semantics — values now reflect probe duration, not recovery time.
+5. Confirm that any automation calling `Invoke-DRTest.ps1` either passes service-principal credentials or explicitly opts in with `-AllowConnectivityOnly`. Silent-PASS-on-auth-failure runs no longer happen.
 
 ---
 

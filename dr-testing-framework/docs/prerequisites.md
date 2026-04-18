@@ -6,7 +6,7 @@ Requirements for deploying the DR Testing Framework solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime (`#Requires -Version 7.0`) |
+| PowerShell | 7.1+ | Core runtime (`#Requires -Version 7.1`) — uses `Get-Date -AsUTC` added in 7.1 |
 | Pester | 5.0+ | Test execution (for running `Invoke-DRTest.Tests.ps1` and `Export-DREvidence.Tests.ps1`) |
 
 ### Installation
@@ -53,9 +53,8 @@ The executing identity (user or service principal) requires the following roles:
 
 | Role | Environment | Purpose |
 |------|-------------|---------|
-| Power Platform Admin | Tenant-level | Environment operations and agent management |
-| System Administrator | Dataverse environment | Write DR test results to `fsi_drtestresult` table |
-| Backup Operator | Azure (optional) | Azure Backup access for environment backups |
+| Power Platform Admin | Tenant-level | Performing PPAC environment restore operations (out of scope of this script — listed for the operator) |
+| System Administrator (or equivalent) | Dataverse environment | Write validation results to `fsi_drtestresult` table |
 
 For service principal access, add the app as an **application user** in each target Dataverse environment and assign the appropriate security roles.
 
@@ -88,7 +87,7 @@ Only the endpoints matching your cloud environment are required. Most organizati
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.1.0+ | Environment context (informational — not imported or validated at runtime) |
+| Environment Lifecycle Management | v1.2.0+ | Environment context (informational — not imported or validated at runtime) |
 
 ## Python Requirements (Schema Script)
 
@@ -107,8 +106,9 @@ pip install msal
 
 | Requirement | Purpose |
 |-------------|---------|
-| Power Platform Premium | Power Automate flows (if using flow-based scheduling) |
-| Dataverse capacity | Storage for `fsi_drtestresult` test records |
-| Azure Backup | Environment backups (optional — required only for backup-based DR scenarios) |
+| Power Platform per-app or per-user license | Required for any Power Platform environment hosting the agents under validation |
+| Dataverse capacity | Storage for `fsi_drtestresult` validation records |
 
-> **Caveat:** This solution aids in meeting operational resilience requirements such as OCC 2011-12 and FFIEC business continuity guidance. It does not by itself satisfy any single regulation. Organizations should verify that their DR testing scope, frequency, and evidence retention meet their specific regulatory obligations.
+> Power Platform environment backups are managed by Microsoft and are not administered through Azure Backup. Environment restore is performed via the Power Platform admin center (PPAC) restore APIs, not by this framework.
+
+> **Caveat:** This solution aids in meeting operational resilience expectations such as FFIEC BCP, OCC Heightened Standards, FINRA Rule 4370, and SEC Rule 17a-4(f). It does not by itself satisfy any single regulation. (Note: OCC Bulletin 2011-12 governs model risk, not business continuity — DR aligns to OCC Heightened Standards instead.) Organizations should verify that their DR testing scope, frequency, and evidence retention meet their specific regulatory obligations.

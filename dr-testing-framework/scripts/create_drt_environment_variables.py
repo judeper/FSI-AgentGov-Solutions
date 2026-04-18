@@ -30,18 +30,18 @@ ENV_VARIABLES = [
         "defaultvalue": "",
     },
     {
-        "schemaname": "fsi_DRT_TargetRTOMinutes",
-        "displayname": "DRT - Target RTO (Minutes)",
-        "description": "Default recovery time objective in minutes for DR tests (default: 60)",
+        "schemaname": "fsi_DRT_ProbeBudgetMinutes",
+        "displayname": "DRT - Validation probe budget (minutes)",
+        "description": "Reserved (v2.0.0) — validation probe wall-clock budget in minutes. Read by Invoke-DRTest.ps1 as ProbeDurationTargetHours when wired in a future release; currently informational only.",
         "type": "Decimal",
         "defaultvalue": "60",
     },
     {
-        "schemaname": "fsi_DRT_TargetRPOMinutes",
-        "displayname": "DRT - Target RPO (Minutes)",
-        "description": "Default recovery point objective in minutes for DR tests (default: 15)",
+        "schemaname": "fsi_DRT_MaxMinutesSinceLastResult",
+        "displayname": "DRT - Max minutes since last result",
+        "description": "Reserved (v2.0.0) — cadence freshness threshold in minutes. NOT a regulator-grade RPO; reflects gap between consecutive validation evidence rows.",
         "type": "Decimal",
-        "defaultvalue": "15",
+        "defaultvalue": "1440",
     },
     {
         "schemaname": "fsi_DRT_TeamsGroupId",
@@ -103,8 +103,17 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
                 results["created"] += 1
             else:
-                # Map type to Dataverse type code
-                type_code = 100000001 if var["type"] == "Decimal" else 100000000
+                # Map type to Dataverse environment variable type code:
+                # 100000000 = String, 100000001 = Number, 100000002 = Boolean, 100000003 = JSON, 100000004 = DataSource, 100000005 = Secret
+                # NOTE: there is no native "Decimal" type for environment variables; "Decimal" entries below are stored as JSON.
+                type_code_map = {
+                    "String": 100000000,
+                    "Number": 100000001,
+                    "Boolean": 100000002,
+                    "JSON": 100000003,
+                    "Decimal": 100000003,  # treated as JSON; Power Automate flows must JSON-parse the value
+                }
+                type_code = type_code_map.get(var["type"], 100000000)
 
                 # Create definition
                 definition_data = {
