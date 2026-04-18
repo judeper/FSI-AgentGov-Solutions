@@ -33,9 +33,16 @@ Requirements for deploying the Scope Drift Monitor.
 | Permission | Type | Purpose |
 |------------|------|---------|
 | `ActivityFeed.Read` | Application | Office 365 Management API audit log access |
-| `Directory.Read.All` | Application | User and app details |
 
 > **Note:** The solution authenticates against `https://manage.office.com` (Office 365 Management API), not Microsoft Graph. Ensure the app registration has `ActivityFeed.Read` permission with admin consent.
+
+### Microsoft Graph Permissions (only for Test-AlertDelivery email path)
+
+| Permission | Type | Purpose |
+|------------|------|---------|
+| `Mail.Send` | Delegated | Required by `Test-AlertDelivery.ps1` to send email alerts via `Send-MgUserMail`. Not used by the production drift scanner. |
+
+> **Note:** `Test-AlertDelivery.ps1` performs an interactive `Connect-MgGraph -Scopes Mail.Send` if no Graph context is present. Pre-authenticate with the same scope when running unattended. The `From` mailbox owner must be the signed-in user (delegated) or, if you adapt the script to application permissions, the app must hold `Mail.Send` (Application) scoped via an exchange ApplicationAccessPolicy.
 
 ---
 

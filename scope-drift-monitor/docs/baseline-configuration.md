@@ -73,7 +73,7 @@ Create baselines manually for precise control over allowed resources.
 | `fsi_name` | Display name | "Customer Service Agent" |
 | `fsi_agentid` | Copilot Studio agent GUID | `12345678-1234-...` |
 | `fsi_environmentid` | Power Platform environment ID | `87654321-4321-...` |
-| `fsi_zone` | Governance zone (1-3) | 3 (Enterprise Managed) |
+| `fsi_zone` | Governance zone (10001-10003) | 10003 (Enterprise Managed) |
 | `fsi_owner` | Agent owner (user lookup) | John Smith |
 | `fsi_purpose` | Declared agent purpose | "Answer customer inquiries" |
 | `fsi_status` | Baseline status | 10002 (Active) |
@@ -122,9 +122,9 @@ Baselines are classified by governance zone, affecting detection behavior.
 
 | Zone | Label | Detection Frequency | Approval Rigor |
 |------|-------|--------------------|-|
-| 1 | Personal Productivity | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
-| 2 | Team Collaboration | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
-| 3 | Enterprise Managed | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+| 10001 | Personal Productivity | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+| 10002 | Team Collaboration | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
+| 10003 | Enterprise Managed | Every 15 minutes | Security team (via `fsi_SDM_SecurityTeamEmail`) |
 
 > **Note:** Zone-differentiated approval rigor (self-service for Zone 1, team lead for Zone 2, dual Security + Data Owner for Zone 3) is planned but not yet implemented. All zones currently route expansion requests to the security team. The schema includes `fsi_dataownerapproval` and `fsi_dataownerapprovedby` fields for future use.
 

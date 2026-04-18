@@ -261,6 +261,18 @@ function Send-EmailNotification {
     }
 
     try {
+        # Ensure Microsoft Graph context exists; Send-MgUserMail otherwise fails
+        # with an opaque "AuthenticationRequired" error.
+        $ctx = Get-MgContext -ErrorAction SilentlyContinue
+        if ($null -eq $ctx) {
+            Write-Host "  Connecting to Microsoft Graph (Mail.Send scope required)..." -ForegroundColor Gray
+            Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop | Out-Null
+        }
+        elseif ($ctx.Scopes -notcontains "Mail.Send") {
+            Write-Warning "Current Graph context lacks Mail.Send scope (has: $($ctx.Scopes -join ', ')). Re-connecting..."
+            Connect-MgGraph -Scopes "Mail.Send" -NoWelcome -ErrorAction Stop | Out-Null
+        }
+
         Send-MgUserMail -UserId $From -BodyParameter $params
         return @{
             Success = $true
@@ -356,6 +368,15 @@ if ($Channel -eq "Email" -or $Channel -eq "Both") {
         $results.Email = @{
             Success = $false
             Message = "Microsoft.Graph.Users.Actions module not installed"
+        }
+        $hasFailure = $true
+    }
+    elseif (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
+        Write-Host "  ERROR: Microsoft.Graph.Authentication module not installed" -ForegroundColor Red
+        Write-Host "  Install with: Install-Module Microsoft.Graph.Authentication -Scope CurrentUser" -ForegroundColor Red
+        $results.Email = @{
+            Success = $false
+            Message = "Microsoft.Graph.Authentication module not installed"
         }
         $hasFailure = $true
     }

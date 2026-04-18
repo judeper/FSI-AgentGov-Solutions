@@ -211,7 +211,7 @@ If Denied: Remediate Access → Close Violation
 
 **Coverage:** Scope definitions help limit agent access to declared data sources.
 
-### GLBA 501(b)
+### GLBA Section 501(b)
 
 > Safeguards to protect the security and confidentiality of customer records.
 
@@ -227,9 +227,9 @@ If Denied: Remediate Access → Close Violation
 
 | Control | Relationship |
 |---------|--------------|
-| [1.4 - Advanced Connector Policies](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-for-copilot-studio.md) | DLP connector classification |
-| [1.5 - DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) | Sensitive data protection |
-| [1.8 - Runtime Protection](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.8-runtime-protection-with-defender-for-cloud-apps.md) | Defender integration |
+| [1.14 - Data Loss Prevention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.14-data-loss-prevention.md) | Detective scope-drift monitoring complements preventive DLP policy enforcement |
+| [1.4 - Advanced Connector Policies](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-for-copilot-studio.md) | Provides monitoring evidence for connector classification (this solution does not block connectors) |
+| [1.5 - DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) | Provides monitoring evidence for sensitive-data access (row-level / column-level enforcement is not implemented) |
 
 ## Known Limitations
 

@@ -82,7 +82,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateRange(10001,10003)]
-    [int]$Zone = 10002
+    [int]$Zone = 10002,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipDuplicateCheck
 )
 
 $ErrorActionPreference = "Stop"
@@ -160,10 +163,12 @@ function Get-CopilotAuditEvents {
         "Content-Type"  = "application/json"
     }
 
-    # Ensure subscription is active
+    # Ensure subscription is active.
+    # Note: -ErrorAction SilentlyContinue would suppress the terminating error and the
+    # catch block would never run, masking real failures (403, 5xx). Let the catch fire.
     try {
         $subscriptionUri = "$ManagementApiEndpoint/api/v1.0/$TenantId/activity/feed/subscriptions/start?contentType=Audit.General"
-        $null = Invoke-RestMethod -Uri $subscriptionUri -Method Post -Headers $headers -ErrorAction SilentlyContinue
+        $null = Invoke-RestMethod -Uri $subscriptionUri -Method Post -Headers $headers
     }
     catch {
         # 400 error means already subscribed, which is fine
@@ -502,7 +507,18 @@ try {
     Write-Host "  No existing active baseline found" -ForegroundColor Green
 }
 catch {
-    Write-Warning "Could not check for existing baselines: $($_.Exception.Message). Proceeding with creation."
+    # Fail closed: if we cannot determine whether a duplicate baseline exists,
+    # do NOT proceed — silently creating a duplicate would corrupt the active scope
+    # set and the scanner would non-deterministically pick one (Goldeneye M1).
+    # Force the operator to retry once Dataverse access is restored, or pass
+    # -SkipDuplicateCheck if intentional override is required.
+    if ($SkipDuplicateCheck) {
+        Write-Warning "Could not check for existing baselines: $($_.Exception.Message). -SkipDuplicateCheck specified; proceeding with creation."
+    }
+    else {
+        Write-Error "Could not check for existing baselines (fail-closed): $($_.Exception.Message). Re-run when Dataverse access is healthy, or pass -SkipDuplicateCheck to override."
+        exit 1
+    }
 }
 
 # Create scope in Dataverse

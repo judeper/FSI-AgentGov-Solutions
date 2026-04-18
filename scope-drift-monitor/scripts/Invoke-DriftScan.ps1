@@ -243,6 +243,7 @@ function Get-AuditEvents {
                 $escapedBlobEndpoint = [regex]::Escape($ApiEndpoint)
                 if ($blob.contentUri -notmatch "^$escapedBlobEndpoint/") {
                     Write-Warning "Skipping untrusted content URI: $($blob.contentUri)"
+                    $script:auditFetchErrors++
                     continue
                 }
                 $blobEvents = Invoke-RestMethod -Uri $blob.contentUri -Headers $headers -Method Get
@@ -253,10 +254,12 @@ function Get-AuditEvents {
             }
             catch {
                 Write-Warning "Could not fetch content blob: $($_.Exception.Message)"
+                $script:auditFetchErrors++
             }
         }
     }
     catch {
+        $script:auditFetchErrors++
         if ($_.Exception.Response.StatusCode -eq 403) {
             Write-Warning "Access denied to Office 365 Management API. Ensure E5/E5 Compliance license and ActivityFeed.Read permission."
         }
@@ -590,8 +593,12 @@ foreach ($scope in $scopes) {
 # Get audit events
 Write-Host ""
 Write-Host "Querying audit events from last $Minutes minutes..." -ForegroundColor Gray
+$script:auditFetchErrors = 0
 $events = Get-AuditEvents -Token $managementToken -TenantId $TenantId -Minutes $Minutes -ApiEndpoint $ManagementApiEndpoint
 Write-Host "  Found $($events.Count) CopilotInteraction event(s)"
+if ($script:auditFetchErrors -gt 0) {
+    Write-Warning "Audit-content fetch encountered $($script:auditFetchErrors) error(s); results may be incomplete."
+}
 
 # Process events and detect violations
 Write-Host ""
@@ -715,11 +722,18 @@ $output = [PSCustomObject]@{
     ScanTime          = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 }
 
-Write-AuditLog "Drift scan complete — Events=$($events.Count) Agents=$($agentsScanned.Count) Violations=$totalViolations"
+Write-AuditLog "Drift scan complete — Events=$($events.Count) Agents=$($agentsScanned.Count) Violations=$totalViolations FetchErrors=$($script:auditFetchErrors)"
 
 Write-Output $output
 
-# Exit 0 even if violations found (success = scan completed)
+# Exit code reflects scan integrity:
+#   0 = scan completed cleanly
+#   2 = scan completed but audit-content fetches reported errors and no events arrived
+#       (callers should treat this as inconclusive, not as "no violations")
+if ($script:auditFetchErrors -gt 0 -and $events.Count -eq 0) {
+    Write-Warning "Drift scan inconclusive: $($script:auditFetchErrors) audit-fetch error(s) and zero events. Exiting with code 2."
+    exit 2
+}
 exit 0
 
 #endregion

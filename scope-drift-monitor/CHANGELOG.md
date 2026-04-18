@@ -4,6 +4,24 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
+## [1.2.0] - 2026-04-16
+
+### Fixed
+
+- **`Invoke-DriftScan.ps1`** — `Get-AuditEvents` no longer silently fails open when audit-content fetches throw. Each catch block now increments `$script:auditFetchErrors`, and the scanner exits with code 2 (inconclusive) when fetch errors occurred AND zero events were returned, preventing operators from interpreting silent failures as "no violations." (Council: agreed Opus + Goldeneye)
+- **`New-AgentBaseline.ps1`** — Removed dead-code error handler at line ~163: the audit-subscription `Invoke-RestMethod` call was suppressing errors with `-ErrorAction SilentlyContinue`, which prevented the surrounding catch block from firing on real failures (403, 5xx). The catch is now reachable and inspects HTTP 400 correctly. (Opus M3)
+- **`New-AgentBaseline.ps1`** — Duplicate-baseline pre-check now fails closed: when the existing-baseline query errors, the script exits non-zero rather than printing "Proceeding with creation." Added `-SkipDuplicateCheck` switch for explicit override. Prevents silent creation of duplicate active scopes that would cause non-deterministic scanner behavior. (Goldeneye M1)
+- **`Test-AlertDelivery.ps1`** — `Send-EmailNotification` now establishes a Microsoft Graph context via `Connect-MgGraph -Scopes Mail.Send` before calling `Send-MgUserMail`, instead of failing with an opaque `AuthenticationRequired` error. Also re-connects when an existing context lacks `Mail.Send`, and verifies `Microsoft.Graph.Authentication` is installed. (Goldeneye M2)
+- **`docs/prerequisites.md`** — Replaced the incorrect `Directory.Read.All` (Application) entry with `Mail.Send` (Delegated) under a new "Microsoft Graph Permissions" subsection scoped only to the `Test-AlertDelivery.ps1` email path; production scanner remains Office 365 Management API only.
+- **`docs/baseline-configuration.md`** — Zone integer values in the `fsi_zone` choice tables corrected from 1/2/3 to 10001/10002/10003 to match `create_fsi_dataverse_schema.py` and `New-AgentBaseline.ps1` ValidateRange.
+- **`README.md`** — "Related Controls" rewritten to match the canonical solutions-catalog mapping (1.14, 1.4, 1.5; previously listed 1.4/1.5/1.8). Reworded 1.4 and 1.5 as "supports monitoring/evidence" rather than enforcement to avoid overreach. GLBA citation upgraded to "GLBA Section 501(b)" per repository regulatory-language rules.
+
+### Changed
+
+- Council artifacts archived under `files/sdm/` (Opus + Goldeneye outputs).
+
+---
+
 ## [1.1.2] - 2026-04-15
 
 ### Fixed
