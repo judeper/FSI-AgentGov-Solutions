@@ -22,7 +22,7 @@ Common issues and solutions for the Compliance Dashboard.
 
 2. **Check Data Exists in Dataverse**
    - Open Power Apps > Tables
-   - Verify `fsi_controlmaster` has 78 rows
+   - Verify `fsi_controlmaster` row count matches your loaded control inventory (62 sample / 78 baseline)
    - Verify `fsi_controlassessment` has assessment records
 
 3. **Refresh Dataset**
@@ -56,7 +56,7 @@ Common issues and solutions for the Compliance Dashboard.
 ### Missing Controls
 
 **Symptoms:**
-- Fewer than 78 controls displayed
+- Fewer controls displayed than expected
 - Specific controls missing from list
 
 **Solutions:**
@@ -65,11 +65,11 @@ Common issues and solutions for the Compliance Dashboard.
    ```powershell
    python scripts/load_sample_data.py --controls-only
    ```
-   - Confirm the control master source reflects the validated 78-control framework baseline before rerunning the loader
+   - Confirm the control master source matches your inventory before rerunning the loader (62 sample / 78 baseline)
 
 2. **Verify Control Master Table**
    - Check `fsi_controlmaster` row count
-   - Ensure all 78 controls present
+   - Ensure all expected controls present (62 sample / 78 baseline)
 
 3. **Check Filter Context**
    - Clear all slicers
@@ -358,4 +358,4 @@ For issues not covered here:
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

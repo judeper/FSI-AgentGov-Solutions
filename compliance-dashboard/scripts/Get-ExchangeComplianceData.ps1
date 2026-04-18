@@ -60,7 +60,7 @@
     Collects Exchange compliance data using interactive authentication.
 
 .EXAMPLE
-    .\Get-ExchangeComplianceData.ps1 -TenantId "contoso.onmicrosoft.com" -ClientId "00000000-0000-0000-0000-000000000001" -CertificateThumbprint "ABC123DEF456"
+    .\Get-ExchangeComplianceData.ps1 -TenantId "tenant.onmicrosoft.com" -ClientId "00000000-0000-0000-0000-000000000001" -CertificateThumbprint "ABC123DEF456"
 
     Collects Exchange compliance data using certificate-based service principal auth.
 
@@ -74,7 +74,7 @@
     ExternalDistributionListRisks, InactiveSharedMailboxes, Summary
 
 .NOTES
-    Version:    1.0.2
+    Version:    1.0.3
     Author:     FSI Agent Governance
     Requires:   PowerShell 7.0+
     Requires:   Microsoft.Graph.Authentication 2.0.0+
@@ -176,6 +176,7 @@ function Invoke-GraphRequest {
     param(
         [string]$Uri,
         [string]$Method = "GET",
+        [hashtable]$Headers = @{},
         [int]$MaxRetries = 3
     )
 
@@ -183,18 +184,31 @@ function Invoke-GraphRequest {
     while ($attempt -lt $MaxRetries) {
         $attempt++
         try {
-            $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -OutputType PSObject
+            if ($Headers.Count -gt 0) {
+                $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -Headers $Headers -OutputType PSObject
+            }
+            else {
+                $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -OutputType PSObject
+            }
             return $response
         }
         catch {
             $statusCode = $_.Exception.Response.StatusCode.value__
+            # Honor server-supplied Retry-After header on 429/503 when available.
+            $retryAfterHeader = $null
+            try { $retryAfterHeader = $_.Exception.Response.Headers['Retry-After'] } catch {}
+
             if ($statusCode -eq 429 -and $attempt -lt $MaxRetries) {
-                $retryAfter = 60 * $attempt
+                $retryAfter = if ($retryAfterHeader -and [int]::TryParse($retryAfterHeader, [ref]$null)) {
+                    [int]$retryAfterHeader
+                } else { 60 * $attempt }
                 Write-AuditLog "Throttled (429). Retrying in ${retryAfter}s (attempt $attempt/$MaxRetries)" "WARN"
                 Start-Sleep -Seconds $retryAfter
             }
             elseif ($statusCode -in @(500, 502, 503, 504) -and $attempt -lt $MaxRetries) {
-                $delay = [math]::Pow(2, $attempt) * 5
+                $delay = if ($retryAfterHeader -and [int]::TryParse($retryAfterHeader, [ref]$null)) {
+                    [int]$retryAfterHeader
+                } else { [int]([math]::Pow(2, $attempt) * 5) }
                 Write-AuditLog "Server error ($statusCode). Retrying in ${delay}s (attempt $attempt/$MaxRetries)" "WARN"
                 Start-Sleep -Seconds $delay
             }
@@ -206,13 +220,16 @@ function Invoke-GraphRequest {
 }
 
 function Invoke-GraphRequestWithPagination {
-    param([string]$Uri)
+    param(
+        [string]$Uri,
+        [hashtable]$Headers = @{}
+    )
 
     $results = [System.Collections.Generic.List[object]]::new()
 
     $nextLink = $Uri
     while ($nextLink) {
-        $response = Invoke-GraphRequest -Uri $nextLink
+        $response = Invoke-GraphRequest -Uri $nextLink -Headers $Headers
         if ($response.value) {
             $results.AddRange([object[]]$response.value)
         }
@@ -236,7 +253,10 @@ function Get-ExternalForwardingRules {
     $findings = [System.Collections.Generic.List[hashtable]]::new()
 
     try {
-        $users = Invoke-GraphRequestWithPagination -Uri "$GraphBase/v1.0/users?`$select=id,displayName,userPrincipalName,mail&`$filter=assignedLicenses/`$count ne 0&`$count=true&`$top=999"
+        # `assignedLicenses/$count ne 0` is a Graph "advanced query" that requires the
+        # `ConsistencyLevel: eventual` header alongside `$count=true`.
+        $advHeaders = @{ ConsistencyLevel = 'eventual' }
+        $users = Invoke-GraphRequestWithPagination -Uri "$GraphBase/v1.0/users?`$select=id,displayName,userPrincipalName,mail&`$filter=assignedLicenses/`$count ne 0&`$count=true&`$top=999" -Headers $advHeaders
     }
     catch {
         Write-AuditLog "Failed to list users: $($_.Exception.Message). Trying without filter..." "WARN"
@@ -366,13 +386,15 @@ function Get-BroadMailboxAccess {
     $findings = [System.Collections.Generic.List[hashtable]]::new()
 
     try {
-        # Shared mailboxes typically have specific recipientTypeDetails
+        # `mailboxSettings/userPurpose eq 'shared'` is also an advanced query and
+        # requires the `ConsistencyLevel: eventual` header.
+        $advHeaders = @{ ConsistencyLevel = 'eventual' }
         $sharedMailboxes = Invoke-GraphRequestWithPagination -Uri (
             "$GraphBase/v1.0/users?" +
             "`$select=id,displayName,userPrincipalName,mail,accountEnabled,signInActivity" +
             "&`$filter=mailboxSettings/userPurpose eq 'shared'" +
-            "&`$top=999"
-        )
+            "&`$count=true&`$top=999"
+        ) -Headers $advHeaders
     }
     catch {
         Write-AuditLog "Shared mailbox filter not supported. Trying alternate approach..." "WARN"
@@ -513,7 +535,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Compliance Dashboard — Exchange Compliance Collector    ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.2                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.3                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -560,7 +582,7 @@ try {
             generatedAt     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             lookbackDays    = $config.retentionDays
             graphBaseUrl    = $GraphBaseUrl
-            version         = "1.0.2"
+            version         = "1.0.3"
             framework       = "FSI Agent Governance"
             controlReference = "3.3, 3.1, 3.2"
         }

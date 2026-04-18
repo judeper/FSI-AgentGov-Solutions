@@ -19,4 +19,4 @@ This solution does not ship a packaged `.zip` file. Build all Dataverse tables, 
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

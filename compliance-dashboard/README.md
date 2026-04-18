@@ -2,11 +2,11 @@
 
 > **Status:** Completed
 
-Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the validated 78-control framework baseline with zone-based filtering.
+Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains 62 controls; organizations should load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
 
 ## Overview
 
-The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 and Power Platform sources to provide a unified view of your AI agent governance posture. It supports regulatory reporting requirements for SOX 404, FINRA 3120, and OCC 2011-12.
+The Compliance Dashboard aggregates compliance data from Dataverse tables (populated by manual imports, the included score and exception flows, sample data, and the optional Exchange evidence collector) to provide a unified view of your AI agent governance posture. It helps support internal reporting used for **SOX Section 404** ICFR monitoring, **FINRA Rule 3120(a)(1)** supervisory control reporting, and **OCC Bulletin 2011-12 / FRB SR 11-7** model-risk governance where applicable. Organizations should verify scope, record categories, and supervisory procedures.
 
 ## Features
 
@@ -15,7 +15,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 | **Executive Summary** | Overall compliance score with trend indicators |
 | **Pillar Breakdown** | Compliance status by pillar (Security, Management, Reporting, SharePoint) |
 | **Zone Filtering** | Filter by governance zone (Zone 1/2/3) |
-| **Control Drill-Down** | Detailed status for each of the 78 controls in the validated framework baseline |
+| **Control Drill-Down** | Detailed status for each control loaded into Dataverse (sample dataset ships 62 controls; load the validated 78-control baseline to enable full-framework coverage) |
 | **Trend Analysis** | Historical compliance tracking over time |
 | **Exception Tracking** | Open exceptions with remediation status |
 
@@ -52,14 +52,15 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 
 ## Data Sources
 
-| Source | Data Collected | Refresh Frequency |
-|--------|----------------|-------------------|
-| **Purview Compliance Manager** | Compliance scores, assessment status | Daily |
-| **Power Platform Admin Center** | Environment count, DLP policy status | Daily |
-| **Environment Lifecycle Management** | Zone classification, governance status | Real-time |
-| **FINRA Supervision Workflow** | Queue metrics, review completion rates | Hourly |
-| **Purview Audit Log** | Compliance-relevant events | Daily |
-| **Exchange Online** | External forwarding rules, DLP alerts, shared mailbox access, distribution list risks | Daily |
+| Source | Data Collected | Status | Refresh Frequency |
+|--------|----------------|--------|-------------------|
+| **Dataverse (Compliance Hub tables)** | Control master, assessments, scores, exceptions, evidence (populated by manual import or other solutions) | Implemented | On import |
+| **Exchange Online (Get-ExchangeComplianceData.ps1)** | External forwarding rules, DLP alerts, mailbox access, DL membership | Implemented (script run on schedule; JSON output imported manually) | Scheduled (manual import) |
+| **Purview Compliance Manager** | Compliance scores, assessment status | Planned (`CD-EvidenceCollector` flow not yet shipped) | — |
+| **Power Platform Admin Center** | Environment count, DLP policy status | Planned | — |
+| **Environment Lifecycle Management** | Zone classification, governance status | Optional dependency — populates Dataverse via the ELM solution | Real-time |
+| **FINRA Supervision Workflow** | Queue metrics, review completion rates | Optional dependency — populates Dataverse via the FINRA solution | Hourly |
+| **Purview Audit Log** | Compliance-relevant events | Planned | — |
 
 ## Prerequisites
 
@@ -87,7 +88,7 @@ The Compliance Dashboard aggregates compliance data from multiple Microsoft 365 
 |----------|---------|---------|
 | Environment Lifecycle Management | v1.1.0+ | Zone classification data |
 | FINRA Supervision Workflow | v1.0.0+ | Supervision metrics (optional) |
-| Get-ExchangeComplianceData.ps1 | v1.0.2 | Exchange compliance signal collection (included) |
+| Get-ExchangeComplianceData.ps1 | v1.0.3 | Exchange compliance signal collection (included) |
 
 ## Quick Start
 
@@ -129,27 +130,29 @@ python scripts/load_sample_data.py --export
 
 **Production Deployment:** Clear sample data before production use.
 
-### 3. Deploy Power BI Dashboard
+### 3. Build the Power BI Dashboard
 
-1. Download Power BI template: `templates/ComplianceDashboard.pbit`
-2. Open in Power BI Desktop
-3. Enter parameters:
-   - `DataverseEnvironmentUrl`: Your environment URL
-   - `TenantId`: Your Microsoft Entra ID tenant ID
-4. Authenticate with organizational account
+The solution does not ship a pre-built `.pbit` template. Build it manually using Power BI Desktop following [Power BI Template Specification](docs/power-bi-template-spec.md):
+
+1. Open Power BI Desktop and create a new report
+2. Connect to your Dataverse environment using the Dataverse connector
+3. Build pages, relationships, and measures per the template specification
+4. Optionally save as a `.pbit` template for re-use within your organization
 5. Publish to Power BI Service
 6. Configure scheduled refresh (daily at 7:00 AM)
 
-See [Power BI Setup](docs/power-bi-setup.md) for detailed configuration and [Power BI Template Specification](docs/power-bi-template-spec.md) for template creation instructions.
+See [Power BI Setup](docs/power-bi-setup.md) for connector configuration and [Power BI Template Specification](docs/power-bi-template-spec.md) for complete page-by-page build instructions and the [DAX Measures](docs/dax-measures.md) reference for measure definitions.
 
-### 4. Activate Flows
+### 4. Build and Activate Flows
 
-1. Navigate to Power Automate > Solutions > Compliance Dashboard
-2. Turn on **CD-ScoreCalculator** (daily score calculation)
-3. Turn on **CD-ExceptionMonitor** (hourly SLA monitoring)
-4. Test each flow manually to verify functionality
+Two Power Automate flows must be built manually following [Flow Configuration](docs/flow-configuration.md):
 
-See [Deployment Checklist](docs/deployment-checklist.md) for complete validation steps.
+1. **CD-ScoreCalculator** (daily score calculation)
+2. **CD-ExceptionMonitor** (hourly SLA monitoring)
+
+After building each flow, turn it on and run a test execution to verify functionality.
+
+> **Note:** A third flow, `CD-EvidenceCollector`, is documented as **planned** in [Flow Configuration](docs/flow-configuration.md) but is not yet implemented. Until it ships, evidence from the Exchange collector and other sources must be imported manually.
 
 ## Documentation
 
@@ -173,7 +176,7 @@ The `Get-ExchangeComplianceData.ps1` script collects Exchange Online compliance 
 .\scripts\Get-ExchangeComplianceData.ps1 -Interactive
 
 # Service principal mode
-.\scripts\Get-ExchangeComplianceData.ps1 -TenantId "contoso.onmicrosoft.com" `
+.\scripts\Get-ExchangeComplianceData.ps1 -TenantId "tenant.onmicrosoft.com" `
     -ClientId "00000000-0000-0000-0000-000000000001" `
     -CertificateThumbprint "ABC123DEF456"
 ```
@@ -184,7 +187,7 @@ The `Get-ExchangeComplianceData.ps1` script collects Exchange Online compliance 
 |--------|-----------|-------------|
 | External forwarding rules | HIGH | Inbox rules forwarding to external addresses — data exfiltration vector |
 | DLP policy alerts | MEDIUM-HIGH | DLP policy matches on Exchange workload |
-| Inactive shared mailboxes | MEDIUM | Shared mailboxes with broad access and no recent sign-in activity |
+| Inactive shared/unused mailboxes | MEDIUM | Mailboxes flagged as shared by `mailboxSettings.userPurpose` (or, when that filter is unavailable, disabled accounts that retain mailboxes); not an enumeration of mailbox permission grants |
 | External distribution list members | MEDIUM | Mail-enabled groups with guest or external members |
 
 **Configuration:** See `templates/exchange-config.sample.json` for scan scope, risk thresholds, and domain allow-list settings.
@@ -259,20 +262,25 @@ Where:
 
 ## Regulatory Alignment
 
-### SOX 404 Support
+### SOX Section 404 support
+
+Supports evidence aggregation used in management's annual evaluation of internal control over financial reporting (ICFR). Firms should distinguish **application controls** from **IT general controls** and address **SOX Section 302** quarterly officer certifications separately.
 
 - Control assessment documentation
 - Evidence collection and linking
 - Exception tracking with remediation timelines
-- Quarterly attestation support
 
-### FINRA 3120 Support
+### FINRA Rule 3120(a)(1) support
+
+Supports aggregation of testing results and exception reporting used in a **reasonably designed** supervisory control system, in conjunction with written supervisory procedures under **FINRA Rule 3110(a)**. Subject to firm interpretation, sampling, and supervisory review procedures.
 
 - Supervisory control testing results
 - Annual review documentation
 - Exception escalation tracking
 
-### OCC 2011-12 Support
+### OCC Bulletin 2011-12 / FRB SR 11-7 support
+
+Supports aggregation of validation and monitoring evidence **when the firm classifies the AI component as a model**. Organizations should document the model/non-model determination, validation scope, and governance responsibilities separately.
 
 - Model risk assessment status
 - Validation tracking
@@ -280,21 +288,19 @@ Where:
 
 ## Known Limitations
 
-This section documents limitations and design decisions for v1.0.0 deployment.
+This section documents limitations and design decisions for the v1.0.x release.
 
 | Limitation | Description | Workaround |
 |------------|-------------|------------|
-| **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop GUI | Follow [Power BI Template Specification](docs/power-bi-template-spec.md) for step-by-step instructions |
+| **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop following [Power BI Template Specification](docs/power-bi-template-spec.md) | The specification provides step-by-step page-by-page build instructions |
+| **Manual flow build** | Power Automate flows must be built manually following [Flow Configuration](docs/flow-configuration.md); no exported flow JSON ships in this solution per repository content policy | Use the manual build instructions; build once and optionally export to your own managed solution |
+| **Sample dataset is 62 controls** | The shipped `sample-data/control-master.json` contains 62 controls (24 Pillar 1 + 21 Pillar 2 + 10 Pillar 3 + 7 Pillar 4); the validated framework baseline contains 78 | Extend `sample-data/control-master.json` and the `PillarDimension` `DATATABLE` in `docs/dax-measures.md` to your full control inventory |
+| **Evidence collector flow not yet shipped** | The third flow `CD-EvidenceCollector` is documented as planned in `docs/flow-configuration.md` but not implemented | Import Exchange and other evidence JSON manually via Power Apps or the Dataverse Web API until the flow ships |
 | **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
-| **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX filters |
-| **Sample data is demo only** | Sample data uses realistic distributions but should not be used in production environments | To clear existing data before loading, manually delete records via Power Apps or Dataverse API |
-| **Single deployment path** | No Quick Start option, full deployment required for all scenarios | Complete all steps in [Deployment Checklist](docs/deployment-checklist.md) |
-| **Upgrade path not documented** | Migration from v1.0.0 to future versions not yet specified | Upgrade documentation will be added in v1.1.0 release |
-| **Unmanaged solution only** | Solution package is unmanaged to allow customer customization | Convert to managed solution post-customization if needed |
+| **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX patterns |
+| **Sample data is demo only** | Sample data uses realistic distributions but should not be used in production environments | Manually delete records via Power Apps or Dataverse API before production use |
 | **Pagination ceiling (100K records)** | All `ListRecords` actions in CD-ExceptionMonitor and CD-ScoreCalculator use `minimumItemCount: 100000`. Results are silently truncated beyond this limit with no runtime detection. | Enable Dataverse archival or add date-range filters to keep active record counts below 100,000 |
-| **Exception count capped at 999** | The `fsi_exceptioncount` column (Customizations.xml) has `MaxValue: 999`. The workflow caps the value with `min(..., 999)` to prevent Dataverse validation errors, but counts above 999 are underreported. | Increase `MaxValue` in Customizations.xml if your organization may exceed 999 open exceptions |
-| **Bracket filename in solution package** | `[Content_Types].xml` contains bracket characters that cause PowerShell `Get-Content` and glob pattern failures without `-LiteralPath` or backtick escaping. | Use `-LiteralPath` or escape brackets when accessing this file in deployment scripts |
-| **Unused environment variables** | Three environment variables (`fsi_CD_TeamsWebhook`, `fsi_CD_DataverseEnvironment`, `fsi_CD_SLAMultiplier`) are unused or deprecated but retained in the package for backward compatibility. | Safely ignore during import; see `environmentvariables.json` for details on each |
+| **Exception count capped at 999** | The `fsi_exceptioncount` column has `MaxValue: 999`. The workflow caps the value with `min(..., 999)` to prevent Dataverse validation errors, but counts above 999 are underreported. | Increase the `MaxValue` on the column if your organization may exceed 999 open exceptions |
 | **N+1 Dataverse update pattern** | `Update_Exception_Record` in CD-ExceptionMonitor issues individual `UpdateRecord` per exception inside a loop, which is inefficient at high volumes. | Migrate to Dataverse batch changeset (`$batch` endpoint) for large exception populations |
 
 **Future Enhancements (planned for v1.1.0+):**
@@ -361,4 +367,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Compliance Dashboard v1.0.2*
+*FSI Agent Governance Framework - Compliance Dashboard v1.0.3*

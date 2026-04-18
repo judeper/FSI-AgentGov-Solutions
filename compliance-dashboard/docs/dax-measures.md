@@ -2,6 +2,11 @@
 
 Complete DAX measure definitions for the Compliance Dashboard.
 
+> **Important — column naming for the Dataverse Power BI connector:**
+> - **Choice (option set) columns** are imported as integer values (Dataverse stores `100000000+` for custom option sets unless you explicitly assign integer values when creating the option set). Comparing `[fsi_status] = 1` only works if you set the option values to `1, 2, 3, 4` when creating the choice. If you accept the Dataverse defaults, change every comparison below to the matching `100000000+` value, or join to a label/dimension table.
+> - **Lookup columns** are imported as `_<schemaname>_value` (a GUID column) on the child side, **not** under the lookup's logical name. For example, the parent reference on `ControlAssessment` is `_fsi_controlmasterid_value`, not `fsi_controlmasterid`. The measures below use the `_value` form on the child side.
+> - **Calculated columns** (`fsi_daysopen`, `fsi_slastatus`) are read-only when imported.
+
 ---
 
 ## Score Measures
@@ -182,7 +187,7 @@ VAR LatestAssessments =
             ControlAssessment,
             "IsLatest", ControlAssessment[fsi_assessmentdate] =
                 CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
-                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[_fsi_controlmasterid_value]))
         ),
         [IsLatest] = TRUE()
     )
@@ -200,7 +205,7 @@ VAR LatestAssessments =
             ControlAssessment,
             "IsLatest", ControlAssessment[fsi_assessmentdate] =
                 CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
-                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[_fsi_controlmasterid_value]))
         ),
         [IsLatest] = TRUE()
     )
@@ -218,7 +223,7 @@ VAR LatestAssessments =
             ControlAssessment,
             "IsLatest", ControlAssessment[fsi_assessmentdate] =
                 CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
-                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[_fsi_controlmasterid_value]))
         ),
         [IsLatest] = TRUE()
     )
@@ -236,7 +241,7 @@ VAR LatestAssessments =
             ControlAssessment,
             "IsLatest", ControlAssessment[fsi_assessmentdate] =
                 CALCULATE(MAX(ControlAssessment[fsi_assessmentdate]),
-                    ALLEXCEPT(ControlAssessment, ControlAssessment[fsi_controlmasterid]))
+                    ALLEXCEPT(ControlAssessment, ControlAssessment[_fsi_controlmasterid_value]))
         ),
         [IsLatest] = TRUE()
     )
@@ -354,7 +359,7 @@ COUNTROWS(ComplianceEvidence)
 Avg Evidence per Control =
 DIVIDE(
     [Total Evidence],
-    DISTINCTCOUNT(ComplianceEvidence[fsi_controlassessmentid]),
+    DISTINCTCOUNT(ComplianceEvidence[_fsi_controlassessmentid_value]),
     0
 )
 ```
@@ -530,4 +535,4 @@ DATATABLE(
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

@@ -78,7 +78,7 @@ Calculates and stores daily compliance scores for trend analysis.
 | 1 | Initialize variable | Name: `TotalWeightedScore`, Type: Float, Value: 0 |
 | 2 | Initialize variable | Name: `TotalWeight`, Type: Float, Value: 0 |
 | 3 | Initialize variable | Name: `PillarScores`, Type: Object |
-| 4 | List rows | Table: `fsi_controlassessments`, Filter: Latest per control |
+| 4 | List rows | Table: `fsi_controlassessment` (singular logical name in Power Automate's "Table name" picker), Filter: Latest per control |
 | 5 | Apply to each | Loop through assessments |
 | 6 | Condition | Check if status != Not Applicable |
 | 7 | Compose | Calculate weighted score |
@@ -88,7 +88,7 @@ Calculates and stores daily compliance scores for trend analysis.
 
 ### Error Handling
 
-- On failure: Send notification to Compliance Admin via `CD_NotificationEmail` environment variable
+- On failure: Send notification to Compliance Admin via `fsi_CD_NotificationEmail` environment variable
 - Retry policy: 3 attempts with exponential backoff (10s initial, 1m max) on Dataverse actions
 - Scope-based error handler sends failure alert email when List, Loop, or Create actions fail
 
@@ -111,28 +111,18 @@ Updates exception SLA status and sends alerts for at-risk items.
    - Filter: fsi_exceptionstatus IN (1, 2, 3)  // Open, In Progress, Pending Verification
 
 2. For each exception:
-   - Calculate DaysOpen = DateDiff(createdon, today)
-   - Get SLA days based on severity
+   - DaysOpen and SLA status are exposed as **calculated columns** (`fsi_daysopen`, `fsi_slastatus`); they are computed by Dataverse and cannot be written from a flow. The flow only reads them and decides whether to send notifications.
 
-   IF DaysOpen > SLA THEN
-     - Set fsi_slastatus = Breached
-     - IF previous status != Breached THEN
-       - Send breach notification
-     END IF
-   ELSE IF DaysOpen > SLA × 0.8 THEN
-     - Set fsi_slastatus = At Risk
-     - IF previous status == On Track THEN
-       - Send warning notification
-     END IF
-   ELSE
-     - Set fsi_slastatus = On Track
+   IF fsi_slastatus == Breached AND previous status != Breached THEN
+     - Send breach notification
+   ELSE IF fsi_slastatus == At Risk AND previous status == On Track THEN
+     - Send warning notification
    END IF
-
-   - Update fsi_daysopen
-   - Update fsi_slastatus
 
 3. Send daily summary if any breached exceptions
 ```
+
+> **Note on calculated columns:** `fsi_daysopen` and `fsi_slastatus` are defined as Dataverse calculated columns in [Dataverse Schema](dataverse-schema.md). Calculated columns cannot be written via the Web API or the Dataverse connector; the flow reads the computed values and tracks state transitions in a separate `fsi_lastnotifiedstatus` column (or in another tracking mechanism). If you intend the flow to write `fsi_slastatus` directly, change the column to a non-calculated choice in your schema before building the flow.
 
 ### SLA Configuration
 
@@ -232,11 +222,11 @@ Authorization: Bearer {token}
 
 | Connection | Purpose |
 |------------|---------|
-| **Dataverse** | Read/write compliance tables |
-| **Office 365 Outlook** | Send email notifications |
-| **Microsoft Teams** | Send Teams notifications |
+| **Microsoft Dataverse** | Read/write compliance tables |
+| **Office 365 Outlook** | Send email notifications (used by both flows) |
+| **Microsoft Teams** | Send Teams notifications (used by CD-ExceptionMonitor) |
 
-> **Note:** The **HTTP with Microsoft Entra ID** connection is only required for the planned CD-EvidenceCollector flow (not yet implemented). The current solution package (`connectionreferences.json`) does not include it. Do not create this connection unless CD-EvidenceCollector is deployed.
+> **Note:** A future `CD-EvidenceCollector` flow (planned, not yet implemented) is expected to require an HTTP-with-Microsoft-Entra-ID connection for Microsoft Graph and Power Platform API calls. Do not create that connection yet.
 
 ### Service Principal Connection
 
@@ -259,33 +249,37 @@ For Graph API and Power Platform API calls:
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CD_NotificationEmail` | Email for compliance notifications | (none — required during import) |
-| `CD_TeamsWebhook` | Not currently used — Teams alerts use the shared\_teams connector directly (PostMessageToConversation). Setting this value has no effect. | (none) |
-| `CD_DataverseEnvironment` | Deprecated — will be removed in next major release. Not referenced by any flow (flows use connection reference). Safe to skip during import. | (current) |
-| `CD_SLAMultiplier` | Reserved for future SLA configurability (not yet referenced by flows) | 1.0 |
+All environment variables follow the Dataverse publisher prefix pattern `fsi_CD_<Name>` (display name without the prefix in parentheses).
+
+| Schema name | Display name | Description | Default |
+|-------------|--------------|-------------|---------|
+| `fsi_CD_NotificationEmail` | CD Notification Email | Email for compliance notifications | (none — required during deployment) |
+| `fsi_CD_TeamsWebhook` | CD Teams Webhook | Reserved for future use; not currently consumed by any flow (Teams alerts use the `shared_teams` connector directly via `PostMessageToConversation`). Setting this value has no effect today. | (none) |
+| `fsi_CD_DataverseEnvironment` | CD Dataverse Environment | Deprecated; flows resolve the environment via the connection reference. Safe to skip. | (none) |
+| `fsi_CD_SLAMultiplier` | CD SLA Multiplier | Reserved for future SLA configurability; not yet referenced by flows. | 1.0 |
+
+> **Note:** Power Automate's "Get environment variable" action expects the **schema name** (`fsi_CD_*`). Dropdown pickers may show the **display name** (the value in the second column above) — both refer to the same record.
 
 ---
 
 ## Deployment
 
-### Import Flows
+This solution does not ship a Power Automate solution package. Build each flow manually in the Power Automate maker portal following the trigger/action notes above, save it into your Compliance Dashboard solution, and configure the connection references and environment variables.
 
-The flows are deployed as part of the Power Apps solution package (not as a standalone Power Automate import package).
+### Build steps
 
-1. Navigate to [Power Apps maker portal](https://make.powerapps.com)
-2. Select **Solutions** > **Import solution**
-3. Build the Dataverse schema using [Dataverse Schema](dataverse-schema.md) and create flows manually following this guide
-4. Configure connection references when prompted
-5. Set environment variables when prompted
-6. After import, navigate to **Power Automate** and turn on the flows
+1. Navigate to [Power Automate maker portal](https://make.powerautomate.com)
+2. Open or create the **Compliance Dashboard** solution
+3. Build the Dataverse schema first (see [Dataverse Schema](dataverse-schema.md))
+4. Build each flow described above using the listed triggers, steps, and connection references
+5. Configure environment variables (`fsi_CD_*`)
+6. Turn on the trigger for each flow
 
-### Post-Import Configuration
+### Post-build configuration
 
 1. Verify connection references are valid
 2. Test each flow manually
-3. Review error handling email recipients
+3. Review error-handling email recipients
 4. Enable scheduled triggers
 
 ---
@@ -328,22 +322,18 @@ All `ListRecords` actions use `minimumItemCount: 100000` (Power Automate maximum
 
 `CD-ExceptionMonitor` issues individual `UpdateRecord` calls per exception inside `Apply_to_each`. For large exception volumes, migrating to Dataverse batch changeset operations (`$batch` endpoint) would reduce API calls and improve throughput.
 
+### Calculated Columns are Read-Only
+
+`fsi_daysopen` and `fsi_slastatus` are documented in [Dataverse Schema](dataverse-schema.md) as **calculated** columns; calculated columns cannot be updated through the Dataverse Web API or the Dataverse connector. If you need the SLA flow to maintain these values directly, change them to standard columns in your schema before building the flow. The pseudo-code above for Flow 2 assumes either (a) the columns are non-calculated in your environment, or (b) the SLA logic is implemented as a Dataverse calculated-column formula and the flow only handles notifications.
+
 ### SLA Multiplier Not Yet Referenced
 
 The `fsi_CD_SLAMultiplier` environment variable is reserved for future SLA configurability but is not yet referenced by any flow. SLA periods are currently hardcoded in `Initialize_SLA_Days` (Critical=7, High=14, Medium=30, Low=90).
 
-### Bracket Characters in Package Filenames
-
-The `[Content_Types].xml` file in the solution package contains bracket characters that require `-LiteralPath` or backtick escaping in PowerShell. Deployment scripts should use `Get-Content -LiteralPath` or escape as `` `[Content_Types`].xml `` to avoid glob expansion errors.
-
-### Dead Variable: CD_TeamsWebhook
-
-The `Initialize_CD_TeamsWebhook` action (CD-ExceptionMonitor) reads the `fsi_CD_TeamsWebhook` environment variable into a flow variable, but no subsequent action references `CD_TeamsWebhook`. Teams notifications use the `shared_teams` connector directly (`PostMessageToConversation`). Removing this initialization requires adjusting the `Scope_Main` runAfter chain (which depends on `Initialize_CD_TeamsWebhook`), so this is an architectural cleanup rather than a simple deletion. The action is annotated with a description documenting this status.
-
 ### Daily Summary Fixed to 09:00 UTC
 
-The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'HH') == "09"`, restricting the daily breach summary email to the 09:00 UTC hourly run. Organizations in time zones far from UTC may prefer to adjust this value. Changing the hour requires editing the condition expression in `CD-ExceptionMonitor.json` (the `"09"` literal in `Condition_Send_Daily_Summary`).
+The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'HH') == "09"`, restricting the daily breach summary email to the 09:00 UTC hourly run. Organizations in time zones far from UTC may prefer to adjust this value when building the flow.
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

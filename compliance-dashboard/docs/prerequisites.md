@@ -27,13 +27,14 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 
 ## Permission Requirements
 
-### Microsoft Entra ID Roles
+### Service Admin Roles
 
 | Role | Required For | Minimum Scope |
 |------|--------------|---------------|
 | **Purview Compliance Admin** | Purview Compliance Manager API | Tenant |
 | **Power Platform Admin** | Environment and DLP data access | Tenant |
 | **Global Reader** | Read-only access to configuration | Tenant |
+| **Exchange Online Admin** | Required for the Exchange data collector script (`Get-ExchangeComplianceData.ps1`) when running interactively | Tenant |
 
 ### Power Platform Roles
 
@@ -41,6 +42,7 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 |------|--------------|-------|
 | **System Administrator** | Dataverse table creation | Environment |
 | **Environment Maker** | Flow creation | Environment |
+| **Application User** | Service principal access to Dataverse Web API (must be created in Power Platform admin center for the app registration below) | Environment |
 
 ### Power BI Roles
 
@@ -63,7 +65,12 @@ The data collection flows use a service principal for API access.
     "microsoftGraph": [
       "ComplianceManager.Read.All",
       "Directory.Read.All",
-      "AuditLog.Read.All"
+      "AuditLog.Read.All",
+      "User.Read.All",
+      "Group.Read.All",
+      "MailboxSettings.Read",
+      "Mail.Read",
+      "SecurityAlert.Read.All"
     ],
     "powerPlatform": [
       "Environment.Read.All",
@@ -75,6 +82,8 @@ The data collection flows use a service principal for API access.
   }
 }
 ```
+
+> **Note:** `User.Read.All`, `MailboxSettings.Read`, `Mail.Read`, `Group.Read.All`, and `SecurityAlert.Read.All` are required by `Get-ExchangeComplianceData.ps1` for license, mailbox-purpose, inactive-mailbox, distribution group, and audit-event signal collection. Grant admin consent after adding.
 
 ### Registration Steps
 
@@ -91,7 +100,20 @@ The data collection flows use a service principal for API access.
    - `ComplianceManager.Read.All` (Application)
    - `Directory.Read.All` (Application)
    - `AuditLog.Read.All` (Application)
+   - `User.Read.All` (Application) — license + UPN enumeration
+   - `Group.Read.All` (Application) — distribution group counts
+   - `MailboxSettings.Read` (Application) — `mailboxSettings/userPurpose`
+   - `Mail.Read` (Application) — inactive mailbox classification
+   - `SecurityAlert.Read.All` (Application) — Exchange-related security signals
 3. Click **Grant admin consent**
+
+### Dataverse Application User
+
+After registering the app, grant it Dataverse access:
+
+1. Navigate to **Power Platform admin center** > target environment > **Settings** > **Users + permissions** > **Application users**
+2. Click **+ New app user** and select the app registration above
+3. Assign the **System Customizer** role (for table reads/writes performed by the dashboard flows) and **Basic User** for OData access
 
 ### Client Secret
 
@@ -153,14 +175,14 @@ If Conditional Access policies restrict API access:
 
 | Solution | Minimum Version | Purpose |
 |----------|-----------------|---------|
-| Environment Lifecycle Management | v1.1.0 | Zone classification data |
+| Environment Lifecycle Management | v1.1.3 | Zone classification data |
 
 ### Optional
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| FINRA Supervision Workflow | v1.0.0 | Supervision queue metrics |
-| Deny Event Correlation Report | v1.1.0 | DLP violation data |
+| FINRA Supervision Workflow | v1.0.1 | Supervision queue metrics |
+| Deny Event Correlation Report | v2.0.1 | DLP violation data |
 
 ---
 
@@ -189,4 +211,4 @@ Once prerequisites are met:
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

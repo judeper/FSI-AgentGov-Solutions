@@ -47,7 +47,7 @@ Parameters allow customers to enter their own Dataverse environment URL and tena
 | Setting | Value |
 |---------|-------|
 | Name | `DataverseEnvironmentUrl` |
-| Description | `Your Dataverse environment URL (e.g., https://contoso.crm.dynamics.com)` |
+| Description | `Your Dataverse environment URL (e.g., https://example.crm.dynamics.com)` |
 | Required | `Yes` (checked) |
 | Type | `Text` |
 | Suggested Values | `Any value` |
@@ -193,7 +193,8 @@ Power BI may auto-detect some relationships. Verify and create the following:
 
 #### Relationship 2: ControlMaster to ControlAssessment
 
-1. Drag `ControlMaster[fsi_controlmasterid]` to `ControlAssessment[fsi_controlmasterid]`
+1. Drag `ControlMaster[fsi_controlmasterid]` to `ControlAssessment[_fsi_controlmasterid_value]`
+   *(Lookup columns are imported by the Dataverse connector as `_<schemaname>_value` GUID columns on the child side.)*
 2. Verify relationship settings:
    - Cardinality: **One to many (1:*)**
    - Cross filter direction: **Single**
@@ -202,7 +203,7 @@ Power BI may auto-detect some relationships. Verify and create the following:
 
 #### Relationship 3: ControlAssessment to ComplianceException
 
-1. Drag `ControlAssessment[fsi_controlassessmentid]` to `ComplianceException[fsi_controlassessmentid]`
+1. Drag `ControlAssessment[fsi_controlassessmentid]` to `ComplianceException[_fsi_controlassessmentid_value]`
 2. Verify relationship settings:
    - Cardinality: **One to many (1:*)**
    - Cross filter direction: **Single**
@@ -211,7 +212,7 @@ Power BI may auto-detect some relationships. Verify and create the following:
 
 #### Relationship 4: ControlAssessment to ComplianceEvidence
 
-1. Drag `ControlAssessment[fsi_controlassessmentid]` to `ComplianceEvidence[fsi_controlassessmentid]`
+1. Drag `ControlAssessment[fsi_controlassessmentid]` to `ComplianceEvidence[_fsi_controlassessmentid_value]`
 2. Verify relationship settings:
    - Cardinality: **One to many (1:*)**
    - Cross filter direction: **Single**
@@ -319,9 +320,12 @@ RETURN
 
 #### Control Status Measures
 
+> **Important:** The naive `CALCULATE(COUNTROWS(ControlAssessment), ...)` form below counts every historical assessment, which inflates results when assessments accumulate over time (90 days × N zones per control). For accurate "current state" counts, use the `LatestAssessments` pattern in [DAX Measures](dax-measures.md#compliant-count) which filters to the most recent assessment per control. The version below is provided only as a quick smoke test against fresh sample data.
+
 ```dax
 Total Controls = COUNTROWS(ControlMaster)
 
+// See dax-measures.md for the production-quality "latest assessment per control" version of these three measures.
 Compliant Controls =
 CALCULATE(
     COUNTROWS(ControlAssessment),
@@ -411,10 +415,7 @@ Switch to **Report** view (icon on left sidebar).
 1. Add **Clustered column chart** visual
 2. Position: Top-right, ~400x200px
 3. Fields:
-   - **X-axis:** Create calculated column in Measures:
-     ```dax
-     Pillar Names = {"Security", "Management", "Reporting", "SharePoint"}
-     ```
+   - **X-axis:** `PillarDimension[PillarName]` (the `PillarDimension` `DATATABLE` is defined in [DAX Measures § Helper Tables](dax-measures.md))
    - **Y-axis:** `[Pillar 1 Score]`, `[Pillar 2 Score]`, `[Pillar 3 Score]`, `[Pillar 4 Score]`
 4. Format:
    - **Data colors:** Blue gradient
@@ -435,7 +436,7 @@ Switch to **Report** view (icon on left sidebar).
 1. Add **Stacked bar chart** visual
 2. Position: Middle-center, ~400x150px
 3. Fields:
-   - **Axis:** `ComplianceException[fsi_slastatus]`
+   - **Axis:** `ComplianceException[fsi_slastatus]` exposes the integer option-set value; for friendly labels (On Track / At Risk / Breached) bind to the connector's `*_label` alias column or join to a status dimension table
    - **Values:** `COUNTROWS(ComplianceException)`
 4. Format:
    - **Data colors:** Green (On Track), Yellow (At Risk), Red (Breached)
@@ -734,26 +735,34 @@ Switch to **Report** view (icon on left sidebar).
 
 Include these examples in template documentation, but do NOT implement:
 
-#### Example Role 1: Zone Viewer
+#### Example Role 1: Zone Viewer (pseudocode — replace with your logic)
 
 Restricts users to see only data from specific zones.
 
 ```dax
+// PSEUDOCODE — VALUE(USERPRINCIPALNAME()) is invalid (UPN is not numeric).
+// Replace with a join to a UserZoneMapping table you load into the model, e.g.:
+//   [fsi_zone] IN
+//       CALCULATETABLE(VALUES(UserZoneMapping[Zone]),
+//           UserZoneMapping[Upn] = USERPRINCIPALNAME())
 [fsi_zone] = VALUE(USERPRINCIPALNAME())
 ```
 
-**Note to customers:** Replace with actual zone assignment logic from your identity system.
+**Note to customers:** Replace with actual zone assignment logic from your identity system — typically a Dataverse or SharePoint mapping table loaded into the report and joined by UPN.
 
-#### Example Role 2: Pillar Owner
+#### Example Role 2: Pillar Owner (pseudocode)
 
 Restricts users to see only data from specific pillars.
 
 ```dax
+// PSEUDOCODE — illustrative only. The IF inside IN returns BLANK on the false
+// branch which collapses the IN list. In production, replace with a UPN-to-pillar
+// mapping table joined into the model.
 [fsi_pillar] IN {
-    IF(USERPRINCIPALNAME() = "security@contoso.com", 1),
-    IF(USERPRINCIPALNAME() = "management@contoso.com", 2),
-    IF(USERPRINCIPALNAME() = "reporting@contoso.com", 3),
-    IF(USERPRINCIPALNAME() = "sharepoint@contoso.com", 4)
+    IF(USERPRINCIPALNAME() = "security@example.com", 1),
+    IF(USERPRINCIPALNAME() = "management@example.com", 2),
+    IF(USERPRINCIPALNAME() = "reporting@example.com", 3),
+    IF(USERPRINCIPALNAME() = "sharepoint@example.com", 4)
 }
 ```
 
@@ -785,9 +794,9 @@ Provide these instructions in the template:
 2. Dialog appears: "Create Power BI Template"
 3. Enter description:
    ```
-   Compliance Dashboard for FSI Agent Governance Framework v1.0.0
+   Compliance Dashboard for FSI Agent Governance Framework v1.0.3
 
-   Provides aggregated compliance reporting across the validated 78-control framework baseline with zone-based filtering.
+   Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains 62 controls; load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
 
    Required parameters:
    - DataverseEnvironmentUrl: Your Dataverse environment URL
@@ -869,7 +878,7 @@ Update the .pbit template when:
 ### Version Control
 
 - Store both `.pbix` (working file) and `.pbit` (template) in repository
-- Tag template releases: `compliance-dashboard-v1.0.0`
+- Tag template releases: `compliance-dashboard-v1.0.3`
 - Document template changes in CHANGELOG.md
 
 ---
@@ -883,4 +892,4 @@ Update the .pbit template when:
 
 ---
 
-*Compliance Dashboard v1.0.2 - Power BI Template Specification*
+*Compliance Dashboard v1.0.3 - Power BI Template Specification*

@@ -45,7 +45,7 @@ git rev-parse --show-toplevel
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v1.0.4 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.3 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.0.2 |
-| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.2 |
+| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.3 |
 | [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.2.1 |
 | [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.3 |
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.1.1 |
@@ -85,7 +85,7 @@ git rev-parse --show-toplevel
 | agent-sharing-access-restriction-detector | 1.18, 2.8 | Zone-based sharing policy enforcement |
 | audit-compliance-manager | 1.7 | Audit configuration validation and gap remediation |
 | coi-testing | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | 3.3, 3.1, 3.2 | Aggregated compliance reporting with Exchange coverage |
+| compliance-dashboard | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting with Exchange coverage |
 | conditional-access-automation | 1.11, 1.23, 1.18 | CA policy deployment and drift detection |
 | content-moderation-monitor | 1.8, 1.14 | Content moderation validation against zone requirements |
 | copilot-studio-analytics | 3.2 | Business impact analytics and session outcome monitoring |

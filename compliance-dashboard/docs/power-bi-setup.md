@@ -27,22 +27,21 @@ The Compliance Dashboard provides five report pages:
 
 ## Deployment Steps
 
-### Step 1: Download Template
+### Step 1: Build the Template
 
-Download the Power BI template file:
-- `templates/ComplianceDashboard.pbit`
+Per the [Solution Content Policy](../README.md), this repo does not ship a `.pbit` file. Build your own following [docs/power-bi-template-spec.md](power-bi-template-spec.md) and save the resulting `.pbix` / `.pbit` to a workspace location your team controls.
 
 ### Step 2: Open in Power BI Desktop
 
 1. Open Power BI Desktop
-2. Click **File** > **Open** > select `ComplianceDashboard.pbit`
+2. Open your built `ComplianceDashboard.pbit` (or `.pbix`)
 3. Template will prompt for parameters
 
 ### Step 3: Configure Parameters
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `DataverseEnvironmentUrl` | Your Dataverse environment URL | `https://contoso.crm.dynamics.com` |
+| `DataverseEnvironmentUrl` | Your Dataverse environment URL | `https://example.crm.dynamics.com` |
 | `TenantId` | Your Microsoft Entra ID tenant ID | `12345678-1234-1234-1234-123456789abc` |
 
 ### Step 4: Authenticate
@@ -121,7 +120,7 @@ ADDCOLUMNS(
 | Visual | Type | Data |
 |--------|------|------|
 | Overall Score | Card | Latest overall score |
-| Score Trend | Line chart | 30-day score trend |
+| Score Change 30D | Line chart | 30-day score change (see dax-measures.md) |
 | Pillar Scores | Column chart | Score by pillar |
 | Zone Scores | Donut chart | Score by zone |
 | Exception Count | Card | Open exceptions |
@@ -189,7 +188,7 @@ ADDCOLUMNS(
 
 | Visual | Type | Data |
 |--------|------|------|
-| Score Trend | Line chart | Overall score over time |
+| Score Change 30D | Line chart | Overall score change over time |
 | Pillar Trends | Multi-line chart | All pillars over time |
 | MoM Change | KPI | Month-over-month change |
 | Forecast | Line chart | 30-day forecast (optional) |
@@ -219,9 +218,11 @@ RETURN
     )
 ```
 
-**Score Trend**
+**Score Change 30D**
 ```dax
-Score Trend =
+// Note: this measure is named "Score Change 30D" in docs/dax-measures.md.
+// Use a single name across the model to avoid breaking visuals.
+Score Change 30D =
 VAR CurrentScore = [Overall Score]
 VAR PriorScore =
     CALCULATE(
@@ -278,17 +279,23 @@ For cloud-only deployments:
 
 ## Row-Level Security (RLS)
 
+> **Pseudocode below.** `USERPRINCIPALNAME()` returns a string and cannot be used directly inside `IN { ... }`. Production RLS requires loading a mapping table (UPN → Zone, UPN → Pillar) into the model and joining on it. The snippets below illustrate intent only.
+
 ### Role Definitions
 
-**Zone Viewer**
+**Zone Viewer (pseudocode)**
 ```dax
-// Users can only see data for their assigned zones
+// Replace with a real mapping pattern, e.g.:
+// [Zone] IN CALCULATETABLE(VALUES(UserZoneMapping[Zone]),
+//          UserZoneMapping[Upn] = USERPRINCIPALNAME())
 [Zone] IN {USERPRINCIPALNAME() zone assignments}
 ```
 
-**Pillar Owner**
+**Pillar Owner (pseudocode)**
 ```dax
-// Users can only see data for their assigned pillars
+// Replace with a real mapping pattern, e.g.:
+// [Pillar] IN CALCULATETABLE(VALUES(UserPillarMapping[Pillar]),
+//          UserPillarMapping[Upn] = USERPRINCIPALNAME())
 [Pillar] IN {USERPRINCIPALNAME() pillar assignments}
 ```
 
@@ -353,4 +360,4 @@ Recommended custom visuals:
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

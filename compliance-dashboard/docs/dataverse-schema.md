@@ -9,7 +9,7 @@ Table definitions for the Compliance Dashboard data model.
 ```
 ┌─────────────────────┐     ┌─────────────────────┐
 │  fsi_controlmaster  │────<│ fsi_controlassessment│
-│  (78 controls)      │     │  (assessments)       │
+│  (62 sample / 78 baseline)      │     │  (assessments)       │
 └─────────────────────┘     └─────────────────────┘
                                     │          │
                                     │          │
@@ -30,7 +30,7 @@ Table definitions for the Compliance Dashboard data model.
 
 ## Table: fsi_controlmaster
 
-Master list of all 78 controls in the validated FSI Agent Governance Framework baseline.
+Master list of controls. The shipped sample dataset contains 62 controls; the validated FSI Agent Governance Framework baseline contains 78. Load whichever set matches your environment.
 
 ### Columns
 
@@ -339,4 +339,4 @@ Use the Power Apps maker portal or PAC CLI to create tables manually following t
 
 ---
 
-*Compliance Dashboard v1.0.2*
+*Compliance Dashboard v1.0.3*

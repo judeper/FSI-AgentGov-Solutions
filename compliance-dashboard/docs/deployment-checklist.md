@@ -119,7 +119,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 
 ### Run Sample Data Loader
 
-- [ ] Confirm the control master source reflects the validated 78-control framework baseline before loading data
+- [ ] Confirm the control master source matches your control inventory (the shipped sample contains 62; the validated baseline contains 78) before loading data
 - [ ] Navigate to `scripts/` directory
 - [ ] Run: `python load_sample_data.py --environment "https://your-org.crm.dynamics.com"`
 - [ ] Verify output: "Loaded X control master records"
@@ -128,7 +128,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 ### Verify Sample Data
 
 - [ ] Navigate to **Power Apps** > **Tables** > **fsi_controlmaster**
-- [ ] Verify 78 control records exist (one for each control in the validated framework baseline)
+- [ ] Verify the expected number of control records exist (62 if loading the shipped sample; 78 if loading the validated baseline)
 - [ ] Check sample controls: "1.1 - Identity and Access Management", "2.12 - Supervision and Oversight"
 - [ ] Navigate to **fsi_compliancescore** table
 - [ ] Verify 90 daily score snapshots exist (today going back 90 days)
@@ -172,7 +172,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 
 ### Open Power BI Template
 
-- [ ] Locate `templates/ComplianceDashboard.pbit` file
+- [ ] Build `ComplianceDashboard.pbit` per [Power BI Template Specification](power-bi-template-spec.md) (no .pbit ships with this repo per the Solution Content Policy)
 - [ ] Open in Power BI Desktop (version: latest recommended)
 - [ ] Template prompts for parameters
 
@@ -202,7 +202,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 - [ ] Wait for refresh to complete (typically 30-60 seconds)
 - [ ] Verify no error messages
 - [ ] Check table row counts in **Model view**:
-  - [ ] ControlMaster: 78 rows (when baseline-aligned control data is loaded)
+  - [ ] ControlMaster: 62 rows (shipped sample) or 78 rows (validated baseline)
   - [ ] ComplianceScore: 90 rows (if sample data loaded)
   - [ ] ComplianceException: varies based on sample data
 
@@ -221,7 +221,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
   - [ ] Pillar Trend line chart shows historical trends
   - [ ] Non-Compliant Controls table displays affected controls
 - [ ] **Page 3 - Control Details:**
-  - [ ] Control List table shows all 78 controls
+  - [ ] Control List table shows the expected number of controls (62 sample / 78 baseline)
   - [ ] Assessment History line chart displays (click control to populate)
   - [ ] Evidence List table shows linked evidence
   - [ ] Regulatory Tags slicer displays filter options
@@ -305,7 +305,7 @@ $env:AZURE_CLIENT_SECRET = "your-client-secret"
 
 ### Control Details Page
 
-- [ ] All 78 controls display in table
+- [ ] All expected controls display in table (62 sample / 78 baseline)
 - [ ] Filtering by pillar/zone/status works correctly
 - [ ] Click control in table populates assessment history chart
 - [ ] Evidence list shows linked evidence items
@@ -425,4 +425,4 @@ After successful deployment:
 
 ---
 
-*Compliance Dashboard v1.0.2 - Deployment Checklist*
+*Compliance Dashboard v1.0.3 - Deployment Checklist*

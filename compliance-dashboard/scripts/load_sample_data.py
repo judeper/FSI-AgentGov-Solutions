@@ -8,6 +8,28 @@ Usage:
     python load_sample_data.py --assessments-only
     python load_sample_data.py --dry-run
     python load_sample_data.py --export
+
+KNOWN LIMITATIONS (tracked in CHANGELOG v1.0.3):
+
+1. **Lookup binding for assessments/exceptions is not implemented.**
+   The generators below emit a string field ``fsi_controlid`` on assessment and
+   exception payloads. The Dataverse schema uses a lookup column
+   (``fsi_ControlMasterId`` -> ``fsi_controlmaster``) instead of a string FK.
+   A complete loader must (a) query ControlMaster by ``fsi_controlid`` to
+   resolve the GUID and (b) post the row with
+   ``"fsi_ControlMasterId@odata.bind": "/fsi_controlmasters(<guid>)"``.
+   Until then, run ``--export`` to produce JSON for inspection only; the
+   ``--assessments-only`` POST path will be rejected by Dataverse for
+   assessments / exceptions.
+
+2. **Choice (option-set) values are integers in Dataverse.**
+   This script uses small integers (1/2/3) for ``fsi_status``,
+   ``fsi_severity``, ``fsi_exceptionstatus``, ``fsi_slastatus``, etc. Dataverse
+   global option sets typically allocate values starting at 100000000. Confirm
+   the integers below match the option-set values defined when the tables
+   were created (see ``docs/dataverse-schema.md``); adjust this script before
+   importing assessments to match the actual choice values in your
+   environment.
 """
 
 import argparse
