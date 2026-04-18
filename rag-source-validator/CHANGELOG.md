@@ -4,6 +4,24 @@ All notable changes to the RAG Source Validator.
 
 ---
 
+## [1.2.0] - 2026-04-17
+
+### Council Review — Technical Accuracy Fixes
+
+This release addresses findings from a 2-member AI Council review (Opus 4.7 + Goldeneye) focused on customer-readiness and sovereign-cloud parity with the main validator.
+
+### Fixed
+- **High (governance scripts):** `Export-ValidationEvidence.ps1` and `Get-SourceValidationSummary.ps1` hard-coded the OAuth token endpoint to `https://login.microsoftonline.com`, while `Invoke-SourceValidation.ps1` already supported full GCC/GCC-H/DoD/China parameterization. Evidence export against `*.crm.microsoftdynamics.us` / `*.crm.dynamics.cn` would fail with an opaque MSAL error. Added an `-AuthBaseUrl` parameter (`ValidateSet` of the three login endpoints) to both scripts; the token URL is now derived from it.
+- **Medium (Invoke-SourceValidation.ps1, `New-SourceChange`):** Same change-type detected on two sources within the same second produced identical `fsi_changename` values — auditor traceability suffered. Now includes the source-name slug (sanitized + truncated) and millisecond precision, e.g. `1-knowledge-policies-pdf-20260417142712345`.
+- **Low (Invoke-SourceValidation.ps1):** Added `fsi_description` to the `Get-KnowledgeSources` `$select` projection so human-readable context is available to logs and downstream evidence consumers.
+- **Low (regulatory citations):** Normalized to canonical forms across `README.md` and `Invoke-SourceValidation.ps1` — `SEC Rule 17a-4`, `FINRA Rule 4511(a)`, `SOX Section 404`, `GLBA Section 501(b)`.
+
+### Notes (not changed in this release)
+- **Option-set value range (consistency):** This solution's option sets define values 1-N, while several other catalog solutions use the 100000000+ Microsoft default custom-publisher range. Both forms deploy successfully via the Web API (explicit `Value` is honored regardless of publisher prefix range), but the inconsistency is tracked for a future major release that would require coordinated updates across the schema script, all hard-coded integers in PowerShell scripts, and `docs/dataverse-schema.md`.
+- **Trust-on-first-use baseline classification:** Already differentiated via `fsi_validationtype = 4` (Baseline Capture) and a `BASELINE CAPTURED` log entry. Auditors filtering by validationtype can isolate trust-on-first-use events.
+
+---
+
 ## [1.1.1] - 2026-04-15
 
 ### Fixed

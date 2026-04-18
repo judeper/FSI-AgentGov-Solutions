@@ -253,7 +253,7 @@ function Get-KnowledgeSources {
     }
 
     $results = [System.Collections.Generic.List[object]]::new()
-    $selectColumns = "fsi_knowledgesourceid,fsi_sourcename,fsi_sourcetype,fsi_sourceuri,fsi_currenthash,fsi_baselinehash,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
+    $selectColumns = "fsi_knowledgesourceid,fsi_sourcename,fsi_description,fsi_sourcetype,fsi_sourceuri,fsi_currenthash,fsi_baselinehash,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
     $nextLink = "$Environment/api/data/v9.2/fsi_knowledgesources?`$select=$selectColumns&`$filter=$filter"
     while ($nextLink) {
         $response = Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
@@ -341,6 +341,7 @@ function New-SourceChange {
         [string]$Environment,
         [string]$Token,
         [string]$SourceId,
+        [string]$SourceName,
         [int]$ChangeType,
         [string]$PreviousValue,
         [string]$NewValue,
@@ -354,9 +355,10 @@ function New-SourceChange {
         "OData-Version" = "4.0"
     }
 
+    $sourceSlug = if ([string]::IsNullOrEmpty($SourceName)) { 'unknown' } else { ($SourceName -replace '[^A-Za-z0-9_\-]','-').Substring(0, [Math]::Min(40, $SourceName.Length)) }
     $change = @{
         "fsi_knowledgesourceid@odata.bind" = "/fsi_knowledgesources($SourceId)"
-        fsi_changename = "$ChangeType-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        fsi_changename = "$ChangeType-$sourceSlug-$(Get-Date -Format 'yyyyMMddHHmmssfff')"
         fsi_changetype = $ChangeType
         fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         fsi_previousvalue = $PreviousValue
@@ -508,7 +510,7 @@ foreach ($source in $sources) {
                     if ($currentHash -ne $source.fsi_currenthash) {
                         try {
                             New-SourceChange -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) `
-                                -SourceId $source.fsi_knowledgesourceid -ChangeType 1 `
+                                -SourceId $source.fsi_knowledgesourceid -SourceName $source.fsi_sourcename -ChangeType 1 `
                                 -PreviousValue $source.fsi_currenthash -NewValue $currentHash `
                                 -ChangedBy "RAG Source Validator"
                         } catch {
@@ -544,7 +546,7 @@ foreach ($source in $sources) {
                     Write-Log "STALE: $($source.fsi_sourcename) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
                     if ($result.fsi_result -eq 2) {
                         # Preserve hash-mismatch result — integrity violations must not be
-                        # reclassified as staleness (SEC 17a-4, FINRA 4511).
+                        # reclassified as staleness (SEC Rule 17a-4, FINRA Rule 4511(a)).
                         Write-Warning "Source '$($source.fsi_sourcename)' is also stale, but hash-mismatch result is preserved as the higher-severity finding."
                         $stale++  # Count staleness independently; counters represent conditions, not a partition
                     } else {
@@ -640,7 +642,7 @@ Write-Log "Validation complete. Passed=$passed Changed=$changed Stale=$stale Fai
 
 # Exit with non-zero code when any validation failures are detected.
 # Ensures CI/CD pipelines and scheduled automation can distinguish
-# success from validation failure (SEC 17a-4, FINRA 4511).
+# success from validation failure (SEC Rule 17a-4, FINRA Rule 4511(a)).
 if ($failed -gt 0 -or $changed -gt 0 -or $stale -gt 0) {
     exit 1
 }

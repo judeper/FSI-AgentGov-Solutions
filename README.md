@@ -40,7 +40,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 |
 | [Model Risk Management Automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation (requires agent-registry-automation) | v2.0.0 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Personal pipeline discovery and ALM governance enforcement | v1.2.0 | 2.3, 2.1 |
-| [RAG Source Validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | v1.1.1 | 2.16, 1.7, 2.13 |
+| [RAG Source Validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | v1.2.0 | 2.16, 1.7, 2.13 |
 | [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | v1.1.2 | 1.14, 1.4, 1.5 |
 | [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.0.0 | 2.8, 2.1, 2.3 |
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.0.1 | 1.23, 1.11 |

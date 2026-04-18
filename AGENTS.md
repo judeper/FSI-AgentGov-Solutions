@@ -46,7 +46,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
 | mime-type-restrictions | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.2.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
-| rag-source-validator | v1.1.1 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
+| rag-source-validator | v1.2.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.1.2 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | segregation-detector | v1.0.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | session-security-configurator | v1.0.1 | 1.23, 1.11 | Session security validation per governance zone with drift detection |

@@ -192,21 +192,21 @@ For documents with references, validates all links are accessible.
 
 ## Regulatory Alignment
 
-### SEC 17a-4
+### SEC Rule 17a-4
 
 > Records must be preserved in a non-rewriteable, non-erasable format.
 
 **Coverage:** Hash validation helps verify records haven't been altered.
 
-> **Limitation:** Validation results are currently stored in standard mutable Dataverse records, which do not satisfy WORM (Write Once Read Many) requirements. Production deployments requiring full SEC 17a-4 compliance should integrate an immutable audit trail (e.g., Azure Immutable Blob Storage, or a third-party WORM-compliant archive) to store validation results alongside Dataverse records.
+> **Limitation:** Validation results are currently stored in standard mutable Dataverse records, which do not satisfy WORM (Write Once Read Many) requirements. Production deployments requiring full SEC Rule 17a-4 compliance should integrate an immutable audit trail (e.g., Azure Immutable Blob Storage, or a third-party WORM-compliant archive) to store validation results alongside Dataverse records.
 
-### FINRA 4511
+### FINRA Rule 4511(a)
 
 > Books and records must be accurate and complete.
 
 **Coverage:** Change detection identifies unauthorized modifications.
 
-### SOX 404
+### SOX Section 404
 
 > Internal controls over data integrity.
 
@@ -240,8 +240,8 @@ For documents with references, validates all links are accessible.
 |------------|---------|
 | **SharePoint direct URLs** | The script acquires a Graph API-scoped token only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
 | **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
-| **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC 17a-4 and FINRA 4511 contexts. |
-| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC 17a-4, FINRA 4511, SOX 404), consider adding unit tests for hash computation, SSRF URI validation, sovereign cloud cross-validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
+| **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC Rule 17a-4 and FINRA Rule 4511(a) contexts. |
+| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC Rule 17a-4, FINRA Rule 4511(a), SOX Section 404), consider adding unit tests for hash computation, SSRF URI validation, sovereign cloud cross-validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
 
 ### Common Issues
 
@@ -262,7 +262,7 @@ This design prevents repeated alerts for known-broken sources but has compliance
 | Concern | Detail |
 |---------|--------|
 | **Transient failures** | A temporary SharePoint outage permanently removes the source from automated validation with no automatic retry. |
-| **SEC 17a-4 / FINRA 4511** | Sources that drop out of monitoring create compliance gaps if not promptly re-activated. |
+| **SEC Rule 17a-4 / FINRA Rule 4511(a)** | Sources that drop out of monitoring create compliance gaps if not promptly re-activated. |
 | **`-SourceId` targeting** | If a specific source is targeted with `-SourceId` but has non-Active status, the script exits with code 2 and a warning instead of silently reporting success. |
 
 **Recommended mitigations:**

@@ -123,6 +123,10 @@ param(
     [string]$SourceType = 'All',
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet('https://login.microsoftonline.com','https://login.microsoftonline.us','https://login.partner.microsoftonline.cn')]
+    [string]$AuthBaseUrl = 'https://login.microsoftonline.com',
+
+    [Parameter(Mandatory = $false)]
     [switch]$Interactive
 )
 
@@ -199,7 +203,7 @@ else {
         scope         = $dataverseScope
         grant_type    = "client_credentials"
     }
-    $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+    $tokenUrl = "$AuthBaseUrl/$TenantId/oauth2/v2.0/token"
 
     try {
         $tokenResponse = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $tokenBody `
