@@ -62,7 +62,7 @@ git rev-parse --show-toplevel
 | [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.0.1 |
 | [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.0.5 |
 | [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.2.0 |
-| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.0.2 |
+| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.1.0 |
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.2 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.1.0 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.1.1 |
@@ -102,7 +102,7 @@ git rev-parse --show-toplevel
 | hitl-workflow-governance | 2.12, 2.17, 1.10 | Zone-based HITL checkpoint governance for agent flows |
 | inactivity-timeout-enforcement | 2.22, 1.23, 3.7, 3.8 | Inactivity timeout validation with zone-based durations |
 | message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
-| mime-type-restrictions | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 | MIME type configuration with server-side validation |
+| mime-type-restrictions | 1.5, 1.13, 1.25, 3.3, 3.7 | MIME type configuration with server-side validation |
 | model-risk-management-automation | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management |
 | pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
 | rag-source-validator | 2.16, 1.7, 2.13 | RAG knowledge source integrity validation |

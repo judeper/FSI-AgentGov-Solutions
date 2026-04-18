@@ -26,7 +26,7 @@ Solutions for securing agent content, file handling, and knowledge sources.
 | [Agent Knowledge Source Scanner](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-knowledge-source-scanner/README.md) | Item-level permission scanning for agent knowledge source SharePoint libraries | v1.0.1 | 4.3, 1.4, 1.5 |
 | [Content Moderation Monitor](content-moderation-monitor/index.md) | Per-agent content moderation validation against zone-specific governance requirements | v1.0.2 | 1.8, 1.14 |
 | [File Upload Security Configurator](file-upload-security/index.md) | Per-agent file upload validation against zone governance policies with drift detection | v1.0.1 | 1.14, 1.8, 1.4 |
-| [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.0.2 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |
+| [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 |
 | [RAG Source Validator](rag-source-validator/index.md) | Integrity validation for RAG knowledge sources with change detection | v1.0.1 | 2.16, 1.7, 2.13 |
 
 ## Compliance & Audit

@@ -490,59 +490,62 @@ PowerPlatformDlpActivity_CL
    - **Execution Mode:** Synchronous
    - **Configuration:** Same as Create step
    - **Filtering Attributes:** `documentbody, mimetype`
-6. Click **Register New Step** for each
+6. **Register a Pre-Image on the Update step** (REQUIRED — without this,
+   updates that don't include the `mimetype` and `filename` columns will
+   be fail-secure-blocked by the plugin):
+   - Right-click the new Update step → **Register New Image**
+   - **Image Type:** Pre Image
+   - **Name:** `PreImage` (case-sensitive — the plugin looks up
+     `context.PreEntityImages["PreImage"]`)
+   - **Entity Alias:** `PreImage`
+   - **Parameters / Attributes:** `mimetype, filename`
+7. Click **Register New Step** for each (and the Pre Image for the Update step)
 
 **Step 2 (Alternative): Register Plugin using PAC CLI**
 
-If you prefer command-line deployment over the Plugin Registration Tool:
+`pac plugin` is intended for low-code plugin scaffolding via
+`pac plugin init`; it does not currently expose commands to register a
+compiled .NET Framework Dataverse plugin assembly or its steps.
+**Use the Plugin Registration Tool (PRT)** described in Step 2 above
+for this solution. There is no supported PAC CLI alternative for
+registering plugin steps and pre-images on the `annotation` table at
+this time.
 
-1. Install PAC CLI:
-   ```bash
-   dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-   ```
+If you want a CLI-driven workflow for CI/CD, package the plugin and
+its registration into a Dataverse solution (`.zip`) once via PRT,
+then promote it across environments using `pac solution import`.
 
-2. Authenticate:
-   ```bash
-   pac auth create --url https://your-org.crm.dynamics.com
-   ```
+**Step 3: Translate DLP Reference Template into Connector Classifications**
 
-3. Register plugin:
-   ```bash
-   pac plugin push --plugin-folder ./bin/Debug
-   ```
+The file at `templates/dlp-policy-template.json` is a **conceptual
+reference** describing the intended MIME / extension restrictions —
+**it cannot be imported directly**. Power Platform DLP operates on
+*connectors*, not on file extensions or MIME types. Use the reference
+as a checklist when configuring connector classifications:
 
-4. Register step (verify exact syntax against current PAC CLI documentation):
-   ```bash
-   pac plugin step create \
-     --name "ValidateMimeTypePlugin: Create of annotation" \
-     --message Create \
-     --primary-entity annotation \
-     --stage PreValidation \
-     --mode Synchronous \
-     --assembly FsiAgentGovernance.Plugins \
-     --plugin ValidateMimeTypePlugin
-   ```
-
-> **Note:** PAC CLI syntax may vary by version. Consult the [PAC CLI documentation](https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/plugin) for current parameters.
-
-**Step 3: Import DLP Policy Template**
-
-1. Customize `dlp-policy-template.json` with organization-specific MIME types
-2. Import via PowerShell:
+1. Review the extension and MIME-type lists in
+   `templates/dlp-policy-template.json` and identify which **connectors**
+   in your tenant could be used to upload content of those types
+   (e.g., HTTP, custom connectors, FTP, file-system connectors).
+2. In the Power Platform admin center → **Policies** → **Data policies**,
+   create or edit the data policy targeting your Zone 2 / Zone 3
+   environments.
+3. Move risky connectors into the **Blocked** or **Non-Business**
+   group as required by your zone policy.
+4. (Optional) Use PowerShell to script the classification once the
+   policy exists:
    ```powershell
-   # Install the Power Platform admin module if not already installed
    Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force
    Add-PowerAppsAccount
-   # Create the DLP policy — see official documentation for connector classification:
-   # https://learn.microsoft.com/en-us/power-platform/admin/create-dlp-policy
-   New-AdminDlpPolicy -DisplayName "MIME Type Restrictions" -EnvironmentName "all"
-   # After creation, classify connectors using Set-AdminDlpPolicy as needed.
-   # Refer to dlp-policy-template.json for the intended connector configuration.
+   # See: https://learn.microsoft.com/en-us/power-platform/admin/create-dlp-policy
+   #      https://learn.microsoft.com/en-us/power-platform/admin/powerapps-powershell
+   Get-AdminDlpPolicy | Format-Table DisplayName, PolicyName
+   # Use Set-DlpPolicy / Set-DlpPolicyConnectorConfigurations to update classifications.
    ```
-3. Verify policy:
-   ```powershell
-   Get-AdminDlpPolicy | Where-Object { $_.DisplayName -like "*MIME*" }
-   ```
+
+The actual server-side MIME enforcement is performed by the
+ValidateMimeType plugin registered in Step 2; this DLP layer is
+defence-in-depth for the upload connectors themselves.
 
 **Step 4: Deploy Sentinel Queries**
 

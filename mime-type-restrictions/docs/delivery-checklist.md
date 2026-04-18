@@ -226,6 +226,9 @@ Offer these follow-up services:
 2. **Plugin Registration:**
    - Use Plugin Registration Tool (download from Microsoft NuGet)
    - Register on `annotation` entity, `Create` and `Update` messages, Pre-Validation stage (10)
+   - **REQUIRED:** Register a Pre Image named `PreImage` on the Update step
+     with attributes `mimetype, filename` — without this, partial updates
+     that omit those columns will be fail-secure-blocked by the plugin
    - **CRITICAL:** Paste entire `MimeConfig.json` content into plugin step configuration
    - Without configuration, plugin will throw error on first upload
 
@@ -263,6 +266,7 @@ Plugin Registration:
 □ Plugin Registration Tool connected to Dataverse environment
 □ Assembly registered (Isolation: Sandbox, Location: Database)
 □ Plugin steps registered on annotation.Create and annotation.Update, Pre-Validation (10)
+□ Pre Image named `PreImage` registered on the Update step with `mimetype, filename`
 □ MimeConfig.json pasted into plugin step configuration (unsecure or secure)
 □ Plugin step status: Active
 

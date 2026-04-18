@@ -52,6 +52,23 @@ namespace FsiAgentGovernance.Plugins
         private readonly MimeValidationConfig _config;
 
         /// <summary>
+        /// Hard-deny extensions for executable / scripting content. These are
+        /// blocked regardless of the declared MIME type and regardless of the
+        /// per-zone allowlist, because the MIME type alone (e.g.
+        /// <c>text/plain</c>) is insufficient to vouch for safety.
+        /// </summary>
+        private static readonly HashSet<string> _denylistedExtensions =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "ps1", "psm1", "psd1", "ps1xml", "ps2",
+                "bat", "cmd", "com", "exe", "dll", "scr",
+                "vbs", "vbe", "wsh", "wsf", "js", "jse",
+                "hta", "lnk", "msi", "msp", "mst",
+                "jar", "war", "ear",
+                "reg", "py", "pyc", "pyo", "rb", "sh",
+            };
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ValidateMimeTypePlugin"/> class.
         /// Configuration is loaded from the secure configuration string first; if empty,
         /// falls back to the unsecure configuration string.
@@ -271,6 +288,45 @@ namespace FsiAgentGovernance.Plugins
 
             tracingService.Trace("[FSI-MIME] MIME type '{0}' is in the allowlist.", declaredMimeType);
 
+            // ─── Step 3a: Hard-deny dangerous executable / script extensions ──
+            // Defense in depth: even if an attacker declares text/plain (which is
+            // commonly allow-listed) and uploads a .ps1, .bat, .js, etc., reject
+            // based on filename extension regardless of the declared MIME type.
+            var fileExtension = GetFileExtension(fileName);
+            if (!string.IsNullOrEmpty(fileExtension) && _denylistedExtensions.Contains(fileExtension))
+            {
+                HandleViolation(tracingService,
+                    $"File '{fileName}' has an extension ('{fileExtension}') that is " +
+                    "denylisted as executable or script content. Uploads of this file " +
+                    "type are not permitted in any zone.",
+                    correlationId);
+                return;
+            }
+
+            // ─── Step 3b: Filename extension must match the declared MIME type ──
+            // The allowlist entry declares which extensions are valid for the
+            // MIME type; mismatched extensions are a strong indicator of a
+            // mislabeled file (e.g., .ps1 declared as text/plain).
+            if (allowedEntry.Extensions != null && allowedEntry.Extensions.Count > 0
+                && !string.IsNullOrEmpty(fileExtension))
+            {
+                var extensionMatch = allowedEntry.Extensions
+                    .Any(e => string.Equals(e.TrimStart('.'), fileExtension,
+                        StringComparison.OrdinalIgnoreCase));
+                if (!extensionMatch)
+                {
+                    HandleViolation(tracingService,
+                        $"File '{fileName}' (extension '.{fileExtension}') does not match " +
+                        $"the expected extensions for declared MIME type '{declaredMimeType}' " +
+                        $"({string.Join(", ", allowedEntry.Extensions)}). The file may have " +
+                        "been mislabeled.",
+                        correlationId);
+                    return;
+                }
+                tracingService.Trace("[FSI-MIME] Extension '{0}' matches MIME type '{1}'.",
+                    fileExtension, declaredMimeType);
+            }
+
             // ─── Step 4: Magic-byte consistency ────────────────────────────
             if (allowedEntry.MagicBytes != null)
             {
@@ -313,12 +369,12 @@ namespace FsiAgentGovernance.Plugins
             // ─── Step 5: OpenXML deep inspection ───────────────────────────
             if (IsOpenXmlType(declaredMimeType))
             {
-                if (!ValidateOpenXmlStructure(fileBytes, tracingService, fileName))
+                if (!ValidateOpenXmlStructure(fileBytes, declaredMimeType, tracingService, fileName))
                 {
                     HandleViolation(tracingService,
                         $"File '{fileName}' declares OpenXML MIME type '{declaredMimeType}' " +
-                        "but does not contain a valid Office Open XML structure " +
-                        "(missing [Content_Types].xml). The file may be corrupted or mislabeled.",
+                        "but does not contain a valid Office Open XML structure for that " +
+                        "subtype. The file may be corrupted or mislabeled.",
                         correlationId);
                     return;
                 }
@@ -418,6 +474,18 @@ namespace FsiAgentGovernance.Plugins
         }
 
         /// <summary>
+        /// Extracts the file extension (without the leading dot, lowercased).
+        /// Returns <c>null</c> if the file name has no extension.
+        /// </summary>
+        private static string GetFileExtension(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return null;
+            var ext = Path.GetExtension(fileName);
+            if (string.IsNullOrEmpty(ext)) return null;
+            return ext.TrimStart('.').ToLowerInvariant();
+        }
+
+        /// <summary>
         /// Checks the first <paramref name="length"/> bytes for binary content.
         /// A byte is considered binary if it is a control character (0x00-0x08, 0x0E-0x1F)
         /// excluding common text control characters (TAB, LF, VT, FF, CR).
@@ -466,10 +534,23 @@ namespace FsiAgentGovernance.Plugins
         /// <param name="tracingService">Tracing service for diagnostic output.</param>
         /// <param name="fileName">File name for trace messages.</param>
         /// <returns><c>true</c> if the structure is valid; otherwise <c>false</c>.</returns>
-        private static bool ValidateOpenXmlStructure(byte[] fileBytes, ITracingService tracingService, string fileName)
+        private static bool ValidateOpenXmlStructure(byte[] fileBytes, string declaredMimeType, ITracingService tracingService, string fileName)
         {
             const int maxEntryCount = 10000;
             const long maxCumulativeSize = 100 * 1024 * 1024; // 100 MB defense-in-depth limit
+
+            // Map declared OpenXML MIME subtype to the package directory that
+            // a legitimate file of that type MUST contain.
+            string requiredPart = null;
+            if (declaredMimeType != null)
+            {
+                if (declaredMimeType.IndexOf("wordprocessingml", StringComparison.OrdinalIgnoreCase) >= 0)
+                    requiredPart = "word/";
+                else if (declaredMimeType.IndexOf("spreadsheetml", StringComparison.OrdinalIgnoreCase) >= 0)
+                    requiredPart = "xl/";
+                else if (declaredMimeType.IndexOf("presentationml", StringComparison.OrdinalIgnoreCase) >= 0)
+                    requiredPart = "ppt/";
+            }
 
             try
             {
@@ -498,9 +579,24 @@ namespace FsiAgentGovernance.Plugins
                 if (!hasContentTypes)
                 {
                     tracingService.Trace("[FSI-MIME] OpenXML check: [Content_Types].xml not found in '{0}'.", fileName);
+                    return false;
                 }
 
-                return hasContentTypes;
+                if (requiredPart != null)
+                {
+                    var hasRequiredPart = archive.Entries
+                        .Any(e => e.FullName.StartsWith(requiredPart,
+                            StringComparison.OrdinalIgnoreCase));
+                    if (!hasRequiredPart)
+                    {
+                        tracingService.Trace(
+                            "[FSI-MIME] OpenXML check: Declared MIME '{0}' requires part '{1}' but '{2}' does not contain it.",
+                            declaredMimeType, requiredPart, fileName);
+                        return false;
+                    }
+                }
+
+                return true;
             }
             catch (InvalidDataException)
             {

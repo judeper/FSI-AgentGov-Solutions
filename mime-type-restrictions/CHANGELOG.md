@@ -2,6 +2,60 @@
 
 All notable changes to MIME Type Restrictions for File Uploads are documented here.
 
+## [1.1.0] — 2026-04-17 — BREAKING (control-coverage scope reduction)
+
+### Changed (BREAKING)
+
+- **Primary controls reduced** from 9 to 5. The solution previously claimed
+  controls 1.10 (Communication Compliance), 1.11 (Conditional Access /
+  MFA), 1.14 (Content Moderation Enforcement) and 4.3 (SharePoint
+  Oversharing Prevention) — none of which are actually implemented by
+  this artifact set. Removed those over-claims from the README. Retained
+  primary controls: **1.5, 1.13, 1.25, 3.3, 3.7**.
+
+### Added
+
+- **Plugin: hard-deny denylist for executable / script extensions** —
+  `.ps1`, `.bat`, `.cmd`, `.exe`, `.js`, `.vbs`, `.jar`, `.py`, `.sh`
+  and ~25 others are blocked regardless of declared MIME type. Closes a
+  bypass where a script file declared as `text/plain` would have passed
+  the allowlist + binary-content check.
+- **Plugin: filename-extension-vs-MIME-type cross-check** — the
+  declared MIME type's allowlist entry now constrains which filename
+  extensions are permitted, catching mislabeled files even when the
+  MIME type itself is allow-listed.
+- **Plugin: subtype-aware OpenXML inspection** — `wordprocessingml`,
+  `spreadsheetml` and `presentationml` MIME types now require the
+  corresponding `word/`, `xl/` or `ppt/` package directory inside the
+  ZIP (in addition to `[Content_Types].xml`). A bare ZIP that only
+  contains `[Content_Types].xml` no longer satisfies the check.
+- **Flow doc:** Pre-Image registration is now an explicit, required
+  step. Without a `PreImage` (mimetype + filename) on the Update step,
+  partial updates that omit those columns are fail-secure-blocked by
+  the plugin.
+- **Delivery checklist:** matching Pre-Image entry added to the plugin
+  registration checklist.
+
+### Fixed
+
+- **DLP template clarified as conceptual, not deployable.** The file
+  `templates/dlp-policy-template.json` previously appeared importable
+  via `New-AdminDlpPolicy`. It is now prominently marked as a
+  reference document — Power Platform DLP cannot enforce extension or
+  MIME-type rules directly; it only classifies connectors. The flow
+  doc's "Step 3" was rewritten to translate the reference into
+  connector classifications via the admin center / Set-DlpPolicy.
+- **Removed fictional PAC CLI commands.** `pac plugin push` and
+  `pac plugin step create` do not exist in any current PAC CLI release.
+  The "Step 2 (Alternative)" section now redirects users to the
+  Plugin Registration Tool (PRT) and `pac solution import` for CI/CD.
+
+### Notes
+
+- Council review (April 2026) findings closed for this solution.
+
+---
+
 ## [1.0.2] — 2026-04-10
 
 ### Changed
