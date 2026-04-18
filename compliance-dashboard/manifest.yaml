@@ -1,0 +1,22 @@
+id: compliance-dashboard
+name: Compliance Dashboard
+description: Aggregated compliance reporting dashboard for the FSI Agent Governance Framework with zone-based filtering and Dataverse-backed control records.
+version: 1.0.3
+status: live
+domain: compliance-audit
+tier: '3'
+controls:
+- '3.3'
+- '3.1'
+- '3.2'
+- '3.4'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/compliance-dashboard/
+prerequisites:
+  power-platform-admin: "Power Platform admin tenant role and a Dataverse environment with the fsi publisher prefix."
+  compliance-admin: "Microsoft Purview Compliance Administrator for compliance evidence review and export."
+  m365-admin: "Power BI workspace owner or capacity admin with M365 E5 or E5 Compliance licensing for dashboard access."
+  global-reader: "Read-only tenant visibility for configuration validation and troubleshooting."
+verification: "Confirm fsi_controlmasters contains the 78-control baseline, then open the Power BI dashboard and verify the latest Dataverse-synced tiles refresh successfully."
+dependencies:
+- agent-observability-foundation
+- cross-solution-integration

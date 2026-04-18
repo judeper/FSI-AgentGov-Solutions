@@ -1,0 +1,18 @@
+id: agent-observability-foundation
+name: Agent Observability Foundation
+description: FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
+version: 1.2.0
+status: live
+domain: monitoring-analytics
+tier: '1'
+controls:
+- '1.7'
+- '2.8'
+- '2.9'
+- '3.2'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-observability-foundation/
+prerequisites:
+  log-analytics-reader: Reader access to the Log Analytics workspace and Application Insights for queries and validation.
+  power-platform-admin: Power Platform admin tenant role for Copilot Studio telemetry source configuration.
+  m365-admin: Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation.
+verification: Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors.

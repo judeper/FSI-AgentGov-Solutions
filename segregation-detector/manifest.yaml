@@ -1,0 +1,16 @@
+id: segregation-detector
+name: Segregation of Duties Detector
+description: Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines and helps address SOX Section 404 IT General Controls.
+version: 1.1.0
+status: live
+domain: compliance-audit
+tier: '2'
+controls:
+- '2.8'
+- '2.1'
+- '2.3'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/segregation-detector/
+prerequisites:
+  global-reader: "Global Reader access for Entra ID role assignment queries."
+  power-platform-admin: "Power Platform administrator access for Dataverse schema deployment and environment role queries."
+verification: "Run Invoke-SoDScan.ps1 and confirm rows are created in fsi_sodviolation for enabled records in fsi_conflictrule."

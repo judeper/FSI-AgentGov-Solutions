@@ -1,0 +1,15 @@
+id: agent-sharing-access-restriction-detector
+name: Agent Sharing Access Restriction Detector
+description: Detects and remediates agent sharing configurations that violate zone-based security group policies.
+version: 2.0.0
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '1.18'
+- '2.8'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-sharing-access-restriction-detector/
+prerequisites:
+  power-platform-admin: "Power Platform admin or Entra Global Admin for BAP Admin API access, Dataverse setup, and remediation flows."
+  m365-admin: "Teams administrator or delegated permissions for adaptive card delivery and notification posting."
+verification: "Confirm fsi_agentsharingcompliances and fsi_approvedsecuritygrouppolicies are populated after a sharing scan and remediation test."

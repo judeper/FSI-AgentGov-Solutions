@@ -1,0 +1,19 @@
+id: environment-lifecycle-management
+name: Environment Lifecycle Management
+description: Automated Power Platform environment provisioning with zone-based governance.
+version: 1.2.0
+status: live
+domain: lifecycle-ops
+tier: '3'
+controls:
+- '2.1'
+- '2.2'
+- '2.3'
+- '2.8'
+- '1.7'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/environment-lifecycle-management/
+prerequisites:
+  power-platform-admin: Power Platform admin for environment creation, environment groups, and managed environment provisioning.
+  security-admin: Entra Global Admin/Application Administrator for app registration, admin consent, and Dataverse schema setup.
+  m365-admin: Microsoft 365 admin for cross-service notifications and governance operations.
+verification: Confirm a request provisions a managed environment and writes a provisioning log row to Dataverse.

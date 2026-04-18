@@ -1,0 +1,14 @@
+id: unrestricted-agent-sharing-detector
+name: Unrestricted Agent Sharing Detector
+description: Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
+version: 2.0.0
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '1.1'
+- '3.8'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/unrestricted-agent-sharing-detector/
+prerequisites:
+  power-platform-admin: "Power Platform admin or Entra Global Admin for Dataverse schema, cloud flows, and remediation setup."
+verification: "Verify fsi_sharingviolations and fsi_sharingexceptions update after running the detection and remediation flows."

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/manifest.schema.json",
+  "title": "FSI-AgentGov Solution Manifest",
+  "description": "Per-solution metadata. Aggregated into solutions.json which mirrors the framework solutions-lock.json schema 1:1.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "name",
+    "description",
+    "version",
+    "status",
+    "domain",
+    "tier",
+    "controls",
+    "url",
+    "prerequisites",
+    "verification"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Canonical id; MUST equal the folder name (kebab-case)."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name shown in the docs site and framework SPA."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-line description; rendered in catalogs and chips."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.-]+)?$",
+      "description": "Semver, no leading 'v'."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["live", "preview"]
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "access-identity",
+        "content-data",
+        "compliance-audit",
+        "monitoring-analytics",
+        "agent-config",
+        "lifecycle-ops"
+      ]
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["1", "2", "3"],
+      "description": "1=foundation, 2=domain, 3=integration. STRING, not int."
+    },
+    "controls": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+      "uniqueItems": true,
+      "description": "Framework control IDs implemented by this solution."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      "uniqueItems": true,
+      "description": "Other solution ids this solution depends on. Optional. NOT projected into solutions.json."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://judeper\\.github\\.io/FSI-AgentGov-Solutions/solutions/[a-z0-9-]+/$"
+    },
+    "prerequisites": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "description": "Map of role label -> one-line prerequisite. Role label SHOULD be from the role taxonomy in CHANGELOG; deviations allowed but flagged."
+    },
+    "verification": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-line description of how to verify deployment is healthy."
+    },
+    "extras": {
+      "type": "object",
+      "description": "Free-form additive fields preserved across regeneration. NOT projected into solutions.json."
+    }
+  }
+}

@@ -1,0 +1,40 @@
+name: Manifest Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  manifest-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: solutions
+
+      - name: Checkout framework (controls.json source of truth)
+        uses: actions/checkout@v4
+        with:
+          repository: judeper/FSI-AgentGov
+          ref: main
+          path: fsi-agentgov
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install pyyaml jsonschema
+
+      - name: Generate artifacts (writes gitignored site-docs)
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py
+
+      - name: Verify generator is deterministic and committed artifacts are in sync
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py --check

@@ -1,0 +1,18 @@
+id: conditional-access-automation
+name: Conditional Access Automation
+description: Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
+version: 1.2.2
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '1.11'
+- '1.23'
+- '1.18'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/conditional-access-automation/
+prerequisites:
+  power-platform-admin: "Power Platform admin tenant role for Dataverse environment and solution setup."
+  security-admin: "Conditional Access Administrator or Security Administrator for policy creation and review."
+  m365-admin: "Application Administrator for service principal registration and Graph permission consent."
+  global-reader: "Global Reader for read-only audit and report validation."
+verification: "Confirm the compliance scan populates fsi_capolicyvalidationhistories and fsi_capolicyviolations, with active baselines in fsi_capolicybaselines."

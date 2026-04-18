@@ -1,0 +1,17 @@
+id: hallucination-tracker
+name: Hallucination Feedback Tracker
+description: Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
+version: 1.1.0
+status: live
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '3.10'
+- '2.9'
+- '2.12'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/hallucination-tracker/
+prerequisites:
+  power-platform-admin: Environment Maker and Solution import rights for Dataverse and Power Automate setup.
+  global-reader: Read-only Dataverse access for the analysis script's Basic User-style queries.
+  m365-admin: Power BI workspace/admin setup for dashboard publishing and service access.
+verification: Run pattern analysis and verify the scorecard and query outputs populate for recent feedback records.

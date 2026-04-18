@@ -1,0 +1,15 @@
+id: session-security-configurator
+name: Session Security Configurator
+description: Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements.
+version: 1.1.0
+status: live
+domain: agent-config
+tier: '2'
+controls:
+- '1.23'
+- '1.11'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/session-security-configurator/
+prerequisites:
+  power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
+  security-admin: Microsoft Entra ID Security Administrator for Conditional Access and PIM policy management.
+verification: Confirm Test-SessionCompliance.ps1 writes rows to `fsi_ValidationHistory` and `fsi_DriftViolation` for a Zone 3 run.

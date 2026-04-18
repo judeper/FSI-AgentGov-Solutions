@@ -31,7 +31,7 @@ GAP_ANALYSIS_REPORT.md
 # MkDocs build output
 site/
 
-# Auto-generated docs (built by scripts/build-docs.py)
+# Auto-generated docs (built by scripts/build-manifest.py)
 # Ignore generated solution subdirectories but keep the hand-authored catalog
 site-docs/solutions/*/
 !site-docs/solutions/index.md

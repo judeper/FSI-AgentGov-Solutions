@@ -97,7 +97,7 @@ nav:
         - Troubleshooting: solutions/conditional-access-automation/troubleshooting.md
       - Inactivity Timeout Enforcement: solutions/inactivity-timeout-enforcement/index.md
       - Agent Sharing Access Restriction Detector: solutions/agent-sharing-access-restriction-detector/index.md
-      - Cross-Tenant External Sharing Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-tenant-external-sharing-governance/README.md
+      - Cross-Tenant External Sharing Governance: solutions/cross-tenant-external-sharing-governance/index.md
       - Unrestricted Agent Sharing Detector:
         - solutions/unrestricted-agent-sharing-detector/index.md
         - Dataverse Schema: solutions/unrestricted-agent-sharing-detector/dataverse-schema.md
@@ -118,7 +118,7 @@ nav:
         - Evidence Export: solutions/file-upload-security/evidence-export.md
         - Troubleshooting: solutions/file-upload-security/troubleshooting.md
       - MIME Type Restrictions: solutions/mime-type-restrictions/index.md
-      - Agent Knowledge Source Scanner: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-knowledge-source-scanner/README.md
+      - Agent Knowledge Source Scanner: solutions/agent-knowledge-source-scanner/index.md
       - RAG Source Validator:
         - solutions/rag-source-validator/index.md
         - Dataverse Schema: solutions/rag-source-validator/dataverse-schema.md
@@ -158,8 +158,8 @@ nav:
         - Power BI Setup: solutions/finra-supervision-workflow/power-bi-setup.md
         - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
         - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
-      - HITL Workflow Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md
-      - Model Risk Management Automation: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/model-risk-management-automation/README.md
+      - HITL Workflow Governance: solutions/hitl-workflow-governance/index.md
+      - Model Risk Management Automation: solutions/model-risk-management-automation/index.md
       - Segregation Detector:
         - solutions/segregation-detector/index.md
         - Prerequisites: solutions/segregation-detector/prerequisites.md
@@ -222,9 +222,9 @@ nav:
         - Prerequisites: solutions/action-confirmation-auditor/prerequisites.md
         - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
         - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
-      - Credential Oversharing Detector: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md
+      - Credential Oversharing Detector: solutions/credential-oversharing-detector/index.md
     - Lifecycle & Operations:
-      - Agent 365 Lifecycle Governance: https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-365-lifecycle-governance/README.md
+      - Agent 365 Lifecycle Governance: solutions/agent-365-lifecycle-governance/index.md
       - Agent Registry Automation:
         - solutions/agent-registry-automation/index.md
         - Prerequisites: solutions/agent-registry-automation/prerequisites.md

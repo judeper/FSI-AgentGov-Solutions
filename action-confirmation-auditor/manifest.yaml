@@ -1,0 +1,14 @@
+id: action-confirmation-auditor
+name: Action Confirmation Auditor
+description: Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
+version: 1.1.0
+status: live
+domain: agent-config
+tier: '2'
+controls:
+- '2.12'
+- '1.10'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/action-confirmation-auditor/
+prerequisites:
+  power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
+verification: Confirm Test-ActionConfirmationCompliance.ps1 writes rows to `fsi_actionscanrun` and `fsi_actionauditresult`.
