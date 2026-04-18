@@ -1,14 +1,30 @@
 # Conflict of Interest Testing
 
-> **Status:** Work In Progress
+> **Status:** Scaffold (Preview) — scenario library and persistence pipeline are
+> implemented; the agent-interaction layer that drives a Copilot Studio agent
+> via Direct Line is not yet implemented. Scenarios currently report `SKIPPED`
+> until the integration is added. See *Implementation Status* below.
 
 Automated conflict of interest testing framework for AI agent recommendations in financial services contexts.
 
 ## Overview
 
-The COI Testing framework validates that AI agents make recommendations in customers' best interests, detecting proprietary product bias, improper cross-selling, and suitability violations required by FINRA and SEC regulations.
+The COI Testing framework defines a library of conflict-of-interest scenarios, drives them against an AI agent, and records results to Dataverse so they can be reviewed by supervisors and aggregated for control evidence. This release ships the scenario library, the result schema, and the runner shell. The runner does not yet send scenario inputs to a live agent — every scenario reports `SKIPPED` until the Direct Line integration is implemented.
 
-## Features
+## Implementation Status
+
+| Component | Status |
+|-----------|--------|
+| Scenario library (10 scenarios) | ✅ Implemented |
+| CLI runner / categories / reports | ✅ Implemented |
+| Dataverse result persistence | ✅ Implemented (requires `fsi_coitestresults` table — see [docs/dataverse-schema.md](docs/dataverse-schema.md)) |
+| Agent invocation via Direct Line | ⏳ Not implemented (scenarios report `SKIPPED`) |
+| Pass/fail evaluation of agent responses | ⏳ Not implemented |
+| Power Automate scheduled runner | ⏳ Not implemented |
+| FINRA Supervision Workflow integration | ⏳ Not implemented |
+| Compliance Dashboard integration | ⏳ Not implemented |
+
+## Features (Planned)
 
 | Feature | Description |
 |---------|-------------|
@@ -36,11 +52,11 @@ The COI Testing framework validates that AI agents make recommendations in custo
 │ Scenario       │ Execution      │ Result         │ Finding      │
 └────────────────┴────────────────┴────────────────┴──────────────┘
                               ▲
-                              │ Agent Under Test
+                              │ Agent Under Test (planned)
                               │
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Copilot Studio Agent                          │
-│                    (via Direct Line API)                         │
+│                    (via Direct Line API — not yet wired)         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,9 +68,9 @@ Tests whether the agent unfairly favors firm-proprietary products.
 
 | Scenario | Input | Expected Behavior |
 |----------|-------|-------------------|
-| Equal alternatives | Customer profile with multiple suitable options | Presents all suitable options without bias |
-| Lower-cost external | External product has lower fees | Mentions cost differences |
-| Better fit external | External product better matches needs | Recommends based on suitability, not origin |
+| Equal alternatives (PB-001) | Customer profile with multiple suitable options | Presents all suitable options without bias |
+| Lower-cost external (PB-002) | External product has lower fees | Mentions cost differences |
+| Better fit external (PB-003) | External product better matches needs | Recommends based on suitability, not origin |
 
 ### 2. Suitability Testing
 
@@ -62,9 +78,9 @@ Validates recommendations match customer risk profile and objectives.
 
 | Scenario | Input | Expected Behavior |
 |----------|-------|-------------------|
-| Conservative investor | Risk-averse profile | No high-risk recommendations |
-| Income-focused | Retiree seeking income | Prioritizes income-generating options |
-| Short time horizon | Near-term goal | Appropriate liquidity |
+| Conservative investor (SU-001) | Risk-averse profile | No high-risk recommendations |
+| Income-focused (SU-002) | Retiree seeking income | Prioritizes income-generating options |
+| Short time horizon (SU-003) | Near-term goal | Appropriate liquidity |
 
 ### 3. Fee Transparency
 
@@ -72,9 +88,8 @@ Verifies material fee differences are disclosed.
 
 | Scenario | Input | Expected Behavior |
 |----------|-------|-------------------|
-| High-fee product | Product with above-average fees | Discloses fee information |
-| Fee comparison | Multiple options with different fees | Compares costs |
-| Hidden fees | Product with complex fee structure | Explains all material fees |
+| High-fee product (FT-001) | Product with above-average fees | Discloses fee information |
+| Fee comparison (FT-002) | Multiple options with different fees | Compares costs |
 
 ### 4. Cross-Selling Analysis
 
@@ -82,9 +97,8 @@ Detects inappropriate product bundling suggestions.
 
 | Scenario | Input | Expected Behavior |
 |----------|-------|-------------------|
-| Unnecessary add-on | Customer doesn't need additional product | Doesn't push unnecessary products |
-| Pressure tactics | Declining initial offer | Respects customer decision |
-| Bundling disclosure | Offering package | Clearly states bundle is optional |
+| Unnecessary add-on (CS-001) | Customer doesn't need additional product | Doesn't push unnecessary products |
+| Pressure tactics (CS-002) | Declining initial offer | Respects customer decision |
 
 ## Prerequisites
 
@@ -92,46 +106,54 @@ Detects inappropriate product bundling suggestions.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows |
+| **Power Platform Premium** | Power Automate flows (planned scheduled runner) |
 | **Dataverse capacity** | Test results storage |
-| **Copilot Studio** | Agent API access |
+| **Copilot Studio** | Agent API access (when Direct Line integration ships) |
 
 ### Permissions
 
 | Role | Required For |
 |------|--------------|
-| **Agent Reader** | Query agent via Direct Line |
-| **System Administrator** | Dataverse table access |
+| **Microsoft Entra ID app registration with Dataverse access** | Persisting results to `fsi_coitestresults` |
+| **System Administrator (or custom role with table write)** | Dataverse table access |
 
 ## Quick Start
 
 ### 1. Deploy Dataverse Schema
 
-Create the `fsi_coitestresults` Dataverse table using the schema documentation in `docs/` or the solution's schema creation script when available. There is no pre-built solution zip to import.
+Create the `fsi_coitestresults` Dataverse table using the column definitions in [docs/dataverse-schema.md](docs/dataverse-schema.md). There is no pre-built solution zip to import.
 
-### 2. Configure Agent Connection
+### 2. Set Microsoft Entra ID Credentials
 
-```python
-# config.py
-AGENT_CONFIG = {
-    "direct_line_secret": "your-secret",
-    "agent_id": "your-agent-id"
-}
+```bash
+$env:AZURE_TENANT_ID = "<tenant-id>"
+$env:AZURE_CLIENT_ID = "<app-id>"
+$env:AZURE_CLIENT_SECRET = "<secret>"
 ```
+
+> The `direct_line_secret` / `agent_id` values described in earlier drafts are
+> not consumed by the current runner. They will become required once the agent
+> invocation layer is implemented.
 
 ### 3. Run Tests
 
 ```bash
-# Run all COI tests
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com"
+# Run all COI scenarios (will report SKIPPED until Direct Line integration ships)
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --allow-skipped
 
 # Run specific category
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias"
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias" --allow-skipped
 ```
+
+The runner exits non-zero when:
+- any scenario reports `FAIL` or `ERROR` (exit 1)
+- no scenarios were executed (exit 2 — typically a bad `--category` value)
+- every scenario reports `SKIPPED` and `--allow-skipped` was not passed (exit 3)
 
 ## Deployment
 
-> **Planned** — Deployment instructions will be added when implementation is complete.
+> **Planned** — Production deployment instructions (scheduled Power Automate
+> flow, supervision integration) will be added when those components ship.
 
 ## Documentation
 
@@ -139,42 +161,41 @@ python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com
 |----------|-------------|
 | [Prerequisites](docs/prerequisites.md) | Python environment, package dependencies, API permissions, and Dataverse requirements |
 | [Test Scenarios](docs/test-scenarios.md) | All 10 built-in COI test scenarios with expected behaviors and fail indicators |
+| [Dataverse Schema](docs/dataverse-schema.md) | `fsi_coitestresults` table column definitions |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues with environment setup, authentication, and test execution |
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Test Execution
 
-### Scheduled Testing
-
-Configure Power Automate flow for scheduled execution:
-
-| Schedule | Scope | Purpose |
-|----------|-------|---------|
-| Daily | Smoke tests (5 scenarios) | Quick health check |
-| Weekly | Full suite (20+ scenarios) | Comprehensive validation |
-| Monthly | Extended suite + edge cases | Thorough assessment |
-
 ### On-Demand Testing
 
 ```bash
-# Test with verbose output
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --verbose
+# Test with verbose output (progress on stderr; report on stdout)
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --verbose --allow-skipped
+
+# Generate JSON report (clean stdout, suitable for piping)
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report json --allow-skipped > results.json
 
 # Generate HTML report
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report html
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report html --allow-skipped > results.html
 ```
+
+### Scheduled Testing (Planned)
+
+A Power Automate scheduled trigger that invokes the runner is on the roadmap.
 
 ## Test Results
 
 ### Result Status
 
-| Status | Meaning |
-|--------|---------|
-| **PASS** | Agent behaved appropriately |
-| **FAIL** | Potential COI detected |
-| **WARN** | Borderline behavior requiring review |
-| **ERROR** | Test execution failed |
+| Status | Meaning | Dataverse Choice value |
+|--------|---------|------------------------|
+| **PASS** | Agent behaved appropriately | `100000000` |
+| **FAIL** | Potential COI detected | `100000001` |
+| **SKIPPED** | Scenario could not execute (current default until agent integration ships) | `100000002` |
+| **WARN** | Borderline behavior requiring review | `100000003` |
+| **ERROR** | Test execution failed | `100000004` |
 
 ### Finding Severity
 
@@ -185,19 +206,15 @@ python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com
 | **Medium** | Possible COI indicator | Review within 1 week |
 | **Low** | Minor observation | Include in quarterly review |
 
-## Integration
+## Integration (Planned)
 
 ### FINRA Supervision Workflow
 
-Failed COI tests automatically create supervision queue items:
-
-```
-COI Test Fails → Finding Created → Supervision Item → Principal Review
-```
+Once the agent-interaction layer is implemented, failed COI tests are intended to be forwarded to the [FINRA Supervision Workflow](../finra-supervision-workflow/) solution as supervision queue items. This integration is not yet implemented in this version.
 
 ### Compliance Dashboard
 
-COI test results feed into the Compliance Dashboard for Control 2.18 status.
+COI test results are intended to feed into the [Compliance Dashboard](../compliance-dashboard/) for Control 2.18 status. This integration is not yet implemented in this version.
 
 ## Regulatory Alignment
 
@@ -205,19 +222,19 @@ COI test results feed into the Compliance Dashboard for Control 2.18 status.
 
 > A member must have a reasonable basis to believe a recommendation is suitable.
 
-**Coverage:** Suitability tests validate customer-appropriate recommendations.
+**Coverage:** The suitability scenarios are designed to validate customer-appropriate recommendations once the agent-interaction layer ships. They do not perform validation in this scaffold release.
 
 ### FINRA Rule 2010 - Standards of Commercial Honor
 
 > High standards of commercial honor and just and equitable principles of trade.
 
-**Coverage:** Bias tests help support fair dealing with customers.
+**Coverage:** The bias scenarios are designed to help support fair dealing reviews once the agent-interaction layer ships.
 
 ### SEC Regulation Best Interest
 
 > Broker-dealers must act in the best interest of retail customers.
 
-**Coverage:** All COI tests collectively support Reg BI compliance.
+**Coverage:** Collectively the scenario library is intended to help support Reg BI review programs. This solution does not by itself satisfy Reg BI.
 
 ## Related Controls
 
@@ -226,15 +243,6 @@ COI test results feed into the Compliance Dashboard for Control 2.18 status.
 | [2.11 - Bias Testing](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.11-bias-testing-and-fairness-assessment.md) | Broader fairness testing |
 | [2.18 - Automated Conflict of Interest Testing](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.18-automated-conflict-of-interest-testing.md) | Primary control for COI testing |
 | [2.5 - Testing and Validation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.5-testing-validation-and-quality-assurance.md) | Testing framework |
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.2 | April 2026 | Fixed status persistence mapping; added SKIPPED count to reports |
-| 1.0.1 | April 2026 | Added documentation suite (prerequisites, test scenarios, troubleshooting) |
-| 1.0.0 | February 2026 | Initial release |
-
-See [CHANGELOG.md](./CHANGELOG.md) for full version history.
 
 ## Support
 
@@ -242,4 +250,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - COI Testing v1.0.2*
+*FSI Agent Governance Framework - COI Testing v1.1.0*

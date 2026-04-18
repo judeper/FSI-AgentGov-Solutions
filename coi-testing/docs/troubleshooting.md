@@ -27,7 +27,7 @@ Common issues and resolutions when deploying or running the COI Testing Framewor
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| All tests return `SKIPPED` status | Direct Line API integration not yet implemented | Expected in v1.0.0 — agent interaction is planned for a future release |
+| All tests return `SKIPPED` status | Direct Line API integration not yet implemented | Expected behavior in this scaffold release — agent interaction is planned for a future release. Pass `--allow-skipped` to exit 0; without it the runner exits 3. |
 | `--category` returns zero scenarios | Invalid category name | Use one of: `proprietary_bias`, `suitability`, `fee_transparency`, `cross_selling` |
 | `--environment` URL rejected | Incorrect Dataverse URL format | Use the full organization URL (e.g., `https://your-org.crm.dynamics.com`) without trailing slash |
 | `Warning: Failed to save result` | Dataverse table missing or permission denied | Verify the `fsi_coitestresults` table exists and the service principal has create permissions |

@@ -13,8 +13,18 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
+
+
+def _now_iso() -> str:
+    """Return a timezone-aware ISO-8601 timestamp (UTC)."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _log(msg: str) -> None:
+    """Emit progress/banner output to stderr so stdout stays clean for --report json/html."""
+    print(msg, file=sys.stderr)
 from typing import Dict, List, Optional
 
 try:
@@ -250,7 +260,7 @@ class COITestRunner:
             "category": scenario["category"],
             "severity": scenario["severity"],
             "finra_rule": scenario.get("finra_rule"),
-            "executed_at": datetime.utcnow().isoformat(),
+            "executed_at": _now_iso(),
             "status": "PASS",
             "findings": []
         }
@@ -259,7 +269,7 @@ class COITestRunner:
             # TODO: Implement actual agent interaction via Direct Line API
             # See: https://learn.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts
             if verbose:
-                print(f"    Input: {json.dumps(scenario['input'], indent=2)}")
+                _log(f"    Input: {json.dumps(scenario['input'], indent=2)}")
 
             # FIXME: No agent interaction implemented — test cannot validate COI behavior
             logging.warning(
@@ -280,26 +290,26 @@ class COITestRunner:
         """Run all tests for specified category."""
         self.results = []
         scenarios = self.get_scenarios(category)
-        print(f"\nRunning {len(scenarios)} test scenarios...")
+        _log(f"\nRunning {len(scenarios)} test scenarios...")
 
         for scenario in scenarios:
-            print(f"\n  [{scenario['id']}] {scenario['name']}")
+            _log(f"\n  [{scenario['id']}] {scenario['name']}")
             result = self.execute_test(scenario, verbose)
             status_color = {
-                "PASS": "\033[92m",  # Green
-                "FAIL": "\033[91m",  # Red
-                "SKIPPED": "\033[96m",  # Cyan
-                "WARN": "\033[93m",  # Yellow
-                "ERROR": "\033[91m"  # Red
+                "PASS": "\033[92m",
+                "FAIL": "\033[91m",
+                "SKIPPED": "\033[96m",
+                "WARN": "\033[93m",
+                "ERROR": "\033[91m"
             }.get(result["status"], "")
-            print(f"    Result: {status_color}{result['status']}\033[0m")
+            _log(f"    Result: {status_color}{result['status']}\033[0m")
 
         return self.results
 
     def save_results(self) -> None:
         """Save results to Dataverse."""
         if not self.dataverse_token:
-            print("Warning: Not authenticated, skipping Dataverse save")
+            _log("Warning: Not authenticated, skipping Dataverse save")
             return
 
         headers = {
@@ -310,12 +320,24 @@ class COITestRunner:
         }
 
         for result in self.results:
-            status_map = {"PASS": 1, "FAIL": 2, "SKIPPED": 3, "WARN": 4, "ERROR": 5}
+            # Dataverse Choice (option-set) values for fsi_status. Schema-defined values
+            # use the standard 100000000+ range (PASS=100000000, FAIL=100000001, etc.).
+            status_map = {
+                "PASS":    100000000,
+                "FAIL":    100000001,
+                "SKIPPED": 100000002,
+                "WARN":    100000003,
+                "ERROR":   100000004,
+            }
+            status_value = status_map.get(result["status"])
+            if status_value is None:
+                print(f"  Warning: unknown result status '{result['status']}' for scenario '{result.get('scenario_id', 'unknown')}'; skipping persist", file=sys.stderr)
+                continue
             record = {
                 "fsi_scenarioid": result["scenario_id"],
                 "fsi_scenarioname": result["scenario_name"],
                 "fsi_category": result["category"],
-                "fsi_status": status_map.get(result["status"], 3),
+                "fsi_status": status_value,
                 "fsi_executedon": result["executed_at"],
                 "fsi_findings": json.dumps(result.get("findings", []))
             }
@@ -327,9 +349,9 @@ class COITestRunner:
                     json=record
                 )
                 if response.status_code not in [201, 204]:
-                    print(f"  Warning: Failed to save result for '{result.get('scenario_id', 'unknown')}': HTTP {response.status_code} — {response.text[:200]}")
+                    _log(f"  Warning: Failed to save result for '{result.get('scenario_id', 'unknown')}': HTTP {response.status_code} — {response.text[:200]}")
             except Exception as e:
-                print(f"  Warning: Error saving result for scenario '{result.get('scenario_id', 'unknown')}': {e}")
+                _log(f"  Warning: Error saving result for scenario '{result.get('scenario_id', 'unknown')}': {e}")
 
     def generate_report(self, format: str = "text") -> str:
         """Generate test report."""
@@ -343,7 +365,7 @@ class COITestRunner:
             return json.dumps(self.results, indent=2, default=str)
         elif format == "html":
             html = "<html><body><h1>COI Test Results</h1>"
-            html += f"<p>Execution Time: {datetime.utcnow().isoformat()}</p>"
+            html += f"<p>Execution Time: {_now_iso()}</p>"
             html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Skipped: {skipped} | Warn: {warnings} | Error: {errors}</p>"
             html += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
             for r in self.results:
@@ -358,7 +380,7 @@ class COITestRunner:
   COI Testing Report
 ========================================
 
-Execution Time: {datetime.utcnow().isoformat()}
+Execution Time: {_now_iso()}
 Total Scenarios: {len(self.results)}
 
 Results:
@@ -388,43 +410,56 @@ def main() -> None:
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--report", choices=["text", "json", "html"], default="text")
     parser.add_argument("--dry-run", action="store_true", help="Run without saving results")
+    parser.add_argument(
+        "--allow-skipped",
+        action="store_true",
+        help="Exit 0 even when every scenario is SKIPPED. Use only when the scaffold is intentionally being smoke-tested before agent connectivity is implemented."
+    )
 
     args = parser.parse_args()
 
-    print("========================================")
-    print("  COI Testing Framework")
-    print("========================================")
+    _log("========================================")
+    _log("  COI Testing Framework")
+    _log("========================================")
 
-    # Get credentials
     tenant_id = os.environ.get("AZURE_TENANT_ID")
     client_id = os.environ.get("AZURE_CLIENT_ID")
     client_secret = os.environ.get("AZURE_CLIENT_SECRET")
 
     runner = COITestRunner(args.environment, tenant_id, client_id, client_secret)
 
-    # Authenticate if credentials available
     if all([tenant_id, client_id, client_secret]) and not args.dry_run:
-        print("\nAuthenticating...")
+        _log("\nAuthenticating...")
         runner.authenticate()
-        print("  Authenticated successfully")
+        _log("  Authenticated successfully")
     else:
-        print("\n[DRY RUN MODE - Results will not be saved]")
+        _log("\n[DRY RUN MODE - Results will not be saved]")
 
-    # Run tests
     runner.run_tests(category=args.category, verbose=args.verbose)
 
-    # Save results
     if not args.dry_run:
         runner.save_results()
 
-    # Generate report
     report = runner.generate_report(args.report)
     print(report)
 
     failed = sum(1 for r in runner.results if r["status"] == "FAIL")
     errors = sum(1 for r in runner.results if r["status"] == "ERROR")
+    skipped = sum(1 for r in runner.results if r["status"] == "SKIPPED")
+    total = len(runner.results)
+
     if failed > 0 or errors > 0:
         sys.exit(1)
+    if total == 0:
+        _log("\nERROR: No scenarios were executed (check --category value).")
+        sys.exit(2)
+    if skipped == total and not args.allow_skipped:
+        _log(
+            "\nERROR: Every scenario reported SKIPPED. The Direct Line agent-interaction "
+            "layer is not implemented in this scaffold release; pass --allow-skipped to "
+            "explicitly accept this and exit 0, or implement the integration."
+        )
+        sys.exit(3)
 
 
 if __name__ == "__main__":
