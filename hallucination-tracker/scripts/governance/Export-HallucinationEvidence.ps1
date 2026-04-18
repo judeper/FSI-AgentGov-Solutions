@@ -311,6 +311,7 @@ Write-Host "Computing summary statistics..." -ForegroundColor Cyan
 $reportsReadable = $allReports | ForEach-Object {
     [PSCustomObject]@{
         reportId    = $_.fsi_hallucinationreportid
+        reportName  = $_.fsi_reportname
         category    = if ($null -ne $_.fsi_category) { $CategoryMap[[int]$_.fsi_category] } else { 'Unknown' }
         severity    = if ($null -ne $_.fsi_severity) { $SeverityMap[[int]$_.fsi_severity] } else { 'Unknown' }
         agentId     = $_.fsi_agentid

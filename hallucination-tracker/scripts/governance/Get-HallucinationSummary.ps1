@@ -339,11 +339,14 @@ $topAgents = $agentCounts.GetEnumerator() |
     Sort-Object -Property Value -Descending |
     Select-Object -First 5 |
     ForEach-Object {
-        $rate = if ($totalReports -gt 0) { [math]::Round(($_.Value / $totalReports) * 100, 1) } else { 0 }
+        # Note: ShareOfReports = this agent's reports / total reports across all agents.
+        # This is NOT a hallucination rate (which would require dividing by the agent's
+        # total response volume — a metric not available in this aggregation).
+        $shareOfReports = if ($totalReports -gt 0) { [math]::Round(($_.Value / $totalReports) * 100, 1) } else { 0 }
         [PSCustomObject]@{
-            AgentId           = $_.Key
-            ReportCount       = $_.Value
-            HallucinationRate = "$rate%"
+            AgentId        = $_.Key
+            ReportCount    = $_.Value
+            ShareOfReports = "$shareOfReports%"
         }
     }
 
@@ -380,21 +383,33 @@ $patterns = $categoryDistribution.GetEnumerator() |
     }
 
 # Overall status determination
-$overallStatus = "Healthy"
+# Default is "NoData" — Healthy can only be claimed once we know the pipeline is producing telemetry.
+# A green PASS for an empty pipeline would mask authentication failures, missing flows, or revoked permissions.
+$overallStatus = if ($totalReports -eq 0) { "NoData" } else { "Healthy" }
 
 # Check for critical-severity clusters
 $criticalCount = if ($severityDistribution.ContainsKey('Critical')) { $severityDistribution['Critical'] } else { 0 }
 $highCount = if ($severityDistribution.ContainsKey('High')) { $severityDistribution['High'] } else { 0 }
+$mediumCount = if ($severityDistribution.ContainsKey('Medium')) { $severityDistribution['Medium'] } else { 0 }
 
 $hasCriticalCluster = $criticalCount -ge $ClusterThreshold
 $hasAgentThresholdExceeded = ($agentCounts.Values | Where-Object { $_ -ge $AgentReportThreshold }).Count -gt 0
-$hasMediumCluster = ($patterns | Measure-Object).Count -gt 0
+# Severity-based clustering — a "Warning" requires at least Medium-severity volume,
+# not merely the existence of any category cluster (which may be all Low).
+$hasMediumOrHigherCluster = $mediumCount -ge $ClusterThreshold -or $highCount -ge $ClusterThreshold
+$hasCategoryCluster = ($patterns | Measure-Object).Count -gt 0
 
-if ($hasCriticalCluster -or $hasAgentThresholdExceeded) {
-    $overallStatus = "Critical"
-}
-elseif ($hasMediumCluster -or $highCount -ge $ClusterThreshold) {
-    $overallStatus = "Warning"
+if ($totalReports -gt 0) {
+    if ($hasCriticalCluster -or $hasAgentThresholdExceeded) {
+        $overallStatus = "Critical"
+    }
+    elseif ($hasMediumOrHigherCluster) {
+        $overallStatus = "Warning"
+    }
+    elseif ($hasCategoryCluster) {
+        # Category-only cluster (all-Low severity) — informational, not an alert.
+        $overallStatus = "Review"
+    }
 }
 
 #endregion
@@ -435,8 +450,11 @@ switch ($OutputFormat) {
         # Status color
         $statusColor = switch ($overallStatus) {
             'Healthy'  { 'Green' }
+            'Review'   { 'Cyan' }
             'Warning'  { 'Yellow' }
             'Critical' { 'Red' }
+            'NoData'   { 'DarkYellow' }
+            default    { 'White' }
         }
 
         Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor $statusColor
@@ -488,10 +506,10 @@ switch ($OutputFormat) {
         # Top agents
         if ($topAgents.Count -gt 0) {
             Write-Host "── Top 5 Agents by Report Count ─────────────────" -ForegroundColor Cyan
-            Write-Host ("  {0,-30} {1,-8} {2}" -f "Agent", "Count", "Rate")
-            Write-Host ("  {0,-30} {1,-8} {2}" -f "─────", "─────", "────")
+            Write-Host ("  {0,-30} {1,-8} {2}" -f "Agent", "Count", "Share")
+            Write-Host ("  {0,-30} {1,-8} {2}" -f "─────", "─────", "─────")
             foreach ($agent in $topAgents) {
-                Write-Host ("  {0,-30} {1,-8} {2}" -f $agent.AgentId, $agent.ReportCount, $agent.HallucinationRate)
+                Write-Host ("  {0,-30} {1,-8} {2}" -f $agent.AgentId, $agent.ReportCount, $agent.ShareOfReports)
             }
             Write-Host ""
         }

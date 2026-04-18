@@ -14,9 +14,9 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
 |---------|-------------|--------|
 | **Multi-Source Collection** | Feedback from users, supervisors, and automated checks | Documented |
 | **Pattern Detection** | Identify recurring error patterns | Implemented |
-| **Agent Comparison** | Compare accuracy across agents | Implemented |
+| **Agent Comparison** | Compare risk profile across agents | Implemented |
 | **Auto-Categorization** | Classify hallucination types automatically | Planned |
-| **Trend Analysis** | Track hallucination rates over time | Implemented |
+| **Trend Analysis** | Track hallucination report volume over time | Implemented (PowerShell summary; Python analyzer aggregates point-in-time only) |
 
 ## Architecture
 
@@ -149,9 +149,16 @@ See [docs/source-configuration.md](docs/source-configuration.md).
 
 ### 3. Run Pattern Analysis
 
-```python
+Set required Microsoft Entra ID app registration credentials, then run:
+
+```powershell
+$env:AZURE_TENANT_ID     = "<tenant-guid>"
+$env:AZURE_CLIENT_ID     = "<app-registration-client-id>"
+$env:AZURE_CLIENT_SECRET = "<client-secret>"
 python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.com"
 ```
+
+Use `--dry-run` to validate the script with sample data without contacting Dataverse.
 
 ### 4. Deploy Dashboard
 
@@ -159,9 +166,11 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 ## Deployment
 
-1. Deploy Dataverse schema: `python scripts/create_ht_dataverse_schema.py`
-2. Create environment variables: `python scripts/create_ht_environment_variables.py`
-3. Create connection references: `python scripts/create_ht_connection_references.py`
+The Dataverse setup scripts (`create_ht_*.py`) require the same `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` environment variables and a `--environment` URL.
+
+1. Deploy Dataverse schema: `python scripts/create_ht_dataverse_schema.py --environment "https://your-org.crm.dynamics.com"`
+2. Create environment variables: `python scripts/create_ht_environment_variables.py --environment "https://your-org.crm.dynamics.com"`
+3. Create connection references: `python scripts/create_ht_connection_references.py --environment "https://your-org.crm.dynamics.com"`
 4. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
 5. Build Power Automate flows per source configuration documentation
 6. Deploy the Power BI dashboard (template planned for future release)
@@ -242,23 +251,23 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 
 ## Regulatory Alignment
 
-### FINRA 2210 - Communications
+### FINRA Rule 2210 — Communications with the Public
 
 > Communications must be fair, balanced, and not misleading.
 
-**Coverage:** Tracks factual accuracy of agent communications.
+**Coverage:** Helps track factual accuracy of agent communications. Implementation supports — but does not on its own satisfy — supervisory review obligations.
 
-### SEC Marketing Rule
+### SEC Rule 206(4)-1 (Investment Adviser Marketing Rule)
 
-> Substantiation required for material claims.
+> Material claims in marketing communications must be substantiated.
 
-**Coverage:** Monitors citation compliance.
+**Coverage:** Helps monitor citation patterns to support substantiation evidence.
 
-### CFPB Chatbot Guidance
+### CFPB Chatbot Guidance (June 2023, *Chatbots in Consumer Finance*)
 
-> Chatbots must provide accurate information.
+> Chatbots in consumer finance must provide accurate information and avoid harm.
 
-**Coverage:** Systematic accuracy tracking.
+**Coverage:** Systematic accuracy tracking aids in detection of recurring inaccuracies.
 
 ## Related Controls
 

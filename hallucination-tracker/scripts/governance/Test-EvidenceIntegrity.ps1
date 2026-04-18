@@ -89,7 +89,6 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateScript({ Test-Path $_ -PathType Leaf })]
     [string]$EvidenceFilePath,
 
     [Parameter(Mandatory = $false)]
@@ -102,6 +101,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 try {
+    # Validate evidence file exists inside try so -Quiet can suppress the non-fatal error.
+    if (-not (Test-Path -LiteralPath $EvidenceFilePath -PathType Leaf)) {
+        if (-not $Quiet) { Write-Error "Evidence file not found: $EvidenceFilePath" }
+        if ($Quiet) { return $false } else { exit 2 }
+    }
+
     # Determine hash file path (use parameter or default convention)
     if (-not $HashFilePath) {
         $HashFilePath = "$EvidenceFilePath.sha256"

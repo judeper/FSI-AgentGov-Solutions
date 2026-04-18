@@ -85,17 +85,28 @@ class TestCalculateAgentScores(unittest.TestCase):
     def test_scores_range(self):
         scores = self.analyzer.calculate_agent_scores(SAMPLE_FEEDBACK)
         for score in scores.values():
+            if score is None:
+                # InsufficientData (<MIN_REPORTS_FOR_SCORE) — acceptable, skip range check.
+                continue
             self.assertGreaterEqual(score, 0)
             self.assertLessEqual(score, 100)
 
     def test_agent_with_critical_scores_lower(self):
         scores = self.analyzer.calculate_agent_scores(SAMPLE_FEEDBACK)
-        # agent-001 has 3 reports including a critical; agent-003 has 1 low
-        self.assertLess(scores["agent-001"], scores["agent-003"])
+        # agent-001 has 3 reports including a critical (scores below 100);
+        # agent-003 has 1 low (returns None — InsufficientData).
+        self.assertIsNotNone(scores["agent-001"])
+        self.assertIsNone(scores["agent-003"])
 
     def test_empty_feedback(self):
         scores = self.analyzer.calculate_agent_scores([])
         self.assertEqual(scores, {})
+
+    def test_insufficient_reports_returns_none(self):
+        # Single low-severity report ⇒ InsufficientData (<3).
+        feedback = [{"fsi_agentid": "agent-x", "fsi_severity": 100000000, "fsi_category": 100000000, "fsi_source": 100000000}]
+        scores = self.analyzer.calculate_agent_scores(feedback)
+        self.assertIsNone(scores["agent-x"])
 
 
 class TestDetectPatterns(unittest.TestCase):

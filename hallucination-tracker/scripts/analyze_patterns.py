@@ -159,30 +159,45 @@ class PatternAnalyzer:
         return dict(severity)
 
     def calculate_agent_scores(self, feedback: List[Dict]) -> Dict:
-        """Calculate accuracy scores per agent using weighted penalty rate.
+        """Calculate per-agent risk scores using weighted severity penalty.
 
-        Score = 100 - min((weighted_issues / total_reports) * 25, 100).
-        The average severity weight (1-4) is scaled by 25 to produce a
-        penalty range of 25-100, giving meaningful score differentiation.
+        IMPORTANT: This is NOT an accuracy metric — the denominator is the
+        agent's *hallucination report count*, not the agent's total response
+        count. The score expresses the *severity profile of reported issues*
+        for an agent, not the actual hallucination rate. To compute true
+        accuracy or hallucination-rate, callers must join against the agent's
+        total response volume (out of scope for this aggregation).
+
+        Calibration (with a single report):
+            1 Low      → 75 ("Needs Improvement")
+            1 Medium   → 50 ("Critical")
+            1 High     → 25 ("Critical")
+            1 Critical → 0  ("Critical")
+
+        Because a single low-volume report can dominate the score, agents
+        with fewer than MIN_REPORTS_FOR_SCORE reports are returned as
+        ``None`` so callers can render them as "InsufficientData".
+
+        Returns:
+            Dict mapping agent_id to either an integer 0-100 or ``None``
+            when the agent has too few reports to score reliably.
         """
-        agent_data = {}
+        MIN_REPORTS_FOR_SCORE = 3
 
+        agent_data = {}
         for item in feedback:
             agent_id = item.get("fsi_agentid") or "unknown"
             severity = item.get("fsi_severity")
-
             if agent_id not in agent_data:
                 agent_data[agent_id] = {"total": 0, "weighted_issues": 0}
-
             agent_data[agent_id]["total"] += 1
             agent_data[agent_id]["weighted_issues"] += SEVERITY_WEIGHTS.get(severity, 1)
 
-        # Calculate scores as rate-based penalty (normalized by report count)
         scores = {}
         for agent_id, data in agent_data.items():
             total = data["total"]
-            if total == 0:
-                scores[agent_id] = 100
+            if total < MIN_REPORTS_FOR_SCORE:
+                scores[agent_id] = None
             else:
                 penalty = min((data["weighted_issues"] / total) * 25, 100)
                 scores[agent_id] = max(0, round(100 - penalty))
@@ -273,9 +288,12 @@ Category Distribution:
             report += f"  {sev}: {count} ({pct:.1f}%)\n"
 
         report += "\nAgent Scores:\n"
-        for agent_id, score in sorted(agent_scores.items(), key=lambda x: x[1]):
-            rating = "Excellent" if score >= 95 else "Good" if score >= 85 else "Needs Improvement" if score >= 70 else "Critical"
+        for agent_id, score in sorted(agent_scores.items(), key=lambda x: (x[1] is None, x[1] if x[1] is not None else 0)):
             display = f"{agent_id[:20]}..." if len(agent_id) > 20 else agent_id
+            if score is None:
+                report += f"  {display}: InsufficientData (<3 reports)\n"
+                continue
+            rating = "Excellent" if score >= 95 else "Good" if score >= 85 else "Needs Improvement" if score >= 70 else "Critical"
             report += f"  {display}: {score} ({rating})\n"
 
         if patterns:
@@ -306,16 +324,15 @@ def main() -> None:
         print("Error: --environment must be an HTTPS URL (e.g., https://your-org.crm.dynamics.com)")
         sys.exit(1)
 
-    # Defense-in-depth: restrict to known Dataverse domains
-    allowed_suffixes = (".crm.dynamics.com", ".crm2.dynamics.com", ".crm3.dynamics.com",
-                        ".crm4.dynamics.com", ".crm5.dynamics.com", ".crm6.dynamics.com",
-                        ".crm7.dynamics.com", ".crm8.dynamics.com", ".crm9.dynamics.com",
-                        ".crm11.dynamics.com", ".crm12.dynamics.com", ".crm14.dynamics.com",
-                        ".crm15.dynamics.com", ".crm17.dynamics.com", ".crm19.dynamics.com",
-                        ".crm20.dynamics.com", ".crm21.dynamics.com",
-                        ".crm.microsoftdynamics.us", ".crm.appsplatform.us")
-    if not any(parsed.netloc.endswith(suffix) for suffix in allowed_suffixes):
-        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com or *.microsoftdynamics.us or *.appsplatform.us)")
+    # Defense-in-depth: restrict to known Dataverse domains using regex
+    # Accepts: *.crm[N].dynamics.com (any region number), sovereign clouds, GCC
+    import re
+    dataverse_pattern = re.compile(
+        r'^[a-z0-9\-]+\.(crm\d*\.dynamics\.com|crm\.microsoftdynamics\.us|crm\.appsplatform\.us|crm\.dynamics\.cn|crm\.dynamics\.de)$',
+        re.IGNORECASE,
+    )
+    if not dataverse_pattern.match(parsed.netloc):
+        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com, *.microsoftdynamics.us, *.appsplatform.us, *.dynamics.cn, *.dynamics.de)")
         print(f"  Got: {parsed.netloc}")
         sys.exit(1)
 
