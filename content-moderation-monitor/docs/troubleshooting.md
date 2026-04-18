@@ -24,7 +24,7 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 | MSAL token error | `MSAL.PS` module not installed | Run `Install-Module MSAL.PS -Scope CurrentUser` |
 | Dataverse 401 Unauthorized | Token expired or wrong audience | Re-authenticate; verify token audience matches Dataverse URL |
 | Dataverse 403 Forbidden | Missing security role in target environment | Add executing identity as application user with read access to CMM tables |
-| `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 — the `-AsPlainText` parameter requires PowerShell 7.0+ | Install PowerShell 7.1+ as documented in [PREREQUISITES.md](PREREQUISITES.md). Run scripts with `pwsh` (not `powershell`) |
+| `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 — the `-AsPlainText` parameter requires PowerShell 7.0+ | Install PowerShell 7.1+ as documented in [PREREQUISITES.md](prerequisites.md). Run scripts with `pwsh` (not `powershell`) |
 | Interactive auth popup blocked | PowerShell session does not support interactive UI | Use `-CertificateThumbprint` and `-ClientId` for non-interactive auth |
 
 ---
@@ -83,14 +83,14 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 
 ## Deployment Placeholders
 
-The Power Automate flow template contains placeholder URLs that must be replaced before import. If adaptive card buttons (e.g., "Run Manual Check" or "View Documentation") are non-functional after deployment, see [FLOW_SETUP.md](FLOW_SETUP.md) for required placeholder replacements including `${ManualCheckUrl}` and the `your-org.github.io` documentation URL.
+The Power Automate flow template contains placeholder URLs that must be replaced before import. If adaptive card buttons (e.g., "Run Manual Check" or "View Documentation") are non-functional after deployment, see [FLOW_SETUP.md](flow-setup.md) for required placeholder replacements including `${ManualCheckUrl}` and the `your-org.github.io` documentation URL.
 
 ## Related Documentation
 
-- [PREREQUISITES.md](PREREQUISITES.md) — Module and permission requirements
-- [SCHEMA.md](SCHEMA.md) — Dataverse schema reference
-- [EVIDENCE_EXPORT.md](EVIDENCE_EXPORT.md) — Evidence export guide
-- [FLOW_SETUP.md](FLOW_SETUP.md) — Power Automate flow deployment and placeholder configuration
+- [PREREQUISITES.md](prerequisites.md) — Module and permission requirements
+- [SCHEMA.md](schema.md) — Dataverse schema reference
+- [EVIDENCE_EXPORT.md](evidence-export.md) — Evidence export guide
+- [FLOW_SETUP.md](flow-setup.md) — Power Automate flow deployment and placeholder configuration
 
 ---
 

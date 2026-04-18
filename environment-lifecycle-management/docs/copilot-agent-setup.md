@@ -572,7 +572,7 @@ When calling Power Automate, the agent sends this JSON structure:
 }
 ```
 
-See [templates/json-output-schema.json](../templates/json-output-schema.json) for the complete schema.
+See [templates/json-output-schema.json](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/environment-lifecycle-management/templates/json-output-schema.json) for the complete schema.
 
 ---
 

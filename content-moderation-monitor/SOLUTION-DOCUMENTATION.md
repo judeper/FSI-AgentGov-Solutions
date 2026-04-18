@@ -188,11 +188,11 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
 ```
 
 #### 2. Power Automate Flow (Manual Build)
-**Build instructions:** See [FLOW_SETUP.md](docs/FLOW_SETUP.md)
+**Build instructions:** See [FLOW_SETUP.md](docs/flow-setup.md)
 
 **Purpose:** Daily scheduled orchestration of content moderation validation with Dataverse persistence and conditional alerting.
 
-> **Note:** This solution does not include an exported flow JSON file. Build the Power Automate flow manually in the designer following the step-by-step instructions in [FLOW_SETUP.md](docs/FLOW_SETUP.md).
+> **Note:** This solution does not include an exported flow JSON file. Build the Power Automate flow manually in the designer following the step-by-step instructions in [FLOW_SETUP.md](docs/flow-setup.md).
 
 **Trigger:**
 - **Schedule:** Daily at 06:00 UTC
@@ -355,7 +355,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-Zone3-*.json"
 
 ### Dataverse Schema
 
-> For the complete schema reference including option sets, environment variables, connection references, and entity relationship diagram, see [docs/SCHEMA.md](docs/SCHEMA.md).
+> For the complete schema reference including option sets, environment variables, connection references, and entity relationship diagram, see [docs/SCHEMA.md](docs/schema.md).
 
 #### Table: fsi_moderationvalidationhistory
 
@@ -473,7 +473,7 @@ python deploy.py \
 
 **Step 5: Build Power Automate Flow**
 
-Build the flow manually in Power Automate designer following the instructions in [FLOW_SETUP.md](docs/FLOW_SETUP.md):
+Build the flow manually in Power Automate designer following the instructions in [FLOW_SETUP.md](docs/flow-setup.md):
 
 1. Create a new Scheduled flow (daily 06:00 UTC)
 2. Configure connection references (Dataverse, Office 365, Teams)

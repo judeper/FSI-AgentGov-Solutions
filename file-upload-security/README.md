@@ -29,7 +29,7 @@ Copilot Studio agents can accept file uploads (images, PDFs, text files) during 
 - PowerShell 7.4+
 - Microsoft.PowerApps.Administration.PowerShell module
 - Copilot Studio environment access
-- See [PREREQUISITES.md](docs/PREREQUISITES.md)
+- See [PREREQUISITES.md](docs/prerequisites.md)
 - See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ### Validate File Upload Compliance
@@ -110,17 +110,17 @@ Import-Module ./scripts/private/FUSClient.psm1
 
 ## Documentation
 
-- [PREREQUISITES.md](docs/PREREQUISITES.md) — Required modules and permissions
-- [SCHEMA.md](docs/SCHEMA.md) — Dataverse table definitions
-- [EVIDENCE_EXPORT.md](docs/EVIDENCE_EXPORT.md) — Evidence export and integrity verification
-- [FLOW_SETUP.md](docs/FLOW_SETUP.md) — Power Automate flow deployment
-- [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — Common issues and resolution
+- [PREREQUISITES.md](docs/prerequisites.md) — Required modules and permissions
+- [SCHEMA.md](docs/schema.md) — Dataverse table definitions
+- [EVIDENCE_EXPORT.md](docs/evidence-export.md) — Evidence export and integrity verification
+- [FLOW_SETUP.md](docs/flow-setup.md) — Power Automate flow deployment
+- [TROUBLESHOOTING.md](docs/troubleshooting.md) — Common issues and resolution
 
 ## Configuration Placeholders
 
-Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, certificate thumbprint, etc.) must be set during manual flow creation. See [FLOW_SETUP.md](docs/FLOW_SETUP.md#2-configure-variables) for the complete list with descriptions.
+Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, certificate thumbprint, etc.) must be set during manual flow creation. See [FLOW_SETUP.md](docs/flow-setup.md#2-configure-variables) for the complete list with descriptions.
 
-> **Note:** For full environment portability across dev/test/prod, consider storing these values as Dataverse environment variables (see [SCHEMA.md](docs/SCHEMA.md) Environment Variables section). This allows per-environment configuration without modifying the flow definition.
+> **Note:** For full environment portability across dev/test/prod, consider storing these values as Dataverse environment variables (see [SCHEMA.md](docs/schema.md) Environment Variables section). This allows per-environment configuration without modifying the flow definition.
 
 ## Platform Update Notes
 

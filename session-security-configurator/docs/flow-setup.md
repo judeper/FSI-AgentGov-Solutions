@@ -368,10 +368,10 @@ The flow routes alerts based on validation status and drift detection:
 
 ## Related Documentation
 
-- [Prerequisites](PREREQUISITES.md) — Licensing, roles, and module requirements
-- [Dataverse Schema](DATAVERSE-SCHEMA.md) — SSC schema deployment guide and table reference
-- [Evidence Export Guide](EVIDENCE-EXPORT-GUIDE.md) — Compliance evidence export instructions
-- [Troubleshooting](TROUBLESHOOTING.md) — Common issues and resolutions
+- [Prerequisites](prerequisites.md) — Licensing, roles, and module requirements
+- [Dataverse Schema](dataverse-schema.md) — SSC schema deployment guide and table reference
+- [Evidence Export Guide](evidence-export-guide.md) — Compliance evidence export instructions
+- [Troubleshooting](troubleshooting.md) — Common issues and resolutions
 
 ---
 

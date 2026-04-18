@@ -20,7 +20,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Account type: Single tenant
 - [ ] Click "Register"
 
-**Details:** [README.md - Prerequisites](../README.md#prerequisites)
+**Details:** [README.md - Prerequisites](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/message-center-monitor/README.md#prerequisites)
 
 ---
 
@@ -33,7 +33,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 - [ ] Search for and add `ServiceMessage.Read.All`
 - [ ] Click "Grant admin consent"
 
-**Details:** [README.md - Microsoft Entra ID App Registration](../README.md#1-microsoft-entra-id-app-registration)
+**Details:** [README.md - Microsoft Entra ID App Registration](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/message-center-monitor/README.md#1-microsoft-entra-id-app-registration)
 
 ---
 
@@ -94,7 +94,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | severity | High, Normal, Critical |
 | assessmentStatus | Not Assessed, Reviewed, Impacts Agents, No Impact |
 
-**Details:** [README.md - Data Model](../README.md#data-model)
+**Details:** [README.md - Data Model](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/message-center-monitor/README.md#data-model)
 
 ---
 
@@ -191,4 +191,4 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 | Teams notifications missing | Verify channel connector and condition logic |
 | Key Vault access denied | Check access policy or RBAC assignment |
 
-**Full troubleshooting:** [README.md - Troubleshooting](../README.md#troubleshooting)
+**Full troubleshooting:** [README.md - Troubleshooting](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/message-center-monitor/README.md#troubleshooting)

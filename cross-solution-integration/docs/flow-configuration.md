@@ -318,7 +318,7 @@ Add a **Compose** action that runs if the Teams message fails:
 
 ### Status Mapping Reference
 
-See [STATUS_MAPPING.md](STATUS_MAPPING.md) for the complete per-solution status translation logic.
+See [STATUS_MAPPING.md](status-mapping.md) for the complete per-solution status translation logic.
 
 ### Data Flow Diagram
 
@@ -513,9 +513,9 @@ Both flows implement consistent error handling patterns:
 
 ## Related Resources
 
-- [README — Solution Overview](../README.md)
-- [SCHEMA_CONTRACT.md](SCHEMA_CONTRACT.md) — Cross-solution data contract and option set values
-- [STATUS_MAPPING.md](STATUS_MAPPING.md) — Per-solution status translation logic
-- [CONFIGURATION.md](CONFIGURATION.md) — Setup and configuration guide
-- [ELM_INTEGRATION.md](ELM_INTEGRATION.md) — ELM provisioning hook integration details
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Common issues and resolution
+- [README — Solution Overview](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-solution-integration/README.md)
+- [SCHEMA_CONTRACT.md](schema-contract.md) — Cross-solution data contract and option set values
+- [STATUS_MAPPING.md](status-mapping.md) — Per-solution status translation logic
+- [CONFIGURATION.md](configuration.md) — Setup and configuration guide
+- [ELM_INTEGRATION.md](elm-integration.md) — ELM provisioning hook integration details
+- [TROUBLESHOOTING.md](troubleshooting.md) — Common issues and resolution

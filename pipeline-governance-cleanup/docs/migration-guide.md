@@ -13,7 +13,7 @@ Use this guide if your organization has:
 - **Platform host usage** - Some environments use Microsoft's infrastructure-managed host
 - **Need for coordinated migration** - You want to migrate without disrupting active deployments
 
-If your organization has **no existing pipelines** (greenfield), see the [Greenfield Quick Start](../README.md#new-deployment-greenfield) section instead.
+If your organization has **no existing pipelines** (greenfield), see the [Greenfield Quick Start](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/README.md#new-deployment-greenfield) section instead.
 
 ---
 

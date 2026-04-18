@@ -437,8 +437,8 @@ The following placeholder values in solution files must be replaced with your or
 
 | Guide | Description |
 |-------|-------------|
-| [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) | Entra ID app registration, API permissions, certificate and MI authentication |
-| [docs/FLOW_SETUP.md](./docs/FLOW_SETUP.md) | Power Automate flow creation and configuration (ACV) |
+| [docs/AUTHENTICATION.md](./docs/authentication.md) | Entra ID app registration, API permissions, certificate and MI authentication |
+| [docs/FLOW_SETUP.md](./docs/flow-setup.md) | Power Automate flow creation and configuration (ACV) |
 | [docs/evidence-export-guide.md](./docs/evidence-export-guide.md) | Compliance evidence collection and verification (ACV) |
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Azure Automation deployment, MI permissions (ALCA) |
 | [docs/scheduling-guide.md](./docs/scheduling-guide.md) | Runbook scheduling configuration (ALCA) |

@@ -127,6 +127,6 @@ Before deployment, verify:
 
 After confirming prerequisites:
 
-1. Review [Dataverse Schema](DATAVERSE-SCHEMA.md) documentation
+1. Review [Dataverse Schema](dataverse-schema.md) documentation
 2. Deploy infrastructure using `python scripts/deploy.py`
-3. Follow [Flow Setup](FLOW_SETUP.md) for automated validation
+3. Follow [Flow Setup](flow-setup.md) for automated validation

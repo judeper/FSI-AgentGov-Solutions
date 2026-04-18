@@ -355,7 +355,7 @@ Add to ELM `SupervisionConfig`:
 - `CAA-Evidence-<timestamp>.json` — Validation results, violations, baselines
 - `CAA-Evidence-<timestamp>.json.sha256` — SHA-256 companion hash for tamper-evident verification
 
-See [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) for the complete command reference and JSON schema.
+See [docs/EVIDENCE_EXPORT.md](./docs/evidence-export.md) for the complete command reference and JSON schema.
 
 ### Regulatory Alignment
 
@@ -407,8 +407,8 @@ See [docs/troubleshooting.md](./docs/troubleshooting.md) for complete error reco
 | Guide | Description |
 |-------|-------------|
 | [docs/prerequisites.md](./docs/prerequisites.md) | Licensing, roles, dependencies (Tier 1 + Tier 2) |
-| [docs/SCHEMA.md](./docs/SCHEMA.md) | Dataverse tables, option sets, environment variables, connection references |
-| [docs/EVIDENCE_EXPORT.md](./docs/EVIDENCE_EXPORT.md) | Evidence export command reference, JSON schema, hash verification |
+| [docs/SCHEMA.md](./docs/schema.md) | Dataverse tables, option sets, environment variables, connection references |
+| [docs/EVIDENCE_EXPORT.md](./docs/evidence-export.md) | Evidence export command reference, JSON schema, hash verification |
 | [docs/policy-templates.md](./docs/policy-templates.md) | Template specifications and customization |
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Step-by-step deployment |
 | [docs/compliance-monitoring.md](./docs/compliance-monitoring.md) | Drift detection and reporting |

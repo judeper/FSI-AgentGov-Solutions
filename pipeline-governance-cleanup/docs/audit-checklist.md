@@ -137,5 +137,5 @@ Common auditor questions and where to find answers:
 ## See Also
 
 - [Portal Walkthrough](./portal-walkthrough.md) - Force-link procedures
-- [README.md](../README.md) - Solution overview
+- [README.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/README.md) - Solution overview
 - [Limitations](./limitations.md) - Technical constraints

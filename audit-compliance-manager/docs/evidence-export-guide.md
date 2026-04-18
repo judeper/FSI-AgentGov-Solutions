@@ -228,5 +228,5 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
 
 ## Related Documentation
 
-- [Flow Setup Guide](FLOW_SETUP.md) - Configure Power Automate flows for automated validation
+- [Flow Setup Guide](flow-setup.md) - Configure Power Automate flows for automated validation
 - [Control 1.7](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) - Audit log configuration framework control

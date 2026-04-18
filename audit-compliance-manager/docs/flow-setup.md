@@ -634,7 +634,7 @@ This table defines the alert behavior based on validation status:
 
 ## Related Documentation
 
-- **[AUTHENTICATION.md](AUTHENTICATION.md)** — Entra ID app registration, API permissions, certificate and Managed Identity authentication
+- **[AUTHENTICATION.md](authentication.md)** — Entra ID app registration, API permissions, certificate and Managed Identity authentication
 - **[deployment-guide.md](deployment-guide.md)** — Deployment, authentication, and Dataverse schema setup
 - **[testing-scenarios.md](testing-scenarios.md)** — Testing and troubleshooting scenarios
 

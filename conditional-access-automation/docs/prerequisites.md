@@ -359,9 +359,9 @@ These prerequisites are required for compliance evidence persistence and Power A
 - [ ] Power Platform environment created
 - [ ] Dataverse database provisioned
 - [ ] Service account has appropriate security role
-- [ ] Schema deployed (see [SCHEMA.md](./SCHEMA.md) for table definitions)
-- [ ] Environment variables deployed (see [SCHEMA.md](./SCHEMA.md) for variable definitions)
-- [ ] Connection references deployed (see [SCHEMA.md](./SCHEMA.md) for reference definitions)
+- [ ] Schema deployed (see [SCHEMA.md](./schema.md) for table definitions)
+- [ ] Environment variables deployed (see [SCHEMA.md](./schema.md) for variable definitions)
+- [ ] Connection references deployed (see [SCHEMA.md](./schema.md) for reference definitions)
 
 ### API Permissions for Dataverse
 

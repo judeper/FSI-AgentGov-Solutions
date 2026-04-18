@@ -167,7 +167,7 @@ Resolution: Review CA policy "Users and groups" assignment in Entra portal.
 ## Getting Support
 
 1. **Check logs:** Review PowerShell output with `-Verbose` flag
-2. **Verify prerequisites:** Re-run prerequisite checks from [PREREQUISITES.md](PREREQUISITES.md)
-3. **Review documentation:** Check [FLOW_SETUP.md](FLOW_SETUP.md) for flow-specific issues
+2. **Verify prerequisites:** Re-run prerequisite checks from [PREREQUISITES.md](prerequisites.md)
+3. **Review documentation:** Check [FLOW_SETUP.md](flow-setup.md) for flow-specific issues
 4. **Search existing issues:** [FSI-AgentGov-Solutions Issues](https://github.com/judeper/FSI-AgentGov-Solutions/issues)
 5. **Open new issue:** Include error code, environment details, and steps to reproduce

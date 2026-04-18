@@ -164,7 +164,7 @@ See [Automation Guide](./automation-guide.md) for flow setup.
 
 | Guide | Description |
 |-------|-------------|
-| [README.md](../README.md) | Solution overview and quick start |
+| [README.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/README.md) | Solution overview and quick start |
 | [Automation Guide](./automation-guide.md) | What can be automated (and what cannot) |
 | [Portal Walkthrough](./portal-walkthrough.md) | Manual UI procedures for force-linking |
 | [Limitations](./limitations.md) | Technical constraints explained |

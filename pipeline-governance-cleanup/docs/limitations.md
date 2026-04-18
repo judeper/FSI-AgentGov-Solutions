@@ -334,4 +334,4 @@ Until Microsoft provides APIs:
 
 - [Automation Guide](./automation-guide.md) - What CAN be automated
 - [Portal Walkthrough](./portal-walkthrough.md) - Manual UI procedures
-- [README.md](../README.md) - Solution overview
+- [README.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/README.md) - Solution overview

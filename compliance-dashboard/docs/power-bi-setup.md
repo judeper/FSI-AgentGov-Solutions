@@ -29,7 +29,7 @@ The Compliance Dashboard provides five report pages:
 
 ### Step 1: Build the Template
 
-Per the [Solution Content Policy](../README.md), this repo does not ship a `.pbit` file. Build your own following [docs/power-bi-template-spec.md](power-bi-template-spec.md) and save the resulting `.pbix` / `.pbit` to a workspace location your team controls.
+Per the [Solution Content Policy](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/compliance-dashboard/README.md), this repo does not ship a `.pbit` file. Build your own following [docs/power-bi-template-spec.md](power-bi-template-spec.md) and save the resulting `.pbix` / `.pbit` to a workspace location your team controls.
 
 ### Step 2: Open in Power BI Desktop
 

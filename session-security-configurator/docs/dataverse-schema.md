@@ -184,6 +184,6 @@ After deployment, configure the security role for `fsi_ValidationHistory` to rem
 
 ## Related Documentation
 
-- [Prerequisites](PREREQUISITES.md) — Licensing and role requirements
-- [Evidence Export Guide](EVIDENCE-EXPORT-GUIDE.md) — Exporting validation history
-- [Flow Setup](FLOW_SETUP.md) — Automated daily validation
+- [Prerequisites](prerequisites.md) — Licensing and role requirements
+- [Evidence Export Guide](evidence-export-guide.md) — Exporting validation history
+- [Flow Setup](flow-setup.md) — Automated daily validation

@@ -329,7 +329,7 @@ Full administrative access.
 
 ### Manual Creation
 
-Use the Power Apps maker portal or PAC CLI to create tables manually following the schema above. The solution does not ship a packaged `.zip` file — see [templates/README.md](../templates/README.md) for guidance.
+Use the Power Apps maker portal or PAC CLI to create tables manually following the schema above. The solution does not ship a packaged `.zip` file — see [templates/README.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/compliance-dashboard/templates/README.md) for guidance.
 
 ### Post-Deployment
 

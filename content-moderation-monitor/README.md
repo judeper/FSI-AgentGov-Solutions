@@ -170,19 +170,19 @@ expectations honest, please note:
 
 ## Configuration Placeholders
 
-Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, etc.) must be set during manual flow creation. See [Flow Setup Guide](docs/FLOW_SETUP.md#step-2-configure-variables) for the complete list with descriptions.
+Configuration values for the Power Automate flow (tenant domain, Dataverse URL, compliance email, Teams IDs, etc.) must be set during manual flow creation. See [Flow Setup Guide](docs/flow-setup.md#step-2-configure-variables) for the complete list with descriptions.
 
 ## Documentation
 
-- [Prerequisites](docs/PREREQUISITES.md)— Module and permission requirements
-- [Dataverse Schema](docs/SCHEMA.md) — Table, column, and option set reference
-- [Evidence Export](docs/EVIDENCE_EXPORT.md) — Compliance evidence export guide
-- [Flow Setup](docs/FLOW_SETUP.md) — Power Automate deployment guide
-- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and resolutions
+- [Prerequisites](docs/prerequisites.md)— Module and permission requirements
+- [Dataverse Schema](docs/schema.md) — Table, column, and option set reference
+- [Evidence Export](docs/evidence-export.md) — Compliance evidence export guide
+- [Flow Setup](docs/flow-setup.md) — Power Automate deployment guide
+- [Troubleshooting](docs/troubleshooting.md) — Common issues and resolutions
 
 ## Prerequisites
 
-See [docs/PREREQUISITES.md](docs/PREREQUISITES.md) for detailed requirements.
+See [docs/PREREQUISITES.md](docs/prerequisites.md) for detailed requirements.
 
 ## License
 

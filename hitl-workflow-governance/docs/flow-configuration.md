@@ -397,4 +397,4 @@ After completing flow deployment:
 4. Monitor HITL-Scanner flow runs for scan results
 5. Train compliance team on exception approval workflow
 
-For comprehensive operational guidance, see the main [README.md](../README.md).
+For comprehensive operational guidance, see the main [README.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/hitl-workflow-governance/README.md).

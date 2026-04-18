@@ -106,7 +106,7 @@ Component metadata table. Used for agent type classification -- specifically to 
 
 > **Note:** Tier 2 table queries are planned for a future release and are not yet implemented in the sync pipeline. The table schemas below document the intended data sources.
 
-> **Retention warning:** conversationtranscript records are subject to a default 30-day bulk delete job. See [prerequisites.md](../prerequisites.md) for extension instructions.
+> **Retention warning:** conversationtranscript records are subject to a default 30-day bulk delete job. See [prerequisites.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/copilot-studio-analytics/prerequisites.md) for extension instructions.
 
 ### msdyn_botcomponentsession
 
@@ -203,7 +203,7 @@ Custom Dataverse table created by `create_csa_dataverse_schema.py`. Tracks sync 
 | fsi_synctier | OptionSet | Data tier synced | Tier1, Tier2 |
 | fsi_errormessage | Multiline | Error details on failure | Null on success |
 
-> **Schema creation:** Run `python scripts/create_csa_dataverse_schema.py` to create this table. Use `--output-docs` flag to generate schema documentation. See [docs/dataverse-schema.md](../docs/dataverse-schema.md) for the auto-generated reference.
+> **Schema creation:** Run `python scripts/create_csa_dataverse_schema.py` to create this table. Use `--output-docs` flag to generate schema documentation. See [dataverse-schema.md](./dataverse-schema.md) for the auto-generated reference.
 
 ---
 

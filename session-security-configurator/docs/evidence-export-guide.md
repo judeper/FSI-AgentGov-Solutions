@@ -229,6 +229,6 @@ if (-not $isValid) {
 
 ## Related Documentation
 
-- [Prerequisites](PREREQUISITES.md) — Required modules and permissions
-- [Dataverse Schema](DATAVERSE-SCHEMA.md) — ValidationHistory table structure
-- [Troubleshooting](TROUBLESHOOTING.md) — Complete error reference
+- [Prerequisites](prerequisites.md) — Required modules and permissions
+- [Dataverse Schema](dataverse-schema.md) — ValidationHistory table structure
+- [Troubleshooting](troubleshooting.md) — Complete error reference

@@ -397,7 +397,7 @@ Add action: **Microsoft Teams - Post card in a chat or channel**
 - **Post in:** Channel
 - **Team:** Your team
 - **Channel:** Your alerts channel
-- **Adaptive Card:** Use the template from [teams-notification-card.json](../templates/teams-notification-card.json)
+- **Adaptive Card:** Use the template from [teams-notification-card.json](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/message-center-monitor/templates/teams-notification-card.json)
 
 Replace placeholders in the card with dynamic content:
 - `{title}` → `@{items('Apply_to_each')?['title']}`

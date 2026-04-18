@@ -10,9 +10,9 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 
 | Capability | Method | Documentation |
 |------------|--------|---------------|
-| List all environments | PowerShell + PAC CLI | [scripts/Get-PipelineInventory.ps1](../scripts/Get-PipelineInventory.ps1) |
+| List all environments | PowerShell + PAC CLI | [scripts/Get-PipelineInventory.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Get-PipelineInventory.ps1) |
 | Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
-| Send owner notifications | PowerShell + Microsoft Graph | [scripts/Send-OwnerNotifications.ps1](../scripts/Send-OwnerNotifications.ps1) |
+| Send owner notifications | PowerShell + Microsoft Graph | [scripts/Send-OwnerNotifications.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Send-OwnerNotifications.ps1) |
 | Monitor deployment events | Power Automate triggers | This document (below) |
 | Alert on new pipelines | Power Automate + Teams | This document (below) |
 
@@ -504,10 +504,10 @@ concat('Pipeline ', triggerOutputs()?['body/OutputParameters/PipelineName'], ' d
 
 ## Next Steps
 
-1. Run [Get-PipelineInventory.ps1](../scripts/Get-PipelineInventory.ps1) to get environment baseline
+1. Run [Get-PipelineInventory.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Get-PipelineInventory.ps1) to get environment baseline
 2. Manually verify pipeline configurations ([Portal Walkthrough](./portal-walkthrough.md))
 3. Prepare notification list with owner information
-4. Run [Send-OwnerNotifications.ps1](../scripts/Send-OwnerNotifications.ps1)
+4. Run [Send-OwnerNotifications.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Send-OwnerNotifications.ps1)
 5. Set up trigger-based monitoring (this guide)
 6. Execute force-link after notification period ([Portal Walkthrough](./portal-walkthrough.md))
 

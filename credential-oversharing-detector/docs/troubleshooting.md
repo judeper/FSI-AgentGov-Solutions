@@ -126,6 +126,6 @@ If issues persist after following this guide:
 1. Review flow run history in Power Automate for detailed error messages
 2. Check Dataverse system jobs for schema or import errors
 3. Verify all prerequisites in [Prerequisites](prerequisites.md) are met
-4. Review the solution [README](../README.md) for known limitations
+4. Review the solution [README](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) for known limitations
 
 > **Note:** This solution aids in meeting credential governance requirements under GLBA Section 501(b) safeguard standards and supports compliance with OCC 2011-12 operational risk guidance. It is recommended to validate that the implementation addresses your organization's specific regulatory obligations.

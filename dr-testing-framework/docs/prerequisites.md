@@ -65,7 +65,7 @@ The `fsi_drtestresult` table must exist in the target Dataverse environment befo
 - **Manual creation** — Follow the column definitions in [dataverse-schema.md](dataverse-schema.md)
 - **Schema script** — Run `create_drt_dataverse_schema.py` (when available) with `--output-docs` to generate schema documentation
 
-> **Note:** A deployable Power Platform solution package for automated schema deployment is planned. Until then, create the table manually as described in the [README](../README.md#deployment).
+> **Note:** A deployable Power Platform solution package for automated schema deployment is planned. Until then, create the table manually as described in the [README](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/dr-testing-framework/README.md#deployment).
 
 ## Network Requirements
 

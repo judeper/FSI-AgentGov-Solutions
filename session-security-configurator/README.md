@@ -235,15 +235,15 @@ SSC validates six session security dimensions:
 
 ## Documentation
 
-- [Prerequisites](docs/PREREQUISITES.md) — Licensing, roles, and module requirements
-- [Dataverse Schema](docs/DATAVERSE-SCHEMA.md) — Table and option set reference
-- [Flow Setup](docs/FLOW_SETUP.md) — Power Automate daily validation configuration
-- [Evidence Export Guide](docs/EVIDENCE-EXPORT-GUIDE.md) — Compliance evidence export instructions
-- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common issues and resolutions
+- [Prerequisites](docs/prerequisites.md) — Licensing, roles, and module requirements
+- [Dataverse Schema](docs/dataverse-schema.md) — Table and option set reference
+- [Flow Setup](docs/flow-setup.md) — Power Automate daily validation configuration
+- [Evidence Export Guide](docs/evidence-export-guide.md) — Compliance evidence export instructions
+- [Troubleshooting](docs/troubleshooting.md) — Common issues and resolutions
 
 ## Configuration Placeholders
 
-Flow-specific placeholders (tenant domain, Dataverse URL, certificate thumbprint, Teams channel IDs, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/FLOW_SETUP.md) for step-by-step instructions.
+Flow-specific placeholders (tenant domain, Dataverse URL, certificate thumbprint, Teams channel IDs, etc.) are configured when manually building the Power Automate flow. See [docs/FLOW_SETUP.md](docs/flow-setup.md) for step-by-step instructions.
 
 ## Platform Update Notes
 
