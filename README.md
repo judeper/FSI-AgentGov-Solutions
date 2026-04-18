@@ -24,7 +24,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Conditional Access Automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.2.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone-specific governance requirements | v1.1.0 | 1.27, 1.8 |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | v2.0.0 | 3.2 |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | v1.0.1 | 1.14, 1.4, 1.18 |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | v2.0.0 | 1.14, 1.4, 1.18 |
 | [Cross-Solution Integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | v1.0.2 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
 | [Cross-Tenant and External Sharing Governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.2 |  1.1, 1.18, 2.1, 2.8, 1.7, 1.11 |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily deny event correlation across Purview Audit, DLP, and Application Insights | v2.0.2 | 1.5, 1.7, 1.8, 3.4 |

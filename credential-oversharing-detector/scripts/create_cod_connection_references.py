@@ -33,10 +33,10 @@ CONNECTION_REFS = [
         "description": "Approvals connection for exception workflows",
     },
     {
-        "logical_name": "fsi_cr_powerplatformadmin_credentialoversharing",
-        "display_name": "Power Platform for Admins - COD",
-        "connector": "shared_powerappsforadmins",
-        "description": "Power Platform Admin for environment scanning",
+        "logical_name": "fsi_cr_powerplatformadminv2_credentialoversharing",
+        "display_name": "Power Platform for Admins V2 - COD",
+        "connector": "shared_powerplatformforadmins",
+        "description": "Power Platform for Admins V2 (covers Copilot Studio bot/environment control-plane actions). Do not use the legacy shared_powerappsforadmins connector for bot/agent enumeration.",
     },
 ]
 
@@ -120,7 +120,7 @@ Connection references created:
   - fsi_cr_dataverse_credentialoversharing (Dataverse connector)
   - fsi_cr_teams_credentialoversharing (Teams connector)
   - fsi_cr_approvals_credentialoversharing (Approvals connector)
-  - fsi_cr_powerplatformadmin_credentialoversharing (Power Platform for Admins connector)
+  - fsi_cr_powerplatformadminv2_credentialoversharing (Power Platform for Admins V2 connector)
 
 These connection references must be bound to actual connections in Power Automate
 before flows can use them.

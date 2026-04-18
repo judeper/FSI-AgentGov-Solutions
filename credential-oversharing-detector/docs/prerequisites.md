@@ -25,10 +25,14 @@
 
 ### Microsoft Entra ID
 
-| Permission | Type | Purpose |
+The PowerShell scanners do **not** call Microsoft Graph today. If you extend
+this solution to enrich findings with app registration metadata or service
+principal ownership, the minimal least-privilege scopes are:
+
+| Permission | Type | Purpose (only if Graph enrichment is enabled) |
 |-----------|------|---------|
-| `Application.Read.All` | Application | Query service principal configurations and OAuth scope assignments |
-| `Directory.Read.All` | Application | Resolve app registration details and ownership information |
+| `Application.Read.All` | Application | Read app registration metadata |
+| `ServicePrincipal.Read.All` | Application | Read service principal metadata (preferred over `Directory.Read.All`) |
 
 ### Service Principal Setup
 
@@ -50,7 +54,7 @@ The following endpoints must be accessible from the execution environment:
 
 ## Environment Lifecycle Management Integration
 
-If using the Environment Lifecycle Management (ELM) solution, zone classification is read from Dataverse automatically. Otherwise, the scanner falls back to environment naming convention heuristics.
+If using the Environment Lifecycle Management (ELM) solution, zone classification is read from the `fsi_environments` Dataverse table automatically. Otherwise, environments resolve to `Unknown` zone and policy is applied per the `Unknown` entry in `templates/zone-credential-policy.json`. (Naming-convention fallback heuristics are not implemented in this version — use ELM or pre-populate `fsi_environments` for accurate zone resolution.)
 
 ## Important Notes
 

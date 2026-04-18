@@ -103,10 +103,23 @@ param(
 
     [Parameter()]
     [ValidateSet('Table', 'JSON', 'Object')]
-    [string]$OutputFormat = 'Table'
+    [string]$OutputFormat = 'Table',
+
+    [Parameter()]
+    [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+    [string]$Cloud = 'Public'
 )
 
 $ErrorActionPreference = "Stop"
+
+$cloudConfig = switch ($Cloud) {
+    'Public'    { @{ Authority = 'https://login.microsoftonline.com'; PowerPlatform = 'https://api.powerplatform.com'; PpEndpoint = 'prod' } }
+    'USGov'     { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.gov.powerplatform.microsoft.us'; PpEndpoint = 'usgov' } }
+    'USGovHigh' { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.high.powerplatform.microsoft.us'; PpEndpoint = 'usgovhigh' } }
+    'USGovDoD'  { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.appsplatform.us'; PpEndpoint = 'dod' } }
+    'China'     { @{ Authority = 'https://login.chinacloudapi.cn'; PowerPlatform = 'https://api.powerplatform.partner.microsoftonline.cn'; PpEndpoint = 'china' } }
+    'Germany'   { @{ Authority = 'https://login.microsoftonline.de'; PowerPlatform = 'https://api.powerplatform.microsoftonline.de'; PpEndpoint = 'germany' } }
+}
 
 #region Helper: Get-AccessToken
 
@@ -130,7 +143,7 @@ function Get-AccessToken {
         [string]$Resource
     )
 
-    $tokenEndpoint = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+    $tokenEndpoint = "$($cloudConfig.Authority)/$TenantId/oauth2/v2.0/token"
     $scope = "$($Resource.TrimEnd('/'))/.default"
     $plainSecret = $ClientSecret | ConvertFrom-SecureString -AsPlainText
 
@@ -177,11 +190,22 @@ if (-not $ClientSecret) { throw "ClientSecret is required. Provide -ClientSecret
 Write-Host "  Resolving environment Dataverse URL..." -ForegroundColor Cyan
 
 $ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
-    -ClientSecret $ClientSecret -Resource "https://api.powerplatform.com"
+    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform
 
 $ppHeaders = @{
     "Authorization" = "Bearer $ppToken"
     "Content-Type"  = "application/json"
+}
+
+# Authenticate the Power Apps Administration module so Get-AdminPowerAppEnvironment
+# resolves under unattended (service principal) execution.
+try {
+    $plainSecretForModule = $ClientSecret | ConvertFrom-SecureString -AsPlainText
+    Add-PowerAppsAccount -Endpoint $cloudConfig.PpEndpoint -TenantID $TenantId `
+        -ApplicationId $ClientId -ClientSecret $plainSecretForModule | Out-Null
+}
+catch {
+    Write-Host "  Warning: Add-PowerAppsAccount failed - $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 $environments = Get-AdminPowerAppEnvironment
@@ -218,11 +242,12 @@ $envHeaders = @{
 
 $envApiBase = "$($envUrl.TrimEnd('/'))/api/data/v9.2"
 
-$botSelect = "botid,name,schemaname,configuration,accesscontrolpolicy,publishedon,modifiedon"
+$botSelect = "botid,name,schemaname,configuration,publishedon,modifiedon"
 $botUrl = "$envApiBase/bots?`$select=$botSelect"
 
 if ($AgentId) {
-    $botUrl += "&`$filter=botid eq '$AgentId'"
+    # OData GUIDs must NOT be quoted as strings.
+    $botUrl += "&`$filter=botid eq $AgentId"
 }
 
 $agents = [System.Collections.ArrayList]::new()
@@ -387,7 +412,8 @@ switch ($OutputFormat) {
         }
     }
     'JSON' {
-        $results | ConvertTo-Json -Depth 10
+        Write-Host "`n  Query: COMPLETE" -ForegroundColor Green
+        return ($results | ConvertTo-Json -Depth 10)
     }
     'Object' {
         $results

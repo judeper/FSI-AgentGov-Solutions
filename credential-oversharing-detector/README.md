@@ -141,9 +141,9 @@ Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build 
 
 | Control | Relationship |
 |---------|-------------|
-| **1.14 — Content & Data Loss Prevention** | Supports least-privilege review for agent data connections and connector credentials |
-| **1.4 — Approved Connector Governance** | Helps document governance for approved connector configurations and authentication patterns |
-| **1.18 — Agent Sharing Controls** | Adds credential-scope context to agent sharing reviews |
+| **1.14 — Data Minimization and Agent Scope Control** | Supports least-privilege review by detecting when agent connector OAuth scopes exceed declared zone limits |
+| **1.4 — Advanced Connector Policies (ACP)** | Provides configuration-time visibility into connector credential scope alongside ACP rule enforcement |
+| **1.18 — Application-Level Authorization and RBAC** | Adds credential-scope context to agent sharing reviews; sharing controls live in Agent Sharing Access Restriction Detector |
 
 ## Boundary with Existing Solutions
 
@@ -179,6 +179,7 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.0.0 | April 2026 | BREAKING: AI Council review fixes — switch→bool params, JSON-only return, single scan-record write, V2 PP connector, sovereign-cloud, multi-connector evaluation, regulatory citation accuracy. See CHANGELOG. |
 | v1.0.1 | April 2026 | Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation, and templates |
 | v0.1.0-preview | March 2026 | Initial documentation-only placeholder |
 

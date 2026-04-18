@@ -53,14 +53,14 @@
 
 .EXAMPLE
     .\Export-CredentialEvidence.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" -Interactive
+        -TenantId "example.onmicrosoft.com" -Interactive
 
     Exports all credential scan results from the past 30 days using interactive
     authentication. Generates JSON evidence file and SHA-256 hash.
 
 .EXAMPLE
     .\Export-CredentialEvidence.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" -Zone "3" `
+        -TenantId "example.onmicrosoft.com" -Zone "3" `
         -FromDate (Get-Date).AddDays(-90) -ToDate (Get-Date) `
         -ClientId "12345..." -CertificateThumbprint "ABCDEF..."
 
@@ -310,12 +310,14 @@ $criticalCount = @($violations | Where-Object { $_.fsi_severity -eq 100000000 })
 $highCount = @($violations | Where-Object { $_.fsi_severity -eq 100000001 }).Count
 $mediumCount = @($violations | Where-Object { $_.fsi_severity -eq 100000002 }).Count
 $lowCount = @($violations | Where-Object { $_.fsi_severity -eq 100000003 }).Count
+$infoCount = @($violations | Where-Object { $_.fsi_severity -eq 100000004 }).Count
 
 $overallStatus = "Compliant"
 if ($criticalCount -gt 0) { $overallStatus = "Critical" }
 elseif ($highCount -gt 0) { $overallStatus = "NonCompliant" }
 elseif ($mediumCount -gt 0) { $overallStatus = "Review" }
 elseif ($lowCount -gt 0) { $overallStatus = "Advisory" }
+elseif ($infoCount -gt 0) { $overallStatus = "Informational" }
 elseif ($scans.Count -eq 0) { $overallStatus = "NoData" }
 
 $evidence = [PSCustomObject]@{
@@ -332,13 +334,14 @@ $evidence = [PSCustomObject]@{
         organizationUrl = $DataverseUrl
     }
     summary    = [PSCustomObject]@{
-        overallStatus      = $overallStatus
-        totalScans         = $scans.Count
-        totalViolations    = $totalViolations
-        criticalViolations = $criticalCount
-        highViolations     = $highCount
-        mediumViolations   = $mediumCount
-        lowViolations      = $lowCount
+        overallStatus           = $overallStatus
+        totalScans              = $scans.Count
+        totalViolations         = $totalViolations
+        criticalViolations      = $criticalCount
+        highViolations          = $highCount
+        mediumViolations        = $mediumCount
+        lowViolations           = $lowCount
+        informationalViolations = $infoCount
     }
     scans      = @($scans)
     violations = @($violations)

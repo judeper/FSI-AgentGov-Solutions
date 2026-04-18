@@ -30,6 +30,11 @@
 | fsi_Zone | fsi_zone | Picklist | No | Governance zone for the scanned environment | **fsi_acv_zone**: `100000000` = Unclassified, `100000001` = Zone 1, `100000002` = Zone 2, `100000003` = Zone 3 |
 | fsi_ScanConfiguration | fsi_scanconfiguration | Memo | No | JSON snapshot of scan configuration at run time |  |
 | fsi_RunBy | fsi_runby | String | No | Identity that initiated the scan run |  |
+| fsi_ScanRunId | fsi_scanrunid | String | No | GUID identifying the scan run |  |
+| fsi_TotalEnvironments | fsi_totalenvironments | Integer | No | Number of environments scanned |  |
+| fsi_OverallStatus | fsi_overallstatus | String | No | Overall compliance status of the scan run |  |
+| fsi_CompliantAgents | fsi_compliantagents | Integer | No | Number of agents that passed all credential checks |  |
+| fsi_ZoneSummary | fsi_zonesummary | Memo | No | JSON summary of per-zone compliance results |  |
 
 ### fsi_CredentialViolation (`fsi_credentialviolation`)
 
@@ -37,6 +42,7 @@
 |---|---|---|---|---|---|
 | fsi_ViolationId | fsi_violationid | String | Yes | Unique violation identifier |  |
 | fsi_AgentId | fsi_agentid | String | Yes | Unique identifier of the agent |  |
+| fsi_ScanRunId | fsi_scanrunid | String | No | GUID of the scan run that detected this violation |  |
 | fsi_AgentName | fsi_agentname | String | No | Display name of the agent |  |
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
 | fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |

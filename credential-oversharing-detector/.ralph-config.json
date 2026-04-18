@@ -1,8 +1,13 @@
 {
   "domainFacts": [
-    "CRITICAL: Scripts use non-schema column names for scan runs (fsi_scanrunid, fsi_scantimestamp, fsi_totalagents, fsi_overallstatus). Schema defines fsi_scanid, fsi_scanstartedat, fsi_scancompletedat, fsi_agentsscanned. Full alignment is required before deployment.",
-    "Zone option set uses values 100000000-100000003 (not 0/1/2). Scripts must convert zone integers to the correct option set values before Dataverse writes.",
-    "Violation records require fsi_violationid and fsi_violationstatus (Required). Scripts currently omit these required columns.",
-    "Teams incoming webhooks are deprecated. Adaptive card template references to incoming webhooks should be replaced with Power Automate Workflows or Graph Teams channel posting."
+    "Schema script and PowerShell scripts now align on fsi_scanid, fsi_scanrunid, fsi_scanstartedat, fsi_scancompletedat, fsi_agentsscanned, fsi_compliantagents, fsi_overallstatus, fsi_zonesummary. docs/dataverse-schema.md is auto-generated from create_cod_dataverse_schema.py — regenerate after schema changes.",
+    "Zone option set uses values 100000000 (Unclassified), 100000001 (Zone1), 100000002 (Zone2), 100000003 (Zone3). Scripts convert string zone names to integers via $zoneMap before Dataverse writes.",
+    "Violation records require fsi_violationid (must be unique — scripts append a GUID suffix) and fsi_violationstatus. Flow builders must populate both.",
+    "Teams Incoming Webhooks were retired by Microsoft on 31 Mar 2026. Use Power Automate Teams 'Post adaptive card' action instead. Action.Submit responses require a bot or Workflow endpoint to capture acknowledgement clicks.",
+    "Power Platform connector for bot/environment control-plane is shared_powerplatformforadmins (V2), NOT shared_powerappsforadmins (legacy app/connection-only).",
+    "PowerShell scanners do not call Microsoft Graph today — Graph permissions are documented as optional/future. PP module is authenticated via Add-PowerAppsAccount in service-principal mode for unattended runs.",
+    "The 'accesscontrolpolicy' column does NOT exist on the Dataverse bot entity — do not include it in $select.",
+    "OData GUID filters use unquoted GUIDs (e.g., botid eq 12345678-... NOT botid eq '12345678-...').",
+    "Detection rules currently apply count-based thresholds + name-based heuristics. True semantic comparison of actual scope names against per-agent declared/approved baselines is planned (Tier 2) — see CHANGELOG Known Limitations."
   ]
 }

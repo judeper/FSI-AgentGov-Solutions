@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -93,7 +93,8 @@ param(
     [string]$OutputFormat = 'Table',
 
     [Parameter()]
-    [switch]$ExcludeSandbox,
+    [Parameter()]
+    [bool]$ExcludeSandbox = $true,
 
     [Parameter()]
     [switch]$IncludeCompliant,
@@ -155,10 +156,7 @@ Write-Host "`n  Running credential scan..." -ForegroundColor Cyan
 $scanParams = @{
     OutputFormat     = 'Object'
     IncludeCompliant = $IncludeCompliant.IsPresent
-}
-
-if ($ExcludeSandbox) {
-    $scanParams.ExcludeSandbox = $true
+    ExcludeSandbox   = $ExcludeSandbox
 }
 
 if ($DataverseUrl) {
@@ -183,7 +181,7 @@ catch {
     }
 
     if ($OutputFormat -eq 'JSON') {
-        $errorResult | ConvertTo-Json -Depth 5
+        return ($errorResult | ConvertTo-Json -Depth 5)
     }
 
     return $errorResult
@@ -198,7 +196,21 @@ Write-Host "  Scan completed: $($scanResult.TotalAgents) agents, $($scanResult.T
 Write-Host "`n  Evaluating zone compliance..." -ForegroundColor Cyan
 
 $zoneSummary = [System.Collections.ArrayList]::new()
-$zones = @('Zone1', 'Zone2', 'Zone3', 'Unknown')
+# Derive the zone list from the scan results plus the policy file rather than a
+# hard-coded list, so any zone configured in zone-credential-policy.json (e.g.
+# 'Unclassified', 'Zone4') is summarized.
+$zonesFromScan = @($scanResult.Violations | Select-Object -ExpandProperty Zone -Unique)
+$zonesFromPolicy = @()
+try {
+    $policyJsonPath = Join-Path $PSScriptRoot '..\..\templates\zone-credential-policy.json'
+    if (Test-Path $policyJsonPath) {
+        $policyContent = Get-Content $policyJsonPath -Raw | ConvertFrom-Json
+        if ($policyContent.zones) {
+            $zonesFromPolicy = ($policyContent.zones | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)
+        }
+    }
+} catch {}
+$zones = @($zonesFromScan + $zonesFromPolicy + @('Unknown')) | Select-Object -Unique
 
 foreach ($zoneName in $zones) {
     $zoneViolations = @($scanResult.Violations | Where-Object { $_.Zone -eq $zoneName })
@@ -258,29 +270,38 @@ if ($PersistResults -and $DataverseUrl) {
         "OData-Version"    = "4.0"
         "OData-MaxVersion" = "4.0"
         "Accept"           = "application/json"
+        "If-Match"         = "*"
     }
 
     $dvApiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
-    $complianceRecord = @{
-        fsi_scanid            = "COD-Compliance-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        fsi_scanrunid         = $scanResult.ScanRunId
-        fsi_scanstatus        = if ($scanResult.TotalViolations -eq 0) { 100000000 } else { 100000001 }
+    # The inner Invoke-CredentialScan.ps1 already wrote the fsi_credentialscans
+    # row when -DataverseUrl was passed to it. Patch that row with compliance
+    # rollup fields instead of POSTing a duplicate scan record.
+    $patchRecord = @{
         fsi_overallstatus     = $overallStatus
-        fsi_agentsscanned     = $scanResult.TotalAgents
         fsi_compliantagents   = $totalCompliant
-        fsi_violationsfound   = $scanResult.TotalViolations
-        fsi_scanstartedat     = $scanResult.ScanTimestamp
         fsi_zonesummary       = ($zoneSummary | ConvertTo-Json -Depth 5 -Compress)
     }
 
     try {
-        Invoke-RestMethod -Uri "$dvApiBase/fsi_credentialscans" -Headers $dvHeaders `
-            -Method Post -Body ($complianceRecord | ConvertTo-Json -Depth 5)
-        Write-Host "    Compliance record persisted" -ForegroundColor Green
+        # Find existing scan row by scanrunid, then PATCH by primary key.
+        $lookupHeaders = $dvHeaders.Clone()
+        $lookupHeaders.Remove("If-Match") | Out-Null
+        $lookup = Invoke-RestMethod -Uri "$dvApiBase/fsi_credentialscans?`$select=fsi_credentialscanid&`$filter=fsi_scanrunid eq '$($scanResult.ScanRunId)'" `
+            -Headers $lookupHeaders -Method Get
+        if ($lookup.value -and $lookup.value.Count -gt 0) {
+            $rowId = $lookup.value[0].fsi_credentialscanid
+            Invoke-RestMethod -Uri "$dvApiBase/fsi_credentialscans($rowId)" -Headers $dvHeaders `
+                -Method Patch -Body ($patchRecord | ConvertTo-Json -Depth 5)
+            Write-Host "    Compliance rollup patched onto existing scan row" -ForegroundColor Green
+        }
+        else {
+            Write-Host "    Warning: No existing scan row found for $($scanResult.ScanRunId); skipping rollup" -ForegroundColor Yellow
+        }
     }
     catch {
-        Write-Host "    Warning: Failed to persist compliance record - $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "    Warning: Failed to patch compliance rollup - $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
@@ -323,7 +344,8 @@ switch ($OutputFormat) {
         }
     }
     'JSON' {
-        $complianceResult | ConvertTo-Json -Depth 10
+        Write-Host "`n  Compliance Test: COMPLETE" -ForegroundColor Green
+        return ($complianceResult | ConvertTo-Json -Depth 10)
     }
     'Object' {
         # Return raw object (emitted below)

@@ -112,10 +112,10 @@
 
 ### Dataverse throttling (429 errors)
 
-- The PowerShell scripts include built-in retry with exponential backoff for 429 responses
-- Reduce concurrency in Power Automate flows to 1 to avoid parallel write conflicts
-- Space out parallel scans across environments by adding delay actions
-- Monitor the `Retry-After` header to understand throttling duration
+- This release of the PowerShell scripts does **not** implement automatic retry/backoff for 429 responses — failures will surface immediately. Schedule scans accordingly and consider wrapping calls with your own retry policy in Power Automate (use a Scope with run-after configured, or the HTTP action's built-in retry policy).
+- Reduce concurrency in Power Automate flows to 1 to avoid parallel write conflicts.
+- Space out parallel scans across environments by adding delay actions.
+- Inspect the `Retry-After` header on 429 responses to understand throttling duration.
 
 ---
 

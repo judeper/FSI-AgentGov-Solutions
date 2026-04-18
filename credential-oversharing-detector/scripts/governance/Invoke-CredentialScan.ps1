@@ -117,7 +117,7 @@ param(
     [string[]]$EnvironmentFilter,
 
     [Parameter()]
-    [switch]$ExcludeSandbox = $true,
+    [bool]$ExcludeSandbox = $true,
 
     [Parameter()]
     [string]$DataverseUrl,
@@ -131,8 +131,22 @@ param(
     [int]$MaxOAuthScopeThreshold = 10,
 
     [Parameter()]
-    [switch]$IncludeCompliant
+    [switch]$IncludeCompliant,
+
+    [Parameter()]
+    [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+    [string]$Cloud = 'Public'
 )
+
+# Map cloud to OAuth authority and Power Platform base URL
+$cloudConfig = switch ($Cloud) {
+    'Public'    { @{ Authority = 'https://login.microsoftonline.com'; PowerPlatform = 'https://api.powerplatform.com' } }
+    'USGov'     { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.gov.powerplatform.microsoft.us' } }
+    'USGovHigh' { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.high.powerplatform.microsoft.us' } }
+    'USGovDoD'  { @{ Authority = 'https://login.microsoftonline.us'; PowerPlatform = 'https://api.appsplatform.us' } }
+    'China'     { @{ Authority = 'https://login.chinacloudapi.cn'; PowerPlatform = 'https://api.powerplatform.partner.microsoftonline.cn' } }
+    'Germany'   { @{ Authority = 'https://login.microsoftonline.de'; PowerPlatform = 'https://api.powerplatform.microsoftonline.de' } }
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -158,7 +172,7 @@ function Get-AccessToken {
         [string]$Resource
     )
 
-    $tokenEndpoint = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+    $tokenEndpoint = "$($cloudConfig.Authority)/$TenantId/oauth2/v2.0/token"
     $scope = "$($Resource.TrimEnd('/'))/.default"
     $plainSecret = $ClientSecret | ConvertFrom-SecureString -AsPlainText
 
@@ -221,11 +235,31 @@ if (-not (Test-Path $policyScriptPath)) {
 Write-Host "`n  Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
 
 $ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
-    -ClientSecret $ClientSecret -Resource "https://api.powerplatform.com"
+    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform
 
 $ppHeaders = @{
     "Authorization" = "Bearer $ppToken"
     "Content-Type"  = "application/json"
+}
+
+# Authenticate the Power Apps Administration module so Get-AdminPowerAppEnvironment
+# works in unattended (service principal) mode. Without this the cmdlet falls back
+# to whatever interactive session is cached (or fails in CI).
+try {
+    $plainSecretForModule = $ClientSecret | ConvertFrom-SecureString -AsPlainText
+    $endpointMap = @{
+        'Public'    = 'prod'
+        'USGov'     = 'usgov'
+        'USGovHigh' = 'usgovhigh'
+        'USGovDoD'  = 'dod'
+        'China'     = 'china'
+        'Germany'   = 'germany'
+    }
+    Add-PowerAppsAccount -Endpoint $endpointMap[$Cloud] -TenantID $TenantId `
+        -ApplicationId $ClientId -ClientSecret $plainSecretForModule | Out-Null
+}
+catch {
+    Write-Host "  Warning: Add-PowerAppsAccount failed - $($_.Exception.Message). Cmdlet calls may fail under unattended runs." -ForegroundColor Yellow
 }
 
 # Acquire Dataverse token if persistence is requested
@@ -262,8 +296,10 @@ if ($EnvironmentFilter) {
 }
 
 if ($ExcludeSandbox) {
+    # EnvironmentType is the documented surface ('Production'/'Sandbox'/'Trial'/'Developer'/'Default').
+    # Internal.properties.environmentSku is not consistently populated for all SKUs.
     $environments = $environments | Where-Object {
-        $_.Internal.properties.environmentSku -ne "Sandbox"
+        $_.EnvironmentType -ne "Sandbox"
     }
 }
 
@@ -292,15 +328,19 @@ foreach ($env in $environments) {
             if ($zoneResponse.value -and $zoneResponse.value.Count -gt 0) {
                 $zoneValue = $zoneResponse.value[0].fsi_zoneclassification
                 $zone = switch ($zoneValue) {
+                    100000000 { "Unclassified" }
                     100000001 { "Zone1" }
                     100000002 { "Zone2" }
                     100000003 { "Zone3" }
                     default { "Unknown" }
                 }
             }
+            else {
+                Write-Host "    Warning: Zone classification empty for $envDisplayName (env may not be ELM-registered)" -ForegroundColor Yellow
+            }
         }
         catch {
-            Write-Host "    Warning: Could not resolve zone for $envDisplayName" -ForegroundColor Yellow
+            Write-Host "    Warning: Could not resolve zone for $envDisplayName - $($_.Exception.Message)" -ForegroundColor Yellow
         }
     }
 
@@ -340,7 +380,9 @@ foreach ($env in $environments) {
         continue
     }
 
-    $botUrl = "$envApiBase/bots?`$select=botid,name,schemaname,configuration,accesscontrolpolicy"
+    # NOTE: 'accesscontrolpolicy' is NOT a column on the bot entity in Dataverse;
+    # access control is modeled via related botcomponent / sharing entities.
+    $botUrl = "$envApiBase/bots?`$select=botid,name,schemaname,configuration,statecode,statuscode"
     $agents = [System.Collections.ArrayList]::new()
     while ($botUrl) {
         try {
@@ -358,6 +400,26 @@ foreach ($env in $environments) {
 
     Write-Host "    Agents found: $($agents.Count)" -ForegroundColor Gray
 
+    # Pre-build connection-id index for SharedCredentialMisuse — parse each agent's
+    # configuration ONCE and map agentId -> [connectionIds]. Avoids regex false
+    # positives against the raw configuration JSON string.
+    $agentConnectionIndex = @{}
+    foreach ($a in $agents) {
+        $aId = $a.botid
+        $cIds = @()
+        if ($a.configuration) {
+            try {
+                $cfg = $a.configuration | ConvertFrom-Json -ErrorAction SilentlyContinue
+                if ($cfg -and $cfg.connectorConfigurations) {
+                    foreach ($c in $cfg.connectorConfigurations) {
+                        if ($c.connectionId) { $cIds += $c.connectionId }
+                    }
+                }
+            } catch {}
+        }
+        $agentConnectionIndex[$aId] = $cIds
+    }
+
     foreach ($agent in $agents) {
         $agentCount++
         $agentId = $agent.botid
@@ -369,7 +431,7 @@ foreach ($env in $environments) {
         $oauthScopes = @()
         $servicePrincipalId = $null
         $credentialAge = $null
-        $credentialId = $null
+        $credentialIds = @()  # ALL connection IDs on this agent (multi-connector aware)
 
         try {
             $configJson = $null
@@ -391,7 +453,7 @@ foreach ($env in $environments) {
                             $oauthScopes += @($conn.oauthScopes)
                         }
                         if ($conn.connectionId) {
-                            $credentialId = $conn.connectionId
+                            $credentialIds += $conn.connectionId
                         }
                     }
                 }
@@ -472,9 +534,10 @@ foreach ($env in $environments) {
         }
 
         # --- Rule 4: CrossEnvironmentCredential ---
-        if ($credentialId) {
-            if ($credentialRegistry.ContainsKey($credentialId)) {
-                $otherEnv = $credentialRegistry[$credentialId]
+        # Evaluate EVERY connection ID on this agent (not just the last seen).
+        foreach ($credId in ($credentialIds | Select-Object -Unique)) {
+            if ($credentialRegistry.ContainsKey($credId)) {
+                $otherEnv = $credentialRegistry[$credId]
                 if ($otherEnv.EnvironmentId -ne $envId) {
                     $allowCross = if ($policy) { $policy.AllowCrossEnvironment } else { $false }
                     if (-not $allowCross) {
@@ -488,16 +551,16 @@ foreach ($env in $environments) {
                             Zone              = $zone
                             ViolationType     = "CrossEnvironmentCredential"
                             Severity          = $severity
-                            Description       = "Credential '$credentialId' is also used in environment '$($otherEnv.EnvironmentName)'"
+                            Description       = "Credential '$credId' is also used in environment '$($otherEnv.EnvironmentName)'"
                             DetectedAt        = $scanTimestamp
-                            SharedCredentialId = $credentialId
+                            SharedCredentialId = $credId
                             OtherEnvironment  = $otherEnv.EnvironmentName
                         })
                     }
                 }
             }
             else {
-                $credentialRegistry[$credentialId] = @{
+                $credentialRegistry[$credId] = @{
                     EnvironmentId   = $envId
                     EnvironmentName = $envDisplayName
                     AgentId         = $agentId
@@ -507,13 +570,16 @@ foreach ($env in $environments) {
         }
 
         # --- Rule 5: SharedCredentialMisuse ---
-        if ($credentialId -and $policy -and -not $policy.AllowSharedCredentials) {
-            $sharedAgents = $agents | Where-Object {
-                $_.botid -ne $agentId -and
-                $_.configuration -and
-                ($_.configuration -match [regex]::Escape($credentialId))
+        # Use the parsed per-agent connection index to find true shared usage.
+        if ($credentialIds.Count -gt 0 -and $policy -and -not $policy.AllowSharedCredentials) {
+            $sharedCount = 0
+            foreach ($otherAgentId in $agentConnectionIndex.Keys) {
+                if ($otherAgentId -eq $agentId) { continue }
+                $otherIds = $agentConnectionIndex[$otherAgentId]
+                $overlap = $credentialIds | Where-Object { $_ -in $otherIds }
+                if ($overlap.Count -gt 0) { $sharedCount++ }
             }
-            if ($sharedAgents.Count -gt 0) {
+            if ($sharedCount -gt 0) {
                 $severity = if ($policy) { $policy.ViolationSeverities.SharedCredentialMisuse } else { "Medium" }
                 [void]$agentViolations.Add([PSCustomObject]@{
                     ScanRunId          = $scanRunId
@@ -524,10 +590,10 @@ foreach ($env in $environments) {
                     Zone               = $zone
                     ViolationType      = "SharedCredentialMisuse"
                     Severity           = $severity
-                    Description        = "Credential shared with $($sharedAgents.Count) other agent(s) in zone that requires individual credentials"
+                    Description        = "Credential(s) shared with $sharedCount other agent(s) in zone that requires individual credentials"
                     DetectedAt         = $scanTimestamp
-                    SharedCredentialId = $credentialId
-                    SharedWithCount    = $sharedAgents.Count
+                    SharedCredentialId = ($credentialIds -join ',')
+                    SharedWithCount    = $sharedCount
                 })
             }
         }
@@ -605,10 +671,12 @@ if ($DataverseUrl -and $dvHeaders) {
     }
 
     # Write scan record
+    $scanCompletedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     $scanRecord = @{
         fsi_scanid            = "COD-Scan-$scanRunId"
         fsi_scanrunid         = $scanRunId
         fsi_scanstartedat     = $scanTimestamp
+        fsi_scancompletedat   = $scanCompletedAt
         fsi_totalenvironments = $envCount
         fsi_agentsscanned     = $agentCount
         fsi_violationsfound   = $violations.Count
@@ -626,8 +694,11 @@ if ($DataverseUrl -and $dvHeaders) {
 
     # Write violation records
     foreach ($v in $violations) {
+        # Append a GUID suffix so multiple violations of the same type for the same
+        # agent within one scan run produce unique primary keys.
+        $vidSuffix = [guid]::NewGuid().ToString('N').Substring(0,8)
         $violationRecord = @{
-            fsi_violationid     = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))"
+            fsi_violationid     = "COD-$($v.ViolationType)-$($v.AgentId.Substring(0, [Math]::Min(8, $v.AgentId.Length)))-$vidSuffix"
             fsi_scanrunid       = $scanRunId
             fsi_agentid         = $v.AgentId
             fsi_agentname       = $v.AgentName
@@ -720,7 +791,10 @@ switch ($OutputFormat) {
         if ($IncludeCompliant) {
             $jsonOutput["compliantAgents"] = @($compliantAgents)
         }
-        $jsonOutput | ConvertTo-Json -Depth 10
+        # Emit JSON only — do NOT fall through to the PSCustomObject return below
+        # which would pollute machine-parseable output.
+        Write-Host "`n  Scan: COMPLETE" -ForegroundColor Green
+        return ($jsonOutput | ConvertTo-Json -Depth 10)
     }
     'Object' {
         # Return handled by #region Return Summary below

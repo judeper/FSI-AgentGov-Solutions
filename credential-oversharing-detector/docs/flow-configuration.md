@@ -9,7 +9,7 @@ Manual build instructions for Power Automate flows supporting the Credential Ove
 | `fsi_cr_dataverse_credentialoversharing` | Dataverse | Read/write scan results and violations |
 | `fsi_cr_teams_credentialoversharing` | Teams | Send alert notifications to governance channel |
 | `fsi_cr_approvals_credentialoversharing` | Approvals | Exception request approval workflows |
-| `fsi_cr_powerplatformadmin_credentialoversharing` | Power Apps for Admins | Query environment and agent configurations |
+| `fsi_cr_powerplatformadminv2_credentialoversharing` | Power Platform for Admins V2 | Query environment and agent (bot) configurations. **Do not use the legacy Power Apps for Admins connector** — Copilot Studio bot and environment control-plane actions live in V2. |
 
 Create each connection reference in your solution before building the flows. Bind them to connections authenticated with accounts that have the permissions described in [Prerequisites](prerequisites.md).
 
@@ -40,13 +40,19 @@ Create each connection reference in your solution before building the flows. Bin
 ### Steps
 
 1. **Get environment variable** — read `fsi_COD_DataverseUrl`
-2. **List environments** — use Power Apps for Admins connector
+2. **List environments** — use Power Platform for Admins V2 connector
 3. **Apply to each environment:**
    a. List agents (bots) in the environment
    b. For each agent, get connector configurations
    c. Evaluate connector OAuth scopes against zone policy
-   d. If violations found, create `fsi_credentialviolations` rows
+   d. If violations found, create `fsi_credentialviolations` rows (see required columns below)
 4. **Create scan record** — write `fsi_credentialscans` with summary
+
+> **Required columns when inserting Dataverse rows:**
+> - `fsi_credentialscans` requires `fsi_scanid` (string), `fsi_scanrunid` (string), `fsi_scanstartedat` (datetime), `fsi_scanstatus` (option set: 100000000 Completed / 100000001 CompletedWithFindings / 100000002 Failed / 100000003 InProgress).
+> - `fsi_credentialviolations` requires `fsi_violationid` (string, must be unique — append a GUID suffix), `fsi_violationstatus` (option set: 100000000 Open / 100000001 Acknowledged / 100000002 ExceptionApproved / 100000003 Remediated / 100000004 Closed), `fsi_severity`, `fsi_violationtype`, `fsi_zone`.
+> - `fsi_credentialexceptions` requires `fsi_exceptionid` (string), `fsi_justification` (multiline string), `fsi_exceptionstatus` (option set: 100000000 Pending / 100000001 Approved / 100000002 Rejected / 100000003 Expired).
+> See `docs/dataverse-schema.md` for the full column list and option-set values.
 5. **Condition: violations found?**
    - **Yes:** Post adaptive card to Teams channel
    - **No:** Log successful scan
@@ -120,4 +126,4 @@ After building flows, perform the following validation steps:
 4. **Test exception approval** — submit an exception, approve it, and verify status transitions end-to-end
 5. **Review flow run history** — check for warnings or errors in each flow's run history
 
-> **Note:** These flows support compliance with FINRA Rule 3110 supervision requirements and SEC 17a-3/4 record-keeping obligations. Organizations should verify their specific implementation helps meet applicable regulatory requirements.
+> **Note:** These flows produce supporting evidence for FINRA Rule 3110 supervision, GLBA 501(b) safeguards, and SEC 17a-3/4 record-keeping reviews. They are management-reporting metrics — not standalone regulator-grade evidence. Organizations should verify their specific implementation helps meet applicable obligations.
