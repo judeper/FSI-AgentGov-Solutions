@@ -51,7 +51,16 @@ See [Secrets Management](docs/secrets-management.md) for detailed steps.
 - Dataverse environment (included with most Power Platform licenses)
 - Power Automate Premium license (required for Dataverse and HTTP connectors)
 
-### 4. DLP Policy (If Applicable)
+### 4. Dataverse Application User (required for governance scripts)
+
+The PowerShell governance scripts call the Dataverse Web API as the same app registration used for Microsoft Graph. Without an application user with read/write access to `fsi_messagecenterlog`, the scripts will fail with `401 Unauthorized` or `403 Forbidden`.
+
+1. Power Platform admin center → **Environments** → select your environment → **Settings** → **Users + permissions** → **Application users** → **+ New app user**
+2. Add the app from Step 1 by Application (client) ID
+3. Assign a security role with read/write/append/append-to access to `fsi_messagecenterlog` (a custom role scoped to the table is recommended; **System Administrator** is acceptable for non-prod)
+4. Confirm the application user appears under **Application users** with status **Enabled**
+
+### 5. DLP Policy (If Applicable)
 
 If your environment has DLP policies:
 
@@ -62,34 +71,29 @@ If your environment has DLP policies:
 
 ## Quick Start
 
-### Step 1: Create the Dataverse Table
+### Step 1: Deploy the Dataverse Schema
 
-Create a table named `MessageCenterLog` with these columns:
+The packaged schema uses the `fsi_` publisher prefix and is the **canonical deployment path** — the included PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageCenterAssessmentStatus.ps1`, `Export-MessageCenterEvidence.ps1`) all target `fsi_messagecenterlog`. Manual table creation under a different publisher prefix (such as a tenant default `cr123_`) is **not supported** by the shipped automation.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| messagecenterId | Text (Primary) | MC###### format |
-| title | Text (500) | Post title |
-| category | Choice | Feature, Admin, Security |
-| severity | Choice | High, Normal, Critical |
-| services | Text (2000) | Comma-separated service names |
-| startDateTime | DateTime | When post was published |
-| actionRequiredByDateTime | DateTime | Deadline for action (if any) |
-| lastModifiedDateTime | DateTime | When Microsoft last updated this post |
-| endDateTime | DateTime | When the post ends |
-| isMajorChange | Yes/No | Microsoft's flag for significant changes |
-| body | Multiline Text (max length: 100,000+) | Full post content (HTML). Set the maximum length to at least 100,000 characters to avoid silent truncation of long posts (Dataverse defaults to 2,000 in some creation paths). |
-| assessmentStatus | Choice | Not Assessed, Reviewed, Impacts Agents, No Impact |
-| assessment | Multiline Text | Your team's assessment notes |
-| impactsAgents | Yes/No | Does this affect your agents? |
-| assessedBy | Text (200) | Who reviewed this post |
-| assessedDate | DateTime | When it was reviewed |
-| actionsTaken | Multiline Text | Notes on response/remediation |
-| tags | Text (1000) | Comma-separated tags |
-| hasAttachments | Yes/No | Whether the post has attachments |
-| notifiedOn | DateTime | When Teams notification was sent (prevents duplicates) |
+Run the schema script to create the table, columns, option sets, and alternate key:
 
-> **Naming Convention Note:**Dataverse uses two naming systems. **Display names** (shown in the table above) are human-readable labels you see in Power Apps. **Logical names** (used in flows and code) include your environment's publisher prefix, e.g., `cr123_messagecenterId`. When configuring Power Automate, use the logical names. Your publisher prefix (e.g., `cr123_`) is specific to your environment—see [Teams Integration](docs/teams-integration.md#finding-your-publisher-prefix) for how to find it.
+```bash
+python scripts/create_mcm_dataverse_schema.py \
+    --tenant-id <tenant-guid> \
+    --client-id <app-id> \
+    --client-secret <secret> \
+    --environment-url https://<org>.crm.dynamics.com \
+    --output-docs
+```
+
+The script provisions:
+
+- Table: `fsi_messagecenterlog` (entity set `fsi_messagecenterlogs`)
+- 20 columns (see `docs/dataverse-schema.md` for the auto-generated reference, including required columns, MaxLength, and option-set integer values)
+- 3 global option sets: `fsi_MCM_messagecategory`, `fsi_MCM_messageseverity`, `fsi_MCM_assessmentstatus`
+- Alternate key on `fsi_messagecenterid` (used by Sync upsert)
+
+> **Naming Convention Note:** Dataverse uses two naming systems. **Display names** (in the schema script) are human-readable labels shown in Power Apps. **Logical names** are always all-lowercase with the publisher prefix (e.g., `fsi_messagecenterid` — Dataverse does NOT insert underscores between words). When configuring Power Automate, OData queries, or scripts, always use the logical name.
 
 ### Step 2: Create the Power Automate Flow
 
@@ -100,7 +104,7 @@ See [Flow Configuration](docs/flow-configuration.md) for complete flow creation 
 1. Trigger: Daily recurrence (e.g., 9 AM)
 2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
-4. For each message: Upsert to Dataverse using messagecenterId
+4. For each message: Upsert to Dataverse using messagecenterid
 5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
 6. Teams notification: Post adaptive card to your channel
 
@@ -154,7 +158,7 @@ This solution uses a single table design for simplicity:
 
 ```
 MessageCenterLog
-├── messagecenterId (PK, MC######)
+├── messagecenterid (PK, MC######)
 ├── title
 ├── category (Feature/Admin/Security)
 ├── severity (High/Normal/Critical)

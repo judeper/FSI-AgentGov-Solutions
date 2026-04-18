@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.3.0] - 2026-04-17
+
+### Fixed
+- **High:** README Step 1 "Quick Start" walked admins through manually creating a `MessageCenterLog` table with a tenant-default publisher prefix (e.g., `cr123_`). The shipped PowerShell governance scripts hardcode the `fsi_` prefix, so manual deployments would 404 on every Sync/Status/Export operation. README Step 1 now points to `python scripts/create_mcm_dataverse_schema.py` as the canonical deployment path and explicitly states that an alternate prefix is unsupported.
+- **High:** Flow-configuration Switch examples mapped Microsoft Graph category/severity enums to text labels (`Feature`, `High`) instead of the option-set integer values (`100000000`/`100000001`/`100000002`) defined in the schema. Power Automate would have failed at the Update Row step. Switch cases now use the canonical option-set integers and reference the schema source of truth.
+- **High:** Dataverse application-user prerequisite was missing from the README. The PowerShell governance scripts call the Dataverse Web API as the same Entra app used for Microsoft Graph and would 401/403 without a Dataverse app user. README "Prerequisites" now includes a dedicated "Dataverse Application User" step covering app-user creation and security-role assignment.
+- **High:** All `cr123_` placeholder publisher-prefix references across `README.md`, `docs/flow-configuration.md`, `docs/teams-integration.md`, and `docs/setup-checklist.md` normalized to the canonical `fsi_` prefix that matches the schema script and governance scripts.
+- **High:** Logical name `cr123_messagecenterId` (uppercase `Id`) corrected to `cr123_messagecenterid` across docs — Dataverse logical names are always all-lowercase and never insert underscores between words.
+
+### Changed
+- **Medium:** `Invoke-MessageCenterSync.ps1` now uses an `Invoke-MCMRest` helper that honors `Retry-After` for HTTP `429`/`503` responses with exponential-backoff fallback (max 5 retries). Previously, a single Graph or Dataverse throttling response aborted the entire sync.
+- **Medium:** `Invoke-MessageCenterSync.ps1` now tracks per-record persistence failures (`FailedRecords` count + `FailedMessageIds` list) and exits non-zero when any Dataverse operation fails. Previously, partial failures were logged as warnings and the script exited 0, hiding silent data loss from scheduled runs (Azure Automation, Logic Apps, GitHub Actions).
+- **Medium:** `Invoke-MessageCenterSync.ps1` truncates `fsi_body` to 99,990 characters with a `[truncated — original length N chars]` marker when an inbound Microsoft 365 Message Center HTML body exceeds the column's MaxLength. Previously, oversized bodies failed the upsert silently.
+- **Medium:** `Get-MessageCenterAssessmentStatus.ps1` now defaults `TenantId`/`ClientId` to `$env:AZURE_TENANT_ID`/`$env:AZURE_CLIENT_ID` (matching the Sync script) and validates them before MSAL calls so missing values produce a clear error rather than an opaque MSAL exception.
+- **Low:** Regulatory citations in `Export-MessageCenterEvidence.ps1` and `Test-EvidenceIntegrity.ps1` updated to canonical forms (`FINRA Rule 4511(a)`, `SOX Section 302 / SOX Section 404`).
+
 ## [2.2.0] - 2026-04-10
 
 ### Added

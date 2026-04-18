@@ -39,7 +39,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | hallucination-tracker | v1.1.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | hitl-workflow-governance | v1.1.0 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
 | inactivity-timeout-enforcement | v1.1.0 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
-| message-center-monitor | v2.2.0 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
+| message-center-monitor | v2.3.0 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
 | mime-type-restrictions | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.1.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |

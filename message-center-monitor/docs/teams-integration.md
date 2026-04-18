@@ -86,7 +86,7 @@ Build the card dynamically using expressions:
 | `{startDateTime}` | `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}` |
 | `{actionRequiredByDateTime}` | `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}` |
 | `{id}` | `@{items('Apply_to_each')?['id']}` |
-| `{recordId}` | `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` — replace `cr123_` with your publisher prefix (see [Dataverse Record Link](#dataverse-record-link-optional)) |
+| `{recordId}` | `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}` — ) |
 
 ## Step 4: Configure Notification Conditions
 
@@ -99,7 +99,7 @@ Only send notifications for important posts. In your flow:
 
 ```
 @and(
-  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     equals(items('Apply_to_each')?['severity'], 'high'),
     equals(items('Apply_to_each')?['severity'], 'critical'),
@@ -108,10 +108,10 @@ Only send notifications for important posts. In your flow:
 )
 ```
 
-> **Note:** Replace `cr123_` with your environment's publisher prefix. The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
+> **Note:**  The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
 
 Or use the visual editor:
-- Condition 1: `@{outputs('Upsert_a_row')?['body/cr123_notifiedon']}` is equal to `null`
+- Condition 1: `@{outputs('Upsert_a_row')?['body/fsi_notifiedon']}` is equal to `null`
 - **AND** (click "Add group" → **OR group** for the conditions below):
   - Condition 2: `severity` equals `high`
   - **OR**
@@ -259,8 +259,8 @@ To use this feature, you need:
 After upserting to Dataverse, the response includes the row GUID:
 
 1. In your flow, after the Dataverse upsert action, add a **Compose** action
-2. Set the input to: `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}`
-   - Replace `cr123_` with your environment's publisher prefix
+2. Set the input to: `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}`
+   - 
 3. Use this value for `{recordId}` in the adaptive card URL
 
 ### URL Format
@@ -277,7 +277,7 @@ https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=en
 |-----------|-------------|---------|
 | `[your-environment]` | Your Dataverse environment name | `contoso` |
 | `[app-id]` | GUID of your model-driven app | `12345678-1234-1234-1234-123456789abc` |
-| `[table-logical-name]` | Logical name of MessageCenterLog table | `cr123_messagecenterlog` |
+| `[table-logical-name]` | Logical name of MessageCenterLog table | `fsi_messagecenterlog` |
 | `[record-guid]` | Row GUID from upsert response | Dynamic from flow |
 
 ### Finding Your App ID
@@ -305,16 +305,16 @@ In your Power Automate flow, replace the placeholder URL:
 
 ### Finding Your Publisher Prefix
 
-Dataverse column logical names include a publisher prefix (e.g., `cr123_messagecenterlogid`). To find your prefix:
+Dataverse column logical names include a publisher prefix (e.g., `fsi_messagecenterlogid`). To find your prefix:
 
 **Method 1: Via Power Apps Tables**
 
 1. Go to [make.powerapps.com](https://make.powerapps.com)
 2. Select your environment (top right)
 3. Navigate to **Tables** > **MessageCenterLog**
-4. Click on any custom column (e.g., `messagecenterId`)
+4. Click on any custom column (e.g., `messagecenterid`)
 5. In the column details panel, find **Logical name**
-6. The prefix is everything before the underscore (e.g., `cr123_` in `cr123_messagecenterId`)
+6. The prefix is everything before the underscore (e.g., `fsi_` in `fsi_messagecenterid`)
 
 **Method 2: Via Solution Publisher**
 
@@ -329,7 +329,7 @@ Dataverse column logical names include a publisher prefix (e.g., `cr123_messagec
 2. Check the flow run history
 3. Look at the upsert action output—the returned field names show the prefix
 
-> **Common prefixes:** Default environments often use `cr...` prefixes (e.g., `cr123_`). Custom publishers use the prefix you specified when creating the publisher.
+> **Common prefixes:** Default environments often use `cr...` prefixes (e.g., `fsi_`). Custom publishers use the prefix you specified when creating the publisher.
 
 ### Monitor Flow Health
 

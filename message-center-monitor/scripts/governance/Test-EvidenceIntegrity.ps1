@@ -18,7 +18,7 @@
     modified after export.
 
     Hash verification aids in meeting evidence integrity requirements for
-    FINRA Rule 4511, SEC Rule 17a-4, and SOX Section 302/404.
+    FINRA Rule 4511(a), SEC Rule 17a-4, and SOX Section 302 / SOX Section 404.
 
 .PARAMETER EvidenceFilePath
     Full path to the JSON evidence file to verify.
@@ -77,9 +77,9 @@
 
     Regulatory context:
     Hash verification supports evidence integrity requirements for:
-    - FINRA Rule 4511 (audit trail accuracy)
+    - FINRA Rule 4511(a) (audit trail accuracy)
     - SEC Rule 17a-4 (record integrity)
-    - SOX Section 302/404 (internal control verification)
+    - SOX Section 302 / SOX Section 404 (internal control verification)
 #>
 
 [CmdletBinding()]

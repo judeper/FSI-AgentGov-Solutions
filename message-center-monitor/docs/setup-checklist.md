@@ -66,7 +66,7 @@ Quick 10-step checklist for deploying the Message Center Monitor solution.
 **Columns:**
 | Column | Type |
 |--------|------|
-| messagecenterId | Text (Primary) |
+| messagecenterid | Text (Primary) |
 | title | Text (500) |
 | category | Choice |
 | severity | Choice |

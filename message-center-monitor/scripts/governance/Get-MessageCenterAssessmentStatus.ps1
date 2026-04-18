@@ -82,10 +82,10 @@ param(
     [string]$DataverseUrl,
 
     [Parameter(Mandatory = $false)]
-    [string]$TenantId,
+    [string]$TenantId = $env:AZURE_TENANT_ID,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientId,
+    [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $true)]
     [SecureString]$ClientSecret,
@@ -136,6 +136,13 @@ $statusLabels = @{
 #region Authentication
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
+
+if (-not $TenantId) {
+    throw "TenantId is required. Pass -TenantId or set AZURE_TENANT_ID environment variable."
+}
+if (-not $ClientId) {
+    throw "ClientId is required. Pass -ClientId or set AZURE_CLIENT_ID environment variable."
+}
 
 Import-Module MSAL.PS -ErrorAction Stop
 

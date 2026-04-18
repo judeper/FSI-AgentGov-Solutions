@@ -231,9 +231,9 @@ If you can configure an alternate key on your Dataverse table, use the simpler "
 5. Click **Keys** in the left submenu (under Schema)
 6. Click **+ New key**
 7. Configure:
-   - **Display name:** `MessageCenterId Key`
+   - **Display name:** `messagecenterid Key`
    - **Name:** (auto-generated, or customize)
-   - **Columns:** Select `messagecenterId`
+   - **Columns:** Select `messagecenterid`
 8. Click **Save**
 9. Wait for the key to be created (status changes from "In Progress" to "Active")
 
@@ -241,7 +241,7 @@ If you can configure an alternate key on your Dataverse table, use the simpler "
 
 1. In your flow, use **Dataverse - Update or insert (upsert) a row**
    - Table: MessageCenterLog
-   - Alternate Key: messagecenterId = `@{items('Apply_to_each')?['id']}`
+   - Alternate Key: messagecenterid = `@{items('Apply_to_each')?['id']}`
 
 This replaces the List + Condition logic.
 
@@ -251,19 +251,19 @@ If you cannot modify the table schema, use this pattern:
 
 1. Add action: **Dataverse - List rows**
    - Table: MessageCenterLog
-   - Filter: `messagecenterId eq '@{items('Apply_to_each')?['id']}'`
+   - Filter: `messagecenterid eq '@{items('Apply_to_each')?['id']}'`
 
 2. Add **Condition**: Check if row exists
    - If yes: **Update a row**
    - If no: **Add a row**
 
-> **Duplicate prevention with List rows:** When using this pattern instead of upsert, check the `notifiedOn` field from the List rows response in your notification condition: `equals(first(outputs('List_rows')?['body/value'])?['cr123_notifiedon'], null)`. Replace `cr123_` with your publisher prefix. If no row exists yet (new post), `first()` returns null and the condition is satisfied, allowing the first notification.
+> **Duplicate prevention with List rows:** When using this pattern instead of upsert, check the `notifiedOn` field from the List rows response in your notification condition: `equals(first(outputs('List_rows')?['body/value'])?['fsi_notifiedon'], null)`.  If no row exists yet (new post), `first()` returns null and the condition is satisfied, allowing the first notification.
 
 **Field mappings for Add/Update:**
 
 | Dataverse Column | Expression |
 |------------------|------------|
-| messagecenterId | `@{items('Apply_to_each')?['id']}` |
+| messagecenterid | `@{items('Apply_to_each')?['id']}` |
 | title | `@{items('Apply_to_each')?['title']}` |
 | category | Map to choice value (see below) |
 | severity | Map to choice value (see below) |
@@ -286,29 +286,29 @@ If you cannot modify the table schema, use this pattern:
 
 ### Choice Field Implementation with Switch
 
-For category and severity, you need to map API text values to Dataverse choice values. Use a **Switch** action:
+Category and severity columns are Dataverse Choice (Picklist) fields backed by global option sets — they reject text labels and require the integer values defined in `create_mcm_dataverse_schema.py` (and reflected in `docs/dataverse-schema.md`). Use a **Switch** action to map the Microsoft Graph API enum values to the option-set integers, then write the integer to the Choice column.
 
-**Category Switch Example:**
+**Category Switch (writes to `fsi_category`, option set `fsi_MCM_messagecategory`):**
 
 1. Add action: **Switch**
 2. On: `@{items('Apply_to_each')?['category']}`
 3. Add cases:
-   - Case `planForChange`: Set variable `categoryValue` = `Feature` (or your choice ID)
-   - Case `stayInformed`: Set variable `categoryValue` = `Admin`
-   - Case `preventOrFixIssue`: Set variable `categoryValue` = `Security`
-   - Default: Set variable `categoryValue` = `Admin`
+   - Case `planForChange`: Set variable `categoryValue` = `100000000` (Feature)
+   - Case `stayInformed`: Set variable `categoryValue` = `100000001` (Admin)
+   - Case `preventOrFixIssue`: Set variable `categoryValue` = `100000002` (Security)
+   - Default: Set variable `categoryValue` = `100000001` (Admin)
 
-**Severity Switch Example:**
+**Severity Switch (writes to `fsi_severity`, option set `fsi_MCM_messageseverity`):**
 
 1. Add action: **Switch**
 2. On: `@{items('Apply_to_each')?['severity']}`
 3. Add cases:
-   - Case `high`: Set variable `severityValue` = `High`
-   - Case `normal`: Set variable `severityValue` = `Normal`
-   - Case `critical`: Set variable `severityValue` = `Critical`
-   - Default: Set variable `severityValue` = `Normal`
+   - Case `high`: Set variable `severityValue` = `100000000` (High)
+   - Case `normal`: Set variable `severityValue` = `100000001` (Normal)
+   - Case `critical`: Set variable `severityValue` = `100000002` (Critical)
+   - Default: Set variable `severityValue` = `100000001` (Normal)
 
-> **Tip:** If your Dataverse choices use numeric IDs (e.g., `100000000` for High), use those IDs instead of text values in your Switch cases.
+The variables are typed as **Integer** so the Update Row action can write them directly to the Choice column. See `docs/dataverse-schema.md` for the canonical option-set definitions, or `create_mcm_dataverse_schema.py:OPTION_SETS` for the source of truth.
 
 ## Step 7: Teams Notification for High Severity
 
@@ -323,7 +323,7 @@ Add **Condition** to notify when action is truly needed:
 **Option A: Basic Check**
 ```
 @and(
-  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     equals(items('Apply_to_each')?['severity'], 'high'),
     equals(items('Apply_to_each')?['severity'], 'critical')
@@ -331,12 +331,12 @@ Add **Condition** to notify when action is truly needed:
 )
 ```
 
-> **Note:** Replace `cr123_` with your environment's publisher prefix (see [Teams Integration § Finding Your Publisher Prefix](teams-integration.md#finding-your-publisher-prefix)). The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
+> **Note:** The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
 
 OR (visual editor equivalent):
 
 In the condition editor, create the following structure:
-- Row 1: `@{outputs('Upsert_a_row')?['body/cr123_notifiedon']}` **is equal to** `null`
+- Row 1: `@{outputs('Upsert_a_row')?['body/fsi_notifiedon']}` **is equal to** `null`
 - **AND** (click "Add group" → **OR group**):
   - Row 2a: `@{items('Apply_to_each')?['severity']}` **is equal to** `high`
   - **OR**
@@ -350,7 +350,7 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 
 ```
 @and(
-  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     equals(items('Apply_to_each')?['severity'], 'high'),
     equals(items('Apply_to_each')?['severity'], 'critical'),
@@ -362,7 +362,7 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 )
 ```
 
-> **Note:** Replace `cr123_` with your publisher prefix. See the Option A note above for details.
+> **Note:**  See the Option A note above for details.
 
 This prevents notifications for posts with past deadlines and means each post triggers at most one notification.
 
@@ -372,7 +372,7 @@ This prevents notifications for posts with past deadlines and means each post tr
 
 ```
 @and(
-  equals(outputs('Upsert_a_row')?['body/cr123_notifiedon'], null),
+  equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     equals(items('Apply_to_each')?['severity'], 'high'),
     equals(items('Apply_to_each')?['severity'], 'critical'),
@@ -385,7 +385,7 @@ This prevents notifications for posts with past deadlines and means each post tr
 )
 ```
 
-> **Note:** Replace `cr123_` with your publisher prefix.
+> **Note:** 
 
 **If yes:**
 
@@ -407,7 +407,7 @@ Replace placeholders in the card with dynamic content:
 - `{startDateTime}` → `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}`
 - `{actionRequiredByDateTime}` → `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}`
 - `{id}` → `@{items('Apply_to_each')?['id']}`
-- `{recordId}` → `@{outputs('Upsert_a_row')?['body/cr123_messagecenterlogid']}` (replace `cr123_` with your publisher prefix — see [Teams Integration](teams-integration.md#finding-your-publisher-prefix))
+- `{recordId}` → `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}`
 
 ## Step 8: Error Handling
 
@@ -528,12 +528,12 @@ The steps above hardcode the polling schedule, severity thresholds, and Teams ch
 
 | Display Name | Schema Name | Type | Example Value |
 |-------------|-------------|------|---------------|
-| Polling Interval (days) | `cr123_PollingIntervalDays` | Integer | `1` |
-| Notification Severity Threshold | `cr123_NotifySeverities` | Text | `high,critical` |
-| Teams Channel ID | `cr123_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
-| Teams Team ID | `cr123_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| Polling Interval (days) | `fsi_PollingIntervalDays` | Integer | `1` |
+| Notification Severity Threshold | `fsi_NotifySeverities` | Text | `high,critical` |
+| Teams Channel ID | `fsi_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
+| Teams Team ID | `fsi_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
-> **Note:** Replace `cr123_` with your publisher prefix. Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**.
+> **Note:**  Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**.
 
 To reference an environment variable in the flow, use the **Dataverse - List rows** action to query the `Environment Variable Values` table, or use the `@{outputs('Get_Environment_Variable')?['body/value']}` pattern after adding a dedicated lookup action. This aligns with ALM best practices and simplifies managed solution deployments.
 

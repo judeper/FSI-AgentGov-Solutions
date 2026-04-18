@@ -180,11 +180,47 @@ $graphUrl = "https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages
 
 Write-Host "Fetching Message Center posts (last $DaysBack days)..." -ForegroundColor Cyan
 
+# Throttling-aware REST helper. Honors Retry-After (seconds or HTTP-date) for
+# 429 / 503 responses; falls back to exponential backoff if header is missing.
+function Invoke-MCMRest {
+    param(
+        [Parameter(Mandatory)] [string]$Uri,
+        [Parameter(Mandatory)] [hashtable]$Headers,
+        [Parameter(Mandatory)] [string]$Method,
+        [string]$Body,
+        [int]$MaxRetries = 5
+    )
+    $attempt = 0
+    while ($true) {
+        $attempt++
+        try {
+            if ($PSBoundParameters.ContainsKey('Body') -and $Body) {
+                return Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method -Body $Body
+            } else {
+                return Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method
+            }
+        }
+        catch {
+            $status = $null
+            try { $status = [int]$_.Exception.Response.StatusCode } catch {}
+            if (($status -eq 429 -or $status -eq 503) -and $attempt -le $MaxRetries) {
+                $retryAfter = 0
+                try { $retryAfter = [int]$_.Exception.Response.Headers['Retry-After'] } catch {}
+                if ($retryAfter -le 0) { $retryAfter = [Math]::Min(60, [Math]::Pow(2, $attempt)) }
+                Write-Warning "  Throttled ($status). Sleeping $retryAfter s (attempt $attempt/$MaxRetries)..."
+                Start-Sleep -Seconds $retryAfter
+                continue
+            }
+            throw
+        }
+    }
+}
+
 $allMessages = [System.Collections.Generic.List[object]]::new()
 
 $pageUrl = $graphUrl
 while ($pageUrl) {
-    $response = Invoke-RestMethod -Uri $pageUrl -Headers $graphHeaders -Method Get
+    $response = Invoke-MCMRest -Uri $pageUrl -Headers $graphHeaders -Method Get
     if ($response.value) {
         $allMessages.AddRange($response.value)
     }
@@ -222,7 +258,14 @@ $assessmentNotAssessed = 100000000
 
 $newCount = 0
 $updatedCount = 0
+$failedCount = 0
+$failedIds = [System.Collections.Generic.List[string]]::new()
 $highCriticalCount = 0
+
+# Dataverse Memo column upper bound for fsi_body — keep one byte of headroom
+# for the truncation marker so very long Message Center HTML bodies can still
+# be persisted without a 0x80040217 PayloadTooLarge failure.
+$bodyMaxLength = 99990
 
 foreach ($msg in $allMessages) {
     $messageId = $msg.id
@@ -243,14 +286,19 @@ foreach ($msg in $allMessages) {
     $servicesStr = if ($msg.services) { ($msg.services -join ', ') } else { $null }
     $tagsStr = if ($msg.tags) { ($msg.tags -join ', ') } else { $null }
     $bodyContent = if ($msg.body -and $msg.body.content) { $msg.body.content } else { $null }
+    if ($bodyContent -and $bodyContent.Length -gt $bodyMaxLength) {
+        $bodyContent = $bodyContent.Substring(0, $bodyMaxLength) + "`n[truncated — original length $($bodyContent.Length) chars]"
+    }
 
     # Check if record exists by fsi_messagecenterid
     $filterUrl = "$dvBaseUrl/fsi_messagecenterlogs?`$filter=fsi_messagecenterid eq '$messageId'&`$select=fsi_messagecenterlogid&`$top=1"
     try {
-        $existing = Invoke-RestMethod -Uri $filterUrl -Headers $dvHeaders -Method Get
+        $existing = Invoke-MCMRest -Uri $filterUrl -Headers $dvHeaders -Method Get
     }
     catch {
         Write-Warning "Failed to query Dataverse for message $messageId : $($_.Exception.Message)"
+        $failedCount++
+        [void]$failedIds.Add($messageId)
         continue
     }
 
@@ -284,12 +332,14 @@ foreach ($msg in $allMessages) {
         $recordId = $existing.value[0].fsi_messagecenterlogid
         $patchUrl = "$dvBaseUrl/fsi_messagecenterlogs($recordId)"
         try {
-            Invoke-RestMethod -Uri $patchUrl -Headers $dvHeaders -Method Patch -Body $jsonBody | Out-Null
+            Invoke-MCMRest -Uri $patchUrl -Headers $dvHeaders -Method Patch -Body $jsonBody | Out-Null
             $updatedCount++
             Write-Verbose "Updated: $messageId — $($msg.title)"
         }
         catch {
             Write-Warning "Failed to update message $messageId : $($_.Exception.Message)"
+            $failedCount++
+            [void]$failedIds.Add($messageId)
         }
     }
     else {
@@ -299,12 +349,14 @@ foreach ($msg in $allMessages) {
 
         $postUrl = "$dvBaseUrl/fsi_messagecenterlogs"
         try {
-            Invoke-RestMethod -Uri $postUrl -Headers $dvHeaders -Method Post -Body $jsonBody | Out-Null
+            Invoke-MCMRest -Uri $postUrl -Headers $dvHeaders -Method Post -Body $jsonBody | Out-Null
             $newCount++
             Write-Verbose "Created: $messageId — $($msg.title)"
         }
         catch {
             Write-Warning "Failed to create message $messageId : $($_.Exception.Message)"
+            $failedCount++
+            [void]$failedIds.Add($messageId)
         }
     }
 }
@@ -319,6 +371,8 @@ $summary = [PSCustomObject]@{
     TotalSynced       = $allMessages.Count
     NewRecords        = $newCount
     UpdatedRecords    = $updatedCount
+    FailedRecords     = $failedCount
+    FailedMessageIds  = $failedIds.ToArray()
     HighSeverityCount = ($allMessages | Where-Object { $_.severity -eq 'high' }).Count
     CriticalCount     = ($allMessages | Where-Object { $_.severity -eq 'critical' }).Count
     SyncTimestamp     = $syncTimestamp
@@ -330,11 +384,16 @@ Write-Host "╠═════════════════════�
 Write-Host ("║ Total Synced:     {0,-31}║" -f $summary.TotalSynced) -ForegroundColor Cyan
 Write-Host ("║ New Records:      {0,-31}║" -f $summary.NewRecords) -ForegroundColor Cyan
 Write-Host ("║ Updated Records:  {0,-31}║" -f $summary.UpdatedRecords) -ForegroundColor Cyan
+Write-Host ("║ Failed Records:   {0,-31}║" -f $summary.FailedRecords) -ForegroundColor $(if ($failedCount -gt 0) { 'Red' } else { 'Cyan' })
 Write-Host ("║ High Severity:    {0,-31}║" -f $summary.HighSeverityCount) -ForegroundColor Cyan
 Write-Host ("║ Critical:         {0,-31}║" -f $summary.CriticalCount) -ForegroundColor Cyan
 Write-Host ("║ Synced At:        {0,-31}║" -f $summary.SyncTimestamp) -ForegroundColor Cyan
 Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
+
+if ($failedCount -gt 0) {
+    Write-Warning "$failedCount message(s) failed to persist to Dataverse: $($failedIds -join ', ')"
+}
 
 if ($highCriticalCount -gt 0) {
     Write-Warning "$highCriticalCount message(s) matched notify severity filter ($($NotifySeverities -join ', '))."
@@ -348,8 +407,15 @@ switch ($OutputFormat) {
         $summary | ConvertTo-Json -Depth 5
     }
     'Object' {
+        # Object output is returned to the pipeline; callers can still
+        # inspect $LASTEXITCODE for partial-failure detection.
+        if ($failedCount -gt 0) { $global:LASTEXITCODE = 1 }
         return $summary
     }
 }
+
+# Surface partial-failure as a non-zero exit code so scheduled runs
+# (Azure Automation, Logic Apps, GitHub Actions) can alert on it.
+if ($failedCount -gt 0) { exit 1 }
 
 #endregion

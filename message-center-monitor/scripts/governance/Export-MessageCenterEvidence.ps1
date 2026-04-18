@@ -88,9 +88,9 @@
 
     Regulatory context:
     Hash verification aids in meeting evidence integrity requirements for:
-    - FINRA Rule 4511 (audit trail accuracy)
+    - FINRA Rule 4511(a) (audit trail accuracy)
     - SEC Rule 17a-4 (record integrity)
-    - SOX Section 302/404 (internal control verification)
+    - SOX Section 302 / SOX Section 404 (internal control verification)
 #>
 
 [CmdletBinding()]
