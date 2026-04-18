@@ -66,7 +66,7 @@ VIEWS = [
     <attribute name="fsi_requestedon"/>
     <order attribute="fsi_requestedon" descending="false"/>
     <filter type="and">
-      <condition attribute="fsi_state" operator="eq" value="3"/>
+      <condition attribute="fsi_state" operator="eq" value="100000003"/>
       <condition attribute="fsi_approver" operator="eq-userid"/>
     </filter>
   </entity>
@@ -97,7 +97,7 @@ VIEWS = [
     <attribute name="fsi_requestedon"/>
     <order attribute="fsi_requestedon" descending="false"/>
     <filter type="and">
-      <condition attribute="fsi_state" operator="eq" value="3"/>
+      <condition attribute="fsi_state" operator="eq" value="100000003"/>
     </filter>
   </entity>
 </fetch>""",
@@ -127,7 +127,7 @@ VIEWS = [
     <attribute name="fsi_approver"/>
     <order attribute="fsi_provisioningstarted" descending="true"/>
     <filter type="and">
-      <condition attribute="fsi_state" operator="eq" value="6"/>
+      <condition attribute="fsi_state" operator="eq" value="100000006"/>
     </filter>
   </entity>
 </fetch>""",
@@ -156,7 +156,7 @@ VIEWS = [
     <attribute name="fsi_provisioningstarted"/>
     <order attribute="fsi_provisioningstarted" descending="true"/>
     <filter type="and">
-      <condition attribute="fsi_state" operator="eq" value="8"/>
+      <condition attribute="fsi_state" operator="eq" value="100000008"/>
     </filter>
   </entity>
 </fetch>""",
@@ -186,7 +186,7 @@ VIEWS = [
     <attribute name="fsi_provisioningcompleted"/>
     <order attribute="fsi_provisioningcompleted" descending="true"/>
     <filter type="and">
-      <condition attribute="fsi_state" operator="eq" value="7"/>
+      <condition attribute="fsi_state" operator="eq" value="100000007"/>
       <condition attribute="fsi_provisioningcompleted" operator="this-month"/>
     </filter>
   </entity>

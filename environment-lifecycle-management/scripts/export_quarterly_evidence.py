@@ -50,7 +50,10 @@ def export_table(
     Returns:
         Tuple of (records, count)
     """
-    # FetchXML for date range query
+    # FetchXML for date range query — primary key tie-breaker added so the
+    # serialized export is byte-stable and SHA-256 reproducible across runs
+    # for an identical query window.
+    pk = f"{entity_name}id"
     fetchxml = f"""
     <fetch>
       <entity name="{entity_name}">
@@ -60,6 +63,7 @@ def export_table(
           <condition attribute="{date_field}" operator="le" value="{end_date}T23:59:59Z" />
         </filter>
         <order attribute="{date_field}" />
+        <order attribute="{pk}" />
       </entity>
     </fetch>
     """
@@ -217,10 +221,14 @@ Examples:
         )
 
         requests_filename = f"EnvironmentRequest-{year}-{quarter}.json"
-        requests_content = json.dumps(requests_data, indent=2, default=str)
+        requests_content = json.dumps(
+            requests_data, indent=2, sort_keys=True, default=str
+        )
         requests_hash = calculate_sha256(requests_content)
 
-        (output_path / requests_filename).write_text(requests_content)
+        (output_path / requests_filename).write_bytes(
+            requests_content.encode("utf-8")
+        )
         print(f"  Exported {requests_count} records to {requests_filename}")
         print(f"  SHA-256: {requests_hash[:16]}...")
 
@@ -249,10 +257,12 @@ Examples:
         )
 
         logs_filename = f"ProvisioningLog-{year}-{quarter}.json"
-        logs_content = json.dumps(logs_data, indent=2, default=str)
+        logs_content = json.dumps(
+            logs_data, indent=2, sort_keys=True, default=str
+        )
         logs_hash = calculate_sha256(logs_content)
 
-        (output_path / logs_filename).write_text(logs_content)
+        (output_path / logs_filename).write_bytes(logs_content.encode("utf-8"))
         print(f"  Exported {logs_count} records to {logs_filename}")
         print(f"  SHA-256: {logs_hash[:16]}...")
 
@@ -270,13 +280,33 @@ Examples:
         # Write manifest
         print()
         print("Writing manifest...")
+
+        # Chain to the previous quarter's manifest, if one exists in the
+        # same output root. This gives auditors a tamper-evident link
+        # between quarterly exports (in the spirit of SEC 17a-4(f) WORM
+        # equivalents — note: still NOT a substitute for WORM storage).
+        previous_manifest_hash = None
+        for sibling in sorted(output_path.parent.glob("*/manifest.json")):
+            if sibling.parent == output_path:
+                continue
+            try:
+                prior = json.loads(sibling.read_text(encoding="utf-8"))
+                if prior.get("manifestHash"):
+                    previous_manifest_hash = prior["manifestHash"]
+            except (OSError, json.JSONDecodeError):
+                continue
+        if previous_manifest_hash:
+            manifest["previousManifestHash"] = previous_manifest_hash
+
         # Hash the files list only (before adding hash to manifest) so
         # the stored hash never includes itself and verification is stable.
         files_content = json.dumps(manifest["files"], indent=2, sort_keys=True)
         manifest["manifestHash"] = calculate_sha256(files_content)
 
         manifest_path = output_path / "manifest.json"
-        manifest_path.write_text(json.dumps(manifest, indent=2))
+        manifest_path.write_bytes(
+            json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
+        )
         print(f"  Manifest: {manifest_path}")
 
         # Summary

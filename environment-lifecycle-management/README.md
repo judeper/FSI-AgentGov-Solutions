@@ -100,14 +100,14 @@ For production environments, use the [manual setup process](#quick-start) for fu
 
 ## What This Solution Does
 
-- **Classifies** environment requests into governance zones (Zone 1/2/3) based on data sensitivity
+- **Classifies** environment requests into governance zones (Zone1, Zone2, Zone3) based on data sensitivity
 - **Automates** approval workflows with segregation of duties enforcement
 - **Provisions** environments via Service Principal with zone-specific configurations
 - **Binds** security groups and applies baseline settings (audit retention, session timeout)
 - **Maintains** immutable provisioning audit trail for regulatory evidence
 - **Exports** quarterly evidence with SHA-256 integrity hashing
 
-**This is an environment governance solution** - it helps organizations automate environment provisioning while supporting compliance with FINRA 4511, SEC 17a-3/4, and SOX 404 requirements.
+**This is an environment governance solution** - it helps organizations automate environment provisioning while supporting compliance with FINRA Rule 4511(a), SEC Rules 17a-3 / 17a-4(f), and SOX 404 requirements.
 
 ## Known Limitations
 
@@ -377,11 +377,11 @@ Checks:
 
 | Regulation | Requirement | How This Helps |
 |------------|-------------|----------------|
-| **FINRA 4511** | Books and records retention | 7-year Zone 3 audit retention, immutable logs |
-| **SEC 17a-3/4** | Record preservation | Quarterly exports with integrity hashing |
-| **SOX 404** | IT general controls | Segregation of duties, approval workflows |
-| **OCC 2011-12** | Model risk management | Zone classification, approval documentation |
-| **GLBA 501(b)** | Safeguards rule | Security group binding, access controls |
+| **FINRA Rule 4511(a)** | General requirements for books and records | Maintains structured environment-request and provisioning audit data; **does not** by itself satisfy the WORM media or 6-year retention obligations of related rules — pair with WORM-compatible storage (Azure Storage Immutable Blobs in time-based retention/legal-hold mode, Purview Records Management, or equivalent). |
+| **SEC Rules 17a-3(a)(17) and 17a-4(f)** | Records of advisory accounts; record preservation on non-rewriteable, non-erasable media | Quarterly evidence exports include SHA-256 hashes and a chained `previousManifestHash` for tamper-evidence; **does not** itself constitute WORM-compliant storage. The exported files must be written to an SEC 17a-4(f)-validated WORM target. |
+| **SOX 404** | IT general controls | Segregation of duties via field-security profiles, mandatory approver routing, and immutable provisioning logs. |
+| **GLBA 501(b) Safeguards Rule** | Customer information protection | Security-group binding and zone-based DLP application; full safeguards program is broader than this solution. |
+| **FFIEC IT Examination Handbook (Information Security)** | Change and access controls for IT systems | Enforces a documented request → approval → provisioning → evidence pipeline; the regulator expects this to be one part of a wider SDLC and access-management program. |
 
 ## Documentation
 
@@ -396,15 +396,39 @@ Checks:
 | [docs/troubleshooting.md](./docs/troubleshooting.md) | Error recovery, rollback procedures |
 | [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) | Phase-based deployment checklist |
 
+## Cross-Solution Contract
+
+ELM is the source-of-truth for environment zone classification across the
+FSI-AgentGov solutions. Other solutions (e.g., conditional-access-automation,
+agent-sharing-access-restriction-detector) read the zone via the shared
+PowerShell helper at `scripts/shared/Get-ZoneClassification.ps1`, which
+queries Dataverse using the contract below.
+
+| Element | Value |
+|---------|-------|
+| Entity set | `fsi_environmentrequests` |
+| Filter column | `fsi_environmentid` (Power Platform environment GUID written back by the provisioning flow) |
+| Returned column | `fsi_zone` |
+| Option values | `100000001` = Zone1, `100000002` = Zone2, `100000003` = Zone3 |
+| Returned labels | `Zone1`, `Zone2`, `Zone3` (no spaces) |
+
+Changing any of these is a **breaking change** for downstream solutions.
+Bump the ELM major version and update the consuming solutions when this
+contract changes.
+
 ## Related Controls
 
 This solution supports:
 
 - [Control 2.1: Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md)
 - [Control 2.2: Environment Groups and Tier Classification](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.2-environment-groups-and-tier-classification.md)
-- [Control 2.3: Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md)
 - [Control 2.8: Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md)
 - [Control 1.7: Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md)
+
+> Control 2.3 (Change Management and Release Planning) was previously
+> claimed but has been removed from this list — ELM provisions
+> environments themselves; release planning across those environments is
+> covered by the **pipeline-governance-cleanup** solution.
 
 ## Playbook Reference
 
@@ -414,7 +438,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.1.3 - April 2026
+1.2.0 - April 2026 (BREAKING — see CHANGELOG)
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

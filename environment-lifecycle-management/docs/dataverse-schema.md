@@ -51,7 +51,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 | Display Name | Logical Name | Type | Required | Description |
 |--------------|--------------|------|----------|-------------|
 | Zone | `fsi_zone` | Choice | Yes | Zone 1/2/3 classification |
-| Zone Rationale | `fsi_zonerationale` | Multiline | Zone 2/3 | Business justification for zone |
+| Zone Rationale | `fsi_zonerationale` | Multiline | Zone2/Zone3 | Business justification for zone |
 | Zone Auto Flags | `fsi_zoneautoflags` | Text (500) | Auto | Auto-detected triggers (comma-separated) |
 | Data Sensitivity | `fsi_datasensitivity` | Choice | Yes | Public/Internal/Confidential/Restricted |
 | Expected Users | `fsi_expectedusers` | Choice | Yes | User population estimate |
@@ -60,7 +60,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 | Display Name | Logical Name | Type | Required | Description |
 |--------------|--------------|------|----------|-------------|
-| Security Group ID | `fsi_securitygroupid` | Text (100) | Zone 2/3 | Entra security group GUID |
+| Security Group ID | `fsi_securitygroupid` | Text (100) | Zone2/Zone3 | Entra security group GUID |
 | Security Group Name | `fsi_securitygroupname` | Text (200) | No | Display name of Entra security group |
 | Requester | `fsi_requester` | Lookup (User) | Auto | Request creator |
 | Requested On | `fsi_requestedon` | DateTime | Auto | Submission timestamp |
@@ -89,58 +89,58 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 | Label | Value | Description |
 |-------|-------|-------------|
-| Draft | 1 | User is completing form |
-| Submitted | 2 | User submitted request |
-| PendingApproval | 3 | Awaiting approver decision |
-| Approved | 4 | Approver approved |
-| Rejected | 5 | Approver rejected |
-| Provisioning | 6 | Flow executing |
-| Completed | 7 | Environment ready |
-| Failed | 8 | Provisioning error |
-| Cancelled | 9 | User cancelled request |
+| Draft | 100000001 | User is completing form |
+| Submitted | 100000002 | User submitted request |
+| PendingApproval | 100000003 | Awaiting approver decision |
+| Approved | 100000004 | Approver approved |
+| Rejected | 100000005 | Approver rejected |
+| Provisioning | 100000006 | Flow executing |
+| Completed | 100000007 | Environment ready |
+| Failed | 100000008 | Provisioning error |
+| Cancelled | 100000009 | User cancelled request |
 
 #### fsi_er_zone (Governance Zone)
 
 | Label | Value | Description |
 |-------|-------|-------------|
-| Zone 1 | 1 | Personal productivity |
-| Zone 2 | 2 | Team collaboration |
-| Zone 3 | 3 | Enterprise managed |
+| Zone1 | 100000001 | Personal productivity |
+| Zone2 | 100000002 | Team collaboration |
+| Zone3 | 100000003 | Enterprise managed |
 
 #### fsi_er_environmenttype (Environment Type)
 
 | Label | Value |
 |-------|-------|
-| Sandbox | 1 |
-| Production | 2 |
-| Developer | 3 |
+| Sandbox | 100000001 |
+| Production | 100000002 |
+| Developer | 100000003 |
 
 #### fsi_er_region (Geographic Region)
 
 | Label | Value | API Code |
 |-------|-------|----------|
-| United States | 1 | unitedstates |
-| Europe | 2 | europe |
-| United Kingdom | 3 | unitedkingdom |
-| Australia | 4 | australia |
+| United States | 100000001 | unitedstates |
+| Europe | 100000002 | europe |
+| United Kingdom | 100000003 | unitedkingdom |
+| Australia | 100000004 | australia |
 
 #### fsi_er_datasensitivity (Data Sensitivity)
 
 | Label | Value |
 |-------|-------|
-| Public | 1 |
-| Internal | 2 |
-| Confidential | 3 |
-| Restricted | 4 |
+| Public | 100000001 |
+| Internal | 100000002 |
+| Confidential | 100000003 |
+| Restricted | 100000004 |
 
 #### fsi_er_expectedusers (Expected User Count)
 
 | Label | Value |
 |-------|-------|
-| Just me (1) | 1 |
-| Small team (2-10) | 2 |
-| Large team (11-50) | 3 |
-| Department (50+) | 4 |
+| Just me (1) | 100000001 |
+| Small team (2-10) | 100000002 |
+| Large team (11-50) | 100000003 |
+| Department (50+) | 100000004 |
 
 ### Business Rules
 
@@ -148,7 +148,7 @@ Complete table and column definitions for Environment Lifecycle Management.
 
 ```
 Trigger: fsi_zone changes
-Condition: fsi_zone = Zone 2 OR fsi_zone = Zone 3
+Condition: fsi_zone = Zone2 OR fsi_zone = Zone3
 Action: Set fsi_zonerationale to Business Required
 ```
 
@@ -156,7 +156,7 @@ Action: Set fsi_zonerationale to Business Required
 
 ```
 Trigger: fsi_zone changes
-Condition: fsi_zone = Zone 2 OR fsi_zone = Zone 3
+Condition: fsi_zone = Zone2 OR fsi_zone = Zone3
 Action: Set fsi_securitygroupid to Business Required
 ```
 
@@ -216,30 +216,30 @@ Action: Set fsi_approvalcomments to Business Required
 
 | Label | Value | Description |
 |-------|-------|-------------|
-| RequestCreated | 1 | Initial request created |
-| ZoneClassified | 2 | Auto-classification applied |
-| ApprovalRequested | 3 | Routed for approval |
-| Approved | 4 | Approver approved |
-| Rejected | 5 | Approver rejected |
-| ProvisioningStarted | 6 | Flow began execution |
-| EnvironmentCreated | 7 | Environment creation complete |
-| ManagedEnabled | 8 | Managed Environment enabled |
-| GroupAssigned | 9 | Added to Environment Group |
-| SecurityGroupBound | 10 | Security group bound |
-| BaselineConfigApplied | 11 | Baseline settings applied |
-| DLPAssigned | 12 | DLP policy applied (reserved — no flow step currently logs this action) |
-| ProvisioningCompleted | 13 | Full provisioning complete |
-| ProvisioningFailed | 14 | Provisioning error |
-| RollbackInitiated | 15 | Rollback started (reserved — no rollback logic currently implemented) |
-| RollbackCompleted | 16 | Rollback finished (reserved — no rollback logic currently implemented) |
+| RequestCreated | 100000001 | Initial request created |
+| ZoneClassified | 100000002 | Auto-classification applied |
+| ApprovalRequested | 100000003 | Routed for approval |
+| Approved | 100000004 | Approver approved |
+| Rejected | 100000005 | Approver rejected |
+| ProvisioningStarted | 100000006 | Flow began execution |
+| EnvironmentCreated | 100000007 | Environment creation complete |
+| ManagedEnabled | 100000008 | Managed Environment enabled |
+| GroupAssigned | 100000009 | Added to Environment Group |
+| SecurityGroupBound | 100000010 | Security group bound |
+| BaselineConfigApplied | 100000011 | Baseline settings applied |
+| DLPAssigned | 100000012 | DLP policy applied (reserved — no flow step currently logs this action) |
+| ProvisioningCompleted | 100000013 | Full provisioning complete |
+| ProvisioningFailed | 100000014 | Provisioning error |
+| RollbackInitiated | 100000015 | Rollback started (reserved — no rollback logic currently implemented) |
+| RollbackCompleted | 100000016 | Rollback finished (reserved — no rollback logic currently implemented) |
 
 #### fsi_pl_actortype (Actor Type)
 
 | Label | Value |
 |-------|-------|
-| User | 1 |
-| ServicePrincipal | 2 |
-| System | 3 |
+| User | 100000001 |
+| ServicePrincipal | 100000002 |
+| System | 100000003 |
 
 ### Immutability Enforcement
 
@@ -264,16 +264,16 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
 {
   "fsi_requestnumber": "REQ-00001",
   "fsi_environmentname": "FIN-QuarterlyReporting-PROD",
-  "fsi_environmenttype": 2,
-  "fsi_region": 1,
-  "fsi_zone": 3,
+  "fsi_environmenttype": 100000002,
+  "fsi_region": 10000000100000001,
+  "fsi_zone": 100000003,
   "fsi_zonerationale": "Processes quarterly financial reports with customer account data",
   "fsi_zoneautoflags": "CUSTOMER_PII,FINANCIAL_TRANSACTIONS",
-  "fsi_datasensitivity": 3,
-  "fsi_expectedusers": 3,
+  "fsi_datasensitivity": 100000003,
+  "fsi_expectedusers": 100000003,
   "fsi_securitygroupid": "12345678-1234-1234-1234-123456789012",
   "fsi_businessjustification": "Quarterly SEC 10-Q reporting automation",
-  "fsi_state": 7,
+  "fsi_state": 100000007,
   "fsi_environmentid": "87654321-4321-4321-4321-210987654321",
   "fsi_environmenturl": "https://<org>.crm.dynamics.com"
 }
@@ -284,7 +284,7 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
 ```json
 {
   "fsi_sequence": 7,
-  "fsi_action": 7,
+  "fsi_action": 100000007,
   "fsi_actiondetails": {
     "environmentId": "87654321-4321-4321-4321-210987654321",
     "environmentUrl": "https://<org>.crm.dynamics.com",
@@ -292,7 +292,7 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
     "region": "unitedstates"
   },
   "fsi_actor": "ELM-Provisioning-ServicePrincipal",
-  "fsi_actortype": 2,
+  "fsi_actortype": 100000002,
   "fsi_success": true,
   "fsi_correlationid": "08585929-1234-5678-abcd-ef1234567890"
 }
@@ -351,3 +351,22 @@ After creating schema:
 
 1. [Configure security roles](./security-roles.md)
 2. [Register Service Principal](./service-principal-setup.md)
+
+## Cross-Solution Contract
+
+Other FSI-AgentGov solutions (e.g., conditional-access-automation,
+agent-sharing-access-restriction-detector) read zone classification from
+this table via `scripts/shared/Get-ZoneClassification.ps1`. The contract
+they depend on is:
+
+| Element | Value |
+|---------|-------|
+| Entity set | `fsi_environmentrequests` |
+| Filter column | `fsi_environmentid` (Power Platform environment GUID) |
+| Returned column | `fsi_zone` |
+| Option values | `100000001`=Zone1, `100000002`=Zone2, `100000003`=Zone3 |
+| Returned labels | `Zone1`, `Zone2`, `Zone3` (no spaces) |
+
+Changing any of these is a **breaking change** for downstream solutions.
+Bump ELM major version and update the consumers when this contract
+changes.

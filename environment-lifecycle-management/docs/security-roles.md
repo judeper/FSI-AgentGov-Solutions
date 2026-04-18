@@ -82,7 +82,10 @@ Create a field security profile to restrict which fields approvers can modify:
 1. Create "ELM Approver Fields" field security profile
 2. Add all EnvironmentRequest columns to profile
 3. Set permissions per matrix above
-4. Associate profile with ELM Approver role
+4. Add the **users** (or AAD security teams) who hold the ELM Approver
+   role directly to the field security profile — Dataverse field
+   security profiles are associated with users/teams, **not** with
+   security roles.
 
 ### Assignment
 
@@ -283,7 +286,9 @@ For each role:
 2. New profile: "ELM Approver Fields"
 3. Add EnvironmentRequest fields
 4. Set permissions per field-level security table
-5. Associate with ELM Approver role
+5. Add the users (or AAD security teams) who hold the ELM Approver
+   role directly to the profile (field security profiles in Dataverse
+   are associated with users/teams, not with security roles).
 
 ### Step 5: Assign Roles
 

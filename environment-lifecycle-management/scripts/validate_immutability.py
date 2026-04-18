@@ -126,12 +126,32 @@ Examples:
         print(f"Records checked: {record_count}")
         print()
 
+        # Verify audit is enabled at table+org level — if it is not, an
+        # empty audit query result is meaningless and must NOT be reported
+        # as PASS.
+        entity_meta = client.get_entity_metadata("fsi_provisioninglog")
+        if not entity_meta:
+            print("ERROR: fsi_provisioninglog table not found — cannot validate immutability.")
+            sys.exit(2)
+        if not entity_meta.get("IsAuditEnabled", {}).get("Value", False):
+            print("ERROR: Auditing is disabled on fsi_provisioninglog. Enable")
+            print("       'Audit changes to its data' on the table and 'Start Auditing'")
+            print("       at the environment level before running this validation.")
+            sys.exit(2)
+
+        # Resolve numeric ObjectTypeCode for the audit filter — the audits
+        # table's ``objecttypecode`` column is an int, not a logical name.
+        otc = entity_meta.get("ObjectTypeCode")
+        if otc is None:
+            print("ERROR: Could not determine ObjectTypeCode for fsi_provisioninglog.")
+            sys.exit(2)
+
         # Check audit log for modification attempts
         print("Audit Log Analysis:")
 
         # Query for Update operations (2)
         update_attempts = client.query_audit(
-            "fsi_provisioninglog",
+            otc,
             operations=[2],  # Update
             start_date=start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             end_date=end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -139,7 +159,7 @@ Examples:
 
         # Query for Delete operations (3)
         delete_attempts = client.query_audit(
-            "fsi_provisioninglog",
+            otc,
             operations=[3],  # Delete
             start_date=start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             end_date=end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),

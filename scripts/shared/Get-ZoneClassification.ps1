@@ -68,41 +68,46 @@ function Get-ZoneFromELM {
     
     try {
         Write-Verbose "Looking up zone in ELM for environment: $EnvironmentId"
-        
-        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environments?" +
-               "`$filter=fsi_environment_guid eq '$EnvironmentId'&" +
-               "`$select=fsi_zone_classification"
-        
+
+        # Canonical ELM contract (set by environment-lifecycle-management v1.2.0):
+        #   Table:        fsi_environmentrequest (entity set: fsi_environmentrequests)
+        #   Filter key:   fsi_environmentid (the Power Platform environment GUID
+        #                 written back by the provisioning flow)
+        #   Zone column:  fsi_zone (custom global option set, values 100000001..3)
+        $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentrequests?" +
+               "`$filter=fsi_environmentid eq '$EnvironmentId'&" +
+               "`$select=fsi_zone"
+
         $headers = @{
             'Authorization' = "Bearer $AccessToken"
             'Accept' = 'application/json'
             'OData-MaxVersion' = '4.0'
             'OData-Version' = '4.0'
         }
-        
+
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
-        
+
         if ($response.value.Count -gt 0) {
-            $zoneValue = $response.value[0].fsi_zone_classification
-            
-            # Map option set value to zone name
+            $zoneValue = $response.value[0].fsi_zone
+
+            # Map option set value to canonical zone label.
             $zoneMapping = @{
-                100000000 = 'Zone1'
-                100000001 = 'Zone2'
-                100000002 = 'Zone3'
+                100000001 = 'Zone1'
+                100000002 = 'Zone2'
+                100000003 = 'Zone3'
             }
-            
+
             if ($zoneMapping.ContainsKey($zoneValue)) {
                 $zone = $zoneMapping[$zoneValue]
                 Write-Verbose "ELM lookup found zone: $zone"
                 return $zone
             }
         }
-        
+
         Write-Verbose "Environment not found in ELM"
         return $null
     } catch {
-        Write-Verbose "ELM lookup failed: $($_.Exception.Message)"
+        Write-Warning "ELM zone lookup failed for environment $($EnvironmentId): $($_.Exception.Message)"
         return $null
     }
 }

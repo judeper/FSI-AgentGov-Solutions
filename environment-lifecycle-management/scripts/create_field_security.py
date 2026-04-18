@@ -183,9 +183,13 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
     print("=" * 60)
 
     print("\n[Important Notes]")
-    print("  - Associate the ELM Approver Fields profile with ELM Approver security role")
-    print("  - Test with an approver user to verify field restrictions work")
-    print("  - Approvers should only be able to modify: State, Approver, Approved On, Approval Comments")
+    print("  - Field Security Profiles are NOT associated with security roles.")
+    print("    Add users (or AAD security teams) directly to the 'ELM Approver Fields'")
+    print("    profile from Power Platform Admin Center > Environments > Settings >")
+    print("    Users + permissions > Field security profiles. Those users must also")
+    print("    hold the 'ELM Approver' security role.")
+    print("  - Test with an approver user to verify field restrictions work.")
+    print("  - Approvers should only be able to modify: State, Approver, Approved On, Approval Comments.")
 
     return success
 

@@ -29,15 +29,15 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "Draft", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Submitted", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "PendingApproval", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 4, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 5, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 6, "Label": {"LocalizedLabels": [{"Label": "Provisioning", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 7, "Label": {"LocalizedLabels": [{"Label": "Completed", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 8, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 9, "Label": {"LocalizedLabels": [{"Label": "Cancelled", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Draft", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Submitted", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "PendingApproval", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000005, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000006, "Label": {"LocalizedLabels": [{"Label": "Provisioning", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000007, "Label": {"LocalizedLabels": [{"Label": "Completed", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000008, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000009, "Label": {"LocalizedLabels": [{"Label": "Cancelled", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_er_zone": {
@@ -48,9 +48,9 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone1", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone2", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone3", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_er_environmenttype": {
@@ -61,9 +61,9 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "Sandbox", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Production", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "Developer", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Sandbox", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Production", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Developer", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_er_region": {
@@ -74,10 +74,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "United States", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Europe", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "United Kingdom", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 4, "Label": {"LocalizedLabels": [{"Label": "Australia", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "United States", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Europe", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "United Kingdom", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Australia", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_er_datasensitivity": {
@@ -88,10 +88,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "Public", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Internal", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "Confidential", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 4, "Label": {"LocalizedLabels": [{"Label": "Restricted", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Public", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Internal", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Confidential", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Restricted", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_er_expectedusers": {
@@ -102,10 +102,10 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "Just me (1)", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "Small team (2-10)", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "Large team (11-50)", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 4, "Label": {"LocalizedLabels": [{"Label": "Department (50+)", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Just me (1)", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Small team (2-10)", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Large team (11-50)", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Department (50+)", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_pl_action": {
@@ -116,22 +116,22 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "RequestCreated", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "ZoneClassified", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "ApprovalRequested", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 4, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 5, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 6, "Label": {"LocalizedLabels": [{"Label": "ProvisioningStarted", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 7, "Label": {"LocalizedLabels": [{"Label": "EnvironmentCreated", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 8, "Label": {"LocalizedLabels": [{"Label": "ManagedEnabled", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 9, "Label": {"LocalizedLabels": [{"Label": "GroupAssigned", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 10, "Label": {"LocalizedLabels": [{"Label": "SecurityGroupBound", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 11, "Label": {"LocalizedLabels": [{"Label": "BaselineConfigApplied", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 12, "Label": {"LocalizedLabels": [{"Label": "DLPAssigned", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 13, "Label": {"LocalizedLabels": [{"Label": "ProvisioningCompleted", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 14, "Label": {"LocalizedLabels": [{"Label": "ProvisioningFailed", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 15, "Label": {"LocalizedLabels": [{"Label": "RollbackInitiated", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 16, "Label": {"LocalizedLabels": [{"Label": "RollbackCompleted", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "RequestCreated", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "ZoneClassified", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "ApprovalRequested", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Approved", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000005, "Label": {"LocalizedLabels": [{"Label": "Rejected", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000006, "Label": {"LocalizedLabels": [{"Label": "ProvisioningStarted", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000007, "Label": {"LocalizedLabels": [{"Label": "EnvironmentCreated", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000008, "Label": {"LocalizedLabels": [{"Label": "ManagedEnabled", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000009, "Label": {"LocalizedLabels": [{"Label": "GroupAssigned", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000010, "Label": {"LocalizedLabels": [{"Label": "SecurityGroupBound", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000011, "Label": {"LocalizedLabels": [{"Label": "BaselineConfigApplied", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000012, "Label": {"LocalizedLabels": [{"Label": "DLPAssigned", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000013, "Label": {"LocalizedLabels": [{"Label": "ProvisioningCompleted", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000014, "Label": {"LocalizedLabels": [{"Label": "ProvisioningFailed", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000015, "Label": {"LocalizedLabels": [{"Label": "RollbackInitiated", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000016, "Label": {"LocalizedLabels": [{"Label": "RollbackCompleted", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_pl_actortype": {
@@ -142,9 +142,9 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 1, "Label": {"LocalizedLabels": [{"Label": "User", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 2, "Label": {"LocalizedLabels": [{"Label": "ServicePrincipal", "LanguageCode": 1033}]}},
-            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 3, "Label": {"LocalizedLabels": [{"Label": "System", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "User", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "ServicePrincipal", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "System", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -219,9 +219,11 @@ def get_provisioning_log_entity() -> dict:
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
                 "SchemaName": "fsi_Name",
                 "DisplayName": {"LocalizedLabels": [{"Label": "Log ID", "LanguageCode": 1033}]},
+                "Description": {"LocalizedLabels": [{"Label": "Auto-generated log ID (PL-00000001)", "LanguageCode": 1033}]},
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 100,
                 "FormatName": {"Value": "Text"},
+                "AutoNumberFormat": "PL-{SEQNUM:8}",
             },
         ],
     }
@@ -320,19 +322,18 @@ ENVIRONMENT_REQUEST_COLUMNS = [
         "MaxLength": 200,
         "FormatName": {"Value": "Text"},
     },
-    {
-        "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
-        "SchemaName": "fsi_Requester",
-        "DisplayName": {"LocalizedLabels": [{"Label": "Requester", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "None"},
-        "Targets": ["systemuser"],
-    },
+    # NOTE: fsi_Requester (lookup -> systemuser) is created via OneToMany
+    # relationship in `create_relationships()` below. The Dataverse Web API
+    # does not allow creating LookupAttributeMetadata via direct POST to
+    # /EntityDefinitions(...)/Attributes; lookups must be created through
+    # /RelationshipDefinitions with an embedded Lookup block.
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
         "SchemaName": "fsi_RequestedOn",
         "DisplayName": {"LocalizedLabels": [{"Label": "Requested On", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "Format": "DateAndTime",
+        "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
     },
     # Workflow State Fields
     {
@@ -341,20 +342,18 @@ ENVIRONMENT_REQUEST_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "State", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_er_state')",
+        "IsSecured": True,  # Field security profile (ELM Approver) restricts edit
     },
-    {
-        "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
-        "SchemaName": "fsi_Approver",
-        "DisplayName": {"LocalizedLabels": [{"Label": "Approver", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "None"},
-        "Targets": ["systemuser"],
-    },
+    # NOTE: fsi_Approver (lookup -> systemuser) is created via relationship
+    # in `create_relationships()` below. See note on fsi_Requester above.
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
         "SchemaName": "fsi_ApprovedOn",
         "DisplayName": {"LocalizedLabels": [{"Label": "Approved On", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "Format": "DateAndTime",
+        "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
+        "IsSecured": True,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
@@ -362,6 +361,7 @@ ENVIRONMENT_REQUEST_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Approval Comments", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},  # Required via business rule on rejection
         "MaxLength": 4000,
+        "IsSecured": True,
     },
     # Provisioning Result Fields
     {
@@ -387,6 +387,7 @@ ENVIRONMENT_REQUEST_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Provisioning Started", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "Format": "DateAndTime",
+        "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
@@ -394,18 +395,17 @@ ENVIRONMENT_REQUEST_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Provisioning Completed", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "Format": "DateAndTime",
+        "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
     },
 ]
 
 
+# NOTE: ProvisioningLog is intended to be append-only. Each column below sets
+# IsValidForUpdate=False to enforce immutability at the platform level (defense
+# in depth alongside the security-role design that withholds write privileges).
 PROVISIONING_LOG_COLUMNS = [
-    {
-        "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
-        "SchemaName": "fsi_EnvironmentRequest",
-        "DisplayName": {"LocalizedLabels": [{"Label": "Environment Request", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "ApplicationRequired"},
-        "Targets": ["fsi_environmentrequest"],
-    },
+    # NOTE: fsi_EnvironmentRequest (lookup -> fsi_environmentrequest) is
+    # created via `create_relationships()`; see note above on Requester/Approver.
     {
         "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
         "SchemaName": "fsi_Sequence",
@@ -414,6 +414,7 @@ PROVISIONING_LOG_COLUMNS = [
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "MinValue": 1,
         "MaxValue": 999,
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
@@ -421,6 +422,7 @@ PROVISIONING_LOG_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Action", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_pl_action')",
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
@@ -429,6 +431,7 @@ PROVISIONING_LOG_COLUMNS = [
         "Description": {"LocalizedLabels": [{"Label": "JSON payload with action details", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "MaxLength": 10000,
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -438,6 +441,7 @@ PROVISIONING_LOG_COLUMNS = [
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "MaxLength": 200,
         "FormatName": {"Value": "Text"},
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
@@ -445,6 +449,7 @@ PROVISIONING_LOG_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Actor Type", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_pl_actortype')",
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
@@ -452,6 +457,8 @@ PROVISIONING_LOG_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Timestamp", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "Format": "DateAndTime",
+        "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
@@ -459,6 +466,7 @@ PROVISIONING_LOG_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Success", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "DefaultValue": True,
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
@@ -466,6 +474,7 @@ PROVISIONING_LOG_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Error Message", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "MaxLength": 10000,
+        "IsValidForUpdate": False,
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -475,6 +484,7 @@ PROVISIONING_LOG_COLUMNS = [
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "MaxLength": 100,
         "FormatName": {"Value": "Text"},
+        "IsValidForUpdate": False,
     },
 ]
 
@@ -537,6 +547,103 @@ def create_columns(client: ELMClient, dry_run: bool = False) -> None:
             print(f"    {col_name}: created")
 
 
+# ============================================================================
+# Relationships (1:N) — lookup columns are created here, NOT via /Attributes.
+# ============================================================================
+
+# Each entry produces one OneToManyRelationshipMetadata POST against
+# /RelationshipDefinitions. The embedded `Lookup` block is what creates the
+# child-side lookup column. Direct POST of LookupAttributeMetadata to
+# /Attributes is rejected by the Dataverse Web API.
+RELATIONSHIPS = [
+    {
+        "SchemaName": "fsi_systemuser_environmentrequest_requester",
+        "ReferencedEntity": "systemuser",
+        "ReferencingEntity": "fsi_environmentrequest",
+        "LookupSchemaName": "fsi_Requester",
+        "LookupDisplayName": "Requester",
+        "AssociatedMenuLabel": "Environment Requests (Requester)",
+    },
+    {
+        "SchemaName": "fsi_systemuser_environmentrequest_approver",
+        "ReferencedEntity": "systemuser",
+        "ReferencingEntity": "fsi_environmentrequest",
+        "LookupSchemaName": "fsi_Approver",
+        "LookupDisplayName": "Approver",
+        "AssociatedMenuLabel": "Environment Requests (Approver)",
+    },
+    {
+        "SchemaName": "fsi_environmentrequest_provisioninglog",
+        "ReferencedEntity": "fsi_environmentrequest",
+        "ReferencingEntity": "fsi_provisioninglog",
+        "LookupSchemaName": "fsi_EnvironmentRequest",
+        "LookupDisplayName": "Environment Request",
+        "AssociatedMenuLabel": "Provisioning Logs",
+        "ChildRequiredLevel": "ApplicationRequired",
+        "CascadeDelete": "Cascade",
+    },
+]
+
+
+def _build_relationship_payload(spec: dict) -> dict:
+    """Build a OneToManyRelationshipMetadata payload from a relationship spec."""
+    cascade = spec.get("CascadeDelete", "Restrict")
+    payload = {
+        "@odata.type": "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata",
+        "SchemaName": spec["SchemaName"],
+        "ReferencedEntity": spec["ReferencedEntity"],
+        "ReferencingEntity": spec["ReferencingEntity"],
+        "AssociatedMenuConfiguration": {
+            "Behavior": "UseLabel",
+            "Group": "Details",
+            "Label": {
+                "LocalizedLabels": [
+                    {"Label": spec["AssociatedMenuLabel"], "LanguageCode": 1033}
+                ]
+            },
+        },
+        "CascadeConfiguration": {
+            "Assign": "NoCascade",
+            "Delete": cascade,
+            "Merge": "NoCascade",
+            "Reparent": "NoCascade",
+            "Share": "NoCascade",
+            "Unshare": "NoCascade",
+        },
+        "Lookup": {
+            "@odata.type": "Microsoft.Dynamics.CRM.LookupAttributeMetadata",
+            "SchemaName": spec["LookupSchemaName"],
+            "DisplayName": {
+                "LocalizedLabels": [
+                    {"Label": spec["LookupDisplayName"], "LanguageCode": 1033}
+                ]
+            },
+            "RequiredLevel": {
+                "Value": spec.get("ChildRequiredLevel", "None"),
+            },
+        },
+    }
+    return payload
+
+
+def create_relationships(client: ELMClient, dry_run: bool = False) -> None:
+    """Create 1:N relationships (and their child-side lookup columns)."""
+    print("\n[Creating Relationships + Lookup Columns]")
+    for spec in RELATIONSHIPS:
+        lookup_logical = spec["LookupSchemaName"].lower()
+        existing_attr = client.get_attribute_metadata(
+            spec["ReferencingEntity"], lookup_logical
+        )
+        if existing_attr:
+            print(f"  {spec['SchemaName']}: lookup {lookup_logical} already exists, skipping")
+            continue
+        if dry_run:
+            print(f"  {spec['SchemaName']}: would create (lookup {lookup_logical})")
+            continue
+        client.create_relationship(_build_relationship_payload(spec))
+        print(f"  {spec['SchemaName']}: created (lookup {lookup_logical})")
+
+
 def create_schema(client: ELMClient, dry_run: bool = False) -> None:
     """Create complete Dataverse schema for ELM."""
     print("=" * 60)
@@ -552,8 +659,12 @@ def create_schema(client: ELMClient, dry_run: bool = False) -> None:
     # Step 2: Create tables
     create_tables(client, dry_run)
 
-    # Step 3: Create columns
+    # Step 3: Create non-lookup columns
     create_columns(client, dry_run)
+
+    # Step 4: Create relationships (which create the lookup columns).
+    #         This MUST run after both referenced and referencing tables exist.
+    create_relationships(client, dry_run)
 
     print("\n" + "=" * 60)
     if dry_run:

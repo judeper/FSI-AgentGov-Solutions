@@ -283,16 +283,18 @@ class ELMClient:
 
     def query_audit(
         self,
-        object_type_code: str,
+        object_type_code,
         operations: Optional[list[int]] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> list[dict]:
         """
-        Query audit log for specific entity.
+        Query audit log for a specific entity.
 
         Args:
-            object_type_code: Entity type code or logical name
+            object_type_code: Numeric ObjectTypeCode (int) for the entity.
+                The ``audits`` table stores this as an integer; passing a
+                logical name string returns no rows.
             operations: List of operation codes (1=Create, 2=Update, 3=Delete)
             start_date: ISO date string for start of range
             end_date: ISO date string for end of range
@@ -300,7 +302,7 @@ class ELMClient:
         Returns:
             List of audit records
         """
-        filters = [f"objecttypecode eq '{object_type_code}'"]
+        filters = [f"objecttypecode eq {int(object_type_code)}"]
 
         if operations:
             op_filter = " or ".join([f"operation eq {op}" for op in operations])
@@ -375,6 +377,12 @@ class ELMClient:
         """
         Create a new attribute (column) on an entity.
 
+        Note: Lookup columns CANNOT be created via this endpoint. Use
+        :meth:`create_relationship` instead, which POSTs a
+        OneToManyRelationshipMetadata to /RelationshipDefinitions with an
+        embedded `Lookup` block. Per Microsoft Learn, the Web API rejects
+        LookupAttributeMetadata posted directly to /Attributes.
+
         Args:
             entity_logical_name: Entity logical name
             attribute_metadata: Attribute definition per Dataverse Web API spec
@@ -392,6 +400,30 @@ class ELMClient:
         )
         response.raise_for_status()
         return attribute_metadata
+
+    def create_relationship(self, relationship_metadata: dict) -> dict:
+        """
+        Create a 1:N (or N:N) relationship via /RelationshipDefinitions.
+
+        For OneToManyRelationshipMetadata, the embedded ``Lookup`` block is
+        what creates the child-side lookup column. This is the only supported
+        path for adding lookup columns programmatically.
+
+        Args:
+            relationship_metadata: Relationship metadata payload (must include
+                ``@odata.type`` such as
+                ``Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata``).
+
+        Returns:
+            The relationship metadata that was sent.
+        """
+        response = self.session.post(
+            urljoin(self.api_url, "RelationshipDefinitions"),
+            headers=self._get_headers(),
+            json=relationship_metadata,
+        )
+        response.raise_for_status()
+        return relationship_metadata
 
     def get_attribute_metadata(
         self, entity_logical_name: str, attribute_logical_name: str

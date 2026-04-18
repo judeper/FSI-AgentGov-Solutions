@@ -1,283 +1,179 @@
 #!/usr/bin/env python3
 """
-Create business rules for Environment Lifecycle Management.
+Print Power Platform maker-portal instructions for ELM business rules.
 
-Creates conditional required field rules:
-- Zone Rationale Required (Zone = 2 or 3)
-- Security Group Required (Zone = 2 or 3)
-- Approval Comments Required (State = Rejected)
+Why this script no longer calls the Dataverse Web API
+-----------------------------------------------------
+Earlier versions of this script tried to create business rules (workflow
+``category=2``) by POSTing legacy ``RuleDefinitions`` XAML to
+``/workflows`` in an already-Activated state. Both decisions are
+incompatible with the current Dataverse Web API:
+
+* The supported XAML for category=2 business rules in modern Dataverse is
+  Windows Workflow Foundation (``<Activity ...
+  xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities">``),
+  not the legacy ``<RuleDefinitions xmlns=".../crm/2009/WebServices">``
+  used here previously.
+* New ``workflow`` rows must be POSTed with ``statecode=0`` (Draft) and
+  then PATCHed to Activated. Posting Activated directly is rejected by
+  the platform.
+
+Programmatically generating valid business-rule WF XAML is brittle and
+hard to maintain. Microsoft's recommended path is to author business
+rules in the maker portal, where the platform produces the correct XAML
+on save. Once authored, the rules can be packaged into a managed
+solution for ALM transport.
+
+Run this script to print the rule definitions; then follow the
+instructions in ``docs/business-rules.md`` to author each rule manually.
 """
 
+from __future__ import annotations
+
 import argparse
-import os
+import json
+import logging
 import sys
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Iterable
 
-from elm_client import ELMClient
+LOGGER = logging.getLogger("elm.business_rules")
 
-# Business rule definitions
-BUSINESS_RULES = [
-    {
-        "name": "ELM Zone Rationale Required",
-        "description": "Require Zone Rationale when Zone is 2 or 3",
-        "entity": "fsi_environmentrequest",
-        "xaml": """<RuleDefinitions xmlns="http://schemas.microsoft.com/crm/2009/WebServices">
-  <Steps>
-    <Step Name="Zone Rationale Required" Description="Set Zone Rationale as required when Zone is 2 or 3">
-      <Condition>
-        <Or>
-          <Condition EntityName="fsi_environmentrequest" AttributeName="fsi_zone" Operator="Equals">
-            <Value>2</Value>
-          </Condition>
-          <Condition EntityName="fsi_environmentrequest" AttributeName="fsi_zone" Operator="Equals">
-            <Value>3</Value>
-          </Condition>
-        </Or>
-      </Condition>
-      <TrueStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_zonerationale</Argument>
-            <Argument Name="RequiredLevel">Required</Argument>
-          </Arguments>
-        </Action>
-      </TrueStep>
-      <FalseStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_zonerationale</Argument>
-            <Argument Name="RequiredLevel">None</Argument>
-          </Arguments>
-        </Action>
-      </FalseStep>
-    </Step>
-  </Steps>
-</RuleDefinitions>""",
-    },
-    {
-        "name": "ELM Security Group Required",
-        "description": "Require Security Group ID when Zone is 2 or 3",
-        "entity": "fsi_environmentrequest",
-        "xaml": """<RuleDefinitions xmlns="http://schemas.microsoft.com/crm/2009/WebServices">
-  <Steps>
-    <Step Name="Security Group Required" Description="Set Security Group ID as required when Zone is 2 or 3">
-      <Condition>
-        <Or>
-          <Condition EntityName="fsi_environmentrequest" AttributeName="fsi_zone" Operator="Equals">
-            <Value>2</Value>
-          </Condition>
-          <Condition EntityName="fsi_environmentrequest" AttributeName="fsi_zone" Operator="Equals">
-            <Value>3</Value>
-          </Condition>
-        </Or>
-      </Condition>
-      <TrueStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_securitygroupid</Argument>
-            <Argument Name="RequiredLevel">Required</Argument>
-          </Arguments>
-        </Action>
-      </TrueStep>
-      <FalseStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_securitygroupid</Argument>
-            <Argument Name="RequiredLevel">None</Argument>
-          </Arguments>
-        </Action>
-      </FalseStep>
-    </Step>
-  </Steps>
-</RuleDefinitions>""",
-    },
-    {
-        "name": "ELM Approval Comments Required",
-        "description": "Require Approval Comments when State is Rejected",
-        "entity": "fsi_environmentrequest",
-        "xaml": """<RuleDefinitions xmlns="http://schemas.microsoft.com/crm/2009/WebServices">
-  <Steps>
-    <Step Name="Approval Comments Required" Description="Set Approval Comments as required when State is Rejected">
-      <Condition>
-        <Condition EntityName="fsi_environmentrequest" AttributeName="fsi_state" Operator="Equals">
-          <Value>5</Value>
-        </Condition>
-      </Condition>
-      <TrueStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_approvalcomments</Argument>
-            <Argument Name="RequiredLevel">Required</Argument>
-          </Arguments>
-        </Action>
-      </TrueStep>
-      <FalseStep>
-        <Action Name="Set Required Level">
-          <Arguments>
-            <Argument Name="EntityName">fsi_environmentrequest</Argument>
-            <Argument Name="AttributeName">fsi_approvalcomments</Argument>
-            <Argument Name="RequiredLevel">None</Argument>
-          </Arguments>
-        </Action>
-      </FalseStep>
-    </Step>
-  </Steps>
-</RuleDefinitions>""",
-    },
-]
+# Option-set values match `create_dataverse_schema.py` after the
+# 2026-04 schema canonicalisation (custom range 100000001+).
+ZONE_2 = 100000002
+ZONE_3 = 100000003
+STATE_REJECTED = 100000005
 
 
-def create_business_rules(client: ELMClient, dry_run: bool = False) -> bool:
-    """Create business rules for ELM entities.
+@dataclass(frozen=True)
+class BusinessRule:
+    name: str
+    description: str
+    entity: str
+    trigger: str
+    actions: tuple[str, ...] = field(default_factory=tuple)
 
-    Returns:
-        True if all operations succeeded, False if any failures occurred.
-    """
-    success = True
-    print("\n" + "=" * 60)
-    print("ELM Business Rules Deployment")
-    print("=" * 60)
 
-    if dry_run:
-        print("\n*** DRY RUN - No changes will be made ***\n")
+RULES: tuple[BusinessRule, ...] = (
+    BusinessRule(
+        name="ELM Zone Rationale Required",
+        description=(
+            "Make 'Zone Rationale' (fsi_zonerationale) required when 'Zone' "
+            "(fsi_zone) is Zone2 or Zone3."
+        ),
+        entity="fsi_environmentrequest",
+        trigger=f"fsi_zone IN ({ZONE_2}, {ZONE_3})",
+        actions=(
+            "Set Business Required: fsi_zonerationale = Business Required",
+            "Otherwise: fsi_zonerationale = Not Required",
+        ),
+    ),
+    BusinessRule(
+        name="ELM Security Group Required",
+        description=(
+            "Make 'Security Group ID' (fsi_securitygroupid) required when "
+            "'Zone' (fsi_zone) is Zone2 or Zone3."
+        ),
+        entity="fsi_environmentrequest",
+        trigger=f"fsi_zone IN ({ZONE_2}, {ZONE_3})",
+        actions=(
+            "Set Business Required: fsi_securitygroupid = Business Required",
+            "Otherwise: fsi_securitygroupid = Not Required",
+        ),
+    ),
+    BusinessRule(
+        name="ELM Approval Comments Required",
+        description=(
+            "Make 'Approval Comments' (fsi_approvalcomments) required when "
+            "'State' (fsi_state) is Rejected."
+        ),
+        entity="fsi_environmentrequest",
+        trigger=f"fsi_state EQUALS {STATE_REJECTED}  (Rejected)",
+        actions=(
+            "Set Business Required: fsi_approvalcomments = Business Required",
+            "Otherwise: fsi_approvalcomments = Not Required",
+        ),
+    ),
+)
 
-    print("\n[Creating Business Rules]")
 
-    for rule in BUSINESS_RULES:
-        rule_name = rule["name"]
-        entity = rule["entity"]
+def _format_human(rules: Iterable[BusinessRule]) -> str:
+    lines = []
+    for r in rules:
+        lines.append("=" * 70)
+        lines.append(f"Rule: {r.name}")
+        lines.append(f"Entity: {r.entity}")
+        lines.append(f"Description: {r.description}")
+        lines.append(f"Condition: {r.trigger}")
+        lines.append("Actions:")
+        for action in r.actions:
+            lines.append(f"  - {action}")
+    lines.append("=" * 70)
+    lines.append("")
+    lines.append("Authoring steps (per rule):")
+    lines.append("  1. Open https://make.powerapps.com")
+    lines.append("  2. Solutions > <your ELM solution> > New > Automation > Business rule")
+    lines.append("  3. Choose the entity, set the Scope to 'Entity'.")
+    lines.append("  4. Add the Condition and Actions exactly as shown above.")
+    lines.append("  5. Save > Activate.")
+    lines.append("")
+    lines.append(
+        "Notes:"
+    )
+    lines.append(
+        "  - Save and activate each rule before testing."
+    )
+    lines.append(
+        "  - Keep the rule scope at 'Entity' so server-side validation runs."
+    )
+    return "\n".join(lines)
 
-        # Check if rule already exists
-        existing = client.get_workflows(entity, category=2)
-        rule_exists = any(w.get("name") == rule_name for w in existing)
 
-        if rule_exists:
-            print(f"\n  {rule_name}:")
-            print(f"    Already exists, skipping")
-            continue
-
-        if dry_run:
-            print(f"\n  {rule_name}:")
-            print(f"    Would create: {rule['description']}")
-            print(f"    Entity: {entity}")
-            continue
-
-        # Create the business rule as a workflow
-        workflow_data = {
-            "name": rule_name,
-            "description": rule["description"],
-            "primaryentity": entity,
-            "category": 2,  # Business Rule
-            "type": 1,  # Definition
-            "scope": 4,  # Entity (entire table)
-            "mode": 0,  # Background
-            "statecode": 1,  # Activated
-            "statuscode": 2,  # Activated
-            "xaml": rule["xaml"],
+def _format_json(rules: Iterable[BusinessRule]) -> str:
+    payload = [
+        {
+            "name": r.name,
+            "description": r.description,
+            "entity": r.entity,
+            "condition": r.trigger,
+            "actions": list(r.actions),
         }
-
-        try:
-            workflow_id = client.create_workflow(workflow_data)
-            print(f"\n  {rule_name}:")
-            print(f"    Created: {workflow_id}")
-            print(f"    Entity: {entity}")
-        except Exception as e:
-            success = False
-            print(f"\n  {rule_name}:")
-            print(f"    ERROR: {e}")
-            print(f"    NOTE: Business rules may need to be created manually via maker portal")
-
-    print("\n" + "=" * 60)
-    if dry_run:
-        print("DRY RUN COMPLETE - Review output above")
-    else:
-        print("BUSINESS RULES DEPLOYMENT COMPLETE")
-    print("=" * 60)
-
-    print("\n[Important Notes]")
-    print("  - Business rules created via API may need activation in maker portal")
-    print("  - Verify rules trigger correctly on Zone and State changes")
-    print("  - Test with Zone 2/3 requests to confirm conditional requirements")
-    print("  - NOTE: The XAML format used here is simplified; Dataverse may require")
-    print("    Windows Workflow Foundation XAML. If submission fails, create rules")
-    print("    manually via the maker portal (make.powerapps.com).")
-
-    return success
+        for r in rules
+    ]
+    return json.dumps(payload, indent=2)
 
 
-def main() -> None:
-    """CLI entry point."""
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Create business rules for ELM",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument(
-        "--tenant-id",
-        default=os.environ.get("ELM_TENANT_ID"),
-        help="Entra ID tenant ID",
+        description="Print ELM business-rule definitions for manual authoring.",
     )
     parser.add_argument(
-        "--client-id",
-        default=os.environ.get("ELM_CLIENT_ID"),
-        help="Application (client) ID",
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text)",
     )
     parser.add_argument(
-        "--client-secret",
-        default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret",
-    )
-    parser.add_argument(
-        "--environment-url",
-        default=os.environ.get("ELM_ENVIRONMENT_URL"),
-        help="Dataverse environment URL",
-    )
-    parser.add_argument(
-        "--interactive",
+        "--verbose",
         action="store_true",
-        help="Use interactive browser authentication",
+        help="Enable verbose logging",
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be created without making changes",
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    args = parser.parse_args()
+    if args.format == "json":
+        print(_format_json(RULES))
+    else:
+        print(_format_human(RULES))
 
-    # Validate required arguments
-    if not args.tenant_id or not args.environment_url:
-        parser.error("--tenant-id and --environment-url are required")
-
-    # Get client secret if needed
-    client_secret = args.client_secret
-    if not args.interactive and not client_secret:
-        if args.client_id:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
-
-    try:
-        client = ELMClient(
-            tenant_id=args.tenant_id,
-            environment_url=args.environment_url,
-            client_id=args.client_id,
-            client_secret=client_secret,
-            interactive=args.interactive,
-        )
-
-        success = create_business_rules(client, dry_run=args.dry_run)
-        if not success and not args.dry_run:
-            sys.exit(1)
-
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+    LOGGER.info("Printed %d business rule definitions.", len(RULES))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

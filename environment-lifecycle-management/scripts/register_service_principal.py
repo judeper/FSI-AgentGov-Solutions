@@ -9,6 +9,7 @@ import argparse
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 try:
     from azure.identity import DefaultAzureCredential, InteractiveBrowserCredential
@@ -21,17 +22,30 @@ except ImportError:
     sys.exit(4)
 
 
+_GRAPH_SESSION: Optional[requests.Session] = None
+
+
 def _get_graph_session() -> requests.Session:
-    """Create an HTTP session with retry logic for Graph API calls."""
+    """Return a process-wide HTTP session with retry logic for Graph API calls.
+
+    POST is intentionally NOT in ``allowed_methods`` because Graph POST
+    operations (create application, create service principal, add password)
+    are non-idempotent — a retried POST after a transient 503 can produce
+    duplicate apps/secrets.
+    """
+    global _GRAPH_SESSION
+    if _GRAPH_SESSION is not None:
+        return _GRAPH_SESSION
     session = requests.Session()
     retry_strategy = Retry(
         total=3,
         backoff_factor=1,
         status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["GET", "POST"],
+        allowed_methods=["GET"],
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("https://", adapter)
+    _GRAPH_SESSION = session
     return session
 
 
@@ -280,8 +294,8 @@ Examples:
     parser.add_argument(
         "--expiry-days",
         type=int,
-        required=True,
-        help="Secret expiry in days (required, valid range: 30-365)",
+        default=90,
+        help="Secret expiry in days (default: 90; valid range: 30-365)",
     )
     parser.add_argument(
         "--rotate-secret",

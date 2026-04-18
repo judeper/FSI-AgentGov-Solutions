@@ -101,8 +101,22 @@ DEPTH_MAP = {
     3: "Organization",
 }
 
-# The privilegedepthmask column stores bitmask values; convert to PrivilegeDepth enum
-_BITMASK_TO_DEPTH = {1: 0, 2: 1, 4: 2, 8: 3}
+# The `privilegedepthmask` column stores a bitmask of granted depths
+# (User=1, Business Unit=2, Parent:Child=4, Organization=8). Take the
+# highest set bit as the effective depth — that's how Dataverse renders
+# composite values in the role designer (e.g., 7 = Org).
+def _depth_from_mask(mask: int) -> int:
+    if not mask:
+        return -1
+    if mask & 8:
+        return 3
+    if mask & 4:
+        return 2
+    if mask & 2:
+        return 1
+    if mask & 1:
+        return 0
+    return -1
 
 
 def get_role_privileges(client: ELMClient, role_name: str) -> Optional[dict]:
@@ -152,7 +166,7 @@ def get_role_privileges(client: ELMClient, role_name: str) -> Optional[dict]:
     priv_map = {}
     for priv in privileges:
         depth_mask = priv.get("privilegedepthmask", 0)
-        depth = _BITMASK_TO_DEPTH.get(depth_mask, depth_mask)
+        depth = _depth_from_mask(depth_mask)
         # Linked entity attributes come with alias prefix
         priv_name = priv.get("priv.name", priv.get("priv_x002e_name", ""))
 

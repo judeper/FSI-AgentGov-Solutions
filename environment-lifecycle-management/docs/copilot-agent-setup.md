@@ -540,7 +540,7 @@ When calling Power Automate, the agent sends this JSON structure:
   "requestId": "guid-generated-by-flow",
   "timestamp": "2026-01-29T14:30:00Z",
   "requester": {
-    "upn": "john.smith@contoso.com",
+    "upn": "john.smith@example.com",
     "displayName": "John Smith",
     "department": "Finance"
   },

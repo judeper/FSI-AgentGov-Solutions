@@ -75,7 +75,7 @@ Solutions for environment management, pipeline governance, and operational testi
 | Solution | Description | Version | Controls |
 |----------|-------------|---------|----------|
 | [Agent 365 Lifecycle Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-365-lifecycle-governance/README.md) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | v1.1.0 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
-| [Environment Lifecycle Management](environment-lifecycle-management/index.md) | Power Platform environment provisioning with zone-based governance | v1.1.2 | 2.1, 2.2, 2.3, 2.8, 1.7 |
+| [Environment Lifecycle Management](environment-lifecycle-management/index.md) | Power Platform environment provisioning with zone-based governance | v1.2.0 | 2.1, 2.2, 2.8, 1.7 |
 | [Pipeline Governance Cleanup](pipeline-governance-cleanup/index.md) | Discover, notify, clean up personal pipelines | v1.1.0 | 2.3, 2.1 |
 | [DR Testing Framework](dr-testing-framework/index.md) | Automated disaster recovery testing for AI agent infrastructure | v1.1.0 | 2.4, 2.1, 1.9 |
 | [Message Center Monitor](message-center-monitor/index.md) | M365 Message Center monitoring for platform changes | v2.1.3 | 2.3, 2.10 |

@@ -50,6 +50,72 @@ Detailed specifications for the three provisioning flows.
 | **Office 365 Outlook** | Send notifications | Included |
 | **Microsoft Teams** | Post notifications | Included |
 
+### Microsoft Graph permissions
+
+The HTTP with Microsoft Entra ID connector calls into Microsoft Graph
+when binding security groups. Grant the service principal the
+following **application** permissions on the Microsoft Graph API
+(admin consent required) before deploying the flows:
+
+| Permission | Used by |
+|------------|---------|
+| `Group.Read.All` | Step 13 (Bind Security Group) — verifies the requested AAD security group exists before the BAP bind call |
+| `Application.Read.All` *(optional)* | If you want to validate the SP context for diagnostics |
+
+The BAP and Dataverse calls themselves do **not** use Microsoft Graph;
+they use the Power Platform admin APIs and Dataverse Web API
+respectively, and rely on the SP being granted Power Platform admin /
+Dataverse `System Administrator` as covered in
+[service-principal-setup.md](./service-principal-setup.md).
+
+---
+
+## Flow 0: Intake Flow (Copilot Studio → Dataverse)
+
+The Copilot Studio agent collects request fields per the JSON contract
+in `templates/json-output-schema.json`, then calls this flow via an HTTP
+trigger. The flow's job is to translate the friendly intake payload
+into a Dataverse `fsi_environmentrequest` row.
+
+### Trigger
+
+| Setting | Value |
+|---------|-------|
+| Type | When an HTTP request is received |
+| Method | POST |
+| Schema | Use `templates/json-output-schema.json` |
+
+### Steps (summary)
+
+1. **Resolve requester** — Office 365 Users → *Get user profile (V2)*
+   with the UPN supplied in `requester.upn`. Capture the resulting
+   `id`. Then **Get a row by ID** from Dataverse `Users` table filtered
+   by `azureactivedirectoryobjectid eq <upn lookup id>` — capture the
+   `systemuserid`.
+2. **Translate friendly enums to choice integers**:
+   - `environment.type` → `fsi_environmenttype` (`Sandbox`=100000001,
+     `Production`=100000002, `Developer`=100000003)
+   - `environment.region` → `fsi_region` (`unitedstates`=100000001,
+     `europe`=100000002, `unitedkingdom`=100000003,
+     `australia`=100000004)
+   - `classification.zone` (1/2/3) → `fsi_zone` (100000001/2/3)
+   - `classification.dataSensitivity` (`Public`/`Internal`/
+     `Confidential`/`Restricted`) → `fsi_datasensitivity`
+     (100000001..100000004)
+3. **Add a row — Microsoft Dataverse** (`Environment Requests`):
+   - Bind the requester via
+     `fsi_Requester@odata.bind = /systemusers(<systemuserid>)` (do
+     **not** populate `_fsi_requester_value` directly — that's a
+     read-only navigation column on the response).
+   - Leave `fsi_requestnumber` empty — the platform autonumbers it
+     (`REQ-{SEQNUM:5}`).
+   - Set `fsi_state` to `100000002` (Submitted).
+4. **Return the request ID** in the HTTP response so the agent can
+   link to the new request.
+
+> Approval routing (Flow 4) and provisioning (Flow 1) take over once
+> the row is in `Submitted` and `Approved` states respectively.
+
 ---
 
 ## Flow 1: Main Provisioning Flow
@@ -61,7 +127,7 @@ Detailed specifications for the three provisioning flows.
 | Type | Dataverse - When a row is modified |
 | Table | EnvironmentRequest |
 | Scope | Organization |
-| Filter rows | `fsi_state eq 4` (Approved) |
+| Filter rows | `fsi_state eq 100000004` (Approved) |
 | Select columns | All |
 
 ### Variables
@@ -81,22 +147,22 @@ Initialize at flow start:
 
 ```
 // environmentGroupName
-if(equals(triggerBody()?['fsi_zone'], 1),
+if(equals(triggerBody()?['fsi_zone'], 100000001),
   'FSI-Zone1-PersonalProductivity',
-  if(equals(triggerBody()?['fsi_zone'], 2),
+  if(equals(triggerBody()?['fsi_zone'], 100000002),
     'FSI-Zone2-TeamCollaboration',
     'FSI-Zone3-EnterpriseManagedEnvironment'
   )
 )
 
 // auditRetentionDays
-if(equals(triggerBody()?['fsi_zone'], 3), 2557,
-  if(equals(triggerBody()?['fsi_zone'], 2), 365, 180)
+if(equals(triggerBody()?['fsi_zone'], 100000003), 2557,
+  if(equals(triggerBody()?['fsi_zone'], 100000002), 365, 180)
 )
 
 // sessionTimeoutMinutes
-if(equals(triggerBody()?['fsi_zone'], 3), 120,
-  if(equals(triggerBody()?['fsi_zone'], 2), 480, 1440)
+if(equals(triggerBody()?['fsi_zone'], 100000003), 120,
+  if(equals(triggerBody()?['fsi_zone'], 100000002), 480, 1440)
 )
 ```
 
@@ -164,11 +230,11 @@ Wrap in error-handling scope:
 
 | Parameter | Value |
 |-----------|-------|
-| Location | `@{if(equals(triggerBody()?['fsi_region'], 1), 'unitedstates', if(equals(triggerBody()?['fsi_region'], 2), 'europe', if(equals(triggerBody()?['fsi_region'], 3), 'unitedkingdom', 'australia')))}` |
+| Location | `@{if(equals(triggerBody()?['fsi_region'], 100000001), 'unitedstates', if(equals(triggerBody()?['fsi_region'], 100000002), 'europe', if(equals(triggerBody()?['fsi_region'], 100000003), 'unitedkingdom', 'australia')))}` |
 | Display Name | `@{triggerBody()?['fsi_environmentname']}` |
-| Environment Type | `@{if(equals(triggerBody()?['fsi_environmenttype'], 1), 'Sandbox', if(equals(triggerBody()?['fsi_environmenttype'], 2), 'Production', 'Developer'))}` |
-| Currency | `@{if(equals(triggerBody()?['fsi_region'], 1), 'USD', if(equals(triggerBody()?['fsi_region'], 2), 'EUR', if(equals(triggerBody()?['fsi_region'], 3), 'GBP', 'AUD')))}` |
-| Language | `@{if(equals(triggerBody()?['fsi_region'], 1), '1033', if(equals(triggerBody()?['fsi_region'], 2), '1033', if(equals(triggerBody()?['fsi_region'], 3), '2057', '3081')))}` |
+| Environment Type | `@{if(equals(triggerBody()?['fsi_environmenttype'], 100000001), 'Sandbox', if(equals(triggerBody()?['fsi_environmenttype'], 100000002), 'Production', 'Developer'))}` |
+| Currency | `@{if(equals(triggerBody()?['fsi_region'], 100000001), 'USD', if(equals(triggerBody()?['fsi_region'], 100000002), 'EUR', if(equals(triggerBody()?['fsi_region'], 100000003), 'GBP', 'AUD')))}` |
+| Language | `@{if(equals(triggerBody()?['fsi_region'], 100000001), '1033', if(equals(triggerBody()?['fsi_region'], 100000002), '1033', if(equals(triggerBody()?['fsi_region'], 100000003), '2057', '3081')))}` |
 
 ### Step 5: Poll Until Ready (Do Until)
 
@@ -254,19 +320,24 @@ Log action `8` (ManagedEnabled) to ProvisioningLog.
 }
 ```
 
-**Post-Action:** Filter array to find group by displayName:
+**Post-Action:** Filter array to find group by displayName.
+
+The Power Automate `filter` workflow function takes a 2-argument signature
+(`filter(<from>, <where>)`) — the previous 3-argument form was invalid. Use
+`equals()` with `item()?['properties']?['displayName']` inside the `where`:
 
 ```
-@first(
-  filter(
-    body('Get_Environment_Groups')?['value'],
-    item()?['properties']?['displayName'],
-    variables('environmentGroupName')
-  )
-)?['name']
+@{
+  first(
+    filter(
+      body('Get_Environment_Groups')?['value'],
+      equals(item()?['properties']?['displayName'], variables('environmentGroupName'))
+    )
+  )?['name']
+}
 ```
 
-Set result to `resolvedGroupId` variable.
+Set the result of this expression into the `resolvedGroupId` variable.
 
 ### Step 10: Assign to Environment Group
 
@@ -378,11 +449,27 @@ Log action `13` (ProvisioningCompleted) to ProvisioningLog.
 
 ### Step 16: Resolve Requester Email
 
-**Action:** Office 365 Users - Get user profile (V2)
+`fsi_Requester` is a Dataverse lookup column, so the trigger payload
+exposes only the systemuser **GUID** (`_fsi_requester_value`). The
+Office 365 Users connector requires a UPN, so resolve the user record
+first and then read its `internalemailaddress` (or `domainname`).
+
+**Action 1: Get a row by ID — Microsoft Dataverse**
 
 | Parameter | Value |
 |-----------|-------|
-| User (UPN) | `triggerBody()?['_fsi_requester_value']` |
+| Table name | `Users` |
+| Row ID | `triggerBody()?['_fsi_requester_value']` |
+| Select columns | `internalemailaddress,domainname,fullname` |
+
+**Action 2: Office 365 Users - Get user profile (V2)**
+
+| Parameter | Value |
+|-----------|-------|
+| User (UPN) | `outputs('Get_a_row_by_ID_-_Requester')?['body/domainname']` |
+
+If your tenant uses a different mail attribute, swap `domainname`
+(the systemuser UPN) for `internalemailaddress`.
 
 ### Step 17: Notify Requester
 
@@ -401,7 +488,7 @@ Log action `13` (ProvisioningCompleted) to ProvisioningLog.
 <ul>
   <li><strong>Name:</strong> @{triggerBody()?['fsi_environmentname']}</li>
   <li><strong>URL:</strong> @{outputs('Create_Environment')?['body']?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']}</li>
-  <li><strong>Zone:</strong> Zone @{triggerBody()?['fsi_zone']}</li>
+  <li><strong>Zone:</strong> @{triggerBody()?['fsi_zone@OData.Community.Display.V1.FormattedValue']}</li>
   <li><strong>Request:</strong> @{triggerBody()?['fsi_requestnumber']}</li>
 </ul>
 
@@ -428,7 +515,7 @@ Wrap the main flow in error-handling scopes:
       "Log_ProvisioningFailed": { ... },
       "Update_Request_Failed": {
         "inputs": {
-          "fsi_state": 8
+          "fsi_state": 100000008
         }
       },
       "Notify_Admin": { ... }
@@ -452,7 +539,7 @@ Wrap the main flow in error-handling scopes:
 |---------|-------|
 | Type | Dataverse - When a row is modified |
 | Table | EnvironmentRequest |
-| Filter rows | `fsi_state eq 7 and fsi_environmentid ne null and fsi_securitygroupid ne null` |
+| Filter rows | `fsi_state eq 100000007 and fsi_environmentid ne null and fsi_securitygroupid ne null` |
 | Select columns | `fsi_securitygroupid` |
 
 ### Step 1: Validate Security Group
@@ -616,7 +703,7 @@ Routes environment requests through manager and compliance approvals, transition
 |---------|-------|
 | Type | Dataverse - When a row is modified |
 | Table | EnvironmentRequest |
-| Filter rows | `fsi_state eq 2` (Submitted) |
+| Filter rows | `fsi_state eq 100000002` (Submitted) |
 
 ### Step 1: Update State to PendingApproval
 
@@ -655,7 +742,7 @@ Routes environment requests through manager and compliance approvals, transition
 
 ### Step 4: Start Compliance Approval (Zone 2/3 Only)
 
-**Condition:** `triggerBody()?['fsi_zone'] ge 2`
+**Condition:** `triggerBody()?['fsi_zone'] ge 100000002`
 
 **Action:** Approvals - Start and wait for an approval
 
