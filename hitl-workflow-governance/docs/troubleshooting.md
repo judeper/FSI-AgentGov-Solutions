@@ -178,16 +178,13 @@ Error: Access denied to table fsi_HitlCheckpointResult
 
 **Symptom:** Records added to `fsi_HitlCheckpointResult` but HITL-Violation-Alert flow does not run.
 
-**Cause:** Trigger filter may not match the severity option set values deployed in your environment.
+**Cause:** Trigger filter is using the wrong column type — `fsi_severity` is a string in this schema, not a picklist.
 
 **Resolution:**
 1. Verify the flow is turned on
-2. Check the trigger filter: `fsi_severity eq 100000003 or fsi_severity eq 100000002`
-3. Confirm these option set values match your deployed schema:
-   - Critical = 100000003
-   - High = 100000002
-4. If values differ, update the trigger filter to match your environment
-5. Manually trigger the flow with a test record to verify
+2. Check the trigger filter is text-based: `fsi_severity eq 'Critical' or fsi_severity eq 'High'`
+3. Severity values are case-sensitive strings (`Critical`, `High`, `Medium`, `Warning`)
+4. Manually trigger the flow with a test record to verify
 
 ---
 
@@ -277,7 +274,7 @@ foreach ($result in $results.CrmRecords) {
 }
 ```
 
-> **Important:** `fsi_HitlScanRun` records are an immutable audit trail that supports compliance with FINRA Rule 4511 and SEC 17a-3/4 recordkeeping requirements. Do not delete scan run records in production environments. If cleanup is needed for testing, delete and recreate the entire test environment instead.
+> **Important:** `fsi_HitlScanRun` records are an immutable audit trail that supports compliance with FINRA Rule 4511 and SEC Rule 17a-3/4 recordkeeping requirements. Do not delete scan run records in production environments. If cleanup is needed for testing, delete and recreate the entire test environment instead.
 
 ### Reprocess Failed Scan
 

@@ -163,7 +163,16 @@ try {
 
     Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
 
-    $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    try {
+        $tokenResult = Get-AzAccessToken -ResourceUri $normalizedUrl -ErrorAction Stop
+    } catch {
+        $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    }
+
+    $rawToken = $tokenResult.Token
+    if ($rawToken -is [System.Security.SecureString]) {
+        $rawToken = [System.Net.NetworkCredential]::new('', $rawToken).Password
+    }
 
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime
@@ -172,12 +181,12 @@ try {
     }
 
     $script:TokenCache[$normalizedUrl] = @{
-        Token     = $tokenResult.Token
+        Token     = $rawToken
         ExpiresOn = $expiresOn
     }
 
     Write-Verbose "Interactive token acquired for $normalizedUrl (expires: $expiresOn)"
-    return $tokenResult.Token
+    return $rawToken
 } catch {
     if ($_.Exception.Message -match 'No Azure context found') {
         throw $_

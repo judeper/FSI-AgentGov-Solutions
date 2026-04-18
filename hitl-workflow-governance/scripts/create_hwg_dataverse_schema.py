@@ -59,6 +59,8 @@ HWG_OPTIONSETS = {
             ("RequestForInformation", 100000000),
             ("MultistageApproval", 100000001),
             ("CustomHitl", 100000002),
+            ("AdvancedApprovalsGeneric", 100000003),
+            ("NotApplicable", 100000004),
         ],
     },
     "fsi_HWG_checkpointstatus": {
@@ -381,7 +383,7 @@ TABLES = {
         "plural": "HITL Scan Runs",
         "description": (
             "Immutable scan execution audit trail for regulatory evidence "
-            "(supports compliance with FINRA 4511, SEC 17a-3)"
+            "(supports compliance with FINRA Rule 4511(a) and SEC Rule 17a-3)"
         ),
         "ownership": "OrganizationOwned",
         "columns": HITL_SCAN_RUN_COLUMNS,

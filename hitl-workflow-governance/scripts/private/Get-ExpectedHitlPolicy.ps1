@@ -58,7 +58,7 @@ switch ($Zone) {
             MissingSeverity         = 'Critical'
             ReviewerMissingSeverity = 'Critical'
             InputSeverity           = 'High'
-            RegulatoryContext       = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA 3110 supervisory requirements'
+            RegulatoryContext       = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA Rule 3110 supervisory requirements'
         }
     }
     'Zone2' {
@@ -71,7 +71,7 @@ switch ($Zone) {
             MissingSeverity         = 'High'
             ReviewerMissingSeverity = 'High'
             InputSeverity           = 'Medium'
-            RegulatoryContext       = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA 501(b) safeguards'
+            RegulatoryContext       = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA Section 501(b) safeguards'
         }
     }
     'Zone1' {

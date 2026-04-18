@@ -26,10 +26,10 @@ Microsoft introduced the **Request for Information** (RFI) action for Copilot St
 | Regulation | Relevance |
 |------------|-----------|
 | **FINRA Rule 3110** | Supervisory procedures requiring human review of AI agent outputs before client-facing actions |
-| **FINRA 4511(a)** | Books and records requirements for supervision evidence, including documentation that human review checkpoints were invoked |
-| **SEC 17a-3/4** | Supervisory review documentation and record preservation for human-in-the-loop decision records |
-| **SOX 302/404** | Internal control documentation demonstrating that material financial workflows include human review steps |
-| **GLBA 501(b)** | Safeguards for customer financial information requiring human oversight of agent actions that access or transmit protected data |
+| **FINRA Rule 4511(a)** | Books and records requirements for supervision evidence, including documentation that human review checkpoints were invoked |
+| **SEC Rule 17a-3/4** | Supervisory review documentation and record preservation for human-in-the-loop decision records |
+| **SOX Section 302/404** | Internal control documentation demonstrating that material financial workflows include human review steps |
+| **GLBA Section 501(b)** | Safeguards for customer financial information requiring human oversight of agent actions that access or transmit protected data |
 
 HWG supports compliance with these regulations by providing auditable evidence that agent flows include appropriate human review checkpoints. Implementation of this solution alone does not satisfy regulatory obligations — organizations should verify that HITL configurations meet their specific supervisory requirements.
 
@@ -93,14 +93,15 @@ hitl-workflow-governance/
     │   └── Test-HitlCheckpointConfiguration.ps1 # HITL checkpoint configuration
     ├── private/
     │   ├── HWGClient.psm1                  # Dataverse client module
-    │   ├── Get-HitlCheckpointResults.ps1   # Evidence query helper
+    │   ├── Get-HWGValidationResults.ps1    # Evidence query helper
     │   ├── Get-ZoneClassification.ps1      # Zone lookup helper
     │   ├── Get-ExpectedHitlPolicy.ps1      # HITL policy reference
     │   ├── Test-ParameterValidation.ps1    # Parameter validators
     │   └── Connect-EnvironmentDataverse.ps1 # Per-env Dataverse auth
-    └── templates/
-        ├── hitl-zone-policy.json               # Zone policy configuration
-        └── adaptive-card-hitl-alert.json       # Teams alert template
+
+templates/
+├── adaptive-card-hitl-alert.json       # Teams alert template (runbook summary)
+└── hitl-zone-policy.json               # Reference zone-policy JSON (runtime policy is in Get-ExpectedHitlPolicy.ps1)
 ```
 
 Power Automate flows are built manually using the instructions in [docs/flow-configuration.md](docs/flow-configuration.md).
@@ -184,18 +185,22 @@ Deploy the Azure Automation runbook for recurring scans:
 
 ## Configuration
 
+The deploy script (`scripts/create_hwg_environment_variables.py`) provisions these Dataverse-backed environment variables (read by `Start-HitlValidationRunbook.ps1` and Power Automate flows):
+
 | Environment Variable | Purpose | Default |
 |---------------------|---------|---------|
-| `fsi_HWG_DataverseUrl` | Target Dataverse organization URL | — |
-| `fsi_HWG_TenantId` | Microsoft Entra ID tenant identifier | — |
-| `fsi_HWG_ClientId` | App registration client ID | — |
-| `fsi_HWG_ScanFrequencyHours` | Hours between scheduled scans | 24 |
-| `fsi_HWG_TeamsGroupId` | Teams group for alert notifications | — |
-| `fsi_HWG_TeamsChannelId` | Teams channel for alert notifications | — |
-| `fsi_HWG_AlertSeverityThreshold` | Minimum severity for Teams alerts | Medium |
-| `fsi_HWG_DryRunMode` | Enable dry-run mode (true/false) | true |
+| `fsi_HWG_GracePeriodHours` | Hours before new agents must have HITL checkpoints | 72 |
+| `fsi_HWG_EnableDataversePersistence` | Persist scan results to Dataverse (`true`/`false`) | true |
+| `fsi_HWG_DefaultReviewSlaHours` | Default reviewer response SLA in hours | 24 |
+| `fsi_HWG_Zone3SampleRate` | Percent of Zone 3 actions requiring HITL | 100 |
+| `fsi_HWG_Zone2SampleRate` | Percent of Zone 2 actions sampled for HITL | 10 |
+| `fsi_HWG_NotificationWebhookUrl` | Microsoft Teams webhook URL for alerts | — |
+| `fsi_HWG_IncludeSandbox` | Include Sandbox environments in scans (`true`/`false`) | false |
+| `fsi_HWG_IncludeDrafts` | Include unpublished draft flows in scans (`true`/`false`) | false |
 
-Zone policy thresholds are configured in `templates/hitl-zone-policy.json`. See [docs/flow-configuration.md](docs/flow-configuration.md) for Azure Automation setup details.
+> Connection (Dataverse URL, tenant, client) is supplied via the runbook's connection reference and Automation account credentials, not as environment variables. Dry-run is controlled by passing `-WhatIf` to `Start-HitlValidationRunbook.ps1`.
+
+Zone policy thresholds are configured in `scripts/private/Get-ExpectedHitlPolicy.ps1`. See [docs/flow-configuration.md](docs/flow-configuration.md) for Azure Automation setup details.
 
 ## Boundary with Existing Solutions
 

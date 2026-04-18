@@ -121,12 +121,13 @@ This guide provides step-by-step instructions for manually building the HITL Wor
      - `fsi_agentname`: `AgentName`
      - `fsi_environmentname`: `EnvironmentName`
      - `fsi_zone`: `Zone` (mapped to option set value)
-     - `fsi_violationtype`: `ViolationType` (mapped to option set value)
-     - `fsi_actiontype`: `ActionType`
-     - `fsi_severity`: `Severity` (mapped to option set value)
+     - `fsi_violationtype`: `ViolationType` (string)
+     - `fsi_severity`: `Severity` (string: `Critical`, `High`, `Medium`, `Warning`)
      - `fsi_regulatorycontext`: `RegulatoryContext`
      - `fsi_detectedat`: Variable `timestamp`
      - `fsi_runid`: Variable `runId`
+
+> **Note:** `fsi_severity` is a string column in this schema (not a picklist). Filter and bind it as text. `fsi_violationtype` is also a string. There is no `fsi_actiontype` or `fsi_details` column on `fsi_HitlCheckpointResult` — do not bind them.
 
 9. **Check Alert Threshold**
    - **Condition:** `AlertRequired` equals `true`
@@ -164,7 +165,7 @@ This guide provides step-by-step instructions for manually building the HITL Wor
    - Change type: Added
    - Table name: `fsi_HitlCheckpointResult`
    - Scope: Organization
-   - **Filter rows:** `fsi_severity eq 100000003 or fsi_severity eq 100000002` (Critical = 100000003, High = 100000002)
+   - **Filter rows:** `fsi_severity eq 'Critical' or fsi_severity eq 'High'`
 
    > **Note:** Adjust option set values to match your deployed schema. The filter restricts the trigger to Critical and High severity violations only.
 
@@ -215,7 +216,7 @@ This guide provides step-by-step instructions for manually building the HITL Wor
 Table: fsi_HitlCheckpointResult
 Change type: Added
 Scope: Organization
-Filter: fsi_severity eq 100000003 or fsi_severity eq 100000002
+Filter: fsi_severity eq 'Critical' or fsi_severity eq 'High'
 ```
 
 ---

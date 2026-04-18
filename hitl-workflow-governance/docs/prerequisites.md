@@ -108,7 +108,7 @@ pip install msal requests
 
 ```bash
 python scripts/create_hwg_dataverse_schema.py \
-  --dataverse-url https://yourorg.crm.dynamics.com \
+  --environment-url https://yourorg.crm.dynamics.com \
   --client-id <app-id> \
   --client-secret <secret> \
   --tenant-id <tenant-id>
@@ -127,7 +127,8 @@ For scheduled unattended scans:
    - Location: Same region as Power Platform environment
 
 2. **Import Runbook**
-   - Import `Test-HitlWorkflowCompliance.ps1` as PowerShell 7.2 runbook
+   - Import `Start-HitlValidationRunbook.ps1` as PowerShell 7.2 runbook (this is the orchestrator entrypoint)
+   - `Test-HitlWorkflowCompliance.ps1` is dot-sourced by the orchestrator and is not the entrypoint
    - Publish the runbook
 
 3. **Configure Credentials**

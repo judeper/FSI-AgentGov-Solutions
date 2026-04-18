@@ -89,7 +89,7 @@
 .NOTES
     Version: 1.0.0
     Solution: HITL Workflow Governance (HWG)
-    Controls: 2.12 (Supervision/FINRA 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
+    Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -175,13 +175,13 @@ try {
     $dvIncludeSandbox = Get-HWGEnvironmentVariable -Name "IncludeSandbox" -DefaultValue "false"
     if ($dvIncludeSandbox -eq "true" -and -not $IncludeSandbox) {
         Write-Verbose "Dataverse override: IncludeSandbox=true"
-        $IncludeSandbox = [switch]::new($true)
+        $IncludeSandbox = $true
     }
 
     $dvIncludeDrafts = Get-HWGEnvironmentVariable -Name "IncludeDrafts" -DefaultValue "false"
     if ($dvIncludeDrafts -eq "true" -and -not $IncludeDrafts) {
         Write-Verbose "Dataverse override: IncludeDrafts=true"
-        $IncludeDrafts = [switch]::new($true)
+        $IncludeDrafts = $true
     }
 
     Write-Verbose "Dataverse parameters loaded"
@@ -245,6 +245,9 @@ try {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $violationCount -gt 0) {
         $overallStatus = 'Review'
+    } elseif ($totalAgents -eq 0) {
+        # No agents discovered: do not silently report Passed.
+        $overallStatus = 'Inconclusive'
     }
 
     Write-Verbose "Scan complete. Overall status: $overallStatus"
@@ -259,6 +262,7 @@ try {
     $driftDetails = @()
     $globalIsFirstRun = $false
     $previousScanFailed = $false
+    $auditControlBypass = $false
 
     # Query the most recent scan run from Dataverse
     $baseUrl = $DataverseUrl.TrimEnd('/')
@@ -308,9 +312,12 @@ try {
             Write-Verbose "No previous scan found -- first run"
         }
     } catch {
-        Write-Verbose "Previous scan query failed: $($_.Exception.Message). Failing open -- no drift detection."
+        # Fail closed on previous-scan query failure to surface AuditControlBypass
+        # rather than silently skipping drift detection.
+        Write-Warning "Previous scan query failed: $($_.Exception.Message). Marking run as Inconclusive (drift detection unavailable)."
         $previousScanFailed = $true
         $globalIsFirstRun = $true
+        $auditControlBypass = $true
     }
 
     # Compare current vs previous per agent
@@ -424,13 +431,22 @@ try {
         $alertSeverity = 'Critical'
     }
 
+    # Audit control bypass (e.g., previous-scan query failure) elevates severity
+    # so supervisors see the run was not fully evaluated.
+    if ($auditControlBypass) {
+        $overallStatus = 'AuditControlBypass'
+        $alertSeverity = 'Critical'
+    }
+
     # Build reason string
     $reason = switch ($overallStatus) {
-        'Passed'   { "All $totalAgents agents across $uniqueEnvs environments have proper HITL checkpoints" }
-        'Review'   { "$violationCount agent(s) with HITL checkpoint violations across $uniqueEnvs environments" }
-        'Failed'   { "$violationCount agent(s) with HITL checkpoint violations including high severity" }
-        'Critical' { "$violationCount agent(s) with HITL checkpoint violations including critical severity" }
-        default    { "Validation completed with status: $overallStatus" }
+        'Passed'             { "All $totalAgents agents across $uniqueEnvs environments have proper HITL checkpoints" }
+        'Review'             { "$violationCount agent(s) with HITL checkpoint violations across $uniqueEnvs environments" }
+        'Failed'             { "$violationCount agent(s) with HITL checkpoint violations including high severity" }
+        'Critical'           { "$violationCount agent(s) with HITL checkpoint violations including critical severity" }
+        'Inconclusive'       { "No agents discovered; verify scope filters and authentication." }
+        'AuditControlBypass' { "Drift detection unavailable: previous-scan query failed; supervisors must verify manually." }
+        default              { "Validation completed with status: $overallStatus" }
     }
 
     if ($hasDrift) {

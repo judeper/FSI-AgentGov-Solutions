@@ -34,7 +34,7 @@ Post-Deployment Steps
 1. SECURITY -- Configure fsi_HitlScanRun security role:
    - Navigate to Settings > Security > Security Roles
    - Remove Write and Delete privileges for fsi_HitlScanRun
-   - This supports immutable audit records (FINRA 4511, SEC 17a-3)
+   - This supports immutable audit records (FINRA Rule 4511(a), SEC Rule 17a-3)
 
 2. CONNECTIONS -- Bind connection references in Power Automate:
    - fsi_cr_dataverse_hitlworkflowgovernance          -> Select Dataverse connection

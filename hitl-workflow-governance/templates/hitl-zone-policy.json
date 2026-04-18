@@ -12,7 +12,7 @@
       "requiredForActionTypes": ["write", "financial", "externalTransfer", "piiProcessing", "customerFacing"],
       "minimumInputs": 1,
       "severity": "Critical",
-      "regulatoryContext": "FINRA Rule 3110 requires supervisory review of customer-facing AI agent outputs. SOX 302/404 requires documented internal controls for financial operations."
+      "regulatoryContext": "FINRA Rule 3110 requires supervisory review of customer-facing AI agent outputs. SOX Section 302/404 requires documented internal controls for financial operations."
     },
     "Zone2": {
       "displayName": "Zone 2 - Team Collaboration",
@@ -23,7 +23,7 @@
       "requiredForActionTypes": ["financial", "externalTransfer", "piiProcessing"],
       "minimumInputs": 1,
       "severity": "High",
-      "regulatoryContext": "FINRA Rule 3110(b) recommends structured oversight for shared agent outputs. GLBA 501(b) requires safeguards for customer financial information."
+      "regulatoryContext": "FINRA Rule 3110(b) recommends structured oversight for shared agent outputs. GLBA Section 501(b) requires safeguards for customer financial information."
     },
     "Zone1": {
       "displayName": "Zone 1 - Personal Productivity",

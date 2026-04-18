@@ -23,7 +23,7 @@
     File: Get-AgentHitlSettings.ps1
     Version: 1.0.0
     Solution: HITL Workflow Governance (HWG)
-    Controls: 2.12 (Supervision/FINRA 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
+    Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
 #>
 
 #Requires -Version 7.0

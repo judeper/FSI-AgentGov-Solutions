@@ -34,7 +34,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | v1.0.1 | 2.12, 1.10, 1.7 |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | v1.1.0 | 2.24 |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | v1.1.0 | 3.10, 2.9, 2.12 |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.0.1 | 2.12, 2.17, 1.10 |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | v1.1.0 | 2.12, 2.17, 1.10 |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.5 | 2.22, 1.23, 3.7, 3.8 |
 | [Message Center Monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes affecting AI agents | v2.2.0 | 2.3, 2.10 |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation and DLP integration | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 |

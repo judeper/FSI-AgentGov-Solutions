@@ -71,7 +71,7 @@ Auto-generated schema documentation. Do not edit manually.
 ### HITL Scan Run (`fsi_HitlScanRun`)
 
 **Ownership:** OrganizationOwned
-**Description:** Immutable scan execution audit trail for regulatory evidence (supports compliance with FINRA 4511, SEC 17a-3)
+**Description:** Immutable scan execution audit trail for regulatory evidence (supports compliance with FINRA Rule 4511(a), SEC Rule 17a-3)
 
 | Column (SchemaName) | Type | Required | Description |
 |-------------------|------|----------|-------------|

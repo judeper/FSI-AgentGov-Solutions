@@ -95,6 +95,26 @@ ENV_VAR_DEFINITIONS = [
             "alerts. Leave empty to disable webhook notifications."
         ),
     },
+    {
+        "schema_name": "fsi_HWG_IncludeSandbox",
+        "display_name": "HWG - Include Sandbox Environments",
+        "type": 100000000,  # String
+        "default_value": "false",
+        "description": (
+            "Whether scans should include Sandbox environments. "
+            "Set to 'true' to evaluate Sandbox alongside Production."
+        ),
+    },
+    {
+        "schema_name": "fsi_HWG_IncludeDrafts",
+        "display_name": "HWG - Include Draft Flows",
+        "type": 100000000,  # String
+        "default_value": "false",
+        "description": (
+            "Whether scans should include draft (unpublished) flows. "
+            "Set to 'true' to detect missing HITL checkpoints in drafts."
+        ),
+    },
 ]
 
 

@@ -41,14 +41,18 @@ $script:IntToZone = @{
 
 # HITL checkpoint type picklist mapping
 $script:CheckpointTypeToInt = @{
-    'RequestForInformation'   = 100000000
-    'MultistageApproval'      = 100000001
-    'CustomHitl'              = 100000002
+    'RequestForInformation'      = 100000000
+    'MultistageApproval'         = 100000001
+    'CustomHitl'                 = 100000002
+    'AdvancedApprovalsGeneric'   = 100000003
+    'NotApplicable'              = 100000004
 }
 $script:IntToCheckpointType = @{
     100000000 = 'RequestForInformation'
     100000001 = 'MultistageApproval'
     100000002 = 'CustomHitl'
+    100000003 = 'AdvancedApprovalsGeneric'
+    100000004 = 'NotApplicable'
 }
 
 # HITL checkpoint status picklist mapping
@@ -182,9 +186,13 @@ function Connect-HWGDataverse {
     } else {
         # Attempt to get token via Az.Accounts
         try {
-            $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
+            try {
+                $token = Get-AzAccessToken -ResourceUri "$script:DataverseUrl" -ErrorAction Stop
+            } catch {
+                $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
+            }
             if ($token.Token -is [System.Security.SecureString]) {
-                $script:AccessToken = $token.Token | ConvertFrom-SecureString -AsPlainText
+                $script:AccessToken = [System.Net.NetworkCredential]::new('', $token.Token).Password
             } else {
                 $script:AccessToken = $token.Token
             }
@@ -421,10 +429,12 @@ function Write-HitlCheckpointResult {
             $script:ZoneToInt[$Result.Zone]
         } else { 0 }
 
-        # Convert checkpoint type string to picklist integer for Dataverse
+        # Convert checkpoint type string to picklist integer for Dataverse.
+        # fsi_CheckpointType is required (ApplicationRequired); default to NotApplicable
+        # when the source did not classify a specific type.
         $checkpointTypeInt = if ($Result.CheckpointType -and $script:CheckpointTypeToInt.ContainsKey($Result.CheckpointType)) {
             $script:CheckpointTypeToInt[$Result.CheckpointType]
-        } else { $null }
+        } else { $script:CheckpointTypeToInt['NotApplicable'] }
 
         # Convert checkpoint status string to picklist integer for Dataverse
         $checkpointStatusInt = if ($Result.CheckpointStatus -and $script:CheckpointStatusToInt.ContainsKey($Result.CheckpointStatus)) {
@@ -462,10 +472,8 @@ function Write-HitlCheckpointResult {
             fsi_detectedat        = (Get-Date).ToUniversalTime().ToString('o')
         }
 
-        # Add checkpoint type if resolved
-        if ($null -ne $checkpointTypeInt) {
-            $record['fsi_checkpointtype'] = $checkpointTypeInt
-        }
+        # Always include checkpoint type (ApplicationRequired); resolved to NotApplicable above when unknown.
+        $record['fsi_checkpointtype'] = $checkpointTypeInt
 
         # Note: ActionCategory is a local classification for policy evaluation, not a Dataverse column
 
@@ -548,10 +556,16 @@ function Write-HitlViolation {
             $script:ZoneToInt[$Violation.Zone]
         } else { 0 }
 
-        # Convert checkpoint type string to picklist integer for Dataverse
+        # Convert checkpoint type string to picklist integer for Dataverse.
+        # fsi_CheckpointType is required; default to NotApplicable for missing-checkpoint violations.
         $checkpointTypeValue = if ($Violation.CheckpointType -and $script:CheckpointTypeToInt.ContainsKey($Violation.CheckpointType)) {
             $script:CheckpointTypeToInt[$Violation.CheckpointType]
-        } else { $null }
+        } else { $script:CheckpointTypeToInt['NotApplicable'] }
+
+        # Map status: explicit Partial only when caller passes it; default Missing for missing-checkpoint violations.
+        $checkpointStatusValue = if ($Violation.CheckpointStatus -and $script:CheckpointStatusToInt.ContainsKey($Violation.CheckpointStatus)) {
+            $script:CheckpointStatusToInt[$Violation.CheckpointStatus]
+        } else { $script:CheckpointStatusToInt['Missing'] }
 
         $body = @{
             fsi_name              = "Violation - $($Violation.AgentName ?? $Violation.AgentId) - $($RunId.Substring(0,8))"
@@ -561,7 +575,7 @@ function Write-HitlViolation {
             fsi_agentname         = $Violation.AgentName
             fsi_zone              = $zoneValue
             fsi_checkpointtype    = $checkpointTypeValue
-            fsi_checkpointstatus  = 100000002
+            fsi_checkpointstatus  = $checkpointStatusValue
             fsi_hashitlcheckpoint = $false
             fsi_violationstatus   = 100000000
             fsi_severity          = $Violation.Severity
@@ -722,7 +736,9 @@ function Get-HitlCheckpointExceptions {
             $filter += " and fsi_agentid eq '$AgentId'"
         }
         if ($ActiveOnly) {
-            $filter += " and fsi_isactive eq true"
+            $nowIso = (Get-Date).ToUniversalTime().ToString('o')
+            # ActiveOnly: isactive flag set AND (no expiry OR expiry in the future).
+            $filter += " and fsi_isactive eq true and (fsi_expiresat eq null or fsi_expiresat ge $nowIso)"
         }
 
         $uri = "$script:DataverseUrl/api/data/v9.2/fsi_hitlcheckpointexceptions?" +
@@ -755,7 +771,9 @@ function Get-HitlCheckpointExceptions {
                 ExceptionId    = $_.fsi_hitlcheckpointexceptionid
                 AgentId        = $_.fsi_agentid
                 AgentName      = $_.fsi_agentname
+                FlowName       = $_.fsi_flowname
                 Zone           = $zoneName
+                ExceptionScope = $_.fsi_exceptionscope
                 ApprovedBy     = $_.fsi_approvedby
                 Justification  = $_.fsi_justification
                 ExpiresAt      = $_.fsi_expiresat

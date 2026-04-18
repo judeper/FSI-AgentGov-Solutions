@@ -91,7 +91,7 @@
 .NOTES
     Version: 1.0.0
     Solution: HITL Workflow Governance (HWG)
-    Controls: 2.12 (Supervision/FINRA 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
+    Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -345,7 +345,6 @@ $checkpointsReadable = $checkpoints | ForEach-Object {
         inputCount        = $_.fsi_inputcount
         violationType     = $_.fsi_violationtype
         severity          = $_.fsi_severity
-        details           = $_.fsi_details
         regulatoryContext = $_.fsi_regulatorycontext
         detectedAt        = $_.fsi_detectedat
         runId             = $_.fsi_runid

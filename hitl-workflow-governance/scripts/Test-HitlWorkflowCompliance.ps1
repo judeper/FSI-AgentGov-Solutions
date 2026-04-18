@@ -23,8 +23,8 @@
     File: Test-HitlWorkflowCompliance.ps1
     Version: 1.0.0
     Solution: HITL Workflow Governance (HWG)
-    Controls: 2.12 (Supervision/FINRA 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
-    Regulations: FINRA 3110, GLBA 501(b), SOX 404
+    Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
+    Regulations: FINRA Rule 3110, GLBA Section 501(b), SOX Section 404
 
     Part of FSI Agent Governance Framework
 #>
@@ -239,7 +239,7 @@ function Test-HitlWorkflowCompliance {
                     MissingSeverity         = 'Critical'
                     ReviewerMissingSeverity = 'Critical'
                     InputSeverity           = 'High'
-                    RegulatoryContext        = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA 3110 supervisory requirements'
+                    RegulatoryContext        = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA Rule 3110 supervisory requirements'
                 }
             }
             'Zone2' {
@@ -252,7 +252,7 @@ function Test-HitlWorkflowCompliance {
                     MissingSeverity         = 'High'
                     ReviewerMissingSeverity = 'High'
                     InputSeverity           = 'Medium'
-                    RegulatoryContext        = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA 501(b) safeguards'
+                    RegulatoryContext        = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA Section 501(b) safeguards'
                 }
             }
             'Zone1' {
@@ -379,12 +379,12 @@ function Test-HitlWorkflowCompliance {
     }
 
     if (-not $agentSettings -or $agentSettings.Count -eq 0) {
-        Write-Warning "No agents found matching the specified criteria."
+        Write-Warning "No agents found matching the specified criteria. Returning Inconclusive — supervisors should verify scope filters."
 
         Write-Host "`n=== HITL Workflow Compliance Scan ===" -ForegroundColor Cyan
         Write-Host "Environments scanned: 0"
         Write-Host "Agents scanned:       0"
-        Write-Host "No agents found to evaluate." -ForegroundColor Yellow
+        Write-Host "No agents found to evaluate (Inconclusive)." -ForegroundColor Yellow
         if ($WhatIfPreference) {
             Write-Host "`n[DRY RUN] Preview mode - no data persisted." -ForegroundColor Gray
         }
@@ -395,6 +395,8 @@ function Test-HitlWorkflowCompliance {
                 return @{
                     metadata = @{
                         RunId                    = $runId
+                        Status                   = 'Inconclusive'
+                        Reason                   = 'No agents discovered; verify scope filters and authentication.'
                         TotalAgentsScanned       = 0
                         TotalEnvironments        = 0
                         TotalFlowsScanned        = 0
@@ -430,15 +432,20 @@ function Test-HitlWorkflowCompliance {
     # Group results by agent to evaluate at agent level
     $agentGroups = $agentSettings | Group-Object -Property AgentId
 
-    # Load exception records if Dataverse is connected
+    # Load exception records if Dataverse is connected.
+    # Exceptions can be agent-wide (no FlowName) or flow-specific. We index both
+    # an agent-wide key and a per-flow key so per-flow lookups can fall back.
     $exceptions = @{}
     if ($dataverseConnected) {
         try {
-            $exceptionRecords = Get-HitlCheckpointExceptions
+            $exceptionRecords = Get-HitlCheckpointExceptions -ActiveOnly
             if ($exceptionRecords) {
                 foreach ($exc in $exceptionRecords) {
-                    $key = "$($exc.AgentId)|$($exc.ActionName)"
-                    $exceptions[$key] = $exc
+                    if ([string]::IsNullOrWhiteSpace($exc.FlowName)) {
+                        $exceptions["$($exc.AgentId)|*"] = $exc
+                    } else {
+                        $exceptions["$($exc.AgentId)|$($exc.FlowName)"] = $exc
+                    }
                 }
             }
             Write-Verbose "Loaded $($exceptions.Count) exception record(s)"
@@ -489,9 +496,10 @@ function Test-HitlWorkflowCompliance {
         } else {
             # Check each HITL checkpoint for reviewer and input compliance
             foreach ($flow in $hitlFlows) {
-                # Check for exception
+                # Check for exception (per-flow first, then agent-wide).
                 $exceptionKey = "$($flow.AgentId)|$($flow.FlowName)"
-                if ($exceptions.ContainsKey($exceptionKey)) {
+                $agentWildcardKey = "$($flow.AgentId)|*"
+                if ($exceptions.ContainsKey($exceptionKey) -or $exceptions.ContainsKey($agentWildcardKey)) {
                     Write-Verbose "Exception found for $($flow.AgentName) flow $($flow.FlowName)"
                     continue
                 }

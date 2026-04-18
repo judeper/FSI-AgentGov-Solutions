@@ -26,8 +26,8 @@
     are classified by severity based on zone assignment and written to Dataverse
     when -PersistResults is specified.
 
-    This script supports compliance with FINRA 3110 (supervision), GLBA 501(b)
-    (safeguards), and SOX 404 (internal controls) by providing auditable evidence
+    This script supports compliance with FINRA Rule 3110 (supervision), GLBA Section 501(b)
+    (safeguards), and SOX Section 404 (internal controls) by providing auditable evidence
     that agent flows include appropriate human oversight checkpoints before execution
     of sensitive operations.
 
@@ -97,8 +97,8 @@
     File: Test-HitlCheckpointConfiguration.ps1
     Version: 1.0.0
     Solution: HITL Workflow Governance (HWG)
-    Controls: 2.12 (Supervision/FINRA 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
-    Regulations: FINRA 3110, GLBA 501(b), SOX 404
+    Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
+    Regulations: FINRA Rule 3110, GLBA Section 501(b), SOX Section 404
 #>
 
 #Requires -Version 7.0
@@ -238,7 +238,7 @@ function Test-HitlCheckpointConfiguration {
             Severity          = 'Critical'
             RequiresReviewer  = $true
             MinimumInputs     = 1
-            RegulatoryContext = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA 3110 supervisory requirements; pre-approval for customer-facing flows'
+            RegulatoryContext = 'Zone 3 (Enterprise/Regulated) - HITL checkpoints required for all write/financial/external actions per FINRA Rule 3110 supervisory requirements; pre-approval for customer-facing flows'
         }
         'Zone2' = [PSCustomObject]@{
             Zone              = 'Zone2'
@@ -246,7 +246,7 @@ function Test-HitlCheckpointConfiguration {
             Severity          = 'High'
             RequiresReviewer  = $true
             MinimumInputs     = 0
-            RegulatoryContext = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA 501(b) safeguards; sampled review for routine flows'
+            RegulatoryContext = 'Zone 2 (Team/Collaborative) - HITL checkpoints required for financial/external/PII actions per GLBA Section 501(b) safeguards; sampled review for routine flows'
         }
         'Zone1' = [PSCustomObject]@{
             Zone              = 'Zone1'
