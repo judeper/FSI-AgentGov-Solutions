@@ -1,3 +1,5 @@
+#Requires -Version 7.4
+
 <#
 .SYNOPSIS
     Retrieves file upload settings for all Copilot Studio agents across
@@ -259,6 +261,7 @@ function Get-AgentFileUploadSettings {
     # Process each environment
     $results = [System.Collections.Generic.List[PSCustomObject]]::new()
     $envIndex = 0
+    $skippedEnvironments = [System.Collections.Generic.List[string]]::new()
     $topReached = $false
 
     foreach ($env in $dvEnvironments) {
@@ -292,6 +295,7 @@ function Get-AgentFileUploadSettings {
                 -DataverseUrl $envDataverseUrl
         } catch {
             Write-Warning "Failed to connect to Dataverse for environment '$envName': $($_.Exception.Message). Skipping."
+            $skippedEnvironments.Add($envName) | Out-Null
             continue
         }
 
@@ -354,6 +358,15 @@ function Get-AgentFileUploadSettings {
     Write-Progress -Activity "Scanning environments for file upload settings" -Completed
 
     Write-Verbose "Total agents retrieved: $($results.Count)"
+
+    if ($skippedEnvironments.Count -gt 0) {
+        $totalEnv = $dvEnvironments.Count
+        $skipped = $skippedEnvironments.Count
+        Write-Warning "Skipped $skipped of $totalEnv environment(s) due to authentication or connectivity failures: $($skippedEnvironments -join ', ')"
+        if ($skipped -eq $totalEnv) {
+            throw "All $totalEnv targeted environment(s) were skipped due to authentication or connectivity failures. Refusing to return an empty result set as this would silently mask coverage gaps."
+        }
+    }
 
     return $results.ToArray()
 

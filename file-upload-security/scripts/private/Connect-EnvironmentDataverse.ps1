@@ -163,7 +163,14 @@ try {
 
     Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
 
-    $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    # Az.Accounts 5.x renamed -ResourceUrl to -ResourceUri; 4.x still accepts -ResourceUrl.
+    # Try the new name first, then fall back to the legacy parameter name on older modules.
+    try {
+        $tokenResult = Get-AzAccessToken -ResourceUri $normalizedUrl -ErrorAction Stop
+    } catch [System.Management.Automation.ParameterBindingException] {
+        Write-Verbose "Get-AzAccessToken does not recognise -ResourceUri; falling back to -ResourceUrl (Az.Accounts < 5.0)"
+        $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    }
 
     # Az.Accounts 5.0+ returns SecureString for .Token; convert to plain text
     $plainToken = if ($tokenResult.Token -is [securestring]) {

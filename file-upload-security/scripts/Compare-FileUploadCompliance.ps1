@@ -1,3 +1,5 @@
+#Requires -Version 7.4
+
 <#
 .SYNOPSIS
     Compares agent file upload settings against zone-specific governance policies.
@@ -102,7 +104,9 @@ function Compare-FileUploadCompliance {
             Critical = 0
             High     = 0
             Medium   = 0
+            Low      = 0
             Warning  = 0
+            Info     = 0
         }
 
         #endregion

@@ -147,7 +147,7 @@ if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name 
         IsCompliant             = $true
         FileUploadCompliant     = $true
         ModerationCompliant     = $true
-        Severity                = 'None'
+        Severity                = 'Info'
         ViolationType           = $null
         RegulatoryContext       = $null
     }
@@ -177,7 +177,7 @@ $isFileUploadEnabled = $FileUploadEnabled -eq $true
 # Determine file upload compliance
 $fileUploadCompliant = $true
 $moderationCompliant = $true
-$severity = 'None'
+$severity = 'Info'
 $violationType = $null
 $regulatoryContext = $null
 
@@ -195,7 +195,7 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
     } else {
         $severity = 'Critical'
         $violationType = 'Zone3_FileUploadEnabled_NoApproval'
-        $regulatoryContext = "FINRA 4511, SEC 17a-3, GLBA 501(b), OCC 2011-12 — File upload enabled in $($zoneKey) (Enterprise Managed) without documented governance approval; data minimization requirements mandate file upload remain disabled unless explicitly authorized"
+        $regulatoryContext = "FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), 12 CFR 30 App. B — File upload enabled in $($zoneKey) (Enterprise Managed) without documented governance approval; data minimization requirements indicate file upload should remain disabled unless explicitly authorized"
     }
 } elseif ($zonePolicy.fileUploadAllowed -and $zonePolicy.requiresApproval -and $isFileUploadEnabled) {
     # Zone 2: file upload allowed with restrictions
@@ -214,7 +214,7 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $moderationCompliant = $false
         $severity = 'Warning'
         $violationType = 'Zone1_NoModeration'
-        $regulatoryContext = "FINRA 25-07 — File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
+        $regulatoryContext = "FINRA Regulatory Notice 25-07 — File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
     }
 }
 

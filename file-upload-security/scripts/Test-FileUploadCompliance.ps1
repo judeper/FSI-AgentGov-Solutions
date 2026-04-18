@@ -1,3 +1,5 @@
+#Requires -Version 7.4
+
 <#
 .SYNOPSIS
     End-to-end file upload compliance validation orchestrator.
@@ -21,6 +23,9 @@
 
 [CmdletBinding()]
 param(
+    [Parameter()]
+    [switch]$AllowEmptyResultSet,
+
     #region Environment Filters
 
     [Parameter()]
@@ -93,7 +98,7 @@ $scriptRoot = $PSScriptRoot
 $banner = @"
 
 ╔══════════════════════════════════════════════════════════════╗
-║           File Upload Security Configurator v1.0.2          ║
+║           File Upload Security Configurator v1.1.0          ║
 ║         FSI Agent Governance Framework - Control 1.14       ║
 ╚══════════════════════════════════════════════════════════════╝
 
@@ -172,8 +177,14 @@ if ($Top -gt 0)            { $getParams['Top']                  = $Top }
 $agentSettings = Get-AgentFileUploadSettings @getParams
 
 if (-not $agentSettings -or $agentSettings.Count -eq 0) {
-    Write-Host "  No agents found. Validation complete." -ForegroundColor Yellow
-    return
+    # Fail closed: zero agents may indicate a real compliance result OR an upstream auth/connectivity failure.
+    # In production we exit non-zero so the runbook does not silently produce a green PASS evidence row.
+    Write-Warning "No agents found across the targeted environments. This may indicate authentication failure, connectivity issues, or a genuine empty result. Treating as a HARD FAIL — review the warning lines above before re-running."
+    if ($AllowEmptyResultSet) {
+        Write-Host "  -AllowEmptyResultSet specified; recording an empty validation run as PASS." -ForegroundColor Yellow
+        return
+    }
+    throw "No agents enumerated. Pass -AllowEmptyResultSet to opt in to recording an empty result as a successful validation."
 }
 
 $fileUploadEnabledCount = ($agentSettings | Where-Object { $_.FileUploadEnabled -eq $true }).Count
@@ -202,19 +213,22 @@ $severitySummary = @{
     Critical = ($violations | Where-Object { $_.Severity -eq 'Critical' }).Count
     High     = ($violations | Where-Object { $_.Severity -eq 'High' }).Count
     Medium   = ($violations | Where-Object { $_.Severity -eq 'Medium' }).Count
+    Low      = ($violations | Where-Object { $_.Severity -eq 'Low' }).Count
     Warning  = ($violations | Where-Object { $_.Severity -eq 'Warning' }).Count
+    Info     = ($violations | Where-Object { $_.Severity -eq 'Info' }).Count
 }
 
 Write-Host "        Compliant: $compliant / $totalAgents" -ForegroundColor $(if ($violations.Count -eq 0) { 'Green' } else { 'Yellow' })
 
 if ($violations.Count -gt 0) {
     Write-Host "        Violations: $($violations.Count)" -ForegroundColor Red
-    foreach ($sev in @('Critical', 'High', 'Medium', 'Warning')) {
+    foreach ($sev in @('Critical', 'High', 'Medium', 'Low', 'Warning', 'Info')) {
         if ($severitySummary[$sev] -gt 0) {
             $color = switch ($sev) {
                 'Critical' { 'Red' }
                 'High'     { 'Red' }
                 'Medium'   { 'Yellow' }
+                'Low'      { 'Yellow' }
                 'Warning'  { 'Yellow' }
             }
             Write-Host "          $($sev): $($severitySummary[$sev])" -ForegroundColor $color

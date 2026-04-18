@@ -12,7 +12,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 | **Solution Type** | Tier 2 — Automated Validation with Drift Detection |
 | **Version** | 1.0.2 |
 | **Zone Model** | Zone 1: Allowed · Zone 2: Restricted · Zone 3: Disabled |
-| **Regulatory** | FINRA 4511/25-07, SEC 17a-3, GLBA 501(b), OCC 2011-12 |
+| **Regulatory** | FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), Interagency Guidelines Establishing Information Security Standards (12 CFR 30 App. B) |
 
 ## Why File Upload Governance Matters
 

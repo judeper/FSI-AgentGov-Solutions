@@ -422,6 +422,7 @@ function ConvertTo-SeverityOptionValue {
     #>
     param([string]$Severity)
     switch ($Severity) {
+        'None'     { return 100000000 }   # legacy callers — alias for Info
         'Info'     { return 100000000 }
         'Low'      { return 100000001 }
         'Warning'  { return 100000005 }
@@ -579,7 +580,8 @@ function Save-FUSBaseline {
             $prevId = $prev.fsi_fileuploadbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines($prevId)"
-                $patchBody = @{ statecode = 1 } | ConvertTo-Json
+                # Dataverse rejects partial state transitions — must include statuscode paired with statecode
+                $patchBody = @{ statecode = 1; statuscode = 2 } | ConvertTo-Json
                 Invoke-DataverseRequest -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
                 Write-Verbose "Deactivated previous baseline: $prevId"
             }

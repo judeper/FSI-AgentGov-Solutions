@@ -65,7 +65,7 @@ ENVIRONMENT_VARIABLES = [
         "Description": (
             "Maximum age of baseline records before they are flagged as "
             "stale and require recapture. Supports regulatory review "
-            "cadences required by FINRA 3110 and OCC 2011-12."
+            "cadences required by FINRA Rule 3110 and FFIEC IT Examination handbook guidance."
         ),
         "Type": "Decimal",
         "DefaultValue": "90",
@@ -107,9 +107,14 @@ def _label(text: str) -> dict:
 
 
 TYPE_MAP = {
-    "String": 100000000,
-    "Decimal": 100000001,
-    "JSON": 100000002,
+    "String":     100000000,
+    "Number":     100000001,
+    "Boolean":    100000002,
+    "JSON":       100000003,
+    "DataSource": 100000004,
+    "Secret":     100000005,
+    # "Decimal" is not a native env-var type — flows must JSON-parse the value
+    "Decimal":    100000003,
 }
 
 

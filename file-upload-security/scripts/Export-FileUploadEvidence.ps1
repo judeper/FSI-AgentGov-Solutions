@@ -1,3 +1,5 @@
+#Requires -Version 7.4
+
 <#
 .SYNOPSIS
     Exports file upload compliance evidence from Dataverse for regulatory review.

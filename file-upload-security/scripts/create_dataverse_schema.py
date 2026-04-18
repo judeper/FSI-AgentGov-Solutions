@@ -193,6 +193,18 @@ def _create_table(
     if client.check_table_exists(logical_name):
         print(f"  Table already exists — checking columns...")
     else:
+        # Dataverse requires a primary name attribute; declare it inline so the entity
+        # can be created in a single call. Code throughout the solution writes/reads `fsi_name`.
+        primary_attribute = {
+            "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": "fsi_Name",
+            "RequiredLevel": {"Value": "ApplicationRequired"},
+            "MaxLength": 850,
+            "FormatName": {"Value": "Text"},
+            "DisplayName": _label("Name"),
+            "Description": _label("Primary name (auto-populated by save helpers)"),
+            "IsPrimaryName": True,
+        }
         definition = {
             "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
             "SchemaName": logical_name,
@@ -203,9 +215,11 @@ def _create_table(
             "IsActivity": False,
             "HasNotes": False,
             "HasActivities": False,
+            "PrimaryNameAttribute": "fsi_name",
+            "Attributes": [primary_attribute],
         }
         client.create_entity(definition)
-        print(f"  Table created ({ownership})")
+        print(f"  Table created ({ownership}) with primary attribute fsi_name")
 
     print(f"  Adding columns:")
     for col_name, col_type, col_factory in columns:
