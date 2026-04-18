@@ -20,25 +20,25 @@
       }
     },
     "emailAddress": {
-      "value": "agent-ops-dev@contoso.com",
+      "value": "agent-ops-dev@example.com",
       "metadata": {
         "description": "Default email address for dev environment alert notifications"
       }
     },
     "emailAddressZone1": {
-      "value": "ops-team-dev@contoso.com",
+      "value": "ops-team-dev@example.com",
       "metadata": {
         "description": "Email address for Zone 1 (Personal Productivity) alert notifications in dev environment"
       }
     },
     "emailAddressZone2": {
-      "value": "team-ops-dev@contoso.com",
+      "value": "team-ops-dev@example.com",
       "metadata": {
         "description": "Email address for Zone 2 (Team Collaboration) alert notifications in dev environment"
       }
     },
     "emailAddressZone3": {
-      "value": "enterprise-ops-dev@contoso.com",
+      "value": "enterprise-ops-dev@example.com",
       "metadata": {
         "description": "Email address for Zone 3 (Enterprise Managed) alert notifications in dev environment"
       }

@@ -19,7 +19,7 @@ Usage:
     # Override storage account and container
     python verify_worm.py --config config/config.yml \\
         --storage-account staofsec17a4export \\
-        --container-name telemetry-export
+        --container-name insights-logs-apptraces
 
     # Verbose output for debugging
     python verify_worm.py --config config/config.yml --verbose
@@ -274,7 +274,7 @@ def get_immutability_policy(
         raise
 
 
-def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = False) -> tuple[bool, bool, bool]:
+def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = False) -> tuple[bool, bool, bool, bool]:
     """
     Verify immutability policy compliance.
 
@@ -283,7 +283,14 @@ def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = F
         verbose: Show detailed output
 
     Returns:
-        Tuple of (policy_exists, is_locked, retention_adequate)
+        Tuple of (policy_exists, is_locked, retention_adequate, append_writes_allowed)
+
+    Note:
+        Azure Diagnostic Settings export to a blob container performs *append*
+        writes against existing blobs. A locked time-based immutability policy
+        without ``allowProtectedAppendWrites`` will block those appends and
+        silently halt telemetry export. For SEC 17a-4(f) export pipelines,
+        ``allowProtectedAppendWrites`` MUST be enabled on the locked policy.
     """
     if not policy_details:
         print("  Immutability policy: NOT CONFIGURED")
@@ -292,17 +299,23 @@ def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = F
         print("    For SEC 17a-4(f) compliance, configure immutable storage.")
         print()
         print("    See docs/worm-configuration.md for manual setup steps.")
-        return (False, False, False)
+        return (False, False, False, False)
 
     state = policy_details.get("state")
     retention = policy_details.get("retention_days")
     allow_append = policy_details.get("allow_protected_append_writes")
+    append_ok = bool(allow_append)
 
     print("  Immutability policy:")
     print(f"    - State: {state}")
     print(f"    - Retention: {retention} days")
-    if allow_append is not None:
-        print(f"    - Protected append writes: {allow_append}")
+    print(f"    - Protected append writes: {allow_append}")
+    if not append_ok:
+        print()
+        print("    WARNING: Protected append writes are DISABLED. Azure Monitor")
+        print("    diagnostic export performs append writes; a locked policy")
+        print("    without this flag will block telemetry from landing in the")
+        print("    container, creating an audit gap. Enable allowProtectedAppendWrites.")
 
     # Check if locked
     is_locked = state == "Locked"
@@ -327,7 +340,7 @@ def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = F
             print(f"    SEC 17a-4(a) requires 6-year retention for broker-dealer records.")
             print(f"    Recommended minimum: {MIN_RETENTION_DAYS_SEC17A4} days (~7 years).")
 
-    return (True, is_locked, retention_adequate)
+    return (True, is_locked, retention_adequate, append_ok)
 
 
 def print_compliance_summary(
@@ -337,17 +350,10 @@ def print_compliance_summary(
     policy_exists: bool,
     is_locked: bool,
     retention_adequate: bool,
+    append_writes_allowed: bool,
 ) -> int:
     """
     Print compliance summary and determine exit code.
-
-    Args:
-        storage_ok: Storage account exists
-        storage_correct_type: Storage account is correct type (no HNS)
-        container_exists: Container exists
-        policy_exists: Immutability policy exists
-        is_locked: Policy is locked
-        retention_adequate: Retention meets requirements
 
     Returns:
         Exit code (0=compliant, 1=not configured, 2=partially compliant)
@@ -365,6 +371,7 @@ def print_compliance_summary(
         ("Immutability policy configured", policy_exists),
         ("Policy state: Locked (SEC 17a-4(f))", is_locked),
         (f"Retention >= {MIN_RETENTION_DAYS_SEC17A4} days", retention_adequate),
+        ("Protected append writes enabled (export-pipeline-safe)", append_writes_allowed),
     ]
 
     for check_name, passed in checks:
@@ -392,7 +399,7 @@ def print_compliance_summary(
         print("    4. Lock policy only when ready (IRREVERSIBLE)")
         return 1
 
-    if not is_locked or not retention_adequate:
+    if not is_locked or not retention_adequate or not append_writes_allowed:
         print("  Status: PARTIALLY COMPLIANT")
         print()
         if not is_locked:
@@ -401,6 +408,10 @@ def print_compliance_summary(
         if not retention_adequate:
             print(f"  Retention period is less than {MIN_RETENTION_DAYS_SEC17A4} days.")
             print("  SEC 17a-4(a) requires 6-year retention minimum.")
+        if not append_writes_allowed:
+            print("  allowProtectedAppendWrites is DISABLED.")
+            print("  Azure Monitor diagnostic export will be blocked once the")
+            print("  policy is locked, creating an audit gap.")
         return 2
 
     print("  Status: COMPLIANT")
@@ -423,7 +434,7 @@ Examples:
     # Override storage account and container
     python verify_worm.py --config config/config.yml \\
         --storage-account staofsec17a4export \\
-        --container-name telemetry-export
+        --container-name insights-logs-apptraces
 
 IMPORTANT: This script ONLY VERIFIES WORM policy.
            It does NOT create, modify, or lock immutability policies.
@@ -497,11 +508,12 @@ IMPORTANT: This script ONLY VERIFIES WORM policy.
         policy_exists = False
         is_locked = False
         retention_adequate = False
+        append_writes_allowed = False
 
         if container_exists:
             print("  Checking immutability policy (read-only)...")
             policy_details = get_immutability_policy(config, credential, args.verbose)
-            policy_exists, is_locked, retention_adequate = verify_immutability_policy(
+            policy_exists, is_locked, retention_adequate, append_writes_allowed = verify_immutability_policy(
                 policy_details, args.verbose
             )
             print()
@@ -514,6 +526,7 @@ IMPORTANT: This script ONLY VERIFIES WORM policy.
             policy_exists,
             is_locked,
             retention_adequate,
+            append_writes_allowed,
         )
 
         print("=" * 70)

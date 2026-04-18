@@ -63,7 +63,7 @@ let vw_event_fact = (startDate: datetime, endDate: datetime) {
             tostring(customDimensions["errorCategory"]),
             dynamic(null)
         ),
-        UserIdRaw = tostring(customDimensions["from_Id"]),
+        UserIdRaw = coalesce(tostring(customDimensions["fromName"]), tostring(customDimensions["from_Id"])),
         ControlId = tostring(customDimensions["controlId"])
     | extend UserId = hash_sha256(UserIdRaw)
     | project

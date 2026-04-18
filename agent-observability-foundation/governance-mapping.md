@@ -60,7 +60,6 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.6 - DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) | Telemetry access for content scanning | Data governance visibility |
 
 **Partial coverage for:**
 
@@ -102,7 +101,6 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.6 - DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) | Operational vs compliance data path separation | Data governance segregation |
 
 **Supporting evidence for:**
 
@@ -121,13 +119,12 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.3 - SharePoint Content Governance and Permissions](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.3-sharepoint-content-governance-and-permissions.md) | PII handling framework | GLBA 501(b) - Customer data protection |
+| (informational adjacency — AOF documents PII-handling guidance for telemetry; primary GLBA 501(b) controls are delivered by Microsoft Purview / DLP) | PII telemetry-handling guidance | GLBA 501(b) (adjacent) |
 
 **Supporting evidence for:**
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.6 - DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) | Sensitive data identification | Data classification requirement |
 
 **Partial coverage for:**
 
@@ -209,19 +206,22 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 ## Control Coverage Summary
 
+> **Scope:** Per the catalog, this solution maps formally to controls **1.7, 2.8, 2.9, 3.2** only. Other controls below are listed as *informational adjacencies* (telemetry that may be useful when implementing those controls); they are not delivered by AOF and should not be cited as primary evidence for those controls.
+
 | Control ID | Control Name | Phase 1 Artifacts | Evidence Tier |
 |------------|--------------|-------------------|---------------|
-| 1.3 | SharePoint Content Governance | PII Sanitization Guidance | Primary |
-| 1.4 | Advanced Connector Policies | RBAC Separation | Supporting |
-| 1.6 | DSPM for AI | RBAC Separation, Log Analytics, PII Guidance | Primary + Supporting |
-| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, Azure Blob Storage (StorageV2) | Primary |
-| 2.6 | Model Risk Management | App Insights (telemetry available) | Partial |
-| 2.8 | Access Control and Segregation of Duties | RBAC Separation | Supporting |
-| 2.9 | Agent Performance Monitoring | App Insights, Sampling Configuration | Primary + Supporting |
-| 3.1 | Operational Dashboards | Log Analytics (foundation) | Partial |
-| 3.2 | Usage Analytics and Activity Monitoring | App Insights, Log Analytics | Primary |
+| 1.7 | Comprehensive Audit Logging | App Insights, Log Analytics, Azure Blob Storage (StorageV2) | Primary (in scope) |
+| 2.8 | Access Control and Segregation of Duties | RBAC Separation | Primary (in scope) |
+| 2.9 | Agent Performance Monitoring | App Insights, Sampling Configuration | Primary (in scope) |
+| 3.2 | Usage Analytics and Activity Monitoring | App Insights, Log Analytics | Primary (in scope) |
+| 1.3 | SharePoint Content Governance | PII Sanitization Guidance | Adjacent (not delivered here) |
+| 1.4 | Advanced Connector Policies | RBAC Separation | Adjacent (not delivered here) |
+| 2.6 | Model Risk Management | App Insights (telemetry available) | Adjacent (not delivered here) |
+| 3.1 | Operational Dashboards | Log Analytics (foundation) | Adjacent (workbook design only) |
+
+> **Control 1.6 (DSPM for AI) is NOT mapped to this solution.** DSPM coverage is delivered by Microsoft Purview, not by AOF telemetry. Earlier drafts that listed 1.6 here were inaccurate.
 
 ---
 
-*Governance Mapping version: 1.1.1*
-*Last updated: February 2026*
+*Governance Mapping version: 1.2.0*
+*Last updated: April 2026*

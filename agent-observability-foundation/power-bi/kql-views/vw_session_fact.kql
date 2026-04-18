@@ -51,9 +51,14 @@ let vw_session_fact = (startDate: datetime, endDate: datetime) {
     | where tostring(customDimensions['DesignMode']) == "False"
     | extend
         AgentId = tostring(customDimensions["recipientId"]),
-        ZoneId = tostring(customDimensions["Zone"]),
+        ZoneRaw = tostring(customDimensions["Zone"]),
         ErrorCode = tostring(customDimensions["errorCodeText"]),
         LatencyMs = todouble(customDimensions["duration"])
+    | extend ZoneId = case(
+        ZoneRaw startswith "Zone 1" or ZoneRaw == "Zone1" or ZoneRaw =~ "Personal Productivity", "Zone1",
+        ZoneRaw startswith "Zone 2" or ZoneRaw == "Zone2" or ZoneRaw =~ "Team Collaboration",      "Zone2",
+        ZoneRaw startswith "Zone 3" or ZoneRaw == "Zone3" or ZoneRaw =~ "Enterprise Managed",      "Zone3",
+        "Unknown")
     | summarize
         SessionCount = dcount(session_Id),
         MessageCount = count(),

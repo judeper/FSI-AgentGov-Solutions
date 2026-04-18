@@ -234,6 +234,30 @@ def preflight_check(
     except ResourceNotFoundError:
         print(f"    {resource_group}: not found, will be created ○")
 
+    # Check Azure resource provider registration. On a net-new subscription
+    # these may be unregistered, in which case create_or_update calls fail
+    # with NoRegisteredProviderFound. Auto-register if needed.
+    print()
+    print("  Checking Azure resource provider registration...")
+    required_providers = (
+        "Microsoft.Insights",
+        "Microsoft.OperationalInsights",
+        "Microsoft.Storage",
+        "Microsoft.Authorization",
+    )
+    for provider_ns in required_providers:
+        try:
+            provider = resource_client.providers.get(provider_ns)
+            state = getattr(provider, "registration_state", "Unknown")
+            if state == "Registered":
+                print(f"    {provider_ns}: Registered ✓")
+            else:
+                print(f"    {provider_ns}: {state} — registering...")
+                resource_client.providers.register(provider_ns)
+                print(f"    {provider_ns}: registration requested ○")
+        except HttpResponseError as e:
+            print(f"    {provider_ns}: check failed ({e.message}) — provisioning may fail until provider is registered.")
+
     print()
     print("  Configuration summary:")
     print(f"    Subscription:    {subscription_id}")
@@ -423,10 +447,10 @@ def create_application_insights(
     )
 
     print(f"  Application Insights {ai_name}: created ✓")
-    print(f"    - Instrumentation Key: {component.instrumentation_key[:8]}...{component.instrumentation_key[-4:]} (masked)")
+    print("    - Instrumentation Key: <not logged> (retrieve from Azure Portal or `az monitor app-insights component show`)")
 
     if verbose:
-        print(f"    - Connection String: {component.connection_string[:40]}... (masked, retrieve full value from Azure Portal)")
+        print("    - Connection String: <not logged> (retrieve from Azure Portal)")
         print(f"    - Resource ID: {component.id}")
 
     return component.id

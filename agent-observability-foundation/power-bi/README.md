@@ -31,7 +31,7 @@ Choose your deployment path based on your experience level and customization nee
 
 **Time to deploy:** 1-2 hours
 
-> **Note:** A `.pbit` template for quick-start deployment is planned for a future release. Until then, the TMDL import path above provides full functionality including all 19 DAX measures, zone-based RLS, and 5 dashboard page designs.
+> **Note:** A `.pbit` template for quick-start deployment is planned for a future release. Until then, the TMDL import path above provides full functionality including 18 DAX measures (see `semantic-model/measures/CoreMetrics.tmdl`), zone-based RLS, and the 5-page dashboard design blueprint in `docs/power-bi-integration.md`.
 
 **See:** [Power BI Integration Guide](docs/power-bi-integration.md) for detailed custom build instructions
 

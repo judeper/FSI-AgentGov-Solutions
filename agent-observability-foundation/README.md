@@ -1,6 +1,6 @@
 # Agent Observability Foundation
 
-> **Version:** v1.1.1
+> **Version:** v1.2.0
 > **Status:** Completed
 
 FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
@@ -235,7 +235,7 @@ agent-observability-foundation/
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Diagnostic settings export shows no data | StorageV2 (with immutability policies) hierarchical namespace enabled | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
-| Queries return "no data" after 90 days | Only `retentionInDays` set, not `totalRetentionInDays` | Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full interactive access |
+| Queries return "no data" after 90 days | Workspace was created with default 90-day retention (the foundation provisioning was modified or skipped) | `provision.py` sets `retention_in_days=730` on the Log Analytics workspace; when `total_retention_in_days` is left unset it defaults to match `retention_in_days`, so 730 interactive days is the expected behavior. If a manual override shortened retention, run `provision.py` again or set `retentionInDays=730` and `totalRetentionInDays=730` directly. |
 | WORM policy locked production data permanently | WORM applied via automation script | Never automate WORM - use manual `worm-configuration.md` steps with explicit confirmation |
 | Adaptive sampling not reducing costs | Python SDK does not support adaptive sampling | Configure ingestion sampling at workspace level, not SDK level; see `cost-tuning-guide.md` |
 | PII found in customDimensions during audit | Sensitive properties logging enabled in Copilot Studio | Disable sensitive logging or implement sanitization per `pii-sanitization-guide.md` |

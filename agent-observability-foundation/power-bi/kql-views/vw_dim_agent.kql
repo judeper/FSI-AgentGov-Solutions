@@ -56,10 +56,15 @@ let vw_dim_agent = () {
     | extend
         AgentId = tostring(customDimensions["recipientId"]),
         AgentName = tostring(customDimensions["recipientName"]),
-        ZoneId = tostring(customDimensions["Zone"]),
+        ZoneRaw = tostring(customDimensions["Zone"]),
         EnvironmentId = tostring(customDimensions["environmentId"]),
         CopilotStudioFlag = tostring(customDimensions["copilotStudioAgent"]),
         Agent365SdkFlag = tostring(customDimensions["agent365Sdk"])
+    | extend ZoneId = case(
+        ZoneRaw startswith "Zone 1" or ZoneRaw == "Zone1" or ZoneRaw =~ "Personal Productivity", "Zone1",
+        ZoneRaw startswith "Zone 2" or ZoneRaw == "Zone2" or ZoneRaw =~ "Team Collaboration",      "Zone2",
+        ZoneRaw startswith "Zone 3" or ZoneRaw == "Zone3" or ZoneRaw =~ "Enterprise Managed",      "Zone3",
+        "Unknown")
     | summarize
         AgentName = take_any(AgentName),
         ZoneId = take_any(ZoneId),

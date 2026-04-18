@@ -33,7 +33,7 @@ WORM (Write Once Read Many) policies enable immutable storage for Azure Blob Sto
 Before configuring WORM policy:
 
 1. **Storage account exists:** Provisioned by `provision.py` (StorageV2, hierarchical namespace disabled)
-2. **Container exists:** `telemetry-export` container created by `provision.py`
+2. **Container exists:** `insights-logs-apptraces` container is auto-created by Azure Diagnostic Settings on first telemetry export (NOT created by `provision.py`)
 3. **Diagnostic Settings configured:** Data is flowing to the container
 4. **Verify test environment:** Confirm you are NOT in production (first time)
 
@@ -50,7 +50,7 @@ Before configuring WORM policy:
 ### Step 2: Open Container Access Policy
 
 1. In the left menu, click **Containers**
-2. Click on the `telemetry-export` container
+2. Click on the `insights-logs-apptraces` container
 3. In the container blade, click **Access policy** in the left menu
 
 ### Step 3: Add Time-Based Retention Policy
@@ -60,6 +60,9 @@ Before configuring WORM policy:
 3. Configure policy parameters:
    - **Policy state:** Unlocked (initially)
    - **Retention period:** Enter retention in days
+   - **Allow protected append writes:** **ENABLED** (REQUIRED for diagnostic export pipelines)
+
+   > **CRITICAL:** Azure Monitor diagnostic settings export telemetry by *appending* to existing blobs. A locked time-based policy without `allowProtectedAppendWrites` will block these appends and silently halt telemetry export — the storage account remains immutable but no longer receives data, creating an audit gap. Always enable protected append writes for any container that receives Azure Monitor diagnostic export.
 
    **Retention Period Reference:**
    | Regulatory Requirement | Minimum Days | Recommended |
@@ -88,7 +91,7 @@ Before locking the policy, verify it works as expected:
    echo "test content" > test-worm.txt
    az storage blob upload \
        --account-name <storage-account> \
-       --container-name telemetry-export \
+       --container-name insights-logs-apptraces \
        --name test-worm.txt \
        --file test-worm.txt \
        --auth-mode login
@@ -98,7 +101,7 @@ Before locking the policy, verify it works as expected:
    ```bash
    az storage blob delete \
        --account-name <storage-account> \
-       --container-name telemetry-export \
+       --container-name insights-logs-apptraces \
        --name test-worm.txt \
        --auth-mode login
    ```
@@ -137,7 +140,7 @@ Verify immutability is enforced:
    echo "locked test" > test-locked.txt
    az storage blob upload \
        --account-name <storage-account> \
-       --container-name telemetry-export \
+       --container-name insights-logs-apptraces \
        --name test-locked.txt \
        --file test-locked.txt \
        --auth-mode login
@@ -147,7 +150,7 @@ Verify immutability is enforced:
    ```bash
    az storage blob delete \
        --account-name <storage-account> \
-       --container-name telemetry-export \
+       --container-name insights-logs-apptraces \
        --name test-locked.txt \
        --auth-mode login
    ```
@@ -164,7 +167,7 @@ Verify immutability is enforced:
 Run the verification script to confirm WORM compliance status:
 
 ```bash
-python scripts/verify_worm.py --storage-account <storage-account> --container telemetry-export
+python scripts/verify_worm.py --storage-account <storage-account> --container insights-logs-apptraces
 ```
 
 The script performs read-only verification without modifying any policies.
@@ -177,7 +180,11 @@ The script performs read-only verification without modifying any policies.
 |-------|---------------------|-------------|
 | **No policy** | No | No immutability protection; data can be deleted |
 | **Unlocked** | No | Policy exists but can be modified or deleted |
-| **Locked** | Yes | Policy is permanent; data is immutable for retention period |
+| **Locked, retention < 6y** | No | Policy is permanent but retention does not meet SEC 17a-4(a) (recommended ≥ 2555 days) |
+| **Locked, append writes disabled** | Partial | Existing data is immutable but new diagnostic-export appends will be blocked, creating an audit gap |
+| **Locked, retention ≥ 6y, append writes enabled** | Yes | Data is immutable for retention period and Azure Monitor export continues to land |
+
+The shipped `verify_worm.py` checks all four conditions (state, retention, protected append writes, container present) and exits with code 2 if any of them fails.
 
 ---
 

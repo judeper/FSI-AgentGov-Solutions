@@ -20,25 +20,25 @@
       }
     },
     "emailAddress": {
-      "value": "agent-ops-prod@contoso.com",
+      "value": "agent-ops-prod@example.com",
       "metadata": {
         "description": "Default email address for prod environment alert notifications"
       }
     },
     "emailAddressZone1": {
-      "value": "ops-team-prod@contoso.com",
+      "value": "ops-team-prod@example.com",
       "metadata": {
         "description": "Email address for Zone 1 (Personal Productivity) alert notifications in prod environment"
       }
     },
     "emailAddressZone2": {
-      "value": "team-ops-prod@contoso.com",
+      "value": "team-ops-prod@example.com",
       "metadata": {
         "description": "Email address for Zone 2 (Team Collaboration) alert notifications in prod environment"
       }
     },
     "emailAddressZone3": {
-      "value": "enterprise-ops-prod@contoso.com",
+      "value": "enterprise-ops-prod@example.com",
       "metadata": {
         "description": "Email address for Zone 3 (Enterprise Managed) alert notifications in prod environment"
       }

@@ -6,7 +6,7 @@ Executive-facing compliance dashboards and agent observability analytics for Mic
 
 **What you get:**
 - Pre-built semantic model (TMDL format) with star schema design
-- 19 DAX measures covering sessions, latency, error rates, compliance score
+- 18 DAX measures covering sessions, latency, error rates, compliance score
 - Executive dashboard with 5 pages optimized for regulatory examination readiness
 - Zone-based Row-Level Security (RLS) aligned with FSI-AgentGov governance framework
 - Deployment via TMDL import (`.pbit` template planned for future release)
@@ -259,8 +259,8 @@ tablePermission DimZone =
 ```
 
 **Example:**
-- User: `compliance-officer@contoso.com`
-- UserZoneMapping entry: `compliance-officer@contoso.com` → `Zone3`
+- User: `compliance-officer@example.com`
+- UserZoneMapping entry: `compliance-officer@example.com` → `Zone3`
 - Result: User sees only Zone 3 agents and their telemetry
 - If user not in UserZoneMapping: User sees NO data (secure default)
 
@@ -273,9 +273,9 @@ Option A - CSV Import (Manual):
 2. Example content:
    ```csv
    UserEmail,ZoneId
-   compliance-officer@contoso.com,Zone3
-   operations-analyst@contoso.com,Zone2
-   developer@contoso.com,Zone1
+   compliance-officer@example.com,Zone3
+   operations-analyst@example.com,Zone2
+   developer@example.com,Zone1
    ```
 3. Power BI Desktop → Home → Get Data → Text/CSV
 4. Load CSV into UserZoneMapping table
