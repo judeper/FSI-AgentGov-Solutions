@@ -106,20 +106,36 @@ Add these **Initialize variable** actions immediately after the trigger:
 
 1. Add action: **Data Operations** > **Parse JSON**
 2. Content: `Get_Job_Output` output
-3. Schema: Use the following schema (generate from a sample runbook output):
+3. Schema: regenerate from a real runbook output sample (Power Automate "Generate from sample"). The runbook emits the following top-level shape:
 
 ```json
 {
     "type": "object",
     "properties": {
+        "RunType": { "type": "string" },
         "RunId": { "type": "string" },
         "Timestamp": { "type": "string" },
-        "OverallStatus": { "type": "string" },
+        "TotalSkills": { "type": "integer" },
         "TotalAgents": { "type": "integer" },
         "TotalEnvironments": { "type": "integer" },
+        "EnvironmentNames": { "type": "string" },
+        "OverallStatus": { "type": "string" },
+        "Reason": { "type": ["string", "null"] },
+        "Control": { "type": "string" },
         "ViolationCount": { "type": "integer" },
         "AlertRequired": { "type": "boolean" },
         "AlertSeverity": { "type": "string" },
+        "ZoneSummary": { "type": "object" },
+        "Drift": {
+            "type": "object",
+            "properties": {
+                "HasDrift": { "type": "boolean" },
+                "IsFirstRun": { "type": "boolean" },
+                "DriftedRoutes": { "type": "integer" },
+                "Details": { "type": "array" }
+            }
+        },
+        "SkillSnapshot": { "type": "array" },
         "Violations": {
             "type": "array",
             "items": {
@@ -127,24 +143,26 @@ Add these **Initialize variable** actions immediately after the trigger:
                 "properties": {
                     "AgentId": { "type": "string" },
                     "AgentName": { "type": "string" },
+                    "TargetAgentId": { "type": "string" },
+                    "TargetAgentName": { "type": "string" },
+                    "SkillName": { "type": "string" },
                     "EnvironmentId": { "type": "string" },
                     "EnvironmentName": { "type": "string" },
                     "SourceZone": { "type": "string" },
                     "TargetZone": { "type": "string" },
                     "ViolationType": { "type": "string" },
-                    "TargetAgentId": { "type": "string" },
-                    "TargetAgentName": { "type": "string" },
-                    "CommunicationPattern": { "type": "string" },
-                    "ExpectedPolicy": { "type": "string" },
-                    "ActualConfig": { "type": "string" },
                     "Severity": { "type": "string" },
-                    "RegulatoryContext": { "type": "string" }
+                    "RegulatoryContext": { "type": "string" },
+                    "IsCrossEnvironment": { "type": "boolean" },
+                    "IsCrossTenant": { "type": "boolean" }
                 }
             }
         }
     }
 }
 ```
+
+> **Note:** `OverallStatus` may be any of `Passed`, `Failed`, `Critical`, `Review`, `Error`. Downstream Switch/Condition actions must enumerate all five values; `Critical` and `Review` are not aliases of `Failed`.
 
 4. Rename action: `Parse_Results`
 
@@ -160,13 +178,13 @@ Add these **Initialize variable** actions immediately after the trigger:
 | Flow Expression | Dataverse Column | Type | Description |
 |----------------|------------------|------|-------------|
 | `"ACRDRun-" + Timestamp` | `fsi_name` | String | Display name with scan timestamp |
-| `RunId` | `fsi_runid` | String | Unique run identifier |
-| `OverallStatus` | `fsi_overallstatus` | String | Passed, Failed, or Error |
+| `RunId` | `fsi_runid` | String | Unique run identifier (also enables join to violations) |
+| `OverallStatus` | `fsi_overallstatus` | String | Passed / Failed / Critical / Review / Error |
 | `ViolationCount` | `fsi_violationcount` | Integer | Number of violations detected |
 | `TotalAgents` | `fsi_totalagents` | Integer | Total agents scanned |
 | `TotalSkills` | `fsi_totalskills` | Integer | Total skill registrations scanned |
-| `string(TotalEnvironments)` | `fsi_environmentsscanned` | String | Environments scanned |
-| Full JSON output | `fsi_summaryjson` | Memo | Complete runbook output |
+| `EnvironmentNames` | `fsi_environmentsscanned` | String | Comma-separated environment display names (NOT the count). The runbook emits this list as `EnvironmentNames`; the schema documents this column as "Comma-separated environments covered". Mapping `string(TotalEnvironments)` would persist `"3"` instead of `"Contoso-Prod, Contoso-Dev, Contoso-Test"` and destroy audit value. |
+| Full JSON output | `fsi_summaryjson` | Memo | Complete runbook output (includes `SkillSnapshot` required for next-run drift detection) |
 | `Timestamp` | `fsi_validationtime` | DateTime | Scan execution timestamp |
 
 5. Rename action: `Write_Scan_Run`
@@ -316,7 +334,7 @@ Provides a structured approval workflow when agents require exceptions to blocke
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
 4. Column mapping:
-   - `fsi_exceptionstatus`: `Approved` (option set value)
+   - `fsi_exceptionstatus`: `100000001` (option set integer for **Approved** — values: 100000000=Pending, 100000001=Approved, 100000002=Denied, 100000003=Expired). Power Automate's Dataverse "Update a row" connector requires the integer option set value, not the label.
    - `fsi_approvedby`: Approver display name from approval response
    - `fsi_approvedat`: `utcNow()`
 5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`
@@ -328,7 +346,7 @@ Provides a structured approval workflow when agents require exceptions to blocke
 2. Table name: `Comm Exception` (`fsi_CommException`)
 3. Row ID: Trigger row ID
 4. Column mapping:
-   - `fsi_exceptionstatus`: `Denied` (option set value)
+   - `fsi_exceptionstatus`: `100000002` (option set integer for **Denied**)
    - `fsi_approvedby`: Responder display name from approval response
    - `fsi_approvedat`: `utcNow()`
 5. Connection reference: `fsi_cr_dataverse_commrestrictiondetector`

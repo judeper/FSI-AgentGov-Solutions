@@ -36,7 +36,7 @@
 
 .NOTES
     File: Get-ZoneClassification.ps1
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Delegates to: scripts/shared/Get-ZoneClassification.ps1
 #>

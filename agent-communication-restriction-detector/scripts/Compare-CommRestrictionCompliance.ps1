@@ -88,7 +88,7 @@
 
 .NOTES
     File: Compare-CommRestrictionCompliance.ps1
-    Version: 1.0.0
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Requires: PowerShell 7.0+

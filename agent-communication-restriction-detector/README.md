@@ -7,7 +7,7 @@ Detects unauthorized agent-to-agent communication patterns, zone boundary violat
 | Property | Value |
 |----------|-------|
 | Status | Released |
-| Version | 1.0.2 |
+| Version | 1.1.0 |
 | Primary Control | [2.17 -- Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) |
 | Regulatory Context | FINRA 3110, GLBA 501(b), SOX 404 |
 
@@ -36,7 +36,7 @@ Each governance zone defines which agent-to-agent communication patterns are per
 | Zone Boundary Violation | Warning | High | Critical |
 | Cross-Tenant Communication | High | Critical | Critical |
 | Cross-Environment Unapproved | Warning | High | Critical |
-| Maker/Checker Violation | Warning | Medium | High |
+| Maker/Checker Violation | Warning | High | Critical |
 
 ## Features
 

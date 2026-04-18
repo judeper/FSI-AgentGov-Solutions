@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-CommRestrictionCompliance.ps1
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -174,7 +174,7 @@ function Test-CommRestrictionCompliance {
     $runId = [guid]::NewGuid().ToString()
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Communication Restriction Detector v1.0.0"
+    Write-Verbose "Agent Communication Restriction Detector v1.1.0"
     Write-Verbose "RunId: $runId"
     Write-Verbose "========================================="
 
@@ -534,6 +534,26 @@ function Test-CommRestrictionCompliance {
         $environmentNameList = ($skillRegistrations | Select-Object -Property EnvironmentDisplayName -Unique |
             ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
 
+        # Build SkillSnapshot of every observed route — required by next run's drift
+        # detection (Start-CommRestrictionValidationRunbook reads
+        # previousSummary.SkillSnapshot from fsi_summaryjson). Without this the
+        # drift compare path silently treats every scan as the first run.
+        $skillSnapshot = @()
+        foreach ($skill in $skillRegistrations) {
+            $skillSnapshot += [PSCustomObject]@{
+                AgentId         = $skill.AgentId
+                AgentName       = $skill.AgentName
+                SkillName       = $skill.SkillName
+                TargetAgentId   = $skill.TargetAgentId
+                TargetAgentName = $skill.TargetAgentName
+                SourceZone      = $skill.SourceZone
+                TargetZone      = $skill.TargetZone
+                EnvironmentId   = $skill.EnvironmentId
+                EnvironmentName = $skill.EnvironmentDisplayName
+                ManifestUrl     = $skill.SkillManifestUrl
+            }
+        }
+
         # Write scan run summary
         $scanSummary = @{
             OverallStatus       = $overallStatus
@@ -542,6 +562,7 @@ function Test-CommRestrictionCompliance {
             CompliantCount      = $compliantSkillCount
             ViolationCount      = $violationSkillCount
             EnvironmentsScanned = $environmentNameList
+            SkillSnapshot       = $skillSnapshot
         }
 
         if ($PSCmdlet.ShouldProcess("Dataverse scan run history", "Write scan results")) {

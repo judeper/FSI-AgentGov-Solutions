@@ -106,7 +106,7 @@ For scheduled daily scans via Power Automate:
 1. Create an Azure Automation account (or reuse an existing governance account)
 2. Import the `Start-CommRestrictionValidationRunbook.ps1` as a PowerShell 7.2 runbook
 3. Upload the authentication certificate to the Certificates blade
-4. Install required modules: `MSAL.PS`, `Microsoft.PowerApps.Administration.PowerShell`
+4. Install required modules: `MSAL.PS`, `Microsoft.PowerApps.Administration.PowerShell`, `Az.Accounts` (the runbook uses MSAL.PS for cert-based Dataverse auth, the admin module for environment enumeration, and Az.Accounts is required transitively by `ACRDClient.psm1` if any helper is dot-sourced)
 5. Configure runbook parameters (tenant ID, client ID, certificate thumbprint, Dataverse URL)
 
 ## Network Requirements

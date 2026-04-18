@@ -118,7 +118,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Requires:
@@ -548,14 +548,14 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Agent Communication Restriction Detector"
-    solutionVersion = "1.0.1"
+    solutionVersion = "1.1.0"
     control         = "2.17"
     controlName     = "Multi-Agent Orchestration Limits"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
     zoneFilter      = $Zone
-    exportVersion   = "1.0.0"
+    exportVersion   = "1.1.0"
     recordCount     = $totalScans
     violationCount  = $totalViolations
     organizationUrl = $DataverseUrl
@@ -572,7 +572,11 @@ $summary = [PSCustomObject]@{
     highViolations      = $highViolations
     mediumViolations    = $mediumViolations
     warningViolations   = $warningViolations
-    violationTypes      = [PSCustomObject]$violationTypes
+    violationTypes      = (& {
+        $h = [ordered]@{}
+        foreach ($k in ($violationTypes.Keys | Sort-Object)) { $h[$k] = $violationTypes[$k] }
+        [PSCustomObject]$h
+    })
 }
 
 # Build complete evidence object
@@ -597,11 +601,42 @@ $evidenceFilePath = Join-Path -Path $OutputDirectory -ChildPath $fileName
 Write-Host "Writing evidence file: $evidenceFilePath" -ForegroundColor Cyan
 
 try {
-    # CRITICAL: Use -Depth 10 to prevent nested object truncation
-    $jsonContent = $evidence | ConvertTo-Json -Depth 10
-    $jsonContent | Out-File -FilePath $evidenceFilePath -Encoding utf8 -Force
+    # Canonicalize evidence object for deterministic SHA-256 (recursive key sort,
+    # stable record ordering, LF-only UTF-8 no-BOM file write).
+    function ConvertTo-CanonicalObject {
+        param($InputObject)
+        if ($null -eq $InputObject) { return $null }
+        if ($InputObject -is [System.Collections.IDictionary] -or $InputObject -is [PSCustomObject]) {
+            $ordered = [ordered]@{}
+            $names = if ($InputObject -is [System.Collections.IDictionary]) {
+                $InputObject.Keys | Sort-Object
+            } else {
+                ($InputObject.PSObject.Properties.Name | Sort-Object)
+            }
+            foreach ($n in $names) {
+                $val = if ($InputObject -is [System.Collections.IDictionary]) { $InputObject[$n] } else { $InputObject.$n }
+                $ordered[$n] = ConvertTo-CanonicalObject -InputObject $val
+            }
+            return [PSCustomObject]$ordered
+        }
+        if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+            $arr = @()
+            foreach ($item in $InputObject) { $arr += ,(ConvertTo-CanonicalObject -InputObject $item) }
+            return ,$arr
+        }
+        return $InputObject
+    }
 
-    Write-Host "Evidence file written successfully." -ForegroundColor Green
+    if ($evidence.scanRuns)       { $evidence.scanRuns       = @($evidence.scanRuns       | Sort-Object validationTime, runId) }
+    if ($evidence.violations)     { $evidence.violations     = @($evidence.violations     | Sort-Object detectedAt, runId, callingAgentId, calledAgentId) }
+    if ($evidence.approvedRoutes) { $evidence.approvedRoutes = @($evidence.approvedRoutes | Sort-Object sourceZone, targetZone, directionType) }
+    if ($evidence.exceptions)     { $evidence.exceptions     = @($evidence.exceptions     | Sort-Object exceptionId) }
+
+    $canonical = ConvertTo-CanonicalObject -InputObject $evidence
+    $jsonContent = $canonical | ConvertTo-Json -Depth 10
+    [System.IO.File]::WriteAllText($evidenceFilePath, ($jsonContent -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+    Write-Host "Evidence file written successfully (canonicalized, LF, UTF-8 no BOM)." -ForegroundColor Green
 }
 catch {
     Write-Error "Failed to write evidence file: $($_.Exception.Message)"
@@ -618,11 +653,10 @@ try {
     $hashResult = Get-FileHash -Path $evidenceFilePath -Algorithm SHA256
     $hashValue = $hashResult.Hash
 
-    # Write hash companion file in standard format: {hash}  {filename}
+    # LF-only, UTF-8 no BOM for cross-platform sha256sum compat
     $hashFileName = "$fileName.sha256"
     $hashFilePath = Join-Path -Path $OutputDirectory -ChildPath $hashFileName
-    $hashContent = "$hashValue  $fileName"
-    $hashContent | Out-File -FilePath $hashFilePath -Encoding utf8 -Force
+    [System.IO.File]::WriteAllText($hashFilePath, "$hashValue  $fileName`n", [System.Text.UTF8Encoding]::new($false))
 
     Write-Host "SHA-256 hash file created: $hashFilePath" -ForegroundColor Green
 }

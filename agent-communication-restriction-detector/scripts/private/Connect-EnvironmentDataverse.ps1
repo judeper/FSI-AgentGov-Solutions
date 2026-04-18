@@ -42,7 +42,7 @@
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
-    Version: 0.1.0
+    Version: 1.1.0
     Requires: PowerShell 7.0+
 #>
 
@@ -167,6 +167,23 @@ try {
 
     $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
 
+    # Az.Accounts >= 2.17 returns Token as SecureString by default. Concatenating
+    # a SecureString into a Bearer header produces 'Bearer System.Security.SecureString'
+    # which Dataverse rejects with HTTP 401. Detect and unwrap.
+    $rawToken = $tokenResult.Token
+    if ($rawToken -is [System.Security.SecureString]) {
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            $rawToken = ConvertFrom-SecureString -SecureString $rawToken -AsPlainText
+        } else {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($rawToken)
+            try {
+                $rawToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            }
+        }
+    }
+
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime
     } else {
@@ -174,12 +191,12 @@ try {
     }
 
     $script:TokenCache[$normalizedUrl] = @{
-        Token     = $tokenResult.Token
+        Token     = $rawToken
         ExpiresOn = $expiresOn
     }
 
     Write-Verbose "Interactive token acquired for $normalizedUrl (expires: $expiresOn)"
-    return $tokenResult.Token
+    return $rawToken
 } catch {
     if ($_.Exception.Message -match 'No Azure context found') {
         throw $_

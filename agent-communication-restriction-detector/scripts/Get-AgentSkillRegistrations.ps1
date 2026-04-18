@@ -15,7 +15,7 @@
 
 .NOTES
     File: Get-AgentSkillRegistrations.ps1
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>

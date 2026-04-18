@@ -15,12 +15,13 @@
 
 .NOTES
     Module: ACRDClient.psm1
-    Version: 1.0.0
-    Requires: PowerShell 7.0+
+    Version: 1.1.0
+    Requires: PowerShell 7.0+, Az.Accounts >= 2.0.0
     Author: FSI Agent Governance Team
 #>
 
 #requires -Version 7.0
+#requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.0.0' }
 
 #region Module Variables
 
@@ -319,16 +320,19 @@ function Get-ACRDSkillRegistration {
         }
 
         return $allRecords | ForEach-Object {
-            # Convert picklist integer back to zone string
+            # Convert picklist integer back to zone string. The
+            # fsi_AgentSkillRegistration table only stores a single fsi_zone (the
+            # source zone). Target zone is NOT persisted on the snapshot — historical
+            # rows cannot be used for cross-zone compare. Returning $null for
+            # TargetZone makes that gap explicit to callers (vs. silently masquerading
+            # SourceZone as TargetZone, which would produce false-negative cross-zone
+            # violation results).
             $sourceZoneValue = $_.fsi_zone
             $sourceZoneName = if ($null -ne $sourceZoneValue -and $script:IntToZone.ContainsKey([int]$sourceZoneValue)) {
                 $script:IntToZone[[int]$sourceZoneValue]
             } else { 'Unknown' }
 
-            $targetZoneValue = $_.fsi_zone
-            $targetZoneName = if ($null -ne $targetZoneValue -and $script:IntToZone.ContainsKey([int]$targetZoneValue)) {
-                $script:IntToZone[[int]$targetZoneValue]
-            } else { 'Unknown' }
+            $targetZoneName = $null
 
             [PSCustomObject]@{
                 RegistrationId        = $_.fsi_agentskillregistrationid
@@ -404,7 +408,7 @@ function Write-ACRDScanRun {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json -Depth 10) -Headers $headers
         Write-Verbose "ACRD scan run record created"
         return $response
     } catch {
@@ -462,9 +466,29 @@ function Write-ACRDViolation {
             $script:ViolationStatusToInt[$Violation.ViolationStatus]
         } else { $script:ViolationStatusToInt['Open'] }
 
+        # Build the primary name within the schema's String(200) cap. Two String(500)
+        # agent names plus delimiters can otherwise overflow.
+        $nameMax = 200
+        $callingTrunc = if ($Violation.CallingAgentName -and $Violation.CallingAgentName.Length -gt 80) { $Violation.CallingAgentName.Substring(0, 80) } else { $Violation.CallingAgentName }
+        $calledTrunc  = if ($Violation.TargetAgentName  -and $Violation.TargetAgentName.Length  -gt 80) { $Violation.TargetAgentName.Substring(0, 80)  } else { $Violation.TargetAgentName }
+        $rawName = "$callingTrunc->$calledTrunc-$(Get-Date -Format 'yyyy-MM-dd')"
+        if ($rawName.Length -gt $nameMax) { $rawName = $rawName.Substring(0, $nameMax) }
+
+        # Resolve required columns up front. fsi_calledenvironmentid and
+        # fsi_violationtype are ApplicationRequired in the schema; missing values
+        # would cause a Dataverse HTTP 400 and silently lose the audit row.
+        $calledEnvId = if ($Violation.TargetEnvironmentId) { $Violation.TargetEnvironmentId } else { 'unknown-tenant' }
+        if (-not $Violation.TargetEnvironmentId) {
+            Write-Warning "Violation has no TargetEnvironmentId (likely cross-tenant skill); writing 'unknown-tenant' placeholder for fsi_calledenvironmentid."
+        }
+        if ($null -eq $violationTypeInt) {
+            throw "Cannot map ViolationType '$($Violation.ViolationType)' to a Dataverse picklist value (fsi_violationtype is ApplicationRequired)."
+        }
+
         $record = @{
-            fsi_name                  = "$($Violation.CallingAgentName)->$($Violation.TargetAgentName)-$(Get-Date -Format 'yyyy-MM-dd')"
+            fsi_name                  = $rawName
             fsi_callingenvironmentid  = $Violation.EnvironmentId
+            fsi_calledenvironmentid   = $calledEnvId
             fsi_environmentname       = $Violation.EnvironmentDisplayName
             fsi_callingagentid        = $Violation.CallingAgentId
             fsi_callingagentname      = $Violation.CallingAgentName
@@ -473,22 +497,15 @@ function Write-ACRDViolation {
             fsi_callingagentzone      = $sourceZoneInt
             fsi_calledagentzone       = $targetZoneInt
             fsi_violationstatus       = $violationStatusInt
+            fsi_violationtype         = $violationTypeInt
             fsi_severity              = $Violation.Severity
             fsi_regulatorycontext     = $Violation.RegulatoryContext
             fsi_detectedat            = (Get-Date).ToUniversalTime().ToString('o')
         }
 
-        # Add violation type if resolved
-        if ($null -ne $violationTypeInt) {
-            $record['fsi_violationtype'] = $violationTypeInt
-        }
-
-        # Add optional fields
+        # Optional fields
         if ($Violation.SkillName) {
             $record['fsi_skillname'] = $Violation.SkillName
-        }
-        if ($Violation.TargetEnvironmentId) {
-            $record['fsi_calledenvironmentid'] = $Violation.TargetEnvironmentId
         }
 
         if ($RunId) {
@@ -503,7 +520,7 @@ function Write-ACRDViolation {
             'Accept'        = 'application/json'
         }
 
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json -Depth 10) -Headers $headers
         Write-Verbose "ACRD violation record created for $($Violation.CallingAgentName) -> $($Violation.TargetAgentName)"
         return $response
     } catch {
@@ -745,7 +762,10 @@ function Get-AgentBots {
     )
 
     try {
-        $select = "botid,name,statecode,statuscode,configuration,publishedon,schemaname"
+        # NOTE: 'schemaname' is a metadata attribute, not a record-level column on
+        # the bots table — including it in $select returns HTTP 400. Use
+        # '_ownerid_value' so downstream maker/checker logic can read the owner.
+        $select = "botid,name,statecode,statuscode,configuration,publishedon,_ownerid_value"
         $baseUrl = $DataverseUrl.TrimEnd('/')
 
         if ($IncludeDrafts) {

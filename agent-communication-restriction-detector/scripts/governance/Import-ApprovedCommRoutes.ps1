@@ -69,7 +69,7 @@
     Valid DirectionType values: OneWay, Bidirectional
     The combination of SourceZone + TargetZone + DirectionType is the idempotency key.
 
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
@@ -81,7 +81,7 @@ param(
     [string]$CsvPath,
 
     [Parameter(Mandatory)]
-    [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com$')]
+    [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics(\.com|\.us|\.de)/?$')]
     [string]$DataverseUrl,
 
     [Parameter()]
@@ -287,6 +287,12 @@ foreach ($row in $csvData) {
         $row.ApprovedBy.Trim()
     } else { $ApprovedBy }
 
+    if (-not $rowApprovedBy) {
+        Write-Warning "Skipping row: ApprovedBy is required (Dataverse fsi_ApprovedBy is ApplicationRequired). Provide an 'ApprovedBy' column in the CSV or pass -ApprovedBy."
+        $skipped++
+        continue
+    }
+
     $expirationDate = if ($row.PSObject.Properties['ExpirationDate'] -and $row.ExpirationDate) {
         $row.ExpirationDate.Trim()
     } else { $null }
@@ -332,10 +338,10 @@ foreach ($row in $csvData) {
         'fsi_allowcrossenvironment' = $allowCrossEnv
         'fsi_isactive'              = $true
         'fsi_notes'                 = $notes
-    }
-
-    if ($rowApprovedBy) {
-        $record['fsi_approvedby'] = $rowApprovedBy
+        # fsi_ApprovedBy and fsi_ApprovedAt are ApplicationRequired in the schema —
+        # always populate them on CREATE/UPDATE so Dataverse does not return HTTP 400.
+        'fsi_approvedby'            = $rowApprovedBy
+        'fsi_approvedat'            = (Get-Date -AsUTC -Format 'o')
     }
 
     if ($expirationDate) {

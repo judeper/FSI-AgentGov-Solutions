@@ -91,7 +91,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.1.0
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 
@@ -239,6 +239,21 @@ try {
 
     $dataverseToken = $tokenResult.AccessToken
     Write-Verbose "Dataverse token acquired"
+
+    # Power Platform admin module (Get-AdminPowerAppEnvironment) maintains its own
+    # session cache and is not satisfied by the Dataverse token above. Authenticate
+    # the admin module explicitly with the same service-principal credential so the
+    # downstream environment enumeration in Get-AgentSkillRegistrations.ps1 succeeds
+    # under non-interactive Azure Automation.
+    Write-Verbose "Authenticating Power Platform admin module (service principal)"
+    Import-Module Microsoft.PowerApps.Administration.PowerShell -ErrorAction Stop
+    Add-PowerAppsAccount `
+        -Endpoint prod `
+        -TenantID $TenantId `
+        -ApplicationId $ClientId `
+        -CertificateThumbprint $CertificateThumbprint `
+        -ErrorAction Stop | Out-Null
+    Write-Verbose "Power Platform admin session established"
 
     #endregion
 
@@ -602,6 +617,26 @@ try {
 
     $runId = [guid]::NewGuid().ToString()
 
+    # Build SkillSnapshot for next-run drift detection — every per-route fact the
+    # Get-CommRouteDriftDirection compare logic needs (key fields + zone + env).
+    # The runbook reads previousSummary.SkillSnapshot on the next scan; without
+    # this writer, drift detection silently treats every scan as the first run.
+    $skillSnapshot = @()
+    foreach ($skill in $currentSkillMap.Values) {
+        $skillSnapshot += [PSCustomObject]@{
+            AgentId         = $skill.AgentId
+            AgentName       = $skill.AgentName
+            SkillName       = $skill.SkillName
+            TargetAgentId   = $skill.TargetAgentId
+            TargetAgentName = $skill.TargetAgentName
+            SourceZone      = $skill.SourceZone
+            TargetZone      = $skill.TargetZone
+            EnvironmentId   = $skill.EnvironmentId
+            EnvironmentName = $skill.EnvironmentDisplayName
+            ManifestUrl     = $skill.SkillManifestUrl
+        }
+    }
+
     $output = [PSCustomObject]@{
         RunType            = "CommRestrictionValidation"
         RunId              = $runId
@@ -615,6 +650,8 @@ try {
         Control            = "2.17"
         ZoneSummary        = [PSCustomObject]$enrichedZoneSummary
         Violations         = $violations
+        ViolationCount     = $violations.Count
+        SkillSnapshot      = $skillSnapshot
         Drift              = [PSCustomObject]@{
             HasDrift      = $hasDrift
             IsFirstRun    = $globalIsFirstRun
