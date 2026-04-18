@@ -108,43 +108,60 @@ def build_solution_index(
         lines.append(" | ".join(badge_parts))
         lines.append("")
 
-    # Preamble (description before first ##)
+    # Preamble: keep only the first non-empty paragraph (skip H1 / badge lines).
+    # Rich detail belongs in README.md on GitHub; the overview page stays lean.
     preamble = sections.get("preamble", "")
     if preamble:
-        # Remove H1 line from preamble
-        preamble_lines = preamble.splitlines()
         preamble_lines = [
-            l for l in preamble_lines if not l.startswith("# ")
+            l for l in preamble.splitlines()
+            if not l.startswith("# ")
+            and not l.startswith("![")  # skip shield/badge image lines
+            and not l.startswith("[![")
         ]
-        preamble_text = "\n".join(preamble_lines).strip()
-        if preamble_text:
-            lines.append(preamble_text)
+        first_para: list[str] = []
+        for line in preamble_lines:
+            if line.strip() == "" and first_para:
+                break
+            if line.strip():
+                first_para.append(line)
+        if first_para:
+            lines.append("\n".join(first_para).strip())
             lines.append("")
 
-    # Standard sections to include
+    # Lean section set: only what a landing page needs. Everything else is a
+    # link to README.md on GitHub or a detail page in the Documentation table.
     section_order = [
-        "overview",
-        "features",
-        "architecture",
         "quick start",
-        "scope components",
-        "zone requirements",
-        "detection logic",
-        "solution components",
-        "configuration placeholders",
-        "deployment",
-        "prerequisites",
         "related controls",
-        "regulatory alignment",
-        "known limitations",
     ]
+
+    # Cap section length so the overview page stays scannable. Longer content
+    # belongs in README.md on GitHub or a dedicated detail page.
+    SECTION_MAX_LINES = 25
 
     for section_key in section_order:
         if section_key in sections and sections[section_key]:
             heading = section_key.title()
+            body_lines = sections[section_key].splitlines()
+            truncated = False
+            if len(body_lines) > SECTION_MAX_LINES:
+                body_lines = body_lines[:SECTION_MAX_LINES]
+                truncated = True
+                # Don't stop inside a fenced code block; back up to the line
+                # before the unclosed ``` so rendering stays valid.
+                if sum(1 for l in body_lines if l.lstrip().startswith("```")) % 2 == 1:
+                    for i in range(len(body_lines) - 1, -1, -1):
+                        if body_lines[i].lstrip().startswith("```"):
+                            body_lines = body_lines[:i]
+                            break
             lines.append(f"## {heading}")
             lines.append("")
-            lines.append(sections[section_key])
+            lines.append("\n".join(body_lines))
+            if truncated:
+                lines.append("")
+                lines.append(
+                    f"_Full details in the [solution README]({GITHUB_BLOB}/{solution_name}/README.md)._"
+                )
             lines.append("")
 
     # Build filename map for link rewriting in README content
@@ -171,10 +188,13 @@ def build_solution_index(
             and f.name.lower() not in CHANGELOG_PATTERNS
         )
         if md_files:
+            # Ensure a blank line before this auto-appended heading.
+            if lines and lines[-1].strip() != "":
+                lines.append("")
             lines.append("## Documentation")
             lines.append("")
-            lines.append("| Document | Description |")
-            lines.append("|----------|-------------|")
+            lines.append("| Document |")
+            lines.append("|----------|")
             for md_file in md_files:
                 norm_name = normalize_filename(md_file.name)
                 display = (
@@ -182,7 +202,7 @@ def build_solution_index(
                     .replace("-", " ")
                     .title()
                 )
-                lines.append(f"| [{display}]({norm_name}) | |")
+                lines.append(f"| [{display}]({norm_name}) |")
             lines.append("")
 
     # GitHub source link

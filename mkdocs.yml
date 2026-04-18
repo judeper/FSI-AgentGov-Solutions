@@ -43,12 +43,6 @@ theme:
 plugins:
   - search:
       separator: '[\s\-\.]+'
-  - include-markdown:
-      # Allow includes to reference files outside docs_dir (site-docs/).
-      # Do NOT rewrite relative URLs: links like ./prerequisites.md inside
-      # the included file should resolve to sibling wrapper pages in
-      # site-docs/solutions/{slug}/, not back to the source location.
-      rewrite_relative_urls: false
 
 markdown_extensions:
   - admonition
