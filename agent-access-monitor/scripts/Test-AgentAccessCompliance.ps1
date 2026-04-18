@@ -75,7 +75,7 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 1.0.3
+    Version: 1.1.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
@@ -383,13 +383,17 @@ if ($DataverseUrl -and $PersistResults) {
         ValidationTime    = $validationTime
     }
     
-    # Write summary to validation history (immutable)
+    # Write summary to validation history (immutable). Failures here are critical
+    # (no audit trail) — surface a terminating error so the runbook captures
+    # this as a runbook failure rather than silently demoting to warning.
     if ($PSCmdlet.ShouldProcess("fsi_accessvalidationhistory", "Write validation summary (RunId=$runId)")) {
         try {
             Write-AAMValidationHistory -ValidationResult $validationResult -RunId $runId
             Write-Verbose "Validation history written: RunId=$runId"
         } catch {
-            Write-Warning "Failed to write validation history: $($_.Exception.Message)"
+            $msg = "Failed to write validation history (RunId=$runId): $($_.Exception.Message)"
+            Write-Error $msg
+            throw $msg
         }
     }
     

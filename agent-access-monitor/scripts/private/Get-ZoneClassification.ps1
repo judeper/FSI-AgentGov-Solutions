@@ -38,7 +38,7 @@ if ($DataverseUrl -and $AccessToken) {
             }
         }
     } catch {
-        Write-Verbose "ELM lookup failed for $EnvironmentId, falling back to naming convention: $($_.Exception.Message)"
+        Write-Warning "ELM lookup failed for $EnvironmentId, falling back to naming convention: $($_.Exception.Message)"
     }
 }
 

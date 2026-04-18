@@ -18,8 +18,8 @@
     by providing tamper-evident exports with full validation history, timestamps,
     and audit trail metadata.
 
-    This script supports FSI-AgentGov Controls 1.18/1.19 evidence collection
-    requirements for agent access governance.
+    This script supports FSI-AgentGov Control 3.8 (Copilot Hub and Governance
+    Dashboard) evidence collection requirements for agent access governance.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
@@ -103,7 +103,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.3
+    Version: 1.1.0
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -365,6 +365,7 @@ $violationsReadable = $violations | ForEach-Object {
         expectedValue     = $_.fsi_expectedvalue
         actualValue       = $_.fsi_actualvalue
         severity          = $severityText
+        severityLabel     = $_.fsi_severitylabel
         regulatoryContext = $_.fsi_regulatorycontext
         detectedAt        = $_.fsi_detectedat
         runId             = $_.fsi_runid
@@ -392,29 +393,32 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
     }
 }
 
-# Compute summary statistics
+# Compute summary statistics. Critical and High both map to fsi_severity picklist
+# 100000003 (Failed); fsi_severitylabel disambiguates them. Buckets prefer label,
+# falling back to severity bucket when the label column is null on legacy rows.
 $totalScans = $validationsReadable.Count
 $scansCompliant = ($validationsReadable | Where-Object { $_.overallStatus -eq 'Passed' }).Count
 $scansWithViolations = ($validationsReadable | Where-Object { $_.violationCount -gt 0 }).Count
 $totalViolations = $violationsReadable.Count
-$criticalViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Failed' }).Count
-$highViolations = ($violationsReadable | Where-Object { $_.severity -eq 'Warning' }).Count
-$warningViolations = ($violationsReadable | Where-Object { $_.severity -eq 'GracePeriod' }).Count
 
-# Compute overall status (worst-case across all scans)
-$overallStatus = "Passed"
+function _bucket($v, $label) {
+    if ($v.severityLabel) { return ($v.severityLabel -eq $label) }
+    if ($label -eq 'Critical') { return ($v.severity -eq 'Failed') }   # legacy fallback (cannot split)
+    if ($label -eq 'High')     { return $false }
+    if ($label -eq 'Warning')  { return ($v.severity -eq 'Warning') }
+    return $false
+}
+$criticalViolations = ($violationsReadable | Where-Object { _bucket $_ 'Critical' }).Count
+$highViolations    = ($violationsReadable | Where-Object { _bucket $_ 'High'     }).Count
+$warningViolations = ($violationsReadable | Where-Object { _bucket $_ 'Warning'  }).Count
+$gracePeriodViolations = ($violationsReadable | Where-Object { $_.severity -eq 'GracePeriod' }).Count
+
+# Compute overall status — explicit NoData check first to avoid masking empty exports as Passed
+$overallStatus = if ($totalScans -eq 0) { 'NoData' } else { 'Passed' }
 $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStatus -ErrorAction SilentlyContinue
-if ($statusValues -contains "Failed") {
-    $overallStatus = "Failed"
-}
-elseif ($statusValues -contains "Review") {
-    $overallStatus = "Review"
-}
-elseif ($statusValues -contains "Warning") {
-    $overallStatus = "Warning"
-}
-elseif ($totalScans -eq 0) {
-    $overallStatus = "NoData"
+if ($overallStatus -ne 'NoData') {
+    if ($statusValues -contains 'Failed')        { $overallStatus = 'Failed' }
+    elseif ($statusValues -contains 'Warning')   { $overallStatus = 'Warning' }
 }
 
 # Build metadata section
@@ -443,7 +447,8 @@ $summary = [PSCustomObject]@{
     totalViolations     = $totalViolations
     criticalViolations  = $criticalViolations
     highViolations      = $highViolations
-    warningViolations   = $warningViolations
+    warningViolations    = $warningViolations
+    gracePeriodViolations = $gracePeriodViolations
 }
 
 # Build complete evidence object
@@ -467,11 +472,42 @@ $evidenceFilePath = Join-Path -Path $OutputDirectory -ChildPath $fileName
 Write-Host "Writing evidence file: $evidenceFilePath" -ForegroundColor Cyan
 
 try {
-    # CRITICAL: Use -Depth 10 to prevent nested object truncation
-    $jsonContent = $evidence | ConvertTo-Json -Depth 10
-    $jsonContent | Out-File -FilePath $evidenceFilePath -Encoding utf8 -Force
+    # Canonicalize evidence object for deterministic SHA-256 (recursive key sort,
+    # stable secondary ordering on records, LF-only UTF-8 no-BOM file write).
+    function ConvertTo-CanonicalObject {
+        param($InputObject)
+        if ($null -eq $InputObject) { return $null }
+        if ($InputObject -is [System.Collections.IDictionary] -or $InputObject -is [PSCustomObject]) {
+            $ordered = [ordered]@{}
+            $names = if ($InputObject -is [System.Collections.IDictionary]) {
+                $InputObject.Keys | Sort-Object
+            } else {
+                ($InputObject.PSObject.Properties.Name | Sort-Object)
+            }
+            foreach ($n in $names) {
+                $val = if ($InputObject -is [System.Collections.IDictionary]) { $InputObject[$n] } else { $InputObject.$n }
+                $ordered[$n] = ConvertTo-CanonicalObject -InputObject $val
+            }
+            return [PSCustomObject]$ordered
+        }
+        if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+            $arr = @()
+            foreach ($item in $InputObject) { $arr += ,(ConvertTo-CanonicalObject -InputObject $item) }
+            return ,$arr
+        }
+        return $InputObject
+    }
 
-    Write-Host "Evidence file written successfully." -ForegroundColor Green
+    # Stable record ordering before canonicalization
+    if ($evidence.validations) { $evidence.validations = @($evidence.validations | Sort-Object validationTime, runId) }
+    if ($evidence.violations)  { $evidence.violations  = @($evidence.violations  | Sort-Object detectedAt, runId, environmentGuid, violationType) }
+    if ($evidence.baselines)   { $evidence.baselines   = @($evidence.baselines   | Sort-Object environmentGuid, capturedAt) }
+
+    $canonical = ConvertTo-CanonicalObject -InputObject $evidence
+    $jsonContent = $canonical | ConvertTo-Json -Depth 10
+    [System.IO.File]::WriteAllText($evidenceFilePath, ($jsonContent -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+    Write-Host "Evidence file written successfully (canonicalized, LF, UTF-8 no BOM)." -ForegroundColor Green
 }
 catch {
     Write-Error "Failed to write evidence file: $($_.Exception.Message)"
@@ -488,11 +524,11 @@ try {
     $hashResult = Get-FileHash -Path $evidenceFilePath -Algorithm SHA256
     $hashValue = $hashResult.Hash
 
-    # Write hash companion file in standard format: {hash}  {filename}
+    # LF-only, UTF-8 no BOM for cross-platform sha256sum compat
     $hashFileName = "$fileName.sha256"
     $hashFilePath = Join-Path -Path $OutputDirectory -ChildPath $hashFileName
-    $hashContent = "$hashValue  $fileName"
-    $hashContent | Out-File -FilePath $hashFilePath -Encoding utf8 -Force
+    $hashContent = "$hashValue  $fileName`n"
+    [System.IO.File]::WriteAllText($hashFilePath, $hashContent, [System.Text.UTF8Encoding]::new($false))
 
     Write-Host "SHA-256 hash file created: $hashFilePath" -ForegroundColor Green
 }

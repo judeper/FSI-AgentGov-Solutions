@@ -88,7 +88,7 @@ Each export produces two files:
   "metadata": {
     "exportedAt": "2026-02-09T14:30:22Z",
     "solution": "Agent Access Governance Monitor",
-    "solutionVersion": "1.0.0",
+    "solutionVersion": "1.1.0",
     "fromDate": "...", "toDate": "...",
     "zoneFilter": "All",
     "recordCount": 30, "violationCount": 5

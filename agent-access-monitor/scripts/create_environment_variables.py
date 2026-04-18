@@ -189,6 +189,8 @@ def main() -> None:
 
     # Get client secret if needed
     client_secret = args.client_secret
+    if args.interactive and not args.client_id:
+        parser.error("--client-id is required even with --interactive (MSAL PublicClientApplication mandate).")
     if not args.interactive and not client_secret:
         if args.client_id:
             import getpass

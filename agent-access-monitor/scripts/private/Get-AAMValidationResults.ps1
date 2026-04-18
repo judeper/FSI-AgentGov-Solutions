@@ -218,7 +218,7 @@ function Get-AAMValidationResults {
             $violationFilterString = $violationFilters -join ' and '
 
             # Select fields for violations
-            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_expectedvalue,fsi_actualvalue,fsi_severity,fsi_regulatorycontext,fsi_detectedat,fsi_runid"
+            $violationSelect = "fsi_name,fsi_environmentguid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_expectedvalue,fsi_actualvalue,fsi_severity,fsi_severitylabel,fsi_regulatorycontext,fsi_detectedat,fsi_runid"
 
             # Build query URL
             $violationUrl = "$DataverseUrl/api/data/v9.2/fsi_accessviolations?`$filter=$violationFilterString&`$orderby=fsi_detectedat desc&`$select=$violationSelect"

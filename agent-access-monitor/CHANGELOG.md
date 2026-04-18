@@ -2,7 +2,40 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
-## [1.0.3] - 2026-04-08
+## [1.1.0] - 2026-05-12
+
+### BREAKING
+
+- Severity bucket reclassification: evidence-export summary buckets (`criticalViolations`, `highViolations`, `warningViolations`) are now driven by `fsi_severitylabel` rather than the `fsi_severity` picklist alone. Critical and High both map to `fsi_severity = 100000003` (Failed) at the picklist level; the prior export code treated `Failed` as Critical, `Warning` as High, and `GracePeriod` as Warning, producing materially incorrect counts. After upgrade, regenerate prior-period evidence to obtain correct buckets. A separate `gracePeriodViolations` count is now emitted.
+- `agent-access-monitor.psd1` `FunctionsToExport` replaced. The previous manifest referenced script names (`Test-AgentAccessCompliance`, `Get-EnvironmentAccessSettings`, `Compare-ZoneCompliance`) that are stand-alone runnable `param()` scripts, not functions. The manifest now exports the actual `AAMClient.psm1` helper functions (`Connect-AAMDataverse`, `Get-AAMConnection`, `Get-ValidToken`, `Get-AAMEnvironmentVariable`, `Get-AAMActiveBaseline`, `Write-AAMValidationHistory`, `Write-AAMViolation`, `Save-AAMBaseline`, `Get-AAMLastValidation`). Continue running scripts directly.
+
+### Added
+
+- `Get-AAMValidationResults` violation `$select` now retrieves `fsi_severitylabel` so the export bucketing can disambiguate Critical from High.
+- `Export-AgentAccessEvidence` writes evidence JSON canonically (recursive key sort, stable record ordering, LF-only UTF-8 no BOM) for deterministic SHA-256 hashes across operating systems.
+- `Export-AgentAccessEvidence` writes the `.sha256` companion file in standard `sha256sum -c`-compatible format (LF terminator, UTF-8 no BOM).
+- `create_dataverse_schema.py` now sets explicit `EntitySetName` and `LogicalCollectionName` on `fsi_accessbaselines`, `fsi_accessvalidationhistory`, and `fsi_accessviolations` so the OData entity set names are deterministic across deployments (avoids default pluralization risk for `…history`).
+- `AAMClient.Invoke-DataverseRequest` now honors the `Retry-After` response header on 429/5xx for Dataverse throttling.
+- All `--interactive` deploy entry points (`deploy.py`, `create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`) now require `--client-id` because MSAL `PublicClientApplication` mandates it. Without this the prior `--interactive --dry-run` exited with `client_id is required for interactive authentication`.
+
+### Fixed
+
+- `Test-AgentAccessCompliance` no longer silently demotes a validation-history write failure to a warning. A failed write is now a terminating error so the runbook records a runbook failure rather than producing an evidence trail with no audit-history row (FINRA 4511 / SEC 17a-3 audit integrity).
+- `Start-AccessValidationRunbook` drift detection now passes `-DataverseUrl`/`-AccessToken` to the per-environment settings query so zone classification uses the ELM lookup (correct), not the name-based fallback.
+- `AAMClient.Get-ValidToken` now warns explicitly when a caller-supplied token is expired and no `ClientId`/`TenantId` is available to refresh it (previous behavior silently returned the stale token, leading to surprise 401s).
+- `AAMClient` record `POST` calls (`Write-AAMValidationHistory`, `Write-AAMViolation`, `Save-AAMBaseline`) now use `ConvertTo-Json -Depth 10` to prevent nested-object truncation.
+- `Get-ZoneClassification` ELM lookup failure escalated from `Write-Verbose` to `Write-Warning` so silent fallbacks to name-based classification are visible in operator logs.
+- `Export-AgentAccessEvidence` `.DESCRIPTION` corrected from "Controls 1.18/1.19" to Control 3.8 (matches script header and framework mapping).
+- `Export-AgentAccessEvidence` overall-status computation reorders the `NoData` check first so an empty export is no longer reported as `Passed`.
+- `docs/TROUBLESHOOTING.md` `deploy.py` authentication failure remediation: replaced `az login` guidance with MSAL re-authentication instructions (the deployment uses MSAL directly, not the Azure CLI).
+- `docs/evidence-export.md` sample `solutionVersion` bumped from `1.0.0` to `1.1.0`.
+- All script `.NOTES Version` and module manifest `ModuleVersion` synchronized to `1.1.0`.
+
+### Notes
+
+- Previous CHANGELOG entries had inverted dates (v1.0.3 dated 2026-04-08, v1.0.2 dated 2026-04-15, v1.0.1 dated 2026-07-15). Dates below are corrected to a monotonic order; entry contents are unchanged.
+
+## [1.0.3] - 2026-04-15
 
 ### Fixed
 
@@ -17,7 +50,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Medium: Fixed evidence-export.md sample JSON `overallStatus` from "NonCompliant" to "Failed"
 - Low: Updated stale documentation references (SCHEMA.md → dataverse-schema.md) in agent-access-monitor.psd1 and .ralph-config.json
 
-## [1.0.2] - 2026-04-15
+## [1.0.2] - 2026-04-08
 
 ### Fixed
 
@@ -27,7 +60,7 @@ All notable changes to the Agent Access Governance Monitor.
 - Get-ZoneClassification: fixed `fsi_environment_id` → `fsi_environmentid` (Dataverse naming convention)
 - dataverse-schema.md: corrected fsi_zone type from Integer to OptionSet, fsi_severity from String to OptionSet, fsi_summaryjson from String to Memo
 
-## [1.0.1] - 2026-07-15
+## [1.0.1] - 2026-03-15
 
 ### Changed
 - Moved adaptive card templates from `src/` to `templates/` (repository content policy alignment)

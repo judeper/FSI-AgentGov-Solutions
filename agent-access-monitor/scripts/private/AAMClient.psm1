@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 1.0.3
+    Version: 1.1.0
     Author: FSI Agent Governance Team
 #>
 
@@ -76,7 +76,8 @@ function Get-ValidToken {
     [CmdletBinding()]
     param()
 
-    if (-not $script:TokenExpiry -or (Get-Date) -ge $script:TokenExpiry.AddMinutes(-5)) {
+    $isExpiring = (-not $script:TokenExpiry) -or ((Get-Date) -ge $script:TokenExpiry.AddMinutes(-5))
+    if ($isExpiring) {
         if ($script:ClientId -and $script:TenantId -and $script:DataverseUrl) {
             try {
                 $token = Get-MsalToken -ClientId $script:ClientId -TenantId $script:TenantId -Scopes "$($script:DataverseUrl)/.default" -Silent
@@ -85,6 +86,11 @@ function Get-ValidToken {
             } catch {
                 Write-Warning "Token refresh failed: $($_.Exception.Message). Using existing token."
             }
+        } elseif ($script:TokenExpiry) {
+            # Caller-supplied token without refresh credentials — warn loudly so a 401 is expected.
+            Write-Warning ("Access token has expired or is near expiry and no ClientId/TenantId is " +
+                "available to refresh it. Reconnect via Connect-AAMDataverse with -ClientId/-TenantId, " +
+                "or supply a freshly issued -AccessToken. Subsequent Dataverse requests are likely to fail with HTTP 401.")
         }
     }
     return $script:AccessToken
@@ -134,7 +140,15 @@ function Invoke-DataverseRequest {
         } catch {
             $statusCode = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
             if ($statusCode -eq 429 -or $statusCode -ge 500) {
+                # Honor Retry-After when present (Dataverse throttling guidance).
                 $delay = [math]::Pow(2, $i)
+                try {
+                    $retryAfter = $_.Exception.Response.Headers['Retry-After']
+                    if ($retryAfter) {
+                        $parsed = 0
+                        if ([int]::TryParse([string]$retryAfter, [ref]$parsed) -and $parsed -gt 0) { $delay = $parsed }
+                    }
+                } catch { }
                 Write-Verbose "Dataverse request failed (HTTP $statusCode), retrying in ${delay}s..."
                 Start-Sleep -Seconds $delay
             } else {
@@ -304,7 +318,7 @@ function Write-AAMValidationHistory {
             'Accept' = 'application/json'
         }
         
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json -Depth 10) -Headers $headers
         Write-Verbose "Validation history record created"
         return $response
     } catch {
@@ -387,7 +401,7 @@ function Write-AAMViolation {
             'Accept' = 'application/json'
         }
         
-        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+        $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json -Depth 10) -Headers $headers
         Write-Verbose "Violation record created for $($Violation.EnvironmentDisplayName)"
         return $response
     } catch {
@@ -493,7 +507,7 @@ function Save-AAMBaseline {
 
         if ($PSCmdlet.ShouldProcess("$EnvironmentName (Zone $Zone)", "Save new access baseline")) {
             $uri = "$script:DataverseUrl/api/data/v9.2/fsi_accessbaselines"
-            $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json) -Headers $headers
+            $response = Invoke-DataverseRequest -Uri $uri -Method Post -Body ($record | ConvertTo-Json -Depth 10) -Headers $headers
             Write-Verbose "Baseline saved for $EnvironmentName (Zone $Zone)"
             return $response
         }

@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.0.3'
+    ModuleVersion     = '1.1.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -38,17 +38,24 @@
     # ScriptsToProcess = @()
     
     # Nested modules bundled with this module
-    NestedModules     = @(
-        'Test-AgentAccessCompliance.ps1',
-        'Get-EnvironmentAccessSettings.ps1',
-        'Compare-ZoneCompliance.ps1'
-    )
-    
-    # Functions to export from this module
+    # NOTE: The .ps1 files under scripts/ (Test-AgentAccessCompliance, Get-EnvironmentAccessSettings,
+    # Compare-ZoneCompliance, etc.) are stand-alone runnable scripts using `param(...)` blocks, not
+    # function definitions. They cannot be exported as commands via FunctionsToExport. Run them
+    # directly (e.g., `.\Test-AgentAccessCompliance.ps1`). The module exports the AAMClient helpers
+    # listed below for re-use by other modules.
+    NestedModules     = @()
+
+    # Functions to export from this module — these are the helpers defined in private/AAMClient.psm1
     FunctionsToExport = @(
-        'Test-AgentAccessCompliance',
-        'Get-EnvironmentAccessSettings',
-        'Compare-ZoneCompliance'
+        'Connect-AAMDataverse',
+        'Get-AAMConnection',
+        'Get-ValidToken',
+        'Get-AAMEnvironmentVariable',
+        'Get-AAMActiveBaseline',
+        'Write-AAMValidationHistory',
+        'Write-AAMViolation',
+        'Save-AAMBaseline',
+        'Get-AAMLastValidation'
     )
     
     # Cmdlets to export from this module

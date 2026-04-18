@@ -245,6 +245,15 @@ Examples:
             "Use --interactive for manual runs or provide Service Principal credentials."
         )
 
+    # Interactive auth still requires a public-client AAD app registration (--client-id)
+    # because aam_client.py uses msal.PublicClientApplication, which mandates client_id.
+    if args.interactive and not args.client_id:
+        parser.error(
+            "--client-id is required even with --interactive (MSAL PublicClientApplication mandate).\n"
+            "Register a Microsoft Entra app (public client / native), grant Dataverse user_impersonation,\n"
+            "and pass its application (client) ID via --client-id."
+        )
+
     # Validate mutually exclusive selective flags
     exclusive_flags = [args.tables_only, args.vars_only, args.refs_only]
     if sum(exclusive_flags) > 1:

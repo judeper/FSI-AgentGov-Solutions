@@ -104,6 +104,8 @@ def get_access_baseline_entity() -> dict:
         "HasNotes": False,
         "IsAuditEnabled": {"Value": True},
         "PrimaryNameAttribute": "fsi_name",
+        "EntitySetName": "fsi_accessbaselines",
+        "LogicalCollectionName": "fsi_accessbaselines",
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -138,6 +140,8 @@ def get_validation_history_entity() -> dict:
         "HasNotes": False,
         "IsAuditEnabled": {"Value": True},
         "PrimaryNameAttribute": "fsi_name",
+        "EntitySetName": "fsi_accessvalidationhistory",
+        "LogicalCollectionName": "fsi_accessvalidationhistory",
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -170,6 +174,8 @@ def get_access_violation_entity() -> dict:
         "HasNotes": False,
         "IsAuditEnabled": {"Value": True},
         "PrimaryNameAttribute": "fsi_name",
+        "EntitySetName": "fsi_accessviolations",
+        "LogicalCollectionName": "fsi_accessviolations",
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -712,6 +718,8 @@ def main() -> None:
 
     # Get client secret if needed
     client_secret = args.client_secret
+    if args.interactive and not args.client_id:
+        parser.error("--client-id is required even with --interactive (MSAL PublicClientApplication mandate).")
     if not args.interactive and not client_secret:
         if args.client_id:
             import getpass

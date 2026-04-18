@@ -9,7 +9,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py` (full deployment is the default); check Dataverse System Administrator role |
 | Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --vars-only` to deploy variables only |
 | Connection reference errors | Connector not available in environment | Verify Power Automate Premium license; check connector availability in target environment |
-| `deploy.py` authentication failure | Expired or invalid token | Re-authenticate with `az login`; verify tenant and environment URL |
+| `deploy.py` authentication failure | Expired or invalid token | Re-run `python scripts/deploy.py --interactive --client-id <app-id>` to refresh the MSAL token cache. The deployment uses MSAL directly (PublicClientApplication or ConfidentialClientApplication) — `az login` is not used. Verify tenant and environment URL. |
 | Schema version mismatch | Partial upgrade from earlier version | Re-run `python scripts/deploy.py` (full deployment is the default) to reconcile schema |
 
 ## Authentication Issues

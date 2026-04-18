@@ -297,6 +297,9 @@ try {
     $envSettingsParams = @{ GracePeriodHours = $GracePeriodHours }
     if ($ExcludeSandbox) { $envSettingsParams['ExcludeSandbox'] = $true }
     if ($ExcludeTrial) { $envSettingsParams['ExcludeTrial'] = $true }
+    # Pass Dataverse context so zone classification uses ELM lookup, not name-based fallback.
+    if ($DataverseUrl)  { $envSettingsParams['DataverseUrl'] = $DataverseUrl }
+    if ($AccessToken)   { $envSettingsParams['AccessToken']  = $AccessToken }
     $allEnvironments = & $getSettingsScript @envSettingsParams
 
     $driftResults = @()
