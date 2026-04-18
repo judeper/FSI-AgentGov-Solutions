@@ -63,6 +63,7 @@ OPTIONSETS = {
             {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Remediated", "LanguageCode": 1033}]}},
             {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Exception Approved", "LanguageCode": 1033}]}},
             {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "False Positive", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Remediation Failed", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_UASD_severity": {

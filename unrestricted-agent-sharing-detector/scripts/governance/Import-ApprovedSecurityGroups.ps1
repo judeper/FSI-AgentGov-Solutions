@@ -120,8 +120,9 @@ foreach ($group in $groups) {
 
     $zoneValue = $zoneMap[$zone]
     if (-not $zoneValue) {
-        Write-Warning "Invalid zone '$zone' for $groupName, defaulting to Zone 2"
-        $zoneValue = 100000001
+        Write-Error "Invalid zone '$zone' for $groupName. Allowed values: $($zoneMap.Keys -join ', '). Aborting import (fail-closed) — fix CSV and re-run."
+        $errors++
+        continue
     }
 
     $payload = @{

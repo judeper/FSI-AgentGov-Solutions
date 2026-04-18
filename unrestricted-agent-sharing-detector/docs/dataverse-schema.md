@@ -24,7 +24,7 @@
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
 | fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |
 | fsi_ViolationType | fsi_violationtype | Picklist | Yes | Type of sharing violation detected | **fsi_UASD_violationtype**: `100000000` = ORG_WIDE_SHARING, `100000001` = PUBLIC_INTERNET_LINK, `100000002` = UNAPPROVED_GROUP, `100000003` = EXCESSIVE_INDIVIDUAL, `100000004` = CROSS_TENANT_ACCESS, `100000005` = POLICY_VIOLATION |
-| fsi_ViolationStatus| fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive |
+| fsi_ViolationStatus| fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive, `100000004` = Remediation Failed |
 | fsi_Severity | fsi_severity | Picklist | Yes | Severity level of the violation | **fsi_UASD_severity**: `100000000` = Critical, `100000001` = High, `100000002` = Medium, `100000003` = Low |
 | fsi_Description | fsi_description | Memo | No | Detailed description of the violation |  |
 | fsi_PrincipalDetails | fsi_principaldetails | Memo | No | Details of principals involved in the violation |  |

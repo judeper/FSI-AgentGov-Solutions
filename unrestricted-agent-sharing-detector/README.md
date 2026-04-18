@@ -73,7 +73,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 
 - **Prebuilt agents** deployed from the Agent Store are available to assigned users without going through environment-level sharing configuration
 - **Admin controls** in the M365 Admin Center (`Agents > All agents`) allow admins to assign, block, or restrict agent access — these controls operate independently of Power Platform environment sharing settings
-- Organizations should verify that Agent Store deployment policies align with zone-based sharing restrictions enforced by this solution
+- Organizations should verify that Agent Store deployment policies align with zone-based sharing restrictions monitored and remediated by this solution
 
 > **Note:** UASD currently detects sharing violations within Power Platform environments. Agent Store deployment visibility is not yet covered. Organizations should review Agent Store admin controls alongside environment-level sharing governance.
 

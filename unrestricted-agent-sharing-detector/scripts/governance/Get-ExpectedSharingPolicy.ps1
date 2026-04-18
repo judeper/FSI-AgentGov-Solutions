@@ -20,10 +20,10 @@
 
 .NOTES
     File: Get-ExpectedSharingPolicy.ps1
-    Version: 1.0.2
+    Version: 2.0.0
     Solution: Unrestricted Agent Sharing Detector (UASD)
     Controls: 1.1, 3.8
-    Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b)
+    Regulations: FINRA Rule 4511(a), SEC Rule 17a-4, SOX Section 302/404, GLBA Section 501(b)
 
     Part of FSI Agent Governance Framework
 #>
@@ -86,7 +86,7 @@ $zonePolicies = @{
         # Auto-remediation strongly recommended in Zone 3
         AutoRemediateByDefault          = $true
         # Regulatory context
-        RegulatoryContext               = 'Zone 3 (Enterprise/Regulated) — ALL unrestricted sharing prohibited; only specific-user sharing permitted per FINRA 4511 and SEC 17a-4'
+        RegulatoryContext               = 'Zone 3 (Enterprise/Regulated) — ALL unrestricted sharing prohibited; only specific-user sharing permitted per FINRA Rule 4511(a) and SEC Rule 17a-4'
     }
 
     'Unknown' = [PSCustomObject]@{

@@ -144,7 +144,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
 4a. **Check Break-Glass Exclusion**
    - Action: "List records" (Dataverse)
    - Table: `fsi_AgentSharingSetting`
-   - Filter: `fsi_agentid eq <violation's fsi_agentid>`
+    - Filter: `fsi_agentid eq '@{triggerOutputs()?['body/fsi_agentid']}'`
    - **Condition:** If result count > 0 and first record's `fsi_breakglassexclude = true`:
      - Update violation record `fsi_remediationresult` to `"Skipped: break-glass exclusion active"`
      - Send Teams notification indicating manual review required
@@ -153,7 +153,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
 4b. **Check for Active Exception**
    - Action: "List records" (Dataverse)
    - Table: `fsi_SharingException`
-   - Filter: `fsi_agentid eq <violation's fsi_agentid> and fsi_violationtype eq <violation's fsi_violationtype> and fsi_exceptionstatus eq 100000001 and fsi_expiresat gt utcNow()`
+   - Filter: `fsi_agentid eq '@{triggerOutputs()?['body/fsi_agentid']}' and fsi_violationtype eq @{triggerOutputs()?['body/fsi_violationtype']} and fsi_exceptionstatus eq 100000001 and fsi_expiresat gt utcNow()`
    - **Condition:** If an active approved exception exists:
      - Update violation `fsi_violationstatus` to 100000002 (Exception Approved)
      - Update `fsi_remediationresult` to `"Skipped: active exception approved until <fsi_expiresat>"`
@@ -205,7 +205,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Method: PATCH
    - Payload: Updated sharing configuration
    - **Skip if `equals(variables('isDryRun'), 'true')`**
-   - **Error handling:** Configure Run-After on this action for "has failed" and "has timed out". If the API call fails, set `fsi_remediationresult` to the error message (e.g., `"API PATCH failed: <status code> — <error body>"`), set `fsi_violationstatus` to 100000002 (RemediationFailed), and skip to step 10 (Send Remediation Alert) with failure details. Do NOT proceed to step 9 to mark the record as remediated.
+   - **Error handling:** Configure Run-After on this action for "has failed" and "has timed out". If the API call fails, set `fsi_remediationresult` to the error message (e.g., `"API PATCH failed: <status code> — <error body>"`), set `fsi_violationstatus` to **100000004 (Remediation Failed)**, and skip to step 10 (Send Remediation Alert) with failure details. Do NOT proceed to step 9 to mark the record as remediated. (Value `100000002` is reserved for **Exception Approved** — do not reuse it for failures.)
 
 9. **Update Violation Record**
    - **Condition:** Only update remediation status if `equals(variables('isDryRun'), 'false')` and remediation was actually performed

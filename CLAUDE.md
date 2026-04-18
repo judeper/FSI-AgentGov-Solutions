@@ -69,7 +69,7 @@ git rev-parse --show-toplevel
 | [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.2.0 |
 | [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.1.0 |
 | [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.1.0 |
-| [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v1.0.2 |
+| [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v2.0.0 |
 
 ## Control Implementations
 

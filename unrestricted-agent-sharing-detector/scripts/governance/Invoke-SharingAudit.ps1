@@ -74,6 +74,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# === DEPRECATED in v2.0.0 ===
+# This script depends on `Get-AdminPowerAppChatBot`, which is NOT a published
+# cmdlet in Microsoft.PowerApps.Administration.PowerShell (verified against
+# the Microsoft Learn module reference). The Dataverse `bot` table also does
+# NOT expose a `sharingtype` column — the actual sharing column is
+# `accesscontrolpolicy` (Picklist 0/1/2/3) plus `authorizedsecuritygroupids`.
+#
+# Use Test-AgentSharingCompliance.ps1 instead. It queries the bot table
+# directly via the Dataverse Web API using the correct columns.
+Write-Error "Invoke-SharingAudit.ps1 is DEPRECATED in UASD v2.0.0. The Get-AdminPowerAppChatBot cmdlet does not exist, and the script's bot.sharingtype assumption is incorrect. Use Test-AgentSharingCompliance.ps1 (which queries bot.accesscontrolpolicy via Dataverse Web API) for sharing detection and remediation."
+exit 2
+
 # --- Authentication ---
 Write-Host "`n[UASD On-Demand Sharing Audit]" -ForegroundColor Cyan
 

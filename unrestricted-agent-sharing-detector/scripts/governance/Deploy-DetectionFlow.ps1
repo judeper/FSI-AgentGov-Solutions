@@ -55,6 +55,18 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# === DEPRECATED in v2.0.0 ===
+# This script attempted to deploy a cloud flow by POSTing raw JSON to the
+# Dataverse `workflows` table. That is NOT a supported provisioning path —
+# triggers, connection references, and solution metadata are not wired up,
+# producing a non-functional flow.
+#
+# Per the FSI-AgentGov-Solutions content policy, cloud flows must be built
+# manually. See docs/flow-configuration.md in this solution for step-by-step
+# instructions.
+Write-Error "This script is DEPRECATED. UASD v2.0.0+ requires building this flow manually per docs/flow-configuration.md. The Dataverse workflows POST pattern this script used is not supported by Microsoft and produces non-functional flows."
+exit 2
+
 # --- Authentication ---
 Write-Host "`n[UASD Detection Flow Deployment]" -ForegroundColor Cyan
 Write-Host "  Target: $DataverseUrl"

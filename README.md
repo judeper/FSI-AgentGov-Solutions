@@ -44,7 +44,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | v1.2.0 | 1.14, 1.4, 1.5 |
 | [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.1.0 | 2.8, 2.1, 2.3 |
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.1.0 | 1.23, 1.11 |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v2.0.0 | 1.1, 3.8 |
 
 ## Preview Placeholders (0)
 

@@ -16,13 +16,13 @@ Copilot Studio agents configured with unrestricted access create significant sec
 **Risk Exposure:**
 - **Unauthorized Access:** Agents accessible organization-wide or publicly without role-based controls
 - **Data Leakage:** Sensitive information exposed through unrestricted agent interactions
-- **Compliance Violations:** Failure to maintain required access controls (FINRA 4511/3110, SEC 17a-3/4, SOX 302/404)
+- **Compliance Violations:** Failure to maintain required access controls (FINRA Rule 4511(a), FINRA Rule 3110, SEC Rule 17a-3/17a-4, SOX Section 302/404)
 - **Resource Misuse:** Uncontrolled agent usage leading to cost overruns and service degradation
 - **Cross-Tenant Access:** Agents accessible from external tenants without proper authorization
 
 ### Solution Overview
 
-The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated monitoring and remediation of Copilot Studio agent sharing configurations across your Power Platform environments. The solution detects six categories of sharing violations, automatically enforces approved security policies, and supports time-bound exception management with dual approval workflows.
+The **Unrestricted Agent Sharing Detector (UASD)** provides continuous automated monitoring and remediation of Copilot Studio agent sharing configurations across your Power Platform environments. The solution detects six categories of sharing violations, applies remediation against approved security policies, and supports time-bound exception management with dual approval workflows. Note: UASD is detective and corrective, not preventive — sharing-restriction enforcement is provided by the native Power Platform sharing rules (May 2025 GA).
 
 **Key Capabilities:**
 - **Continuous Detection:** Daily automated scans across all Power Platform environments
@@ -636,7 +636,7 @@ Example Records:
 
 **Resolution:**
 1. Be aware that sharing violations for Copilot Studio chatbots may not be detected by the audit script
-2. For more reliable chatbot sharing detection, use the Dataverse bot table API (`api/data/v9.2/bots`) with the `sharingtype` field
+2. For more reliable chatbot sharing detection, use the Dataverse bot table API (`api/data/v9.2/bots`) with the `accesscontrolpolicy` and `authorizedsecuritygroupids` fields (see `Test-AgentSharingCompliance.ps1`)
 3. Cross-reference audit results with the Flow 1 Detector scan, which queries the Copilot Studio agent management API directly
 
 #### Audit and Evidence Export
@@ -667,7 +667,7 @@ Evidence files should include:
 
 **Retention:**
 
-- Violation records: Retain for 7 years (SEC 17a-4 requirement)
+- Violation records: Retain for 7 years (SEC Rule 17a-4 requirement)
 - Exception approvals: Retain for 7 years (audit trail requirement)
 - Remediation logs: Retain for 3 years (operational history)
 - Agent sharing settings: Retain for 1 year (point-in-time audit capability)
@@ -690,8 +690,9 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 **Notes:**
 
-1. The Dataverse bot table `sharingtype` field cannot distinguish individual from security-group
-   sharing (both map to `sharingtype=0` → `SpecificUsers`). `Test-AgentSharingCompliance.ps1`
+1. The Dataverse bot table `accesscontrolpolicy` field cannot distinguish individual from security-group
+   sharing within the "Group membership" mode (value `2`); the `authorizedsecuritygroupids` field lists
+   the assigned Entra group IDs but not per-user shares. `Test-AgentSharingCompliance.ps1`
    therefore cannot detect unapproved group access.
 2. The bot table does not expose per-agent share-count data, so excessive individual shares
    cannot be detected from Dataverse alone.
@@ -881,4 +882,4 @@ The following Microsoft platform features (GA 2025) complement the controls UASD
 
 ---
 
-*This solution supports compliance with FINRA 4511 (Supervision), SEC 17a-3/17a-4 (Recordkeeping), and SOX 302/404 (Internal Controls). Consult with your compliance and legal teams for applicability to your organization's regulatory requirements.*
+*This solution supports compliance with FINRA Rule 4511(a) (Supervision), SEC Rule 17a-3/17a-4 (Recordkeeping), and SOX Section 302/404 (Internal Controls). Consult with your compliance and legal teams for applicability to your organization's regulatory requirements.*
