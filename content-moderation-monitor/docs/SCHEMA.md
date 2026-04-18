@@ -10,10 +10,12 @@ The CMM solution uses three Dataverse tables, two shared option sets, seven envi
 
 ## Tables
 
-### fsi_moderationbaselines
+### fsi_moderationbaseline
 
 Per-agent moderation level snapshots used for drift detection comparison. Each record captures a single agent's content moderation configuration at a point in time.
 
+**Logical name:** `fsi_moderationbaseline` (singular)
+**Entity set (OData):** `fsi_moderationbaselines` (plural)
 **Ownership:** User-owned
 **Primary Name Column:** `fsi_name`
 
@@ -38,6 +40,8 @@ Per-agent moderation level snapshots used for drift detection comparison. Each r
 
 Organization-owned immutable scan summary records. Each record represents one complete validation run across all environments.
 
+**Logical name:** `fsi_moderationvalidationhistory`
+**Entity set (OData):** `fsi_moderationvalidationhistory` (explicit singular set name; default auto-plural would be `fsi_moderationvalidationhistorys`)
 **Ownership:** Organization-owned (no per-user filtering)
 **Primary Name Column:** `fsi_name`
 **Immutability:** Records are created once and never updated. This supports audit trail requirements for FINRA 4511 and SEC 17a-3/4.
@@ -55,10 +59,12 @@ Organization-owned immutable scan summary records. Each record represents one co
 | `fsi_environmentsscanned` | String (2000) | No | Comma-separated environment list |
 | `fsi_summaryjson` | Memo (100000) | No | Full JSON summary blob |
 
-### fsi_moderationviolations
+### fsi_moderationviolation
 
 Per-agent violation records with severity classification and regulatory context. Each record represents one agent whose content moderation level does not meet its zone requirement.
 
+**Logical name:** `fsi_moderationviolation` (singular)
+**Entity set (OData):** `fsi_moderationviolations` (plural)
 **Ownership:** User-owned
 **Primary Name Column:** `fsi_name`
 

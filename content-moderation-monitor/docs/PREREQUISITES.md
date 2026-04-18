@@ -6,10 +6,10 @@ Requirements for deploying the Content Moderation Monitor solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.1+ | Core runtime |
+| PowerShell | 7.2+ (matches Azure Automation runbook target; `Invoke-ModerationBaselineCapture.ps1` and Quick Start examples require PowerShell 7) | Core runtime |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
-| MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
+| MSAL.PS | 4.37+ | Evidence export and runbook authentication (community-maintained; pin to 4.37.0 — see Known Limitations in CHANGELOG) |
 
 ## Installation
 
@@ -19,6 +19,9 @@ Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force -Scope
 
 # Install Az.Accounts for Dataverse authentication
 Install-Module -Name Az.Accounts -Force -Scope CurrentUser
+
+# Install MSAL.PS for evidence export / runbook (pin matches script #Requires)
+Install-Module -Name MSAL.PS -RequiredVersion 4.37.0 -Force -Scope CurrentUser
 ```
 
 ## Permissions

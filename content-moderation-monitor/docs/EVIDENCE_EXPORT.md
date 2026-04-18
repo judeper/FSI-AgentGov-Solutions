@@ -177,14 +177,14 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
   "metadata": {
     "exportedAt": "2026-02-10T14:30:22Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.0.3",
+    "solutionVersion": "1.1.0",
     "fromDate": "2026-01-11T00:00:00Z",
     "toDate": "2026-02-10T14:30:22Z",
     "runId": null,
     "zoneFilter": "All",
     "exportVersion": "1.0.0",
-    "recordCount": 45,
-    "violationCount": 3,
+    "recordCount": 30,
+    "violationCount": 8,
     "organizationUrl": "https://org.crm.dynamics.com"
   },
   "summary": {
@@ -219,7 +219,7 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
       "environmentName": "Production-Sales-Z3",
       "agentId": "bot-guid",
       "agentName": "SalesBot",
-      "zone": 3,
+      "zone": 100000003,
       "expectedLevel": "High",
       "actualLevel": "Low",
       "severity": "Critical",
@@ -230,14 +230,13 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
   ],
   "baselines": [
     {
-      "baselineId": "guid",
-      "agentId": "bot-guid",
-      "agentName": "SalesBot",
       "environmentGuid": "guid",
       "environmentName": "Production-Sales-Z3",
-      "zone": 3,
+      "agentId": "bot-guid",
+      "agentName": "SalesBot",
+      "zone": 100000003,
       "moderationLevel": "High",
-      "capturedBy": "admin@contoso.com",
+      "capturedBy": "admin@example.com",
       "capturedAt": "2026-02-01T10:00:00Z",
       "isActive": true
     }

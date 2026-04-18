@@ -98,7 +98,7 @@ function Get-CMMValidationResults {
         [string]$AccessToken,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('All', '1', '2', '3')]
+        [ValidateSet('All', 'Zone1', 'Zone2', 'Zone3', 'Unknown')]
         [string]$Zone = 'All',
 
         [Parameter(Mandatory = $false)]
@@ -204,7 +204,12 @@ function Get-CMMValidationResults {
             # Optional zone filter (not applied when 'All')
             # fsi_zone is a Dataverse picklist (integer) column — do not quote the value
             if ($Zone -ne 'All') {
-                $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
+                $zoneIntMap = @{
+                    'Unknown' = 100000000
+                    'Zone1'   = 100000001
+                    'Zone2'   = 100000002
+                    'Zone3'   = 100000003
+                }
                 $zoneIntValue = $zoneIntMap[$Zone]
                 $violationFilters += "fsi_zone eq $zoneIntValue"
             }

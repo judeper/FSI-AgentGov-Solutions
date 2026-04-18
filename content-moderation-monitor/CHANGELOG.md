@@ -2,6 +2,92 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [1.1.0] - 2026-04-17
+
+AI Council technical-accuracy review (Opus 4.7 + Goldeneye + GPT-5.4) plus targeted
+researcher follow-up on Copilot Studio moderation field surface and FSI control
+mappings. This release contains documentation/bug fixes only — no schema changes.
+
+### Fixed
+
+- **Critical (latent runtime):** `CMMClient.psm1` `Write-ModerationViolation` and
+  `Save-CMMBaseline` zone-fallback wrote `0` to `fsi_zone` for unknown zone strings.
+  The `fsi_acv_zone` global option set's valid range is `100000000`–`100000003`, so
+  every write with an unknown zone was silently rejected by Dataverse with a
+  BadRequest. Fallback now writes `100000000` (Unknown). An `'Unclassified' = 100000000`
+  alias was also added to `$script:ZoneToInt` so the schema label and the runtime
+  hashtable round-trip cleanly.
+- **High:** `Get-ZoneClassification.ps1` standalone-fallback path was unreachable
+  (wrong relative path to the shared utility — `..\..\` instead of `..\..\..\`)
+  AND the local Dataverse fallback mapped `fsi_zone` as `1/2/3` instead of the
+  real option-set values `100000001/100000002/100000003`. Both fixed.
+- **High:** `Invoke-ModerationBaselineCapture.ps1` declared `#Requires -Version 5.1`
+  but used the PowerShell 7 null-coalescing operator (`??`), causing parse failure
+  on Windows PowerShell 5.1. Bumped requirement to `-Version 7.0` to match runtime.
+- **High:** `Get-AgentModerationSettings.ps1` called `Get-AdminPowerAppEnvironment`
+  with no Power Platform connection precondition. Catch block now surfaces a
+  friendly hint to run `Add-PowerAppsAccount` (or pass an SP context) when
+  authentication is the failure cause.
+- **High:** Control mapping was wrong. README and SOLUTION-DOCUMENTATION claimed
+  Control `1.14 (Content Moderation Enforcement)`, but framework Control 1.14 is
+  **Data Minimization**. Actual moderation control is **1.27 (AI Agent Content
+  Moderation Enforcement)**. README and Related Controls table now lead with 1.27
+  primary and re-position Control 1.8 as **complementary** (CMM contributes one
+  config-time signal; 1.8 is broader runtime protection). v1.0.3 had silently
+  reverted 1.27 → 1.14 with no CHANGELOG entry; this release re-corrects to 1.27.
+- **High:** `docs/FLOW_SETUP.md` Step 1 said "Import from JSON (Recommended)" but
+  no flow JSON ships (removed in v1.0.2 per content policy). Rewritten as
+  manual scheduled-flow build instructions. Overview bullet that claimed the
+  flow itself "writes validation results to Dataverse" was corrected — the flow
+  triggers the runbook that performs the writes.
+- **High:** `docs/EVIDENCE_EXPORT.md` sample JSON did not match script output:
+  fictional `baselineId` field removed, violation `zone` shown as raw option-set
+  integer (`100000003`) to match `Export-ContentModerationEvidence.ps1` behavior,
+  and `recordCount` aligned with `totalScans` semantics.
+- **High:** `SOLUTION-DOCUMENTATION.md` claimed extraction of a documented
+  `contentModerationLevel` property. The code actually probes four possible keys
+  (`ContentModeration`, `contentModeration`, `ContentModerationSetting`,
+  `contentModerationSetting`) on an undocumented `bot.configuration` blob. Doc now
+  describes the heuristic honestly and adds a "best-effort, scope-limited" caveat.
+  README has a new **Scope and Limitations** section that explicitly lists what
+  CMM does NOT cover (topic-level overrides, custom safety messages, Purview
+  moderation logs, runtime moderation decisions).
+- **Medium:** `docs/SCHEMA.md` table headings used entity-set names but listed
+  singular-logical primary keys. Now show both **Logical name** and **Entity set
+  (OData)** explicitly so OData URL builders and Web API callers don't conflate
+  the two.
+- **Medium:** `Get-CMMValidationResults.ps1` `-Zone` ValidateSet was
+  `'All','1','2','3'` (dropped Unknown and used integer-string labels). Now
+  `'All','Zone1','Zone2','Zone3','Unknown'` matching the schema label set; int
+  map updated with `Unknown = 100000000`.
+- **Medium:** `docs/PREREQUISITES.md` listed MSAL.PS as required but the
+  Installation block omitted it. Added pinned `Install-Module -Name MSAL.PS
+  -RequiredVersion 4.37.0`. PowerShell floor raised to 7.2+ to match runbook
+  target and the `??` operator usage.
+- **Medium:** `CMMClient.psm1` doc-comment for `Get-BotModerationLevel` claimed
+  a botcomponent fallback path. The scan pipeline never retrieves component
+  records, so the fallback is dead code. Comment now describes `-Components`
+  as a future-use parameter and warns that component-only agents will resolve
+  to `Unknown` today.
+- **Low:** Stripped `(formerly Azure AD)` parentheticals from live scripts and
+  docs (`Connect-EnvironmentDataverse.ps1`, `Export-ContentModerationEvidence.ps1`,
+  `Invoke-ModerationBaselineCapture.ps1`, `Start-ModerationValidationRunbook.ps1`).
+- **Low:** Replaced `contoso.onmicrosoft.com` / `admin@contoso.com` with RFC 2606
+  `example.onmicrosoft.com` / `admin@example.com` across all docs and scripts.
+- **Low:** README Quick Start `Install-Module` now uses `-Scope CurrentUser`.
+- **Low:** `FLOW_SETUP.md` "Power Automate Premium" relabeled "Power Automate
+  Premium per user" (per-user is the actual SKU name) with link to current
+  Microsoft licensing reference.
+
+### Known limitations
+
+- MSAL.PS is community-maintained and unchanged since 4.37.0 (2022). Microsoft
+  recommends `Az.Accounts` `Get-AzAccessToken` for new code. CMM still hard-pins
+  MSAL.PS 4.37.0 in three runbooks; migration to Az.Accounts is deferred.
+- Copilot Studio moderation level is read from an undocumented `bot.configuration`
+  JSON blob via heuristic key probing. If Microsoft renames the field, agents
+  will resolve to `Unknown` (treat as **unverified**, not compliant).
+
 ## [1.0.3] - 2026-04-15
 
 ### Fixed

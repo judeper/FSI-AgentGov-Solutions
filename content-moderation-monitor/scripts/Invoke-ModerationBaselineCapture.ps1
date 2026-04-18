@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+#Requires -Version 7.0
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -27,10 +27,10 @@
     environment level. Each agent has its own baseline record.
 
 .PARAMETER TenantId
-    Microsoft Entra ID (formerly Azure AD) tenant ID. Required.
+    Microsoft Entra ID tenant ID. Required.
 
 .PARAMETER ClientId
-    Microsoft Entra ID (formerly Azure AD) application (client) ID. Required.
+    Microsoft Entra ID application (client) ID. Required.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -68,7 +68,7 @@
 
 .EXAMPLE
     .\Invoke-ModerationBaselineCapture.ps1 `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -CertificateThumbprint "ABCDEF123456" `
         -DataverseUrl "https://governance.crm.dynamics.com"
@@ -77,7 +77,7 @@
 
 .EXAMPLE
     .\Invoke-ModerationBaselineCapture.ps1 `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -DataverseUrl "https://governance.crm.dynamics.com" `
         -Interactive -Zone 3
@@ -86,7 +86,7 @@
 
 .EXAMPLE
     .\Invoke-ModerationBaselineCapture.ps1 `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -DataverseUrl "https://governance.crm.dynamics.com" `
         -Interactive -AgentId "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -95,7 +95,7 @@
 
 .EXAMPLE
     .\Invoke-ModerationBaselineCapture.ps1 `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -DataverseUrl "https://governance.crm.dynamics.com" `
         -Interactive -WhatIf

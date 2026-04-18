@@ -16,7 +16,7 @@
     The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Microsoft Entra ID (formerly Azure AD) tenant ID for service principal authentication.
+    Microsoft Entra ID tenant ID for service principal authentication.
 
 .PARAMETER Credential
     PSCredential containing ClientId (UserName) and ClientSecret (Password)

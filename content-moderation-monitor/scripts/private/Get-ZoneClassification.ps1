@@ -16,8 +16,10 @@ param(
     [string]$AccessToken
 )
 
-# Try shared module if available (monorepo context)
-$sharedScript = "$PSScriptRoot\..\..\scripts\shared\Get-ZoneClassification.ps1"
+# Try shared module if available (monorepo context).
+# Repo layout: <repo-root>\scripts\shared\Get-ZoneClassification.ps1
+# This file lives at <repo-root>\content-moderation-monitor\scripts\private\, so go up THREE.
+$sharedScript = "$PSScriptRoot\..\..\..\scripts\shared\Get-ZoneClassification.ps1"
 if (Test-Path $sharedScript) {
     & $sharedScript @PSBoundParameters
     return
@@ -51,7 +53,13 @@ if ($DataverseUrl -and $AccessToken) {
         $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -ErrorAction Stop
         if ($response.value -and $response.value.Count -gt 0) {
             $zoneValue = $response.value[0].fsi_zone
-            $zoneMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
+            # fsi_zone is a Choice (option set); valid values are in the 100000000+ range.
+            $zoneMap = @{
+                100000000 = 'Unknown'
+                100000001 = 'Zone1'
+                100000002 = 'Zone2'
+                100000003 = 'Zone3'
+            }
             if ($zoneMap.ContainsKey($zoneValue)) {
                 return [PSCustomObject]@{ Zone = $zoneMap[$zoneValue]; Source = 'Dataverse' }
             }

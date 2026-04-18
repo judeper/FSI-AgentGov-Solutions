@@ -11,7 +11,7 @@ This flow provides automated orchestration and alerting for the Content Moderati
 - Triggers daily at 6:00 AM UTC (configurable)
 - Executes `Start-ModerationValidationRunbook.ps1` in Azure Automation
 - Parses validation results including per-agent moderation drift detection
-- Writes validation results to Dataverse immutable audit trail (all scans, not just failures)
+- Triggers the runbook that writes validation results to the Dataverse immutable audit trail (all scans, not just failures) — the flow itself does not call Dataverse to persist scan history
 - Posts adaptive card to Teams for Critical/Failed/Error severity
 - Sends email to distribution list for all drift alerts
 - Handles errors with CRITICAL email notification
@@ -31,40 +31,40 @@ Before creating the flow, ensure you have:
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
-- [ ] **Power Automate Premium license** (required for Azure Automation connector)
+- [ ] **Power Automate Premium per user** license (required for the premium Azure Automation connector). See [Microsoft licensing](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/types) for current SKU details.
 - [ ] **Connection references** bound in Power Automate:
   - `fsi_cr_dataverse_moderationmonitor` (Dataverse)
   - `fsi_cr_teams_moderationmonitor` (Microsoft Teams)
   - `fsi_cr_office365_moderationmonitor` (Office 365 Outlook)
   - Azure Automation connection to your subscription
 
-## Step 1: Import Flow
+## Step 1: Create the Scheduled Flow
 
-### Option A: Import from JSON (Recommended)
+> No flow JSON ships with this solution (per the repository content policy).
+> Build the flow manually using these steps.
 
 1. Navigate to [make.powerautomate.com](https://make.powerautomate.com)
 2. Select your target environment (same environment where CMM schema is deployed)
-3. Click **My flows** > **Import** > **Import Package (Legacy)**
-4. Click **Create** > **Scheduled cloud flow**
-5. Name: `CMM - Content Moderation Validation (Daily)`
-6. Set schedule:
+3. Click **Create** > **Scheduled cloud flow**
+4. Name: `CMM - Content Moderation Validation (Daily)`
+5. Set schedule:
    - Start: Today
    - Repeat every: **1 Day**
    - At: **6:00 AM**
    - Time zone: **UTC**
-7. Click **Create**
-8. Build the flow actions following the steps in this guide
+6. Click **Create**
+7. Build the flow actions following the steps in this guide
 
 ## Step 2: Configure Variables
 
 Update these variables in the flow designer (Initialize Variable actions):
 
-> **Note:** These variables are currently hardcoded as `InitializeVariable` actions in the flow JSON. The solution already deploys `fsi_CMM_TeamsGroupId` and `fsi_CMM_TeamsChannelId` as Dataverse environment variables. For multi-environment portability, consider migrating flow variables to Dataverse environment variable lookups (via the Dataverse connector) so the flow does not require manual editing per environment.
+> **Note:** These values are configured as `Initialize Variable` actions in the flow you build by hand. The solution also deploys `fsi_CMM_TeamsGroupId` and `fsi_CMM_TeamsChannelId` as Dataverse environment variables. For multi-environment portability, consider replacing the matching Initialize Variable actions with **Get Environment Variable Value** lookups (Dataverse connector) so the flow does not require manual editing per environment. Pick one approach and apply it consistently — running both leads to silent value precedence.
 
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
 | `DataverseUrl` | String | `your-dataverse-url-here` | Your Dataverse environment URL (where CMM schema is deployed). **Must be changed per environment.** |
-| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID tenant identifier |
+| `TenantId` | String | `example.onmicrosoft.com` | Microsoft Entra ID tenant identifier |
 | `ClientId` | String | `your-client-id-here` | App registration client ID (same one used for certificate auth) |
 | `CertificateThumbprint` | String | `your-thumbprint` | Certificate thumbprint uploaded to Azure Automation |
 | `SubscriptionId` | String | `your-subscription-id-here` | Azure subscription containing Automation Account |

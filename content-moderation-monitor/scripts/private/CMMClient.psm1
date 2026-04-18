@@ -19,10 +19,11 @@ $script:AccessToken = $null
 
 # Zone string-to-integer mapping for Dataverse picklist column (fsi_acv_zone option set)
 $script:ZoneToInt = @{
-    'Unknown' = 100000000
-    'Zone1'   = 100000001
-    'Zone2'   = 100000002
-    'Zone3'   = 100000003
+    'Unknown'      = 100000000
+    'Unclassified' = 100000000
+    'Zone1'        = 100000001
+    'Zone2'        = 100000002
+    'Zone3'        = 100000003
 }
 $script:IntToZone = @{
     100000000 = 'Unknown'
@@ -382,10 +383,12 @@ function Write-ModerationViolation {
     }
 
     try {
-        # Convert zone string to picklist integer for Dataverse
+        # Convert zone string to picklist integer for Dataverse.
+        # Default to 100000000 (Unknown/Unclassified) — option-set range starts at 100000000;
+        # writing 0 is rejected by Dataverse with a picklist range error.
         $zoneInt = if ($script:ZoneToInt.ContainsKey($Violation.Zone)) {
             $script:ZoneToInt[$Violation.Zone]
-        } else { 0 }
+        } else { 100000000 }
 
         $record = @{
             fsi_name                = "$($Violation.AgentName)-$($Violation.Zone)-$(Get-Date -Format 'yyyy-MM-dd')"
@@ -511,11 +514,13 @@ function Get-BotModerationLevel {
         - contentModeration
         - ContentModerationSetting
 
-        If the configuration blob does not contain moderation info, checks botcomponent
-        records for moderation configuration.
-
         Normalizes returned values to canonical levels: Low, Medium, High.
         Returns 'Unknown' if the level cannot be determined.
+
+        Note: An optional -Components parameter exists for a future botcomponent-based
+        fallback path (not yet wired into the scan pipeline). Today the caller in
+        Get-AgentModerationSettings does not retrieve botcomponent records; agents that
+        store moderation only in components will resolve to 'Unknown'.
 
     .PARAMETER Bot
         A bot record PSCustomObject from Get-AgentBots.
@@ -687,10 +692,11 @@ function Save-CMMBaseline {
         $capturedByValue = if ($CapturedBy) { $CapturedBy } else { "System" }
         $rawJsonValue = if ($RawJson) { $RawJson } else { "" }
 
-        # Convert zone string to picklist integer for Dataverse
+        # Convert zone string to picklist integer for Dataverse.
+        # Default to 100000000 (Unknown/Unclassified); see note in Write-ModerationViolation.
         $zoneInt = if ($script:ZoneToInt.ContainsKey($Zone)) {
             $script:ZoneToInt[$Zone]
-        } else { 0 }
+        } else { 100000000 }
 
         $record = @{
             fsi_name               = "$AgentName-$Zone-$timestamp"

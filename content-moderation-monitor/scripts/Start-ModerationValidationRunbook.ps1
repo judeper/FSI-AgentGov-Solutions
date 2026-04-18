@@ -27,10 +27,10 @@
     results and route alerts based on severity and drift status.
 
 .PARAMETER TenantId
-    Microsoft Entra ID (formerly Azure AD) tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID (formerly Azure AD) application (client) ID for certificate-based authentication.
+    Microsoft Entra ID application (client) ID for certificate-based authentication.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
@@ -52,7 +52,7 @@
 
 .EXAMPLE
     Start-ModerationValidationRunbook `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -CertificateThumbprint "ABCDEF123456" `
         -DataverseUrl "https://governance.crm.dynamics.com"
@@ -62,7 +62,7 @@
 
 .EXAMPLE
     Start-ModerationValidationRunbook `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -ClientId "12345-app-id" `
         -CertificateThumbprint "ABCDEF123456" `
         -DataverseUrl "https://governance.crm.dynamics.com" `

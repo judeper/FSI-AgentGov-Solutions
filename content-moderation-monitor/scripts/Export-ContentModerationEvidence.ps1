@@ -28,7 +28,7 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Microsoft Entra ID (formerly Azure AD) tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -58,12 +58,12 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID (formerly Azure AD) application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-ContentModerationEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -OutputDirectory ".\evidence" `
         -Interactive
 
@@ -73,7 +73,7 @@
 .EXAMPLE
     .\Export-ContentModerationEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -OutputDirectory "C:\compliance\evidence" `
         -Zone "2" `
         -IncludeBaselines `
@@ -88,7 +88,7 @@
 .EXAMPLE
     .\Export-ContentModerationEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -OutputDirectory ".\evidence" `
         -RunId "a1b2c3d4-e5f6-7890-abcd-ef1234567890" `
         -IncludeBaselines `

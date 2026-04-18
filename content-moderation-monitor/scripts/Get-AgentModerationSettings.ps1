@@ -238,7 +238,12 @@ function Get-AgentModerationSettings {
         $allEnvironments = Get-AdminPowerAppEnvironment -ErrorAction Stop
         Write-Verbose "Found $($allEnvironments.Count) total environments"
     } catch {
-        throw "Failed to retrieve Power Platform environments: $($_.Exception.Message)"
+        # Most often this is an unauthenticated session. Surface a friendlier hint.
+        $msg = $_.Exception.Message
+        if ($msg -match 'authenticated|sign in|token|credential') {
+            throw "Failed to retrieve Power Platform environments: $msg`n`nRun 'Add-PowerAppsAccount' (or pass a service-principal context) before invoking Get-AgentModerationSettings."
+        }
+        throw "Failed to retrieve Power Platform environments: $msg"
     }
 
     # Apply filters

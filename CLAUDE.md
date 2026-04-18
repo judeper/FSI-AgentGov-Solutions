@@ -47,7 +47,7 @@ git rev-parse --show-toplevel
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.1.0 |
 | [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.3 |
 | [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.2.2 |
-| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.0.3 |
+| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.1.0 |
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.1.1 |
 | [credential-oversharing-detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | PowerShell/Python | v1.0.1 |
 | [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v1.0.2 |
@@ -87,7 +87,7 @@ git rev-parse --show-toplevel
 | coi-testing | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
 | compliance-dashboard | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting with Exchange coverage |
 | conditional-access-automation | 1.11, 1.23, 1.18 | CA policy deployment and drift detection |
-| content-moderation-monitor | 1.8, 1.14 | Content moderation validation against zone requirements |
+| content-moderation-monitor | 1.27, 1.8 | Content moderation validation against zone requirements |
 | copilot-studio-analytics | 3.2 | Business impact analytics and session outcome monitoring |
 | credential-oversharing-detector | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
 | cross-solution-integration | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Compliance Dashboard integration and evidence export |

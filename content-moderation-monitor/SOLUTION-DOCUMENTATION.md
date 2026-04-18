@@ -129,8 +129,9 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 
 3. **Per-Agent Moderation Level Extraction:**
    - Parse agent JSON configuration (`bot.configuration` field)
-   - Extract `contentModerationLevel` property
+   - Extract content moderation by probing the keys `ContentModeration`, `contentModeration`, `ContentModerationSetting`, and `contentModerationSetting` (case-insensitive); the value may be either a simple string (`"Low"`/`"Medium"`/`"High"`) or an object with a `level` property
    - Normalize values: `"Low"`, `"Medium"`, `"High"`, or `"Unknown"`
+   - **Best-effort heuristic.** Copilot Studio does not currently expose a documented public moderation field; if the underlying key name changes in a future Copilot Studio release, agents will normalize to `"Unknown"`. Treat scans where every agent resolves to `Unknown` as **unverified**, not compliant.
 
 4. **Zone Classification:**
    - If `-DataverseUrl` provided: Query environment lifecycle management table for zone
@@ -330,7 +331,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
       "environmentName": "Finance Production-Z3",
       "zone": 3,
       "moderationLevel": "High",
-      "capturedBy": "admin@contoso.com",
+      "capturedBy": "admin@example.com",
       "capturedAt": "2026-01-15T10:00:00Z",
       "isActive": true
     }
