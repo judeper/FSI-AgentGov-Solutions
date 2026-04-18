@@ -15,7 +15,7 @@
     Supports WhatIf mode to preview the capture operation without querying Graph.
 
 .PARAMETER TenantId
-    The Entra ID (Azure AD) tenant GUID to capture policies from.
+    The Entra ID tenant GUID to capture policies from.
 
 .PARAMETER OutputPath
     File path for the exported JSON baseline. The directory is created

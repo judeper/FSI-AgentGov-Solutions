@@ -309,10 +309,13 @@ do {
 2. Update the baseline:
 ```powershell
 .\scripts\Export-PolicyBaseline.ps1 `
-    -TenantId "<tenant-id>" `
-    -OutputPath "./baseline" `
-    -Force
+    -TenantId   "<tenant-id>" `
+    -OutputPath "./baselines/baseline.json"
 ```
+
+> `Export-PolicyBaseline.ps1 -OutputPath` is a **file path**, not a directory,
+> and the script does NOT expose a `-Force` switch. The file is overwritten
+> in place each run, so re-running is the supported way to refresh a baseline.
 
 3. Add expected changes to ignore list:
 ```json

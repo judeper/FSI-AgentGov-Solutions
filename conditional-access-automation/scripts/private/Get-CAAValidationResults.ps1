@@ -141,8 +141,12 @@ function Get-CAAValidationResults {
     $queryUrl = "$baseUrl/api/data/v9.2/$Table"
 
     if ($filters.Count -gt 0) {
+        # OData filter literals (especially DateTimeOffset values that contain
+        # ':' and 'Z') must be URL-encoded once for the request URI; if not,
+        # Dataverse returns 400 BadRequest on the colon-in-time-component.
         $filterString = $filters -join ' and '
-        $queryUrl += "?`$filter=$filterString&`$orderby=$timestampColumn desc"
+        $encodedFilter = [Uri]::EscapeDataString($filterString)
+        $queryUrl += "?`$filter=$encodedFilter&`$orderby=$timestampColumn desc"
     }
     else {
         $queryUrl += "?`$orderby=$timestampColumn desc"

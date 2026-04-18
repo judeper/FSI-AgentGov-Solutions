@@ -223,11 +223,12 @@ Update all policy templates to exclude break-glass accounts:
 
 Identify the application IDs for AI workloads in your tenant:
 
-| Application | App ID (Global) | Notes |
-|-------------|-----------------|-------|
+| Application | App ID (first-party) | Notes |
+|-------------|----------------------|-------|
 | Microsoft 365 Copilot | `fb8d773d-7ef8-4ec0-a117-179f88add510` | M365 embedded Copilot |
-| Copilot Studio | Varies by tenant | Check enterprise apps |
-| Power Platform | `475226c6-020e-4fb2-8571-c63252b0c2f4` | Power Apps/Automate |
+| Copilot Studio | `38e55b99-bd9c-4dff-b510-8d8ee0bff7d6` | Copilot Studio service principal |
+| Power Platform Admin | `8578e004-a5c6-46e7-913e-12f58912df43` | Power Platform admin operations |
+| Power Platform | `475226c6-020e-4fb2-8571-c63252b0c2f4` | Power Apps/Automate runtime |
 
 ### Find Application IDs
 

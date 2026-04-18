@@ -3,7 +3,7 @@
     RootModule = 'conditional-access-automation.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.2.1'
+    ModuleVersion     = '1.2.2'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -102,6 +102,26 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 1.2.2 - 2026-04-22
+
+### Fixed
+- Get-ZoneClassification: ELM lookup now queries fsi_environmentrequests / fsi_environmentid / fsi_zone (the ELM source-of-truth table); previous columns did not exist and the lookup always silently failed.
+- Connect-CAAGraphSession: added Certificate and ManagedIdentity parameter sets so unattended runbook usage no longer requires interactive auth.
+- Get-CAAPolicyBaseline: removed SupportsShouldProcess wrap; -WhatIf was returning $null for callers that depend on baseline output.
+- Test-PolicyCompliance: drift counter now credits clean policies as passed and routes the current baseline through Get-CAAPolicyBaseline so Zone-derived severity escalation works.
+- Compare-CAAPolicyBaseline: removed-risk-level branch now elevates severity to 4 (was identical to the no-op arm).
+- Get-CAAValidationResults: OData $filter datetime literals are URL-encoded.
+- Export-CAAComplianceEvidence: requires a real Entra tenant GUID (no more org-name fallback) and resolves the zone breakdown via the picklist FormattedValue annotation.
+- Schema script: GlobalOptionSet payloads now include @odata.type discriminators on the OptionSetMetadata root and each OptionMetadata entry; UTC audit datetime columns flipped to TimeZoneIndependent.
+- Runbook env-var contract: Start-CAAValidationRunbook reads the actual fsi_CAA_* SchemaName values created by create_caa_environment_variables.py.
+- Register-ServicePrincipal: certificate parameter set added; client-secret expiry is now a parameter (default 90 days).
+- Watch-PolicyDrift / Test-EvidenceIntegrity: dot-sourced invocation no longer kills the calling runspace.
+
+### Changed
+- README zone-policy table rewritten to match the actual templates (Zone 2/3 ship without sign-in risk levels by default; Entra ID P2 add-on template included).
+- New optional template: CA-RiskBased-Zone3-Block.json for tenants with Entra ID P2 that want risk-based blocking on Zone 3 workloads.
+- Stripped legacy "Azure AD" parenthetical references from PowerShell help blocks.
+
 ## 1.1.0 - 2026-02-10
 
 ### Added

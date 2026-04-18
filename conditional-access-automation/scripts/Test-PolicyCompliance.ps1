@@ -19,7 +19,7 @@
     querying Microsoft Graph.
 
 .PARAMETER TenantId
-    The Entra ID (Azure AD) tenant GUID to check policies against.
+    The Entra ID tenant GUID to check policies against.
 
 .PARAMETER ConfigPath
     Path to the tenant configuration JSON file containing group IDs,
@@ -444,26 +444,26 @@ if ($BaselinePath) {
         $baselineContent = Get-Content $BaselinePath -Raw -ErrorAction Stop | ConvertFrom-Json
         $previousPolicies = $baselineContent.policies
 
-        # Build current baseline from the already-retrieved policies (avoid second Graph API call)
-        # Map raw Graph API objects (.Id) to the .PolicyId property expected by Compare-CAAPolicyBaseline
-        $currentBaseline = $fsiPolicies | ForEach-Object {
-            $p = $_ | Select-Object *
-            $p | Add-Member -NotePropertyName 'PolicyId' -NotePropertyValue $_.Id -Force
-            $p
-        }
+        # Build a normalized current baseline through the same code path used by
+        # Watch-PolicyDrift.ps1 — Get-CAAPolicyBaseline derives `Zone` from
+        # display-name conventions (Zone1/Zone2/Zone3/Common). Bypassing this
+        # function (e.g. using Select-Object * on raw Graph results) leaves
+        # `.Zone` unset, defaults to 'Common' in Compare-CAAPolicyBaseline, and
+        # under-classifies Zone-3 drift severity.
+        $currentBaseline = Get-CAAPolicyBaseline -TenantId $TenantId
 
         $driftResults = Compare-CAAPolicyBaseline -PreviousBaseline @($previousPolicies) -CurrentBaseline @($currentBaseline)
         $driftFindings = @($driftResults | Where-Object { $_.DriftType -ne 'None' })
 
-        foreach ($drift in $driftResults) {
-            $complianceResults.checksPerformed++
-            if ($drift.Severity -le 1) {
-                $complianceResults.checksPassed++
-            }
-            else {
-                $complianceResults.checksFailed++
-            }
-        }
+        # `Compare-CAAPolicyBaseline` only emits records when drift is detected,
+        # so $driftResults.Count == $driftFindings.Count. Count clean policies
+        # (those that round-tripped without drift) as passed to keep the overall
+        # complianceRate honest.
+        $totalCompared    = [Math]::Min($previousPolicies.Count, $currentBaseline.Count)
+        $cleanPolicies    = [Math]::Max(0, $totalCompared - $driftFindings.Count)
+        $complianceResults.checksPerformed += ($driftFindings.Count + $cleanPolicies)
+        $complianceResults.checksPassed    += $cleanPolicies
+        $complianceResults.checksFailed    += @($driftFindings | Where-Object { $_.Severity -gt 1 }).Count
 
         $complianceResults['driftAnalysis'] = @{
             baselineFile     = $BaselinePath

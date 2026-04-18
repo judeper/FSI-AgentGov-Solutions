@@ -20,7 +20,7 @@
     Supports WhatIf mode to preview the detection workflow without querying Graph.
 
 .PARAMETER TenantId
-    The Entra ID (Azure AD) tenant GUID to check policies against.
+    The Entra ID tenant GUID to check policies against.
 
 .PARAMETER BaselinePath
     Path to the previously exported baseline JSON file (from Export-PolicyBaseline.ps1).
@@ -293,11 +293,13 @@ if ($OutputPath) {
 
 Write-Host "Drift detection complete." -ForegroundColor Green
 
-# Exit code: 0 = no drift above threshold, 1 = drift detected above threshold
-# WARNING: These exit statements are correct for standalone/CI usage but will
-# terminate the calling PowerShell session if invoked in-process. Replace with
-# 'return' if this script is ever refactored into a module function.
+# Exit code: 0 = no drift above threshold, 1 = drift detected above threshold.
+# `exit` statements terminate the host PowerShell session, which is correct for
+# standalone CLI / CI invocation but breaks dot-sourced or module-scoped use.
+# Detect dot-sourcing (caller runs `. .\Watch-PolicyDrift.ps1`) and switch to
+# return-style flow control to keep the caller's runspace alive.
+$invokedDotSourced = $MyInvocation.InvocationName -eq '.'
 if ($driftCount -gt 0) {
-    exit 1
+    if ($invokedDotSourced) { return 1 } else { exit 1 }
 }
-exit 0
+if ($invokedDotSourced) { return 0 } else { exit 0 }

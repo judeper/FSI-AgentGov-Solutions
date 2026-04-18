@@ -87,20 +87,26 @@ Two global option sets are reused across all three tables:
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 0 | Unclassified | Policy not yet assigned to a governance zone |
-| 1 | Zone 1 | Personal Productivity — risk-based MFA, standard controls |
-| 2 | Zone 2 | Team Collaboration — always-on MFA, enhanced controls |
-| 3 | Zone 3 | Enterprise Managed — MFA + compliant device, strictest controls |
+| 100000000 | Unclassified | Policy not yet assigned to a governance zone |
+| 100000001 | Zone 1 | Personal Productivity — risk-based MFA, standard controls |
+| 100000002 | Zone 2 | Team Collaboration — always-on MFA, enhanced controls |
+| 100000003 | Zone 3 | Enterprise Managed — MFA + compliant device, strictest controls |
 
 ### fsi_acv_severity — Validation Severity
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 1 | Passed | Policy meets all requirements |
-| 2 | Warning | Non-critical finding — review recommended |
-| 3 | GracePeriod | Policy recently deployed — within grace window (default 48 hours) |
-| 4 | Failed | Policy does not meet zone requirements |
-| 5 | Error | Scan could not evaluate the policy (connectivity, permissions, etc.) |
+| 100000000 | Passed | Policy meets all requirements |
+| 100000001 | Warning | Non-critical finding — review recommended |
+| 100000002 | GracePeriod | Policy recently deployed — within grace window (default 48 hours) |
+| 100000003 | Failed | Policy does not meet zone requirements |
+| 100000004 | Error | Scan could not evaluate the policy (connectivity, permissions, etc.) |
+
+> Dataverse global option sets always use values ≥ 100,000,000. The integer
+> values shown above are what `$select` / `$filter` queries return on the bare
+> `fsi_overall_severity` and `fsi_zone` columns; the human label is on the
+> `…@OData.Community.Display.V1.FormattedValue` annotation when the request
+> sets `Prefer: odata.include-annotations="OData.Community.Display.V1.FormattedValue"`.
 
 ---
 

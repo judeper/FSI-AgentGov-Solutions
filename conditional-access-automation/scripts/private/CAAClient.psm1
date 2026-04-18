@@ -228,7 +228,7 @@ function Connect-CAADataverse {
         The Dataverse environment URL (e.g., https://org.crm.dynamics.com).
 
     .PARAMETER TenantId
-        The Azure AD tenant GUID for authentication.
+        The Microsoft Entra tenant GUID for authentication.
 
     .PARAMETER AccessToken
         Optional pre-acquired bearer token. When provided, MSAL interactive

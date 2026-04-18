@@ -79,15 +79,18 @@ First, export a known-good baseline:
 
 ```powershell
 .\scripts\Export-PolicyBaseline.ps1 `
-    -TenantId "<tenant-id>" `
-    -OutputPath "./baseline"
+    -TenantId   "<tenant-id>" `
+    -OutputPath "./baselines/baseline.json"
 ```
+
+> `-OutputPath` is a **file path**, not a directory. The script writes the
+> baseline JSON to that path verbatim and creates the parent folder if needed.
 
 ### Drift Detection
 
 ```powershell
 .\scripts\Watch-PolicyDrift.ps1 `
-    -TenantId "<tenant-id>" `
+    -TenantId     "<tenant-id>" `
     -BaselinePath "./baselines/baseline.json"
 ```
 
@@ -149,23 +152,29 @@ Create a scheduled task or Azure Automation runbook:
 ```powershell
 # Azure Automation Runbook
 param(
-    [string]$TenantId,
-    [string]$KeyVaultName,
-    [string]$BaselineBlobUrl,
-    [string]$TeamsWebhook
+    [Parameter(Mandatory)] [string]$TenantId,
+    [Parameter(Mandatory)] [string]$ClientId,
+    [Parameter(Mandatory)] [string]$CertificateThumbprint,
+    [Parameter(Mandatory)] [string]$BaselineFilePath,
+    [Parameter(Mandatory)] [string]$TeamsWebhook
 )
 
-# Authenticate using managed identity
-Connect-MgGraph -Identity
+# App-only certificate auth — Connect-MgGraph -Identity is NOT supported by
+# the Conditional Access Graph endpoints when the runbook needs delegated
+# scope semantics. Use a registered app + cert.
+. .\private\Connect-GraphSession.ps1
+Connect-CAAGraphSession -TenantId $TenantId -ClientId $ClientId `
+    -CertificateThumbprint $CertificateThumbprint
 
-# Download baseline from blob storage
-$baseline = Invoke-WebRequest -Uri $BaselineBlobUrl | ConvertFrom-Json
-
-# Check for drift
-$drift = .\Watch-PolicyDrift.ps1 -TenantId $TenantId -BaselinePath $baseline
+# Watch-PolicyDrift writes its findings to the OutputPath JSON file and
+# returns drift records for the caller. -BaselinePath expects a FILE PATH,
+# not a parsed JSON object.
+$drift = .\Watch-PolicyDrift.ps1 -TenantId $TenantId `
+    -BaselinePath $BaselineFilePath `
+    -OutputPath   "./drift-report.json"
 
 # Alert if drift detected
-if ($drift.Count -gt 0) {
+if ($drift -and $drift.Count -gt 0) {
     Send-TeamsAlert -Webhook $TeamsWebhook -Drift $drift
 }
 ```
@@ -177,130 +186,90 @@ if ($drift.Count -gt 0) {
 ### Purpose
 
 Generate compliance evidence for regulatory examinations (FINRA, SEC, OCC).
+Helps support recordkeeping requirements; organizations should verify retention
+and authenticity controls meet their specific regulatory obligations.
 
 ### Usage
 
 ```powershell
+Connect-AzAccount -TenantId "<tenant-guid>"
+
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
-    -OutputPath "./evidence" `
-    -FromDate "2026-01-01" `
-    -ToDate "2026-03-31"
+    -TenantId    "<tenant-guid>" `
+    -OutputPath  "./evidence" `
+    -FromDate    "2026-01-01" `
+    -ToDate      "2026-03-31"
 ```
 
 ### Output Files
 
+The export produces a single JSON document per run plus a SHA-256 companion:
+
 | File | Content |
 |------|---------|
-| `CAPolicies-Q1-2026.json` | Complete policy configurations |
-| `PolicyAuditLog-Q1-2026.json` | Policy change audit trail |
-| `SignInLogs-Q1-2026.json` | Sign-in events with CA evaluation |
-| `MFAUsage-Q1-2026.json` | MFA completion statistics |
-| `manifest.json` | SHA-256 hashes for integrity |
+| `CAA-Evidence-<UTC-timestamp>.json` | Validation history, active violations, active baselines, summary, zone breakdown — combined |
+| `CAA-Evidence-<UTC-timestamp>.json.sha256` | sha256sum-compatible hash for integrity verification |
+
+There is no per-table file split (no `CAPolicies*.json`, `SignInLogs*.json`,
+`MFAUsage*.json`, or `manifest.json`). Sign-in and MFA usage data are sourced
+from Microsoft Graph reporting endpoints separately and are out of scope for
+the CAA evidence export.
 
 ### Evidence Content
 
-#### Policy Configuration Export
-
-```json
-{
-  "exportDate": "2026-04-01T00:00:00Z",
-  "tenantId": "<tenant-id>",
-  "policies": [
-    {
-      "id": "<policy-id>",
-      "displayName": "CA-FSI-CopilotStudio-Zone3-MFA-CompliantDevice",
-      "state": "enabled",
-      "createdDateTime": "2026-01-15T10:00:00Z",
-      "modifiedDateTime": "2026-01-15T10:00:00Z",
-      "conditions": { ... },
-      "grantControls": { ... },
-      "sessionControls": { ... }
-    }
-  ]
-}
-```
-
-#### Audit Log Export
-
-```json
-{
-  "exportDate": "2026-04-01T00:00:00Z",
-  "events": [
-    {
-      "timestamp": "2026-02-01T14:30:00Z",
-      "activity": "Update conditional access policy",
-      "actor": "admin@contoso.com",
-      "policyId": "<policy-id>",
-      "policyName": "CA-FSI-CopilotStudio-Zone3-MFA-CompliantDevice",
-      "changes": {
-        "state": { "old": "enabledForReportingButNotEnforced", "new": "enabled" }
-      }
-    }
-  ]
-}
-```
-
-#### Sign-In Log Export
-
-```json
-{
-  "exportDate": "2026-04-01T00:00:00Z",
-  "summary": {
-    "totalSignIns": 150000,
-    "mfaRequired": 45000,
-    "mfaCompleted": 44800,
-    "blocked": 200,
-    "byPolicy": {
-      "CA-FSI-CopilotStudio-Zone3-MFA-CompliantDevice": {
-        "applied": 12000,
-        "granted": 11950,
-        "blocked": 50
-      }
-    }
-  },
-  "signIns": [ ... ]  // Detailed records
-}
-```
-
-### Integrity Verification
-
-The manifest includes SHA-256 hashes:
+#### Combined Evidence Document Layout
 
 ```json
 {
   "exportInfo": {
     "timestamp": "2026-04-01T00:00:00Z",
-    "exportedBy": "Export-CAAComplianceEvidence.ps1 v1.2.1"
+    "exportedBy": "Export-CAAComplianceEvidence.ps1",
+    "version": "1.2.2"
   },
-  "files": [
-    {
-      "filename": "CAPolicies-Q1-2026.json",
-      "sha256": "abc123...",
-      "recordCount": 8
-    },
-    {
-      "filename": "PolicyAuditLog-Q1-2026.json",
-      "sha256": "def456...",
-      "recordCount": 24
-    }
-  ]
+  "tenantId": "<tenant-id>",
+  "summary": {
+    "passed": 120, "warning": 4, "failed": 1, "overallStatus": "Warning"
+  },
+  "zoneBreakdown": {
+    "Zone1": { "passed": 40, "warning": 0, "failed": 0, "total": 40 },
+    "Zone2": { "passed": 40, "warning": 2, "failed": 0, "total": 42 },
+    "Zone3": { "passed": 40, "warning": 2, "failed": 1, "total": 43 }
+  },
+  "validations": [ /* fsi_capolicyvalidationhistories rows */ ],
+  "violations":  [ /* fsi_capolicyviolations rows (active only) */ ],
+  "baselines":   [ /* fsi_capolicybaselines rows (active only) */ ]
 }
 ```
 
-Verify integrity:
+### Integrity Verification
 
 ```powershell
-$manifest = Get-Content "./evidence/manifest.json" | ConvertFrom-Json
-foreach ($file in $manifest.files) {
-    $hash = (Get-FileHash "./evidence/$($file.filename)" -Algorithm SHA256).Hash
-    if ($hash -eq $file.sha256) {
-        Write-Host "✓ $($file.filename): Verified" -ForegroundColor Green
-    } else {
-        Write-Host "✗ $($file.filename): FAILED" -ForegroundColor Red
-    }
-}
+.\scripts\Test-EvidenceIntegrity.ps1 `
+    -EvidencePath "./evidence/CAA-Evidence-20260401T000000Z.json"
+
+# or sha256sum on Linux / macOS:
+# sha256sum -c CAA-Evidence-20260401T000000Z.json.sha256
 ```
+
+---
+
+### Evidence Content Reference
+
+For the document layout produced by `Export-CAAComplianceEvidence.ps1`, see
+the layout block above. Per-record schemas for `validations`, `violations`,
+and `baselines` follow the Dataverse table definitions in
+[`docs/dataverse-schema.md`](dataverse-schema.md):
+
+- `validations` mirrors `fsi_capolicyvalidationhistories`
+- `violations` mirrors `fsi_capolicyviolations` (filtered to `fsi_is_active eq true`)
+- `baselines` mirrors `fsi_capolicybaselines` (filtered to `fsi_is_active eq true`)
+
+Sign-in event data, MFA completion statistics, and Conditional Access audit
+logs are sourced from Microsoft Graph reporting endpoints (e.g.,
+`/auditLogs/signIns`, `/auditLogs/directoryAudits`) and are intentionally not
+included in the CAA evidence package — pull those separately and archive them
+alongside the CAA-Evidence file when required by your compliance program.
 
 ---
 

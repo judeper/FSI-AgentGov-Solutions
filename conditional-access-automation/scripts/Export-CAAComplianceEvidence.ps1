@@ -165,15 +165,34 @@ if (-not (Test-Path $OutputPath)) {
 # --- Authenticate ---
 Write-Verbose 'Connecting to Dataverse...'
 try {
-    # Resolve tenant identifier: prefer explicit -TenantId parameter, fall back to org name extraction.
-    # The org name fallback (e.g., "contoso" from https://contoso.crm.dynamics.com) is NOT a valid
-    # tenant GUID and will cause auth failures when Phase 2 Dataverse integration ships.
-    if ($TenantId) {
-        $tenantHint = $TenantId
-    } else {
-        Write-Warning "No -TenantId provided. Extracting org name from DataverseUrl as tenant hint — this is not a valid tenant GUID and will fail when Phase 2 Dataverse integration ships."
-        $tenantHint = ([Uri]$DataverseUrl).Host.Split('.')[0]
+    # Resolve tenant identifier: require an explicit GUID. Earlier behaviour
+    # extracted the org subdomain from $DataverseUrl which never round-trips to
+    # a real Entra tenant GUID — Connect-CAADataverse would silently fall back
+    # to an interactive prompt and runbooks would block.
+    if (-not $TenantId) {
+        # Try to derive from any active context before giving up.
+        try {
+            $mgCtx = Get-MgContext -ErrorAction Stop
+            if ($mgCtx -and $mgCtx.TenantId) { $TenantId = $mgCtx.TenantId }
+        } catch { }
+        if (-not $TenantId) {
+            try {
+                $azCtx = Get-AzContext -ErrorAction Stop
+                if ($azCtx -and $azCtx.Tenant.Id) { $TenantId = $azCtx.Tenant.Id }
+            } catch { }
+        }
     }
+
+    if (-not $TenantId) {
+        throw "TenantId is required. Pass -TenantId <guid>, or run Connect-MgGraph / Connect-AzAccount first so it can be derived from the active context."
+    }
+
+    $parsedGuid = [Guid]::Empty
+    if (-not [Guid]::TryParse($TenantId, [ref]$parsedGuid)) {
+        throw "TenantId '$TenantId' is not a valid GUID. Provide the Entra tenant GUID, not the Dataverse org name."
+    }
+    $tenantHint = $parsedGuid.Guid
+
     Connect-CAADataverse -DataverseUrl $DataverseUrl -TenantId $tenantHint
 } catch {
     Write-Warning "Connect-CAADataverse failed: $_. Falling back to Get-AzAccessToken."
@@ -260,7 +279,20 @@ foreach ($v in $validations) {
 # Zone breakdown
 $zoneBreakdown = @{}
 foreach ($v in $validations) {
-    $zone = if ($v.fsi_zone) { $v.fsi_zone } else { 'Unknown' }
+    # Dataverse picklists serialize the integer value on the bare property; the
+    # human label is on the @OData.Community.Display.V1.FormattedValue
+    # annotation when the request includes the matching `Prefer` header. Use
+    # the formatted value when available so the breakdown is keyed by
+    # 'Zone1' / 'Zone2' / 'Zone3' rather than 100000001..100000003.
+    $zoneLabel = $v.'fsi_zone@OData.Community.Display.V1.FormattedValue'
+    if ($zoneLabel) {
+        $zone = $zoneLabel -replace '\s', ''
+    } elseif ($null -ne $v.fsi_zone) {
+        $zoneIntMap = @{ 100000000 = 'Unclassified'; 100000001 = 'Zone1'; 100000002 = 'Zone2'; 100000003 = 'Zone3' }
+        $zone = if ($zoneIntMap.ContainsKey([int]$v.fsi_zone)) { $zoneIntMap[[int]$v.fsi_zone] } else { 'Unknown' }
+    } else {
+        $zone = 'Unknown'
+    }
     if (-not $zoneBreakdown.ContainsKey($zone)) {
         $zoneBreakdown[$zone] = @{ passed = 0; failed = 0; warning = 0; total = 0 }
     }

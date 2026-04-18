@@ -19,7 +19,7 @@
     switch is retained for backward compatibility and maps to -WhatIf internally.
 
 .PARAMETER TenantId
-    The Entra ID (Azure AD) tenant GUID to register the app in.
+    The Entra ID tenant GUID to register the app in.
 
 .PARAMETER AppName
     Display name for the app registration. Should follow organizational
@@ -39,7 +39,7 @@
     Previews all registration steps without creating any resources.
 
 .EXAMPLE
-    .\Register-ServicePrincipal.ps1 -TenantId "contoso.onmicrosoft.com" -AppName "CAA-Automation-SP" -KeyVaultName "kv-caa"
+    .\Register-ServicePrincipal.ps1 -TenantId "example.onmicrosoft.com" -AppName "CAA-Automation-SP" -KeyVaultName "kv-caa"
 
     Creates the app registration, service principal, client secret, and stores
     credentials in Key Vault. Outputs the admin consent URL.
@@ -59,7 +59,7 @@
     auditable, least-privilege service identities for CA automation.
 #>
 
-[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High', DefaultParameterSetName = 'Secret')]
 param(
     [Parameter(Mandatory = $true)]
     [string]$TenantId,
@@ -69,6 +69,19 @@ param(
 
     [Parameter(Mandatory = $true)]
     [string]$KeyVaultName,
+
+    # Secret rotation cadence. Defaults to 90 days to align with FSI password
+    # rotation policies — override only when an organizational standard differs.
+    [Parameter(ParameterSetName = 'Secret')]
+    [ValidateRange(1, 730)]
+    [int]$SecretExpiryDays = 90,
+
+    # Use a certificate credential instead of a client secret. Provide the
+    # local cert-store thumbprint (LocalMachine\My) of the cert whose public
+    # key should be uploaded to the app registration. Recommended for
+    # production-grade unattended runbooks.
+    [Parameter(Mandatory = $true, ParameterSetName = 'Certificate')]
+    [string]$CertificateThumbprint,
 
     # [Obsolete("Use -WhatIf instead of -DryRun. -DryRun is retained for backward compatibility.")]
     [Parameter(Mandatory = $false)]
@@ -121,7 +134,7 @@ if ($WhatIfPreference) {
     Write-Host "[WhatIf] Would perform the following:" -ForegroundColor Yellow
     Write-Host "  1. Create app registration: $AppName"
     Write-Host "  2. Add required Graph API permissions"
-    Write-Host "  3. Create client secret (1 year expiry)"
+    Write-Host "  3. Create client secret (default 90-day expiry) or upload certificate"
     Write-Host "  4. Store credentials in Key Vault: $KeyVaultName"
     Write-Host "  5. Generate admin consent URL"
     Write-Host ""
@@ -182,21 +195,43 @@ else {
     Write-Verbose "Service principal exists: $($sp.Id)"
 }
 
-# Create client secret
-if ($PSCmdlet.ShouldProcess("Client secret for app: $AppName", "Create with 1-year expiry")) {
-    Write-Verbose "Creating client secret..."
-    $secretParams = @{
-        PasswordCredential = @{
-            DisplayName = "CAA-Automation-Secret"
-            EndDateTime = (Get-Date).AddYears(1)
+# Create credential — either client secret or certificate, depending on parameter set.
+$useCertificate = ($PSCmdlet.ParameterSetName -eq 'Certificate')
+
+if ($useCertificate) {
+    if ($PSCmdlet.ShouldProcess("Certificate credential for app: $AppName", "Upload public key from thumbprint $CertificateThumbprint")) {
+        Write-Verbose "Loading certificate $CertificateThumbprint from LocalMachine\My..."
+        $cert = Get-Item -Path "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction SilentlyContinue
+        if (-not $cert) {
+            $cert = Get-Item -Path "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
         }
+        $keyCred = @{
+            Type        = 'AsymmetricX509Cert'
+            Usage       = 'Verify'
+            Key         = $cert.RawData
+            DisplayName = "CAA-Automation-Cert"
+            EndDateTime = $cert.NotAfter
+        }
+        Update-MgApplication -ApplicationId $app.Id -KeyCredentials @($keyCred) -ErrorAction Stop | Out-Null
+        Write-Verbose "Certificate uploaded (expires: $($cert.NotAfter))"
     }
-    $secret = Add-MgApplicationPassword -ApplicationId $app.Id -BodyParameter $secretParams
-    Write-Verbose "Client secret created (expires: $($secret.EndDateTime))"
+}
+else {
+    if ($PSCmdlet.ShouldProcess("Client secret for app: $AppName", "Create with $SecretExpiryDays-day expiry")) {
+        Write-Verbose "Creating client secret with $SecretExpiryDays-day expiry..."
+        $secretParams = @{
+            PasswordCredential = @{
+                DisplayName = "CAA-Automation-Secret"
+                EndDateTime = (Get-Date).AddDays($SecretExpiryDays)
+            }
+        }
+        $secret = Add-MgApplicationPassword -ApplicationId $app.Id -BodyParameter $secretParams
+        Write-Verbose "Client secret created (expires: $($secret.EndDateTime))"
+    }
 }
 
 # Store in Key Vault
-if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials (ClientId, ClientSecret, TenantId)")) {
+if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials")) {
     Write-Verbose "Storing credentials in Key Vault..."
     try {
         Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
@@ -205,9 +240,14 @@ if ($PSCmdlet.ShouldProcess("Key Vault: $KeyVaultName", "Store CAA credentials (
         Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientId" -SecretValue (ConvertTo-SecureString $app.AppId -AsPlainText -Force) | Out-Null
         Write-Verbose "  Stored: CAA-SP-ClientId"
 
-        # Store client secret
-        Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue (ConvertTo-SecureString $secret.SecretText -AsPlainText -Force) | Out-Null
-        Write-Verbose "  Stored: CAA-SP-ClientSecret"
+        if ($useCertificate) {
+            Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-CertThumbprint" -SecretValue (ConvertTo-SecureString $CertificateThumbprint -AsPlainText -Force) | Out-Null
+            Write-Verbose "  Stored: CAA-SP-CertThumbprint (the certificate itself stays in the cert store)"
+        }
+        else {
+            Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-SP-ClientSecret" -SecretValue (ConvertTo-SecureString $secret.SecretText -AsPlainText -Force) | Out-Null
+            Write-Verbose "  Stored: CAA-SP-ClientSecret"
+        }
 
         # Store tenant ID
         Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "CAA-TenantId" -SecretValue (ConvertTo-SecureString $TenantId -AsPlainText -Force) | Out-Null
@@ -230,7 +270,7 @@ Write-Host "  Object ID: $($app.Id)"
 Write-Host "  Service Principal ID: $($sp.Id)"
 
 Write-Host "`nAdmin Consent Required:" -ForegroundColor Yellow
-Write-Host "  Open the following URL in a browser and sign in as Global Administrator:"
+Write-Host "  Open the following URL in a browser and sign in as a Microsoft Entra Global Admin:"
 Write-Host ""
 Write-Host "  https://login.microsoftonline.com/$TenantId/adminconsent?client_id=$($app.AppId)" -ForegroundColor Cyan
 Write-Host ""

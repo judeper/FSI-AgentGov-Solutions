@@ -192,31 +192,42 @@ After testing in report-only mode:
 
 | Zone | MFA | Device Compliance | Session Controls | Risk-Based |
 |------|-----|-------------------|------------------|------------|
-| **Zone 1** | Risk-based | Optional | 8-hour timeout | Sign-in risk medium+ |
-| **Zone 2** | Always | Recommended | 4-hour timeout | Sign-in risk low+ |
-| **Zone 3** | Always | Required | 1-hour timeout | Any risk blocks |
+| **Zone 1** | Risk-based (medium+) | Optional | 8-hour timeout | `signInRiskLevels: medium, high` (CA-CopilotStudio-Zone1) |
+| **Zone 2** | Always | Recommended | 4-hour timeout | Not enforced in default template — see note |
+| **Zone 3** | Always | Required | 1-hour timeout | Optional risk-block add-on (CA-RiskBased-Zone3) |
+
+> **Note on risk-based policies:** Sign-in and user-risk evaluation requires
+> **Microsoft Entra ID P2** (risk evaluation is a P2 feature). Templates that
+> rely on `signInRiskLevels` / `userRiskLevels` will only function on tenants
+> licensed for Entra ID P2. Tenants on P1 only should rely on the MFA +
+> compliant-device controls and omit the risk-based templates.
 
 ### Zone 1 - Personal Productivity
 
-- MFA required only for risky sign-ins (medium or above)
+- MFA required only for risky sign-ins (`signInRiskLevels: medium, high`)
 - No device compliance requirement
 - Standard session timeout (8 hours)
 - Suitable for personal agents with limited data access
+- **Requires Entra ID P2** for risk evaluation
 
 ### Zone 2 - Team Collaboration
 
 - MFA always required for AI application access
-- Device compliance recommended but not enforced
+- Device compliance recommended but not enforced (use Intune compliance policy
+  separately if required)
 - Reduced session timeout (4 hours)
 - Suitable for team agents with shared data access
+- Works on Entra ID P1
 
 ### Zone 3 - Enterprise Managed
 
 - MFA always required
 - Compliant or Microsoft Entra hybrid joined device required
 - Short session timeout (1 hour)
-- Block access from any risky sign-in
 - Required for agents accessing sensitive/regulated data
+- Works on Entra ID P1 (base policies) — add the optional
+  `CA-RiskBased-Zone3-Block.json` template for "block on any risk" behavior
+  (requires Entra ID P2)
 
 ## Scripts Reference
 

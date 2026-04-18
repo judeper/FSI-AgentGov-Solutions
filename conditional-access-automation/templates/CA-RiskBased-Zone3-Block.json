@@ -1,0 +1,31 @@
+{
+  "displayName": "CA-RiskBased-Zone3-Block",
+  "state": "enabledForReportingButNotEnforced",
+  "_comment": "Optional add-on template — blocks access for any sign-in risk against Zone-3 AI applications. Requires Microsoft Entra ID P2 (risk evaluation is a P2 feature). Deploy AFTER the base CA-CopilotStudio-Zone3 / CA-AgentBuilder-Zone3 / CA-RequireCompliantDevice-Zone3 templates so the MFA + compliant-device base controls remain enforced.",
+  "conditions": {
+    "signInRiskLevels": ["low", "medium", "high"],
+    "userRiskLevels": ["medium", "high"],
+    "applications": {
+      "includeApplications": [
+        "<copilot-studio-app-id>",
+        "<agent-builder-app-id>",
+        "<m365-copilot-app-id>"
+      ]
+    },
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": [
+        "<break-glass-account-1>",
+        "<break-glass-account-2>"
+      ],
+      "excludeGroups": [
+        "<service-account-group-id>"
+      ]
+    },
+    "clientAppTypes": ["all"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["block"]
+  }
+}

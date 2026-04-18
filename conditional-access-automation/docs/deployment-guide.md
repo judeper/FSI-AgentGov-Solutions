@@ -34,8 +34,9 @@ $PSVersionTable.PSVersion
 Get-Module -ListAvailable Microsoft.Graph*, Az.KeyVault, Az.Accounts |
     Select-Object Name, Version | Format-Table
 
-# Verify roles (connect to Graph first)
-Connect-MgGraph -Scopes "RoleManagement.Read.Directory"
+# Verify roles (connect to Graph first; broader scopes are needed below to
+# enumerate groups, users, and service principals during deployment validation).
+Connect-MgGraph -Scopes "RoleManagement.Read.Directory","Group.Read.All","User.Read.All","Application.Read.All"
 ```
 
 ---
@@ -186,8 +187,13 @@ Policies to be created:
   7. CA-FSI-BlockLegacyAuth-AllAI
   8. CA-FSI-RequireCompliantDevice-Zone3
 
-Total policies: 8
-State: Report-only (enabledForReportingButNotEnforced)
+  9. CA-FSI-AgentBuilder-Zone1-RiskBasedMFA
+ 10. (optional add-on) CA-RiskBased-Zone3-Block — requires Entra ID P2 to evaluate
+     signInRiskLevels / userRiskLevels at the Zone-3 risk-block grant control
+
+Total bundled policies: 9 baseline + 1 optional Entra ID P2 add-on
+State: Report-only (enabledForReportingButNotEnforced) — switch to enabled
+       per zone after report-only review.
 ```
 
 ### 4.2 Deploy
@@ -233,6 +239,12 @@ Allow 24-48 hours for report-only data collection.
    - Applications covered
 
 ### 5.3 What-If Testing
+
+> ⚠️ **Preview API.** The `/beta/identity/conditionalAccess/evaluate` endpoint
+> is part of the Microsoft Graph beta surface and is subject to change without
+> notice. Do not depend on its response shape in production runbooks; treat
+> it as an interactive validation aid only. Track changes in the
+> [Microsoft Graph beta changelog](https://learn.microsoft.com/graph/changelog).
 
 ```powershell
 # Test Zone 3 user accessing Copilot Studio
@@ -327,10 +339,11 @@ All policies should show `State: enabled`.
 ### 7.1 Set Up Drift Detection
 
 ```powershell
-# Export baseline
+# Export baseline (OutputPath is a FILE path, not a directory)
+Connect-AzAccount -TenantId "<tenant-id>"
 .\scripts\Export-PolicyBaseline.ps1 `
-    -TenantId "<tenant-id>" `
-    -OutputPath "./baseline"
+    -TenantId   "<tenant-id>" `
+    -OutputPath "./baselines/baseline.json"
 
 # Schedule drift detection (run daily)
 .\scripts\Watch-PolicyDrift.ps1 `
@@ -352,10 +365,14 @@ Schedule weekly compliance reports:
 ### 7.3 Evidence Export (Quarterly)
 
 ```powershell
+# Authenticate to Azure first so the script can request a Dataverse token.
+Connect-AzAccount -TenantId "<tenant-guid>"
+
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
-    -OutputPath "./evidence" `
-    -FromDate "2026-01-01" -ToDate "2026-03-31"
+    -TenantId    "<tenant-guid>" `
+    -OutputPath  "./evidence" `
+    -FromDate    "2026-01-01" -ToDate "2026-03-31"
 ```
 
 ---

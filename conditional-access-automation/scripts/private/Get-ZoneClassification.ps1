@@ -97,38 +97,53 @@ function Get-CAAZoneClassification {
         try {
             Write-Verbose "Looking up zone in ELM for environment: $EnvironmentId"
 
-            $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environments?" +
-                   "`$filter=fsi_environment_guid eq '$EnvironmentId'&" +
-                   "`$select=fsi_zone_classification"
+            # ELM source-of-truth schema (from environment-lifecycle-management/scripts/create_dataverse_schema.py):
+            #   table SchemaName  : fsi_EnvironmentRequest   -> entity set: fsi_environmentrequests
+            #   environment id    : fsi_EnvironmentId        -> logical:    fsi_environmentid (string)
+            #   zone (picklist)   : fsi_Zone                 -> logical:    fsi_zone (integer)
+            # Picklist values: 100000001=Zone1, 100000002=Zone2, 100000003=Zone3.
+            # Use the OData formatted-value annotation to resolve labels safely.
+            $uri = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_environmentrequests?" +
+                   "`$filter=fsi_environmentid eq '$EnvironmentId'&" +
+                   "`$select=fsi_zone&`$top=1"
 
             $headers = @{
                 'Authorization'    = "Bearer $AccessToken"
                 'Accept'           = 'application/json'
                 'OData-MaxVersion' = '4.0'
                 'OData-Version'    = '4.0'
+                'Prefer'           = 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"'
             }
 
             $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
 
             if ($response.value.Count -gt 0) {
-                $zoneValue = $response.value[0].fsi_zone_classification
+                $row = $response.value[0]
+                $zoneValue = $row.fsi_zone
+                $zoneLabel = $row.'fsi_zone@OData.Community.Display.V1.FormattedValue'
 
-                # Map option set value to zone name
+                # Prefer the formatted label when available (handles option-set
+                # rename in ELM without code changes). Fall back to the
+                # documented integer mapping.
+                if ($zoneLabel -and $zoneLabel -match '^Zone[123]$') {
+                    Write-Verbose "ELM lookup found zone (label): $zoneLabel"
+                    return $zoneLabel
+                }
+
                 $zoneMapping = @{
-                    100000000 = 'Unknown'
                     100000001 = 'Zone1'
                     100000002 = 'Zone2'
                     100000003 = 'Zone3'
                 }
 
-                if ($zoneMapping.ContainsKey($zoneValue)) {
-                    $zone = $zoneMapping[$zoneValue]
-                    Write-Verbose "ELM lookup found zone: $zone"
+                if ($zoneMapping.ContainsKey([int]$zoneValue)) {
+                    $zone = $zoneMapping[[int]$zoneValue]
+                    Write-Verbose "ELM lookup found zone (mapped): $zone"
                     return $zone
                 }
             }
 
-            Write-Verbose "Environment not found in ELM"
+            Write-Verbose "Environment not found in ELM (fsi_environmentrequests)"
             return $null
         } catch {
             Write-Verbose "ELM lookup failed: $($_.Exception.Message)"

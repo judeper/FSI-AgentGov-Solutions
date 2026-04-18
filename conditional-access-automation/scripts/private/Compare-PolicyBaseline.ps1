@@ -310,9 +310,10 @@ function Compare-CAAPolicyBaseline {
 
             if (-not (Compare-Arrays -Expected @($prevRisk) -Actual @($curRisk))) {
                 $policyDriftFound = $true
-                # Removing risk levels is a weakening
                 $removedRisks = @($prevRisk) | Where-Object { $_ -and $_ -notin @($curRisk) }
-                $baseSev = if ($removedRisks.Count -gt 0) { 2 } else { 2 }
+                # Removing risk levels weakens the policy and should escalate
+                # severity above a routine "changed" event.
+                $baseSev = if ($removedRisks.Count -gt 0) { 4 } else { 2 }
                 $severity = Get-EscalatedSeverity -BaseSeverity $baseSev -Zone $zone
                 $results.Add(@{
                     PolicyName  = $policyName

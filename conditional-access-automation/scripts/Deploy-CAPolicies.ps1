@@ -13,7 +13,7 @@
     backward compatibility and maps to -WhatIf internally.
 
 .PARAMETER TenantId
-    The Entra ID (Azure AD) tenant GUID to deploy policies into.
+    The Entra ID tenant GUID to deploy policies into.
 
 .PARAMETER ConfigPath
     Path to the tenant configuration JSON file containing group IDs,

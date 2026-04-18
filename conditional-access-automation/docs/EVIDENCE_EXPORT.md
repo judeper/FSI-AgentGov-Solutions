@@ -15,20 +15,28 @@ Evidence packages are designed to demonstrate:
 
 ## Quick Start
 
-### Step 1: Connect to Dataverse
+### Step 1: Authenticate to Azure (for Dataverse access token)
 
 ```powershell
-# Authenticate to Azure (for Dataverse access token)
-Connect-AzAccount -TenantId "<tenant-id>"
+Connect-AzAccount -TenantId "<tenant-guid>"
 ```
+
+> Required even when running from a workstation with cached credentials —
+> `Export-CAAComplianceEvidence.ps1` falls back to `Get-AzAccessToken` for the
+> Dataverse resource if `Connect-CAADataverse` is not pre-initialized.
 
 ### Step 2: Export Evidence
 
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
-    -OutputPath "./evidence"
+    -TenantId    "<tenant-guid>" `
+    -OutputPath  "./evidence"
 ```
+
+> `-TenantId` is required (an Entra tenant GUID). Earlier behaviour extracted
+> the org subdomain as a tenant hint, which never resolved correctly against
+> Microsoft Entra and silently produced empty exports.
 
 ### Step 3: Verify Integrity
 
@@ -36,6 +44,10 @@ Connect-AzAccount -TenantId "<tenant-id>"
 .\scripts\Test-EvidenceIntegrity.ps1 `
     -EvidencePath "./evidence/CAA-Evidence-20260210T120000Z.json"
 ```
+
+The export produces a single `CAA-Evidence-<timestamp>.json` file plus a
+companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
+`SignInLogs*.json`, etc. are not produced).
 
 ---
 

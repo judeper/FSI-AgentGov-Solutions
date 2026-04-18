@@ -551,7 +551,7 @@ COLUMNS = {
                 ]
             },
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -619,7 +619,7 @@ COLUMNS = {
                 ]
             },
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
@@ -1041,7 +1041,7 @@ COLUMNS = {
                 ]
             },
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -1085,7 +1085,7 @@ COLUMNS = {
                 ]
             },
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -1318,6 +1318,28 @@ def generate_schema_docs() -> str:
 # =============================================================================
 
 
+def _normalize_optionset_payload(metadata: dict) -> dict:
+    """Inject required Dataverse Web API @odata.type discriminators.
+
+    The shared `dataverse_client.create_global_optionset` posts the metadata
+    payload raw to /GlobalOptionSetDefinitions. The Dataverse OData metadata
+    endpoint requires:
+      - root: "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata"
+      - each entry under "Options": "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata"
+    Without the per-Option discriminator, Dataverse returns
+    "An error occurred while validating input parameters: The request URI is not valid".
+    """
+    payload = dict(metadata)
+    payload.setdefault("@odata.type", "Microsoft.Dynamics.CRM.OptionSetMetadata")
+    options = []
+    for opt in payload.get("Options", []):
+        opt2 = dict(opt)
+        opt2.setdefault("@odata.type", "Microsoft.Dynamics.CRM.OptionMetadata")
+        options.append(opt2)
+    payload["Options"] = options
+    return payload
+
+
 def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     """Create global option sets (shared and CAA-specific)."""
     print("\n=== Creating Option Sets ===")
@@ -1331,7 +1353,7 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {name}: Creating")
-            client.create_option_set(metadata)
+            client.create_option_set(_normalize_optionset_payload(metadata))
             created += 1
 
     print("\nCAA-specific option sets:")
@@ -1341,7 +1363,7 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {name}: Creating")
-            client.create_option_set(metadata)
+            client.create_option_set(_normalize_optionset_payload(metadata))
             created += 1
 
     return {"created": created, "skipped": skipped}

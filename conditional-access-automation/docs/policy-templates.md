@@ -468,8 +468,16 @@ To enable policies for enforcement, use `Deploy-CAPolicies.ps1 -EnablePolicies $
 
 Templates contain `<placeholder>` tokens (e.g., `<zone-3-users-group-id>`, `<copilot-studio-app-id>`, `<break-glass-1>`) that must be replaced with tenant-specific values at deploy time. `Deploy-CAPolicies.ps1` performs this substitution using values from the configuration file (`-ConfigPath`).
 
-**Known limitation:** The deployment script does not currently validate that all placeholder tokens were substituted before issuing the Graph API call. If a configuration value is missing, the raw `<placeholder>` token is sent to the Graph API, which will reject it as an invalid GUID. To mitigate:
+**Pre-deployment validation:** `Deploy-CAPolicies.ps1` validates that all
+`<placeholder>` tokens were substituted from `-ConfigPath` before issuing the
+Graph API call. If any placeholder remains unresolved (e.g., a missing field
+in `config.json`), the script fails fast with a clear error rather than
+sending an invalid GUID to Microsoft Graph.
 
-1. Always run `Deploy-CAPolicies.ps1 -WhatIf` first and review the substituted values in verbose output.
-2. Ensure your `config.json` contains all required fields (see `config.sample.json` for the complete schema).
-3. A future enhancement will add pre-deployment validation to fail fast on unresolved placeholders.
+To author and deploy safely:
+
+1. Run `Deploy-CAPolicies.ps1 -WhatIf` first and review the substituted values
+   in verbose output.
+2. Ensure your `config.json` contains all required fields (see
+   `config.sample.json` for the complete schema; `policyPrefix` defaults to
+   `CA-FSI`).

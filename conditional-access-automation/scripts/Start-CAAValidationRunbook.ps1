@@ -184,35 +184,35 @@ try {
         Write-Verbose "CAAClient not available: $($_.Exception.Message)"
     }
 
-    # Read operational parameters from Dataverse environment variables (with defaults)
+    # Read operational parameters from Dataverse environment variables (with defaults).
+    # NOTE: env var names below MUST match what scripts/create_caa_environment_variables.py
+    # actually creates (full SchemaName with `fsi_CAA_` prefix). Earlier versions used
+    # bare names like `SeverityThreshold` which never resolved against Dataverse.
     $severityThreshold = 'Warning'
     $includeReportOnly = $false
     $baselineMaxAgeDays = 30
 
     if ($dataverseAvailable) {
-        try {
-            $dvThreshold = Get-CAAEnvironmentVariable -VariableName 'SeverityThreshold'
-            if ($dvThreshold) {
-                $severityThreshold = $dvThreshold
-                Write-Verbose "Dataverse override: SeverityThreshold=$severityThreshold"
-            }
-        } catch { Write-Verbose "SeverityThreshold env var not available: $($_.Exception.Message)" }
+        # SeverityThreshold has no dedicated Dataverse env var; consumers can override
+        # via the -SeverityThreshold parameter on Test-CAAPolicyCompliance directly.
+        # The closest env var is fsi_CAA_DriftSeverityEscalation, which is a Zone-3
+        # escalation flag, not a threshold value, so it intentionally is NOT used here.
 
         try {
-            $dvReportOnly = Get-CAAEnvironmentVariable -VariableName 'IncludeReportOnly'
-            if ($dvReportOnly -eq 'true') {
+            $dvReportOnly = Get-CAAEnvironmentVariable -VariableName 'fsi_CAA_IncludeReportOnlyPolicies'
+            if ($dvReportOnly -eq 'true' -or $dvReportOnly -eq $true) {
                 $includeReportOnly = $true
-                Write-Verbose "Dataverse override: IncludeReportOnly=true"
+                Write-Verbose "Dataverse override: fsi_CAA_IncludeReportOnlyPolicies=true"
             }
-        } catch { Write-Verbose "IncludeReportOnly env var not available: $($_.Exception.Message)" }
+        } catch { Write-Verbose "fsi_CAA_IncludeReportOnlyPolicies env var not available: $($_.Exception.Message)" }
 
         try {
-            $dvMaxAge = Get-CAAEnvironmentVariable -VariableName 'BaselineMaxAgeDays'
+            $dvMaxAge = Get-CAAEnvironmentVariable -VariableName 'fsi_CAA_BaselineMaxAgeDays'
             if ($dvMaxAge) {
                 $baselineMaxAgeDays = [int]$dvMaxAge
-                Write-Verbose "Dataverse override: BaselineMaxAgeDays=$baselineMaxAgeDays"
+                Write-Verbose "Dataverse override: fsi_CAA_BaselineMaxAgeDays=$baselineMaxAgeDays"
             }
-        } catch { Write-Verbose "BaselineMaxAgeDays env var not available: $($_.Exception.Message)" }
+        } catch { Write-Verbose "fsi_CAA_BaselineMaxAgeDays env var not available: $($_.Exception.Message)" }
     }
 
     Write-Verbose "Parameters: SeverityThreshold=$severityThreshold, IncludeReportOnly=$includeReportOnly, BaselineMaxAgeDays=$baselineMaxAgeDays"

@@ -65,9 +65,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# WARNING: This script uses 'exit' statements for CI/CD exit codes. These are correct
-# for standalone/CI usage but will terminate the calling PowerShell session if invoked
-# in-process. Replace with 'return' if this script is ever refactored into a module function.
+# `exit` statements are correct for standalone CLI / CI usage but terminate
+# the host runspace when the script is dot-sourced or imported. Detect
+# dot-sourcing once up-front and route control via a small helper so callers
+# in module/automation contexts don't lose state.
+$invokedDotSourced = $MyInvocation.InvocationName -eq '.'
+function _LeaveScript([int]$Code) {
+    if ($script:invokedDotSourced) { return $Code } else { exit $Code }
+}
 
 # Resolve full path
 $resolvedPath = Resolve-Path -Path $EvidencePath -ErrorAction Stop | Select-Object -ExpandProperty Path
@@ -75,14 +80,14 @@ $resolvedPath = Resolve-Path -Path $EvidencePath -ErrorAction Stop | Select-Obje
 # Verify evidence file exists
 if (-not (Test-Path $resolvedPath -PathType Leaf)) {
     Write-Error "Evidence file not found: $resolvedPath"
-    exit 1
+    return (_LeaveScript 1)
 }
 
 # Locate companion hash file
 $hashFilePath = "$resolvedPath.sha256"
 if (-not (Test-Path $hashFilePath -PathType Leaf)) {
     Write-Error "Companion SHA-256 hash file not found: $hashFilePath"
-    exit 1
+    return (_LeaveScript 1)
 }
 
 # Read expected hash from companion file
@@ -92,7 +97,7 @@ $expectedHash = ($hashContent -split '\s{2}')[0].Trim().ToUpperInvariant()
 
 if ([string]::IsNullOrWhiteSpace($expectedHash)) {
     Write-Error "Could not parse hash from companion file: $hashFilePath"
-    exit 1
+    return (_LeaveScript 1)
 }
 
 # Compute actual hash
@@ -123,5 +128,5 @@ $result
 
 # Set exit code
 if (-not $isValid) {
-    exit 1
+    return (_LeaveScript 1)
 }
