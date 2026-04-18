@@ -1,0 +1,20 @@
+id: deny-event-correlation-report
+name: Deny Event Correlation Report
+description: Daily reporting for correlating deny/no-content events across Copilot and Copilot Studio using Purview, Application Insights, and optional Defender data.
+version: 2.0.2
+status: live
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '1.5'
+- '1.7'
+- '1.8'
+- '3.4'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/deny-event-correlation-report/
+prerequisites:
+  compliance-admin: Purview Compliance Admin/View-Only Audit Logs for audit log extraction and CSV exports.
+  log-analytics-reader: Monitoring Reader on Application Insights for RAI telemetry correlation.
+  m365-admin: Azure subscription access for Storage, Automation, and scheduled runbook deployment.
+verification: Confirm the daily runbook produces CSV exports and current-day audit/RAI correlations without errors.
+dependencies:
+- agent-observability-foundation

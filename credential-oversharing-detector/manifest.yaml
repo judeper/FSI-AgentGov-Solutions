@@ -1,0 +1,15 @@
+id: credential-oversharing-detector
+name: Credential Oversharing Detector
+description: Scans Copilot Studio agent credentials against zone policy to detect overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment sharing, and stale credentials.
+version: 2.0.0
+status: live
+domain: agent-config
+tier: '2'
+controls:
+- '1.14'
+- '1.4'
+- '1.18'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/credential-oversharing-detector/
+prerequisites:
+  power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
+verification: Confirm Invoke-CredentialScan.ps1 writes rows to `fsi_credentialscans` and `fsi_credentialviolations`.

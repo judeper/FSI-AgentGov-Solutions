@@ -1,0 +1,15 @@
+id: pipeline-governance-cleanup
+name: Pipeline Governance Cleanup
+description: Discover and clean up personal Power Platform pipelines before central ALM governance.
+version: 1.2.0
+status: live
+domain: lifecycle-ops
+tier: '2'
+controls:
+- '2.3'
+- '2.1'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/pipeline-governance-cleanup/
+prerequisites:
+  power-platform-admin: Power Platform admin for environment inventory, Deployment Pipeline Configuration access, and cleanup actions.
+  security-admin: Entra Global Admin/Application Administrator for Graph permissions, app registration, and admin consent.
+verification: Confirm the custom pipelines host is set as default and no personal hosts remain in Deployment Pipeline Configuration.

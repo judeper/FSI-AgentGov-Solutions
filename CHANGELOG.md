@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.4.0] - 2026-04-22
+
+### Manifest unification + alignment with FSI-AgentGov v1.4
+
+Replaces the centralized `scripts/solution-config.yml` with **per-solution `manifest.yaml`** files and adds a committed root-level **`solutions.json`** consumable by the framework's `refresh_solutions_lock.py`.
+
+#### Added
+- `<solution>/manifest.yaml` for all 35 solutions (canonical id = folder name; required fields: `id`, `name`, `description`, `version`, `status`, `domain`, `tier`, `controls`, `url`, `prerequisites`, `verification`).
+- `scripts/manifest.schema.json` — JSON Schema (Draft 2020-12) enforcing the per-solution manifest contract.
+- `scripts/build-manifest.py` — single generator for `solutions.json`, README catalog table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, all 35 detail pages, `site-docs/reference/control-mapping.md` (lists ALL 78 framework controls), and the home-page hero metrics block. Supports `--check` for CI drift detection.
+- `solutions.json` at repo root, exposed at `https://raw.githubusercontent.com/judeper/FSI-AgentGov-Solutions/v1.4.0/solutions.json`.
+- `.github/workflows/manifest-check.yml` — PR gate that fails when manifests reference unknown framework control IDs or generated artifacts drift from manifests. Pins framework `controls.json` via the v1.4 branch.
+
+#### Changed
+- 6 solutions previously linked to GitHub blob URLs from sidebar nav now have rendered detail pages: `cross-tenant-external-sharing-governance`, `agent-knowledge-source-scanner`, `hitl-workflow-governance`, `model-risk-management-automation`, `credential-oversharing-detector`, `agent-365-lifecycle-governance`.
+- Display-name normalization: `Segregation of Duties Detector`, `Agent Access Governance Monitor`, `MIME Type Restrictions for File Uploads`, `Hallucination Feedback Tracker`, `Conflict of Interest Testing`.
+- `compliance-dashboard` controls now include `3.4` (Incident Reporting and Root Cause Analysis).
+- `agent-observability-foundation` controls populated: `1.7, 2.8, 2.9, 3.2`.
+- `action-confirmation-auditor` controls corrected to `2.12, 1.10`.
+- Pillar 4 control mapping page now lists all 9 SharePoint controls (4.1–4.9); previously listed only 4.3.
+- Coverage Summary on control-mapping page now reads from manifest data (35 solutions).
+- `scripts/publish_docs.yml` and the docs build pipeline both invoke `build-manifest.py` instead of `build-docs.py`.
+
+#### Removed
+- `scripts/solution-config.yml` — superseded by per-solution manifests.
+- `scripts/build-docs.py` — superseded by `scripts/build-manifest.py`.
+
+#### Schema evolution policy
+
+> **`solutions.json` schema 1.4.x is additive-only.** New optional fields are allowed in 1.4.1 and later patch/minor releases. Field renames, new required fields, or shape changes (e.g., turning a string into an array) require **1.5.0** with a coordinated framework update so that consumers (currently `judeper/fsi-agentgov` lock-refresh tooling) upgrade in lockstep.
+
+#### Stability guarantees
+
+- **No solution folder renamed.** All `/<folder>/` paths in the repo are unchanged.
+- **No `/solutions/<folder>/` URL changed** on the public site. Detail pages stay at `site-docs/solutions/<folder>/index.md`.
+- Sidebar nav entries that previously pointed at GitHub blob URLs now point at internal pages with the same human-visible labels — no link redirects required.
+
+#### Verification
+
+```bash
+python scripts/build-manifest.py            # idempotent regen
+python scripts/build-manifest.py --check    # exits 0 only when in sync
+mkdocs build --strict                       # site builds clean
+```
+
+After tagging, the framework's `refresh_solutions_lock.py --tag v1.4.0` consumes `solutions.json` from the raw GitHub URL.
+
+---
+
 ## [Site Usability Review] - 2026-04-18
 
 ### Docs site — deduplication, lean overview pages, comment-coverage audit

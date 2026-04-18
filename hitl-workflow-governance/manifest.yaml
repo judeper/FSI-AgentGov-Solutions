@@ -1,0 +1,16 @@
+id: hitl-workflow-governance
+name: HITL Workflow Governance
+description: Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the advancedapprovals connector.
+version: 1.1.0
+status: live
+domain: compliance-audit
+tier: '2'
+controls:
+- '2.12'
+- '2.17'
+- '1.10'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/hitl-workflow-governance/
+prerequisites:
+  power-platform-admin: "Power Platform admin tenant role or Dataverse environment administration for Copilot Studio scanning and schema deployment."
+  security-admin: "Entra Global Admin or Application Administrator permissions for app registration, consent, and service principal setup."
+verification: "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal."

@@ -1,0 +1,13 @@
+id: generative-ai-config-auditor
+name: Generative AI Config Auditor
+description: Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies.
+version: 1.1.0
+status: live
+domain: agent-config
+tier: '2'
+controls:
+- '2.24'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/generative-ai-config-auditor/
+prerequisites:
+  power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
+verification: Confirm Test-GenAIConfigCompliance.ps1 writes rows to `fsi_GACValidationHistory` and `fsi_GACViolation`.

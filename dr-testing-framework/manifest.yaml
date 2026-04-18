@@ -1,0 +1,16 @@
+id: dr-testing-framework
+name: DR Testing Framework
+description: Post-recovery validation and evidence packaging for Power Platform DR testing.
+version: 2.0.0
+status: live
+domain: lifecycle-ops
+tier: '2'
+controls:
+- '2.4'
+- '2.1'
+- '1.9'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/dr-testing-framework/
+prerequisites:
+  power-platform-admin: Power Platform admin for PPAC restore operations and managed target environment access.
+  security-admin: Entra app registration/admin consent and Dataverse system administrator access for evidence writes.
+verification: Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence.

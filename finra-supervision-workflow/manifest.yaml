@@ -1,0 +1,17 @@
+id: finra-supervision-workflow
+name: FINRA Supervision Workflow
+description: Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance.
+version: 1.0.1
+status: live
+domain: compliance-audit
+tier: '2'
+controls:
+- '2.12'
+- '1.10'
+- '1.7'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/finra-supervision-workflow/
+prerequisites:
+  power-platform-admin: "Power Platform admin tenant role and Dataverse table creation access for the supervision queue and log schema."
+  compliance-admin: "Microsoft Purview Compliance Administrator for Communication Compliance policy access and alert review."
+  security-admin: "Entra Application Administrator or equivalent for service principal registration and consent."
+verification: "Create a test queue item and confirm rows appear in fsi_supervisionqueue and fsi_supervisionlog, then verify the Power BI supervision report shows the new item."

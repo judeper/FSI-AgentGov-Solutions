@@ -1,0 +1,14 @@
+id: agent-access-monitor
+name: Agent Access Governance Monitor
+description: Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
+version: 1.1.0
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '3.8'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-access-monitor/
+prerequisites:
+  power-platform-admin: "Power Platform admin or Dynamics 365 Service Admin for tenant queries, baseline capture, and Dataverse schema setup."
+  m365-admin: "Global Admin is the fallback for tenant-level setup when Power Platform admin access is unavailable."
+verification: "Run Test-AgentAccessCompliance.ps1 and confirm rows are written to fsi_accessvalidationhistory and fsi_accessviolations."

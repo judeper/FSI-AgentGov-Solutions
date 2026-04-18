@@ -1,0 +1,16 @@
+id: agent-knowledge-source-scanner
+name: Agent Knowledge Source Scanner
+description: Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
+version: 1.1.0
+status: live
+domain: content-data
+tier: '2'
+controls:
+- '4.3'
+- '1.4'
+- '1.5'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-knowledge-source-scanner/
+prerequisites:
+  sharepoint-admin: SharePoint Site Collection Admin or Site Member access is required to read item permissions in each target knowledge source library.
+  global-reader: Entra ID Reader or GroupMember.Read.All is required when resolving agent user scope from -AgentUserGroupId.
+verification: Run Get-KnowledgeSourceItemPermissions.ps1 and confirm RiskScore values in ./output/item-permissions-report.csv, then cross-check any flagged items in SharePoint Manage Access.

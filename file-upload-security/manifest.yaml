@@ -1,0 +1,15 @@
+id: file-upload-security
+name: File Upload Security
+description: Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled.
+version: 1.1.0
+status: live
+domain: content-data
+tier: '2'
+controls:
+- '1.14'
+- '1.8'
+- '1.4'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/file-upload-security/
+prerequisites:
+  power-platform-admin: Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and write Dataverse baseline and violation records.
+verification: Run Test-FileUploadCompliance.ps1 and confirm new rows in fsi_fileuploadvalidationhistory and fsi_fileuploadviolation, with the latest fsi_runtimestamp reflecting the scan.

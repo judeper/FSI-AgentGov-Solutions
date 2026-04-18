@@ -1,0 +1,23 @@
+id: cross-tenant-external-sharing-governance
+name: Cross-Tenant External Sharing Governance
+description: Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments.
+version: 1.0.2
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '1.1'
+- '1.18'
+- '2.1'
+- '2.8'
+- '3.1'
+- '1.11'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/cross-tenant-external-sharing-governance/
+prerequisites:
+  power-platform-admin: "Power Platform admin for tenant isolation settings, PPAC access, and Dataverse setup."
+  m365-admin: "Entra Global Admin or Cross-Tenant Access Administrator for Graph consent and partner policy changes."
+  compliance-admin: "Optional compliance/audit reviewer for the Dataverse compliance event log and retention checks."
+verification: "Confirm fsi_crosstenantcomplianceevent receives events and fsi_approvedexternaltenant is updated during onboarding and remediation runs."
+dependencies:
+- agent-registry-automation
+- unrestricted-agent-sharing-detector

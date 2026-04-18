@@ -1,0 +1,34 @@
+name: Manifest Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  manifest-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: solutions
+
+      - name: Checkout framework v1.4 (controls.json source of truth)
+        uses: actions/checkout@v4
+        with:
+          repository: judeper/fsi-agentgov
+          ref: feat/v1.4-assessment-unification
+          path: fsi-agentgov
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install pyyaml jsonschema
+
+      - name: Validate manifests + check generated artifacts
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py --check

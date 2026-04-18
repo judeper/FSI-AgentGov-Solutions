@@ -1,0 +1,19 @@
+id: scope-drift-monitor
+name: Scope Drift Monitor
+description: Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
+version: 1.2.0
+status: live
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '1.14'
+- '1.4'
+- '1.5'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/scope-drift-monitor/
+prerequisites:
+  compliance-admin: Purview Compliance Admin for Unified Audit Log queries.
+  power-platform-admin: System Administrator / Environment Maker access for Dataverse tables, flows, and solution import.
+  m365-admin: Microsoft 365 E5 or E5 Compliance licensing plus Office 365 Management API app consent for audit collection.
+verification: Run a test scan and confirm a drift violation is detected and alerted within the 15-minute cycle.
+dependencies:
+- agent-observability-foundation

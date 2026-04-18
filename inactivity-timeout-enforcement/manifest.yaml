@@ -1,0 +1,16 @@
+id: inactivity-timeout-enforcement
+name: Inactivity Timeout Enforcement
+description: Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
+version: 1.1.0
+status: live
+domain: access-identity
+tier: '2'
+controls:
+- '2.22'
+- '1.23'
+- '3.7'
+- '3.8'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/inactivity-timeout-enforcement/
+prerequisites:
+  power-platform-admin: "Power Platform admin permissions with a Dataverse environment and Power Automate Premium license for the daily compliance flow."
+verification: "Check fsi_inactivitytimeoutcompliances for scan results and fsi_inactivitytimeouterrorlogs for any MissingPolicy or API error entries."

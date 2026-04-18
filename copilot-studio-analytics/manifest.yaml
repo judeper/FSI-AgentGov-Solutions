@@ -1,0 +1,16 @@
+id: copilot-studio-analytics
+name: Copilot Studio Analytics
+description: Business impact analytics for Copilot Studio agents—session outcomes, CSAT, Agent Assisted Hours, and ROI tracking. Extends Agent Observability Foundation with zone-based governance; not a full Viva Insights replacement.
+version: 2.0.0
+status: live
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '3.2'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-studio-analytics/
+prerequisites:
+  log-analytics-reader: Reader access to the Agent Observability workspace and Application Insights from Agent Observability Foundation.
+  power-platform-admin: Power Platform admin tenant role for Dataverse, Copilot Studio configuration, and solution deployment.
+verification: Run the Dataverse session sync and confirm CopilotSessionOutcome events and workbook queries return data.
+dependencies:
+- agent-observability-foundation
