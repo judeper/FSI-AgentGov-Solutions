@@ -50,7 +50,11 @@ Common issues and solutions for the Segregation of Duties Detector.
 3. Scope mismatch
 
 **Solutions:**
-1. Verify rules exist in Dataverse: query `fsi_conflictrules?$filter=fsi_enabled eq true` or run `.\Invoke-SoDScan.ps1 -DryRun -Verbose` and check the "Found N active rules" output
+1. Verify rules exist in Dataverse. Use the full OData URL (escape `$` in PowerShell with a backtick):
+   ```
+   GET https://<env>.crm.dynamics.com/api/data/v9.2/fsi_conflictrules?$filter=fsi_enabled eq true
+   ```
+   Or run `.\Invoke-SoDScan.ps1 -DryRun -Verbose` and check the "Found N active rules" output.
 2. Import default rules: `.\Import-ConflictRules.ps1 -RuleSet Default`
 3. Check role context matches actual assignments
 

@@ -203,9 +203,9 @@ Validate rule syntax by importing with `-WhatIf`:
 
 ### FSI-Specific Considerations
 
-1. **FINRA 3110** - Supervision roles require separation
-2. **SOX 404** - Document all rule rationale for auditors
-3. **OCC 2011-12** - Model validation requires independence
+1. **FINRA Rule 3110** - Supervision roles require separation
+2. **SOX Section 404** - Document all rule rationale for auditors
+3. **OCC Bulletin 2011-12** - Model validation requires independence
 4. **Information Barriers** - Research/trading separation rules
 
 ---

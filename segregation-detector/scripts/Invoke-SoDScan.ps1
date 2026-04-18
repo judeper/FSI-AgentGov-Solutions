@@ -48,14 +48,25 @@ param(
     [Parameter(Mandatory = $false)]
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
-    [ValidateNotNullOrEmpty()]
+    # Note: do NOT use [ValidateNotNullOrEmpty()] here — the parameter resolves at bind time, before
+    # the manual check below can run, and the validator's generic message would mask the actionable
+    # "FSI_CLIENT_SECRET / AZURE_CLIENT_SECRET" guidance the script emits later. (Council Opus #6)
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET),
 
     [Parameter(Mandatory = $false)]
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    # When set, allow the scan to continue even if Power Platform BAP role enumeration fails for
+    # ALL environments. Default is fail-closed: a complete BAP outage exits non-zero so operators
+    # do not interpret an empty scan as "no violations". (Council Opus #3 / Goldeneye #2)
+    [switch]$AllowPartialResults
 )
 
 $ErrorActionPreference = "Stop"
+
+# Expose param to function scope (used by Get-PowerPlatformRoleAssignments fail-closed guard)
+$script:AllowPartialResults = $AllowPartialResults
 
 # Normalize: strip trailing slash to prevent double-slash in API URLs
 $Environment = $Environment.TrimEnd('/')
@@ -158,6 +169,7 @@ function Get-PowerPlatformRoleAssignments {
     } while ($envUri)
 
     $skippedCount = 0
+    $totalEnvironments = $environments.Count
     foreach ($env in $environments) {
         $envId = $env.name
         $envDisplayName = $env.properties.displayName
@@ -168,9 +180,15 @@ function Get-PowerPlatformRoleAssignments {
             try {
                 $roleResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $roleUri -Headers $headers -Method Get }
                 foreach ($ra in $roleResponse.value) {
+                    # Filter to user principals only — groups and service principals would otherwise
+                    # be merged into the user role map and emit false-positive SoD violations against
+                    # GUIDs that are not real users. (Council Opus #1 / Goldeneye #4)
+                    $principalType = $ra.properties.principal.type
+                    if ($principalType -and $principalType -ne 'User') { continue }
+
                     $assignments.Add(@{
                         PrincipalId     = $ra.properties.principal.id
-                        PrincipalType   = $ra.properties.principal.type
+                        PrincipalType   = $principalType
                         RoleName        = $ra.properties.roleDefinition.displayName
                         RoleId          = $ra.properties.roleDefinition.id
                         EnvironmentId   = $envId
@@ -186,7 +204,19 @@ function Get-PowerPlatformRoleAssignments {
         } while ($roleUri)
     }
     if ($skippedCount -gt 0) {
-        Write-Warning "$skippedCount of $($environments.Count) environment(s) failed Power Platform role queries — results may be incomplete"
+        Write-Warning "$skippedCount of $totalEnvironments environment(s) failed Power Platform role queries — results may be incomplete"
+        # Fail closed when ALL environment queries failed — silently returning an empty
+        # assignment set would be reported as "no violations" when in fact no data was
+        # retrieved (e.g., service principal not registered with New-PowerAppManagementApp,
+        # or BAP outage). (Council Opus #3 / Goldeneye #2)
+        if ($skippedCount -eq $totalEnvironments -and $totalEnvironments -gt 0) {
+            if ($script:AllowPartialResults) {
+                Write-Warning "All Power Platform environment role queries failed; -AllowPartialResults set, continuing with empty PP role data."
+            }
+            else {
+                throw "All $totalEnvironments Power Platform environment role queries failed. Verify the service principal is registered as a Power Platform admin (New-PowerAppManagementApp -ApplicationId <ClientId>) and re-run, or pass -AllowPartialResults to override."
+            }
+        }
     }
 
     return $assignments
@@ -206,7 +236,10 @@ function Get-DataverseSecurityRoleAssignments {
     }
 
     $results = [System.Collections.Generic.List[hashtable]]::new()
-    $nextLink = "$Environment/api/data/v9.2/systemusers?`$select=systemuserid,azureactivedirectoryobjectid,domainname,fullname&`$expand=systemuserroles_association(`$select=name,roleid)&`$filter=isdisabled eq false"
+    # Filter out application users (service principals provisioned as systemusers) — they would
+    # otherwise be merged into the user role map and reported as SoD violators against the SP's
+    # AAD object ID. (Council Opus #2)
+    $nextLink = "$Environment/api/data/v9.2/systemusers?`$select=systemuserid,azureactivedirectoryobjectid,domainname,fullname&`$expand=systemuserroles_association(`$select=name,roleid)&`$filter=isdisabled eq false and applicationid eq null"
     while ($nextLink) {
         try {
             $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
@@ -443,6 +476,7 @@ Write-Host ""
 Write-Host "Building user role map..." -ForegroundColor Gray
 $userRoleMap = @{}
 
+$skippedAssignments = 0
 foreach ($assignment in $roleAssignments) {
     $userId = $assignment.principalId
     $roleId = $assignment.roleDefinitionId
@@ -468,6 +502,15 @@ foreach ($assignment in $roleAssignments) {
             Assignment = $assignment.id
         }
     }
+    else {
+        # Track silent drops so operators can detect when the SP lacks principal-expansion
+        # permissions or principals were deleted, instead of seeing an empty result. (Council Opus #5)
+        $skippedAssignments++
+    }
+}
+
+if ($skippedAssignments -gt 0) {
+    Write-Warning "$skippedAssignments Entra role assignment(s) skipped (principal not expanded as user, deleted, or non-user principal). If this number is high, verify the service principal holds Directory.Read.All and that `?$expand=principal` returned data."
 }
 
 Write-Host "  Mapped roles for $($userRoleMap.Count) users" -ForegroundColor Green
@@ -640,11 +683,22 @@ if ($DryRun) {
 }
 
 $persistedCount = if ($DryRun -or $newViolations.Count -eq 0) { 0 } else { $createdCount }
-Write-AuditLog -Message "SoD scan completed: $usersScanned users scanned, $conflictsFound conflicts found, $($newViolations.Count) new violations ($persistedCount persisted)"
+$activeOpenCount = $existingViolations.Count + $newViolations.Count
+Write-AuditLog -Message "SoD scan completed: $usersScanned users scanned, $conflictsFound conflicts found, $($newViolations.Count) new violations ($persistedCount persisted), $($existingViolations.Count) pre-existing open violations"
 
-# Exit with non-zero code when new violations are found (for CI/CD pipeline gates)
-if ($newViolations.Count -gt 0) {
+# Exit-code semantics for CI/CD pipeline gates (Council Opus #13 / Goldeneye #1):
+#   * In -DryRun mode, NEVER fail the build — dry runs are evidence collection and would
+#     otherwise block every CI run that finds even pre-existing conflicts.
+#   * Otherwise, exit non-zero if ANY active conflicts exist (newly detected OR previously
+#     recorded but not yet resolved). The earlier behavior of gating only on "newly created"
+#     allowed repeat runs to return 0 while the same SoD violation remained open.
+if ($DryRun) {
+    exit 0
+}
+if ($activeOpenCount -gt 0) {
+    Write-Host "Pipeline gate: $activeOpenCount unresolved SoD violation(s) remain open ($($existingViolations.Count) pre-existing + $($newViolations.Count) new). Exiting non-zero." -ForegroundColor Red
     exit 1
 }
+exit 0
 
 #endregion

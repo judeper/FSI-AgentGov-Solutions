@@ -81,7 +81,25 @@ Complete requirements for deploying the Segregation of Duties Detector.
    - Expiration: 24 months
 4. Copy and store the secret value securely
 
-### 4. Store in Azure Key Vault
+### 4. Register Service Principal as Power Platform Admin
+
+The Power Platform BAP API (`/providers/Microsoft.BusinessAppPlatform/scopes/admin/...`)
+will return **403 Forbidden** for service principals that have not been registered as a
+Power Platform admin via the Power Platform Admin module — the **Power Platform
+Administrator** Entra role alone is **not** sufficient. Without this step,
+`Invoke-SoDScan.ps1` exits non-zero with the message "All N Power Platform environment
+role queries failed" (fail-closed).
+
+```powershell
+# Run as a tenant admin signed in to Power Platform CLI / module
+Install-Module Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser
+Add-PowerAppsAccount
+New-PowerAppManagementApp -ApplicationId <your-client-id>
+```
+
+Reference: [Use service principal accounts to connect to Power Platform](https://learn.microsoft.com/en-us/power-platform/admin/powershell-create-service-principal).
+
+### 5. Store in Azure Key Vault
 
 ```powershell
 # Create secret in Key Vault

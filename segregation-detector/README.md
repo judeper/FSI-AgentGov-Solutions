@@ -2,11 +2,11 @@
 
 > **Status:** Validated
 
-Automated role conflict detection for Maker/Checker enforcement in AI agent deployment pipelines, supporting SOX 404 IT General Controls.
+Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines, helping address SOX Section 404 IT General Controls.
 
 ## Overview
 
-The Segregation of Duties (SoD) Detector identifies and prevents conflicts where users have incompatible roles in the AI agent development and deployment lifecycle. It enforces the principle that no single individual should control all phases of a critical process.
+The Segregation of Duties (SoD) Detector identifies users who hold incompatible role combinations in the AI agent development and deployment lifecycle. It supports the principle that no single individual should control all phases of a critical process. The shipped scripts perform detection and reporting; runtime pipeline gating and real-time alerts are roadmap items (see Features table).
 
 ## Features
 
@@ -15,7 +15,7 @@ The Segregation of Duties (SoD) Detector identifies and prevents conflicts where
 | **Role Conflict Detection** | Identifies users with incompatible role combinations |
 | **Real-Time Alerts** | Immediate notification when violations are detected (planned) |
 | **Exception Workflow** | Documented approval process for justified exceptions |
-| **Pipeline Integration** | Blocks promotions when SoD violations exist (planned) |
+| **Pipeline Integration** | Blocks promotions when SoD violations exist via `Invoke-SoDScan.ps1` exit code (CI gate); native ALM-pipeline pre-deploy hook is planned |
 | **Audit Reporting** | Quarterly SoD compliance reports for auditors |
 
 ## Architecture
@@ -254,19 +254,19 @@ For supervision queue assignments:
 
 ## Regulatory Alignment
 
-### SOX 404 - IT General Controls
+### SOX Section 404 - IT General Controls
 
 | ITGC Category | SoD Detector Coverage |
 |---------------|----------------------|
 | Access Controls | Role assignment monitoring |
-| Change Management | Maker/checker enforcement |
-| Segregation of Duties | Conflict detection and prevention |
+| Change Management | Supports Maker/Checker via detection |
+| Segregation of Duties | Conflict detection (runtime prevention via pipeline gate is planned) |
 
 ### COSO Framework
 
 | Component | Coverage |
 |-----------|----------|
-| Control Activities | Automated SoD enforcement |
+| Control Activities | Detection of role-based SoD conflicts |
 | Information & Communication | Alert notifications |
 | Monitoring Activities | Continuous detection |
 
@@ -275,14 +275,14 @@ For supervision queue assignments:
 | Requirement | Coverage |
 |-------------|----------|
 | Risk Management | Conflict risk identification |
-| Internal Controls | Automated enforcement |
+| Internal Controls | Detection feeding into manual remediation |
 | Audit Trail | Complete violation history |
 
 ## Related Controls
 
 | Control | Relationship |
 |---------|--------------|
-| [2.8 - Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-segregation-of-duties.md) | Primary — role conflict detection and Maker/Checker enforcement |
+| [2.8 - Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-segregation-of-duties.md) | Primary — role conflict detection supporting Maker/Checker controls |
 | [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Environment role context |
 | [2.3 - Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md) | Pipeline integration |
 
@@ -313,7 +313,8 @@ Microsoft has introduced new [REST API endpoints for RBAC role assignments](http
 | **No token refresh** | Access tokens expire after ~60 minutes. In large tenants, scans may exceed this duration, causing 401 failures partway through. `Invoke-WithRetry` does not retry 401 errors and no re-authentication is attempted. For large environments, consider splitting scans or refreshing tokens externally. |
 | **No batch violation creation** | `New-Violation` creates individual Dataverse records via separate POST calls. Using the Dataverse `$batch` endpoint would reduce API round-trips and allow atomic creation. For environments with many new violations, this may cause throttling. |
 | **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` before production use. Contributions welcome. |
-| **Console-only audit log** | `Write-AuditLog` outputs structured logs to the console but does not persist records to the `fsi_sodauditlog` Dataverse table. A persistent audit trail requires manual log forwarding (e.g., to Azure Monitor or a SIEM). |
+| **Console-only audit log** | `Write-AuditLog` writes via `Write-Host`, which bypasses the PowerShell pipeline and **cannot be redirected** with `6>&1` to capture for SIEM ingestion. The shipped script does not persist records to the `fsi_sodauditlog` Dataverse table either. To get a durable audit trail you must rewrite `Write-AuditLog` to use `Write-Information -InformationAction Continue` (or `Write-Output` of structured objects) and capture the stream, or POST directly to `fsi_sodauditlogs` when not in `-DryRun`. |
+| **PIM-eligible roles not evaluated** | Only **active** Entra ID role assignments (`/roleManagement/directory/roleAssignments`) are queried. Users who are PIM-eligible (but not currently activated) for conflicting roles are **not** detected. To cover this gap, separately query `/roleManagement/directory/roleEligibilityScheduleInstances?$expand=principal` and merge the results, or document that eligibility activations must be reviewed via Entra PIM access reviews. |
 | **Unsupported role contexts** | Entra ID App Role assignments (context 2) and Custom Application Roles (context 5) are not queried. Rules targeting these contexts will not match. |
 | **Group-based role assignments** | Entra ID role assignments through security groups are not expanded. Only direct user assignments are evaluated. Users who inherit conflicting roles via group membership will not be detected. |
 | **No auto-reconciliation** | Violations are not automatically closed when the underlying role conflict is removed. Stale violations accumulate with status "Open" until manually resolved. |

@@ -47,7 +47,9 @@ param(
     [Parameter(Mandatory = $false)]
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
-    [ValidateNotNullOrEmpty()]
+    # Note: do NOT use [ValidateNotNullOrEmpty()] here — the validator runs at parameter binding
+    # and would mask the actionable "FSI_CLIENT_SECRET / AZURE_CLIENT_SECRET" guidance below.
+    # (Council Opus #6)
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
 )
 
@@ -114,9 +116,14 @@ $DefaultRules = @{
             fsi_roleb = "DLP Policy Approver"
             fsi_rolebcontext = 3
             fsi_severity = 1
-            fsi_enabled = $true
+            # Disabled by default: no public Power Platform role names "DLP Policy Author"
+            # or "DLP Policy Approver" exist in the BAP role-assignment API surface that this
+            # solution queries. Enable only after wiring a custom collector that emits these
+            # role names (e.g., by inspecting DLP policy creator/approver metadata in the
+            # tenant). (Council Goldeneye #3)
+            fsi_enabled = $false
             fsi_allowexception = $false
-            fsi_description = "Prevents self-exemption from DLP policies"
+            fsi_description = "Prevents self-exemption from DLP policies (DISABLED — requires custom DLP policy ownership collector; not produced by Power Platform BAP role-assignment API)"
         },
         @{
             fsi_name = "Connection Creator cannot be Connection Approver"
@@ -177,9 +184,14 @@ $DefaultRules = @{
             fsi_roleb = "Environment Approver"
             fsi_rolebcontext = 3
             fsi_severity = 2
-            fsi_enabled = $true
+            # Disabled by default: "Environment Approver" is not a Power Platform built-in
+            # role name returned by the BAP role-assignment API. "Environment Maker" and
+            # "Environment Admin" are the actual role names. Enable only after the customer
+            # operationalizes an explicit "approver" group in their tenant and adapts the
+            # collector. (Council Goldeneye #3)
+            fsi_enabled = $false
             fsi_allowexception = $true
-            fsi_description = "Environment lifecycle separation"
+            fsi_description = "Environment lifecycle separation (DISABLED — 'Environment Approver' is not a Power Platform BAP built-in role; rename to your tenant's approval group before enabling)"
         },
         @{
             fsi_name = "Data Steward cannot be Data Consumer for sensitive data"

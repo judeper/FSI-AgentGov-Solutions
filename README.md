@@ -42,7 +42,7 @@ This repository currently includes **35 live solution implementations** and **0 
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Personal pipeline discovery and ALM governance enforcement | v1.2.0 | 2.3, 2.1 |
 | [RAG Source Validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | v1.2.0 | 2.16, 1.7, 2.13 |
 | [Scope Drift Monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | v1.2.0 | 1.14, 1.4, 1.5 |
-| [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.0.0 | 2.8, 2.1, 2.3 |
+| [Segregation of Duties Detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | v1.1.0 | 2.8, 2.1, 2.3 |
 | [Session Security Configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection and evidence export | v1.0.1 | 1.23, 1.11 |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |
 
