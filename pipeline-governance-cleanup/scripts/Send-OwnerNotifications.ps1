@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Users.Actions
+#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Users.Actions
 
 <#
 .SYNOPSIS
@@ -211,8 +211,20 @@ function Send-GraphEmail {
         saveToSentItems = $true
     }
 
-    # Determine UserId: use explicit sender for application permissions, "me" for delegated
-    $userId = if ([string]::IsNullOrEmpty($Sender)) { "me" } else { $Sender }
+    # Determine UserId: explicit sender for application permissions; signed-in account for delegated.
+    # Send-MgUserMail does NOT accept the literal "me" alias — the underlying Graph route is
+    # /users/{id|upn}/sendMail, which rejects "me". Fall back to the authenticated principal.
+    if ([string]::IsNullOrEmpty($Sender)) {
+        $ctx = Get-MgContext
+        if ($null -eq $ctx -or [string]::IsNullOrEmpty($ctx.Account)) {
+            Write-Error "No -SenderEmail provided and no signed-in delegated account on Microsoft Graph context."
+            return $false
+        }
+        $userId = $ctx.Account
+    }
+    else {
+        $userId = $Sender
+    }
 
     $maxRetries = 3
     for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
@@ -221,15 +233,29 @@ function Send-GraphEmail {
             return $true
         }
         catch {
-            $isTransient = $_.Exception.Message -match '429|503|504|timeout' -or
-                           $_.Exception.GetType().Name -match 'HttpRequestException|TaskCanceledException'
+            # Inspect HTTP status code on the response (preferred) and Retry-After if present;
+            # fall back to message regex for non-Graph SDK exceptions.
+            $statusCode = $null
+            try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { }
+            $retryAfter = $null
+            try { $retryAfter = $_.Exception.Response.Headers['Retry-After'] } catch { }
+
+            $isTransient = (
+                ($statusCode -in @(408, 429, 500, 502, 503, 504)) -or
+                ($_.Exception.GetType().Name -match 'HttpRequestException|TaskCanceledException') -or
+                ($_.Exception.Message -match '\b(429|503|504|timeout|throttl)\b')
+            )
             if ($isTransient -and $attempt -lt $maxRetries) {
-                $backoffSeconds = [Math]::Pow(2, $attempt)
-                Write-Warning "Transient error sending to $To (attempt $attempt/$maxRetries). Retrying in ${backoffSeconds}s..."
+                $backoffSeconds = if ($retryAfter -and [int]::TryParse($retryAfter, [ref]$null)) {
+                    [int]$retryAfter
+                } else {
+                    [Math]::Pow(2, $attempt)
+                }
+                Write-Warning "Transient error sending to $To (status=$statusCode, attempt $attempt/$maxRetries). Retrying in ${backoffSeconds}s..."
                 Start-Sleep -Seconds $backoffSeconds
             }
             else {
-                Write-Error "Failed to send email to $To : $_"
+                Write-Error "Failed to send email to $To (status=$statusCode): $_"
                 return $false
             }
         }
@@ -414,7 +440,7 @@ You may need to manually add owner information to your inventory before sending 
     finally {
         Write-Progress -Activity "Sending notifications" -Completed
 
-        # Write audit log for compliance evidence (FINRA Rule 3110/4511)
+        # Write audit log for compliance evidence (FINRA Rule 3110(a) / Rule 4511(a))
         $logTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
         $logDir = Split-Path -Path $InputPath -Parent
         if ([string]::IsNullOrEmpty($logDir)) { $logDir = "." }

@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.2.0] - 2026-04-17
+
+### Council Review — Technical Accuracy Fixes
+
+This release addresses findings from a 2-member AI Council review (Opus 4.7 + Goldeneye) targeting technical accuracy and customer-readiness.
+
+### Fixed
+- **Critical (Send-OwnerNotifications.ps1):** Delegated email send used `Send-MgUserMail -UserId "me"`, which Microsoft Graph rejects (the literal `me` alias works only on `/me/*` endpoints, not `/users/{id}/sendMail`). Every delegated send would fail in production while `-TestMode` previews succeeded. Now resolves the signed-in account from `Get-MgContext().Account` when no explicit `-SenderEmail` is supplied, with a clear error if neither is available.
+- **High (Send-OwnerNotifications.ps1):** Transient-error retry detection regex-matched `$_.Exception.Message` for `429|503|504|timeout`. Microsoft Graph throttling responses surface the status on `$_.Exception.Response.StatusCode` and the wait time on the `Retry-After` header — both were ignored. Retry now inspects HTTP status codes (408/429/500/502/503/504), honors `Retry-After` (seconds), and falls back to exponential backoff.
+- **High (Get-PipelineInventory.ps1):** Script invoked `pac admin list` without first verifying that an active PAC authentication profile existed. Missing or wrong-scope profiles produced misleading "Failed to list environments" errors or partial inventories. Added a `Test-PacAuth` check that runs `pac auth who` and exits with explicit remediation guidance if no profile is active.
+- **High (Get-PipelineInventory.ps1):** Pipeline probe fail-open: when `pac pipeline list` succeeded but the output did not match any documented pattern, the function returned `HasPipelines = "No"` (silently classifying parse failures as compliant). Now returns `Unknown` with a "verify manually" note unless pac explicitly reports zero pipelines.
+- **High (README.md schema table):** Pipeline-stage `previousstageid` lookup column renamed to the actual logical name `previousdeploymentstageid` (the Dataverse `deploymentpipelinestage` table uses the `DeploymentPipelineStage`-prefixed schema).
+- **Medium (notification-templates.md):** Two flow-template expressions referenced `scheduledremovaldate`, a column that the custom tracking-table guide does not create. Aligned to the actual logical name `enforcementdate` (display name `EnforcementDate`).
+- **Medium (Get-PipelineInventory.ps1):** Clarified inline that `ComplianceStatus = "Requires Manual Verification"` is an operator hint, not an evaluated verdict — the public PAC CLI / BAP API do not expose deployment-pipeline host linkage.
+- **Medium (Send-OwnerNotifications.ps1):** Added `Microsoft.Graph.Authentication` to `#Requires -Modules` so constrained runspaces (Azure Automation sandboxes, JEA endpoints) load the dependency explicitly.
+- **Low:** Regulatory citations normalized to canonical forms — `GLBA Section 501(b)`, `SOX Section 404`, `FINRA Rule 3110(a) / Rule 4511(a)` — across `README.md`, `docs/audit-checklist.md`, and `Send-OwnerNotifications.ps1`.
+
+---
+
 ## [1.1.0] - 2026-04-10
 
 ### Security Hardening & Compliance Improvements

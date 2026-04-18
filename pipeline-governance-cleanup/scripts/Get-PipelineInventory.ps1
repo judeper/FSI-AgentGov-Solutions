@@ -83,6 +83,28 @@ function Test-PacCli {
     }
 }
 
+# Verify PAC CLI has an active authenticated profile with admin scope.
+# Without this check, `pac admin list` either fails with a generic error
+# or returns the partial scope of whatever profile happens to be active.
+function Test-PacAuth {
+    try {
+        $who = pac auth who 2>&1
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($who -join ''))) {
+            Write-Error @"
+No active PAC CLI authentication profile found.
+Run: pac auth create --tenant <tenant-id>
+Then sign in with an account that holds the Power Platform Administrator role.
+"@
+            return $false
+        }
+        return $true
+    }
+    catch {
+        Write-Error "Unable to verify PAC CLI authentication: $_"
+        return $false
+    }
+}
+
 # Get all environments using PAC CLI
 function Get-PowerPlatformEnvironments {
     Write-Host "Retrieving Power Platform environments..." -ForegroundColor Cyan
@@ -127,7 +149,8 @@ function Test-EnvironmentPipelines {
             if ($resultText -match "No pipelines found" -or $resultText -match "no records" -or $resultText -match "0 pipeline") {
                 return @{ HasPipelines = "No"; Notes = "" }
             }
-            return @{ HasPipelines = "Unknown"; Notes = "Unable to query: $($resultText.Substring(0, [Math]::Min(100, $resultText.Length)))" }
+            $snippet = if ([string]::IsNullOrWhiteSpace($resultText)) { "exit=$LASTEXITCODE (no output)" } else { $resultText.Substring(0, [Math]::Min(100, $resultText.Length)) }
+            return @{ HasPipelines = "Unknown"; Notes = "Unable to query: $snippet" }
         }
 
         # Parse text output - look for pipeline entries (lines with GUIDs typically indicate pipelines)
@@ -135,11 +158,12 @@ function Test-EnvironmentPipelines {
         $lines = $result | Where-Object { $_ -match "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}" }
 
         if ($null -eq $lines -or @($lines).Count -eq 0) {
-            # No GUIDs found, likely no pipelines
+            # Only assert "No" when pac explicitly tells us so; otherwise mark Unknown to
+            # avoid silently classifying parse failures as compliant.
             if ($resultText -match "No pipelines" -or $resultText -match "0 pipeline") {
                 return @{ HasPipelines = "No"; Notes = "" }
             }
-            return @{ HasPipelines = "No"; Notes = "" }
+            return @{ HasPipelines = "Unknown"; Notes = "Output did not match known patterns; verify manually" }
         }
 
         $pipelineCount = @($lines).Count
@@ -154,7 +178,7 @@ function Test-EnvironmentPipelines {
 function Main {
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Power Platform Environment Inventory Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.1.0 - April 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.2.0 - April 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -164,6 +188,11 @@ function Main {
 Power Platform CLI (pac) is not installed or not in PATH.
 Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction
 "@
+        exit 1
+    }
+
+    # Verify there is an active PAC auth profile with admin scope
+    if (-not (Test-PacAuth)) {
         exit 1
     }
 
@@ -192,12 +221,14 @@ Install from: https://learn.microsoft.com/en-us/power-platform/developer/cli/int
 
         Write-Progress -Activity "Processing environments" -Status "$index of $($environments.Count): $envName" -PercentComplete (($index / $environments.Count) * 100)
 
-        # Determine compliance status based on designated host
+        # Determine compliance status based on designated host.
+        # NOTE: We cannot programmatically determine which deployment-pipeline host an
+        # environment is linked to from the public PAC CLI / BAP API. When a designated
+        # host is provided, the value below signals to the operator that this row needs
+        # manual verification against the Deployment Pipeline Configuration app — it is
+        # NOT an evaluated compliance verdict.
         $complianceStatus = "Unknown"
         if (-not [string]::IsNullOrEmpty($DesignatedHostId)) {
-            # Note: This is a simplified check. In reality, you need to query the
-            # Deployment Pipeline Configuration app to see which host an environment is linked to.
-            # This information is not available via PAC CLI or public API.
             $complianceStatus = "Requires Manual Verification"
         }
 

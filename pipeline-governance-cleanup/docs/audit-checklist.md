@@ -58,7 +58,7 @@ How this solution supports regulatory compliance.
 |------------|------------|----------|
 | **OCC 2011-12** (Sound Practices for Model Risk Management) | Change management controls | Notification timeline, approval records, documented procedures |
 | **FFIEC IT Handbook** | Configuration management | Centralized host documentation, inventory records |
-| **SOX §404(a)** | IT general controls — management assessment | Force-link execution records, segregation of duties |
+| **SOX Section 404** | IT general controls — management assessment | Force-link execution records, segregation of duties |
 | **FINRA Rule 4511(a)** | Books and records retention | Complete inventory, change logs, communication records |
 | **FINRA Rule 3110(a)** | Supervisory system requirements | Pipeline approval gates, supervisory control documentation |
 

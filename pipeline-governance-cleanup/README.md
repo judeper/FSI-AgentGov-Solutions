@@ -171,7 +171,7 @@ Links pipelines to target environments.
 | name | Text | Stage name (e.g., "Dev", "Test", "Prod") |
 | deploymentpipelineid | Lookup | Parent pipeline |
 | targetdeploymentenvironmentid | Lookup | Target environment |
-| previousstageid | Lookup | Previous stage (for sequencing) |
+| previousdeploymentstageid | Lookup | Previous stage (for sequencing) |
 
 #### DeploymentEnvironment
 
@@ -438,7 +438,7 @@ This solution generates files containing personally identifiable information (PI
 - **Secure deletion:** After the retention period, securely delete files per your organization's data disposal procedures
 - **Access:** Limit access to the Platform Operations team and authorized auditors
 
-> **GLBA 501(b):** Organizations subject to GLBA should verify that generated files are stored in compliance with their information security program safeguards.
+> **GLBA Section 501(b):** Organizations subject to GLBA should verify that generated files are stored in compliance with their information security program safeguards.
 
 ## FSI Regulatory Alignment
 
@@ -448,7 +448,7 @@ This solution supports compliance with:
 |------------|-------------|----------------|
 | **OCC 2011-12** (Sound Practices for Model Risk Management) | Change management controls | Documents all pipeline changes with audit trail |
 | **FFIEC IT Handbook** | Configuration management | Supports centralized deployment infrastructure |
-| **SOX §404(a)** | IT general controls — management assessment | Provides evidence of controlled deployments |
+| **SOX Section 404** | IT general controls — management assessment | Provides evidence of controlled deployments |
 | **FINRA Rule 4511(a)** | Books and records retention | Maintains inventory and cleanup documentation |
 | **FINRA Rule 3110(a)** | Supervisory system requirements | Pipelines provide approval gates for supervisory control of deployments |
 

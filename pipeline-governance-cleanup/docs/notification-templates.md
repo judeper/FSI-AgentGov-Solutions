@@ -68,7 +68,7 @@ When using Power Automate to send notifications (if you have a custom tracking t
 | `[Owner Email]` | Owner email address | `outputs('Get_a_row_by_ID')?['internalemailaddress']` |
 | `[Pipeline Name]` | Pipeline/environment name | `items('Apply_to_each')?['name']` |
 | `[Environment ID]` | Environment GUID | `items('Apply_to_each')?['environmentid']` |
-| `[Enforcement Date]` | Scheduled enforcement date | `formatDateTime(items('Apply_to_each')?['scheduledremovaldate'], 'MMMM d, yyyy')` |
+| `[Enforcement Date]` | Scheduled enforcement date | `formatDateTime(items('Apply_to_each')?['enforcementdate'], 'MMMM d, yyyy')` |
 
 ### Important: Resolving Owner Email
 
@@ -195,7 +195,7 @@ Replace placeholders with expressions:
 |-------------|------------|
 | `${pipelineName}` | `@{items('Apply_to_each')?['pipelinename']}` |
 | `${createdDate}` | `@{formatDateTime(items('Apply_to_each')?['createdon'], 'MMMM d, yyyy')}` |
-| `${enforcementDate}` | `@{formatDateTime(items('Apply_to_each')?['scheduledremovaldate'], 'MMMM d, yyyy')}` |
+| `${enforcementDate}` | `@{formatDateTime(items('Apply_to_each')?['enforcementdate'], 'MMMM d, yyyy')}` |
 
 ---
 
