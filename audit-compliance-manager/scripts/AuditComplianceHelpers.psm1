@@ -476,8 +476,8 @@ function Send-ComplianceNotification {
         Display name for the attachment. Defaults to the file name.
 
     .EXAMPLE
-        Send-ComplianceNotification -FromAddress "governance@contoso.com" `
-            -ToAddresses @("admin@contoso.com") `
+        Send-ComplianceNotification -FromAddress "governance@example.com" `
+            -ToAddresses @("admin@example.com") `
             -Subject "Audit Compliance Report" `
             -HtmlBody "<h1>Report</h1>" `
             -AttachmentPath "C:\temp\report.csv"

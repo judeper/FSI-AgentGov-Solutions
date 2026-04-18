@@ -34,7 +34,7 @@
     Generates a canary event on the current user's mailbox with a random GUID.
 
 .EXAMPLE
-    $canary = New-CanaryEvent -CanaryId "test-2024-01-15" -MailboxIdentity "admin@contoso.com"
+    $canary = New-CanaryEvent -CanaryId "test-2024-01-15" -MailboxIdentity "admin@example.com"
     Generates a canary event with a specific ID on a specified mailbox.
 
 .OUTPUTS

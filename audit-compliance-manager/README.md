@@ -1,6 +1,6 @@
 # Audit Compliance Manager (ACM)
 
-> **Version:** v1.0.2
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the Audit Configuration Validator (ACV) and Audit Logging Compliance Automation (ALCA) into a single solution that validates audit configurations, detects compliance gaps, and remediates non-compliant environments.
@@ -23,7 +23,7 @@ Unified audit compliance solution for Microsoft 365 and Power Platform environme
 
 | Role | Purpose |
 |------|---------|
-| Exchange Administrator | Unified Audit Log configuration, Search-UnifiedAuditLog |
+| Exchange Online Admin | Unified Audit Log configuration, Search-UnifiedAuditLog |
 | Purview Compliance Admin | Purview retention policy access |
 | Power Platform Admin | Environment enumeration, audit configuration |
 | Entra Global Admin | Managed Identity role assignments |
@@ -44,7 +44,7 @@ pip install -r scripts/requirements.txt
 | Component | Version |
 |-----------|---------|
 | PowerShell | 7.2+ |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0+ |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ |
 | ExchangeOnlineManagement | 3.0+ |
 | Azure Automation Runtime | 7.2 (for ALCA remediation runbooks) |
 
@@ -97,7 +97,7 @@ The deployment script creates:
 - AuditValidationHistory table (org-owned, immutable)
 - EnvironmentRegistry table (org-owned, admin-managed)
 - Environment variables for zone thresholds (180d/365d/730d)
-- Connection references for Dataverse and Office 365
+- Connection references for Dataverse and Office 365 (Approvals, Teams, and Azure Automation connections referenced by the documented flows must be created manually in Power Automate — they are not provisioned by `create_connection_references.py`)
 
 ### Step 2: Deploy ALCA Compliance Schema
 
@@ -113,7 +113,12 @@ python scripts/create_audit_compliance_schema.py \
 ### Step 3: Run Tenant-Level Validation
 
 ```powershell
-# Validate tenant audit configuration for Zone 3 (730-day retention)
+# Validate tenant audit configuration against Zone 3 thresholds (default: 730 days target)
+# NOTE: Whether your tenant actually retains 730 days of UAL data depends on your
+# Microsoft 365 license. Audit Standard (E3) retains 90/180 days; Audit Premium (E5)
+# retains 1 year by default and up to 10 years with the audit log retention add-on.
+# This script reports the *configured* thresholds and flags shortfalls; it does not
+# extend retention beyond what your license permits.
 .\scripts\Invoke-TenantAuditValidation.ps1 -Zone Zone3 -Verbose
 
 # With JSON output for automation
@@ -142,8 +147,8 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
 
 1. **Create an Azure Automation Account** with System-Assigned Managed Identity enabled
 2. **Assign the Managed Identity** the required roles:
-   - Power Platform Administrator (Entra ID role)
-   - Exchange Administrator (Entra ID role)
+   - Power Platform Admin (Entra ID role)
+   - Exchange Online Admin (Entra ID role)
    - Mail.Send (Microsoft Graph API permission — admin consent required)
    - Dataverse Application User with System Administrator role (per environment)
 3. **Import PowerShell modules** into the Automation Account:
@@ -189,7 +194,7 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
     -Interactive
 
 # Verify evidence integrity
-.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\tenant-validation-20260206-143500.json
+.\scripts\Test-EvidenceIntegrity.ps1 -EvidenceFilePath .\exports\Tenant-validation-20260206-143500.json
 ```
 
 ## Zone Requirements
@@ -200,7 +205,9 @@ Zone classification determines minimum audit retention thresholds:
 |------|-----------|-------|-------------------|
 | Zone 1 | 180 days | Personal Productivity | Individual developer environments, testing |
 | Zone 2 | 365 days | Team Collaboration | Department applications, team agents |
-| Zone 3 | 730 days | Enterprise Managed | Production agents, customer-facing AI |
+| Zone 3 | 730 days (target) | Enterprise Managed | Production agents, customer-facing AI |
+
+> **Retention reality check:** The thresholds above are FSI Agent Governance Framework *targets*. Your actual M365 audit retention is set by your license: Audit Standard (E3) = 90/180 days; Audit Premium (E5) = 1 year by default, up to 10 years with the audit log retention add-on. This solution validates *configured* retention against zone thresholds and flags shortfalls — it does not change the underlying license-bounded retention.
 
 Zone thresholds are configurable via Dataverse environment variables:
 - `fsi_ACV_Zone1RetentionDays` (default: 180)
@@ -421,7 +428,7 @@ The following placeholder values in solution files must be replaced with your or
 | Regulation | Requirement | How This Solution Helps |
 |------------|-------------|------------------------|
 | **FINRA 4511** | Books and records retention | Zone-based audit retention validation, immutable logs |
-| **SEC 17a-3/4** | Record preservation | Evidence export with SHA-256 integrity hashing |
+| **SEC 17a-3/4** | Record preservation | Evidence export with SHA-256 integrity hashing. Note: SEC 17a-4(b)(4) requires 3-year retention for communications (first 2 years readily accessible); 17a-4(a) requires 6 years for blotters/ledgers/customer records. This solution helps validate audit-log configuration but does not by itself satisfy WORM/non-erasable storage requirements — combine with compliant archival storage. |
 | **SOX 404** | IT general controls | Automated validation, drift detection, approval workflows |
 | **OCC 2011-12** | Model risk management | Zone classification, environment registry |
 | **GLBA 501(b)** | Safeguards rule | Audit configuration validation, remediation tracking |
@@ -436,6 +443,8 @@ The following placeholder values in solution files must be replaced with your or
 | [docs/deployment-guide.md](./docs/deployment-guide.md) | Azure Automation deployment, MI permissions (ALCA) |
 | [docs/scheduling-guide.md](./docs/scheduling-guide.md) | Runbook scheduling configuration (ALCA) |
 | [docs/testing-scenarios.md](./docs/testing-scenarios.md) | 15 test scenarios with verification (ALCA) |
+| [docs/acv-CHANGELOG.md](./docs/acv-CHANGELOG.md) | Pre-merge ACV component changelog (historical) |
+| [docs/alca-CHANGELOG.md](./docs/alca-CHANGELOG.md) | Pre-merge ALCA component changelog (historical) |
 
 ## Related Controls
 
@@ -455,8 +464,8 @@ This solution helps support implementation of:
 1. Install Python dependencies: `pip install -r scripts/requirements.txt`
 2. Deploy ACV Dataverse infrastructure using `scripts/deploy.py`
 3. Deploy ALCA compliance schema using `scripts/create_audit_compliance_schema.py`
-4. Import Power Automate flow templates from `templates/`
-5. Configure connection references (see prerequisites)
+4. Build Power Automate flows manually using `docs/FLOW_SETUP.md`; `templates/` contains the adaptive cards (`adaptive-card-tenant-alert.json`, `adaptive-card-environment-alert.json`) referenced from the flows. (Per repo content policy, no exported flow JSON ships in this solution.)
+5. Configure connection references — Dataverse and Office 365 are provisioned by `create_connection_references.py`; Approvals, Teams, and Azure Automation must be created manually before flow build.
 6. Update placeholder values (see Configuration Placeholders above)
 7. Activate cloud flows
 8. Verify deployment using the validation scripts

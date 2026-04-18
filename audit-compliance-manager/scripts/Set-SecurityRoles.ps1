@@ -73,10 +73,10 @@ $headers = @{
     "Accept"           = "application/json"
 }
 
-Write-Host "=" * 70 -ForegroundColor Cyan
+Write-Host ("=" * 70) -ForegroundColor Cyan
 Write-Host "  ACV Security Role Configuration" -ForegroundColor Cyan
 Write-Host "  Enforcing append-only access on AuditValidationHistory" -ForegroundColor Cyan
-Write-Host "=" * 70 -ForegroundColor Cyan
+Write-Host ("=" * 70) -ForegroundColor Cyan
 Write-Host ""
 
 # Step 1: Resolve root business unit if not provided
@@ -161,20 +161,32 @@ $grantPrivileges = @("prvCreatefsi_auditvalidationhistory", "prvReadfsi_auditval
 $denyPrivileges = @("prvWritefsi_auditvalidationhistory", "prvDeletefsi_auditvalidationhistory")
 
 if ($roleId) {
+    # IMPORTANT: Dataverse role privileges require an explicit Depth (Basic/Local/Deep/Global)
+    # and must be modified via the bound `Microsoft.Dynamics.CRM.AddPrivilegesRole` action,
+    # NOT via roleprivileges_association/$ref (which does not accept a Depth parameter and is
+    # not the supported pattern). For removal, use the unbound RemovePrivilegeRoleRequest action.
+    # See: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/use-web-api-actions
+    #      https://learn.microsoft.com/dotnet/api/microsoft.crm.sdk.messages.addprivilegesrolerequest
+
     foreach ($privName in $grantPrivileges) {
         if ($privilegeLookup.ContainsKey($privName)) {
             $privId = $privilegeLookup[$privName]
-            if ($PSCmdlet.ShouldProcess("$privName on role $RoleName", "Grant privilege")) {
+            if ($PSCmdlet.ShouldProcess("$privName on role $RoleName", "Grant privilege (Global depth)")) {
                 try {
-                    $addPrivUrl = "$DataverseUrl/api/data/v9.2/roles($roleId)/roleprivileges_association/`$ref"
+                    $addPrivUrl = "$DataverseUrl/api/data/v9.2/roles($roleId)/Microsoft.Dynamics.CRM.AddPrivilegesRole"
                     $addPrivBody = @{
-                        "@odata.id" = "$DataverseUrl/api/data/v9.2/privileges($privId)"
-                    } | ConvertTo-Json
+                        Privileges = @(
+                            @{
+                                PrivilegeId = $privId
+                                Depth       = "Global"
+                            }
+                        )
+                    } | ConvertTo-Json -Depth 5
                     Invoke-RestMethod -Uri $addPrivUrl -Method Post -Headers $headers -Body $addPrivBody -ErrorAction Stop
-                    Write-Host "  ✓ Granted: $privName (Organization depth)" -ForegroundColor Green
+                    Write-Host "  ✓ Granted: $privName (Global depth)" -ForegroundColor Green
                 }
                 catch {
-                    if ($_.Exception.Message -match "already exists") {
+                    if ($_.Exception.Message -match "already") {
                         Write-Host "  ✓ Already granted: $privName" -ForegroundColor Gray
                     }
                     else {
@@ -183,7 +195,7 @@ if ($roleId) {
                 }
             }
             else {
-                Write-Host "  [WhatIf] Would grant: $privName" -ForegroundColor Yellow
+                Write-Host "  [WhatIf] Would grant: $privName (Global depth)" -ForegroundColor Yellow
             }
         }
         else {
@@ -196,12 +208,22 @@ if ($roleId) {
             $privId = $privilegeLookup[$privName]
             if ($PSCmdlet.ShouldProcess("$privName on role $RoleName", "Remove privilege")) {
                 try {
-                    $removePrivUrl = "$DataverseUrl/api/data/v9.2/roles($roleId)/roleprivileges_association($privId)/`$ref"
-                    Invoke-RestMethod -Uri $removePrivUrl -Method Delete -Headers $headers -ErrorAction SilentlyContinue
+                    # RemovePrivilegeRoleRequest is an unbound action that takes the role and the privilege id.
+                    $removePrivUrl = "$DataverseUrl/api/data/v9.2/RemovePrivilegeRole"
+                    $removeBody = @{
+                        Role        = @{ "@odata.type" = "Microsoft.Dynamics.CRM.role"; roleid = $roleId }
+                        PrivilegeId = $privId
+                    } | ConvertTo-Json -Depth 5
+                    Invoke-RestMethod -Uri $removePrivUrl -Method Post -Headers $headers -Body $removeBody -ErrorAction Stop
                     Write-Host "  ✓ Removed: $privName (Write/Delete denied)" -ForegroundColor Green
                 }
                 catch {
-                    Write-Host "  ✓ Already removed: $privName" -ForegroundColor Gray
+                    if ($_.Exception.Message -match "does not exist|0x80040217") {
+                        Write-Host "  ✓ Already absent: $privName" -ForegroundColor Gray
+                    }
+                    else {
+                        Write-Warning "  Failed to remove $privName : $($_.Exception.Message)"
+                    }
                 }
             }
             else {
@@ -212,7 +234,7 @@ if ($roleId) {
 }
 
 Write-Host ""
-Write-Host "=" * 70 -ForegroundColor Cyan
+Write-Host ("=" * 70) -ForegroundColor Cyan
 Write-Host "  Security Role Configuration Complete" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Role: $RoleName" -ForegroundColor White
@@ -221,4 +243,4 @@ Write-Host "  Denied:  Write, Delete (immutability enforced)" -ForegroundColor R
 Write-Host ""
 Write-Host "  NEXT STEP: Assign this role to the automation Managed Identity" -ForegroundColor Yellow
 Write-Host "  and REMOVE the System Administrator role for production use." -ForegroundColor Yellow
-Write-Host "=" * 70 -ForegroundColor Cyan
+Write-Host ("=" * 70) -ForegroundColor Cyan

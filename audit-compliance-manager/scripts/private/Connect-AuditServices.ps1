@@ -201,13 +201,17 @@ function Connect-ComplianceSession {
                 -ErrorAction Stop
         }
         elseif ($ClientId -and $CertificateFilePath) {
-            # Service principal auth with certificate file
+            # Service principal auth with certificate file.
+            # NOTE: Connect-IPPSSession in the EXO V3 module accepts -Certificate (an X509Certificate2 object)
+            # but does NOT accept -CertificateFilePath. Load the certificate from the file ourselves and
+            # pass the object via -Certificate instead.
             if (-not $TenantId) {
                 throw "TenantId is required for service principal authentication."
             }
+            $certObject = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromCertFile($CertificateFilePath)
             Connect-IPPSSession `
                 -AppId $ClientId `
-                -CertificateFilePath $CertificateFilePath `
+                -Certificate $certObject `
                 -Organization $TenantId `
                 -ShowBanner:$false `
                 -ErrorAction Stop

@@ -172,8 +172,8 @@ Describe "Invoke-WithRetry" {
 Describe "Get-ManagedIdentityToken" {
     Context "Missing environment variables" {
         It "Throws when IDENTITY_ENDPOINT is not set" {
-            $originalEndpoint = $env:IDENTITY_ENDPOINT
-            $originalHeader = $env:IDENTITY_HEADER
+            $script:originalEndpoint = $env:IDENTITY_ENDPOINT
+            $script:originalHeader = $env:IDENTITY_HEADER
             try {
                 $env:IDENTITY_ENDPOINT = $null
                 $env:IDENTITY_HEADER = "test-header"
@@ -187,8 +187,8 @@ Describe "Get-ManagedIdentityToken" {
         }
 
         It "Throws when IDENTITY_HEADER is not set" {
-            $originalEndpoint = $env:IDENTITY_ENDPOINT
-            $originalHeader = $env:IDENTITY_HEADER
+            $script:originalEndpoint = $env:IDENTITY_ENDPOINT
+            $script:originalHeader = $env:IDENTITY_HEADER
             try {
                 $env:IDENTITY_ENDPOINT = "https://localhost/token"
                 $env:IDENTITY_HEADER = $null
@@ -204,8 +204,8 @@ Describe "Get-ManagedIdentityToken" {
 
     Context "Successful token acquisition" {
         It "Calls IDENTITY_ENDPOINT with correct parameters" {
-            $originalEndpoint = $env:IDENTITY_ENDPOINT
-            $originalHeader = $env:IDENTITY_HEADER
+            $script:originalEndpoint = $env:IDENTITY_ENDPOINT
+            $script:originalHeader = $env:IDENTITY_HEADER
             try {
                 $env:IDENTITY_ENDPOINT = "https://localhost/msi/token"
                 $env:IDENTITY_HEADER = "test-secret-header"
@@ -253,8 +253,8 @@ Describe "Get-DataverseToken" {
             }
         }
         finally {
-            $env:IDENTITY_ENDPOINT = $originalEndpoint
-            $env:IDENTITY_HEADER = $originalHeader
+            $env:IDENTITY_ENDPOINT = $script:originalEndpoint
+            $env:IDENTITY_HEADER = $script:originalHeader
         }
     }
 }
@@ -353,8 +353,8 @@ Describe "Send-ComplianceNotification" {
             } -ModuleName AuditComplianceHelpers
 
             Send-ComplianceNotification `
-                -FromAddress "governance@contoso.com" `
-                -ToAddresses @("admin@contoso.com", "compliance@contoso.com") `
+                -FromAddress "governance@example.com" `
+                -ToAddresses @("admin@example.com", "compliance@example.com") `
                 -Subject "Test Compliance Report" `
                 -HtmlBody "<h1>Report</h1><p>Test body</p>"
 
@@ -392,8 +392,8 @@ Describe "Send-ComplianceNotification" {
                 } -ModuleName AuditComplianceHelpers
 
                 Send-ComplianceNotification `
-                    -FromAddress "governance@contoso.com" `
-                    -ToAddresses @("admin@contoso.com") `
+                    -FromAddress "governance@example.com" `
+                    -ToAddresses @("admin@example.com") `
                     -Subject "Report with Attachment" `
                     -HtmlBody "<p>See attached</p>" `
                     -AttachmentPath $tempFile `

@@ -354,7 +354,7 @@ This ALCA flow queries Dataverse for non-compliant environments and requests gov
 
 **Flow actions:**
 
-1. **Query Dataverse** — HTTP GET to `{DataverseEnvironmentUrl}/api/data/v9.2/fsi_auditenvironmentcompliances` with OData filter `$filter=fsi_compliancestatus eq 100000001` to retrieve non-compliant environments
+1. **Query Dataverse** — Use the **Microsoft Dataverse → List rows** action (NOT a raw HTTP GET) against table `Audit Environment Compliances` (`fsi_auditenvironmentcompliance`) with **Filter rows** `fsi_compliancestatus eq 100000001` and **Select columns** `fsi_environmentid,fsi_environmentname,fsi_auditenabled,fsi_dataverseauditenabled,fsi_compliancestatus,fsi_lastchecked`. The Dataverse connector handles auth via the connection reference; if you must use HTTP, configure the **HTTP** action with **Authentication: Active Directory OAuth**, audience `{DataverseEnvironmentUrl}`, and a registered service principal — do not call the API anonymously.
 2. **Parse response** and set `NonCompliantCount` to the number of results
 3. **Build summary table** — Use a **Select** action to extract environment name, audit status, and last checked timestamp, then a **Create HTML Table** action
 4. **Condition: NonCompliantCount > 0** — if no non-compliant environments, skip approval
@@ -452,6 +452,18 @@ If drift is detected (AlertRequired = true):
 - [ ] Validator results show individual status for each validator
 - [ ] "View in Power Platform" link works
 - [ ] "View Validation History" link opens Dataverse environment
+
+## Connection References (manual setup before flow build)
+
+`scripts/create_connection_references.py` provisions only Dataverse and Office 365 references. The flows in this guide additionally require:
+
+| Connector | Purpose | Documented in |
+|-----------|---------|---------------|
+| **Approvals** | Step 5 of the ALCA approval flow | This file (Step 2.5) |
+| **Microsoft Teams** | Posting adaptive cards to a governance channel | This file (Step 5) |
+| **Azure Automation** | Triggering `Test-AuditLoggingCompliance` / `Enable-AuditLogging` runbooks from a flow (optional pattern) | scheduling-guide.md |
+
+Create these manually via Power Automate → Connections, then add the corresponding Connection References to the solution before importing/building the flows.
 
 **Email verification:**
 

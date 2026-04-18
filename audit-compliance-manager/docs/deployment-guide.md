@@ -66,7 +66,7 @@ Assign these Entra ID roles to the Managed Identity:
 > which is broader than needed for audit compliance scanning (read-only operations).
 > For production deployments, consider these alternatives:
 >
-> - **Compliance Administrator** instead of Exchange Administrator — provides read access
+> - **Purview Compliance Admin** (Entra display name 'Compliance Administrator') instead of Exchange Online Admin — provides read access
 >   to audit logs and compliance data without full Exchange administration rights.
 > - **Power Platform Administrator** can be scoped using Entra ID Administrative Units
 >   if your organization has segmented governance.
@@ -222,7 +222,7 @@ Import these modules from the PowerShell Gallery:
 
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
-| `Microsoft.PowerApps.Administration.PowerShell` | 2.0.0 | Environment enumeration, admin config |
+| `Microsoft.PowerApps.Administration.PowerShell` | 2.0.180 | Environment enumeration, admin config |
 | `ExchangeOnlineManagement` | 3.0.0 | Exchange Online MI auth, audit log search |
 
 **For each module:**
@@ -248,6 +248,29 @@ Import these modules from the PowerShell Gallery:
 ---
 
 ## Phase 5: Runbook Creation
+
+### 5.0 Pre-requisite: ALCA Dataverse Schema
+
+Before creating runbooks, deploy the ALCA `fsi_auditenvironmentcompliance` table that the detection and remediation runbooks read/write. From a workstation that can reach the target Dataverse environment:
+
+```bash
+python scripts/create_audit_compliance_schema.py \
+    --environment-url https://<your-org>.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --client-id <your-app-client-id> \
+    --interactive
+```
+
+This creates the `fsi_auditenvironmentcompliance` table, columns, and the `fsi_compliancestatus` choice column (Compliant / Non-Compliant / Unknown / Error). The ACV tables (`fsi_auditvalidationhistory`, `fsi_environmentregistry`) are created separately by `scripts/deploy.py` (see [README Step 1](../README.md)).
+
+### 5.0.1 Pre-requisite: Helper scripts uploaded with the runbook
+
+The detection and remediation runbooks `dot-source` files in `scripts/private/` (`Connect-AuditServices.ps1`, `New-CanaryEvent.ps1`, `Connect-PowerPlatform.ps1`, `Compare-ValidationBaseline.ps1`, `Get-ValidationResults.ps1`, `Write-ValidationResult.ps1`). Azure Automation runbooks do not have a working directory that reaches your local filesystem. Two supported options:
+
+1. **Convert the `private/` helpers into a single PowerShell module** (`AuditComplianceHelpersInternal.psm1`) and import it alongside `AuditComplianceHelpers` in step 4.1, then `Import-Module` it from the runbook instead of dot-sourcing.
+2. **Inline the contents of the required helpers** at the top of each runbook (acceptable for short helpers; reduces maintainability).
+
+If you skip this step, runbooks fail with `The term 'New-CanaryEvent' is not recognized as a name of a cmdlet, function, ...` or similar.
 
 ### 5.1 Create Detection Runbook
 

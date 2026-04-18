@@ -410,22 +410,35 @@ try {
     }
 
     # =========================================================================
-    # Step 3: Tenant-Wide Purview Unified Audit
+    # Step 3: Tenant-Wide Power Platform Audit Logging
     # =========================================================================
-    Write-Output "`n[Step 3/6] Tenant-wide Purview unified audit..."
+    # NOTE: This step toggles the Power Platform tenant setting
+    # `powerPlatform.governance.disableAuditLogging`. This setting controls
+    # whether Power Platform admin activities are audited. It does NOT control
+    # Microsoft 365 Unified Audit Log (UAL) or Purview retention — those are
+    # separately governed by Exchange/Purview admin settings, license, and audit
+    # retention policies. The detection-side validators (`Test-UnifiedAuditLog.ps1`,
+    # `Test-PurviewRetention.ps1`) check UAL/Purview, which this script does not
+    # remediate; tenant UAL must be enabled out-of-band by an Exchange Online Admin
+    # (Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true).
+    # The parameter name `EnableTenantUnifiedAudit` is preserved for backward
+    # compatibility but the underlying setting is the Power Platform governance flag.
+    Write-Output "`n[Step 3/6] Tenant-wide Power Platform audit logging (governance.disableAuditLogging)..."
 
     if ($EnableTenantUnifiedAudit) {
         if ($isWhatIf) {
-            Write-Output "  [WHATIF] Would enable tenant-wide Purview unified audit via Set-AdminPowerAppTenantSettings"
+            Write-Output "  [WHATIF] Would set powerPlatform.governance.disableAuditLogging=false via Set-AdminPowerAppTenantSettings"
+            Write-Output "  [WHATIF] NOTE: This does NOT enable M365 Unified Audit Log; that is a separate Exchange/Purview action"
             Write-Output "  [WHATIF] WARNING: This is a TENANT-WIDE change affecting all environments"
         }
         else {
-            Write-Output "  WARNING: Enabling tenant-wide Purview unified audit (tenant-wide change)"
-            if ($PSCmdlet.ShouldProcess("Tenant: $TenantDomain", "Enable Purview Unified Audit Logging")) {
+            Write-Output "  WARNING: Enabling Power Platform tenant audit logging (tenant-wide change)"
+            Write-Output "  NOTE: This does NOT enable M365 Unified Audit Log; ensure UAL is enabled separately"
+            if ($PSCmdlet.ShouldProcess("Tenant: $TenantDomain", "Enable Power Platform tenant audit logging")) {
                 try {
                     $currentConfig = Get-AdminPowerAppTenantSettings
                     if ($currentConfig.powerPlatform.governance.disableAuditLogging -eq $false) {
-                        Write-Output "  Purview unified audit: Already enabled"
+                        Write-Output "  Power Platform tenant audit logging: Already enabled"
                     }
                     else {
                         $settings = @{
@@ -436,11 +449,11 @@ try {
                             }
                         }
                         Set-AdminPowerAppTenantSettings -RequestBody $settings
-                        Write-Output "  Purview unified audit: ENABLED"
+                        Write-Output "  Power Platform tenant audit logging: ENABLED"
                     }
                 }
                 catch {
-                    Write-Warning "  Failed to enable tenant-wide Purview audit: $($_.Exception.Message)"
+                    Write-Warning "  Failed to enable tenant-wide Power Platform audit: $($_.Exception.Message)"
                 }
             }
         }

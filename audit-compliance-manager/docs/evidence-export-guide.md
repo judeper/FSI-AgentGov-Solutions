@@ -139,9 +139,13 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
 ```json
 {
   "metadata": {
-    "exportTimestamp": "2026-02-06T14:35:00Z",
+    "exportedAt": "2026-02-06T14:35:00Z",
     "scope": "Tenant",
-    "dateRange": {
+    "fromDate": "2026-01-07T14:35:00Z",
+    "toDate": "2026-02-06T14:35:00Z",
+    "exportVersion": "1.0",
+    "organizationUrl": "https://org.crm.dynamics.com",
+    "_dateRange_legacy_only_keep_for_backcompat": {
       "from": "2026-01-07T00:00:00Z",
       "to": "2026-02-06T23:59:59Z"
     },
@@ -170,7 +174,7 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
       "severity": "Passed",
       "validationType": "UnifiedAuditLog",
       "rawValue": "AuditEnabled=true,RetentionDays=730",
-      "reason": "Unified Audit Log meets Zone 3 retention (730 days)",
+      "reason": "Unified Audit Log retention meets Zone 3 target threshold (730 days). NOTE: actual retention is bounded by license — Audit Standard (E3) = 90/180 days, Audit Premium (E5) = 1 year default / up to 10 years with retention add-on.",
       "timestamp": "2026-02-06T14:00:00Z"
     }
   ]

@@ -173,7 +173,7 @@ ACM-Solution-v1.0.2/
 ```
 Hi [Customer Name],
 
-Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.1.
+Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.3.
 
 This solution provides enterprise-grade automated detection and remediation of audit logging
 gaps across Microsoft 365 and Power Platform environments with Azure Automation and Managed
@@ -189,18 +189,18 @@ Package Contents:
   • Regulatory alignment (FINRA 4511, SEC 17a-3/4, SOX 404, GLBA 501(b))
 
 - 35 Solution Component Files:
-  • 17 PowerShell scripts (ALCA detection + remediation, ACV validators, orchestrators, runbook wrappers, evidence export)
+  • 22 PowerShell scripts in scripts/ (16 .ps1 + 1 .Tests.ps1) plus 6 helpers in scripts/private/, plus the AuditComplianceHelpers module (.psm1 + .psd1)
   • 1 shared helper module with 6 reusable functions
-  • 8 Python scripts (Dataverse schema, client libraries, deployment)
-  • 5 Power Automate/adaptive card templates
+  • 7 Python scripts (acv_client, alca_client, create_audit_compliance_schema, create_connection_references, create_dataverse_schema, create_environment_variables, deploy)
+  • 2 adaptive card templates (templates/adaptive-card-tenant-alert.json, templates/adaptive-card-environment-alert.json). NOTE: Per content policy, no exported Power Automate flow JSON ships in this solution; flows are built manually using docs/FLOW_SETUP.md.
   • Unit tests for quality assurance
 
-- 3 Deployment Guides:
+- Deployment Guides (in docs/):
   • Azure Automation setup (phases 1-5, ~90 minutes total)
   • Runbook scheduling configuration
   • 15 test scenarios with troubleshooting
 
-- 2 Additional Guides:
+- Additional Guides (in docs/):
   • Power Automate flow setup (FLOW_SETUP.md)
   • Evidence export guide
 
@@ -273,7 +273,7 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All files are included (17 PowerShell, 8 Python, 5 templates, 5 docs)
+- [ ] All files are included (~22 PowerShell .ps1 scripts in scripts/ + 6 helpers in scripts/private/, AuditComplianceHelpers .psm1/.psd1, 7 Python scripts, 2 adaptive cards in templates/, 8 docs in docs/)
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `example.com`)
@@ -379,7 +379,7 @@ Dataverse Application User:
 PowerShell Modules:
 □ Microsoft.PowerApps.Administration.PowerShell (2.0+) imported
 □ ExchangeOnlineManagement (3.0+) imported
-□ AuditComplianceHelpers (1.0.0) custom module uploaded
+□ AuditComplianceHelpers (1.0.2) custom module uploaded
 
 Dataverse Schema:
 □ Python script executed successfully

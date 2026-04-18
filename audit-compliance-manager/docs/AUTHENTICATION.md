@@ -23,8 +23,10 @@ The ACV component uses a Service Principal (app registration) for certificate-ba
 ### 1.2 Configure Authentication
 
 1. Navigate to **Authentication** in the app registration
-2. Under **Advanced settings**, set **Allow public client flows** to **No**
-3. No redirect URIs are required for certificate-based or Managed Identity auth
+2. Under **Advanced settings**:
+   - For **production** (certificate / Managed Identity / app-only): set **Allow public client flows** to **No**. No redirect URI required.
+   - For **interactive setup** (the `--interactive` quick-start path used by `deploy.py`, `create_*_schema.py`, and `ACVClient` / `ALCAClient`): you must set **Allow public client flows** to **Yes** AND register a public-client/native-app redirect URI of `http://localhost`. The interactive scripts use `msal.PublicClientApplication.acquire_token_interactive()`, which requires a public-client app registration.
+3. The recommended pattern is **two app registrations**: one public-client app for interactive bootstrap, one confidential-client (or system-assigned MI) for production runbooks.
 
 ## 2. API Permissions
 
@@ -51,7 +53,13 @@ Navigate to **API permissions** → **+ Add a permission** and add the following
 |-----------|------|---------|
 | `Exchange.ManageAsApp` | Application | Service principal access to Exchange Online cmdlets (`Get-AdminAuditLogConfig`, `Search-UnifiedAuditLog`) |
 
-### 2.4 Grant Admin Consent
+### 2.4 Office 365 Security & Compliance Center (Purview / IPPS)
+
+| Permission | Type | Purpose |
+|-----------|------|---------|
+| `Compliance.ManageAsApp` (Office 365 Exchange Online > Application permissions) | Application | Service principal access to `Connect-IPPSSession` for Purview retention validation (used by `Test-PurviewRetention.ps1` and `Connect-AuditServices.ps1`). Pair with the **Compliance Administrator** Entra role on the SP. |
+
+### 2.5 Grant Admin Consent
 
 After adding all permissions:
 
@@ -181,7 +189,7 @@ $ppAdminRole = Get-MgDirectoryRole -Filter "displayName eq 'Power Platform Admin
 New-MgDirectoryRoleMember -DirectoryRoleId $ppAdminRole.Id `
     -BodyParameter @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$miObjectId" }
 
-# Assign Exchange Administrator role
+# Assign Exchange Online Admin (Entra role display name = 'Exchange Administrator')
 $exAdminRole = Get-MgDirectoryRole -Filter "displayName eq 'Exchange Administrator'"
 New-MgDirectoryRoleMember -DirectoryRoleId $exAdminRole.Id `
     -BodyParameter @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$miObjectId" }
@@ -235,7 +243,7 @@ python scripts/deploy.py \
     --interactive
 ```
 
-The `--interactive` flag uses MSAL's interactive auth flow, which opens a browser window for sign-in. The signed-in user must have sufficient permissions (Global Admin or Dataverse System Administrator).
+The `--interactive` flag uses MSAL's interactive auth flow, which opens a browser window for sign-in. The signed-in user must have sufficient permissions (Entra Global Admin or Dataverse System Administrator).
 
 ### 6.2 PowerShell Scripts (ACV Validators)
 
@@ -263,8 +271,8 @@ ALCA scripts (`Test-AuditLoggingCompliance.ps1`, `Enable-AuditLogging.ps1`) are 
 | `AADSTS7000215: Invalid client secret` | Client secret expired or incorrect | Regenerate the client secret and update the configuration |
 | `AADSTS700027: Certificate validation failed` | Certificate not uploaded to app registration or thumbprint mismatch | Re-upload the `.cer` file and verify the thumbprint |
 | `401 Unauthorized` on Dataverse API | Managed Identity or Service Principal not configured as Application User | Add the identity as an Application User with System Administrator role |
-| `403 Forbidden` on Exchange Online | Missing `Exchange.ManageAsApp` permission or Exchange Admin role | Add the API permission and assign the Exchange Administrator role |
-| `Connect-ExchangeOnline: Access denied` | Managed Identity missing Exchange Administrator role | Assign the Exchange Administrator Entra ID role to the MI |
+| `403 Forbidden` on Exchange Online | Missing `Exchange.ManageAsApp` permission or Exchange Online Admin role | Add the API permission and assign the Exchange Online Admin (Exchange Administrator) Entra role |
+| `Connect-ExchangeOnline: Access denied` | Managed Identity missing Exchange Online Admin role | Assign the Exchange Online Admin (Exchange Administrator) Entra ID role to the MI |
 | `Get-AdminPowerAppEnvironment: Unauthorized` | Missing Power Platform Administrator role | Assign the Power Platform Administrator Entra ID role |
 | `Send-MgUserMail: Insufficient privileges` | Missing `Mail.Send` permission or admin consent not granted | Add Mail.Send (Application) permission and grant admin consent |
 | `Certificate not found in Automation Account` | Certificate not uploaded or name mismatch | Navigate to Automation Account → Certificates and verify upload |

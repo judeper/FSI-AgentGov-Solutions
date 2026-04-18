@@ -154,7 +154,7 @@
 - `saveToSentItems = false` (shared mailbox)
 
 **Verification:**
-1. Run detection with `-SendEmail -NotificationToAddresses "user1@contoso.com,user2@contoso.com"`
+1. Run detection with `-SendEmail -NotificationToAddresses "user1@example.com,user2@example.com"`
 2. Verify all recipients received the email
 3. Verify CSV attachment is present and contains all environment data
 

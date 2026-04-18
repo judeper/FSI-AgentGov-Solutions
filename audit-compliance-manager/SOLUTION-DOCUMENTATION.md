@@ -193,8 +193,8 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
     -DataverseEnvironmentUrl "https://governance.crm.dynamics.com" `
     -TenantDomain "contoso.onmicrosoft.com" `
     -SendEmail `
-    -NotificationFromAddress "governance@contoso.com" `
-    -NotificationToAddresses "admin@contoso.com,compliance@contoso.com"
+    -NotificationFromAddress "governance@example.com" `
+    -NotificationToAddresses "admin@example.com,compliance@example.com"
 ```
 
 #### 3. Remediation Runbook — Enable-AuditLogging.ps1
@@ -562,7 +562,7 @@ For each Power Platform environment with Dataverse:
 **Step 5: Create Detection Runbook**
 
 1. Navigate to **Azure Automation Account** → **Runbooks** → **+ Create a runbook**
-2. **Name:** `ALCA-Test-AuditLoggingCompliance`
+2. **Name:** `Test-AuditLoggingCompliance`
 3. **Runbook type:** PowerShell
 4. **Runtime version:** 7.2
 5. Click **Create**
@@ -572,7 +572,7 @@ For each Power Platform environment with Dataverse:
 **Step 6: Create Remediation Runbook**
 
 1. Navigate to **Runbooks** → **+ Create a runbook**
-2. **Name:** `ALCA-Enable-AuditLogging`
+2. **Name:** `Enable-AuditLogging`
 3. **Runbook type:** PowerShell
 4. **Runtime version:** 7.2
 5. Click **Create**
@@ -600,7 +600,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 8: Schedule Detection Runbook**
 
-1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
+1. Navigate to **Test-AuditLoggingCompliance** runbook → **Schedules** → **+ Add a schedule**
 2. **Create schedule:**
    - **Name:** `Weekly-Audit-Compliance-Scan`
    - **Starts:** Next Monday 06:00 UTC
@@ -610,13 +610,13 @@ For each Power Platform environment with Dataverse:
    - `DataverseEnvironmentUrl`: `https://governance.crm.dynamics.com`
    - `TenantDomain`: `contoso.onmicrosoft.com`
    - `SendEmail`: `true`
-   - `NotificationFromAddress`: `governance@contoso.com`
-   - `NotificationToAddresses`: `admin@contoso.com,compliance@contoso.com`
+   - `NotificationFromAddress`: `governance@example.com`
+   - `NotificationToAddresses`: `admin@example.com,compliance@example.com`
 4. Click **OK** → **Create**
 
 **Step 9: Test Detection Runbook**
 
-1. Navigate to **ALCA-Test-AuditLoggingCompliance** runbook → **Start**
+1. Navigate to **Test-AuditLoggingCompliance** runbook → **Start**
 2. **Parameters:**
    - `DataverseEnvironmentUrl`: `https://governance.crm.dynamics.com`
    - `TenantDomain`: `contoso.onmicrosoft.com`
@@ -631,7 +631,7 @@ For each Power Platform environment with Dataverse:
 
 **Step 10: Test Remediation Runbook (WhatIf)**
 
-1. Navigate to **ALCA-Enable-AuditLogging** runbook → **Start**
+1. Navigate to **Enable-AuditLogging** runbook → **Start**
 2. **Parameters:**
    - `DataverseEnvironmentUrl`: `https://governance.crm.dynamics.com`
    - `TenantDomain`: `contoso.onmicrosoft.com`
@@ -645,7 +645,7 @@ For each Power Platform environment with Dataverse:
 **Test 1: Detection Runbook — Authentication**
 
 ```powershell
-# In Azure Automation → Runbooks → ALCA-Test-AuditLoggingCompliance → Test pane
+# In Azure Automation → Runbooks → Test-AuditLoggingCompliance → Test pane
 
 # Expected output:
 # [Step 1/6] Authenticating via Managed Identity...
@@ -681,7 +681,7 @@ For each Power Platform environment with Dataverse:
 **Test 4: Remediation Runbook — WhatIf Mode**
 
 ```powershell
-# In Azure Automation → ALCA-Enable-AuditLogging → Test pane
+# In Azure Automation → Enable-AuditLogging → Test pane
 # Parameters: -WhatIf $true
 
 # Expected output:
@@ -755,7 +755,7 @@ For each Power Platform environment with Dataverse:
    - Approve or reject with business justification
 
 3. **Execute Remediation:**
-   - **Manual:** Run `ALCA-Enable-AuditLogging` runbook via Azure Portal
+   - **Manual:** Run `Enable-AuditLogging` runbook via Azure Portal
    - **Automated:** Approval flow triggers runbook via webhook
 
 4. **Post-Remediation Validation:**
@@ -902,8 +902,11 @@ Evidence files should include:
 
 **Retention:**
 
-- Compliance records: Retain for 7 years (SEC 17a-4 requirement)
-- Remediation history: Retain for 7 years (audit trail requirement)
+- **Communications-class compliance records:** Retain for **3 years** under SEC 17a-4(b)(4) (first 2 years readily accessible). For mailbox audit and message-related records.
+- **Books-and-records-class compliance records:** Retain for **6 years** under SEC 17a-4(a) and FINRA Rule 4511(b) (e.g., environment registry, validation history, security role assignments).
+- **SOX/PCAOB-related audit-supporting records:** Retain for **7 years** under PCAOB AS 1215 / SOX §802 where the records are relied upon as audit work papers.
+- **GLBA Safeguards Rule** does not specify a retention period — firm policy applies.
+- Remediation history: Retain for the longest applicable period above based on the underlying record class
 - Runbook logs: Retain for 3 years (operational history, Azure Automation default)
 - Email notifications: Retain for 3 years (compliance evidence)
 
@@ -1039,7 +1042,7 @@ The Audit Logging Compliance Automation solution supports compliance with the fo
 **Requirement:** Broker-dealers must make and preserve records related to business operations, including electronic communications, trading activities, and system changes. Records must be retained for prescribed periods (3-6 years).
 
 **ALCA Support:**
-- Purview unified audit log captures all M365 and Power Platform activities
+- Purview unified audit log captures many supported audited M365 and Power Platform events (coverage varies by workload and license — see [Microsoft 365 audited activities documentation](https://learn.microsoft.com/purview/audit-log-activities)). `Search-UnifiedAuditLog` is a validation aid; it does not by itself prove exhaustive event capture
 - Dataverse audit log captures entity changes, field modifications, and API calls
 - Entity-level audit helps ensure Copilot Studio agent changes are recorded
 - Compliance table provides immutable evidence of audit configuration history
@@ -1077,7 +1080,8 @@ The ACM solution includes the **Audit Configuration Validator (ACV)** subsystem,
 | `scripts/acv_client.py` | Dataverse Web API client with MSAL authentication (interactive browser or service principal), retry logic, and dry-run mode |
 | `templates/adaptive-card-tenant-alert.json` | Adaptive Card v1.4 template for tenant-level drift alerts posted to Teams |
 | `templates/adaptive-card-environment-alert.json` | Adaptive Card v1.4 template for environment-level drift alerts posted to Teams |
-| `scripts/create_dataverse_schema.py` | Creates the `fsi_auditenvironmentcompliance` Dataverse table and columns |
+| `scripts/create_dataverse_schema.py` | Creates the **ACV** Dataverse tables (`fsi_auditvalidationhistory` and `fsi_environmentregistry`) |
+| `scripts/create_audit_compliance_schema.py` | Creates the **ALCA** `fsi_auditenvironmentcompliance` Dataverse table and columns |
 | `scripts/create_connection_references.py` | Creates connection references for Power Automate flows |
 | `scripts/create_environment_variables.py` | Creates environment variables used by validation flows |
 
@@ -1093,8 +1097,8 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
-**Release Date:** February 2026
+**Solution Version:** 1.0.3
+**Release Date:** April 2026
 **License:** MIT License
 
 **Change Management:**
@@ -1104,7 +1108,10 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - Coordinate tenant-wide audit enablement with M365 admin team (impacts all services)
 
 **Version History:**
-- **v1.0.2 (February 2026):** Initial release with detection, remediation, MI authentication, and approval workflow
+- **v1.0.0 (February 2026):** Initial merged release combining ACV and ALCA components
+- **v1.0.1 (March 2026):** Issue-fix wave — see CHANGELOG
+- **v1.0.2 (April 2026):** Token-cache and OData filter bug fixes
+- **v1.0.3 (April 2026):** AI Council technical-accuracy pass (Opus 4.7 + Goldeneye + GPT-5.4)
 
 ---
 

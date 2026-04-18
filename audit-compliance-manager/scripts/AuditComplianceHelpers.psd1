@@ -37,7 +37,7 @@
             Tags         = @('Audit', 'Compliance', 'PowerPlatform', 'Dataverse', 'ManagedIdentity', 'FSI')
             ProjectUri   = 'https://github.com/judeper/FSI-AgentGov-Solutions'
             LicenseUri   = 'https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/LICENSE'
-            ReleaseNotes = 'Initial release — 6 helper functions for ALCA detection and remediation runbooks.'
+            ReleaseNotes = 'v1.0.2 — token-cache fix and other defects; original v1.0.0 release shipped 6 helper functions for ALCA detection and remediation runbooks. Initial release — 6 helper functions for ALCA detection and remediation runbooks.'
         }
     }
 }
