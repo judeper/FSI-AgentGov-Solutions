@@ -94,10 +94,10 @@ Tier 1 provides session-level outcome data sufficient for most analytics:
 |-----------|--------|-------|
 | Session outcome | msdyn_botsession.msdyn_sessionoutcome | Resolved, Escalated, Abandoned, Unengaged |
 | CSAT score | msdyn_botsession.msdyn_csatscore | 1-5 scale when survey enabled |
-| Session duration | msdyn_botsession timestamps | Start and end time |
+| Session duration | msdyn_botsession timestamps | `msdyn_sessioncreatedon` and `msdyn_sessionclosedon` |
 | Agent ID | msdyn_botsession.msdyn_botid | Joined with bot table for name |
-| Agent type | botcomponent.componenttypename | 17 = External Trigger (autonomous) |
-| Knowledge source proxy | GenerativeAnswers events (App Insights) | Result = "Success" indicates KS citation |
+| Agent type | botcomponent.componenttype (integer) | Optionset value `17` = External Trigger (autonomous). The integer `componenttype` column is used; `componenttypename` is the human-readable label and is **not** the column queried. |
+| Knowledge source proxy | `msdyn_topicname` substring heuristic | Tier 1 best-effort heuristic — `hasKnowledgeSource = true` when the topic name contains `generativeanswers` or `knowledge` (case-insensitive). It does **not** correlate with `GenerativeAnswers` Application Insights events; agents whose KS topic uses a custom name will be under-counted. Tier 2 plans actual App Insights correlation. |
 
 ### Tier 2 -- Detailed Behavior Data (Planned)
 
@@ -146,20 +146,22 @@ Each synced session produces a custom event with these properties:
 |----------|------|-------------|
 | name | string | `CopilotSessionOutcome` (fixed) |
 | customDimensions.recipientId | string | Agent ID (matches AOF `recipientId` format) |
-| customDimensions.sessionId | string | Unique session ID from `msdyn_sessionid` |
+| customDimensions.sessionId | string | Unique session ID from `msdyn_botsessionid` |
 | customDimensions.sessionOutcome | string | Conversational: Resolved, Escalated, Abandoned; Autonomous: Success, Failure |
-| customDimensions.sessionOutcomeReason | string | Sub-type from `msdyn_outcomereason` |
+| customDimensions.sessionOutcomeReason | string | Sub-type from `msdyn_sessionoutcomereason` |
 | customDimensions.isEngaged | boolean | Engaged session flag from `msdyn_isengaged` |
 | customDimensions.csatScore | number | 1-5 for conversational, empty for autonomous |
-| customDimensions.sessionDurationSeconds | number | Duration from startedon/endedon |
-| customDimensions.hasKnowledgeSource | boolean | Knowledge source proxy (Tier 1: GenerativeAnswers) |
+| customDimensions.sessionDurationSeconds | number | Duration computed from `msdyn_sessioncreatedon` and `msdyn_sessionclosedon` |
+| customDimensions.hasKnowledgeSource | boolean | Tier 1 best-effort heuristic on `msdyn_topicname` (substring match for `generativeanswers`/`knowledge`); does **not** correlate with App Insights GenerativeAnswers events |
 | customDimensions.topicName | string | Primary topic from `msdyn_topicname` |
 | customDimensions.agentMode | string | `Conversational` or `Autonomous` |
 | customDimensions.channelId | string | Channel identifier |
 | customDimensions.Zone | string | Governance zone from environment metadata |
 | customDimensions.syncSource | string | `DataverseSync` (distinguishes from native events) |
 | customDimensions.syncTier | string | `Tier1` or `Tier2` |
-| timestamp | datetime | Session end time (msdyn_sessionclosedon), falling back to start time if not yet closed |
+| customDimensions.sessionCreatedOn | string (ISO 8601) | True session start (`msdyn_sessioncreatedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
+| customDimensions.sessionClosedOn | string (ISO 8601) | True session end (`msdyn_sessionclosedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
+| timestamp | datetime | **Important:** Application Insights stamps this column with the **send-time** of the sync run, not the actual session time. The `applicationinsights` Python SDK's `TelemetryClient.track_event` does not accept a custom timestamp. KQL queries that need true session time should bin on `customDimensions['sessionClosedOn']`. Migration to `azure-monitor-opentelemetry` (which supports custom timestamps) is planned. |
 
 ## Agent Type Classification
 
@@ -168,10 +170,14 @@ CSA classifies agents as either **conversational** or **autonomous** based on Da
 ### Classification Logic
 
 1. Query `botcomponent` table for records associated with the agent's bot ID
-2. Check `componenttypename` values:
-   - If any component has `componenttypename = 17` (External Trigger), the agent is classified as **autonomous**
+2. Check the integer `componenttype` optionset value:
+   - If any component has `componenttype = 17` (External Trigger), the agent is classified as **autonomous**
    - Otherwise, the agent is classified as **conversational**
 3. Classification is determined per sync run based on current botcomponent metadata
+
+> **Note:** The integer column `componenttype` is the one queried — not the
+> string column `componenttypename` (which carries the human-readable label).
+> Filtering on `componenttypename eq 17` will not work.
 
 ### Why Classification Matters
 
@@ -188,7 +194,7 @@ See [docs/agent-assisted-hours-methodology.md](docs/agent-assisted-hours-methodo
 |-------------------|-----------|-------------|
 | Application Insights workspace | CSA writes to AOF infrastructure | CopilotSessionOutcome events land in the same App Insights |
 | Log Analytics workspace | CSA reads from AOF infrastructure | KQL queries correlate session outcomes with native events |
-| GenerativeAnswers events | CSA reads AOF data | Used as Tier 1 proxy for knowledge source citations |
+| GenerativeAnswers events | CSA reads AOF data | Planned future Tier 2 join. Tier 1 currently uses a `msdyn_topicname` substring heuristic — see Knowledge Source row in Source Data Mapping above. Cross-check the exact event name (`GenerativeAnswers` vs `GenerateAnswerEvent`) against your AOF deployment before relying on the join. |
 | BotMessageSend events | CSA reads AOF data | Used for session volume cross-validation |
 
 ---

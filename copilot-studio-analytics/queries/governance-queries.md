@@ -18,6 +18,8 @@ This document complements the solution-level governance mapping by providing gra
 
 > **Regulatory Language Note:** This document uses hedging language ("helps support", "aids in meeting") per FSI-AgentGov CONTRIBUTING.md guidelines. No control or query, on its own, supports compliance. Implementation, validation, and ongoing maintenance are required for compliance.
 
+> **Scope of business-impact queries:** Agent Assisted Hours (AAH), cost-savings, and ROI queries (`conversational-assisted-hours.kql`, `autonomous-assisted-hours.kql`, `agent-assisted-cost.kql`, `roi-trend.kql`) are **management-reporting metrics computed from configurable time-savings multipliers**. They are useful as supporting context for ongoing-monitoring discussions (OCC 2011-12, SR 11-7) and for executive reporting, but they are **not** independent audit evidence for SOX 404 automated-control effectiveness, FINRA 3110 supervision adequacy, or any other rule that requires direct observation of the control. Treat any "Primary evidence for: SOX 404 / FINRA 3110" rows below for these business-impact queries as the **strongest among CSA-emitted artifacts**, not as standalone regulator-grade evidence — pair them with the corresponding control-execution evidence from the relevant FSI-AgentGov solution.
+
 ---
 
 ## Query-to-Control Mapping

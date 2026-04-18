@@ -71,11 +71,11 @@ let AutonomousWeekly =
     | where AgentType == "Autonomous"
     | summarize
         KSRef = countif(HasKS == true),
-        Successful = countif(Outcome == "Success"),
+        SuccessfulWithActions = countif(Outcome == "Success" and HasKS == true),
         SuccessNoAction = countif(Outcome == "Success" and HasKS != true)
         by WeekStart
     | extend Hours = (todouble(KSRef) * InfoRetrievalMinutes
-        + todouble(Successful) * GenericActionMinutes
+        + todouble(SuccessfulWithActions) * GenericActionMinutes
         + todouble(SuccessNoAction) * GenericTimeSavingMinutes) / 60.0
     | project WeekStart, AutoHours = Hours;
 

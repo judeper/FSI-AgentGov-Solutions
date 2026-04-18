@@ -40,14 +40,28 @@ The primary data source for session outcome analytics. Each record represents on
 
 **Session Outcome Values (msdyn_sessionoutcome):**
 
+The following integer optionset values are what the sync code (`scripts/sync_dataverse_sessions.py` `SESSION_OUTCOMES`) reads and what Microsoft Customer Service / Copilot Studio actually emit:
+
 | Value | Label | Description |
 |-------|-------|-------------|
-| 1 | Resolved | Session completed successfully -- user's intent was addressed |
-| 2 | Escalated | Session transferred to a human agent |
-| 3 | Abandoned | User left the session without resolution |
-| 4 | Unengaged | Session started but no meaningful interaction occurred |
+| 192350001 | Resolved | Session completed successfully -- user's intent was addressed |
+| 192350002 | Escalated | Session transferred to a human agent |
+| 192350003 | Abandoned | User left the session without resolution |
+| 192350004 | Unengaged | Session started but no meaningful interaction occurred |
 
-> **Note:** Outcome values may vary by Copilot Studio version. Verify against your environment's option set metadata using `GET /api/data/v9.2/EntityDefinitions(LogicalName='msdyn_botsession')/Attributes(LogicalName='msdyn_sessionoutcome')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$select=LogicalName&$expand=OptionSet`.
+**Session Outcome Reason Values (msdyn_sessionoutcomereason):**
+
+| Value | Label |
+|-------|-------|
+| 192350100 | TopicResolved |
+| 192350101 | UserEndedConversation |
+| 192350102 | HandoffInitiated |
+| 192350103 | AgentTransfer |
+| 192350104 | Timeout |
+| 192350105 | UserAbandoned |
+| 192350106 | NoEngagement |
+
+> **Note:** Optionset values may vary slightly across Copilot Studio releases. Verify against your environment's option set metadata using `GET /api/data/v9.2/EntityDefinitions(LogicalName='msdyn_botsession')/Attributes(LogicalName='msdyn_sessionoutcome')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet`.
 
 ### bot
 
@@ -71,20 +85,20 @@ Component metadata table. Used for agent type classification -- specifically to 
 |------------------------|------|-------------|-------|
 | botcomponentid | Uniqueidentifier | Primary key | |
 | name | String | Component display name | |
-| componenttype | OptionSet | Component type identifier | |
-| componenttypename | String | Component type name | Key field for classification |
+| componenttype | OptionSet (integer) | Component type identifier | **Key field for classification.** Filter on this integer value, e.g. `componenttype eq 17`. |
+| componenttypename | String | Human-readable component-type label | Informational only — do **not** filter on this. |
 | botid | Lookup (bot) | Parent agent reference | Join key to bot table |
 | schemaname | String | Component schema name | |
 | createdon | DateTime | Component creation timestamp | |
 
 **Agent Type Classification Logic:**
 
-| componenttypename Value | Classification | Description |
-|-------------------------|---------------|-------------|
+| componenttype Value | Classification | Description |
+|---------------------|---------------|-------------|
 | 17 (External Trigger) | Autonomous | Agent triggered by events, not user conversations |
 | Other values | Conversational | Standard conversational agent |
 
-> **Classification query:** `GET /api/data/v9.2/botcomponents?$filter=_botid_value eq '{botId}'&$select=componenttypename`
+> **Classification query:** `GET /api/data/v9.2/botcomponents?$filter=_botid_value eq '{botId}' and componenttype eq 17&$select=_botid_value,componenttype`
 
 ---
 
@@ -219,8 +233,8 @@ GET /api/data/v9.2/bots
 
 ```
 GET /api/data/v9.2/botcomponents
-  ?$filter=_botid_value eq '{botId}'
-  &$select=botcomponentid,componenttypename
+  ?$filter=_botid_value eq '{botId}' and componenttype eq 17
+  &$select=botcomponentid,componenttype
 ```
 
 ### Tier 2 Topic Sessions *(Planned)*

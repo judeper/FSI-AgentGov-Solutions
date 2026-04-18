@@ -32,9 +32,21 @@
         },
         "workspace_id": {
           "type": "string",
-          "description": "Log Analytics workspace resource ID (ARM format)",
-          "pattern": "^/subscriptions/[0-9a-fA-F-]+/resourceGroups/.+/providers/Microsoft\\.OperationalInsights/workspaces/.+$",
-          "examples": ["/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-aof/providers/Microsoft.OperationalInsights/workspaces/law-aof"]
+          "description": "Log Analytics workspace identifier. Accepts either a GUID (preferred — used directly with LogsQueryClient.query_workspace) or an ARM resource ID (validate_telemetry.py auto-routes ARM IDs through LogsQueryClient.query_resource).",
+          "oneOf": [
+            {
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+              "description": "Workspace GUID"
+            },
+            {
+              "pattern": "^/subscriptions/[0-9a-fA-F-]+/resourceGroups/.+/providers/Microsoft\\.OperationalInsights/workspaces/.+$",
+              "description": "ARM resource ID"
+            }
+          ],
+          "examples": [
+            "00000000-0000-0000-0000-000000000000",
+            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-aof/providers/Microsoft.OperationalInsights/workspaces/law-aof"
+          ]
         }
       }
     },

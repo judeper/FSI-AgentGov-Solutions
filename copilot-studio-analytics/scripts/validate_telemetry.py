@@ -179,6 +179,27 @@ def verify_copilot_session_events(
 
     logs_client = LogsQueryClient(credential)
 
+    # The validate_telemetry config carries `workspace_id` as the ARM resource
+    # ID (per config.schema.json), but LogsQueryClient.query_workspace expects
+    # the Log Analytics workspace GUID. Detect the difference and dispatch to
+    # the correct API:
+    #   - GUID format -> query_workspace(workspace_id=GUID, ...)
+    #   - ARM ID     -> query_resource(resource_id=ARM, ...)
+    is_arm_id = isinstance(workspace_id, str) and workspace_id.startswith("/subscriptions/")
+
+    def _run_query():
+        if is_arm_id:
+            return logs_client.query_resource(
+                resource_id=workspace_id,
+                query=query,
+                timespan=timedelta(hours=hours),
+            )
+        return logs_client.query_workspace(
+            workspace_id=workspace_id,
+            query=query,
+            timespan=timedelta(hours=hours),
+        )
+
     # KQL query: check for CopilotSessionOutcome events
     query = f"""
     customEvents
@@ -195,27 +216,26 @@ def verify_copilot_session_events(
     """
 
     try:
-        response = logs_client.query_workspace(
-            workspace_id=workspace_id,
-            query=query,
-            timespan=timedelta(hours=hours),
-        )
+        response = _run_query()
     except HttpResponseError as e:
-        # Retry with exponential backoff for transient errors
+        # Only retry transient (429 / 5xx) failures. 4xx auth/config errors
+        # should surface immediately so the operator can fix the cause.
+        status_code = getattr(e, "status_code", None)
+        retryable = status_code in (429, 500, 502, 503, 504) if status_code else False
+        if not retryable:
+            print(f"  Telemetry query: FAILED ({status_code}) - {e}")
+            return (False, False, False, [])
+
         max_retries = 3
         last_error = e
         for attempt in range(1, max_retries + 1):
             import time
             delay = 2 ** attempt
             if verbose:
-                print(f"  Query failed (attempt {attempt}/{max_retries}), retrying in {delay}s...")
+                print(f"  Transient query error (attempt {attempt}/{max_retries}), retrying in {delay}s...")
             time.sleep(delay)
             try:
-                response = logs_client.query_workspace(
-                    workspace_id=workspace_id,
-                    query=query,
-                    timespan=timedelta(hours=hours),
-                )
+                response = _run_query()
                 last_error = None
                 break
             except HttpResponseError as retry_e:

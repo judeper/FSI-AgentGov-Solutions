@@ -52,11 +52,11 @@ customEvents
 | extend Outcome = tostring(customDimensions["sessionOutcome"])
 | summarize
     KSReferences = countif(HasKS == true),
-    SuccessfulSessions = countif(Outcome == "Success"),
+    SuccessfulWithActions = countif(Outcome == "Success" and HasKS == true),
     SuccessfulWithoutActions = countif(Outcome == "Success" and HasKS != true)
     by AgentId
 | extend KSSavings = round(todouble(KSReferences) * InfoRetrievalMinutes / 60.0, 1)
-| extend ActionSavings = round(todouble(SuccessfulSessions) * GenericActionMinutes / 60.0, 1)
+| extend ActionSavings = round(todouble(SuccessfulWithActions) * GenericActionMinutes / 60.0, 1)
 | extend GenericSavings = round(todouble(SuccessfulWithoutActions) * GenericTimeSavingMinutes / 60.0, 1)
 | extend AgentAssistedHours = round(KSSavings + ActionSavings + GenericSavings, 1)
 | project AgentId, KSSavings, ActionSavings, GenericSavings, AgentAssistedHours

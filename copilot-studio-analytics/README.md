@@ -3,7 +3,7 @@
 > **Version:** v1.1.1
 > **Status:** Active
 
-Business impact analytics for Copilot Studio agents -- session outcomes, CSAT, Agent Assisted Hours, and ROI calculations. Provides Viva Insights-equivalent metrics for organizations without Viva Insights licenses.
+Business impact analytics for Copilot Studio agents -- session outcomes, CSAT, Agent Assisted Hours, and ROI calculations. Provides a customizable, partial alternative to Microsoft Viva Insights for organizations without Viva Insights licenses or that need zone-based governance and regulatory-reporting integration. Not a full Viva replacement -- see [docs/viva-insights-parity-matrix.md](docs/viva-insights-parity-matrix.md).
 
 ## Architecture Overview
 
@@ -22,7 +22,7 @@ See [architecture.md](architecture.md) for the full data flow diagram and tiered
 
 - **Syncs msdyn_botsession records** from Dataverse to Application Insights as CopilotSessionOutcome custom events
 - **Watermark-based incremental sync** using a Dataverse tracking table to avoid duplicate processing
-- **Agent type classification** by joining bot and botcomponent tables (componenttypename = 17 identifies autonomous agents)
+- **Agent type classification** by joining bot and botcomponent tables (`componenttype = 17` integer optionset identifies autonomous agents — note this is the integer column `componenttype`, not the human-readable `componenttypename` label)
 - **Configurable sync frequency** from daily batch to near-real-time (4-6 hour intervals)
 
 ### KQL Query Library
@@ -166,10 +166,10 @@ copilot-studio-analytics/
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Sync returns zero sessions | Dataverse app registration missing read permissions | Verify app has `msdyn_botsession` read access in Dataverse security role |
-| CopilotSessionOutcome events not appearing | App Insights instrumentation key misconfigured | Verify `APPINSIGHTS_INSTRUMENTATIONKEY` env var or `application_insights.name` in config.yml matches AOF deployment |
+| CopilotSessionOutcome events not appearing | App Insights credential misconfigured | Set `APPLICATIONINSIGHTS_CONNECTION_STRING` (preferred) or the legacy `APPINSIGHTS_INSTRUMENTATIONKEY` env var; ensure `application_insights.name` in config.yml matches the AOF deployment |
 | CSAT data missing from queries | CSAT survey not enabled on agents | Enable CSAT survey in Copilot Studio agent settings |
 | Tier 2 queries return no data | Tier 2 sync not yet implemented | Tier 2 transcript parsing is planned for a future release; current sync provides Tier 1 data only |
-| Autonomous agent AAH shows zero | Agent type classification failed | Verify botcomponent records exist with componenttypename for the agent |
+| Autonomous agent AAH shows zero | Agent type classification failed | Verify botcomponent records exist with the integer `componenttype = 17` for the agent (do not query on `componenttypename`) |
 | Workbook shows "No data" | Time range too narrow or sync not yet run | Expand time range; verify sync completed via `validate_telemetry.py` |
 | Duplicate CopilotSessionOutcome events | Watermark table corrupted or reset | Check watermark table; delete watermark records from fsi_csasyncwatermarks and re-run sync to rebuild |
 

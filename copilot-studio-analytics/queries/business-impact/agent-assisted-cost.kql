@@ -76,11 +76,11 @@ let AutonomousAAH =
     | extend Outcome = tostring(customDimensions["sessionOutcome"])
     | summarize
         KSReferences = countif(HasKS == true),
-        SuccessfulSessions = countif(Outcome == "Success"),
+        SuccessfulWithActions = countif(Outcome == "Success" and HasKS == true),
         SuccessfulWithoutActions = countif(Outcome == "Success" and HasKS != true)
         by AgentId
     | extend KSSavings = todouble(KSReferences) * InfoRetrievalMinutes / 60.0
-    | extend ActionSavings = todouble(SuccessfulSessions) * GenericActionMinutes / 60.0
+    | extend ActionSavings = todouble(SuccessfulWithActions) * GenericActionMinutes / 60.0
     | extend GenericSavings = todouble(SuccessfulWithoutActions) * GenericTimeSavingMinutes / 60.0
     | extend AgentAssistedHours = round(KSSavings + ActionSavings + GenericSavings, 1)
     | extend AgentType = "Autonomous"

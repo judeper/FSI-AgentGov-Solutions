@@ -27,12 +27,14 @@ AAH = (KnowledgeSourceReferences + WeightedSessionsWithoutKS) x TimeSavingsMulti
 
 ### Components
 
-**KnowledgeSourceReferences** -- Sessions where the agent cited at least one knowledge source.
+**KnowledgeSourceReferences** -- Sessions where the agent appears to have invoked a knowledge source.
 
 | Tier | Measurement Method | Precision |
 |------|-------------------|-----------|
-| Tier 1 | Proxy via GenerativeAnswers events in App Insights where Result = "Success" | Approximate -- counts events, not distinct citations |
-| Tier 2 *(planned)* | Parse conversationtranscript content JSON for Citation entities | Precise -- exact count of knowledge source citations per session *(not yet implemented)* |
+| Tier 1 *(current)* | Topic-name substring heuristic against `msdyn_topicname` (matches `generativeanswers` or `knowledge`, case-insensitive) | **Best-effort.** Will under-count any agent whose KS topic uses a custom name and may over-count topics whose names happen to match those substrings. The originally-planned join to `GenerativeAnswers` Application Insights events is *not* implemented in the current sync pipeline. |
+| Tier 2 *(planned)* | Parse `conversationtranscript` content JSON for Citation entities, plus correlate with App Insights `GenerativeAnswers` events | Precise -- exact count of knowledge source citations per session *(not yet implemented)* |
+
+> **Operator note:** Inspect `customDimensions.topicName` distribution in your environment before relying on Tier 1 KS counts. If your knowledge-grounded topics use custom display names, edit the heuristic in `transform_session()` (`scripts/sync_dataverse_sessions.py`) to match your topics, or wait for Tier 2.
 
 **WeightedSessionsWithoutKS** -- Sessions that did not involve knowledge source citations, weighted by outcome quality.
 
@@ -79,7 +81,18 @@ For the example above: 77.5 hours x $72/hr = **$5,580** in estimated cost avoida
 
 ## Autonomous Agent Formula
 
-### Formula
+> **Implementation status:** The current sync pipeline (`scripts/sync_dataverse_sessions.py`) and the active KQL queries under `queries/business-impact/` only use the **session-level Tier 1** form of the autonomous formula:
+>
+> ```
+> AAH = (
+>     SuccessfulSessionsWithKS  x InfoRetrievalTimeSaving
+>   + SuccessfulSessionsWithoutKS x GenericActionTimeSaving
+> ) / 60
+> ```
+>
+> The per-action multipliers and `TotalTimeSavedAutomatingActions` term described below are the **planned Tier 2** form. They require transcript parsing or `CopilotActionOutcome` events that the sync pipeline does not yet emit.
+
+### Tier 2 Formula *(planned)*
 
 ```
 AAH = (
@@ -97,14 +110,14 @@ AAH = (
 |-----------|---------|-------------|-------|
 | InfoRetrievalTimeSaving | 6 minutes | Yes (config.yml) | Time saved per information retrieval vs manual lookup |
 
-**TotalTimeSavedAutomatingActions** -- Sum of time savings from executed automation actions.
+**TotalTimeSavedAutomatingActions** -- Sum of time savings from executed automation actions. *(Tier 2; not yet computed by the active KQL.)*
 
 Each action type has a configurable time saving value:
 
 | Action Category | Default Time Saving | Example Actions |
 |----------------|-------------------|-----------------|
 | Data entry / form submission | 10 minutes | Create record, update record |
-| Information retrieval | 5 minutes | Query database, search documents |
+| Information retrieval | 6 minutes | Query database, search documents |
 | Notification / routing | 3 minutes | Send email, post message, assign task |
 | Approval workflow | 15 minutes | Submit approval, process approval |
 | Custom connector action | 8 minutes | API call to external system |
@@ -117,19 +130,19 @@ Each action type has a configurable time saving value:
 |-----------|---------|-------------|-------|
 | GenericTimeSaving | 5 minutes | Yes (config.yml) | Minimum time saving for successful autonomous task completion |
 
-### Calculation Example
+### Calculation Example *(Tier 2 — illustrative, not what the current KQL emits)*
 
 Given 500 autonomous agent runs in a period:
 
 | Component | Count | Time Saving | Total Minutes |
 |-----------|-------|-------------|---------------|
-| KS retrievals | 100 | 5 min each | 500 |
+| KS retrievals | 100 | 6 min each | 600 |
 | Data entry actions | 80 | 10 min each | 800 |
 | Notification actions | 120 | 3 min each | 360 |
 | Approval actions | 30 | 15 min each | 450 |
 | Sessions without actions | 170 | 5 min each | 850 |
-| **Total minutes** | | | **2,960** |
-| **AAH** | | | 2,960 / 60 = **49.3 hours** |
+| **Total minutes** | | | **3,060** |
+| **AAH** | | | 3,060 / 60 = **51.0 hours** |
 
 ---
 

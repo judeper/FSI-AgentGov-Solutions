@@ -163,6 +163,18 @@ class DataverseClient:
             return entity_id.split("(")[1].split(")")[0]
         return ""
 
+    def update_record(self, entity_set: str, record_id: str, data: dict) -> None:
+        """Update an existing record via PATCH. record_id is the row GUID."""
+        if self.dry_run:
+            print(f"  [DRY RUN] Would update record {entity_set}({record_id})")
+            return
+        url = urljoin(self.api_url, f"{entity_set}({record_id})")
+        headers = self._get_headers()
+        # If-Match: * required to prevent accidental upsert insertion when row missing
+        headers["If-Match"] = "*"
+        response = self._session.patch(url, headers=headers, json=data)
+        response.raise_for_status()
+
     def delete_record(self, entity_set: str, record_id: str) -> None:
         """Delete a record from Dataverse.
 

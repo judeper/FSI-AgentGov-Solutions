@@ -49,6 +49,7 @@ OPTIONSETS = {
 TABLES = {
     "fsi_CSASyncWatermark": {
         "SchemaName": "fsi_CSASyncWatermark",
+        "EntitySetName": "fsi_csasyncwatermarks",
         "DisplayName": {"LocalizedLabels": [{"Label": "CSA Sync Watermark", "LanguageCode": 1033}]},
         "DisplayCollectionName": {"LocalizedLabels": [{"Label": "CSA Sync Watermarks", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Tracks incremental sync state between Dataverse sessions and Application Insights", "LanguageCode": 1033}]},

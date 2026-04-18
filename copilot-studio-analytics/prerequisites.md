@@ -135,7 +135,7 @@ For meaningful analytics, confirm at least:
 
 - [ ] **One Copilot Studio agent** connected to Application Insights with production sessions
 - [ ] **7+ days of session data** in msdyn_botsession for trend analysis
-- [ ] **GenerativeAnswers events** visible in App Insights customEvents (for Tier 1 knowledge source proxy)
+- [ ] **GenerativeAnswers events** visible in App Insights customEvents (planned Tier 2 knowledge-source signal; the current Tier 1 implementation uses a `msdyn_topicname` substring heuristic — see [docs/agent-assisted-hours-methodology.md](docs/agent-assisted-hours-methodology.md))
 
 ### Validation Commands
 

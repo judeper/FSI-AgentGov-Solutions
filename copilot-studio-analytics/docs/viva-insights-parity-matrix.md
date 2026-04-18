@@ -4,7 +4,7 @@ Honest assessment of Copilot Studio Analytics (CSA) feature coverage relative to
 
 ## Overview
 
-Microsoft Viva Insights provides built-in analytics for Copilot Studio agents as part of the Viva Insights license. CSA provides equivalent analytics for organizations that do not have Viva Insights licenses or that need customizable metrics, zone-based governance, or regulatory reporting integration.
+Microsoft Viva Insights provides built-in analytics for Copilot Studio agents as part of the Viva Insights license. CSA provides a **partial alternative** for organizations that do not have Viva Insights licenses or that need customizable metrics, zone-based governance, or regulatory reporting integration. CSA is **not a drop-in replacement** for Viva Insights — see the parity matrix below for items that have only "near", "substantial", or "limited" parity, and the "Viva-only" rows for capabilities CSA does not currently match.
 
 This matrix documents what CSA covers, what it partially covers, and what remains Viva-only.
 
@@ -69,7 +69,7 @@ CSA is the better choice when:
 - **Custom calculations** -- Organization needs full control over AAH multipliers, outcome weights, and cost parameters
 - **Historical recalculation** -- Need to recalculate metrics with adjusted parameters retroactively
 - **Unified telemetry platform** -- Want all agent analytics (operational + business impact) in a single Application Insights workspace
-- **Autonomous agent analytics** -- Need separate, detailed analytics for autonomous agents (Viva combines both types)
+- **Autonomous agent analytics** -- Need a separate breakdown of autonomous-agent activity. Viva Insights does report on autonomous agents, but CSA's separate AAH formula and dedicated workbook section make the autonomous metrics easier to isolate and tune.
 - **Custom workbooks** -- Need to extend or customize analytics dashboards beyond what Viva provides
 
 ## When to Use Both

@@ -151,8 +151,9 @@ def get_agent_classifications(client: DataverseClient) -> dict[str, str]:
     """
     Classify agents as Conversational or Autonomous by querying botcomponent.
 
-    Autonomous agents have at least one botcomponent with componenttypename=17
-    (External Trigger / Event-Driven). All others are Conversational.
+    Autonomous agents have at least one botcomponent with componenttype=17
+    (External Trigger / Event-Driven; the integer optionset value, NOT the
+    string `componenttypename`). All others are Conversational.
 
     Args:
         client: DataverseClient instance
@@ -219,9 +220,15 @@ def get_watermark(
     """
     tier_value = WATERMARK_TIER_1 if tier == 1 else WATERMARK_TIER_2
 
-    # Validate environment_url to prevent OData filter injection
+    # Validate environment_url to prevent OData filter injection.
+    # Accept commercial cloud (.dynamics.com), US Gov (.dynamics.us /
+    # .crm.dynamics.us), Germany (.microsoftdynamics.de), and China
+    # (.crm.dynamics.cn) sovereign cloud hosts.
     import re
-    if not re.match(r'^https://[a-zA-Z0-9._-]+\.dynamics\.com$', environment_url):
+    if not re.match(
+        r'^https://[a-zA-Z0-9._-]+\.(dynamics\.com|dynamics\.us|microsoftdynamics\.de|crm\.dynamics\.cn)$',
+        environment_url,
+    ):
         raise ValueError(f"Invalid environment URL format: {environment_url}")
 
     records = client.query(
@@ -313,16 +320,13 @@ def update_watermark(
     error_message: Optional[str] = None,
 ) -> None:
     """
-    Create or update the sync watermark record.
+    Upsert the sync watermark record for (environment_url, tier).
 
-    Args:
-        client: DataverseClient instance
-        environment_url: Environment URL
-        tier: Sync tier (1 or 2)
-        timestamp: Sync timestamp to record
-        records_synced: Count of records synced
-        status: Watermark status code
-        error_message: Optional error message for failed syncs
+    Looks up the existing watermark row by (environment_url, tier) and
+    PATCHes it; if none exists, INSERTs the first one. Prevents the
+    table from growing unboundedly across runs. (Bug: prior versions
+    always called create_record on every sync — every InProgress claim,
+    success, and failure inserted a fresh row.)
     """
     tier_value = WATERMARK_TIER_1 if tier == 1 else WATERMARK_TIER_2
 
@@ -337,9 +341,34 @@ def update_watermark(
     if error_message:
         data["fsi_errormessage"] = error_message[:100000]  # Respect Memo max length
 
+    # Look up existing row for this (env, tier).
+    existing = client.query(
+        WATERMARK_TABLE,
+        select=["fsi_csasyncwatermarkid"],
+        filter_expr=(
+            f"fsi_environmenturl eq '{environment_url}' "
+            f"and fsi_synctier eq {tier_value}"
+        ),
+        orderby="fsi_lastsynctimestamp desc",
+        top=1,
+    )
+
+    if existing:
+        record_id = existing[0].get("fsi_csasyncwatermarkid")
+        if record_id:
+            client.update_record(WATERMARK_TABLE, record_id, data)
+            logger.info(
+                "Watermark patched: %s (records: %d, status: %d)",
+                timestamp.isoformat(),
+                records_synced,
+                status,
+            )
+            return
+
+    # First sync for this (env, tier) — insert the row.
     client.create_record(WATERMARK_TABLE, data)
     logger.info(
-        "Watermark updated: %s (records: %d, status: %d)",
+        "Watermark created (first sync): %s (records: %d, status: %d)",
         timestamp.isoformat(),
         records_synced,
         status,
@@ -399,14 +428,26 @@ def correlate_knowledge_sources(
     sessions: list[dict],
 ) -> dict[str, bool]:
     """
-    Tier 1: Determine which sessions used knowledge sources by checking for
-    GenerativeAnswers events in the conversation transcript metadata.
+    Tier 1 (current): Best-effort heuristic. Marks a session as
+    "knowledge-source-using" when its `msdyn_topicname` contains the
+    substring `generativeanswers` or `knowledge` (case-insensitive).
 
-    For Tier 1, we check msdyn_botsession for the presence of generative
-    answers topic references (a lightweight proxy for knowledge source usage).
+    LIMITATIONS:
+      - Will UNDER-COUNT any agent whose KS-grounded topic uses a custom
+        display name (e.g., "PolicyLookup", "AccountFAQ").
+      - Will OVER-COUNT topics that happen to contain those substrings
+        without actually invoking a knowledge source.
+      - Does NOT correlate with App Insights `GenerativeAnswers` events,
+        despite older docs saying so. That correlation is planned for
+        Tier 2 along with `conversationtranscript` parsing.
+
+    Operators should inspect the distribution of `topicName` in their
+    environment before relying on aggregate KS metrics; if topic names
+    are heavily customized, edit the keyword list below or wait for Tier 2.
 
     Args:
-        client: DataverseClient instance
+        client: DataverseClient instance (currently unused — reserved for
+            Tier 2 botcomponent / conversationtranscript queries)
         sessions: List of session records
 
     Returns:
@@ -573,10 +614,19 @@ def transform_session(
         "Zone": zone,
         "syncSource": "DataverseSync",
         "syncTier": f"Tier{tier}",
+        # True session times — needed by KQL/workbooks because TelemetryClient
+        # stamps Application Insights' `timestamp` column with sync-execution
+        # time, NOT the session time. Always re-bin trends on these in KQL:
+        #   extend SessionTime = todatetime(customDimensions['sessionClosedOn'])
+        "sessionCreatedOn": created_on or "",
+        "sessionClosedOn": closed_on or "",
     }
 
     # Use session end time as event timestamp (preferred for time-series alignment),
-    # falling back to start time if session hasn't closed yet
+    # falling back to start time if session hasn't closed yet.
+    # NOTE: opencensus / applicationinsights TelemetryClient.track_event ignores
+    # this field and stamps send-time instead. Future v2.x will move to
+    # azure-monitor-opentelemetry which supports custom timestamps.
     event_timestamp = closed_on if closed_on else created_on
 
     return {
@@ -652,28 +702,36 @@ def send_to_app_insights(
     return (sent, failed)
 
 
-def get_instrumentation_key(config: dict[str, Any]) -> str:
+def get_app_insights_credential(config: dict[str, Any]) -> str:
     """
-    Retrieve the App Insights instrumentation key.
+    Retrieve the App Insights credential to pass to TelemetryClient.
 
-    Checks APPINSIGHTS_INSTRUMENTATIONKEY env var first, then attempts
-    to resolve from Azure management API.
+    Resolution order (Microsoft now recommends connection strings over
+    legacy instrumentation keys; this function supports both):
+      1. APPLICATIONINSIGHTS_CONNECTION_STRING env var (preferred)
+      2. APPINSIGHTS_INSTRUMENTATIONKEY env var (legacy, still accepted)
+      3. Azure management API: prefer component.connection_string, fall
+         back to component.instrumentation_key
 
-    Args:
-        config: Configuration dictionary
-
-    Returns:
-        Instrumentation key string
+    Returns either a connection string (preferred) or a raw ikey GUID.
+    Both are accepted by opencensus-ext-azure / azure-monitor-opentelemetry.
 
     Raises:
-        ValueError: If key cannot be resolved
+        ValueError: If no credential can be resolved.
     """
-    # Check environment variable first
+    conn_str = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
+    if conn_str:
+        return conn_str
+
     ikey = os.environ.get("APPINSIGHTS_INSTRUMENTATIONKEY", "")
     if ikey:
+        logger.warning(
+            "Using legacy APPINSIGHTS_INSTRUMENTATIONKEY. Microsoft recommends "
+            "APPLICATIONINSIGHTS_CONNECTION_STRING — see "
+            "https://learn.microsoft.com/azure/azure-monitor/app/connection-strings"
+        )
         return ikey
 
-    # Try to resolve from Azure management API
     try:
         from azure.identity import DefaultAzureCredential
         from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
@@ -686,12 +744,23 @@ def get_instrumentation_key(config: dict[str, Any]) -> str:
             resource_group_name=config["resource_group"],
             resource_name=config["application_insights"]["name"],
         )
+        # Prefer connection_string when SDK exposes it (recent versions do).
+        cs = getattr(component, "connection_string", None)
+        if cs:
+            return cs
         return component.instrumentation_key
     except Exception as e:
         raise ValueError(
-            f"Cannot resolve instrumentation key. Set APPINSIGHTS_INSTRUMENTATIONKEY "
-            f"env var or provide Azure credentials: {e}"
+            "Cannot resolve Application Insights credential. Set "
+            "APPLICATIONINSIGHTS_CONNECTION_STRING (preferred) or "
+            f"APPINSIGHTS_INSTRUMENTATIONKEY env var, or provide Azure credentials: {e}"
         )
+
+
+# Backwards-compatible alias; prefer get_app_insights_credential going forward.
+def get_instrumentation_key(config: dict[str, Any]) -> str:
+    """Deprecated: use get_app_insights_credential. Retained for callers."""
+    return get_app_insights_credential(config)
 
 
 def print_banner() -> None:

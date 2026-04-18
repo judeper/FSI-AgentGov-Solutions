@@ -28,9 +28,23 @@ resource_group: ""
 application_insights:
   # Resource name (e.g., ai-aof-observability)
   name: ""
-  # Log Analytics workspace resource ID
-  # Format: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.OperationalInsights/workspaces/{name}
+  # Log Analytics workspace ID for the workspace-based Application Insights component.
+  # Two formats are accepted by validate_telemetry.py:
+  #   - GUID:   "00000000-0000-0000-0000-000000000000"   (preferred — used by LogsQueryClient.query_workspace)
+  #   - ARM ID: "/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.OperationalInsights/workspaces/{name}"
+  #             (validate_telemetry.py auto-detects ARM IDs and routes through LogsQueryClient.query_resource)
   workspace_id: ""
+
+# -----------------------------------------------------------------------------
+# Telemetry credential (set ONE of the following env vars before running sync)
+# -----------------------------------------------------------------------------
+# Microsoft now recommends connection strings over legacy instrumentation keys:
+#   APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=...;IngestionEndpoint=https://...;LiveEndpoint=https://..."
+# Legacy fallback (still supported, but deprecated by Microsoft):
+#   APPINSIGHTS_INSTRUMENTATIONKEY="00000000-0000-0000-0000-000000000000"
+# If neither env var is set, sync_dataverse_sessions.py will fall back to
+# resolving the connection string (preferred) or instrumentation key from
+# the Azure ARM API using `application_insights.name` above.
 
 # -----------------------------------------------------------------------------
 # REQUIRED: Dataverse Connection for Session Sync

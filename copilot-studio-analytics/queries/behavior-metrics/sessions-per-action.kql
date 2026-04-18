@@ -27,6 +27,13 @@
 // Notes:
 //   - IMPORTANT: Requires Tier 2 sync (transcript parsing) for action data
 //   - Tier 1 sync only provides session-level outcomes; action details require transcript analysis
+// TIER 2 — PLANNED, NOT YET EMITTED BY THE SYNC PIPELINE.
+// This query depends on a `CopilotActionOutcome` custom event with an
+// `actionName` customDimension. The current `sync_dataverse_sessions.py`
+// only emits `CopilotSessionOutcome` events; until Tier 2 transcript
+// parsing ships, this query will return zero rows in production.
+//
+// Notes:
 //   - This query uses actionName from customDimensions, populated during Tier 2 sync
 //   - When Tier 2 data is not available, this query returns no results
 //   - High invocation counts on specific actions may indicate automation opportunities
