@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Site Usability Review] - 2026-04-18
+
+### Docs site — deduplication, lean overview pages, comment-coverage audit
+
+Post-council-review sweep focused on GitHub Pages usability and code comment quality. Three commits:
+
+- `docs(site): eliminate duplication — site-docs now includes canonical solution/docs at build` — renamed 28 solution `docs/*.md` files from UPPERCASE_UNDERSCORE to lowercase-hyphen so `build-docs.py`'s filename normalization produces consistent URLs; fixed internal cross-references.
+- `docs(site): generate lean overview pages, sync versions, remove unused plugin` — rewrote `scripts/build-docs.py` to emit skim-friendly overview pages (preamble first paragraph only; Quick Start + Related Controls sections only; 25-line section cap with safe code-fence handling; Documentation table simplified). Resynced `scripts/solution-config.yml` versions to CHANGELOG heads for all 35 solutions. Removed unused `mkdocs-include-markdown-plugin`. All 35 overview pages now 23–65 lines (was 45–302).
+- `docs(scripts): add PowerShell help blocks to 6 files missing .SYNOPSIS` — added `<# .SYNOPSIS #>` blocks to `conditional-access-automation.psm1` and the 5 private `Get-ZoneClassification.ps1` solution variants. All 211 PS files now parse with 0 errors.
+
+### Code comment audit findings
+
+- **PowerShell** (211 files): 6 missing help blocks — all fixed.
+- **Python** (120 files): 0 missing module docstrings. Low-density files are predominantly schema-definition data literals (appropriately sparse).
+- **KQL** (40 files): 0 missing headers; 54 % average density.
+
+### AI context files updated
+
+Added a **Docs Site Build Pipeline** section to `README.md`, `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` documenting:
+
+- The two-step build (`build-docs.py` → `mkdocs build --strict`) used by CI.
+- That `site-docs/solutions/*/` is gitignored and regenerated on every build.
+- Where to edit to change overview structure (`build-docs.py`), content (solution `README.md`), and metadata (`solution-config.yml`).
+- The verify-before-commit workflow.
+
+### Validation
+
+- `python scripts/build-docs.py` — 35 index pages, 149 nav-referenced files all present.
+- `python -m mkdocs build --strict` — 0 errors.
+- PowerShell AST parse over 211 files — 0 errors.
+
+---
+
 ## [Council Review] - 2026-04-16
 
 ### Council Review — Autonomous Multi-Agent Audit

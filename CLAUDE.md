@@ -176,6 +176,32 @@ When writing documentation in this repository, follow the language guidelines fr
 
 **Full guidelines:** See FSI-AgentGov `CONTRIBUTING.md`
 
+## Docs Site Build Pipeline
+
+The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
+
+1. `python scripts/build-docs.py` — auto-generates `site-docs/solutions/{slug}/` from each solution's `README.md`, copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens), and stamps version / domain / controls from `scripts/solution-config.yml`.
+2. `mkdocs build --strict` — renders the site from `site-docs/`.
+
+**Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
+
+### To change overview pages
+
+- **Structure / layout** (section order, truncation rules, documentation table format): edit `scripts/build-docs.py`. Current behavior: preamble = first paragraph only; sections included = `## Quick Start` and `## Related Controls` only; each section capped at 25 lines with safe code-fence handling; links to the full README appended when content is truncated.
+- **Content** (description, Quick Start steps, Related Controls): edit the solution's `README.md`.
+- **Version / domain / controls metadata** shown in the page header: edit `scripts/solution-config.yml`. **Keep this file in sync with each solution's CHANGELOG head.**
+
+### To change detail pages
+
+Edit files under `{slug}/docs/`. build-docs.py copies them into `site-docs/solutions/{slug}/` with filename normalization (uppercase / underscores → lowercase / hyphens). Update `mkdocs.yml` nav when adding or removing detail pages.
+
+### To verify before committing
+
+```bash
+python scripts/build-docs.py       # regenerate site-docs/solutions/
+python -m mkdocs build --strict    # fail on any broken link or missing nav file
+```
+
 ## Validation Commands
 
 ```bash
