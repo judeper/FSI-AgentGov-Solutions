@@ -472,9 +472,9 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
    - `timestamp`: Expression `utcNow()`
    - `runId`: Expression `guid()`
    - `findingsCount`: Integer `0`
-   - `baselineInboundBlocked`: Environment variable `CTABaseline_InboundB2BBlocked`
-   - `baselineOutboundBlocked`: Environment variable `CTABaseline_OutboundB2BBlocked`
-   - `baselineDirectConnectBlocked`: Environment variable `CTABaseline_DirectConnectBlocked`
+   - `baselineInboundBlocked`: Environment variable `fsi_CTSG_CTABaselineInboundB2BBlocked`
+   - `baselineOutboundBlocked`: Environment variable `fsi_CTSG_CTABaselineOutboundB2BBlocked`
+   - `baselineDirectConnectBlocked`: Environment variable `fsi_CTSG_CTABaselineDirectConnectBlocked`
 
 4. **Get Default CTA Policy**
    - Action: HTTP with Microsoft Entra ID
@@ -922,14 +922,14 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
      1. **Deduplication Check:**
         - Query `fsi_crosstenantcomplianceevent`:
           ```
-          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 11 and fsi_eventdetails eq '{tenantId}' and createdon ge {thirtyDaysAgo}&$top=1
+          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 11 and fsi_externaltenantid eq '{tenantId}' and createdon ge {thirtyDaysAgo}&$top=1
           ```
         - **If reminder already sent in past 30 days:** Skip
      2. **If no recent reminder:**
         - Send Teams notification to `governanceTeamEmail` and requesting team (`fsi_notes`):
           - Use Annual Review Reminder Adaptive Card (see [Template 3](#template-3-annual-review-reminder))
           - Set urgency indicator: `"Upcoming"`
-        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Annual Review Due"`, `fsi_eventdetails` = `fsi_tenantid`
+        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `11` (Annual Review Due), `fsi_externaltenantid` = `fsi_tenantid`
         - Increment `remindersQueued`
 
    5b. **Evaluate 30-Day Threshold**
@@ -954,7 +954,7 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
           - `fsi_findingtype`: `"Approved Tenant - Review Required"`
           - `fsi_severity`: `3` (Low)
           - `fsi_findingstatus`: `0` (Open)
-          - `fsi_detectedby`: `"Monitor-AnnualTenantReviews-Daily"`
+          - `fsi_detectedby`: `"Send-AnnualReviewReminders-Daily"`
           - `fsi_governancelayer`: `0` (Layer 1 — Tenant Isolation)
           - `fsi_remediationstatus`: `0` (Pending)
           - `fsi_externaltenanttenantid`: `fsi_tenantid`

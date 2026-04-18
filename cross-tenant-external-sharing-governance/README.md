@@ -11,9 +11,9 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 Power Platform Tenant Isolation is **OFF by default**, meaning any tenant can establish inbound or outbound connector connections unless explicitly blocked. This is a critical governance gap for financial services organizations subject to GLBA, OCC, and SOX requirements for controlling third-party data access. Without active governance, agents can silently access external tenant resources — or external users can invoke internal agents — with no audit trail or approval workflow.
 
-This solution governs cross-tenant access across three distinct layers: **Power Platform Tenant Isolation** (connector-level blocking/allowing at the tenant boundary), **Entra Cross-Tenant Access Policies** (identity-level B2B inbound/outbound controls), and **Copilot Studio Agent Shares** (agent-level sharing with external guest users). Each layer operates independently, and a compliant posture requires all three layers to be validated together.
+This solution governs cross-tenant access across three distinct layers: **Power Platform Tenant Isolation** (connector-level blocking/allowing at the tenant boundary), **Entra Cross-Tenant Access Policies** (identity-level B2B inbound/outbound controls), and **Copilot Studio Agent Shares** (agent-level sharing with external guest users). Each layer operates independently and addresses a distinct risk surface; a defensible posture validates all three together along with adjacent controls (Conditional Access, Tenant Restrictions v2, SharePoint external sharing).
 
-The solution continuously detects unauthorized cross-tenant configurations, maintains an authoritative allow list of approved external tenants with dual-approval onboarding, and generates immutable compliance events for 7-year long-term retention as recommended for SEC 17a-4 and FINRA 4511 record-keeping requirements.
+The solution continuously detects unauthorized cross-tenant configurations, maintains an authoritative allow list of approved external tenants with dual-approval onboarding, and writes append-only compliance events to a Dataverse long-term retention plan (configure 7-year retention to support SEC 17a-4 and FINRA 4511 record-keeping requirements). Note: SEC 17a-4 WORM/non-rewriteable storage requirements are met by the underlying Azure Storage immutability policy; Dataverse LTR provides retention but customers must validate WORM characteristics with their counsel.
 
 ## Related Controls
 
@@ -23,7 +23,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 | [1.18 - RBAC and Access Control](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-rbac-and-access-control/) | Role-based access control for cross-tenant governance workflows |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-governance/2.1-managed-environments/) | Environment-level governance for cross-tenant policy enforcement |
 | [2.8 - Access Control and Segregation of Duties](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-governance/2.8-access-control-and-segregation-of-duties/) | Dual-approval separation for tenant onboarding |
-| [3.1 - Audit Logging](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.1-audit-logging/) | Immutable compliance event logging for cross-tenant activity |
+| [1.7 - Audit Logging and Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.7-audit-logging-and-monitoring/) | Append-only compliance event logging for cross-tenant activity |
 | [1.11 - Conditional Access](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access/) | Conditional Access policy alignment for external access |
 
 ## Regulatory Alignment
@@ -31,10 +31,11 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 | Regulation | Requirement |
 |------------|-------------|
 | GLBA 501(b) | Safeguards against unauthorized cross-boundary data access |
-| OCC 2011-12 / Fed SR 11-7 | Third-party and vendor risk governance |
-| SOX 302/404 | IT general controls for external party access |
-| FINRA 4370 / 3110 | Business continuity and supervision documentation |
-| NYDFS 23 NYCRR 500 | Third-party service provider security |
+| OCC 2011-12 / Fed SR 11-7 | Helps support model risk management requirements where AI agents are governed as models; consult internal model risk management for applicability |
+| SOX 302/404 (ICFR scope) | Helps support IT general controls for external party access to systems within ICFR scope |
+| FINRA 3110 | Helps meet supervision requirements for cross-tenant agent activity |
+| FINRA 4370 | Business continuity considerations for restoration of allow lists |
+| NYDFS 23 NYCRR 500.11 | Helps support third-party service provider security policies |
 | FFIEC | Third-party risk due diligence and ongoing monitoring |
 
 > **Note:** No single control satisfies any regulation in isolation. This solution supports compliance with these requirements when deployed as part of a comprehensive governance program.
@@ -140,15 +141,18 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 
 ## Quick Start
 
-1. Deploy Dataverse schema: `python scripts/create_ctsg_dataverse_schema.py --interactive --dry-run`
-2. Create environment variables: `python scripts/create_ctsg_environment_variables.py --interactive`
-3. Create connection references: `python scripts/create_ctsg_connection_references.py --interactive`
-4. Run baseline audit: `.\scripts\governance\Deploy-CrossTenantBaseline.ps1 -DataverseEnvironmentUrl <url>`
-5. Populate `fsi_approvedexternaltenant` for all existing cross-tenant relationships
-6. Set `IsCrossTenantGovernanceEnabled = "true"`
-7. Build flows following [Flow Configuration Guide](docs/flow-configuration.md)
+1. Preview Dataverse schema (dry-run): `python scripts/create_ctsg_dataverse_schema.py --tenant-id <tenant-id> --environment-url https://org.crm.dynamics.com --interactive --dry-run`
+2. Deploy Dataverse schema: `python scripts/create_ctsg_dataverse_schema.py --tenant-id <tenant-id> --environment-url https://org.crm.dynamics.com --interactive`
+3. Create environment variables: `python scripts/create_ctsg_environment_variables.py --tenant-id <tenant-id> --environment-url https://org.crm.dynamics.com --interactive`
+4. Create connection references: `python scripts/create_ctsg_connection_references.py --tenant-id <tenant-id> --environment-url https://org.crm.dynamics.com --interactive`
+5. Run baseline audit: `.\scripts\governance\Deploy-CrossTenantBaseline.ps1 -DataverseEnvironmentUrl <url>`
+6. Populate `fsi_approvedexternaltenant` for all existing cross-tenant relationships
+7. Set `fsi_CTSG_IsCrossTenantGovernanceEnabled = "true"`
+8. Build flows following [Flow Configuration Guide](docs/flow-configuration.md)
 
-> **Warning:** Complete ALL items in the [Delivery Checklist](DELIVERY-CHECKLIST.md) before setting `IsCrossTenantGovernanceEnabled = "true"`. Activating governance flows without a fully populated approved tenant list may trigger false-positive remediation actions.
+> **Warning:** Complete ALL items in the [Delivery Checklist](DELIVERY-CHECKLIST.md) before setting `fsi_CTSG_IsCrossTenantGovernanceEnabled = "true"`. Activating governance flows without a fully populated approved tenant list may trigger false-positive remediation actions.
+
+> **Adjacent controls to consider alongside this solution:** Tenant Restrictions v2 (TRv2) for outbound device-level enforcement, SharePoint external sharing settings (`Set-SPOTenant -SharingCapability`), Conditional Access policies for guest sessions, and OneDrive external sharing controls. Cross-tenant governance is necessary but not sufficient on its own — sharing surfaces outside Power Platform require their own governance.
 
 ## Documentation
 

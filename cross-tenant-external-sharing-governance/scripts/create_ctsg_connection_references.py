@@ -35,26 +35,43 @@ CONNECTION_REFS = [
     {
         "logical_name": "fsi_cr_powerplatformadmin_ctsg_readonly",
         "display_name": "Power Platform for Admins - CTSG (ReadOnly)",
-        "connector": "shared_powerappsforadmins",
-        "description": "Power Platform Admin connector for MI-CrossTenantReadOnly (Flows 1-3, 6)",
+        "connector": "shared_powerplatformforadmins",
+        "description": "Power Platform Admin V2 connector for MI-CrossTenantReadOnly (Flows 1-3, 6)",
     },
     {
         "logical_name": "fsi_cr_powerplatformadmin_ctsg_readwrite",
         "display_name": "Power Platform for Admins - CTSG (ReadWrite)",
-        "connector": "shared_powerappsforadmins",
-        "description": "Power Platform Admin connector for MI-CrossTenantReadWrite (Flows 4-5)",
+        "connector": "shared_powerplatformforadmins",
+        "description": "Power Platform Admin V2 connector for MI-CrossTenantReadWrite (Flows 4-5)",
     },
+    # NOTE: There is no first-party "generic Microsoft Graph" connector that exposes
+    # /policies/crossTenantAccessPolicy, /tenantRelationships, or /users guest filters
+    # as actions. Flows that call those Graph endpoints use the "HTTP with Microsoft
+    # Entra ID" connector (logical id ``shared_webcontents`` / per-tenant) and supply
+    # the URL + scopes directly. The two connection references below are placeholders
+    # so that solution-aware deploys still pin a per-managed-identity connection in the
+    # environment; rebind them post-deploy to the HTTP-with-Entra connection that the
+    # flow actions actually call.
     {
         "logical_name": "fsi_cr_graph_ctsg_readonly",
-        "display_name": "Microsoft Graph - CTSG (ReadOnly)",
-        "connector": "shared_microsoftgraphsecurity",
-        "description": "Graph connector for MI-CrossTenantReadOnly (guest users, CTA policies, tenant info)",
+        "display_name": "Microsoft Graph (HTTP with Entra ID) - CTSG (ReadOnly)",
+        "connector": "shared_webcontents",
+        "description": "HTTP-with-Entra-ID connector for MI-CrossTenantReadOnly (guest users, CTA policies, tenant info)",
     },
     {
         "logical_name": "fsi_cr_graph_ctsg_readwrite",
-        "display_name": "Microsoft Graph - CTSG (ReadWrite)",
-        "connector": "shared_microsoftgraphsecurity",
-        "description": "Graph connector for MI-CrossTenantReadWrite (CTA policy updates)",
+        "display_name": "Microsoft Graph (HTTP with Entra ID) - CTSG (ReadWrite)",
+        "connector": "shared_webcontents",
+        "description": "HTTP-with-Entra-ID connector for MI-CrossTenantReadWrite (CTA policy updates)",
+    },
+    # Office 365 Outlook connection used by Flow 6 (Annual Review reminders) and the
+    # Flow 5 escalation path. Flow doc requires this connector; if absent flows fail
+    # at design time. Add an extra CR rather than relying on per-flow ad-hoc auth.
+    {
+        "logical_name": "fsi_cr_office365_ctsg",
+        "display_name": "Office 365 Outlook - CTSG",
+        "connector": "shared_office365",
+        "description": "Office 365 Outlook connector for governance email notifications",
     },
 ]
 
@@ -130,10 +147,11 @@ Connection references created:
   - fsi_cr_dataverse_ctsg (Dataverse connector)
   - fsi_cr_teams_ctsg (Teams connector)
   - fsi_cr_approvals_ctsg (Approvals connector)
-  - fsi_cr_powerplatformadmin_ctsg_readonly (Power Platform for Admins - ReadOnly)
-  - fsi_cr_powerplatformadmin_ctsg_readwrite (Power Platform for Admins - ReadWrite)
-  - fsi_cr_graph_ctsg_readonly (Microsoft Graph - ReadOnly)
-  - fsi_cr_graph_ctsg_readwrite (Microsoft Graph - ReadWrite)
+  - fsi_cr_powerplatformadmin_ctsg_readonly (Power Platform for Admins V2 - ReadOnly)
+  - fsi_cr_powerplatformadmin_ctsg_readwrite (Power Platform for Admins V2 - ReadWrite)
+  - fsi_cr_graph_ctsg_readonly (HTTP with Microsoft Entra ID - ReadOnly)
+  - fsi_cr_graph_ctsg_readwrite (HTTP with Microsoft Entra ID - ReadWrite)
+  - fsi_cr_office365_ctsg (Office 365 Outlook - email notifications)
 
 These connection references must be bound to actual connections in Power Automate
 before flows can use them.

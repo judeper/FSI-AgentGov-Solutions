@@ -98,6 +98,13 @@ ENV_VARIABLES = [
         "type": "String",
         "defaultvalue": "FSI-AgentGov-v1.1",
     },
+    {
+        "schemaname": "fsi_CTSG_GovernanceTeamChannelId",
+        "displayname": "CTSG - Governance Team Channel ID",
+        "description": "Microsoft Teams channel ID used by Flow 2 to post the daily governance summary adaptive card",
+        "type": "String",
+        "defaultvalue": "",
+    },
 ]
 
 

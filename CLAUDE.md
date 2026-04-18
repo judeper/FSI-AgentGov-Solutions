@@ -51,7 +51,7 @@ git rev-parse --show-toplevel
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v1.1.1 |
 | [credential-oversharing-detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | PowerShell/Python | v1.0.1 |
 | [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v1.0.2 |
-| [cross-tenant-external-sharing-governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | PowerShell/Python | v1.0.1 |
+| [cross-tenant-external-sharing-governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | PowerShell/Python | v1.0.2 |
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.1 |
 | [dr-testing-framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | PowerShell/Python | v1.2.1 |
 | [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.1.3 |
@@ -91,7 +91,7 @@ git rev-parse --show-toplevel
 | copilot-studio-analytics | 3.2 | Business impact analytics and session outcome monitoring |
 | credential-oversharing-detector | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
 | cross-solution-integration | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Compliance Dashboard integration and evidence export |
-| cross-tenant-external-sharing-governance | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 | Three-layer cross-tenant access governance |
+| cross-tenant-external-sharing-governance |  1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance |
 | deny-event-correlation-report | 1.5, 1.7, 1.8, 3.4 | Deny event correlation across Purview and App Insights |
 | dr-testing-framework | 2.4, 2.1, 1.9 | Automated disaster recovery testing |
 | environment-lifecycle-management | 2.1, 2.2, 2.3, 2.8, 1.7 | Environment provisioning with zone-based governance |

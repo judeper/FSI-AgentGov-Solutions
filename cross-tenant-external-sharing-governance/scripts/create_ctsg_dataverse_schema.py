@@ -180,6 +180,10 @@ CTSG_OPTIONSETS = {
             ("Remediation Approved", 14),
             ("Remediation Rejected", 15),
             ("API Schema Validation Failed", 16),
+            ("Feature Flag Skip", 17),
+            ("Flow Error", 18),
+            ("Duplicate Remediation Skipped", 19),
+            ("Critical Finding Manual Remediation Required", 20),
         ],
     },
     "fsi_ctsg_complianceimpact": {
@@ -399,12 +403,12 @@ APPROVED_TENANT_COLUMNS = [
 ]
 
 EXTERNAL_SHARE_FINDING_COLUMNS = [
-    _string_col("fsi_AgentId", "Agent ID", 100,
-                description="Power Platform Bot ID"),
-    _string_col("fsi_AgentName", "Agent Name", 500,
-                description="Display name from agent registry"),
-    _string_col("fsi_EnvironmentId", "Environment ID", 100,
-                description="Power Platform environment ID"),
+    _string_col("fsi_AgentId", "Agent ID", 100, required=False,
+                description="Power Platform Bot ID (Layer 3 only; null for tenant-level findings)"),
+    _string_col("fsi_AgentName", "Agent Name", 500, required=False,
+                description="Display name from agent registry (Layer 3 only)"),
+    _string_col("fsi_EnvironmentId", "Environment ID", 100, required=False,
+                description="Power Platform environment ID (Layer 3 only)"),
     _string_col("fsi_ExternalTenantTenantId", "External Tenant ID", 100,
                 description="Tenant ID — populated even if not in registry"),
     _string_col("fsi_ExternalTenantName", "External Tenant Name", 500,
@@ -595,22 +599,42 @@ ALTERNATE_KEYS = [
         "display": "Tenant ID Unique Key",
         "key_columns": ["fsi_tenantid"],
     },
-    {
-        "entity": "fsi_externalsharefinding",
-        "schema_name": "fsi_FindingDeduplicationKey",
-        "display": "Finding Deduplication Key",
-        "key_columns": [
-            "fsi_agentid",
-            "fsi_externaltenanttenantid",
-            "fsi_findingtype",
-        ],
-    },
+    # NOTE: A composite alternate key on fsi_externalsharefinding was removed.
+    # Dataverse alt keys cannot include picklist columns (findingtype) or
+    # nullable columns (agentid/upn), so dedup must happen at the flow layer
+    # via $filter prior to Create. See flow doc Step "Pre-Create dedup".
 ]
 
 
 # =============================================================================
 # Deployment Functions
 # =============================================================================
+
+
+def _build_optionset_metadata(os_def: dict) -> dict:
+    """Construct a Dataverse global OptionSetMetadata payload from a CTSG def."""
+    name = os_def["name"]
+    options = os_def["options"]
+    display_label = os_def.get("display") or " ".join(
+        word.capitalize() for word in name.split("_")[1:]
+    ) or name
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
+        "Name": name,
+        "DisplayName": _label(display_label),
+        "Description": _label(os_def.get("description", display_label)),
+        "OptionSetType": "Picklist",
+        "IsGlobal": True,
+        "IsCustomOptionSet": True,
+        "Options": [
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
+                "Value": value,
+                "Label": _label(label),
+            }
+            for (label, value) in options
+        ],
+    }
 
 
 def create_shared_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
@@ -622,7 +646,7 @@ def create_shared_optionsets(client: DataverseClient, dry_run: bool = False) -> 
     print("\n[Creating/Verifying Shared Option Sets]")
 
     for os_name, os_def in SHARED_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        client.create_option_set(_build_optionset_metadata(os_def))
 
 
 def create_ctsg_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
@@ -634,7 +658,7 @@ def create_ctsg_optionsets(client: DataverseClient, dry_run: bool = False) -> No
     print("\n[Creating CTSG Option Sets]")
 
     for os_name, os_def in CTSG_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        client.create_option_set(_build_optionset_metadata(os_def))
 
 
 def create_table_with_columns(
@@ -707,8 +731,10 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool = False) -> Non
 
     Keys:
       - fsi_TenantIdUniqueKey on fsi_approvedexternaltenant — uniqueness on tenant GUID
-      - fsi_FindingDeduplicationKey on fsi_externalsharefinding — composite
-        deduplication on (agentid, externaltenanttenantid, findingtype)
+
+    NOTE: A composite key on fsi_externalsharefinding was removed because Dataverse
+    alternate keys cannot include picklist columns or nullable columns. Finding
+    deduplication is performed at the flow layer via $filter prior to Create.
     """
     print("\n[Creating Alternate Keys]")
 
@@ -743,6 +769,7 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool = False) -> Non
 
         # Create the alternate key
         key_definition = {
+            "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
             "SchemaName": key_name,
             "DisplayName": _label(alt_key["display"]),
             "KeyAttributes": alt_key["key_columns"],

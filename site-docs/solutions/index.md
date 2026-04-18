@@ -12,7 +12,7 @@ Solutions for controlling who can access, share, and publish AI agents.
 |----------|-------------|---------|----------|
 | [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated detection of overly permissive agent access configurations per governance zone | v1.0.1 | 3.8 |
 | [Conditional Access Automation](conditional-access-automation/index.md) | CA policy deployment, compliance monitoring, and drift detection for AI workloads | v1.1.2 | 1.11, 1.23, 1.18 |
-| [Cross-Tenant and External Sharing Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-tenant-external-sharing-governance/README.md) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.0 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
+| [Cross-Tenant and External Sharing Governance](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/cross-tenant-external-sharing-governance/README.md) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | v1.0.2 | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 |
 | [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Policy-driven inactivity timeout validation with zone-based duration requirements | v1.0.3 | 2.22, 1.23, 3.7, 3.8 |
 | [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Zone-based agent sharing policy enforcement with approval workflows and exception management | v1.0.2 | 1.18, 2.8 |
 | [Unrestricted Agent Sharing Detector](unrestricted-agent-sharing-detector/index.md) | Continuous detection of overly permissive agent sharing with automated remediation | v1.0.2 | 1.1, 3.8 |

@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.17.0' }
 
 <#
 .SYNOPSIS
@@ -52,8 +52,11 @@ if (-not $OutputPath) {
 # --- Authentication ---
 Connect-AzAccount -Identity | Out-Null
 
-$graphToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
-$ppToken    = (Get-AzAccessToken -ResourceUrl "https://api.powerplatform.com").Token
+# Az.Accounts >= 2.17 returns SecureString by default; force SecureString and convert.
+$graphResp  = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString
+$ppResp     = Get-AzAccessToken -ResourceUrl "https://service.powerapps.com/" -AsSecureString
+$graphToken = $graphResp.Token | ConvertFrom-SecureString -AsPlainText
+$ppToken    = $ppResp.Token    | ConvertFrom-SecureString -AsPlainText
 
 $graphHeaders = @{
     Authorization    = "Bearer $graphToken"
@@ -89,23 +92,35 @@ $layer1Result = @{
 }
 
 # 1a. Tenant isolation status
+# NOTE: Tenant isolation is exposed via the BAP (Business Application Platform)
+# admin API, not the public api.powerplatform.com endpoint surface. The accurate
+# endpoints are:
+#   GET /providers/Microsoft.BusinessAppPlatform/scopes/admin/tenantSettings
+#       ?api-version=2020-10-01
+#   GET /providers/Microsoft.BusinessAppPlatform/scopes/admin/crossTenantConnectionAllowPolicy
+#       ?api-version=2020-10-01
+# The BAP token audience is https://service.powerapps.com/. Re-authenticate the
+# managed identity against that resource and replace $ppHeaders below before
+# enabling Flow 1 in production. Property name on the policy object is
+# 'isolationEnabled' (not 'tenantIsolationEnabled') — confirm in your tenant.
 try {
     $tenantSettings = Invoke-RestMethod `
-        -Uri "https://api.powerplatform.com/governance/tenantSettings?api-version=2022-03-01-preview" `
+        -Uri "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/tenantSettings?api-version=2020-10-01" `
         -Headers $ppHeaders `
         -Method Get
 
-    if ($null -eq $tenantSettings.tenantIsolationEnabled) {
-        Write-Warning "SCHEMA MISMATCH: 'tenantIsolationEnabled' property not found in API response."
+    if ($null -eq $tenantSettings.isolationEnabled -and $null -eq $tenantSettings.tenantIsolationEnabled) {
+        Write-Warning "SCHEMA MISMATCH: neither 'isolationEnabled' nor 'tenantIsolationEnabled' found in BAP response."
         Write-Warning "Inspect the actual response and update the property name in DELIVERY-CHECKLIST.md."
         Write-Host "  Raw response properties: $($tenantSettings.PSObject.Properties.Name -join ', ')" -ForegroundColor Gray
         [void]$deliveryChecklistItems.Add("Layer1-TenantSettings: Confirm property name for isolation flag. Found: $($tenantSettings.PSObject.Properties.Name -join ', ')")
     } else {
-        $layer1Result.IsolationEnabled = $tenantSettings.tenantIsolationEnabled
+        $isolationFlag = if ($null -ne $tenantSettings.isolationEnabled) { $tenantSettings.isolationEnabled } else { $tenantSettings.tenantIsolationEnabled }
+        $layer1Result.IsolationEnabled = $isolationFlag
         $layer1Result.ApiConfirmed = $true
-        Write-Host "  Tenant isolation enabled: $($tenantSettings.tenantIsolationEnabled)" `
-            -ForegroundColor $(if ($tenantSettings.tenantIsolationEnabled) { "Green" } else { "Red" })
-        if (-not $tenantSettings.tenantIsolationEnabled) {
+        Write-Host "  Tenant isolation enabled: $isolationFlag" `
+            -ForegroundColor $(if ($isolationFlag) { "Green" } else { "Red" })
+        if (-not $isolationFlag) {
             Write-Warning "ACTION REQUIRED: Tenant isolation is OFF. Enable in PPAC before activating Flow 1."
             [void]$deliveryChecklistItems.Add("Layer1-IsolationOff: Enable tenant isolation in Power Platform Admin Center")
         }
@@ -113,14 +128,14 @@ try {
 } catch {
     $layer1Result.Errors += "TenantSettings API failed: $($_.Exception.Message)"
     Write-Warning "API 1 failed: $($_.Exception.Message)"
-    Write-Warning "Validate: https://api.powerplatform.com/governance/tenantSettings"
-    [void]$deliveryChecklistItems.Add("Layer1-TenantSettingsAPI: Validate endpoint accessibility for Managed Identity")
+    Write-Warning "Validate BAP endpoint and audience https://service.powerapps.com/ for the managed identity."
+    [void]$deliveryChecklistItems.Add("Layer1-TenantSettingsAPI: Validate BAP endpoint accessibility for Managed Identity (audience https://service.powerapps.com/)")
 }
 
 # 1b. Cross-tenant allow-list policies
 try {
     $allowList = Invoke-RestMethod `
-        -Uri "https://api.powerplatform.com/governance/crossTenantPolicies?api-version=2022-03-01-preview" `
+        -Uri "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/crossTenantConnectionAllowPolicy?api-version=2020-10-01" `
         -Headers $ppHeaders `
         -Method Get
 
@@ -365,7 +380,10 @@ if ($guestRetrieved) {
     $tenantDomains = @{}
     foreach ($guest in $guestUsers) {
         $upn = $guest.userPrincipalName
-        if ($upn -match '_([^#]+)#EXT#@') {
+        # Anchor on the LAST underscore before '#EXT#' so UPNs like
+        # 'john_doe_example.com#EXT#@tenant.onmicrosoft.com' resolve to
+        # 'example.com' (the domain), not 'doe_example.com'.
+        if ($upn -match '^.+_([^_#]+)#EXT#@') {
             $externalDomain = $Matches[1]
             if (-not $tenantDomains.ContainsKey($externalDomain)) {
                 $tenantDomains[$externalDomain] = 0

@@ -38,6 +38,17 @@ Used by: Flow 4, Flow 5 only
 
 > **IAM Note:** `Policy.ReadWrite.CrossTenantAccess` is a highly privileged Graph permission that may require Entra Global Admin approval in FSI tenants. If approval is delayed, Flows 4 and 5 can operate in manual-instruction-only mode.
 
+## Required Entra Roles
+
+The human operators (not the Managed Identities) require the following Entra roles for the deployment and operation activities described in this solution:
+
+| Role | Required For | Notes |
+|------|--------------|-------|
+| Entra Global Admin | Granting `Policy.ReadWrite.CrossTenantAccess` admin consent | One-time, can be delegated post-grant |
+| Cross-Tenant Access Administrator | Editing partner-level cross-tenant access policies, reviewing tenant relationships | Least-privilege alternative to Global Admin for ongoing CTA changes |
+| Power Platform Admin | Configuring tenant isolation in PPAC and reviewing baseline reports | Required for PPAC settings page access |
+| Privileged Role Admin | Granting MI app role assignments to Managed Identities | Or use the Microsoft Graph PowerShell SDK with delegated consent |
+
 ## Provisioning Steps
 
 ### Step 1: Create Managed Identities in Azure Portal

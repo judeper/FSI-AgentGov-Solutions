@@ -51,14 +51,14 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - `fsi_tenantisolationrecords`: _______________
   - `fsi_entractarecords`: _______________
   - `fsi_crosstenantcomplianceevents`: _______________
-- [ ] All OptionSet integer values confirmed against deployed solution XML
+- [ ] All OptionSet integer values confirmed against `docs/dataverse-schema.md` (auto-generated from `scripts/create_ctsg_dataverse_schema.py` — the source of truth; this solution does not ship an exported solution package per repo content policy)
   - `fsi_ctsg_approvalstatus`: Pending=0, Approved=1, Expired=2, Suspended=3, Revoked=4
   - `fsi_ctsg_findingstatus`: Open=0, Under Review=1, Remediated=2, Approved Exception=3, False Positive=4
   - `fsi_ctsg_severity`: Critical=0, High=1, Medium=2, Low=3
   - `fsi_ctsg_guestdetectionmethod`: EXT# Parsing=0, Mail Field=1, CreationType=2, Multi-Method Agreed=3, Unresolved=4
   - `fsi_ctsg_ppisolationdirection`: Inbound=0, Outbound=1, Both=2, None=3
   - `fsi_ctsg_isolationcompliancestatus`: Compliant=0, Non-Compliant - Isolation Disabled=1, Non-Compliant - Unapproved Entries=2
-  - `fsi_ctsg_eventtype`: Tenant Isolation Validated=0, Unapproved Entry Detected=1, Direction Mismatch=2, External Agent Share Detected=3, Unapproved Agent Share=4, CTA Default Block Missing=5, CTA Partner Mismatch=6, CTA Inbound Risk=7, Inbound B2B Unrestricted=8, Outbound B2B Unrestricted=9, Direct Connect Unrestricted=10, Tenant Onboarded=11, Tenant Suspended=12, Tenant Revoked=13, Review Completed=14, Review Overdue=15, API Schema Validation Failed=16
+  - `fsi_ctsg_eventtype`: Tenant Isolation Validated=0, Tenant Isolation Violation=1, External Share Detected=2, External Share Remediated=3, Entra CTA Audited=4, Entra CTA Violation=5, Tenant Onboarding Initiated=6, Tenant Approved=7, Tenant Expired=8, Tenant Suspended=9, Tenant Revoked=10, Annual Review Due=11, Annual Review Overdue=12, Annual Review Completed=13, Remediation Approved=14, Remediation Rejected=15, API Schema Validation Failed=16, Feature Flag Skip=17, Flow Error=18, Duplicate Remediation Skipped=19, Critical Finding Manual Remediation Required=20
 
 ## Managed Identity Configuration
 
@@ -83,8 +83,8 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
 
 ## Environment Configuration
 
-- [ ] All 12 environment variables created via `create_ctsg_environment_variables.py`
-- [ ] `CTABaseline_OutboundB2BBlocked` decision documented:
+- [ ] All 13 environment variables created via `create_ctsg_environment_variables.py`
+- [ ] `fsi_CTSG_CTABaselineOutboundB2BBlocked` decision documented:
   - Zone 1/2 value: _______________
   - Zone 3 value: _______________
   - Business rationale: _______________
@@ -104,7 +104,7 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - Configured via: Power Platform Admin Center
   - Date configured: _______________
 
-- [ ] `IsCrossTenantGovernanceEnabled` set to `"true"`
+- [ ] `fsi_CTSG_IsCrossTenantGovernanceEnabled` set to `"true"`
   - Date activated: _______________
   - Activated by: _______________
 
