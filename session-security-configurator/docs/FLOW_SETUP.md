@@ -205,7 +205,7 @@ The flow routes alerts based on validation status and drift detection:
 - Compares current validation status to most recent Passed baseline in Dataverse
 - If no baseline exists: `IsFirstRun: true`, every non-Passed triggers alert
 - If baseline exists: Drift detected when current status differs from baseline
-- Fails open: If Dataverse query fails, assumes drift and sends alert
+- Fail-safe alerting: if the Dataverse baseline query fails, the runbook returns `DriftDetected=true` with `Status='Error'` so the alert path still fires (fail-closed for alerting; downstream flows can route on `Status` to distinguish infrastructure errors from genuine drift).
 
 ## Troubleshooting
 

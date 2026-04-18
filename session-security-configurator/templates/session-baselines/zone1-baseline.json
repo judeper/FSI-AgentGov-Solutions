@@ -6,6 +6,7 @@
   "persistentBrowser": "never",
   "authenticationStrength": null,
   "authenticationStrengthDescription": "Standard MFA (any method)",
+  "requireMfa": true,
   "requireCompliantDevice": false,
   "pimSettings": {
     "maxActivationHours": 8,

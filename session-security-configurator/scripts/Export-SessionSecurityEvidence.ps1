@@ -236,7 +236,8 @@ if ($Interactive) {
             # Fallback: Attempt to use existing Graph context
             Write-Warning "MSAL.PS module not found. Attempting to use existing authentication context."
             $context = Get-MgContext -ErrorAction SilentlyContinue
-            if ($context -and $context.AccessToken) {
+            # Property check is StrictMode-safe: touching .AccessToken on Graph SDK v2 throws PropertyNotFoundException.
+            if ($context -and ($context.PSObject.Properties.Name -contains 'AccessToken') -and $context.AccessToken) {
                 # Graph SDK v1: AccessToken is directly available on context
                 $accessToken = $context.AccessToken
                 Write-Host "Using existing authentication context." -ForegroundColor Green
@@ -415,7 +416,7 @@ $metadata = [PSCustomObject]@{
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
-    exportVersion   = "1.0.0"
+    exportVersion   = "1.0.2"
     recordCount     = $validationsReadable.Count
     organizationUrl = $DataverseUrl
 }

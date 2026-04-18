@@ -239,7 +239,7 @@ COLUMNS = {
             "DisplayName": {"LocalizedLabels": [{"Label": "Captured On", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "When baseline was captured", "LanguageCode": 1033}]},
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
@@ -319,7 +319,7 @@ COLUMNS = {
             "DisplayName": {"LocalizedLabels": [{"Label": "Timestamp", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "When validation ran", "LanguageCode": 1033}]},
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
@@ -410,7 +410,7 @@ COLUMNS = {
             "DisplayName": {"LocalizedLabels": [{"Label": "Detected On", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "When drift was detected", "LanguageCode": 1033}]},
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
@@ -440,7 +440,7 @@ COLUMNS = {
             "DisplayName": {"LocalizedLabels": [{"Label": "Acknowledged On", "LanguageCode": 1033}]},
             "Description": {"LocalizedLabels": [{"Label": "When acknowledged", "LanguageCode": 1033}]},
             "Format": "DateAndTime",
-            "DateTimeBehavior": {"Value": "UserLocal"},
+            "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",

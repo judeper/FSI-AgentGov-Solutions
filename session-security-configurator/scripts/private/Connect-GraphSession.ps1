@@ -65,7 +65,12 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string[]]$Scopes = @("Policy.ReadWrite.ConditionalAccess", "Policy.Read.All")
+    [string[]]$Scopes = @(
+        "Policy.ReadWrite.ConditionalAccess",
+        "Policy.Read.All",
+        "GroupMember.Read.All",
+        "RoleManagement.Read.Directory"
+    )
 )
 
 Set-StrictMode -Version Latest
@@ -87,7 +92,12 @@ function Connect-GraphSession {
         [string]$CertificateThumbprint,
 
         [Parameter(Mandatory = $false)]
-        [string[]]$Scopes = @("Policy.ReadWrite.ConditionalAccess", "Policy.Read.All")
+        [string[]]$Scopes = @(
+            "Policy.ReadWrite.ConditionalAccess",
+            "Policy.Read.All",
+            "GroupMember.Read.All",
+            "RoleManagement.Read.Directory"
+        )
     )
 
     try {

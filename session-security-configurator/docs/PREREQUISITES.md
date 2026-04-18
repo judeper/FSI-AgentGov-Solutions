@@ -81,11 +81,22 @@ For scheduled validation via Azure Automation:
 
 - Azure Automation Account with PowerShell 7.2+ runtime
 - Certificate uploaded to Automation Account Certificates blade
-- Modules installed: `Microsoft.Graph.Identity.SignIns`, `MSAL.PS`
-- App registration with:
+- Modules installed: `Microsoft.Graph.Identity.SignIns`, `Microsoft.Graph.Groups`, `Microsoft.Graph.Identity.Governance`, `MSAL.PS`
+- App registration with the following Microsoft Graph application permissions:
+
+**Required for validation (`Test-SessionCompliance.ps1`, `Start-SessionValidationRunbook.ps1`):**
+
   - `Policy.Read.All` (read CA policies)
-  - `Directory.Read.All` (read group memberships for break-glass exclusion)
-  - `RoleManagement.Read.All` (optional — for PIM validation)
+  - `GroupMember.Read.All` (read group memberships for break-glass exclusion checks)
+  - `RoleManagement.Read.Directory` (read PIM role assignments and policies)
+
+**Required for deployment (`Deploy-StepUpPolicies.ps1`, `Deploy-AuthContexts.ps1`):**
+
+  - `Policy.ReadWrite.ConditionalAccess` (create/update CA policies and authentication context references)
+
+> **Note:** Some legacy documentation mentioned `Application.Read.All` and `Directory.Read.All` — the
+> current code paths do not require either. `GroupMember.Read.All` (more narrowly scoped than
+> `Directory.Read.All`) covers all break-glass and group-membership reads performed by SSC.
 
 ## Governance Zone Alignment
 

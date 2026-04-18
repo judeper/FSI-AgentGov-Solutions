@@ -168,12 +168,27 @@ function Compare-SessionBaseline {
 
         # Check 3: Authentication strength
         # Graph API returns a GUID in AuthenticationStrength.Id while baseline JSON
-        # stores a display name (e.g. "passwordless"). Resolve the policy GUID to its
-        # display name so comparisons use the same type.
+        # stores a display name (e.g. "Passwordless MFA"). DisplayName is NOT populated
+        # by default on Get-MgIdentityConditionalAccessPolicy results — resolve the policy
+        # by ID to get its current display name.
         $policyAuthStrengthId = $Policy.GrantControls.AuthenticationStrength.Id
-        $policyAuthStrength = if ($policyAuthStrengthId) {
-            $Policy.GrantControls.AuthenticationStrength.DisplayName
-        } else { $null }
+        $policyAuthStrength = $null
+        if ($policyAuthStrengthId) {
+            # Prefer DisplayName when present; otherwise resolve via auth-strength endpoint.
+            if ($Policy.GrantControls.AuthenticationStrength.PSObject.Properties.Name -contains 'DisplayName' -and
+                $Policy.GrantControls.AuthenticationStrength.DisplayName) {
+                $policyAuthStrength = $Policy.GrantControls.AuthenticationStrength.DisplayName
+            }
+            else {
+                try {
+                    $strengthPolicy = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $policyAuthStrengthId -ErrorAction Stop
+                    $policyAuthStrength = $strengthPolicy.DisplayName
+                }
+                catch {
+                    Write-Verbose "  Unable to resolve auth-strength policy $policyAuthStrengthId : $($_.Exception.Message)"
+                }
+            }
+        }
         $baselineAuthStrength = $Baseline.authenticationStrength
 
         if ($policyAuthStrength -ne $baselineAuthStrength) {
@@ -208,6 +223,23 @@ function Compare-SessionBaseline {
         }
         else {
             Write-Verbose "  ✓ requireCompliantDevice matches: $policyRequiresCompliantDevice"
+        }
+
+        # Check 5: MFA built-in control (Zone 1 baselines specify requireMfa: true since they
+        # rely on builtInControls=mfa rather than a custom authentication strength policy).
+        if ($Baseline.PSObject.Properties.Name -contains 'requireMfa' -and $Baseline.requireMfa) {
+            $policyRequiresMfa = $Policy.GrantControls.BuiltInControls -contains "mfa"
+            if (-not $policyRequiresMfa) {
+                $results.Mismatches += @{
+                    Property = "requireMfa"
+                    Expected = $true
+                    Actual = $false
+                }
+                Write-Verbose "  Mismatch: requireMfa - Expected true, Actual false"
+            }
+            else {
+                Write-Verbose "  ✓ requireMfa matches: true"
+            }
         }
 
         # Determine overall status

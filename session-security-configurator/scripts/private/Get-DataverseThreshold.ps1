@@ -127,10 +127,11 @@ function Get-DataverseThreshold {
             Write-Verbose "Using provided access token for Dataverse authentication."
         }
         else {
-            # Attempt to get token from current Graph context
+            # Attempt to get token from current Graph context (Graph SDK v1 only).
+            # Property check is StrictMode-safe — touching .AccessToken on v2 throws PropertyNotFoundException.
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
-                if ($context -and $context.AccessToken) {
+                if ($context -and ($context.PSObject.Properties.Name -contains 'AccessToken') -and $context.AccessToken) {
                     # Graph SDK v1: AccessToken is directly available on context
                     $token = $context.AccessToken
                     Write-Verbose "Using access token from current Microsoft Graph session."
@@ -157,10 +158,12 @@ function Get-DataverseThreshold {
             "OData-Version" = "4.0"
         }
 
-        # Build OData query for environment variable definitions
+        # Build OData query for environment variable definitions.
+        # Uses the canonical navigation property name 'environmentvariabledefinition_environmentvariablevalue'
+        # for expanding to the related fsi_SSC_* env-var values.
         $filter = "startswith(schemaname,'fsi_SSC_$Zone')"
         $select = "schemaname"
-        $expand = "environmentvariablevalues(`$select=value)"
+        $expand = "environmentvariabledefinition_environmentvariablevalue(`$select=value)"
         $apiUrl = "$DataverseUrl/api/data/v9.2/environmentvariabledefinitions?`$filter=$filter&`$select=$select&`$expand=$expand"
 
         Write-Verbose "Querying Dataverse environment variables for zone: $Zone"
@@ -183,17 +186,18 @@ function Get-DataverseThreshold {
 
         foreach ($envVar in $response.value) {
             $schemaName = $envVar.schemaname
+            $envValues = $envVar.environmentvariabledefinition_environmentvariablevalue
 
             if ($schemaName -eq "fsi_SSC_${Zone}SignInFrequencyMinutes") {
-                if ($envVar.environmentvariablevalues -and $envVar.environmentvariablevalues.Count -gt 0) {
+                if ($envValues -and $envValues.Count -gt 0) {
                     # Environment variable values are stored as strings - convert to int
-                    $signInFrequencyMinutes = [int]$envVar.environmentvariablevalues[0].value
+                    $signInFrequencyMinutes = [int]$envValues[0].value
                     Write-Verbose "  SignInFrequencyMinutes: $signInFrequencyMinutes"
                 }
             }
             elseif ($schemaName -eq "fsi_SSC_${Zone}AuthStrength") {
-                if ($envVar.environmentvariablevalues -and $envVar.environmentvariablevalues.Count -gt 0) {
-                    $authStrength = $envVar.environmentvariablevalues[0].value
+                if ($envValues -and $envValues.Count -gt 0) {
+                    $authStrength = $envValues[0].value
                     Write-Verbose "  AuthStrength: $authStrength"
                 }
             }

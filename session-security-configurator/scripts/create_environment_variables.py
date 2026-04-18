@@ -18,21 +18,21 @@ ENV_VARIABLES = [
         "schemaname": "fsi_SSC_Zone1SignInFrequencyMinutes",
         "displayname": "SSC - Zone 1 Sign-In Frequency (Minutes)",
         "description": "Maximum sign-in frequency for Zone 1 Personal Productivity (default: 480 = 8 hours)",
-        "type": "Decimal",
+        "type": "Number",
         "defaultvalue": "480",
     },
     {
         "schemaname": "fsi_SSC_Zone2SignInFrequencyMinutes",
         "displayname": "SSC - Zone 2 Sign-In Frequency (Minutes)",
         "description": "Maximum sign-in frequency for Zone 2 Team Collaboration (default: 240 = 4 hours)",
-        "type": "Decimal",
+        "type": "Number",
         "defaultvalue": "240",
     },
     {
         "schemaname": "fsi_SSC_Zone3SignInFrequencyMinutes",
         "displayname": "SSC - Zone 3 Sign-In Frequency (Minutes)",
         "description": "Maximum sign-in frequency for Zone 3 Enterprise Managed (default: 60 = 1 hour)",
-        "type": "Decimal",
+        "type": "Number",
         "defaultvalue": "60",
     },
     {
@@ -96,7 +96,7 @@ def create_environment_variables(client: SSCClient, dry_run: bool = False) -> di
                 results["created"] += 1
             else:
                 # Map type to Dataverse type code
-                type_code = 100000001 if var["type"] == "Decimal" else 100000000
+                type_code = 100000001 if var["type"] == "Number" else 100000000
 
                 # Create definition
                 definition_data = {

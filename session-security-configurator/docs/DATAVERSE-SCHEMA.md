@@ -127,9 +127,9 @@ Configurable thresholds stored as Dataverse environment variables.
 
 | Variable | Type | Default | Purpose |
 |----------|------|---------|---------|
-| fsi_SSC_Zone1SignInFrequencyMinutes | Decimal | 480 | Zone 1 session limit (8 hours) |
-| fsi_SSC_Zone2SignInFrequencyMinutes | Decimal | 240 | Zone 2 session limit (4 hours) |
-| fsi_SSC_Zone3SignInFrequencyMinutes | Decimal | 60 | Zone 3 session limit (1 hour) |
+| fsi_SSC_Zone1SignInFrequencyMinutes | Number (integer) | 480 | Zone 1 session limit (8 hours) |
+| fsi_SSC_Zone2SignInFrequencyMinutes | Number (integer) | 240 | Zone 2 session limit (4 hours) |
+| fsi_SSC_Zone3SignInFrequencyMinutes | Number (integer) | 60 | Zone 3 session limit (1 hour) |
 | fsi_SSC_Zone1AuthStrength | String | standard | Zone 1 authentication strength |
 | fsi_SSC_Zone2AuthStrength | String | Passwordless MFA | Zone 2 authentication strength |
 | fsi_SSC_Zone3AuthStrength | String | Phishing-resistant MFA | Zone 3 authentication strength |

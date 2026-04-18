@@ -126,10 +126,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Banner
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 Write-Host "Session Security Configurator - Step-Up Policy Deployment" -ForegroundColor Cyan
 Write-Host "FSI-AgentGov Control 1.23" -ForegroundColor Cyan
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 Write-Host "Tenant: $TenantId"
 Write-Host "Zone: $Zone"
 Write-Host "Mode: $(if ($EnablePolicies) { 'ENABLE ENFORCEMENT' } elseif ($DryRun) { 'DRY RUN' } else { 'DEPLOY REPORT-ONLY' })"
@@ -231,9 +231,9 @@ else {
 
 # --- 72-HOUR BAKE PERIOD ENFORCEMENT ---
 if ($EnablePolicies) {
-    Write-Host "`n" + "=" * 80 -ForegroundColor Yellow
+    Write-Host ("`n" + ("=" * 80)) -ForegroundColor Yellow
     Write-Host "ENFORCEMENT MODE - 72-Hour Bake Period Validation" -ForegroundColor Yellow
-    Write-Host "=" * 80 -ForegroundColor Yellow
+    Write-Host ("=" * 80) -ForegroundColor Yellow
 
     # Query existing SSC policies
     Write-Host "`nQuerying existing session security policies..." -ForegroundColor Cyan
@@ -267,9 +267,9 @@ if ($EnablePolicies) {
 
     # Abort if any policy is too young
     if ($tooYoungPolicies.Count -gt 0) {
-        Write-Host "`n" + "=" * 80 -ForegroundColor Red
+        Write-Host ("`n" + ("=" * 80)) -ForegroundColor Red
         Write-Host "DEPLOYMENT ABORTED - BAKE PERIOD NOT MET" -ForegroundColor Red
-        Write-Host "=" * 80 -ForegroundColor Red
+        Write-Host ("=" * 80) -ForegroundColor Red
         Write-Host "`nThe following policies were created less than 72 hours ago:" -ForegroundColor Red
         Write-Host ""
 
@@ -336,9 +336,9 @@ if ($EnablePolicies) {
     }
 
     # Summary for enforcement transition
-    Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
+    Write-Host ("`n" + ("=" * 80)) -ForegroundColor Cyan
     Write-Host "Enforcement Transition Summary" -ForegroundColor Cyan
-    Write-Host "=" * 80 -ForegroundColor Cyan
+    Write-Host ("=" * 80) -ForegroundColor Cyan
 
     Write-Host "`nPolicies Enforced: $($transitioned.Count)"
     foreach ($result in $transitioned) {
@@ -364,9 +364,9 @@ if ($EnablePolicies) {
 # --- PRE-DEPLOYMENT CA POLICY CONFLICT AUDIT ---
 $conflicts = @()
 if (-not $SkipConflictAudit) {
-    Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
+    Write-Host ("`n" + ("=" * 80)) -ForegroundColor Cyan
     Write-Host "Pre-Deployment Conflict Audit" -ForegroundColor Cyan
-    Write-Host "=" * 80 -ForegroundColor Cyan
+    Write-Host ("=" * 80) -ForegroundColor Cyan
 
     Write-Host "`nQuerying all existing Conditional Access policies..." -ForegroundColor Cyan
     $allCAPolicies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop
@@ -463,18 +463,18 @@ if (-not $SkipConflictAudit) {
 
 # If DryRun, stop here
 if ($DryRun) {
-    Write-Host "`n" + "=" * 80 -ForegroundColor Yellow
+    Write-Host ("`n" + ("=" * 80)) -ForegroundColor Yellow
     Write-Host "DRY RUN COMPLETE" -ForegroundColor Yellow
-    Write-Host "=" * 80 -ForegroundColor Yellow
+    Write-Host ("=" * 80) -ForegroundColor Yellow
     Write-Host "`nNo policies were deployed." -ForegroundColor Yellow
     Write-Host "Re-run without -DryRun to deploy policies in report-only mode." -ForegroundColor Yellow
     return
 }
 
 # --- TEMPLATE PROCESSING AND DEPLOYMENT ---
-Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
+Write-Host ("`n" + ("=" * 80)) -ForegroundColor Cyan
 Write-Host "Policy Template Processing" -ForegroundColor Cyan
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 
 $deployedPolicies = @()
 $errors = @()
@@ -618,10 +618,10 @@ foreach ($templateFile in $templatesToDeploy) {
                     $betaTemplate = $template | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
                     $betaTemplate.displayName = "$($config.policyPrefix)-Zone3-Risky-User-Reauthentication"
 
-                    # Set Beta-specific session controls
+                    # Set Beta-specific session controls.
+                    # NOTE: When frequencyInterval = "everyTime", value/type MUST be omitted —
+                    # Microsoft Graph beta rejects the combination with HTTP 400.
                     $betaTemplate.sessionControls.signInFrequency = @{
-                        value = 1
-                        type = "hours"
                         isEnabled = $true
                         frequencyInterval = "everyTime"
                         authenticationType = "primaryAndSecondaryAuthentication"
@@ -657,9 +657,9 @@ foreach ($templateFile in $templatesToDeploy) {
 }
 
 # --- DEPLOYMENT SUMMARY ---
-Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
+Write-Host ("`n" + ("=" * 80)) -ForegroundColor Cyan
 Write-Host "Deployment Summary" -ForegroundColor Cyan
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 
 Write-Host "`nPolicies Processed: $($deployedPolicies.Count)"
 foreach ($result in $deployedPolicies) {

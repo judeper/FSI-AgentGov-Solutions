@@ -262,8 +262,18 @@ if ($DataverseUrl) {
             $baseline.signInFrequencyMinutes = $dvThresholds.SignInFrequencyMinutes
         }
         if ($dvThresholds.AuthStrength) {
-            Write-Host "  AuthStrength: $($baseline.authenticationStrength) -> $($dvThresholds.AuthStrength)" -ForegroundColor Cyan
-            $baseline.authenticationStrength = $dvThresholds.AuthStrength
+            # Treat the sentinel value 'standard' as $null — Zone 1 policies use builtInControls=mfa
+            # rather than a custom authentication strength policy, so storing 'standard' here would
+            # cause a false 'Failed: authenticationStrength Expected=standard Actual=not configured'
+            # mismatch in Compare-SessionBaseline.
+            if ($dvThresholds.AuthStrength -imatch '^standard$') {
+                Write-Host "  AuthStrength: $($baseline.authenticationStrength) -> (null, standard MFA)" -ForegroundColor Cyan
+                $baseline.authenticationStrength = $null
+            }
+            else {
+                Write-Host "  AuthStrength: $($baseline.authenticationStrength) -> $($dvThresholds.AuthStrength)" -ForegroundColor Cyan
+                $baseline.authenticationStrength = $dvThresholds.AuthStrength
+            }
         }
     }
     else {

@@ -130,7 +130,10 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [switch]$Interactive
+    [switch]$Interactive,
+
+    [Parameter(Mandatory = $false)]
+    [string]$PolicyPrefix = "SSC"
 
 )
 
@@ -166,19 +169,26 @@ try {
 
     Write-Verbose "Connected to Microsoft Graph"
 
-    # Query enabled CA policies with session controls
+    # Query enabled CA policies with session controls, filtered to the SSC policies for this zone
     Write-Verbose "Querying CA policies with session controls..."
 
-    $policies = Get-MgIdentityConditionalAccessPolicy -ErrorAction Stop | Where-Object {
+    # Resolve policy prefix (parameter, defaults to 'SSC')
+    $policyPrefix = $PolicyPrefix
+    $zoneNamePattern = "$policyPrefix-$Zone-"
+    Write-Verbose "Filtering policies by display-name prefix: '$zoneNamePattern'"
+
+    $allPolicies = Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop
+    $policies = $allPolicies | Where-Object {
         $_.State -in @("enabled", "enabledForReportingButNotEnforced") -and
         $_.SessionControls -and
-        $_.SessionControls.SignInFrequency
+        $_.SessionControls.SignInFrequency -and
+        $_.DisplayName -like "$zoneNamePattern*"
     }
 
-    Write-Verbose "Found $($policies.Count) enabled policy(ies) with session controls"
+    Write-Verbose "Found $($policies.Count) enabled $Zone policy(ies) with session controls"
 
     if (-not $policies -or $policies.Count -eq 0) {
-        throw "No enabled CA policies with session controls found. Cannot capture baseline."
+        throw "No enabled CA policies matching '$zoneNamePattern*' with session controls found. Cannot capture baseline for $Zone. Deploy step-up policies first via Deploy-StepUpPolicies.ps1."
     }
 
     # Extract session control settings per policy

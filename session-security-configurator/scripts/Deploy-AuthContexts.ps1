@@ -103,10 +103,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Banner
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 Write-Host "Session Security Configurator - Authentication Context Deployment" -ForegroundColor Cyan
 Write-Host "FSI-AgentGov Control 1.23" -ForegroundColor Cyan
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 Write-Host "Tenant: $TenantId"
 Write-Host "Mode: $(if ($DryRun) { 'DRY RUN' } else { 'DEPLOY' })"
 Write-Host "Force: $(if ($Force) { 'Yes' } else { 'No' })"
@@ -326,9 +326,9 @@ foreach ($context in $authContexts) {
 
 # Check for conflicts that would abort deployment
 if ($conflicts.Count -gt 0 -and -not $Force) {
-    Write-Host "`n" + "=" * 80 -ForegroundColor Red
+    Write-Host ("`n" + ("=" * 80)) -ForegroundColor Red
     Write-Host "DEPLOYMENT ABORTED - CONFLICTS DETECTED" -ForegroundColor Red
-    Write-Host "=" * 80 -ForegroundColor Red
+    Write-Host ("=" * 80) -ForegroundColor Red
     Write-Host "`nAuthentication context conflicts detected:" -ForegroundColor Red
     Write-Host ""
 
@@ -349,9 +349,9 @@ if ($conflicts.Count -gt 0 -and -not $Force) {
 }
 
 # Summary
-Write-Host "`n" + "=" * 80 -ForegroundColor Cyan
+Write-Host ("`n" + ("=" * 80)) -ForegroundColor Cyan
 Write-Host "Deployment Summary" -ForegroundColor Cyan
-Write-Host "=" * 80 -ForegroundColor Cyan
+Write-Host ("=" * 80) -ForegroundColor Cyan
 
 Write-Host "`nAuthentication Contexts Processed: $($deployedContexts.Count)"
 foreach ($result in $deployedContexts) {

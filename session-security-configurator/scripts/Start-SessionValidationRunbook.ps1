@@ -212,20 +212,22 @@ try {
 
             $currentSeverity = $severityMap[$CurrentStatus]
 
-            # Build OData filter for baseline query
-            # Find most recent Passed (severity=1) validation for this zone
+            # Build OData filter for active baseline query
+            # Drift detection compares the current run against the active SessionBaseline for this zone
+            # (recorded by Invoke-BaselineCapture.ps1). fsi_sessionbaselines is the canonical source of
+            # truth for "known good"; fsi_validationhistories captures point-in-time runs only.
             $zoneMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003 }
             $zoneVal = $zoneMap[$Zone]
-            $filter = "fsi_severity eq 1 and fsi_zone eq $zoneVal"
+            $filter = "fsi_zone eq $zoneVal and fsi_isactive eq true"
 
             # Construct API URL with OData query
-            $apiUrl = "$DataverseUrl/api/data/v9.2/fsi_validationhistories"
+            $apiUrl = "$DataverseUrl/api/data/v9.2/fsi_sessionbaselines"
             $apiUrl += "?`$filter=$filter"
-            $apiUrl += "&`$orderby=createdon desc"
+            $apiUrl += "&`$orderby=fsi_capturedon desc"
             $apiUrl += "&`$top=1"
-            $apiUrl += "&`$select=fsi_severity,fsi_timestamp,createdon"
+            $apiUrl += "&`$select=fsi_name,fsi_signinfrequencyminutes,fsi_authstrength,fsi_requirecompliantdevice,fsi_capturedon"
 
-            Write-Verbose "Querying baseline: $apiUrl"
+            Write-Verbose "Querying active baseline: $apiUrl"
 
             # Prepare headers
             $headers = @{
@@ -246,12 +248,13 @@ try {
             $baseline = $response.value | Select-Object -First 1
 
             if ($null -eq $baseline) {
-                # No baseline exists - this is first run
-                # Any non-Passed result is drift
-                Write-Verbose "No baseline found (first run). Current: $CurrentStatus"
+                # No active baseline exists - this is first run
+                # Any non-Passed result is treated as drift so it surfaces for investigation
+                Write-Verbose "No active SessionBaseline found for $Zone (first run). Current: $CurrentStatus"
 
                 return [PSCustomObject]@{
                     DriftDetected  = ($CurrentStatus -ne "Passed")
+                    Status         = "OK"
                     CurrentStatus  = $CurrentStatus
                     BaselineStatus = $null
                     BaselineDate   = $null
@@ -259,51 +262,35 @@ try {
                 }
             }
 
-            # Baseline exists - compare severities
-            $baselineSeverity = $baseline.fsi_severity
+            # Active baseline exists - drift is signalled when current severity is worse than Passed,
+            # i.e. the live config diverged from the captured baseline. Per-property comparison is
+            # already performed by Compare-SessionBaseline; here we only summarize for routing.
+            $baselineDate = if ($baseline.fsi_capturedon) { $baseline.fsi_capturedon } else { $null }
+            $driftDetected = $currentSeverity -gt 1  # 1 = Passed
 
-            # Map baseline severity back to status string
-            $reverseSeverityMap = @{
-                1 = "Passed"
-                2 = "Warning"
-                3 = "GracePeriod"
-                4 = "Failed"
-                5 = "Error"
-            }
-            $baselineStatus = $reverseSeverityMap[$baselineSeverity]
-
-            $baselineDate = if ($baseline.fsi_timestamp) {
-                $baseline.fsi_timestamp
-            }
-            elseif ($baseline.createdon) {
-                $baseline.createdon
-            }
-            else {
-                $null
-            }
-
-            # Drift detected if current severity is worse (higher number) than baseline
-            $driftDetected = $currentSeverity -gt $baselineSeverity
-
-            Write-Verbose "Baseline found: $baselineStatus (severity=$baselineSeverity) at $baselineDate"
-            Write-Verbose "Current: $CurrentStatus (severity=$currentSeverity)"
-            Write-Verbose "Drift detected: $driftDetected"
+            Write-Verbose "Active baseline: $($baseline.fsi_name) captured $baselineDate"
+            Write-Verbose "Current: $CurrentStatus (severity=$currentSeverity); Drift detected: $driftDetected"
 
             return [PSCustomObject]@{
                 DriftDetected  = $driftDetected
+                Status         = "OK"
                 CurrentStatus  = $CurrentStatus
-                BaselineStatus = $baselineStatus
+                BaselineStatus = "Passed"
+                BaselineName   = $baseline.fsi_name
                 BaselineDate   = $baselineDate
                 IsFirstRun     = $false
             }
         }
         catch {
-            # On error, fail open - return drift detected to avoid suppressing alerts
+            # Fail-closed for alerting: surface a Dataverse error as drift so the alert path still
+            # fires, but tag Status='Error' so downstream Power Automate routing can distinguish
+            # infrastructure errors from genuine drift.
             $errorMsg = $_.Exception.Message
-            Write-Verbose "Baseline comparison failed: $errorMsg. Failing open (DriftDetected=true)."
+            Write-Verbose "Baseline comparison failed: $errorMsg. Returning DriftDetected=true with Status='Error'."
 
             return [PSCustomObject]@{
                 DriftDetected  = $true
+                Status         = "Error"
                 CurrentStatus  = $CurrentStatus
                 BaselineStatus = $null
                 BaselineDate   = $null

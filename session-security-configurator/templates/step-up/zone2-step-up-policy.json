@@ -14,7 +14,6 @@
   "grantControls": {
     "operator": "AND",
     "builtInControls": [],
-    "_builtInControls_comment": "Intentionally empty - Zone 2 relies solely on authenticationStrength (passwordless MFA) rather than builtInControls",
     "authenticationStrength": {
       "id": "<passwordless-mfa-policy-id>"
     }
