@@ -26,7 +26,7 @@
 
 .NOTES
     File: Get-ExpectedConfirmationPolicy.ps1
-    Version: 1.0.2
+    Version: 1.1.0
     Requires: PowerShell 7.0+
 #>
 

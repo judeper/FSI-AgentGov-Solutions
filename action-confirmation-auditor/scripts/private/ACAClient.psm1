@@ -18,7 +18,7 @@
 
 .NOTES
     Module: ACAClient.psm1
-    Version: 1.0.2
+    Version: 1.1.0
     Requires: PowerShell 7.0+
     Author: FSI Agent Governance Team
 #>
@@ -284,7 +284,7 @@ function Write-ACAValidationHistory {
 
     try {
         $record = @{
-            fsi_name                        = "$($ValidationResult.OverallStatus)-$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            fsi_name                        = "$($ValidationResult.OverallStatus)-$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))"
             fsi_runid                       = $RunId
             fsi_validationtime              = (Get-Date).ToUniversalTime().ToString('o')
             fsi_totalagents                 = $ValidationResult.TotalAgents
@@ -379,6 +379,11 @@ function Write-ACAViolation {
             fsi_regulatorycontext = $Violation.RegulatoryContext
             fsi_violationstatus   = $violationStatusInt
             fsi_detectedat        = (Get-Date).ToUniversalTime().ToString('o')
+        }
+
+        # Add violation type if supplied (used for cross-solution dashboard filtering)
+        if ($Violation.ViolationType) {
+            $record['fsi_violationtype'] = $Violation.ViolationType
         }
 
         # Add action type if resolved

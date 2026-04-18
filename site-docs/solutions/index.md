@@ -65,7 +65,7 @@ Solutions for validating and enforcing agent configuration settings.
 | [Generative AI Config Auditor](generative-ai-config-auditor/index.md) | GenAI feature configuration validation per zone governance policy | v1.0.0 | 2.24 |
 | [Session Security Configurator](session-security-configurator/index.md) | Session security validation per governance zone with drift detection | v1.0.1 | 1.23, 1.11 |
 | [Agent Communication Restriction Detector](agent-communication-restriction-detector/index.md) | Inter-agent communication restriction validation per zone routing policy | v1.0.0 | 2.17 |
-| [Action Confirmation Auditor](action-confirmation-auditor/index.md) | Step-up confirmation validation for agent action invocations | v1.0.0 | 1.23 |
+| [Action Confirmation Auditor](action-confirmation-auditor/index.md) | HITL confirmation step validation in Copilot Studio agent topics | v1.1.0 | 2.12, 1.10 |
 | [Credential Oversharing Detector](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/credential-oversharing-detector/README.md) | Configuration-time credential scope governance for agent connectors | v1.0.0 | 1.14, 1.4, 1.18 |
 
 ## Lifecycle & Operations

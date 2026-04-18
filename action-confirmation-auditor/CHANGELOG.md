@@ -2,6 +2,31 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.1.0] - 2026-04-17 - BREAKING
+
+### Changed (BREAKING)
+
+- **Control mapping re-aligned.** Primary control changed from **1.23 (Step-Up Authentication for Agent Operations)** to **2.12 (Human-in-the-Loop Checkpoints)**, with **1.10 (Communication Compliance)** as supporting (FINRA 3110 supervisory review evidence). Control 1.23 is implemented through Entra Authentication Contexts and Conditional Access (see *Conditional Access Automation* and *Session Security Configurator* solutions); ACA validates HITL/approval prompts in agent topics and does not by itself satisfy AAL2/AAL3 step-up authentication. AI Council convergent finding (Opus 4.7 + Goldeneye).
+- **Schema: `fsi_IsActive` default flipped to `false`** on `fsi_ActionConfirmationException`. Previously defaulted to `true`, creating a control-bypass window where any newly created exception immediately suppressed violations until the approver acted (up to 14 days). Now exceptions are inactive by default and only the approval branch in the exception-approval flow sets `fsi_IsActive = true`. Existing tenants must republish the schema (`python scripts/create_dataverse_schema.py`) and update the exception-approval flow trigger filter (remove `fsi_isactive eq true`).
+- **Runbook output schema additions.** `Start-ActionConfirmationValidationRunbook.ps1` now emits `ActionsMissingConfirmation` and `ActionsWithConfirmation` at the top level of the JSON output (previously only present inside `ZoneSummary[*]`). The Power Automate Parse JSON schema in `docs/flow-configuration.md` already referenced these top-level fields, so prior to this fix the corresponding Dataverse `fsi_actionsmissingconfirmation` / `fsi_actionswithconfirmation` `ApplicationRequired` columns were always written as null (record creation failed).
+
+### Fixed
+
+- **scripts/Start-ActionConfirmationValidationRunbook.ps1**: Replaced remaining `OverallStatus = 'Review'` emission (lines 248, 431, .OUTPUTS doc) with `'Warning'`. CHANGELOG v1.0.3 fixed this in `Test-ActionConfirmationCompliance.ps1` but missed the runbook, which is the primary production path. Removed dead `'Review'` branches from `Export-ActionAuditEvidence.ps1` and `Test-ActionConfirmationCompliance.ps1` switch tables.
+- **scripts/private/ACAClient.psm1 `Write-ACAViolation`**: Now persists `fsi_violationtype` from the supplied `Violation.ViolationType`. Previously omitted, breaking cross-solution-integration / dashboard filtering by violation type. (Same gap was fixed in `Test-UserDefinedActionMessages.ps1` per v1.0.3 but the central PSM1 path was missed.)
+- **scripts/private/ACAClient.psm1 `Write-ACAValidationHistory`**: `fsi_name` timestamp now correctly converted to UTC before formatting (was emitting local time labelled `Z`, causing drift vs `fsi_validationtime`).
+- **scripts/Export-ActionAuditEvidence.ps1**: Evidence JSON is now **deterministic** — recursive key sort + LF-only + UTF-8 no-BOM write — so two exports of identical Dataverse data produce identical SHA-256 hashes. Required for FINRA 4511 / SEC 17a-4 chain-of-custody verification through `Test-EvidenceIntegrity.ps1`.
+- **scripts/Export-ActionAuditEvidence.ps1**: Hash companion file now written via `[System.IO.File]::WriteAllText` with explicit `\n` line ending and UTF-8 no BOM, matching GNU `sha256sum` format exactly.
+- **scripts/Export-ActionAuditEvidence.ps1**: All three Dataverse queries (`fsi_actionscanrun`, `fsi_actionauditresults`, `fsi_actionconfirmationexceptions`) now follow `@odata.nextLink` via a shared `Invoke-DataversePagedQuery` helper. Previously single-page only — large tenants received truncated evidence packages with hashes computed over partial data.
+- **scripts/Export-ActionAuditEvidence.ps1**: Added GUID format validation for `-RunId` parameter before insertion into OData filter (mirrors validation already present in `ACAClient.psm1`).
+- **scripts/Export-ActionAuditEvidence.ps1**: Replaced "Azure AD" with "Microsoft Entra ID" in `.PARAMETER TenantId` and `.PARAMETER ClientId` help text (per repo language policy).
+- **All script `.NOTES`**: Bumped `Version` from `1.0.2` → `1.1.0` and `Control` references from `1.23` → `2.12 (HITL); supports 1.10 (Communication Compliance / FINRA 3110)` across `Get-AgentActionSettings.ps1`, `ACAClient.psm1`, `Start-ActionConfirmationValidationRunbook.ps1`, `Test-UserDefinedActionMessages.ps1`, `Test-ActionConfirmationCompliance.ps1`, `Get-ExpectedConfirmationPolicy.ps1`, `Test-EvidenceIntegrity.ps1`, `Test-ParameterValidation.ps1`, `Export-ActionAuditEvidence.ps1`. Verbose banner in `Test-ActionConfirmationCompliance.ps1` and `solutionVersion` in evidence package metadata also bumped.
+- **README.md**: Updated Related Controls table to reflect 2.12 / 1.10 mapping, added explanatory note about why 1.23 was removed.
+
+### Council Review
+
+This release applies fixes from a 2-member AI Council technical review (Opus 4.7 + Goldeneye). Both council members independently identified the control mis-mapping, the runbook `'Review'` regression, the version-string drift, and "Azure AD" naming issues. Opus additionally surfaced the non-deterministic evidence JSON, the `Write-ACAViolation` `fsi_violationtype` omission, the `IsActive` default-true control-bypass vector, and the missing `ActionsMissingConfirmation` / `ActionsWithConfirmation` runbook output fields. Goldeneye additionally surfaced the missing OData pagination in `Export-ActionAuditEvidence.ps1`.
+
 ## [1.0.3] - 2026-04-16
 
 ### Fixed

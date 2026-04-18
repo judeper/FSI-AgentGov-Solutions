@@ -77,9 +77,9 @@
     - TotalAgents: Count of scanned agents
     - TotalEnvironments: Count of scanned environments
     - TotalActions: Count of action invocation nodes found
-    - OverallStatus: Passed | Critical | Failed | Review | Error
+    - OverallStatus: Passed | Warning | Failed | Critical | Error
     - Reason: Summary explanation
-    - Control: "1.23"
+    - Control: "2.12"
     - ZoneSummary: Object with Zone1/Zone2/Zone3 sub-objects
     - Violations: Array of violation details
     - Drift: Object with HasDrift, IsFirstRun, DriftedAgents, Details
@@ -87,9 +87,9 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.1.0
     Solution: Action Confirmation Auditor (ACA)
-    Control: 1.23 (Step-Up Authentication for Agent Operations)
+    Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -245,7 +245,7 @@ try {
     } elseif ($highCount -gt 0) {
         $overallStatus = 'Failed'
     } elseif ($mediumCount -gt 0 -or $violationCount -gt 0) {
-        $overallStatus = 'Review'
+        $overallStatus = 'Warning'
     }
 
     Write-Verbose "Scan complete. Overall status: $overallStatus"
@@ -428,7 +428,7 @@ try {
     # Build reason string
     $reason = switch ($overallStatus) {
         'Passed'   { "All $totalAgents agents across $uniqueEnvs environments have proper action confirmations" }
-        'Review'   { "$violationCount agent(s) with missing action confirmations across $uniqueEnvs environments" }
+        'Warning'  { "$violationCount agent(s) with missing action confirmations across $uniqueEnvs environments" }
         'Failed'   { "$violationCount agent(s) with missing action confirmations including high severity" }
         'Critical' { "$violationCount agent(s) with missing action confirmations including critical severity" }
         default    { "Validation completed with status: $overallStatus" }
@@ -492,16 +492,18 @@ try {
     $runId = [guid]::NewGuid().ToString()
 
     $output = [PSCustomObject]@{
-        RunType            = "ActionConfirmationValidation"
-        RunId              = $runId
-        Timestamp          = (Get-Date -AsUTC -Format "o")
-        TotalAgents        = $totalAgents
-        TotalEnvironments  = $uniqueEnvs
-        TotalActions       = $totalActions
-        EnvironmentNames   = $environmentNameList
-        OverallStatus      = $overallStatus
-        Reason             = $reason
-        Control            = "1.23"
+        RunType                       = "ActionConfirmationValidation"
+        RunId                         = $runId
+        Timestamp                     = (Get-Date -AsUTC -Format "o")
+        TotalAgents                   = $totalAgents
+        TotalEnvironments             = $uniqueEnvs
+        TotalActions                  = $totalActions
+        ActionsMissingConfirmation    = [int]$totalMissingConfirm
+        ActionsWithConfirmation       = [int]($totalActions - $totalMissingConfirm)
+        EnvironmentNames              = $environmentNameList
+        OverallStatus                 = $overallStatus
+        Reason                        = $reason
+        Control                       = "2.12"
         ZoneSummary        = [PSCustomObject]$enrichedZoneSummary
         Violations         = $violations
         Drift              = [PSCustomObject]@{

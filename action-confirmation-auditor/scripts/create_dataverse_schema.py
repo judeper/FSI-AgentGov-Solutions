@@ -315,8 +315,8 @@ ACTION_CONFIRMATION_EXCEPTION_COLUMNS = [
               description="Approver comments on approval decision"),
     _memo_col("fsi_RejectionNotes", "Rejection Notes", 5000,
               description="Approver comments on rejection decision"),
-    _boolean_col("fsi_IsActive", "Is Active", default=True,
-                 description="Whether this exception is currently active"),
+    _boolean_col("fsi_IsActive", "Is Active", default=False,
+                 description="Whether this exception is currently active. Defaults to false on create — must be set true only by approver flow after Maker/Checker review (prevents control bypass during pending-approval window)."),
 ]
 
 ACTION_SCAN_RUN_COLUMNS = [

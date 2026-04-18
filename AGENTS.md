@@ -16,7 +16,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
-| action-confirmation-auditor | v1.0.3 | 1.23 | Step-up confirmation validation for agent actions |
+| action-confirmation-auditor | v1.1.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
 | agent-365-lifecycle-governance | v1.1.3 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.0.3 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.0.2 | 2.17 | Inter-agent communication restriction validation |

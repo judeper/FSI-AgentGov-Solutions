@@ -1,22 +1,24 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.0.3
+> **Version:** v1.1.0
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
 
 ## Overview
 
-The Action Confirmation Auditor (ACA) scans Power Platform environments for Copilot Studio agents that invoke actions without requiring user confirmation. In regulated financial services environments, unconfirmed agent actions -- particularly write, delete, and external transfer operations -- represent operational and compliance risk. ACA identifies missing confirmation steps, classifies violations by severity based on zone and action type, and supports exception management for approved bypasses.
+The Action Confirmation Auditor (ACA) scans Power Platform environments for Copilot Studio agents that invoke actions without requiring user confirmation. In regulated financial services environments, unconfirmed agent actions -- particularly write, delete, and external transfer operations -- represent operational and compliance risk. ACA identifies missing confirmation steps, classifies violations by severity based on zone and action type, and supports exception management for approved bypasses (with Maker/Checker approval gating).
 
 ## Related Controls
 
 | Control | Relationship |
 |---------|--------------|
-| [1.23 - Step-Up Authentication for Agent Operations](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-step-up-authentication-for-agent-operations/) | Primary -- Step-up authentication enforcement |
-| [1.8 - Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-protection/) | Supporting -- Runtime action monitoring |
+| [2.12 - Human-in-the-Loop Checkpoints](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.12-human-in-the-loop-checkpoints/) | Primary -- HITL confirmation node validation in agent topics |
+| [1.10 - Communication Compliance](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.10-communication-compliance/) | Supporting -- Aids FINRA 3110 supervisory review evidence |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.1-managed-environments/) | Dependency -- Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Downstream -- Evidence export for governance dashboard |
+
+> **Note on Control 1.23:** Earlier versions claimed Control 1.23 (Step-Up Authentication for Agent Operations). Control 1.23 is implemented through Entra Authentication Contexts, Conditional Access policies, and phishing-resistant MFA -- see the *Conditional Access Automation* and *Session Security Configurator* solutions. ACA validates HITL/approval prompts in agent topics, which is governed by Control 2.12. ACA does not by itself satisfy AAL2/AAL3 step-up authentication requirements.
 
 ## Regulatory Context
 

@@ -174,7 +174,7 @@ This guide provides step-by-step instructions for manually building the Action C
    - Entity: `fsi_ActionConfirmationException`
    - Message: 1 (Create only)
    - Scope: 4 (Organization)
-   - Trigger filters: `fsi_isactive eq true` (active exception requests pending approval; fsi_IsActive defaults to true on create)
+   - Trigger filters: *(none — fire on every create)*. As of solution v1.1.0 the schema sets `fsi_IsActive` default to **false** on create. The approval branch in step 5 sets `fsi_IsActive = true` only after the approver decides. This prevents a control-bypass window where an unapproved exception would suppress violations.
 
 3. **Get Exception Record**
    - Action: "Get a record" (Dataverse)
@@ -211,10 +211,9 @@ This guide provides step-by-step instructions for manually building the Action C
    - Send notification to requestor: "Exception rejected" with reason
    - Post Teams message to compliance channel: Exception rejection summary
 
-6. **Log to Audit Trail**
-   - Action: "Create a new record" (Dataverse)
-   - Table: `fsi_ActionAuditResult` (or dedicated audit log)
-   - Fields: Record the approval/rejection event with timestamp, approver, and outcome
+6. **(Optional) Notify approval channel**
+   - The approver decision is already persisted on the `fsi_ActionConfirmationException` row itself (`fsi_approvedby`, `fsi_approvedat`, `fsi_justification`, `fsi_rejectionnotes`, `fsi_isactive`). Do **not** write the approval event into `fsi_ActionAuditResult` — that table models confirmation-step violations, not approval workflow events, and several `ApplicationRequired` columns (`fsi_agentid`, `fsi_actionname`, `fsi_severity`, etc.) would not have meaningful values.
+   - If a separate approval audit trail is required, model a new dedicated table (e.g., `fsi_ActionExceptionAuditEvent`) before adding this step.
 
 **Trigger Configuration:**
 ```

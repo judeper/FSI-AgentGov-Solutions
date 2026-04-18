@@ -23,14 +23,15 @@
     ACA operates at the action level within agents: violation records include
     per-action detail (fsi_actionname, fsi_actiontype, fsi_confirmationstatus)
     for action confirmation governance. This script supports FSI-AgentGov
-    Control 1.23 (Step-Up Authentication for Agent Operations) evidence
-    collection requirements.
+    Control 2.12 (Human-in-the-Loop checkpoints for AI agent actions) evidence
+    collection requirements and aids in meeting FINRA Rule 3110(b)(1) supervisory
+    review obligations.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Azure AD tenant ID. Required for authentication.
+    Microsoft Entra ID tenant ID. Required for authentication.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -60,7 +61,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER ClientId
-    Azure AD application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for service principal authentication.
 
 .EXAMPLE
     .\Export-ActionAuditEvidence.ps1 `
@@ -108,9 +109,9 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.1.0
     Solution: Action Confirmation Auditor (ACA)
-    Control: 1.23 (Step-Up Authentication for Agent Operations)
+    Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -276,6 +277,9 @@ Write-Host "  Zone Filter:  $Zone" -ForegroundColor Cyan
 Write-Host "  From Date:    $($FromDate.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
 Write-Host "  To Date:      $($ToDate.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
 if ($RunId) {
+    if ($RunId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+        throw "Invalid -RunId value '$RunId'. Expected GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."
+    }
     Write-Host "  Run ID:       $RunId" -ForegroundColor Cyan
 }
 Write-Host ""
@@ -289,6 +293,19 @@ $headers = @{
     'Prefer'           = 'odata.include-annotations=*'
 }
 
+# Helper: page through OData results following @odata.nextLink
+function Invoke-DataversePagedQuery {
+    param([Parameter(Mandatory)][string]$Uri, [Parameter(Mandatory)][hashtable]$Headers)
+    $all = @()
+    $next = $Uri
+    while ($next) {
+        $resp = Invoke-RestMethod -Uri $next -Method Get -Headers $Headers -ErrorAction Stop
+        if ($resp.value) { $all += $resp.value }
+        $next = $resp.'@odata.nextLink'
+    }
+    return $all
+}
+
 # Query validation history from fsi_actionscanrun
 $fromDateStr = $FromDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $toDateStr = $ToDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -300,8 +317,7 @@ if ($RunId) {
 
 try {
     $validationUri = "$baseUrl/api/data/v9.2/fsi_actionscanrun?`$filter=$validationFilter&`$orderby=fsi_validationtime desc"
-    $validationResponse = Invoke-RestMethod -Uri $validationUri -Method Get -Headers $headers -ErrorAction Stop
-    $validations = if ($validationResponse.value) { $validationResponse.value } else { @() }
+    $validations = @(Invoke-DataversePagedQuery -Uri $validationUri -Headers $headers)
     Write-Host "Retrieved $($validations.Count) validation records" -ForegroundColor Green
 } catch {
     Write-Error "Failed to query validation results: $($_.Exception.Message)"
@@ -319,8 +335,7 @@ if ($Zone -ne 'All') {
 
 try {
     $violationUri = "$baseUrl/api/data/v9.2/fsi_actionauditresults?`$filter=$violationFilter&`$orderby=fsi_detectedat desc"
-    $violationResponse = Invoke-RestMethod -Uri $violationUri -Method Get -Headers $headers -ErrorAction Stop
-    $violations = if ($violationResponse.value) { $violationResponse.value } else { @() }
+    $violations = @(Invoke-DataversePagedQuery -Uri $violationUri -Headers $headers)
     Write-Host "Retrieved $($violations.Count) violation records" -ForegroundColor Green
     Write-Host ""
 } catch {
@@ -339,10 +354,7 @@ if ($IncludeExceptions) {
 
     try {
         $exceptionUri = "$baseUrl/api/data/v9.2/fsi_actionconfirmationexceptions?`$filter=fsi_isactive eq true"
-        $exceptionResponse = Invoke-RestMethod -Uri $exceptionUri -Method Get -Headers $headers -ErrorAction Stop
-        if ($exceptionResponse.value) {
-            $exceptionRecords = @($exceptionResponse.value)
-        }
+        $exceptionRecords = @(Invoke-DataversePagedQuery -Uri $exceptionUri -Headers $headers)
         Write-Host "Retrieved $($exceptionRecords.Count) active exception records" -ForegroundColor Green
         Write-Host ""
     }
@@ -448,15 +460,15 @@ foreach ($v in $violationsReadable) {
 }
 
 # Compute overall status (worst-case across all scans)
-$overallStatus = "Compliant"
+$overallStatus = "Passed"
 $statusValues = $validationsReadable | Select-Object -ExpandProperty overallStatus -ErrorAction SilentlyContinue
 if ($statusValues -contains "Critical") {
     $overallStatus = "Critical"
 }
-elseif ($statusValues -contains "NonCompliant" -or $statusValues -contains "Failed") {
-    $overallStatus = "NonCompliant"
+elseif ($statusValues -contains "Failed" -or $statusValues -contains "NonCompliant") {
+    $overallStatus = "Failed"
 }
-elseif ($statusValues -contains "Warning" -or $statusValues -contains "Review") {
+elseif ($statusValues -contains "Warning") {
     $overallStatus = "Warning"
 }
 elseif ($totalScans -eq 0) {
@@ -469,8 +481,8 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Action Confirmation Auditor"
-    solutionVersion = "1.0.2"
-    control         = "1.23"
+    solutionVersion = "1.1.0"
+    control         = "2.12"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
@@ -518,11 +530,38 @@ $evidenceFilePath = Join-Path -Path $OutputDirectory -ChildPath $fileName
 Write-Host "Writing evidence file: $evidenceFilePath" -ForegroundColor Cyan
 
 try {
-    # CRITICAL: Use -Depth 10 to prevent nested object truncation
-    $jsonContent = $evidence | ConvertTo-Json -Depth 10
-    $jsonContent | Out-File -FilePath $evidenceFilePath -Encoding utf8 -Force
+    # Canonicalize evidence object (recursively sort keys) for deterministic SHA-256.
+    function ConvertTo-CanonicalObject {
+        param($InputObject)
+        if ($null -eq $InputObject) { return $null }
+        if ($InputObject -is [System.Collections.IDictionary] -or $InputObject -is [PSCustomObject]) {
+            $ordered = [ordered]@{}
+            $names = if ($InputObject -is [System.Collections.IDictionary]) {
+                $InputObject.Keys | Sort-Object
+            } else {
+                ($InputObject.PSObject.Properties.Name | Sort-Object)
+            }
+            foreach ($n in $names) {
+                $val = if ($InputObject -is [System.Collections.IDictionary]) { $InputObject[$n] } else { $InputObject.$n }
+                $ordered[$n] = ConvertTo-CanonicalObject -InputObject $val
+            }
+            return [PSCustomObject]$ordered
+        }
+        if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+            $arr = @()
+            foreach ($item in $InputObject) { $arr += ,(ConvertTo-CanonicalObject -InputObject $item) }
+            return ,$arr
+        }
+        return $InputObject
+    }
 
-    Write-Host "Evidence file written successfully." -ForegroundColor Green
+    $canonical = ConvertTo-CanonicalObject -InputObject $evidence
+    # CRITICAL: Use -Depth 10 to prevent nested object truncation
+    $jsonContent = $canonical | ConvertTo-Json -Depth 10
+    # LF-only, BOM-less UTF-8 for cross-platform deterministic hashing
+    [System.IO.File]::WriteAllText($evidenceFilePath, ($jsonContent -replace "`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
+
+    Write-Host "Evidence file written successfully (canonicalized, LF, UTF-8 no BOM)." -ForegroundColor Green
 }
 catch {
     Write-Error "Failed to write evidence file: $($_.Exception.Message)"
@@ -539,11 +578,12 @@ try {
     $hashResult = Get-FileHash -Path $evidenceFilePath -Algorithm SHA256
     $hashValue = $hashResult.Hash
 
-    # Write hash companion file in standard format: {hash}  {filename}
+    # Write hash companion file in standard sha256sum format: {hash}  {filename}\n
+    # LF, UTF-8 no BOM for cross-platform compatibility (sha256sum -c)
     $hashFileName = "$fileName.sha256"
     $hashFilePath = Join-Path -Path $OutputDirectory -ChildPath $hashFileName
-    $hashContent = "$hashValue  $fileName"
-    $hashContent | Out-File -FilePath $hashFilePath -Encoding utf8 -Force
+    $hashContent = "$hashValue  $fileName`n"
+    [System.IO.File]::WriteAllText($hashFilePath, $hashContent, [System.Text.UTF8Encoding]::new($false))
 
     Write-Host "SHA-256 hash file created: $hashFilePath" -ForegroundColor Green
 }
