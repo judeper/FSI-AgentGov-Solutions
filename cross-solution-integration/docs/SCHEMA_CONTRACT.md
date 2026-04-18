@@ -6,38 +6,39 @@ This document defines the canonical Dataverse option set values and data contrac
 
 ## Canonical Option Sets
 
-### Zone Classification (`fsi_acvzone`)
+### Zone Classification (`fsi_acv_zone`)
 
 The zone option set classifies governance environments by security posture.
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 1 | Zone 1 — Personal Productivity | Low-risk personal agents; standard M365 controls |
-| 2 | Zone 2 — Team Collaboration | Team-scoped agents; enhanced controls, approval required |
-| 3 | Zone 3 — Enterprise Managed | Enterprise-critical agents; maximum controls, change management |
+| 100000000 | Unclassified | Environments not yet zone-tagged; integration treats as Zone 1 by policy |
+| 100000001 | Zone 1 — Personal Productivity | Low-risk personal agents; standard M365 controls |
+| 100000002 | Zone 2 — Team Collaboration | Team-scoped agents; enhanced controls, approval required |
+| 100000003 | Zone 3 — Enterprise Managed | Enterprise-critical agents; maximum controls, change management |
 
-**Owner:** Audit Configuration Validator (ACV) solution defines this global option set.
+**Owner:** Audit Configuration Validator (ACV) solution defines this global option set (`fsi_acv_zone`). The legacy name `fsi_acvzone` does NOT exist.
 
-**Normalization Note:** Some solutions (ACV, SSC) may use internal values `100000001`, `100000002`, `100000003` for zone storage. The integration layer normalizes these to `1`, `2`, `3` via `Get-CanonicalZoneValue` in `IntegrationConfig.psm1`. All cross-solution queries and mappings use the canonical 1/2/3 values.
+**Normalization:** All solutions store the raw `100000000`-based value. The integration layer keeps these values throughout — no remapping to 1/2/3 occurs. `IntegrationConfig.psm1`'s `Get-CanonicalZoneValue` returns the same value it receives.
 
-### Severity Classification (`fsi_acvseverity`)
+### Severity Classification (`fsi_acv_severity`)
 
 The severity option set classifies validation results by compliance impact.
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 1 | Passed | All checks met zone requirements |
-| 2 | Warning | Minor deviations; advisory, no immediate action required |
-| 3 | GracePeriod | Non-compliant but within grace window (new environments, config changes) |
-| 4 | Failed | Compliance violation requiring remediation |
-| 5 | Error | Validation could not complete (connectivity, permission issues) |
+| 100000000 | Passed | All checks met zone requirements |
+| 100000001 | Warning | Minor deviations; advisory, no immediate action required |
+| 100000002 | GracePeriod | Non-compliant but within grace window (new environments, config changes) |
+| 100000003 | Failed | Compliance violation requiring remediation |
+| 100000004 | Error | Validation could not complete (connectivity, permission issues) |
 
-**Owner:** Audit Configuration Validator (ACV) solution defines this global option set.
+**Owner:** Audit Configuration Validator (ACV) solution defines this global option set (`fsi_acv_severity`). The legacy name `fsi_acvseverity` does NOT exist.
 
 **Per-Solution Severity Variants:**
-- **ACV, SSC**: Use canonical 1-5 values directly
-- **AAM**: Uses string-based status (`Compliant`, `Warning`, `NonCompliant`, `Critical`) — integration layer maps to canonical severity
-- **CMM, FUS**: Use compliance percentage — integration layer converts to severity via thresholds
+- **ACV, SSC, CAA**: Use the canonical `100000000`-based values directly via this global option set.
+- **AAM**: Uses string-based status (`Compliant`, `Warning`, `NonCompliant`, `Critical`) on `fsi_overallstatus` — integration layer maps to canonical severity.
+- **CMM, FUS**: Use compliance percentage (`fsi_compliancerate` / `compliantcount`/`totalagents`) — integration layer converts to severity via thresholds.
 
 ### Compliance Dashboard Status (`fsi_status`)
 
@@ -70,14 +71,37 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 
 ### Solution Table Names
 
-| Solution | Baseline Table | History Table | Violation Table |
-|----------|---------------|---------------|-----------------|
-| ACV | — | `fsi_auditvalidationhistory` | `fsi_auditvalidationviolation` |
-| SSC | — | `fsi_validationhistory` | `fsi_driftviolation` |
-| AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | `fsi_accessviolation` |
-| CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | `fsi_moderationviolation` |
-| FUS | `fsi_fileuploadbaseline` | `fsi_fileuploadvalidationhistory` | `fsi_fileuploadviolation` |
-| CAA | — | `fsi_capolicyvalidationhistory` | `fsi_capolicyviolation` |
+| Solution | Baseline Table | History Table | History EntitySet (REST) | Violation Table |
+|----------|---------------|---------------|--------------------------|-----------------|
+| ACV | — | `fsi_auditvalidationhistory` | `fsi_auditvalidationhistories` | *(not implemented — flagged for ACV roadmap)* |
+| SSC | — | `fsi_validationhistory` | `fsi_validationhistories` | `fsi_driftviolation` |
+| AAM | `fsi_accessbaseline` | `fsi_accessvalidationhistory` | **`fsi_accessvalidationhistory`** (singular — explicit `EntitySetName` in schema) | `fsi_accessviolation` |
+| CMM | `fsi_moderationbaseline` | `fsi_moderationvalidationhistory` | **`fsi_moderationvalidationhistory`** (singular — explicit `EntitySetName` in schema) | `fsi_moderationviolation` |
+| FUS | `fsi_fileuploadbaseline` | `fsi_fileuploadvalidationhistory` | `fsi_fileuploadvalidationhistories` | `fsi_fileuploadviolation` |
+| CAA | — | `fsi_capolicyvalidationhistory` | `fsi_capolicyvalidationhistories` | `fsi_capolicyviolation` |
+
+> ⚠️ **AAM / CMM are exceptions.** Their schema scripts (`agent-access-monitor/scripts/create_dataverse_schema.py` and `content-moderation-monitor/scripts/create_dataverse_schema.py`) declare an explicit `EntitySetName` equal to the table logical name (singular). All other solutions accept the Dataverse default plural. Hard-coding the wrong plural results in a 404 from the Web API.
+
+> ⚠️ **ACV `fsi_environmentregistry`.** The default plural is `fsi_environmentregistries` (consonant + y → ies). `Register-ProvisionedEnvironment.ps1` uses this form.
+
+### Per-Solution History Run-Level Columns
+
+| Solution | Status (run) | Timestamp | RunId | Notes |
+|----------|--------------|-----------|-------|-------|
+| ACV | `fsi_severity` (choice) | `fsi_validationtime` | `fsi_runid` | — |
+| SSC | `fsi_severity` (choice) | `fsi_timestamp` | `fsi_runid` | — |
+| AAM | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` | String status — see mapping in `STATUS_MAPPING.md` |
+| CMM | `fsi_overallstatus` (string) **and** `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` | Status derived from rate |
+| FUS | `fsi_compliancerate` (% int) | `fsi_validationtime` (also `fsi_runtimestamp`) | `fsi_runid` | Status derived from rate |
+| CAA | `fsi_overall_severity` (choice) | `fsi_validation_time` | `fsi_run_id` | **Underscores in field names — exception to rest of catalog** |
+
+### Validation-Type Filter
+
+The integration layer **does not** filter history rows by `fsi_validationtype`. That column does not exist on ACV, SSC, or CAA history tables. Any historical filter that relies on it must be removed before deploying v2.0.0.
+
+### Violation Tables
+
+The integration **registers run-level evidence only** as of v2.0.0. Per-finding violation rows are no longer exported through `Export-UnifiedComplianceEvidence.ps1` — they remain visible in each owning solution's own dashboards. This avoids exposing PII (agent names, owner UPNs) in the consolidated package and prevents drift between mutable violation records and immutable evidence hashes.
 
 ### Correlation
 
@@ -133,4 +157,4 @@ Each solution defines its own connection references (not shared):
 
 ---
 
-*Schema Contract v1.0.0 — February 2026*
+*Schema Contract v2.0.0 — April 2026*

@@ -1,11 +1,23 @@
 <#
 .SYNOPSIS
-    Exports unified compliance evidence from all Tier 2 governance solutions.
+    Exports unified compliance evidence (run-level history) from Tier 2
+    governance solutions into a CSV bundle with a SHA-256 manifest.
 
 .DESCRIPTION
-    Queries each Tier 2 solution's Dataverse tables for validation and violation
-    records, exports them as CSV files, and generates a master manifest with
-    SHA-256 hash chain suitable for FINRA 4511 / SEC 17a-4 audit evidence packages.
+    Queries each Tier 2 solution's run-level validation-history table in
+    Dataverse and writes per-solution CSVs plus a master manifest that
+    captures SHA-256 hashes of every exported file.
+
+    The manifest is suitable as a *collection step* in an audit-evidence
+    workflow that supports record-keeping requirements such as FINRA Rule
+    4511 and SEC Rule 17a-4. Long-term immutability requires downstream
+    storage on a WORM/immutable target; this script does not provide WORM
+    semantics on its own.
+
+    NOTE: v2.0.0 narrows the export to run-level history tables only.
+    Per-finding violation tables (fsi_*violations) vary in shape across
+    solutions and are deferred to a future release that will join history
+    -> violation by run id.
 
 .PARAMETER DataverseUrl
     The Dataverse environment URL.
@@ -34,6 +46,9 @@
 .PARAMETER Interactive
     Use interactive authentication.
 
+.PARAMETER Cloud
+    Sovereign cloud (Public, USGov, USGovHigh, USGovDoD, China, Germany).
+
 .PARAMETER DryRun
     Show export plan without querying Dataverse.
 
@@ -46,9 +61,9 @@
         -TenantId "guid" -Solutions ACV,SSC -StartDate "2026-01-01" -Interactive
 
 .NOTES
-    Version: 1.0.1
-    Date: 2026-02-10
-    Requires: IntegrationConfig.psm1
+    Version: 2.0.0
+    Date: 2026-04-16
+    Requires: IntegrationConfig.psm1 v2.0.0
 #>
 
 #Requires -Version 7.0
@@ -83,6 +98,10 @@ param(
     [Parameter(ParameterSetName = 'Interactive')]
     [switch]$Interactive,
 
+    [Parameter()]
+    [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+    [string]$Cloud = 'Public',
+
     [switch]$DryRun
 )
 
@@ -99,76 +118,50 @@ Import-Module $modulePath -Force
 #region Solution Table Definitions
 
 $SolutionEvidence = @{
+    # NOTE: Field lists below are the *common, verified* run-level columns
+    # exported per solution. Keep these in sync with each solution's
+    # create_*_dataverse_schema.py. Per-finding violation tables are not
+    # exported in v2.0.0 — see CHANGELOG.
     ACV = @{
         Validations = @{
             EntitySet = 'fsi_auditvalidationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_settingname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity', 'fsi_environmentname', 'fsi_zone')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_auditvalidationviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_settingname', 'fsi_severity', 'fsi_status', 'fsi_environmentname', 'fsi_zone')
+            DateField = 'fsi_validationtime'
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_severity', 'fsi_zone', 'fsi_environmentname', 'fsi_summaryjson')
         }
     }
     SSC = @{
         Validations = @{
             EntitySet = 'fsi_validationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_policyname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_driftviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_policyname', 'fsi_severity', 'fsi_status')
+            DateField = 'fsi_timestamp'
+            Fields    = @('fsi_runid', 'fsi_timestamp', 'fsi_severity', 'fsi_zone', 'fsi_validationtype', 'fsi_checkcount')
         }
     }
     AAM = @{
         Validations = @{
-            EntitySet = 'fsi_accessvalidationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_agentname', 'fsi_permissiontype', 'fsi_expectedaccess', 'fsi_actualaccess', 'fsi_severity')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_accessviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_agentname', 'fsi_severity', 'fsi_status')
+            EntitySet = 'fsi_accessvalidationhistory'
+            DateField = 'fsi_validationtime'
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_severity', 'fsi_zone', 'fsi_overallstatus', 'fsi_totalenvironments', 'fsi_compliantcount', 'fsi_violationcount', 'fsi_summaryjson')
         }
     }
     CMM = @{
         Validations = @{
-            EntitySet = 'fsi_moderationvalidationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_agentname', 'fsi_moderationpolicy', 'fsi_expectedconfig', 'fsi_actualconfig', 'fsi_severity')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_moderationviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_agentname', 'fsi_severity', 'fsi_status')
+            EntitySet = 'fsi_moderationvalidationhistory'
+            DateField = 'fsi_validationtime'
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_zone', 'fsi_overallstatus', 'fsi_totalagents', 'fsi_compliantcount', 'fsi_summaryjson')
         }
     }
     FUS = @{
         Validations = @{
             EntitySet = 'fsi_fileuploadvalidationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_settingname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_fileuploadviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_settingname', 'fsi_severity', 'fsi_status')
+            DateField = 'fsi_validationtime'
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_zone', 'fsi_compliancerate', 'fsi_summaryjson')
         }
     }
     CAA = @{
         Validations = @{
             EntitySet = 'fsi_capolicyvalidationhistories'
-            DateField = 'fsi_scannedon'
-            Fields    = @('fsi_name', 'fsi_scannedon', 'fsi_policyname', 'fsi_expectedvalue', 'fsi_actualvalue', 'fsi_severity')
-        }
-        Violations  = @{
-            EntitySet = 'fsi_capolicyviolations'
-            DateField = 'fsi_detectedon'
-            Fields    = @('fsi_name', 'fsi_detectedon', 'fsi_policyname', 'fsi_severity', 'fsi_status')
+            DateField = 'fsi_validation_time'
+            Fields    = @('fsi_run_id', 'fsi_validation_time', 'fsi_overall_severity', 'fsi_zone', 'fsi_total_policies', 'fsi_passed_count', 'fsi_warning_count', 'fsi_failed_count', 'fsi_drift_count')
         }
     }
 }
@@ -197,9 +190,13 @@ function Get-DataverseRecords {
                 $success = $true
             } catch {
                 $retryCount++
-                $statusCode = $_.Exception.Response.StatusCode.value__
+                $statusCode = if ($null -ne $_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
+                $retryAfter = $null
+                if ($null -ne $_.Exception.Response -and $_.Exception.Response.Headers -and $_.Exception.Response.Headers.Contains('Retry-After')) {
+                    $retryAfter = ($_.Exception.Response.Headers.GetValues('Retry-After') | Select-Object -First 1)
+                }
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                    $delay = [math]::Pow(2, $retryCount) * 5
+                    $delay = if ($retryAfter -and ($retryAfter -as [int])) { [int]$retryAfter } else { [math]::Pow(2, $retryCount) * 5 }
                     Write-Warning "Transient error ($statusCode) querying $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                     Start-Sleep -Seconds $delay
                 } else {
@@ -245,9 +242,11 @@ function Get-FileHashSHA256 {
 Write-Host "`nExport-UnifiedComplianceEvidence" -ForegroundColor Cyan
 Write-Host "=================================`n" -ForegroundColor Cyan
 
-$startStr = $StartDate.ToString('yyyy-MM-dd')
-$endStr = $EndDate.AddDays(1).ToString('yyyy-MM-dd')
-$exportDir = Join-Path $OutputPath "evidence-export-$(Get-Date -Format 'yyyy-MM-dd-HHmmss')"
+$startStr = $StartDate.ToUniversalTime().ToString('yyyy-MM-dd')
+# End is exclusive in OData filters below; advance by one day so that records on
+# EndDate are included.
+$endStr = $EndDate.ToUniversalTime().AddDays(1).ToString('yyyy-MM-dd')
+$exportDir = Join-Path $OutputPath "evidence-export-$([DateTime]::UtcNow.ToString('yyyy-MM-dd-HHmmss'))"
 
 Write-Host "Period: $startStr to $endStr" -ForegroundColor Gray
 Write-Host "Solutions: $($Solutions -join ', ')" -ForegroundColor Gray
@@ -259,7 +258,6 @@ if ($DryRun) {
         $tables = $SolutionEvidence[$sol]
         Write-Host "  $($sol):" -ForegroundColor Yellow
         Write-Host "    Validations: $($tables.Validations.EntitySet)" -ForegroundColor Yellow
-        Write-Host "    Violations:  $($tables.Violations.EntitySet)" -ForegroundColor Yellow
     }
     Write-Host "`n[DryRun] No data exported.`n" -ForegroundColor Yellow
     return
@@ -267,19 +265,23 @@ if ($DryRun) {
 
 # Connect
 Write-Host "`nConnecting to Dataverse..." -ForegroundColor Gray
-$connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
-    -ClientId $ClientId -ClientSecret $ClientSecret -Interactive:$Interactive
+if ($Interactive) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
+} else {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
+}
 
 # Create output directory
 New-Item -Path $exportDir -ItemType Directory -Force | Out-Null
 
 $manifest = @{
     exportId      = [guid]::NewGuid().ToString()
-    exportDate    = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    exportDate    = (Get-IsoUtcTimestamp)
     periodStart   = $startStr
-    periodEnd     = $endStr
+    periodEnd     = $EndDate.ToUniversalTime().ToString('yyyy-MM-dd')
     framework     = 'FSI Agent Governance Framework'
-    frameworkVersion = 'v1.2.38'
+    moduleVersion = '2.0.0'
     solutions     = @{}
     fileHashes    = @{}
     masterHash    = $null
@@ -308,30 +310,14 @@ foreach ($sol in $Solutions) {
     $vHash = Get-FileHashSHA256 -FilePath $vPath
     Write-Host "  Validations: $($validations.Count) records" -ForegroundColor Green
 
-    # Violations
-    $xFilter = "$($tables.Violations.DateField) ge $startStr and $($tables.Violations.DateField) lt $endStr"
-    $violations = Get-DataverseRecords -Connection $connection `
-        -EntitySet $tables.Violations.EntitySet `
-        -Filter $xFilter `
-        -Fields $tables.Violations.Fields `
-        -DateField $tables.Violations.DateField
-
-    $xPath = Join-Path $solDir 'violations.csv'
-    Export-ToCsv -Records $violations -FilePath $xPath -Fields $tables.Violations.Fields
-    $xHash = Get-FileHashSHA256 -FilePath $xPath
-    Write-Host "  Violations:  $($violations.Count) records" -ForegroundColor Green
-
     # Record manifest entries
     $manifest.solutions[$solKey] = @{
         validationCount = $validations.Count
-        violationCount  = $violations.Count
-        exportedAt      = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        exportedAt      = (Get-IsoUtcTimestamp)
     }
 
     $manifest.fileHashes["$solKey/validations.csv"] = $vHash
-    $manifest.fileHashes["$solKey/violations.csv"]  = $xHash
     $allHashes += $vHash
-    $allHashes += $xHash
 }
 
 # Calculate master hash (SHA-256 of sorted concatenated file hashes)

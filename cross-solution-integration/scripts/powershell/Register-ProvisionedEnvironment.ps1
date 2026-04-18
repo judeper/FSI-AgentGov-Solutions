@@ -46,9 +46,9 @@
         -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
 
 .NOTES
-    Version: 1.0.1
-    Date: 2026-02-10
-    Requires: IntegrationConfig.psm1
+    Version: 2.0.0
+    Date: 2026-04-16
+    Requires: IntegrationConfig.psm1 v2.0.0
 #>
 
 #Requires -Version 7.0
@@ -88,8 +88,11 @@ param(
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [SecureString]$ClientSecret,
 
-    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'Interactive', Mandatory)]
     [switch]$Interactive,
+
+    [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+    [string]$Cloud = 'Public',
 
     [switch]$DryRun
 )
@@ -109,15 +112,19 @@ Write-Host "================================`n" -ForegroundColor Cyan
 
 # Connect
 Write-Host "Connecting to Dataverse..." -ForegroundColor Gray
-$connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
-    -ClientId $ClientId -ClientSecret $ClientSecret -Interactive:$Interactive
+if ($Interactive) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
+} else {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
+}
 
 $canonicalZone = Get-CanonicalZoneValue -ZoneValue $Zone
 
 # Check if environment already registered
 Write-Host "Checking ACV environment registry..." -ForegroundColor Gray
 $sanitizedEnvId = $EnvironmentId -replace "[^0-9a-fA-F\-]", ''
-$checkUrl = "$($connection.BaseUrl)/fsi_environmentregistrys?`$filter=fsi_environmentid eq '$sanitizedEnvId'&`$top=1"
+$checkUrl = "$($connection.BaseUrl)/fsi_environmentregistries?`$filter=fsi_environmentid eq '$sanitizedEnvId'&`$top=1"
 
 $maxRetries = 3
 $retryCount = 0
@@ -128,7 +135,7 @@ while ($true) {
         break
     } catch {
         $retryCount++
-        $statusCode = $_.Exception.Response.StatusCode.value__
+        $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
         if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
             $delay = [math]::Pow(2, $retryCount) * 5
             Write-Warning "Transient error ($statusCode) checking registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
@@ -145,7 +152,7 @@ $record = @{
     'fsi_zone'            = $canonicalZone
     'fsi_status'          = 1  # Active
     'fsi_environmenttype' = $EnvironmentType
-    'fsi_discoveredon'    = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+    'fsi_discoveredon'    = (Get-IsoUtcTimestamp)
     'fsi_notes'           = "Auto-registered via ELM provisioning$(if ($RequestNumber) { ". Request: $RequestNumber" })"
 }
 
@@ -159,7 +166,7 @@ if ($existing.Count -gt 0) {
     if ($DryRun) {
         Write-Host "[DryRun] Would UPDATE existing registry: $existingId" -ForegroundColor Yellow
     } else {
-        $updateUrl = "$($connection.BaseUrl)/fsi_environmentregistrys($existingId)"
+        $updateUrl = "$($connection.BaseUrl)/fsi_environmentregistries($existingId)"
         $body = $record | ConvertTo-Json -Depth 5
         $retryCount = 0
         while ($true) {
@@ -168,7 +175,7 @@ if ($existing.Count -gt 0) {
                 break
             } catch {
                 $retryCount++
-                $statusCode = $_.Exception.Response.StatusCode.value__
+                $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
                     $delay = [math]::Pow(2, $retryCount) * 5
                     Write-Warning "Transient error ($statusCode) updating registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
@@ -184,7 +191,7 @@ if ($existing.Count -gt 0) {
     if ($DryRun) {
         Write-Host "[DryRun] Would CREATE new registry for: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Yellow
     } else {
-        $createUrl = "$($connection.BaseUrl)/fsi_environmentregistrys"
+        $createUrl = "$($connection.BaseUrl)/fsi_environmentregistries"
         $body = $record | ConvertTo-Json -Depth 5
         $retryCount = 0
         $created = $null
@@ -195,7 +202,7 @@ if ($existing.Count -gt 0) {
                 break
             } catch {
                 $retryCount++
-                $statusCode = $_.Exception.Response.StatusCode.value__
+                $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
                     # Re-query before retry to avoid duplicate creation
                     try {

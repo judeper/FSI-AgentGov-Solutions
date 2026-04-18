@@ -67,7 +67,7 @@ Future integration could cascade to additional solutions:
 | **FUS** | Register for file upload monitoring | environmentId, zone | Planned |
 | **SSC** | No action (tenant-level) | — | N/A |
 
-**Rationale for Phase 1 scope:** AAM, CMM, and FUS naturally discover environments during their daily scans. ACV is the exception because it maintains a persistent environment registry that other solutions don't. Registering in ACV ensures the first daily scan includes the new environment.
+**Rationale for Phase 1 scope:** AAM, CMM, and FUS naturally discover environments during their daily scans. ACV is the exception because it maintains a persistent environment registry that other solutions don't. Registering in ACV supports inclusion of the new environment in the first daily scan.
 
 ---
 

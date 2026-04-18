@@ -12,8 +12,8 @@
     (ACV, SSC, AAM, CMM, FUS, CAA) and the Compliance Dashboard.
 
 .NOTES
-    Version: 1.0.2
-    Date: 2026-02-10
+    Version: 2.0.0
+    Date: 2026-04-16
     Solution: Cross-Solution Integration
 #>
 
@@ -27,13 +27,16 @@ $script:ZoneValues = @{
     'Unclassified' = 0
 }
 
-# Canonical severity values (fsi_acvseverity)
+# Canonical severity values from the global option set fsi_acv_severity
+# (defined in audit-compliance-manager/scripts/create_dataverse_schema.py).
+# These integer values are the Dataverse-stored representation; they are
+# normalized to dashboard status by ConvertTo-DashboardStatus.
 $script:SeverityValues = @{
-    'Passed'      = 1
-    'Warning'     = 2
-    'GracePeriod' = 3
-    'Failed'      = 4
-    'Error'       = 5
+    'Passed'      = 100000000
+    'Warning'     = 100000001
+    'GracePeriod' = 100000002
+    'Failed'      = 100000003
+    'Error'       = 100000004
 }
 
 # Compliance Dashboard status values (fsi_status)
@@ -54,11 +57,15 @@ $script:DashboardScores = @{
 # Evidence type for automated assessments
 $script:EvidenceTypeTestResult = 5
 
-# ACV zone value normalization (some solutions use 100000001+ internally)
+# Zone value normalization. ACV/SSC/CAA/CMM/AAM/FUS store zone as the global
+# option set fsi_acv_zone (Unclassified=100000000, Zone1=100000001, ...).
+# Some legacy integrations also pass canonical small ints. Map both into
+# canonical 0/1/2/3 used throughout this module.
 $script:ZoneNormalizationMap = @{
-    100000001 = 1
-    100000002 = 2
-    100000003 = 3
+    100000000 = 0   # Unclassified
+    100000001 = 1   # Zone1
+    100000002 = 2   # Zone2
+    100000003 = 3   # Zone3
     0         = 0
     1         = 1
     2         = 2
@@ -89,30 +96,51 @@ function Connect-DataverseApi {
     .PARAMETER Interactive
         Use interactive (browser) authentication.
 
+    .PARAMETER Cloud
+        Sovereign cloud selector. Defaults to Public. Routes the OAuth authority
+        and Dataverse base URL is taken from -Url (operators must supply the
+        environment URL appropriate to the chosen cloud).
+
     .OUTPUTS
         Hashtable with BaseUrl and Headers for Dataverse API calls.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ServicePrincipal')]
     param(
         [Parameter(Mandatory)]
         [string]$Url,
         [Parameter(Mandatory)]
         [string]$TenantId,
+        [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [string]$ClientId,
+        [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [SecureString]$ClientSecret,
-        [switch]$Interactive
+        [Parameter(ParameterSetName = 'Interactive', Mandatory)]
+        [switch]$Interactive,
+        [Parameter()]
+        [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+        [string]$Cloud = 'Public'
     )
+
+    $authorityHosts = @{
+        'Public'    = 'https://login.microsoftonline.com'
+        'USGov'     = 'https://login.microsoftonline.us'
+        'USGovHigh' = 'https://login.microsoftonline.us'
+        'USGovDoD'  = 'https://login.microsoftonline.us'
+        'China'     = 'https://login.chinacloudapi.cn'
+        'Germany'   = 'https://login.microsoftonline.de'
+    }
+    $authority = "$($authorityHosts[$Cloud])/$TenantId"
 
     $scope = "$($Url.TrimEnd('/'))/.default"
 
-    if ($Interactive) {
-        Write-Verbose "Authenticating interactively to $Url"
+    if ($PSCmdlet.ParameterSetName -eq 'Interactive') {
+        Write-Verbose "Authenticating interactively to $Url (cloud=$Cloud)"
         $interactiveClientId = if ($env:FSI_INT_InteractiveClientId) { $env:FSI_INT_InteractiveClientId } else { '51f81489-12ee-4a9e-aaae-a2591f45987d' }
-        $token = Get-MsalToken -TenantId $TenantId -ClientId $interactiveClientId -Scopes $scope -Interactive
+        $token = Get-MsalToken -TenantId $TenantId -ClientId $interactiveClientId -Authority $authority -Scopes $scope -Interactive
     } else {
-        Write-Verbose "Authenticating with service principal to $Url"
+        Write-Verbose "Authenticating with service principal to $Url (cloud=$Cloud)"
         $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
-        $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -ClientCredential $credential -Scopes $scope
+        $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -Authority $authority -ClientCredential $credential -Scopes $scope
     }
 
     return @{
@@ -190,64 +218,72 @@ function Get-SolutionTableConfig {
         'ACV' = @{
             EntitySet       = 'fsi_auditvalidationhistories'
             StatusField     = 'fsi_severity'
-            StatusType      = 'Choice'          # Choice 1-5
-            TimestampField  = 'fsi_timestamp'
+            StatusType      = 'Choice'          # Global option set fsi_acv_severity (100000000-based)
+            TimestampField  = 'fsi_validationtime'
             RunIdField      = 'fsi_runid'
-            FilterLatest    = "`$filter=fsi_validationtype eq 'Orchestrator'&`$orderby=fsi_timestamp desc&`$top=1"
+            ZoneField       = 'fsi_zone'
+            FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName    = 'Audit Configuration Validator'
-            SolutionVersion = 'v1.0.0'
+            SolutionVersion = 'v1.0.2'
         }
         'SSC' = @{
             EntitySet       = 'fsi_validationhistories'
             StatusField     = 'fsi_severity'
-            StatusType      = 'Choice'          # Choice 1-5
+            StatusType      = 'Choice'          # Global option set fsi_acv_severity (100000000-based)
             TimestampField  = 'fsi_timestamp'
             RunIdField      = 'fsi_runid'
-            FilterLatest    = "`$filter=fsi_validationtype eq 'Orchestrator'&`$orderby=fsi_timestamp desc&`$top=1"
+            ZoneField       = 'fsi_zone'
+            FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
             SolutionName    = 'Session Security Configurator'
-            SolutionVersion = 'v1.0.0'
+            SolutionVersion = 'v1.0.1'
         }
         'AAM' = @{
-            EntitySet       = 'fsi_accessvalidationhistories'
+            # Explicit singular EntitySetName per AAM schema to avoid auto-plural
+            EntitySet       = 'fsi_accessvalidationhistory'
             StatusField     = 'fsi_overallstatus'
             StatusType      = 'String'          # String: Compliant/Warning/NonCompliant/Critical
-            TimestampField  = 'fsi_timestamp'
+            TimestampField  = 'fsi_validationtime'
             RunIdField      = 'fsi_runid'
-            FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
+            ZoneField       = 'fsi_zone'
+            FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName    = 'Agent Access Governance Monitor'
-            SolutionVersion = 'v1.0.0'
+            SolutionVersion = 'v1.0.3'
         }
         'CMM' = @{
-            EntitySet        = 'fsi_moderationvalidationhistories'
+            # Explicit singular EntitySetName per CMM schema to avoid auto-plural
+            EntitySet        = 'fsi_moderationvalidationhistory'
             StatusField      = 'fsi_overallstatus'
             StatusType       = 'Percentage'     # Derived from fsi_compliantcount / fsi_totalagents
             CompliantField   = 'fsi_compliantcount'
             TotalField       = 'fsi_totalagents'
-            TimestampField   = 'fsi_timestamp'
+            TimestampField   = 'fsi_validationtime'
             RunIdField       = 'fsi_runid'
-            FilterLatest     = "`$orderby=fsi_timestamp desc&`$top=1"
+            ZoneField        = 'fsi_zone'
+            FilterLatest     = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName     = 'Content Moderation Governance Monitor'
-            SolutionVersion  = 'v1.0.0'
+            SolutionVersion  = 'v1.0.3'
         }
         'FUS' = @{
             EntitySet        = 'fsi_fileuploadvalidationhistories'
             StatusField      = 'fsi_compliancerate'
             StatusType       = 'Percentage'     # Direct percentage field
-            TimestampField   = 'fsi_timestamp'
+            TimestampField   = 'fsi_validationtime'
             RunIdField       = 'fsi_runid'
-            FilterLatest     = "`$orderby=fsi_timestamp desc&`$top=1"
+            ZoneField        = 'fsi_zone'
+            FilterLatest     = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName     = 'File Upload Security Configurator'
-            SolutionVersion  = 'v1.0.0'
+            SolutionVersion  = 'v1.0.2'
         }
         'CAA' = @{
             EntitySet       = 'fsi_capolicyvalidationhistories'
-            StatusField     = 'fsi_severity'
-            StatusType      = 'Choice'          # Choice 1-5
-            TimestampField  = 'fsi_timestamp'
-            RunIdField      = 'fsi_runid'
-            FilterLatest    = "`$filter=fsi_validationtype eq 'Orchestrator'&`$orderby=fsi_timestamp desc&`$top=1"
+            StatusField     = 'fsi_overall_severity'
+            StatusType      = 'Choice'          # Global option set fsi_acv_severity (100000000-based)
+            TimestampField  = 'fsi_validation_time'
+            RunIdField      = 'fsi_run_id'
+            ZoneField       = 'fsi_zone'
+            FilterLatest    = "`$orderby=fsi_validation_time desc&`$top=1"
             SolutionName    = 'Conditional Access Automation'
-            SolutionVersion = 'v1.1.0'
+            SolutionVersion = 'v1.2.1'
         }
     }
 }
@@ -266,7 +302,7 @@ function ConvertTo-DashboardStatus {
         to the CD's fsi_status choice values (1=Compliant, 2=Partial, 3=Non-Compliant).
 
     .PARAMETER Solution
-        The solution abbreviation: ACV, SSC, AAM, CMM, FUS.
+        The solution abbreviation: ACV, SSC, AAM, CMM, FUS, CAA.
 
     .PARAMETER Severity
         The solution's severity or status value (integer for Choice types, string for AAM).
@@ -284,7 +320,7 @@ function ConvertTo-DashboardStatus {
         Hashtable with Status (int), Score (int), and StatusLabel (string).
 
     .EXAMPLE
-        ConvertTo-DashboardStatus -Solution 'ACV' -Severity 1
+        ConvertTo-DashboardStatus -Solution 'ACV' -Severity 100000000
         # Returns @{ Status = 1; Score = 100; StatusLabel = 'Compliant' }
 
     .EXAMPLE
@@ -312,15 +348,19 @@ function ConvertTo-DashboardStatus {
 
     switch ($Solution) {
         { $_ -in 'ACV', 'SSC', 'CAA' } {
-            # Choice-based severity (1-5)
+            # Choice-based severity stored as 100000000-based option set values
+            # (global option set fsi_acv_severity).
             $sevInt = [int]$Severity
             switch ($sevInt) {
-                1 { return @{ Status = 1; Score = 100; StatusLabel = 'Compliant' } }      # Passed
-                2 { return @{ Status = 2; Score = 50;  StatusLabel = 'Partial' } }         # Warning
-                3 { return @{ Status = 2; Score = 50;  StatusLabel = 'Partial' } }         # GracePeriod
-                4 { return @{ Status = 3; Score = 0;   StatusLabel = 'Non-Compliant' } }   # Failed
-                5 { return @{ Status = 3; Score = 0;   StatusLabel = 'Non-Compliant' } }   # Error
-                default { return @{ Status = 3; Score = 0; StatusLabel = 'Non-Compliant' } }
+                100000000 { return @{ Status = 1; Score = 100; StatusLabel = 'Compliant' } }      # Passed
+                100000001 { return @{ Status = 2; Score = 50;  StatusLabel = 'Partial' } }         # Warning
+                100000002 { return @{ Status = 2; Score = 50;  StatusLabel = 'Partial' } }         # GracePeriod
+                100000003 { return @{ Status = 3; Score = 0;   StatusLabel = 'Non-Compliant' } }   # Failed
+                100000004 { return @{ Status = 3; Score = 0;   StatusLabel = 'Non-Compliant' } }   # Error
+                default {
+                    Write-Warning "Unknown severity value '$sevInt' for solution $Solution — defaulting to Non-Compliant"
+                    return @{ Status = 3; Score = 0; StatusLabel = 'Non-Compliant' }
+                }
             }
         }
         'AAM' {
@@ -408,6 +448,49 @@ function Get-CanonicalZoneValue {
 
     Write-Warning "Unknown zone value: $ZoneValue — returning 0 (Unclassified)"
     return 0
+}
+
+#endregion
+
+#region UTC Time Helpers
+
+function Get-IsoUtcTimestamp {
+    <#
+    .SYNOPSIS
+        Returns the current UTC time as an ISO-8601 string with trailing Z.
+
+    .DESCRIPTION
+        Used by all sync/export scripts so that values written to Dataverse
+        DateTime columns are unambiguously UTC. Wraps [DateTime]::UtcNow to
+        avoid the local-time-with-literal-Z bug from
+        (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ').
+
+    .OUTPUTS
+        String formatted as yyyy-MM-ddTHH:mm:ss.fffZ.
+    #>
+    [CmdletBinding()]
+    param()
+
+    return [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+}
+
+function Get-IsoUtcDate {
+    <#
+    .SYNOPSIS
+        Returns today's date in UTC as yyyy-MM-dd.
+
+    .DESCRIPTION
+        Used to build same-day OData filters that span midnight correctly.
+        Local-time date can drift by one day around midnight UTC, causing
+        duplicate-row creation and lost upserts.
+
+    .OUTPUTS
+        String formatted as yyyy-MM-dd (UTC calendar date).
+    #>
+    [CmdletBinding()]
+    param()
+
+    return [DateTime]::UtcNow.ToString('yyyy-MM-dd')
 }
 
 #endregion

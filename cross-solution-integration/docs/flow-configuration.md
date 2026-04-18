@@ -114,7 +114,7 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 1. **List rows** — Query ACV Latest
    - Table: `fsi_auditvalidationhistories`
-   - Filter: `fsi_validationtype eq 'Orchestrator'`
+   - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
    - Order by: `fsi_timestamp desc`
    - Select: `fsi_severity,fsi_runid,fsi_timestamp`
    - Top count: `1`
@@ -125,11 +125,13 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 3. **If yes → Compose** — Map ACV Status
    - Use the severity-based mapping:
 
-   | Severity | Status | Score |
-   |----------|--------|-------|
-   | 1 (Info) | 1 (Compliant) | 100 |
-   | 2 or 3 (Warning/Error) | 2 (Partial) | 50 |
-   | Other | 3 (Non-Compliant) | 0 |
+   | `fsi_severity` value | Severity label | Dashboard Status | Score |
+   |----------------------|----------------|------------------|-------|
+   | `100000000` | Passed | 1 (Compliant) | 100 |
+   | `100000001` | Warning | 2 (Partial) | 50 |
+   | `100000002` | GracePeriod | 2 (Partial) | 50 |
+   | `100000003` | Failed | 3 (Non-Compliant) | 0 |
+   | `100000004` | Error | 3 (Non-Compliant) | 0 |
 
 4. **If yes → Upsert Assessment** — Check for existing assessment today, then create or update:
    - **List rows** — Check existing `fsi_controlassessments` where `_fsi_controlmasterid_value` equals the `fsi_INT_ControlGuid_1_7` parameter and `fsi_assessmentdate` is today
@@ -144,7 +146,7 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 1. **List rows** — Query SSC Latest
    - Table: `fsi_validationhistories`
-   - Filter: `fsi_validationtype eq 'Orchestrator'`
+   - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
    - Order by: `fsi_timestamp desc`
    - Select: `fsi_severity,fsi_runid,fsi_timestamp`
    - Top count: `1`
@@ -249,7 +251,7 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 1. **List rows** — Query CAA Latest
    - Table: `fsi_capolicyvalidationhistories`
-   - Filter: `fsi_validationtype eq 'Orchestrator'`
+   - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
    - Order by: `fsi_timestamp desc`
    - Select: `fsi_severity,fsi_runid,fsi_timestamp`
    - Top count: `1`
@@ -335,7 +337,7 @@ CAA → fsi_capolicyvalidationhistories → Map Severity → Upsert ──→ fs
 
 ## Flow 2: ELM-SolutionInitializer
 
-**Purpose:** Child flow triggered when Environment Lifecycle Management (ELM) logs a successful provisioning event. Cascades to downstream solution registration by auto-registering the newly provisioned environment in the ACV `fsi_environmentregistrys` table.
+**Purpose:** Child flow triggered when Environment Lifecycle Management (ELM) logs a successful provisioning event. Cascades to downstream solution registration by auto-registering the newly provisioned environment in the ACV `fsi_environmentregistries` table.
 
 ### Trigger
 
@@ -407,7 +409,7 @@ Add a **Condition** that runs after Step 2 succeeds:
 Add a **Scope** (`Register_In_ACV`) that runs after Step 4 succeeds:
 
 1. **List rows** — Check if environment already exists in ACV
-   - Table: `fsi_environmentregistrys`
+   - Table: `fsi_environmentregistries`
    - Filter: `fsi_environmentid eq '{environmentId}'`
    - Select: `fsi_environmentregistryid`
    - Top count: `1`
@@ -415,7 +417,7 @@ Add a **Scope** (`Register_In_ACV`) that runs after Step 4 succeeds:
 2. **Condition** — Environment not registered (length = 0)
 
 3. **If not registered → Add a row** — Create ACV registry entry
-   - Table: `fsi_environmentregistrys`
+   - Table: `fsi_environmentregistries`
    - Fields:
      - `fsi_name`: environment name
      - `fsi_environmentid`: environment ID from ELM
@@ -499,9 +501,9 @@ Both flows implement consistent error handling patterns:
 ### ELM-SolutionInitializer
 
 1. **Prerequisite:** ELM solution deployed with `fsi_provisioninglogs` and `fsi_environmentrequests` tables
-2. **Prerequisite:** ACV `fsi_environmentregistrys` table exists
+2. **Prerequisite:** ACV `fsi_environmentregistries` table exists
 3. **Test trigger:** Create a `fsi_provisioninglog` row with `fsi_action = 13` and `fsi_success = true` referencing a valid environment request
-4. **Verify:** Check `fsi_environmentregistrys` for the new environment entry
+4. **Verify:** Check `fsi_environmentregistries` for the new environment entry
 5. **Verify:** Check `fsi_provisioninglogs` for the `INT-Init-*` success entry
 6. **Verify:** Check Teams channel for initialization notification
 7. **Re-provision test:** Trigger again with the same environment → should update (not duplicate) the ACV registry entry

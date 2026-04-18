@@ -28,7 +28,7 @@ This document defines the per-solution logic for translating Tier 2 governance s
 
 **Source table:** `fsi_auditvalidationhistories`
 **Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'` (represents overall run result)
+**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)` (represents overall run result)
 
 | ACV Severity | CD Status | CD Score | Logic |
 |-------------|-----------|----------|-------|
@@ -46,7 +46,7 @@ This document defines the per-solution logic for translating Tier 2 governance s
 
 **Source table:** `fsi_validationhistories`
 **Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'`
+**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
 
 SSC validates 6 dimensions. For dashboard purposes, the orchestrator-level severity is used.
 
@@ -125,7 +125,7 @@ compliance_rate = (fsi_compliantcount / fsi_totalagents) * 100
 
 **Source table:** `fsi_capolicyvalidationhistories`
 **Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `fsi_validationtype eq 'Orchestrator'`, ordered by `fsi_timestamp desc`
+**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`, ordered by `fsi_timestamp desc`
 
 | CAA Severity | CD Status | CD Score | Logic |
 |-------------|-----------|----------|-------|

@@ -20,8 +20,8 @@
     .\Test-UnifiedEvidenceIntegrity.ps1 -ExportPath ".\evidence-export-2026-02-01-140000" -Detailed
 
 .NOTES
-    Version: 1.0.2
-    Date: 2026-02-10
+    Version: 2.0.0
+    Date: 2026-04-16
 #>
 
 #Requires -Version 7.0
@@ -117,8 +117,8 @@ if ($calculatedMaster -eq $manifest.masterHash) {
 
 # Summary
 Write-Host "`n==============================" -ForegroundColor Cyan
-$total = $passed + $failed + 1  # +1 for master hash
-Write-Host "Files verified: $($fileHashes.Count)" -ForegroundColor Gray
+$total = $passed + $failed
+Write-Host "Files verified: $($fileHashes.Count) | Total checks (incl. master hash): $($total)" -ForegroundColor Gray
 Write-Host "Passed: $passed | Failed: $failed" -ForegroundColor $(if ($failed -gt 0) { 'Red' } else { 'Green' })
 
 if ($failed -gt 0) {

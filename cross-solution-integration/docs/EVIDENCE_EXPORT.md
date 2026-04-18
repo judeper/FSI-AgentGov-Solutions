@@ -98,16 +98,20 @@ This approach is consistent with the per-solution evidence export pattern used b
 
 ---
 
-## Data Sources Per Solution
+## Data Sources Per Solution (v2.0.0 — validations only)
 
-| Solution | Validation Table | Violation Table | Date Field | Key Fields |
-|----------|-----------------|-----------------|------------|------------|
-| ACV | `fsi_auditvalidationhistories` | `fsi_auditvalidationviolations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity, zone |
-| SSC | `fsi_validationhistories` | `fsi_driftviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
-| AAM | `fsi_accessvalidationhistories` | `fsi_accessviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, permissionType, expectedAccess, actualAccess |
-| CMM | `fsi_moderationvalidationhistories` | `fsi_moderationviolations` | `fsi_scannedon` / `fsi_detectedon` | agentName, moderationPolicy, expectedConfig, actualConfig |
-| FUS | `fsi_fileuploadvalidationhistories` | `fsi_fileuploadviolations` | `fsi_scannedon` / `fsi_detectedon` | settingName, expectedValue, actualValue, severity |
-| CAA | `fsi_capolicyvalidationhistories` | `fsi_capolicyviolations` | `fsi_scannedon` / `fsi_detectedon` | policyName, expectedValue, actualValue, severity |
+> **Breaking change:** v2.0.0 exports **run-level validation rows only**. Per-finding violation rows are intentionally excluded — they live in each owning solution's own dashboards and frequently contain agent owner UPNs and other PII that should not be redistributed in a consolidated package. The `violations` array in the export schema is retained as `[]` for back-compat.
+
+| Solution | Validation Table EntitySet | Status Field | Timestamp Field | RunId Field |
+|----------|----------------------------|--------------|-----------------|-------------|
+| ACV | `fsi_auditvalidationhistories` | `fsi_severity` (choice, 100000000-based) | `fsi_validationtime` | `fsi_runid` |
+| SSC | `fsi_validationhistories` | `fsi_severity` (choice, 100000000-based) | `fsi_timestamp` | `fsi_runid` |
+| AAM | **`fsi_accessvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` |
+| CMM | **`fsi_moderationvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` + `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` |
+| FUS | `fsi_fileuploadvalidationhistories` | `fsi_compliancerate` (% int) | `fsi_validationtime` (also `fsi_runtimestamp`) | `fsi_runid` |
+| CAA | `fsi_capolicyvalidationhistories` | `fsi_overall_severity` (choice, 100000000-based) | `fsi_validation_time` | `fsi_run_id` |
+
+> ⚠️ `fsi_scannedon` / `fsi_detectedon` columns referenced in v1.x docs **do not exist** on history tables. Use the per-solution timestamp column shown above.
 
 ---
 

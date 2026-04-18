@@ -49,8 +49,8 @@
     .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -ClientId "app-guid" -ClientSecret $secret
 
 .NOTES
-    Version: 1.0.1
-    Date: 2026-02-10
+    Version: 2.0.0
+    Date: 2026-04-16
     Requires: IntegrationConfig.psm1
 #>
 
@@ -70,8 +70,11 @@ param(
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [SecureString]$ClientSecret,
 
-    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'Interactive', Mandatory)]
     [switch]$Interactive,
+
+    [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]
+    [string]$Cloud = 'Public',
 
     [switch]$DryRun,
 
@@ -321,11 +324,11 @@ function Sync-SolutionToAssessment {
 
         $assessmentRecord = @{
             'fsi_controlmasterid@odata.bind' = "/fsi_controlmasters($controlGuid)"
-            'fsi_assessmentdate'             = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            'fsi_assessmentdate'             = (Get-IsoUtcTimestamp)
             'fsi_status'                     = $dashStatus.Status
             'fsi_score'                      = $dashStatus.Score
             'fsi_notes'                      = $notes
-            'fsi_nextreviewdate'             = (Get-Date).AddDays(1).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            'fsi_nextreviewdate'             = [DateTime]::UtcNow.AddDays(1).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
         }
         if ($null -ne $zone) {
             $assessmentRecord['fsi_zone'] = $zone
@@ -338,6 +341,7 @@ function Sync-SolutionToAssessment {
             Score          = $dashStatus.Score
             RunId          = $runId
             Timestamp      = $timestamp
+            Zone           = $zone
             Action         = 'Pending'
             AssessmentGuid = $null
         }
@@ -347,11 +351,15 @@ function Sync-SolutionToAssessment {
             Write-Host "  [DryRun] $Solution → Control $controlId : $($dashStatus.StatusLabel) (Score: $($dashStatus.Score))" -ForegroundColor Yellow
         } else {
             try {
-                # Check for existing same-day assessment
-                $today = (Get-Date).ToString('yyyy-MM-dd')
+                # Check for existing same-day assessment using a UTC date window
+                # (avoids the Microsoft.Dynamics.CRM.On function, which expects a
+                # full ISO timestamp, and the local-vs-UTC midnight skew that
+                # caused duplicate inserts).
+                $todayStart = [DateTime]::UtcNow.Date.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                $tomorrowStart = [DateTime]::UtcNow.Date.AddDays(1).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
                 $sanitizedZone = if ($null -ne $zone) { [int]$zone } else { $null }
                 $zoneFilter = if ($null -ne $sanitizedZone) { " and fsi_zone eq $sanitizedZone" } else { '' }
-                $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')$zoneFilter&`$top=1"
+                $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and fsi_assessmentdate ge $todayStart and fsi_assessmentdate lt $tomorrowStart$zoneFilter&`$top=1"
                 $existing = Invoke-DataverseQuery -Connection $Connection `
                     -EntitySet $cdConfig.Assessment.EntitySet `
                     -Query $existingQuery
@@ -439,13 +447,35 @@ function Register-SolutionEvidence {
         } elseif ($Manifest.exportDate) {
             $Manifest.exportDate
         } else {
-            (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            (Get-IsoUtcTimestamp)
         }
+
+        # Re-hash files on disk and verify they match the manifest. The
+        # manifest itself is mutable on a normal filesystem, so trusting its
+        # stored hashes without recomputation would let an attacker swap
+        # both file and manifest entry. WORM/immutable storage downstream
+        # is still required for tamper-evidence.
+        $diskHashes = @()
+        foreach ($entry in ($manifestFiles | Sort-Object Name)) {
+            $filePath = Join-Path $EvidenceDirectory ($entry.Name -replace '/', [IO.Path]::DirectorySeparatorChar)
+            $diskHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
+            if ($diskHash -ne $entry.Value) {
+                Write-Warning "  [Evidence] Hash mismatch for $($entry.Name) — manifest=$($entry.Value), disk=$diskHash"
+                return $null
+            }
+            $diskHashes += $diskHash
+        }
+        $combinedHash = ($diskHashes -join '')
+        $packageHash = [System.BitConverter]::ToString(
+            [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+                [System.Text.Encoding]::UTF8.GetBytes($combinedHash)
+            )
+        ).Replace('-', '')
 
         $evidenceRecord = @{
             'fsi_name'          = "$Solution Evidence Package — $($exportDate.Substring(0,10))"
             'fsi_evidencetype'  = Get-EvidenceTypeId
-            'fsi_description'   = "Automated evidence package from $((Get-SolutionTableConfig)[$Solution].SolutionName). Files: $fileNames. SHA-256 verified via manifest."
+            'fsi_description'   = "Automated evidence package from $((Get-SolutionTableConfig)[$Solution].SolutionName). Files: $fileNames. SHA-256 recomputed and verified against manifest at registration time."
             'fsi_collecteddate' = $exportDate
             'fsi_hash'          = $packageHash
         }
@@ -495,19 +525,23 @@ function Register-SolutionEvidence {
     $evidenceFile = $evidenceFiles
     $hashFile = "$($evidenceFile.FullName).sha256"
 
-    $hash = $null
+    # In legacy mode we already have the file path; recompute hash from disk
+    # rather than trusting any sidecar (sidecars are mutable too).
+    $hash = (Get-FileHash -Path $evidenceFile.FullName -Algorithm SHA256).Hash
     if (Test-Path $hashFile) {
         $hashContent = Get-Content $hashFile -Raw
-        $hash = ($hashContent -split '\s+')[0]
-    } else {
-        $hash = (Get-FileHash -Path $evidenceFile.FullName -Algorithm SHA256).Hash
+        $sidecarHash = ($hashContent -split '\s+')[0]
+        if ($sidecarHash -and $sidecarHash -ne $hash) {
+            Write-Warning "  [Evidence] Hash mismatch for $($evidenceFile.Name) — sidecar=$sidecarHash, disk=$hash"
+            return $null
+        }
     }
 
     $evidenceRecord = @{
-        'fsi_name'          = "$Solution Evidence Export — $(Get-Date -Format 'yyyy-MM-dd')"
+        'fsi_name'          = "$Solution Evidence Export — $([DateTime]::UtcNow.ToString('yyyy-MM-dd'))"
         'fsi_evidencetype'  = Get-EvidenceTypeId
-        'fsi_description'   = "Automated evidence from $((Get-SolutionTableConfig)[$Solution].SolutionName). SHA-256 verified. File: $($evidenceFile.Name)"
-        'fsi_collecteddate' = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        'fsi_description'   = "Automated evidence from $((Get-SolutionTableConfig)[$Solution].SolutionName). SHA-256 recomputed at registration. File: $($evidenceFile.Name)"
+        'fsi_collecteddate' = (Get-IsoUtcTimestamp)
         'fsi_hash'          = $hash
     }
 
@@ -547,8 +581,12 @@ if ($DryRun) {
 
 # Connect
 Write-Host "Connecting to Dataverse..." -ForegroundColor Gray
-$connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
-    -ClientId $ClientId -ClientSecret $ClientSecret -Interactive:$Interactive
+if ($Interactive) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
+} else {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
+}
 
 # Resolve control master GUIDs
 Write-Host "Resolving control master GUIDs..." -ForegroundColor Gray
@@ -645,9 +683,23 @@ if (('SSC' -in $Solutions) -and ('CAA' -in $Solutions)) {
                         $controlGuid = $controlGuids[$dualFedControl]
                         if ($controlGuid) {
                             $cdConfig = Get-DashboardTableConfig
-                            $today = (Get-Date).ToString('yyyy-MM-dd')
-                            # Query all same-day assessments for this control (across all zones)
-                            $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and Microsoft.Dynamics.CRM.On(PropertyName='fsi_assessmentdate',PropertyValue='$today')"
+                            # Use a UTC date window — the prior Microsoft.Dynamics.CRM.On
+                            # call expected an ISO timestamp and used local time; both
+                            # caused 400s and cross-day duplicates around midnight UTC.
+                            $todayStart = [DateTime]::UtcNow.Date.ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+                            $tomorrowStart = [DateTime]::UtcNow.Date.AddDays(1).ToString('yyyy-MM-ddTHH:mm:ss.fffZ')
+
+                            # Worst-of-two is computed *per zone* — limit the update
+                            # to the SSC/CAA pair's zones so a Zone3 finding cannot
+                            # overwrite an unrelated Zone1 row.
+                            $candidateZones = @($sscResult.Zone, $caaResult.Zone) |
+                                Where-Object { $_ -ne $null -and $_ -ne '' } |
+                                Sort-Object -Unique
+                            $zoneFilter = if ($candidateZones.Count -gt 0) {
+                                ' and (' + (($candidateZones | ForEach-Object { "fsi_zone eq $_" }) -join ' or ') + ')'
+                            } else { '' }
+
+                            $existingQuery = "?`$filter=_fsi_controlmasterid_value eq $controlGuid and fsi_assessmentdate ge $todayStart and fsi_assessmentdate lt $tomorrowStart$zoneFilter"
                             $existingRecords = Invoke-DataverseQuery -Connection $connection `
                                 -EntitySet $cdConfig.Assessment.EntitySet `
                                 -Query $existingQuery

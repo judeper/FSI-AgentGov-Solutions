@@ -49,7 +49,7 @@
 
 ### Authentication errors with service principal
 
-**Symptom:** `Connect-Dataverse` fails with 401 or insufficient privileges.
+**Symptom:** `Connect-DataverseApi` fails with 401 or insufficient privileges.
 
 **Resolution:**
 1. Verify the app registration has `user_impersonation` Dataverse API permission
