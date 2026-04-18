@@ -632,6 +632,98 @@ def create_schema(client: ARAClient, dry_run: bool = False) -> None:
 
 
 # =============================================================================
+# Documentation Generator
+# =============================================================================
+
+
+def _required_label(col: dict) -> str:
+    lvl = col.get("RequiredLevel", {}).get("Value", "None")
+    return "Yes" if lvl == "ApplicationRequired" else "No"
+
+
+def _col_type_label(col: dict) -> str:
+    odata_type = col.get("@odata.type", "")
+    suffix = odata_type.rsplit(".", 1)[-1].replace("AttributeMetadata", "")
+    if suffix == "String":
+        return f"String({col.get('MaxLength', '')})"
+    if suffix == "Memo":
+        return f"Memo({col.get('MaxLength', '')})"
+    if suffix == "Picklist":
+        os_name = col.get("GlobalOptionSet", {}).get("Name", "")
+        return f"Choice ({os_name})" if os_name else "Choice"
+    return suffix
+
+
+def write_schema_docs(path: str) -> None:
+    """Generate docs/dataverse-schema.md from the in-memory schema definitions.
+
+    The output is the single source of truth for column logical names and
+    option-set values. Regenerate after any schema edit and commit the diff.
+    """
+    lines: list[str] = []
+    lines.append("# Agent Registry Automation — Dataverse Schema")
+    lines.append("")
+    lines.append("> Auto-generated from `scripts/create_dataverse_schema.py`. Do not hand-edit.")
+    lines.append("> Regenerate with: `python scripts/create_dataverse_schema.py --output-docs docs/dataverse-schema.md`")
+    lines.append("")
+    lines.append("## Tables")
+    lines.append("")
+    for tname, tdef in TABLES.items():
+        if tdef.get("entity_set_name"):
+            entity_set = tdef["entity_set_name"]
+        elif tname.endswith("y"):
+            entity_set = tname[:-1] + "ies"
+        else:
+            entity_set = tname + "s"
+        lines.append(f"### `{tname}` — {tdef['display']}")
+        lines.append("")
+        lines.append(f"- **Schema name:** `{tdef['schema_name']}`")
+        lines.append(f"- **Entity set name (OData):** `{entity_set}`")
+        lines.append(f"- **Ownership:** {tdef['ownership']}")
+        lines.append(f"- **Primary name attribute:** `fsi_name` (ApplicationRequired, String(500))")
+        lines.append(f"- **Description:** {tdef['description']}")
+        lines.append("")
+        lines.append("| Logical name | Schema name | Type | Required | Description |")
+        lines.append("|--------------|-------------|------|----------|-------------|")
+        for col in tdef["columns"]:
+            schema = col["SchemaName"]
+            logical = schema.lower()
+            ctype = _col_type_label(col)
+            required = _required_label(col)
+            desc = ""
+            if "Description" in col:
+                desc = col["Description"]["LocalizedLabels"][0]["Label"]
+            lines.append(f"| `{logical}` | `{schema}` | {ctype} | {required} | {desc} |")
+        lines.append("")
+    lines.append("## Option Sets")
+    lines.append("")
+    lines.append("All option sets are global (cross-table) so the same numeric value can be used in OData filters across tables.")
+    lines.append("")
+    for os_dict in (SHARED_OPTIONSETS, ARA_OPTIONSETS):
+        for os_name, os_def in os_dict.items():
+            lines.append(f"### `{os_name}`")
+            lines.append("")
+            lines.append("| Label | Value |")
+            lines.append("|-------|-------|")
+            for label, value in os_def["options"]:
+                lines.append(f"| {label} | {value} |")
+            lines.append("")
+    lines.append("## Alternate Keys")
+    lines.append("")
+    lines.append(f"- `{ALTERNATE_KEY['entity']}` — schema name `{ALTERNATE_KEY['schema_name']}` "
+                 f"(logical: `{ALTERNATE_KEY['schema_name'].lower()}`); key columns: "
+                 f"{', '.join('`' + c + '`' for c in ALTERNATE_KEY['key_columns'])}")
+    lines.append("")
+    lines.append("Use this alternate key for upsert-by-business-key:")
+    lines.append("```")
+    lines.append(f"PATCH /api/data/v9.2/{TABLES['fsi_agentinventory'].get('entity_set_name') or 'fsi_agentinventories'}(fsi_agentid='<bot-guid>',fsi_environmentid='<env-guid>')")
+    lines.append("```")
+    lines.append("")
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines))
+
+
+# =============================================================================
 # CLI Entry Point
 # =============================================================================
 
@@ -684,8 +776,20 @@ def main() -> None:
         action="store_true",
         help="Show what would be created without making changes",
     )
+    parser.add_argument(
+        "--output-docs",
+        metavar="PATH",
+        help="Write a Markdown schema reference (dataverse-schema.md) to PATH "
+             "and exit without contacting Dataverse. Use this to regenerate "
+             "docs/dataverse-schema.md after schema changes.",
+    )
 
     args = parser.parse_args()
+
+    if args.output_docs:
+        write_schema_docs(args.output_docs)
+        print(f"Wrote schema reference to {args.output_docs}")
+        return
 
     # Validate required arguments
     if not args.tenant_id:

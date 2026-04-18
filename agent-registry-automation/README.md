@@ -1,6 +1,6 @@
 # Agent Registry Automation
 
-> **Status:** Production Ready (v1.0.2)
+> **Status:** Production Ready (v2.0.0)
 
 Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform environments, supporting FSI agent inventory and record-keeping requirements.
 
@@ -247,4 +247,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Agent Registry Automation v1.0.2*
+*FSI Agent Governance Framework — Agent Registry Automation v2.0.0*

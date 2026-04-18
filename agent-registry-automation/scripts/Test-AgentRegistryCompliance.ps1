@@ -33,13 +33,13 @@
 
 .EXAMPLE
     .\Test-AgentRegistryCompliance.ps1 `
-        -DataverseUrl "https://contoso.crm.dynamics.com" `
+        -DataverseUrl "https://example.crm.dynamics.com" `
         -OutputFormat JSON `
         -OutputPath ".\compliance-report-$(Get-Date -Format yyyyMMdd).json"
 
 .EXAMPLE
     .\Test-AgentRegistryCompliance.ps1 `
-        -DataverseUrl "https://contoso.crm.dynamics.com" `
+        -DataverseUrl "https://example.crm.dynamics.com" `
         -CheckOrphans `
         -IncludeDetails
 
@@ -93,9 +93,6 @@ $script:Zone3Value = 100000003
 
 # Registration status option set values
 $script:StatusUnregistered = 100000000
-
-# SLA deadline: pending registration requests older than this are non-compliant
-$script:SlaDeadlineHours = 72
 
 # --- Helper Functions ------------------------------------------------------------
 
@@ -435,19 +432,22 @@ function Test-SlaCompliance {
     )
 
     $violations = [System.Collections.Generic.List[object]]::new()
+    $nowUtc = (Get-Date).ToUniversalTime()
+    $nowIso = $nowUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
 
-    $slaThreshold = (Get-Date).AddHours(-$script:SlaDeadlineHours).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-
-    # Query pending requests created before the SLA deadline
-    $filter = "fsi_approvalstatus eq 100000000 and createdon lt $slaThreshold"
+    # Pending requests whose recorded SLA deadline has passed.
+    # fsi_sladeadline is the canonical per-request SLA stamped at request creation
+    # by the registration flow; honoring it lets ops customize SLA per zone/risk.
+    $filter = "fsi_approvalstatus eq 100000000 and fsi_sladeadline lt $nowIso"
     $pendingRequests = Get-DataverseRecords -EntitySet "fsi_registrationrequests" `
         -Token $Token `
-        -Select "fsi_registrationrequestid,fsi_agentid,fsi_agentname,fsi_requestedby,createdon" `
+        -Select "fsi_registrationrequestid,fsi_agentid,fsi_agentname,fsi_requestedby,createdon,fsi_sladeadline" `
         -Filter $filter
 
     foreach ($req in $pendingRequests) {
         $createdOn = [datetime]$req.createdon
-        $hoursWaiting = [math]::Round(((Get-Date).ToUniversalTime() - $createdOn).TotalHours, 1)
+        $sla = [datetime]$req.fsi_sladeadline
+        $hoursOverdue = [math]::Round(($nowUtc - $sla).TotalHours, 1)
 
         $violations.Add([PSCustomObject]@{
             RequestId    = $req.fsi_registrationrequestid
@@ -455,8 +455,8 @@ function Test-SlaCompliance {
             AgentName    = $req.fsi_agentname
             RequestedBy  = $req.fsi_requestedby
             CreatedOn    = $createdOn.ToString("yyyy-MM-dd HH:mm:ss")
-            HoursWaiting = $hoursWaiting
-            SlaDeadline  = "$script:SlaDeadlineHours hours"
+            SlaDeadline  = $sla.ToString("yyyy-MM-dd HH:mm:ss")
+            HoursOverdue = $hoursOverdue
         })
     }
 
@@ -464,7 +464,7 @@ function Test-SlaCompliance {
         CheckName  = "SLA Compliance"
         Result     = if ($violations.Count -eq 0) { "Pass" } else { "Fail" }
         Violations = $violations
-        Summary    = "$($violations.Count) pending request(s) past ${script:SlaDeadlineHours}h SLA"
+        Summary    = "$($violations.Count) pending request(s) past fsi_sladeadline"
     }
 }
 
@@ -641,7 +641,7 @@ if ($CheckOrphans) {
 
 # Step 3: Query all agents from fsi_agentinventory
 Write-AuditLog "Querying agent inventory..."
-$agents = Get-DataverseRecords -EntitySet "fsi_agentinventorys" `
+$agents = Get-DataverseRecords -EntitySet "fsi_agentinventories" `
     -Token $dvToken `
     -Select "fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_registrationstatus,fsi_zone,fsi_ownerupn,fsi_isorphaned,fsi_lastscannedat"
 

@@ -74,15 +74,15 @@ Configure these values before enabling the flows.
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
 | `fsi_ARA_TenantId` | String | Microsoft Entra ID tenant ID | `12345678-1234-1234-1234-123456789012` |
-| `fsi_ARA_DataverseEnvironmentUrl` | String | Dataverse environment URL | `https://contoso.crm.dynamics.com` |
-| `fsi_ARA_GovernanceTeamEmail` | String | Governance team email for approvals and notifications | `ai-governance@contoso.com` |
+| `fsi_ARA_DataverseEnvironmentUrl` | String | Dataverse environment URL | `https://example.crm.dynamics.com` |
+| `fsi_ARA_GovernanceTeamEmail` | String | Governance team email for approvals and notifications | `ai-governance@example.com` |
 | `fsi_ARA_TeamsChannelId` | String | Teams channel ID for notifications | `19:xxxxx@thread.tacv2` |
 | `fsi_ARA_ApprovalDeadlineDays` | String | Number of business days for approval SLA | `5` |
 | `fsi_ARA_IsEntraRegistrySyncEnabled` | String | Feature flag for Entra Agent Registry sync | `false` |
 | `fsi_ARA_DefaultTimeZone` | String | Fallback time zone for SLA calculations | `Eastern Standard Time` |
 | `fsi_ARA_FrameworkVersion` | String | FSI-AgentGov framework version tag | `FSI-AgentGov-v1.1` |
-| `fsi_ARA_EscalationApproverUPN` | String | Skip-level approver UPN for SLA escalation | `ciso@contoso.com` |
-| `fsi_ARA_FlowAdministrators` | String | Email for flow error notifications | `platform-admins@contoso.com` |
+| `fsi_ARA_EscalationApproverUPN` | String | Skip-level approver UPN for SLA escalation | `ciso@example.com` |
+| `fsi_ARA_FlowAdministrators` | String | Email for flow error notifications | `platform-admins@example.com` |
 
 ### Finding Teams Channel ID
 
@@ -186,11 +186,11 @@ Add **Compose** action to classify the environment's zone. Use a lookup against 
 ```json
 if(
   contains(items('Apply_to_each')?['properties']?['environmentSku'], 'Production'),
-  10003,
+  100000002,
   if(
     contains(items('Apply_to_each')?['properties']?['environmentSku'], 'Teams'),
-    10002,
-    10001
+    100000001,
+    100000000
   )
 )
 ```
@@ -206,9 +206,9 @@ Add **Dataverse — Update a row** action with alternate key:
 - **Columns to set:**
   - `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
   - `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
-  - `fsi_botframeworkendpoint`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
+  - `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
   - `fsi_zone`: Zone value from Step 5d-i
-  - `fsi_lastscanned`: `@{utcNow()}`
+  - `fsi_lastscannedat`: `@{utcNow()}`
 - **Configure Run After:** Set to run on **success** and **failure** (for new records, the upsert creates; for existing records, it updates)
 
 > **Important:** The alternate key `fsi_ak_agentinventory_agentenv` must be in **Active** status before this step will work. If the key is still **Pending**, the upsert will fail with a 404 error.
@@ -222,32 +222,32 @@ For new records only:
 ##### Step 5d-iv: Set Default Registration Status
 
 Add **Dataverse — Update a row** to set:
-- `fsi_registrationstatus`: `10001` (Discovered)
-- `fsi_discoveredon`: `@{utcNow()}`
+- `fsi_registrationstatus`: `100000000` (Unregistered)
+- `fsi_lastscannedat`: `@{utcNow()}`
 
 ##### Step 5d-v: Check Zone 3 Auto-Quarantine
 
-Add **Condition** — if zone equals `10003` AND `fsi_registrationstatus` equals `10001` (Discovered):
+Add **Condition** — if zone equals `100000002` AND `fsi_registrationstatus` equals `100000000` (Unregistered):
 
 **Yes branch:**
 - Add **Dataverse — Update a row** to set:
-  - `fsi_isquarantined`: `true`
-  - `fsi_quarantinedon`: `@{utcNow()}`
-  - `fsi_quarantinereason`: `Auto-quarantined: Zone 3 agent discovered without prior registration`
-  - `fsi_registrationstatus`: `10004` (Quarantined)
+  - `fsi_publishedstatus`: `100000002` (Quarantined)
+  - `fsi_registrationstatus`: `100000000` (still Unregistered — quarantine is a published-state flag, not a registration status)
+
+> **Note:** ARA models quarantine via `fsi_publishedstatus = Quarantined (100000002)`. There are no separate `fsi_isquarantined` / `fsi_quarantinedon` columns — the audit trail is the compliance event below.
 
 ##### Step 5d-vi: Log Compliance Event
 
 Add **Dataverse — Add a new row** to `fsi_agentcomplianceevents`:
 - `fsi_name`: `Agent Discovered — @{items('Apply_to_each_Bot')?['properties']?['displayName']}`
-- `fsi_eventtype`: `10001` (Agent Discovered)
-- `fsi_eventsource`: `10001` (Flow 1 — Discovery)
-- `fsi_severity`: `10001` (Informational) — or `10004` (High) if quarantined
-- `fsi_actorupn`: `system@contoso.com`
+- `fsi_eventtype`: `100000000` (Discovered) — or `100000004` (Quarantined) if quarantined
+- `fsi_actorupn`: `system@example.com`
+- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['name']}`
 - `fsi_environmentid`: `@{items('Apply_to_each')?['name']}`
 - `fsi_zone`: Zone value from Step 5d-i
-- `fsi_correlationid`: `@{variables('varDiscoveryCorrelationId')}`
-- `fsi_occurredon`: `@{utcNow()}`
+- `fsi_details`: `{"correlationId":"@{variables('varDiscoveryCorrelationId')}","quarantined":@{variables('varQuarantined')}}`
+- `fsi_eventtimestamp`: `@{utcNow()}`
+- `fsi_frameworkversion`: `2.0.0`
 
 ##### Step 5d-vii: Increment Counters
 
@@ -300,7 +300,14 @@ Processes registration requests for discovered agents. Routes approval through M
 
 #### Step 3: Get Agent Details
 
-Add **Dataverse — Get a row by ID** to retrieve the related `fsi_agentinventory` record using the `fsi_agentinventoryid` lookup from the trigger.
+The trigger record is the `fsi_registrationrequest`. To retrieve the related agent, query `fsi_agentinventory` by business key:
+
+- **Action:** Dataverse — List rows
+- **Table:** Agent Inventory (`fsi_agentinventories`)
+- **Filter rows:** `fsi_agentid eq '@{triggerOutputs()?['body/fsi_agentid']}' and fsi_environmentid eq '@{triggerOutputs()?['body/fsi_environmentid']}'`
+- **Top count:** 1
+
+Use the first row of the result for downstream agent metadata. ARA does not maintain a Dataverse lookup column between the request and the inventory — the business key (`fsi_agentid` + `fsi_environmentid`) is the join.
 
 #### Step 4: Calculate SLA Deadline
 
@@ -315,23 +322,25 @@ addDays(utcNow(), variables('varApprovalDeadlineDays'))
 #### Step 5: Update Request Status
 
 Add **Dataverse — Update a row** on the registration request:
-- `fsi_requeststatus`: `10002` (Under Review)
-- `fsi_approver`: `@{variables('varGovernanceTeamEmail')}`
-- `fsi_approvaldeadline`: Result from Step 4
+- `fsi_approvalstatus`: `100000000` (Pending — set on creation; left as-is until approval)
+- `fsi_sladeadline`: Result from Step 4
+- `fsi_escalationtarget`: `@{variables('varGovernanceTeamEmail')}`
 
 #### Step 6: Log Compliance Event
 
 Add **Dataverse — Add a new row** to `fsi_agentcomplianceevents`:
-- `fsi_eventtype`: `10002` (Registration Requested)
-- `fsi_eventsource`: `10002` (Flow 2 — Registration)
-- `fsi_severity`: `10001` (Informational)
-- `fsi_correlationid`: `@{variables('varCorrelationId')}`
+- `fsi_eventtype`: `100000001` (Registered) — logged later on approval; for *requested* state use `100000000` (Discovered) is incorrect; create event on approval/rejection only
+- `fsi_actorupn`: `@{triggerOutputs()?['body/fsi_requestedby']}`
+- `fsi_agentid`: `@{triggerOutputs()?['body/fsi_agentid']}`
+- `fsi_environmentid`: `@{triggerOutputs()?['body/fsi_environmentid']}`
+- `fsi_eventtimestamp`: `@{utcNow()}`
+- `fsi_details`: `{"correlationId":"@{variables('varCorrelationId')}","action":"requested"}`
 
 #### Step 7: Start Approval
 
 Add **Approvals — Start and wait for an approval**:
 - **Approval type:** Approve/Reject — First to respond
-- **Title:** `Agent Registration — @{outputs('Get_Agent')?['body/fsi_name']}`
+- **Title:** `Agent Registration — @{first(outputs('Get_Agent')?['body/value'])?['fsi_name']}`
 - **Assigned to:** `@{variables('varGovernanceTeamEmail')}`
 - **Details:** Include agent name, environment, zone, justification, and SLA deadline
 - **Item link:** Link to the agent inventory record in Dataverse
@@ -343,24 +352,25 @@ Add **Switch** on `outputs('Start_Approval')?['body/outcome']`:
 
 ##### Case: "Approve"
 
-1. Update registration request: `fsi_requeststatus` = `10003` (Approved), `fsi_approvaloutcome` = `10001`
-2. Update agent inventory: `fsi_registrationstatus` = `10003` (Registered), `fsi_registeredon` = `utcNow()`
-3. If agent was quarantined: clear `fsi_isquarantined`, clear `fsi_quarantinedon`
-4. Log compliance event: `fsi_eventtype` = `10003` (Registration Approved)
+1. Update registration request: `fsi_approvalstatus` = `100000001` (Approved), `fsi_approvedby` = approver UPN, `fsi_approvedat` = `utcNow()`
+2. Update agent inventory: `fsi_registrationstatus` = `100000002` (Registered), `fsi_registeredat` = `utcNow()`
+3. If `fsi_publishedstatus` was `100000002` (Quarantined) on discovery, set it to `100000001` (Draft) so the agent is no longer quarantined
+4. Log compliance event: `fsi_eventtype` = `100000002` (Approved)
 5. Send Teams notification to requestor
 
 ##### Case: "Reject"
 
-1. Update registration request: `fsi_requeststatus` = `10004` (Rejected), `fsi_approvaloutcome` = `10002`
-2. Log compliance event: `fsi_eventtype` = `10004` (Registration Rejected)
-3. Send Teams notification to requestor with rejection comments
+1. Update registration request: `fsi_approvalstatus` = `100000002` (Rejected), `fsi_rejectionreason` = approver comments
+2. Update agent inventory: `fsi_registrationstatus` = `100000003` (Rejected)
+3. Log compliance event: `fsi_eventtype` = `100000003` (Rejected)
+4. Send Teams notification to requestor with rejection comments
 
 ##### Default (Timeout)
 
-1. Update registration request: `fsi_requeststatus` = `10006` (Timed Out), `fsi_approvaloutcome` = `10003`
-2. Log compliance event: `fsi_eventtype` = `10013` (Approval Timed Out)
+1. Update registration request: `fsi_approvalstatus` = `100000004` (Expired)
+2. Log compliance event: `fsi_eventtype` = `100000005` (SLA_Escalated)
 3. Check if escalation is configured:
-   - If yes: create a new approval assigned to the escalation approver, update `fsi_isescalated` = `true`, `fsi_escalatedon` = `utcNow()`, log `fsi_eventtype` = `10012` (SLA Escalation)
+   - If yes: create a new approval assigned to the escalation approver, update `fsi_approvalstatus` = `100000003` (Escalated), `fsi_escalationdate` = `utcNow()`
    - If no: send notification to governance team about unresolved request
 
 ---
@@ -395,7 +405,7 @@ Add **Condition** — check if `@{parameters('fsi_ARA_IsEntraRegistrySyncEnabled
 
 #### Step 3: Check Registration Status
 
-Add **Condition** — check if `fsi_registrationstatus` equals `10003` (Registered).
+Add **Condition** — check if `fsi_registrationstatus` equals `100000002` (Registered).
 
 **No branch:** Terminate — only sync registered agents.
 
@@ -410,7 +420,7 @@ Add **Compose** action:
   "environmentId": "@{triggerOutputs()?['body/fsi_environmentid']}",
   "ownerUpn": "@{triggerOutputs()?['body/fsi_ownerupn']}",
   "riskClassification": "@{triggerOutputs()?['body/fsi_zone']}",
-  "registeredOn": "@{triggerOutputs()?['body/fsi_registeredon']}",
+  "registeredOn": "@{triggerOutputs()?['body/fsi_registeredat']}",
   "frameworkVersion": "FSI-AgentGov-v1.1"
 }
 ```
@@ -475,8 +485,8 @@ Checks all registered agents weekly to verify that their owners are still active
 
 Add **Dataverse — List rows** from `fsi_agentinventories`:
 
-- **Filter rows:** `fsi_registrationstatus eq 10003 and fsi_isorphaned eq false`
-- **Select columns:** `fsi_agentinventoryid,fsi_name,fsi_ownerupn,fsi_agentid,fsi_environmentid,fsi_zone`
+- **Filter rows:** `fsi_registrationstatus eq 100000002 and fsi_isorphaned eq false`
+- **Select columns:** `fsi_name,fsi_ownerupn,fsi_agentid,fsi_environmentid,fsi_zone`
 
 #### Step 4: Loop Through Agents
 
@@ -511,20 +521,26 @@ If orphan criteria met:
 
 1. **Dataverse — Update a row** on `fsi_agentinventories`:
    - `fsi_isorphaned`: `true`
-   - `fsi_orphanedon`: `@{utcNow()}`
+   - `fsi_lastscannedat`: `@{utcNow()}`
 
 2. **Dataverse — Add a new row** to `fsi_ownershipaudits`:
-   - `fsi_changetype`: Appropriate value (10001, 10002, or 10003)
+   - `fsi_agentid`: `@{items('Apply_to_each')?['fsi_agentid']}`
+   - `fsi_environmentid`: `@{items('Apply_to_each')?['fsi_environmentid']}`
    - `fsi_previousownerupn`: `@{items('Apply_to_each')?['fsi_ownerupn']}`
-   - `fsi_previousownerstatus`: `Deleted`, `Disabled`, or `Inactive`
-   - `fsi_changedon`: `@{utcNow()}`
-   - `fsi_changedby`: `system@contoso.com`
+   - `fsi_newownerupn`: `unknown@unassigned.local`
+   - `fsi_changereason`: `Orphan detected — Deleted | Disabled | Inactive (>90d)`
+   - `fsi_changedat`: `@{utcNow()}`
+   - `fsi_changedby`: `system@example.com`
+   - `fsi_isorphanreassignment`: `false`
+   - `fsi_details`: `{"correlationId":"@{variables('varCorrelationId')}"}`
 
 3. **Dataverse — Add a new row** to `fsi_agentcomplianceevents`:
-   - `fsi_eventtype`: `10008` (Orphan Detected)
-   - `fsi_eventsource`: `10004` (Flow 4 — Orphan Detection)
-   - `fsi_severity`: `10003` (Medium)
-   - `fsi_correlationid`: `@{variables('varCorrelationId')}`
+   - `fsi_eventtype`: `100000006` (OrphanDetected)
+   - `fsi_actorupn`: `system@example.com`
+   - `fsi_agentid`: `@{items('Apply_to_each')?['fsi_agentid']}`
+   - `fsi_environmentid`: `@{items('Apply_to_each')?['fsi_environmentid']}`
+   - `fsi_eventtimestamp`: `@{utcNow()}`
+   - `fsi_details`: `{"correlationId":"@{variables('varCorrelationId')}","reason":"Owner deleted/disabled/inactive"}`
 
 4. **Increment variable** `varOrphanCount`
 
@@ -558,4 +574,4 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 
 ---
 
-*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.0.0 — FSI Agent Governance Framework*

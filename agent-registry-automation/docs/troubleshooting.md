@@ -318,7 +318,7 @@ $token = Get-AccessToken -Scope "https://your-org.crm.dynamics.com/.default"
 $headers = @{ "Authorization" = "Bearer $token"; "OData-MaxVersion" = "4.0"; "OData-Version" = "4.0" }
 
 $uri = "https://your-org.crm.dynamics.com/api/data/v9.2/fsi_agentinventories?" +
-       "`$select=fsi_name,fsi_registrationstatus,fsi_zone,fsi_isorphaned,fsi_isquarantined"
+       "`$select=fsi_name,fsi_registrationstatus,fsi_zone,fsi_isorphaned,fsi_publishedstatus"
 $response = Invoke-RestMethod -Uri $uri -Headers $headers
 $response.value | Group-Object fsi_registrationstatus | Select-Object Name, Count
 ```
@@ -327,7 +327,7 @@ $response.value | Group-Object fsi_registrationstatus | Select-Object Name, Coun
 
 ```powershell
 # Count compliance events by type in the last 7 days
-$filter = "fsi_occurredon ge " + (Get-Date).AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ssZ")
+$filter = "fsi_eventtimestamp ge " + (Get-Date).AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ssZ")
 $uri = "https://your-org.crm.dynamics.com/api/data/v9.2/fsi_agentcomplianceevents?" +
        "`$filter=$filter&`$select=fsi_eventtype"
 $response = Invoke-RestMethod -Uri $uri -Headers $headers
@@ -338,13 +338,14 @@ $response.value | Group-Object fsi_eventtype | Select-Object Name, Count
 
 ```powershell
 # List all pending or escalated registration requests
+# fsi_approvalstatus values: 100000000=Pending, 100000003=Escalated
 $uri = "https://your-org.crm.dynamics.com/api/data/v9.2/fsi_registrationrequests?" +
-       "`$filter=fsi_requeststatus eq 10001 or fsi_requeststatus eq 10005" +
-       "&`$select=fsi_name,fsi_requeststatus,fsi_approvaldeadline,fsi_isescalated"
+       "`$filter=fsi_approvalstatus eq 100000000 or fsi_approvalstatus eq 100000003" +
+       "&`$select=fsi_agentid,fsi_agentname,fsi_approvalstatus,fsi_sladeadline,fsi_escalationtarget"
 $response = Invoke-RestMethod -Uri $uri -Headers $headers
-$response.value | Format-Table fsi_name, fsi_requeststatus, fsi_approvaldeadline, fsi_isescalated
+$response.value | Format-Table fsi_agentname, fsi_approvalstatus, fsi_sladeadline, fsi_escalationtarget
 ```
 
 ---
 
-*Agent Registry Automation v1.0.2 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.0.0 — FSI Agent Governance Framework*

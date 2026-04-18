@@ -174,4 +174,4 @@ The following connectors are used by the solution's Power Automate flows. Verify
 
 ---
 
-*Agent Registry Automation v1.0.1 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.0.0 — FSI Agent Governance Framework*

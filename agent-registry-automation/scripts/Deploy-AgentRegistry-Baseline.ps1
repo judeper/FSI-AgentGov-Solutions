@@ -16,7 +16,7 @@
     handled by the Discover-UnregisteredAgents-Daily flow.
 
 .PARAMETER DataverseUrl
-    Target Dataverse environment URL (e.g., https://contoso.crm.dynamics.com).
+    Target Dataverse environment URL (e.g., https://example.crm.dynamics.com).
 
 .PARAMETER PowerPlatformApiUrl
     Power Platform API base URL. Defaults to https://api.powerplatform.com.
@@ -34,12 +34,12 @@
 
 .EXAMPLE
     .\Deploy-AgentRegistry-Baseline.ps1 `
-        -DataverseUrl "https://contoso.crm.dynamics.com" `
+        -DataverseUrl "https://example.crm.dynamics.com" `
         -ExportPath ".\baseline-inventory-$(Get-Date -Format yyyyMMdd).json"
 
 .EXAMPLE
     .\Deploy-AgentRegistry-Baseline.ps1 `
-        -DataverseUrl "https://contoso.crm.dynamics.com" `
+        -DataverseUrl "https://example.crm.dynamics.com" `
         -Zone 2 `
         -WhatIf
 
@@ -238,7 +238,7 @@ function Get-EnvironmentBots {
         [string]$Token
     )
 
-    $uri = "$($ApiBaseUrl.TrimEnd('/'))/powervirtualagents/environments/$EnvironmentId/bots?api-version=2022-03-01-preview"
+    $uri = "$($ApiBaseUrl.TrimEnd('/'))/appmanagement/environments/$EnvironmentId/bots?api-version=2022-03-01-preview"
 
     try {
         $response = Invoke-ApiRequest -Uri $uri -Token $Token -Method GET
@@ -264,6 +264,15 @@ function Write-AgentInventoryRecord {
     .SYNOPSIS
         Upserts an agent inventory record in fsi_agentinventory.
         Returns 'Created' or 'Updated' to indicate the operation performed.
+
+    .DESCRIPTION
+        Idempotent. On *create*, writes the full discovery payload.
+        On *update*, only refreshes columns that should track current
+        Bots-API state (display names, endpoint, last-scanned timestamp,
+        published status). It DOES NOT reset workflow columns like
+        fsi_registrationstatus, fsi_zone, fsi_isorphaned, or fsi_ownerupn —
+        those are governed by the registration approval flow and must not
+        be clobbered by a second discovery pass.
     #>
     param(
         [Parameter(Mandatory)]
@@ -273,25 +282,28 @@ function Write-AgentInventoryRecord {
         [hashtable]$AgentData
     )
 
-    # Check for existing record by agent ID and environment ID
     $agentId = $AgentData.fsi_agentid
     $envId = $AgentData.fsi_environmentid
     $filter = "`$filter=fsi_agentid eq '$agentId' and fsi_environmentid eq '$envId'"
     $select = "`$select=fsi_agentinventoryid"
-    $checkUri = "$script:DataverseApiBase/fsi_agentinventorys?$filter&$select&`$top=1"
+    $checkUri = "$script:DataverseApiBase/fsi_agentinventories?$filter&$select&`$top=1"
 
     $existing = Invoke-ApiRequest -Uri $checkUri -Token $Token -Method GET
 
     if ($existing.value -and $existing.value.Count -gt 0) {
-        # Update existing record
         $recordId = $existing.value[0].fsi_agentinventoryid
-        $updateUri = "$script:DataverseApiBase/fsi_agentinventorys($recordId)"
-        Invoke-ApiRequest -Uri $updateUri -Token $Token -Method PATCH -Body $AgentData | Out-Null
+        $updateUri = "$script:DataverseApiBase/fsi_agentinventories($recordId)"
+
+        # Only refresh discovery-tracking fields. Preserve workflow state.
+        $updatePayload = @{}
+        foreach ($col in @('fsi_name','fsi_agentname','fsi_environmentname','fsi_agentendpointurl','fsi_lastscannedat','fsi_publishedstatus','fsi_rawjson')) {
+            if ($AgentData.ContainsKey($col)) { $updatePayload[$col] = $AgentData[$col] }
+        }
+        Invoke-ApiRequest -Uri $updateUri -Token $Token -Method PATCH -Body $updatePayload | Out-Null
         return "Updated"
     }
     else {
-        # Create new record
-        $createUri = "$script:DataverseApiBase/fsi_agentinventorys"
+        $createUri = "$script:DataverseApiBase/fsi_agentinventories"
         Invoke-ApiRequest -Uri $createUri -Token $Token -Method POST -Body $AgentData | Out-Null
         return "Created"
     }
@@ -430,8 +442,12 @@ foreach ($env in $environments) {
 
         foreach ($bot in $bots) {
             $counters.TotalAgents++
-            $botId = $bot.id
+            # Power Platform Bots API returns the GUID in `name`; `id` is the
+            # ARM resource path. Use `name` as the durable bot identifier so
+            # the alternate key (fsi_agentid + fsi_environmentid) stays stable.
+            $botId = $bot.name
             $botName = $bot.properties.displayName
+            if ([string]::IsNullOrWhiteSpace($botName)) { $botName = $botId }
 
             $agentRecord = @{
                 fsi_name               = $botName
@@ -445,19 +461,27 @@ foreach ($env in $environments) {
                 fsi_isorphaned         = $false
             }
 
-            # Include owner UPN if available
+            # Owner UPN — required column. If the API doesn't return one,
+            # populate a placeholder so the create succeeds; orphan detection
+            # will flag the record on the next compliance pass.
             if ($bot.properties.owner -and $bot.properties.owner.userPrincipalName) {
                 $agentRecord["fsi_ownerupn"] = $bot.properties.owner.userPrincipalName
+            } else {
+                $agentRecord["fsi_ownerupn"] = "unknown@unassigned.local"
+                $agentRecord["fsi_isorphaned"] = $true
             }
 
-            # Include published status if available — map string to option-set integer
+            # Published status — required column. Default to Draft if absent.
             if ($bot.properties.publishedStatus) {
                 $mappedStatus = $script:PublishedStatusMap[$bot.properties.publishedStatus]
                 if ($null -ne $mappedStatus) {
                     $agentRecord["fsi_publishedstatus"] = $mappedStatus
                 } else {
-                    Write-AuditLog "  Unknown publishedStatus '$($bot.properties.publishedStatus)' for $botName — skipping field" -Level WARN
+                    Write-AuditLog "  Unknown publishedStatus '$($bot.properties.publishedStatus)' for $botName — defaulting to Draft" -Level WARN
+                    $agentRecord["fsi_publishedstatus"] = $script:PublishedStatusMap["Draft"]
                 }
+            } else {
+                $agentRecord["fsi_publishedstatus"] = $script:PublishedStatusMap["Draft"]
             }
 
             if ($PSCmdlet.ShouldProcess("$botName ($botId) in $envName", "Upsert agent inventory record")) {

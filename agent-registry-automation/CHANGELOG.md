@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.0] - 2026-04-30
+
+### BREAKING
+
+- **`docs/dataverse-schema.md` is now generated** from `scripts/create_dataverse_schema.py` via the new `--output-docs` flag. Hand-edits to the schema doc will be overwritten — modify the schema script and regenerate. The previous hand-written schema doc described many columns that did not exist in the schema script (root cause of the v1.0.x flow drift).
+- **Power Platform Bots API path** corrected from `/powervirtualagents/environments/{envId}/bots` to `/appmanagement/environments/{envId}/bots` in `Deploy-AgentRegistry-Baseline.ps1`. The `powervirtualagents` path is no longer the supported route.
+- **Bot identifier source switched** from `bot.id` (an ARM resource path) to `bot.name` (the GUID) when populating `fsi_agentid`. Existing rows whose `fsi_agentid` was an ARM path will not be matched by the v2.0.0 baseline scan and will be re-created with the correct GUID. **Migration:** before upgrading, export and reconcile any rows where `fsi_agentid` starts with `/providers/`; after upgrade, delete the duplicate ARM-path rows.
+- **Test-AgentRegistryCompliance.ps1 SLA check** now reads `fsi_sladeadline` from each registration request instead of using a hardcoded 72-hour threshold. This honours the per-request SLA stamped by the registration flow and supports zone- or risk-tier-specific SLAs. The `$script:SlaDeadlineHours` variable was removed.
+- **`docs/flow-configuration.md` rewritten** for column accuracy. All references to non-existent columns (`fsi_isquarantined`, `fsi_quarantinedon`, `fsi_quarantinereason`, `fsi_eventsource`, `fsi_severity`, `fsi_correlationid`, `fsi_changetype`, `fsi_previousownerstatus`, `fsi_isescalated`, `fsi_orphanedon`, `fsi_approver`, `fsi_approvaloutcome`, `fsi_discoveredon`) replaced with their schema-correct equivalents (`fsi_publishedstatus`, `fsi_details`, `fsi_eventtimestamp`, `fsi_approvedby`, `fsi_approvedat`). All option-set values bumped from the placeholder `1000x` range to the canonical `100000000+` range.
+- **Lookup-based agent retrieval removed** from Flow 2 (Process-RegistrationRequest). The flow now joins `fsi_registrationrequest` to `fsi_agentinventory` by business key (`fsi_agentid` + `fsi_environmentid`) instead of a lookup column that does not exist on the request table.
+
+### Fixed
+
+- Critical: Entity set name `fsi_agentinventorys` → `fsi_agentinventories` (default Dataverse pluralization for nouns ending in `y`) in `Deploy-AgentRegistry-Baseline.ps1`, `Test-AgentRegistryCompliance.ps1`, and `ara_client.py`.
+- Critical: `Write-AgentInventoryRecord` is now idempotent. On *update*, only discovery-tracking fields (display names, endpoint URL, `fsi_lastscannedat`, `fsi_publishedstatus`, `fsi_rawjson`) are PATCHed; workflow state (`fsi_registrationstatus`, `fsi_zone`, `fsi_isorphaned`, `fsi_ownerupn`) is preserved. v1.0.x clobbered approval state on every re-scan.
+- High: `fsi_publishedstatus` now defaults to `Draft` instead of being omitted when the Bots API returns no value, so the create call succeeds (the column is `ApplicationRequired`).
+- High: `fsi_ownerupn` now defaults to `unknown@unassigned.local` and `fsi_isorphaned = true` when the Bots API does not return an owner, so the create call succeeds (the column is `ApplicationRequired`).
+- High: `docs/troubleshooting.md` diagnostic queries corrected — replaced `fsi_isquarantined`, `fsi_occurredon`, `fsi_requeststatus`, `fsi_approvaldeadline`, `fsi_isescalated` with their canonical column names (`fsi_publishedstatus`, `fsi_eventtimestamp`, `fsi_approvalstatus`, `fsi_sladeadline`, `fsi_escalationtarget`).
+- Medium: `contoso.com` → `example.com` (RFC 2606) across all docs and scripts.
+- Medium: Sample config `templates/agent-registry-config.sample.json` version bumped to 2.0.0.
+- Medium: Doc footers across `docs/*.md` bumped to v2.0.0.
+
+### Added
+
+- `scripts/create_dataverse_schema.py --output-docs PATH` — generates a Markdown reference for tables, columns, option sets, and alternate keys directly from the in-memory schema definitions. This is now the only supported way to update `docs/dataverse-schema.md`.
+
+---
+
 ## [1.0.2] - 2026-04-16
 
 ### Fixed

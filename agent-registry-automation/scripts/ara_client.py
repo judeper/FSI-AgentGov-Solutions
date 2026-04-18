@@ -173,7 +173,7 @@ class ARAClient:
         """Query Dataverse table using OData.
 
         Args:
-            entity_set: Entity set name (e.g., 'fsi_agentinventorys')
+            entity_set: Entity set name (e.g., 'fsi_agentinventories')
             select: OData $select expression
             filter: OData $filter expression
             orderby: OData $orderby expression
