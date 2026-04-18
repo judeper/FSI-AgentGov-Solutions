@@ -220,26 +220,32 @@ When writing documentation in this repository:
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-docs.py` — auto-generates `site-docs/solutions/{slug}/` from each solution's `README.md`, copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens), and stamps version / domain / controls from `scripts/solution-config.yml`.
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), the home-page hero metrics block, and copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens).
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
-### To change overview pages
+A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
 
-- **Structure / layout** (section order, truncation rules, documentation table format): edit `scripts/build-docs.py`. Current behavior: preamble = first paragraph only; sections included = `## Quick Start` and `## Related Controls` only; each section capped at 25 lines with safe code-fence handling; links to the full README appended when content is truncated.
-- **Content** (description, Quick Start steps, Related Controls): edit the solution's `README.md`.
-- **Version / domain / controls metadata** shown in the page header: edit `scripts/solution-config.yml`. **Keep this file in sync with each solution's CHANGELOG head.**
+### To change overview / catalog content
 
-### To change detail pages
+- **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — this is the single source of truth. The schema is enforced by `scripts/manifest.schema.json`.
+- **Layout / table structure**: edit `scripts/build-manifest.py` (functions `emit_site_catalog`, `emit_solution_detail`, `emit_readme_table`, `emit_control_mapping`).
 
-Edit files under `{slug}/docs/`. build-docs.py copies them into `site-docs/solutions/{slug}/` with filename normalization (uppercase / underscores → lowercase / hyphens). Update `mkdocs.yml` nav when adding or removing detail pages.
+### To change detail-page sub-docs
+
+Edit files under `{slug}/docs/`. `build-manifest.py` copies them into `site-docs/solutions/{slug}/` with filename normalization (uppercase / underscores → lowercase / hyphens). Update `mkdocs.yml` nav when adding or removing detail pages.
+
+### Schema evolution policy
+
+`solutions.json` schema 1.4.x is **additive-only**. Optional fields may be added in 1.4.1+. Field renames, new required fields, or shape changes require **1.5.0** with a coordinated `judeper/fsi-agentgov` update.
 
 ### To verify before committing
 
 ```bash
-python scripts/build-docs.py       # regenerate site-docs/solutions/
-python -m mkdocs build --strict    # fail on any broken link or missing nav file
+python scripts/build-manifest.py            # regenerate everything
+python scripts/build-manifest.py --check    # exits non-zero if drift exists
+python -m mkdocs build --strict             # fail on any broken link or missing nav file
 ```
 
 ## Validation Commands
