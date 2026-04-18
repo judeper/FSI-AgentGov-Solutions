@@ -36,7 +36,7 @@ CONNECTION_REFS = [
     {
         "logical_name": "fsi_cr_http_sharingrestriction",
         "display_name": "HTTP Premium - ASARD",
-        "connector": "shared_httppremium",
+        "connector": "shared_http",
         "description": "HTTP Premium connector for BAP Admin API calls",
     },
 ]

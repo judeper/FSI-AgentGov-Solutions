@@ -51,7 +51,7 @@
 .EXAMPLE
     .\Export-SharingComplianceEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -Interactive
 
     Exports all compliance records from the past 30 days using interactive auth.
@@ -59,7 +59,7 @@
 .EXAMPLE
     .\Export-SharingComplianceEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
+        -TenantId "example.onmicrosoft.com" `
         -Zone "2" `
         -FromDate (Get-Date).AddDays(-90) `
         -OutputDirectory "C:\compliance\evidence" `

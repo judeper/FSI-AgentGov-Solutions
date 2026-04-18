@@ -315,11 +315,10 @@
     "renderingPipeline": "adaptive-cards-templating",
     "renderingNotes": "This card uses ${variable} placeholders rendered via the Adaptive Cards Templating SDK. Do not mix with {{variable}} string-replacement syntax used by alert/exception cards.",
     "violationTypeMapping": {
-      "Everyone": "🔴 Organization-wide sharing",
-      "Public": "🟠 Public internet link",
-      "UnapprovedGroup": "🟡 Unapproved security group",
-      "ExcessiveIndividual": "🟡 Excessive individual sharing",
-      "CrossTenant": "🔴 Cross-tenant access"
+      "GroupSharing": "🟡 Group sharing not allowed in this zone",
+      "OrgWideSharing": "🔴 Organization-wide sharing",
+      "PublicSharing": "🟠 Public / anonymous link",
+      "UnapprovedGroup": "🟡 Unapproved security group"
     },
     "principalIconMapping": {
       "Everyone": "🔴",

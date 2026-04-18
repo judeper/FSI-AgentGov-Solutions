@@ -42,6 +42,9 @@
 .PARAMETER ExcludeSandbox
     Exclude sandbox environments from scan. Default: $true.
 
+.PARAMETER ExcludeTrial
+    Exclude trial environments from scan. Default: $false.
+
 .PARAMETER DataverseUrl
     Dataverse organization URL for persisting results and loading approved groups.
     When provided, results are written to fsi_agentsharingcompliances.
@@ -102,6 +105,9 @@ function Invoke-SharingComplianceScan {
 
         [Parameter()]
         [switch]$ExcludeSandbox = $true,
+
+        [Parameter()]
+        [switch]$ExcludeTrial,
 
         [Parameter()]
         [string]$DataverseUrl,
@@ -207,9 +213,31 @@ function Invoke-SharingComplianceScan {
             $dataverseToken = $dvTokenResponse.access_token
         }
         catch {
-            Write-Warning "Dataverse authentication failed. Results will not be persisted: $($_.Exception.Message)"
+            Write-Warning "Dataverse authentication failed. Approved-group lookups and result persistence will be DISABLED for this run: $($_.Exception.Message)"
+            $script:DataverseAuthFailed = $true
             $DataverseUrl = $null
         }
+    }
+
+    #endregion
+
+    #region Authenticate PowerApps Admin Module
+
+    # The Microsoft.PowerApps.Administration.PowerShell module is used for
+    # environment enumeration AND for sharing-principal lookup
+    # (Get-AdminPowerAppRoleAssignment is the only API that returns Entra group
+    # object IDs for Copilot Studio agent shares; the Dataverse
+    # botcomponentroleassociations table only stores Dataverse security role
+    # GUIDs, not Entra group IDs). The module's cmdlets require a separate
+    # session login via Add-PowerAppsAccount — the OAuth token above is for
+    # raw REST calls and does not authenticate the cmdlet session.
+    try {
+        $secureSecret = ConvertTo-SecureString $plainSecret -AsPlainText -Force
+        Add-PowerAppsAccount -TenantID $TenantId -ApplicationId $ClientId -ClientSecret $secureSecret -Endpoint prod -ErrorAction Stop | Out-Null
+        Write-Host "  PowerApps admin session established." -ForegroundColor Green
+    }
+    catch {
+        throw "Add-PowerAppsAccount failed. Verify the service principal is registered as a Power Platform admin: $($_.Exception.Message)"
     }
 
     #endregion
@@ -235,6 +263,9 @@ function Invoke-SharingComplianceScan {
             if (-not $matchesFilter) { $include = $false }
         }
         if ($ExcludeSandbox -and $env.EnvironmentType -eq 'Sandbox') {
+            $include = $false
+        }
+        if ($ExcludeTrial -and $env.EnvironmentType -eq 'Trial') {
             $include = $false
         }
 
@@ -484,17 +515,24 @@ function Invoke-SharingComplianceScan {
             $agentName = if ($bot.name) { $bot.name } else { 'Unknown Agent' }
             $sharingType = $bot.sharingtype
 
-            # Query role assignments to detect shared security groups
+            # Enumerate sharing principals via Get-AdminPowerAppRoleAssignment.
+            # This cmdlet is the only supported source that returns Entra group
+            # object IDs (PrincipalType = 'Group', PrincipalObjectId = group
+            # objectId) for Copilot Studio agents. The Dataverse
+            # `botcomponentroleassociations` table only contains Dataverse
+            # security role GUIDs, which can never match `fsi_securitygroupid`
+            # (declared as an Entra object ID in the schema).
             $sharedGroupIds = @()
             try {
-                $roleUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/botcomponentroleassociations?`$filter=botid eq '$agentId'&`$select=securityroleid"
-                $roleResponse = Invoke-RestMethod -Uri $roleUrl -Headers $botHeaders -Method Get -ErrorAction SilentlyContinue
-                if ($roleResponse.value) {
-                    $sharedGroupIds = $roleResponse.value | ForEach-Object { $_.securityroleid }
-                }
+                $shareAssignments = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -ResourceType "Bot" -ResourceId $agentId -ErrorAction Stop
+                $sharedGroupIds = @(
+                    $shareAssignments |
+                        Where-Object { $_.PrincipalType -eq 'Group' -and $_.PrincipalObjectId } |
+                        ForEach-Object { $_.PrincipalObjectId }
+                )
             }
             catch {
-                Write-Verbose "  Could not query role assignments for $agentName"
+                Write-Verbose "  Could not enumerate sharing for $agentName : $($_.Exception.Message)"
             }
 
             $violationType = Get-SharingViolationType `

@@ -37,12 +37,12 @@ The following tables must be created before deploying the flows. Use the schema 
 python scripts/create_asard_dataverse_schema.py
 ```
 
-| Table | Logical Name | Purpose |
-|-------|-------------|---------|
-| Agent Sharing Compliances | `fsi_agentsharingcompliances` | Detected sharing policy violations with agent identity, zone, remediation status, and exception fields |
-| Approved Security Group Policies | `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per governance zone |
+| Table | Logical Name | Entity Set Name (OData) | Purpose |
+|-------|-------------|-------------------------|---------|
+| Agent Sharing Compliances | `fsi_agentsharingcompliance` | `fsi_agentsharingcompliances` | Detected sharing policy violations with agent identity, zone, remediation status, and exception fields |
+| Approved Security Group Policies | `fsi_approvedsecuritygrouppolicy` | `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per governance zone |
 
-Key columns on `fsi_agentsharingcompliances`:
+Key columns on `fsi_agentsharingcompliance`:
 
 - `fsi_agentid`, `fsi_agentname` — Agent identity
 - `fsi_environmentid`, `fsi_environmentname` — Environment identity

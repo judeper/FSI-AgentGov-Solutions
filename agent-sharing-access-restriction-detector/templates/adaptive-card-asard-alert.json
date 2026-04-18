@@ -213,11 +213,10 @@
       "exceptions_url"
     ],
     "violationTypeMapping": {
-      "Everyone": "🔴 Organization-wide sharing",
-      "Public": "🟠 Public internet link",
-      "UnapprovedGroup": "🟡 Unapproved security group",
-      "ExcessiveIndividual": "🟡 Excessive individual sharing",
-      "CrossTenant": "🔴 Cross-tenant access"
+      "GroupSharing": "🟡 Group sharing not allowed in this zone",
+      "OrgWideSharing": "🔴 Organization-wide sharing",
+      "PublicSharing": "🟠 Public / anonymous link",
+      "UnapprovedGroup": "🟡 Unapproved security group"
     },
     "renderingPipeline": "string-replacement",
     "renderingNotes": "This card uses {{variable}} placeholders rendered via Power Automate string replace() functions. Do not mix with ${variable} Adaptive Cards Templating SDK syntax."

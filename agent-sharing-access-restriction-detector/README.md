@@ -1,6 +1,6 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v1.0.4
+> **Version:** v2.0.0
 > **Status:** Completed
 
 See [CHANGELOG](./CHANGELOG.md) for version history.

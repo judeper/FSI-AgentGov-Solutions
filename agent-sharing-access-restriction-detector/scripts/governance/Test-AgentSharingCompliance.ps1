@@ -38,8 +38,11 @@
     Pre-obtained access token for Dataverse authentication.
 
 .PARAMETER PersistResults
-    When specified with -DataverseUrl and -DataverseToken, writes compliance
-    summary to Dataverse.
+    [DEPRECATED — no-op] Earlier versions reserved this switch for writing
+    a summary row to Dataverse. Per-violation rows are already persisted by
+    Invoke-SharingComplianceScan when -DataverseUrl is supplied; there is no
+    additional summary-level persistence. The switch is retained for backward
+    compatibility and will be removed in a future major version.
 
 .PARAMETER BaselinePath
     Path to a JSON file containing zone policy overrides. When specified, overrides
@@ -158,6 +161,7 @@ function Test-AgentSharingCompliance {
     }
 
     if ($ExcludeSandbox) { $scanParams.ExcludeSandbox = $true }
+    if ($ExcludeTrial)   { $scanParams.ExcludeTrial   = $true }
     if ($DataverseUrl)   { $scanParams.DataverseUrl = $DataverseUrl }
 
     $scanResults = Invoke-SharingComplianceScan @scanParams
@@ -216,8 +220,8 @@ function Test-AgentSharingCompliance {
 
     #region Persist Summary to Dataverse
 
-    if ($PersistResults -and $DataverseUrl) {
-        Write-Warning "Summary-level Dataverse persistence is not yet supported. Violation records are persisted by the scan script. Use -ExportPath for summary output."
+    if ($PersistResults) {
+        Write-Verbose "-PersistResults is a no-op in this version. Per-violation rows are persisted by Invoke-SharingComplianceScan when -DataverseUrl is supplied."
     }
 
     #endregion

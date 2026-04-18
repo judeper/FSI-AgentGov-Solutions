@@ -2,6 +2,24 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [2.0.0] — 2026-04-30
+
+### BREAKING
+
+- **Sharing-principal enumeration switched** from the Dataverse `botcomponentroleassociations` table to `Get-AdminPowerAppRoleAssignment` (Microsoft.PowerApps.Administration.PowerShell). The previous query returned Dataverse security role GUIDs and could never match the Entra group object IDs stored in `fsi_securitygroupid`, producing false negatives on every Zone 2 / Zone 3 evaluation (the solution's primary control). The replacement requires an `Add-PowerAppsAccount` session — `Invoke-SharingComplianceScan.ps1` now establishes one immediately after acquiring the OAuth token. Service principals **must** now be registered as Power Platform admins (`Add-PowerAppsAccount` will throw if they are not).
+- **`Test-AgentSharingCompliance.ps1 -PersistResults` is now documented as a no-op.** Per-violation rows are persisted by `Invoke-SharingComplianceScan` when `-DataverseUrl` is supplied; there is no separate summary persistence. The switch is retained for backward compatibility and will be removed in a future major.
+
+### Fixed
+
+- High: `-ExcludeTrial` is now actually applied. The switch was accepted by `Test-AgentSharingCompliance.ps1` and documented in its `.PARAMETER` block but was never forwarded to the scan script and the scan script had no trial-filter logic. Added the parameter to `Invoke-SharingComplianceScan.ps1`, the `EnvironmentType -eq 'Trial'` filter, and the forwarding line in the wrapper.
+- High: Adaptive card `adaptive-card-asard-remediation-result.json` bumped to schema version `1.5` so `isVisible` on `Action.OpenUrl` renders correctly in modern Teams clients (1.4 does not reliably support action visibility).
+- Medium: Connector ID `shared_httppremium` (does not exist in the connector registry) corrected to `shared_http` in `create_asard_connection_references.py`. Flows referencing the bad connector ID would have failed to bind.
+- Medium: `fsi_ASARD_ApprovalTimeoutDays` environment variable type label corrected from `"Decimal"` to `"Number"` in `create_asard_environment_variables.py`. The Dataverse type code (`100000001`) was already correct (Number); only the label was misleading.
+- Medium: `contoso.onmicrosoft.com` examples replaced with `example.onmicrosoft.com` in `Export-SharingComplianceEvidence.ps1`.
+- Medium: Adaptive card `_metadata.violationTypeMapping` keys in `adaptive-card-asard-alert.json` and `adaptive-card-asard-remediation-approval.json` updated from the legacy UASD set (`Everyone`, `Public`, `ExcessiveIndividual`, `CrossTenant`) to the keys actually emitted by `asard_zone_rules.py` (`GroupSharing`, `OrgWideSharing`, `PublicSharing`, `UnapprovedGroup`).
+- Medium: `docs/prerequisites.md` table now distinguishes logical name (`fsi_agentsharingcompliance` singular) from entity-set name (`fsi_agentsharingcompliances` plural). The single "Logical Name" column conflated the two.
+- Medium: Dataverse-auth failure path in `Invoke-SharingComplianceScan.ps1` now sets `$script:DataverseAuthFailed` so callers can detect the silent downgrade to no-persistence.
+
 ## [1.0.4] — 2026-04-15
 
 ### Fixed

@@ -33,7 +33,7 @@ ENV_VARIABLES = [
         "schemaname": "fsi_ASARD_ApprovalTimeoutDays",
         "displayname": "ASARD - Approval Timeout Days",
         "description": "Number of days before a remediation approval request times out (default: 7)",
-        "type": "Decimal",
+        "type": "Number",
         "defaultvalue": "7",
     },
     {
@@ -83,7 +83,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                 results["created"] += 1
             else:
                 # Map type to Dataverse type code
-                type_code = 100000001 if var["type"] == "Decimal" else 100000000
+                type_code = 100000001 if var["type"] == "Number" else 100000000
 
                 # Create definition
                 definition_data = {
