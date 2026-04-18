@@ -63,7 +63,7 @@
     Boolean - $true if hash matches (file integrity verified), $false if mismatch.
 
 .NOTES
-    Version: 1.0.5
+    Version: 1.1.0
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
 
@@ -158,9 +158,10 @@ try {
     }
 }
 catch {
-    # Handle errors (missing files, invalid format, etc.)
+    # Missing files, invalid format, hash mismatch — return $false so callers
+    # can branch on integrity rather than wrapping the call in try/catch.
     if (-not $Quiet) {
         Write-Error "Evidence integrity verification failed: $($_.Exception.Message)"
     }
-    throw
+    return $false
 }

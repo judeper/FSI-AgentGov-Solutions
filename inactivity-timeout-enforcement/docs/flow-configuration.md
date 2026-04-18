@@ -16,7 +16,7 @@ Copilot Studio agents and Power Platform environments without properly configure
 **Risk Exposure:**
 - **Unauthorized Access:** Active sessions on unattended workstations allow unauthorized users to impersonate legitimate users
 - **Session Hijacking:** Extended session lifetimes increase attack windows for session token theft
-- **Compliance Violations:** Failure to enforce timeout controls violates regulatory requirements (GLBA 501(b), SOX 302, FINRA 4511, NIST 800-53 AC-11/AC-12)
+- **Compliance Violations:** Failure to enforce timeout controls violates regulatory requirements (GLBA Section 501(b), SOX Section 302, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12)
 - **Data Exposure:** Prolonged sessions increase risk of data leakage through unattended terminals
 - **Audit Gaps:** Inability to demonstrate timeout enforcement creates examination findings
 
@@ -133,7 +133,7 @@ Environments are classified into governance zones with tailored maximum timeout 
 | **Zone 2** | Team Collaboration | 120 minutes | Team environments with moderate data sensitivity |
 | **Zone 3** | Enterprise Production | 60 minutes | Production environments with regulatory requirements |
 
-**Note:** Enterprise/production environments (Zone 3) should have the shortest timeouts per NIST 800-53 AC-11 and FINRA 4511. All timeouts should not exceed 120 minutes (2 hours).
+**Note:** Enterprise/production environments (Zone 3) should have the shortest timeouts per NIST 800-53 AC-11 and FINRA Rule 4511(a). All timeouts should not exceed 120 minutes (2 hours).
 
 **Process Flow:**
 
@@ -158,8 +158,9 @@ Environments are classified into governance zones with tailored maximum timeout 
      - Extract environment name (canonical ID) and display name
      - Resolve policy from cached array by environment ID
      - **If policy exists:**
-       - Call BAP Privacy Settings API: `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/{environmentName}/settings/privacy`
-       - Parse `inactivityTimeoutEnabled` (boolean) and `inactivityTimeoutDuration` (ISO 8601)
+       - Call the BAP **Governance Configuration** API:
+       `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/{environmentName}/governanceConfiguration?api-version=2021-04-01`
+     - Parse `properties.settings.inactivityTimeoutEnabled` (boolean) and `properties.settings.inactivityTimeoutDuration` (ISO 8601). For backward compatibility with older API responses, also accept `sessionTimeoutEnabled` / `sessionTimeoutInactivityDuration`.
        - Convert ISO 8601 duration to minutes (handles `PT60M`, `PT2H`, `PT1H30M` formats)
        - **Evaluate compliance:**
          - If timeout not explicitly enabled (disabled or null) → **Non-Compliant**
@@ -177,9 +178,9 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 5. **Summary Reporting:**
    - Query compliance records by scan run ID:
-     - Non-Compliant records (`fsi_compliancestatus = 1`)
-     - Unknown records (`fsi_compliancestatus = 2`)
-     - Compliant count (`fsi_compliancestatus = 0`)
+     - Non-Compliant records (`fsi_compliancestatus eq 100000001`)
+     - Unknown records (`fsi_compliancestatus eq 100000002`)
+     - Compliant count (`fsi_compliancestatus eq 100000000`)
    - **Guarded Notification:** Only send email if Non-Compliant count > 0 OR Unknown count > 0
    - Build HTML email with:
      - Scan summary (compliant/non-compliant/unknown counts)
@@ -238,11 +239,13 @@ Legal-Dev           |      | Unknown        | False    | 0       | 0       | No 
 
 Master registry of environment-to-zone mappings with required timeout policies.
 
+> **Implementation status (v1.1.0):** The Power Automate flow described in this document reads `fsi_environmentpolicies` to resolve the per-environment policy. The PowerShell scanner shipped in `scripts/governance/Get-ExpectedTimeoutPolicy.ps1` does **not** read Dataverse — it derives the zone from environment-name heuristics (`Default-` → Personal, `*-Sandbox*` → Team, all others → Enterprise) and applies the same hardcoded zone limits (Personal=120, Team=120, Enterprise=60). When zone classification needs to be data-driven, populate `fsi_environmentpolicies` and use the flow rather than the standalone scanner. A future release will reconcile the two paths.
+
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_environmentid` | String(100) | Canonical Power Platform environment name (primary key for policy lookup) |
 | `fsi_environmentdisplayname` | String(200) | Human-readable environment display name |
-| `fsi_zone` | Choice | Governance zone: 1=Personal, 2=Team, 3=Enterprise |
+| `fsi_zone` | Choice (`fsi_ITE_zone` global option set) | Governance zone: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise. Use the integer values directly in OData filters (`$filter=fsi_zone eq 100000002`). |
 | `fsi_requiredmaxduration` | Number | Required maximum inactivity timeout duration in minutes (e.g., 60, 90, 120) |
 
 **Example Records:**
@@ -264,22 +267,23 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeoutcomplianceid` | GUID | Primary key |
-| `fsi_compliancename` | String(200) | Auto-generated name: `{EnvironmentId} - {Timestamp}` |
+| `fsi_compliancename` | String(200) **(required)** | Auto-generated by the runbook as `ITE-{EnvironmentName}-{RunId}` (truncated to 200 chars). Required by the schema. |
 | `fsi_environmentid` | String(100) | Canonical environment name |
 | `fsi_environmentname` | String(200) | Environment display name |
-| `fsi_zone` | Choice | Governance zone (from policy) |
+| `fsi_zone` | Choice (`fsi_ITE_zone`) | Governance zone from policy: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise |
 | `fsi_inactivitytimeoutenabled` | Boolean | Whether inactivity timeout is enabled |
-| `fsi_timeoutduration` | Number | Actual timeout duration in minutes (0 if disabled) |
-| `fsi_requiredmaxduration` | Number | Required maximum duration from policy |
-| `fsi_compliancestatus` | Choice | 0=Compliant, 1=Non-Compliant, 2=Unknown |
+| `fsi_timeoutduration` | String(50) | Raw ISO 8601 duration returned by the BAP API (e.g., `PT2H`, `PT60M`). Empty when timeout is disabled. |
+| `fsi_timeoutdurationminutes` | Whole Number | Parsed duration in minutes (`-1` when not parseable, `0` when disabled). Use this for numeric comparisons in flows. |
+| `fsi_requiredmaxduration` | Whole Number | Required maximum duration in minutes from policy |
+| `fsi_compliancestatus` | Choice (`fsi_ITE_compliancestatus`) | `100000000`=Compliant, `100000001`=NonCompliant, `100000002`=Unknown. Use the integer values directly in OData filters. |
 | `fsi_notes` | Memo | Human-readable compliance evaluation notes |
 | `fsi_lastscandate` | DateTime | Scan execution timestamp (UTC) |
 | `fsi_scanrunid` | String(50) | Correlation ID for batch scan (GUID) |
 
-**Compliance Status Mapping:**
-- **0 (Compliant):** Timeout enabled and duration ≤ required max
-- **1 (Non-Compliant):** Timeout disabled OR duration > required max
-- **2 (Unknown):** Missing policy OR BAP API error OR timeout enabled but duration null (indeterminate state)
+**Compliance Status Mapping (`fsi_ITE_compliancestatus` global option set):**
+- **`100000000` (Compliant):** Timeout enabled and duration ≤ required max
+- **`100000001` (NonCompliant):** Timeout disabled OR duration > required max
+- **`100000002` (Unknown):** Missing policy OR BAP API error OR timeout enabled but duration null (indeterminate state)
 
 **3. fsi_inactivitytimeouterrorlogs (Error Logs)**
 
@@ -288,16 +292,16 @@ Diagnostic logs for API errors and missing policy issues.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_inactivitytimeouterrorlogid` | GUID | Primary key |
-| `fsi_errorname` | String(200) | Auto-generated name: `{ErrorType} - {EnvironmentId} - {Timestamp}` |
+| `fsi_errorname` | String(200) **(required)** | Auto-generated by the runbook as `ITE-ERR-{EnvironmentName}-{RunId}` (truncated to 200 chars). |
 | `fsi_environmentid` | String(100) | Canonical environment name where error occurred |
-| `fsi_errortype` | String(50) | Error classification: `MissingPolicy`, `Unauthorized`, `Forbidden`, `NotFound`, `Throttled`, `ParseError`, `DataverseError` |
+| `fsi_errortype` | Choice (`fsi_ITE_errortype`) **(required)** | `100000000`=MissingPolicy, `100000001`=Unauthorized, `100000002`=Forbidden, `100000003`=NotFound, `100000004`=Throttled, `100000005`=ParseError, `100000006`=DataverseError. The runbook always populates this column. |
 | `fsi_errorraw` | Memo | Raw error response from BAP API or policy lookup. **Security note:** may contain internal URLs, tenant identifiers, and correlation IDs — configure Dataverse column-level security to restrict read access to authorized roles. |
 | `fsi_timestamp` | DateTime | Error occurrence timestamp (UTC) |
 
-**Error Type Mapping:**
-- **MissingPolicy:** No `fsi_environmentpolicies` record exists for environment
-- **Unauthorized (401):** MSI lacks Power Platform Admin permissions
-- **Forbidden (403):** Access denied to environment privacy settings
+**Error Type Mapping (`fsi_ITE_errortype` global option set):**
+- **`100000000` MissingPolicy:** No `fsi_environmentpolicies` record exists for environment
+- **`100000001` Unauthorized (401):** MSI lacks Power Platform Admin permissions
+- **`100000002` Forbidden (403):** Access denied to environment privacy settings
 - **NotFound (404):** Environment not found or deleted
 - **Throttled (429):** BAP API rate limit exceeded
 - **ParseError:** Unable to parse BAP API response or ISO 8601 duration, or any other unrecognized HTTP error (e.g., 500, 503)
@@ -363,14 +367,14 @@ Execute the following in Dataverse (via Power Apps maker portal → Tables → N
    - Plural Name: Environment Policies
    - Primary Column: `fsi_environmentid` (Text, 100 characters)
    - Add columns per Data Model section
-   - Create choice field `fsi_zone`: 1=Personal, 2=Team, 3=Enterprise
+   - Create choice field `fsi_zone` from global option set `fsi_ITE_zone`: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise
 
 2. **Create `fsi_inactivitytimeoutcompliances` table:**
    - Display Name: Inactivity Timeout Compliances
    - Plural Name: Inactivity Timeout Compliances
    - Primary Column: Auto-number (e.g., `ITC-{SEQNUM:5}`)
    - Add columns per Data Model section
-   - Create choice field `fsi_compliancestatus`: 0=Compliant, 1=Non-Compliant, 2=Unknown
+   - Create choice field `fsi_compliancestatus` from global option set `fsi_ITE_compliancestatus`: `100000000`=Compliant, `100000001`=NonCompliant, `100000002`=Unknown
 
 3. **Create `fsi_inactivitytimeouterrorlogs` table:**
    - Display Name: Inactivity Timeout Error Logs
@@ -402,7 +406,7 @@ Create environment variables in Power Platform:
 | Variable Name | Type | Example Value | Description |
 |---------------|------|---------------|-------------|
 | `fsi_ITE_NotificationRecipients` | String | `security@contoso.com;compliance@contoso.com` | Semicolon-separated email addresses |
-| `fsi_ITE_ConcurrencyLimit` | Number | `5` | Informational only — not read by the flow. Parallel degree is hardcoded to 5 in the flow's `runtimeConfiguration`. To change concurrency, modify the flow JSON directly. |
+| `fsi_ITE_ConcurrencyLimit` | *(removed)* | n/a | This environment variable is **not provisioned** by `create_ite_environment_variables.py` and is not read by the flow. Parallel degree is hardcoded to 5 in the flow's `runtimeConfiguration`. To change concurrency, modify the flow JSON directly. |
 | `fsi_ITE_ScanFrequencyHours` | Number | `24` | Informational only — not read by the flow. The trigger uses a hardcoded daily recurrence. To change scan frequency, modify the flow trigger directly. |
 
 **Step 6: Populate Environment Policies**
@@ -597,7 +601,7 @@ Evidence files should include:
 
 **Retention:**
 
-- Compliance records: Retain for 7 years (SEC 17a-4 requirement)
+- Compliance records: Retain for 7 years (SEC Rule 17a-4 requirement)
 - Policy configurations: Retain for 7 years (audit trail requirement)
 - Error logs: Retain for 3 years (operational history)
 - Email notifications: Retain for 3 years (compliance evidence)
@@ -610,7 +614,7 @@ This solution does not include an automated retention or cleanup mechanism. The 
 2. **Dataverse bulk delete jobs**: Configure recurring bulk delete jobs in the Power Platform Admin Center targeting records older than the retention threshold. Schedule during off-peak hours to minimize Dataverse API impact.
 3. **Azure Data Factory / Synapse pipeline**: For tenants already exporting Dataverse data to a data lake, implement retention policies at the lake layer and use truncation jobs for the source Dataverse tables.
 
-Whichever approach is chosen, ensure deleted records have already been exported to long-term archival storage (see Export Format above) before purging, to maintain SEC 17a-4 compliance.
+Whichever approach is chosen, ensure deleted records have already been exported to long-term archival storage (see Export Format above) before purging, to maintain SEC Rule 17a-4 compliance.
 
 ---
 
@@ -756,7 +760,7 @@ Input: "PT0M"    → Output: 0 minutes   (disabled or zero; if timeout is enable
 
 The Inactivity Timeout Enforcement solution supports compliance with the following regulatory requirements:
 
-### GLBA 501(b) — Safeguards Rule
+### GLBA Section 501(b) — Safeguards Rule
 
 **Requirement:** Financial institutions must implement administrative, technical, and physical safeguards to protect customer information, including access controls and session management.
 
@@ -765,7 +769,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Provides audit trail of timeout configurations and compliance status
 - Generates evidence of continuous monitoring for regulatory examinations
 
-### SOX 302 — Internal Controls over Financial Reporting
+### SOX Section 302 — Internal Controls over Financial Reporting
 
 **Requirement:** Management must establish and maintain adequate internal controls to ensure reliability of financial reporting, including IT controls for session management.
 
@@ -774,7 +778,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Immutable compliance records provide audit trail for internal control effectiveness
 - Daily monitoring enables timely detection of control deficiencies
 
-### FINRA 4511 — General Requirements (Books and Records)
+### FINRA Rule 4511(a) — General Requirements (Books and Records)
 
 **Requirement:** Member firms must make and preserve books and records as required under FINRA rules, the Exchange Act, and applicable SEC rules, including records of technology controls and compliance monitoring.
 
@@ -832,4 +836,4 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ---
 
-*This solution supports compliance with GLBA 501(b), SOX 302, FINRA 4511, and NIST 800-53 AC-11/AC-12. Consult with your compliance and legal teams for applicability to your organization's regulatory requirements.*
+*This solution supports compliance with GLBA Section 501(b), SOX Section 302, FINRA Rule 4511(a), and NIST 800-53 AC-11/AC-12. Consult with your compliance and legal teams for applicability to your organization's regulatory requirements.*

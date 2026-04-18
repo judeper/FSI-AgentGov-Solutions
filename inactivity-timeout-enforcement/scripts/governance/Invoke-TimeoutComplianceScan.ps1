@@ -81,11 +81,28 @@
     Full scan with Dataverse persistence, returning PSCustomObjects for pipeline use.
 
 .NOTES
-    Version: 1.0.5
+    Version: 1.1.0
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
-    Regulations: GLBA 501(b), SOX 302/404, FINRA 4511, NIST 800-53 AC-11/AC-12
+    Regulations: GLBA Section 501(b), SOX Section 302, SOX Section 404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
 #>
+
+# Script-level params: when this file is invoked directly (e.g.,
+# `.\Invoke-TimeoutComplianceScan.ps1 -DataverseUrl ...`) these capture the
+# arguments and forward them to the inner function. When the file is
+# dot-sourced (Test-TimeoutCompliance.ps1), no arguments are supplied so the
+# function is simply registered without side effects.
+[CmdletBinding()]
+param(
+    [Parameter()] [string]$TenantId,
+    [Parameter()] [string]$ClientId,
+    [Parameter()] [SecureString]$ClientSecret,
+    [Parameter()] [string]$BapApiBaseUrl = 'https://api.bap.microsoft.com',
+    [Parameter()] [string[]]$EnvironmentFilter,
+    [Parameter()] [switch]$ExcludeSandbox,
+    [Parameter()] [string]$DataverseUrl,
+    [Parameter()] [ValidateSet('Table', 'JSON', 'Object')] [string]$OutputFormat = 'Table'
+)
 
 function Invoke-TimeoutComplianceScan {
     [CmdletBinding()]
@@ -106,7 +123,7 @@ function Invoke-TimeoutComplianceScan {
         [string[]]$EnvironmentFilter,
 
         [Parameter()]
-        [switch]$ExcludeSandbox = $true,
+        [switch]$ExcludeSandbox,
 
         [Parameter()]
         [string]$DataverseUrl,
@@ -122,7 +139,7 @@ function Invoke-TimeoutComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Inactivity Timeout Enforcement v1.0.5"
+    Write-Verbose "Inactivity Timeout Enforcement v1.1.0"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -189,7 +206,7 @@ function Invoke-TimeoutComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Inactivity Timeout Enforcement v1.0.5" -ForegroundColor Cyan
+    Write-Host "Inactivity Timeout Enforcement v1.1.0" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -365,11 +382,24 @@ function Invoke-TimeoutComplianceScan {
                 -Method Get `
                 -ErrorAction Stop
 
-            # Parse privacy settings for inactivity timeout
+            # Parse governance settings for inactivity timeout. The
+            # `governanceConfiguration` API exposes inactivity timeouts under
+            # `properties.settings` as `inactivityTimeoutEnabled` (boolean) and
+            # `inactivityTimeoutDuration` (ISO 8601 duration). Older responses
+            # may use `sessionTimeoutEnabled` / `sessionTimeoutInactivityDuration`,
+            # so we accept either to be resilient across API versions.
             $privacySettings = $govResponse.properties.settings
             if ($null -ne $privacySettings) {
-                $timeoutEnabled = $privacySettings.sessionTimeoutEnabled
-                $timeoutDuration = $privacySettings.sessionTimeoutInactivityDuration
+                $timeoutEnabled = if ($null -ne $privacySettings.inactivityTimeoutEnabled) {
+                    $privacySettings.inactivityTimeoutEnabled
+                } else {
+                    $privacySettings.sessionTimeoutEnabled
+                }
+                $timeoutDuration = if ($null -ne $privacySettings.inactivityTimeoutDuration) {
+                    $privacySettings.inactivityTimeoutDuration
+                } else {
+                    $privacySettings.sessionTimeoutInactivityDuration
+                }
 
                 if ($timeoutEnabled -and $timeoutDuration) {
                     $timeoutMinutes = ConvertFrom-Iso8601Duration -Duration $timeoutDuration
@@ -378,6 +408,19 @@ function Invoke-TimeoutComplianceScan {
         }
         catch {
             $apiError = $_.Exception.Message
+            $statusCode = $null
+            try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = $null }
+
+            # Classify error to satisfy required fsi_errortype column
+            $errorTypeLabel = switch ($statusCode) {
+                401     { 'Unauthorized' }
+                403     { 'Forbidden' }
+                404     { 'NotFound' }
+                429     { 'Throttled' }
+                default {
+                    if ($apiError -match 'parse|deserialize|json') { 'ParseError' } else { 'DataverseError' }
+                }
+            }
             Write-Warning "  Failed to retrieve governance config for $envName`: $apiError"
 
             $errorLogs.Add([PSCustomObject]@{
@@ -385,6 +428,7 @@ function Invoke-TimeoutComplianceScan {
                 EnvironmentId   = $envId
                 EnvironmentName = $envName
                 Zone            = $zone
+                ErrorType       = $errorTypeLabel
                 ErrorMessage    = $apiError
                 ErrorTime       = (Get-Date -Format 'o')
             })
@@ -519,11 +563,27 @@ function Invoke-TimeoutComplianceScan {
             $errorPersisted = 0
             foreach ($e in $errorLogs) {
                 try {
+                    $errorTypeMap = @{
+                        'MissingPolicy'  = 100000000
+                        'Unauthorized'   = 100000001
+                        'Forbidden'      = 100000002
+                        'NotFound'       = 100000003
+                        'Throttled'      = 100000004
+                        'ParseError'     = 100000005
+                        'DataverseError' = 100000006
+                    }
+                    $errorTypeInt = if ($e.ErrorType -and $errorTypeMap.ContainsKey($e.ErrorType)) {
+                        $errorTypeMap[$e.ErrorType]
+                    } else {
+                        100000006  # DataverseError fallback satisfies required column
+                    }
+
                     $errorRecord = @{
                         'fsi_errorname'       = "ITE-ERR-$($e.EnvironmentName)-$runId".Substring(0, [Math]::Min(200, "ITE-ERR-$($e.EnvironmentName)-$runId".Length))
                         'fsi_environmentid'   = $e.EnvironmentId
                         'fsi_environmentname' = $e.EnvironmentName
                         'fsi_zone'            = $zoneMap[$e.Zone]
+                        'fsi_errortype'       = $errorTypeInt
                         'fsi_errorraw'        = $e.ErrorMessage
                         'fsi_timestamp'       = $e.ErrorTime
                         'fsi_scanrunid'       = $e.RunId
@@ -590,4 +650,13 @@ function Invoke-TimeoutComplianceScan {
     }
 
     #endregion
+}
+
+# When invoked directly (not dot-sourced), forward the script-level args to
+# the function so admins can run `.\Invoke-TimeoutComplianceScan.ps1 -DataverseUrl ...`.
+# Dot-sourcing (e.g., from Test-TimeoutCompliance.ps1) bypasses this block
+# because $PSBoundParameters is empty and the function is registered for
+# explicit invocation.
+if ($MyInvocation.InvocationName -ne '.' -and $PSBoundParameters.Count -gt 0) {
+    Invoke-TimeoutComplianceScan @PSBoundParameters
 }

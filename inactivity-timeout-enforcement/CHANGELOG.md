@@ -2,6 +2,23 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [1.1.0] — 2026-04-17
+
+### Fixed
+- **Critical:** `Invoke-TimeoutComplianceScan.ps1` was a function-only script — running it directly registered the function but never invoked it (silent green). Added a script-level `param()` block plus an explicit invocation guard so direct invocation now forwards arguments to the function. Dot-sourcing from `Test-TimeoutCompliance.ps1` continues to work unchanged.
+- **Critical:** Error-log persistence omitted the required `fsi_errortype` column, causing every `fsi_inactivitytimeouterrorlogs` insert to fail with `0x80040217 ObjectDoesNotExist` once the schema was deployed. Errors are now classified (`Unauthorized`/`Forbidden`/`NotFound`/`Throttled`/`ParseError`/`DataverseError`) from the HTTP status code and mapped to the `fsi_ITE_errortype` global option set integer (100000000–100000006).
+- **Critical:** BAP API field-name reconciliation — the scanner was reading `sessionTimeoutEnabled` / `sessionTimeoutInactivityDuration` while the documented contract uses `inactivityTimeoutEnabled` / `inactivityTimeoutDuration`. The scanner now accepts both shapes and the flow-configuration documentation now reflects the canonical `governanceConfiguration?api-version=2021-04-01` endpoint with the correct field names.
+- **High:** Flow documentation Dataverse tables now use the deployed option-set integer values (`fsi_compliancestatus`: 100000000/100000001/100000002; `fsi_zone`: 100000001/100000002/100000003) instead of 0/1/2 and 1/2/3, which previously produced silent OData filter mismatches.
+- **High:** `fsi_timeoutduration` documentation reconciled with the schema — split into `fsi_timeoutduration` (String(50), raw ISO 8601) and `fsi_timeoutdurationminutes` (Whole Number, parsed minutes). `fsi_errortype` is now correctly documented as a Choice / global option set, not String(50).
+- **High:** Compliance and error-log table documentation now flags required columns (`fsi_compliancename`, `fsi_errorname`, `fsi_errortype`) and documents the auto-generated naming pattern `ITE-{env}-{runId}` used by the runbook.
+- **High:** Bulk regulatory citation sweep across `flow-configuration.md`, `Get-ExpectedTimeoutPolicy.ps1`, `Export-TimeoutComplianceEvidence.ps1`, `Test-TimeoutCompliance.ps1`, and the `Invoke-TimeoutComplianceScan.ps1` `.NOTES` block — `FINRA 4511` → `FINRA Rule 4511(a)`, `SOX 404`/`302` → `SOX Section 404`/`302`, `GLBA 501(b)` → `GLBA Section 501(b)`, `SEC 17a-3`/`17a-4` → `SEC Rule 17a-3`/`17a-4`.
+- **Medium:** `$ExcludeSandbox` no longer defaults to `$true` in `Invoke-TimeoutComplianceScan.ps1` and `Test-TimeoutCompliance.ps1` — sandbox environments were being silently dropped from compliance reporting. Default is now opt-in (`$false`).
+- **Medium:** `Test-EvidenceIntegrity.ps1` now returns `$false` on missing-file / parse-failure paths instead of re-throwing, so callers can branch on integrity without wrapping the call in `try`/`catch`.
+- **Medium:** Flow documentation now clarifies that `fsi_ITE_ConcurrencyLimit` is **not provisioned** by `create_ite_environment_variables.py` (consistent with prior CHANGELOG entries) and is not read by the flow.
+
+### Changed
+- Documented the implementation gap between the flow (which reads the `fsi_environmentpolicies` table) and the standalone PowerShell scanner (which derives zone from environment-name heuristics in `Get-ExpectedTimeoutPolicy.ps1`). A future release will reconcile the two paths.
+
 ## [1.0.5] — 2026-04-15
 
 ### Fixed
