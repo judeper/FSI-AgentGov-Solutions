@@ -220,7 +220,7 @@
       "domain": "compliance-audit",
       "tier": "3",
       "status": "live",
-      "description": "Aggregated compliance reporting dashboard for the FSI Agent Governance Framework with zone-based filtering and Dataverse-backed control records.",
+      "description": "Aggregated compliance reporting dashboard covering all 78 FSI Agent Governance Framework controls, with zone-based filtering and Dataverse-backed control records.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/compliance-dashboard/",
       "controls": [
         "3.3",

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [v1.4.1] - 2026-04-19
+## [v1.4.1] - 2026-04-18
 
 ### Added
 - `solutions.json` now includes per-solution `controls`, `dependencies`, and `status` fields (additive — schemaVersion bumped to **1.4.1** per the additive-only policy). Customers and downstream tools consuming the lock file can now see control mappings without crawling individual manifests.
@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [v1.4.0] - 2026-04-22
+## [v1.4.0] - 2026-04-18
 
 ### Manifest unification + alignment with FSI-AgentGov v1.4
 
