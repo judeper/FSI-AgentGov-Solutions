@@ -143,6 +143,10 @@ The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
 
+### Continuous health monitoring
+
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
+
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
 ### To change overview pages

@@ -227,6 +227,10 @@ The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
 
+### Continuous health monitoring
+
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
+
 ### To change overview / catalog content
 
 - **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — this is the single source of truth. The schema is enforced by `scripts/manifest.schema.json`.
