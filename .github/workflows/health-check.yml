@@ -1,0 +1,91 @@
+name: Health Check
+
+# Pings the published artifacts every 30 minutes and on demand.
+# Opens a GitHub issue if any check fails so problems are visible
+# without depending on a developer being online.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe published surfaces
+        id: probe
+        env:
+          LATEST_TAG: v1.4.1
+        shell: bash
+        run: |
+          set -u
+          fail=0
+          declare -a errors
+
+          check_url() {
+            local label="$1" url="$2" expect="$3"
+            local code
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "$url" || echo "000")
+            if [ "$code" != "$expect" ]; then
+              errors+=("$label expected $expect got $code -- $url")
+              fail=1
+            fi
+            echo "$label  $code  $url"
+          }
+
+          check_url "site-home"     "https://judeper.github.io/FSI-AgentGov-Solutions/" 200
+          check_url "site-catalog"  "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/" 200
+          check_url "site-detail"   "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-observability-foundation/" 200
+          check_url "site-mapping"  "https://judeper.github.io/FSI-AgentGov-Solutions/reference/control-mapping/" 200
+          check_url "raw-lock"      "https://raw.githubusercontent.com/judeper/FSI-AgentGov-Solutions/${LATEST_TAG}/solutions.json" 200
+
+          # Validate solutions.json shape
+          if curl -sS --max-time 20 "https://raw.githubusercontent.com/judeper/FSI-AgentGov-Solutions/${LATEST_TAG}/solutions.json" -o lock.json; then
+            count=$(python -c "import json; d=json.load(open('lock.json')); print(len(d.get('solutions',{})))")
+            if [ "$count" != "35" ]; then
+              errors+=("solutions.json count expected 35 got $count")
+              fail=1
+            fi
+            schema=$(python -c "import json; print(json.load(open('lock.json')).get('schemaVersion',''))")
+            if [ -z "$schema" ]; then
+              errors+=("solutions.json missing schemaVersion")
+              fail=1
+            fi
+            missing=$(python -c "import json; d=json.load(open('lock.json'))['solutions']; print(len([k for k,v in d.items() if not v.get('controls')]))")
+            if [ "$missing" != "0" ]; then
+              errors+=("solutions.json: $missing entries missing controls[]")
+              fail=1
+            fi
+          else
+            errors+=("solutions.json fetch failed")
+            fail=1
+          fi
+
+          {
+            echo "fail=$fail"
+            echo "errors<<EOF"
+            for e in "${errors[@]:-}"; do echo "- $e"; done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update issue on failure
+        if: steps.probe.outputs.fail == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ERRORS: ${{ steps.probe.outputs.errors }}
+        run: |
+          set -e
+          title="Health check failure: published artifacts not healthy"
+          body=$'Automated probe detected failures:\n\n'"$ERRORS"$'\n\nRun: '"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          existing=$(gh issue list -R "${{ github.repository }}" --search "$title in:title is:open" --json number --jq '.[0].number' || echo "")
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            gh issue comment "$existing" -R "${{ github.repository }}" --body "$body"
+          else
+            gh issue create -R "${{ github.repository }}" --title "$title" --body "$body" --label bug
+          fi
