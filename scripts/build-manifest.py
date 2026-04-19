@@ -254,8 +254,11 @@ def project_to_lock(m: dict) -> dict:
         "version": m["version"],
         "domain": m["domain"],
         "tier": m["tier"],
+        "status": m.get("status", "live"),
         "description": m["description"],
         "url": m["url"],
+        "controls": list(m.get("controls", [])),
+        "dependencies": list(m.get("dependencies", [])),
         "prerequisites": dict(m["prerequisites"]),
         "verification": m["verification"],
     }
@@ -263,7 +266,7 @@ def project_to_lock(m: dict) -> dict:
 
 def emit_solutions_json(
     manifests: dict[str, dict],
-    schema_version: str = "1.4.0",
+    schema_version: str = "1.4.1",
 ) -> str:
     """Return the canonical solutions.json content (deterministic)."""
     out = {
