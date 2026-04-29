@@ -13,3 +13,10 @@ prerequisites:
   power-platform-admin: "Power Platform admin or Entra Global Admin for BAP Admin API access, Dataverse setup, and remediation flows."
   m365-admin: "Teams administrator or delegated permissions for adaptive card delivery and notification posting."
 verification: "Confirm fsi_agentsharingcompliances and fsi_approvedsecuritygrouppolicies are populated after a sharing scan and remediation test."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: confidential

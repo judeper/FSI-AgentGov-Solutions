@@ -21,3 +21,9 @@ verification: "Confirm fsi_crosstenantcomplianceevent receives events and fsi_ap
 dependencies:
 - agent-registry-automation
 - unrestricted-agent-sharing-detector
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: confidential

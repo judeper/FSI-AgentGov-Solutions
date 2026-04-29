@@ -1,8 +1,37 @@
 # FSI-AgentGov-Solutions
 
-Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov).
+Reference implementations for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov), targeting Microsoft 365 AI agents (Copilot Studio, Agent Builder) in regulated financial services.
+
+> **Positioning.** This catalog ships **reference implementations**, not turnkey deployable Power Platform solutions. There are no exported flow `.zip` packages: each solution provides scripts (PowerShell / Python / KQL), Dataverse schema generators, manifests, and step-by-step build instructions that customer architects adapt to their tenant, zone model, and regulatory profile. See [DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md) for the recommended pilot path.
 
 For detailed descriptions, regulatory alignment, and framework playbook links, see the [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) in FSI-AgentGov.
+
+## Quickstart: deploy one reference solution
+
+Use [`action-confirmation-auditor`](./action-confirmation-auditor/) as the canonical first deployment. It is small, has no plugin code, and exercises the standard Dataverse + governance script pattern that the rest of the catalog follows.
+
+```bash
+# 1. Clone and pick a solution folder
+git clone https://github.com/judeper/FSI-AgentGov-Solutions.git
+cd FSI-AgentGov-Solutions/action-confirmation-auditor
+
+# 2. Read the solution README for prerequisites and zone applicability
+$ cat README.md
+
+# 3. Provision the Dataverse schema (uses scripts/shared/dataverse_client.py).
+#    Pass --dry-run first; remove the flag once the planned changes look correct.
+python scripts/create_dataverse_schema.py \
+  --tenant-id $env:TENANT_ID --client-id $env:CLIENT_ID \
+  --environment-url $env:DATAVERSE_URL --dry-run
+
+# 4. Generate the schema reference docs that flow builders will consume.
+python scripts/create_dataverse_schema.py --output-docs
+
+# 5. Follow docs/flow-configuration.md to build the Power Automate flow manually
+#    (no exported flow JSON ships in this repo).
+```
+
+Read [DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md) for the layered rollout (foundational → Tier 2 → standalone) and the zone-applicability matrix.
 
 ## Solutions
 
@@ -11,43 +40,43 @@ For detailed descriptions, regulatory alignment, and framework playbook links, s
 
 This repository currently includes **35 live solution implementations**.
 
-| Solution | Description | Version | Controls |
-|----------|-------------|---------|----------|
-| [Action Confirmation Auditor](./action-confirmation-auditor/) | Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance. | v1.1.0 | 2.12, 1.10 |
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.3 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
-| [Agent Access Governance Monitor](./agent-access-monitor/) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.0 | 3.8 |
-| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration. | v1.1.0 | 2.17 |
-| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources. | v1.1.0 | 4.3, 1.4, 1.5 |
-| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.0 | 1.7, 2.8, 2.9, 3.2 |
-| [Agent Registry Automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform. | v2.0.0 | 1.2, 1.7, 2.1, 2.13 |
-| [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.0 | 1.18, 2.8 |
-| [Audit Compliance Manager](./audit-compliance-manager/) | Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the ACV and ALCA capabilities into one solution that validates audit configurations, detects gaps, and remediates non-compliant environments. | v1.0.3 | 1.7 |
-| [Conflict of Interest Testing](./coi-testing/) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.0 | 2.18, 2.11, 2.5 |
-| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting dashboard covering all 78 FSI Agent Governance Framework controls, with zone-based filtering and Dataverse-backed control records. | v1.0.3 | 3.3, 3.1, 3.2, 3.4 |
-| [Conditional Access Automation](./conditional-access-automation/) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v1.2.2 | 1.11, 1.23, 1.18 |
-| [Content Moderation Monitor](./content-moderation-monitor/) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.0 | 1.8, 1.14 |
-| [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents—session outcomes, CSAT, Agent Assisted Hours, and ROI tracking. Extends Agent Observability Foundation with zone-based governance; not a full Viva Insights replacement. | v2.0.0 | 3.2 |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | Scans Copilot Studio agent credentials against zone policy to detect overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment sharing, and stale credentials. | v2.0.0 | 1.14, 1.4, 1.18 |
-| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
-| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.0.2 | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
-| [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily reporting for correlating deny/no-content events across Copilot and Copilot Studio using Purview, Application Insights, and optional Defender data. | v2.0.2 | 1.5, 1.7, 1.8, 3.4 |
-| [DR Testing Framework](./dr-testing-framework/) | Post-recovery validation and evidence packaging for Power Platform DR testing. | v2.0.0 | 2.4, 2.1, 1.9 |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated Power Platform environment provisioning with zone-based governance. | v1.2.0 | 2.1, 2.2, 2.3, 2.8, 1.7 |
-| [File Upload Security](./file-upload-security/) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.0 | 1.14, 1.8, 1.4 |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance. | v1.0.1 | 2.12, 1.10, 1.7 |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies. | v1.1.0 | 2.24 |
-| [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs. | v1.1.0 | 3.10, 2.9, 2.12 |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the advancedapprovals connector. | v1.1.0 | 2.12, 2.17, 1.10 |
-| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.0 | 2.22, 1.23, 3.7, 3.8 |
-| [Message Center Monitor](./message-center-monitor/) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.3.0 | 2.3, 2.10 |
-| [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.1.0 | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |
-| [Model Risk Management Automation](./model-risk-management-automation/) | Automated OCC 2011-12 and Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation. | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
-| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover and clean up personal Power Platform pipelines before central ALM governance. | v1.2.0 | 2.3, 2.1 |
-| [RAG Source Validator](./rag-source-validator/) | Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities. | v1.2.0 | 2.16, 1.7, 2.13 |
-| [Scope Drift Monitor](./scope-drift-monitor/) | Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements. | v1.2.0 | 1.14, 1.4, 1.5 |
-| [Segregation of Duties Detector](./segregation-detector/) | Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines and helps address SOX Section 404 IT General Controls. | v1.1.0 | 2.8, 2.1, 2.3 |
-| [Session Security Configurator](./session-security-configurator/) | Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements. | v1.1.0 | 1.23, 1.11 |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.0 | 1.1, 3.8 |
+| Solution | Description | Version | Status | Zones | Controls |
+|----------|-------------|---------|--------|-------|----------|
+| [Action Confirmation Auditor](./action-confirmation-auditor/) | Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance. | v1.1.0 | live | personal, team, enterprise | 2.12, 1.10 |
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.3 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
+| [Agent Access Governance Monitor](./agent-access-monitor/) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.0 | live | team, enterprise | 3.8 |
+| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration. | v1.1.0 | live | team, enterprise | 2.17 |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources. | v1.1.0 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
+| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.0 | live | personal, team, enterprise | 1.7, 2.8, 2.9, 3.2 |
+| [Agent Registry Automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform. | v2.0.0 | live | personal, team, enterprise | 1.2, 1.7, 2.1, 2.13 |
+| [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.0 | live | team, enterprise | 1.18, 2.8 |
+| [Audit Compliance Manager](./audit-compliance-manager/) | Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the ACV and ALCA capabilities into one solution that validates audit configurations, detects gaps, and remediates non-compliant environments. | v1.0.3 | live | team, enterprise | 1.7 |
+| [Conflict of Interest Testing](./coi-testing/) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.0 | live | team, enterprise | 2.18, 2.11, 2.5 |
+| [Compliance Dashboard](./compliance-dashboard/) | Aggregated compliance reporting dashboard covering all 78 FSI Agent Governance Framework controls, with zone-based filtering and Dataverse-backed control records. | v1.0.3 | live | enterprise | 3.3, 3.1, 3.2, 3.4 |
+| [Conditional Access Automation](./conditional-access-automation/) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v1.2.2 | live | team, enterprise | 1.11, 1.23, 1.18 |
+| [Content Moderation Monitor](./content-moderation-monitor/) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.0 | live | personal, team, enterprise | 1.8, 1.14 |
+| [Copilot Studio Analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents—session outcomes, CSAT, Agent Assisted Hours, and ROI tracking. Extends Agent Observability Foundation with zone-based governance; not a full Viva Insights replacement. | v2.0.0 | live | personal, team, enterprise | 3.2 |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | Scans Copilot Studio agent credentials against zone policy to detect overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment sharing, and stale credentials. | v2.0.0 | live | personal, team, enterprise | 1.14, 1.4, 1.18 |
+| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.0 | live | personal, team, enterprise | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 |
+| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.0.2 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
+| [Deny Event Correlation Report](./deny-event-correlation-report/) | Daily reporting for correlating deny/no-content events across Copilot and Copilot Studio using Purview, Application Insights, and optional Defender data. | v2.0.2 | live | team, enterprise | 1.5, 1.7, 1.8, 3.4 |
+| [DR Testing Framework](./dr-testing-framework/) | Post-recovery validation and evidence packaging for Power Platform DR testing. | v2.0.0 | live | enterprise | 2.4, 2.1, 1.9 |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | Automated Power Platform environment provisioning with zone-based governance. | v1.2.0 | live | personal, team, enterprise | 2.1, 2.2, 2.3, 2.8, 1.7 |
+| [File Upload Security](./file-upload-security/) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.0 | live | personal, team, enterprise | 1.14, 1.8, 1.4 |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance. | v1.0.1 | live | enterprise | 2.12, 1.10, 1.7 |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies. | v1.1.0 | live | team, enterprise | 2.24 |
+| [Hallucination Feedback Tracker](./hallucination-tracker/) | Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs. | v1.1.0 | live | personal, team, enterprise | 3.10, 2.9, 2.12 |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the advancedapprovals connector. | v1.1.0 | live | personal, team, enterprise | 2.12, 2.17, 1.10 |
+| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.0 | live | team, enterprise | 2.22, 1.23, 3.7, 3.8 |
+| [Message Center Monitor](./message-center-monitor/) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.3.0 | live | enterprise | 2.3, 2.10 |
+| [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.1.0 | live | personal, team, enterprise | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |
+| [Model Risk Management Automation](./model-risk-management-automation/) | Automated OCC 2011-12 and Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation. | v1.0.2 | live | enterprise | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
+| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | Discover and clean up personal Power Platform pipelines before central ALM governance. | v1.2.0 | live | team, enterprise | 2.3, 2.1 |
+| [RAG Source Validator](./rag-source-validator/) | Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities. | v1.2.0 | live | personal, team, enterprise | 2.16, 1.7, 2.13 |
+| [Scope Drift Monitor](./scope-drift-monitor/) | Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements. | v1.2.0 | live | personal, team, enterprise | 1.14, 1.4, 1.5 |
+| [Segregation of Duties Detector](./segregation-detector/) | Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines and helps address SOX Section 404 IT General Controls. | v1.1.0 | live | team, enterprise | 2.8, 2.1, 2.3 |
+| [Session Security Configurator](./session-security-configurator/) | Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements. | v1.1.0 | live | team, enterprise | 1.23, 1.11 |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.0 | live | team, enterprise | 1.1, 3.8 |
 
 <!-- END:SOLUTIONS -->
 

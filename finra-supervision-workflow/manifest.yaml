@@ -15,3 +15,9 @@ prerequisites:
   compliance-admin: "Microsoft Purview Compliance Administrator for Communication Compliance policy access and alert review."
   security-admin: "Entra Application Administrator or equivalent for service principal registration and consent."
 verification: "Create a test queue item and confirm rows appear in fsi_supervisionqueue and fsi_supervisionlog, then verify the Power BI supervision report shows the new item."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: restricted

@@ -14,3 +14,11 @@ prerequisites:
   sharepoint-admin: SharePoint Site Collection Admin or Site Member access is required to read item permissions in each target knowledge source library.
   global-reader: Entra ID Reader or GroupMember.Read.All is required when resolving agent user scope from -AgentUserGroupId.
 verification: Run Get-KnowledgeSourceItemPermissions.ps1 and confirm RiskScore values in ./output/item-permissions-report.csv, then cross-check any flagged items in SharePoint Manage Access.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: confidential

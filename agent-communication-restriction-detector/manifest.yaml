@@ -11,3 +11,10 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-communicat
 prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
 verification: Confirm Test-CommRestrictionCompliance.ps1 writes rows to `fsi_CommScanRun` and `fsi_AgentCommViolation`.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: internal

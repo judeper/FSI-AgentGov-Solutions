@@ -1,0 +1,27 @@
+name: OData Column Lint
+
+# Catches Dataverse logical-name mis-spellings (the #1 source of runtime
+# bugs per CLAUDE.md). See scripts/lint-odata-columns.py for the rule set.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: python scripts/lint-odata-columns.py
+        # Soft-gate while baseline violations (5 known) are resolved by
+        # solution owners. Flip to `--strict` once baseline is clean.

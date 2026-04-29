@@ -20,3 +20,9 @@ verification: "Confirm fsi_controlmasters contains the 78-control baseline, then
 dependencies:
 - agent-observability-foundation
 - cross-solution-integration
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: confidential

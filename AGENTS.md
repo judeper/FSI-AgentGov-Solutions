@@ -242,7 +242,7 @@ Edit files under `{slug}/docs/`. `build-manifest.py` copies them into `site-docs
 
 ### Schema evolution policy
 
-`solutions.json` schema 1.4.x is **additive-only**. Optional fields may be added in 1.4.1+. Field renames, new required fields, or shape changes require **1.5.0** with a coordinated `judeper/fsi-agentgov` update.
+`solutions.json` schema 1.4.x is **additive-only**. Optional fields may be added in 1.4.1+ (1.4.2 added `zones`, `dataClassification`, `dataResidency`, `retention` per solution). Field renames, new required fields, or shape changes require **1.5.0** with a coordinated `judeper/fsi-agentgov` update — `zones` becomes required at that point.
 
 ### To verify before committing
 
@@ -329,6 +329,18 @@ Version numbers follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.
 **Key rule:** `src/` is only acceptable for actual compilable source code (e.g., C# Dataverse plugins). Exported Power Platform artifacts, flow JSON, connection references, environment variable exports, and Dataverse solution packages must NOT be in `src/`.
 
 ## Coding Patterns
+
+### Authentication standard (managed-identity-first)
+
+All scripts that authenticate to Microsoft Graph, Power Platform, or Dataverse MUST follow this priority order:
+
+1. **System-assigned managed identity** when running inside an Azure-hosted runner or Function (use `DefaultAzureCredential` / `ManagedIdentityCredential`).
+2. **User-assigned managed identity** for cross-resource scenarios (pass the `ClientId`).
+3. **Workload identity federation** (GitHub Actions OIDC → Entra app) for CI workflows.
+4. **Interactive / device-code flow** for one-off admin-workstation runs.
+5. **Client secret** ONLY as a development fallback. Mark such code paths with the comment `# legacy: dev-only — replace with managed identity in production`. Do not ship customer-facing docs that prescribe client secrets as the recommended path.
+
+`scripts/shared/dataverse_client.py` is the canonical example: it accepts an MSAL token from any source, so callers can pick the strongest auth method available in their environment without changing the client.
 
 ### PowerShell Scripts
 - Use `#Requires -Modules` for dependencies

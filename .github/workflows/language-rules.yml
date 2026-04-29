@@ -1,0 +1,70 @@
+name: Language Rules
+
+# Enforces the FSI compliance-language guidelines defined in
+# .github/instructions/fsi-language-rules.instructions.md.
+#
+# Banned phrases imply legal guarantees the framework does not make:
+#   - "ensures compliance" / "guarantees" / "will prevent" / "eliminates risk"
+# Banned product naming (legacy Microsoft branding):
+#   - "Azure AD" (use "Microsoft Entra ID")
+#
+# CHANGELOG.md history is exempt — historical entries may reference the
+# legacy names verbatim.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  language-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Banned compliance phrases
+        # Excludes files that DOCUMENT the rule (instruction files contain
+        # the banned phrases as examples) and CHANGELOG history.
+        run: |
+          set +e
+          patterns='ensures compliance|guarantees compliance|guarantee compliance|will prevent|eliminates risk'
+          hits=$(grep -rEn --include='*.md' \
+                   --exclude-dir='.git' \
+                   --exclude-dir='site' \
+                   --exclude-dir='site-docs' \
+                   --exclude-dir='.github' \
+                   --exclude='AGENTS.md' \
+                   --exclude='CLAUDE.md' \
+                   --exclude='CHANGELOG.md' \
+                   --exclude='*/CHANGELOG.md' \
+                   "$patterns" . || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Banned compliance phrases found:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: no banned compliance phrases."
+
+      - name: Banned product naming (Azure AD outside CHANGELOG/instructions)
+        run: |
+          set +e
+          hits=$(grep -rEn --include='*.md' \
+                   --exclude-dir='.git' \
+                   --exclude-dir='site' \
+                   --exclude-dir='site-docs' \
+                   --exclude-dir='.github' \
+                   --exclude='AGENTS.md' \
+                   --exclude='CLAUDE.md' \
+                   --exclude='CHANGELOG.md' \
+                   --exclude='*/CHANGELOG.md' \
+                   '\bAzure AD\b' . || true)
+          if [ -n "$hits" ]; then
+            echo "::error::'Azure AD' found outside CHANGELOG/instruction files (use 'Microsoft Entra ID'):"
+            echo "$hits"
+            exit 1
+          fi
+          echo "OK: no 'Azure AD' references outside CHANGELOG/instructions."

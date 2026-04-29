@@ -20,3 +20,11 @@ prerequisites:
 verification: "Run Sync-SolutionAssessments.ps1 and confirm rows are written or updated in fsi_controlassessments for the expected control IDs, with the Power Automate feed collector completing successfully."
 dependencies:
 - agent-observability-foundation
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

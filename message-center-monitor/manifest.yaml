@@ -13,3 +13,9 @@ prerequisites:
   m365-admin: Microsoft 365 admin for Message Center Graph access, admin consent, and Teams notifications.
   power-platform-admin: Power Platform admin for the Dataverse application user, flow deployment, and connector setup.
 verification: Confirm the daily poll imports a Message Center post into fsi_messagecenterlog and posts the Teams alert.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: internal

@@ -13,3 +13,11 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/credential-overs
 prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
 verification: Confirm Invoke-CredentialScan.ps1 writes rows to `fsi_credentialscans` and `fsi_credentialviolations`.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: confidential

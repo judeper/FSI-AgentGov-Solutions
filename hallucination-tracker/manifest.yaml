@@ -15,3 +15,11 @@ prerequisites:
   global-reader: Read-only Dataverse access for the analysis script's Basic User-style queries.
   m365-admin: Power BI workspace/admin setup for dashboard publishing and service access.
 verification: Run pattern analysis and verify the scorecard and query outputs populate for recent feedback records.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

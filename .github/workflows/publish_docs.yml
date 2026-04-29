@@ -25,7 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: judeper/FSI-AgentGov
-          ref: main
+          # Pinned to a framework release tag; bump deliberately. Do NOT use 'main'.
+          ref: ${{ vars.FRAMEWORK_REF || 'v1.4.0' }}
           path: fsi-agentgov
 
       - uses: actions/setup-python@v5

@@ -13,3 +13,10 @@ prerequisites:
   power-platform-admin: Power Platform admin for environment inventory, Deployment Pipeline Configuration access, and cleanup actions.
   security-admin: Entra Global Admin/Application Administrator for Graph permissions, app registration, and admin consent.
 verification: Confirm the custom pipelines host is set as default and no personal hosts remain in Deployment Pipeline Configuration.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: internal

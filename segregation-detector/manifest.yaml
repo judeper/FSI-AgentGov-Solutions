@@ -14,3 +14,10 @@ prerequisites:
   global-reader: "Global Reader access for Entra ID role assignment queries."
   power-platform-admin: "Power Platform administrator access for Dataverse schema deployment and environment role queries."
 verification: "Run Invoke-SoDScan.ps1 and confirm rows are created in fsi_sodviolation for enabled records in fsi_conflictrule."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: confidential

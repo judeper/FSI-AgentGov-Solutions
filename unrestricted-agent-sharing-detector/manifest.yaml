@@ -12,3 +12,10 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/unrestricted-age
 prerequisites:
   power-platform-admin: "Power Platform admin or Entra Global Admin for Dataverse schema, cloud flows, and remediation setup."
 verification: "Verify fsi_sharingviolations and fsi_sharingexceptions update after running the detection and remediation flows."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: confidential

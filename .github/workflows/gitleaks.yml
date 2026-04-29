@@ -1,0 +1,31 @@
+name: Secret Scan (gitleaks)
+
+# Runs on every PR and push to main. Closes the .mcp.json-style risk
+# permanently by failing CI on any committed secret.
+#
+# To run locally:
+#   gitleaks detect --source . --no-banner --redact
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true

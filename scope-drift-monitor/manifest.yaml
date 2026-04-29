@@ -17,3 +17,11 @@ prerequisites:
 verification: Run a test scan and confirm a drift violation is detected and alerted within the 15-minute cycle.
 dependencies:
 - agent-observability-foundation
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: confidential
