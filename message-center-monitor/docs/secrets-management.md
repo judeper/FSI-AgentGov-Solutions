@@ -1,5 +1,7 @@
 # Secrets Management Guide
 
+> **Note:** This guide is for the **client-secret fallback path**. If you can use **managed identity** (PowerShell governance scripts running in Azure Functions, Logic Apps Standard, or GitHub-hosted runners with workload identity federation) — prefer that path and skip this document. See [README — Authentication](../README.md#authentication).
+
 This guide explains how to securely store and access the client secret for the Message Center Monitor solution using Azure Key Vault.
 
 ## Why Use Key Vault?

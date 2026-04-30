@@ -733,7 +733,7 @@
         "enterprise"
       ],
       "dataClassification": "internal",
-      "retention": "no regulatory retention required; operational only"
+      "retention": "operational only — no statutory retention obligation declared by this solution"
     },
     "mime-type-restrictions": {
       "id": "mime-type-restrictions",

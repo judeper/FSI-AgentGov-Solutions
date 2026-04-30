@@ -265,7 +265,7 @@ If you cannot use the upsert action (e.g., the alternate key has not propagated 
 
 > **Severity and category mapping:** These columns are Choice (Picklist) fields backed by global option sets. Dataverse rejects text labels — bind them to the integer values produced by the Switch blocks below.
 
-### 6c-1: Choice Field Implementation with Switch
+### 6b: Choice Field Implementation with Switch
 
 Category and severity columns are Dataverse Choice (Picklist) fields backed by global option sets — they reject text labels and require the integer values defined in `create_mcm_dataverse_schema.py` (and reflected in `docs/dataverse-schema.md`). Use a **Switch** action to map the Microsoft Graph API enum values to the option-set integers, then write the integer to the Choice column.
 

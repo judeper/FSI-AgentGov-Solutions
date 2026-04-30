@@ -11,8 +11,7 @@
     with approaching action-required deadlines (within 7 days) that have not
     been assessed.
 
-    Supports Controls 2.3 (Change Management) and 2.10 (Platform Change Monitoring)
-    from the FSI Agent Governance Framework.
+    Supports Control 2.3 (Change Management) from the FSI Agent Governance Framework.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).

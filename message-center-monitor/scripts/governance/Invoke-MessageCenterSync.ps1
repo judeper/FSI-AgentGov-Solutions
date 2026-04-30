@@ -293,9 +293,11 @@ foreach ($msg in $allMessages) {
         $bodyContent = $bodyContent.Substring(0, $bodyMaxLength) + "`n[truncated — original length $($bodyContent.Length) chars]"
     }
 
-    # Build the upsert payload. fsi_assessmentstatus is set to NotAssessed on
-    # the create path only — we don't want to clobber an admin's assessment on
-    # subsequent syncs of the same message.
+    # Build the upsert payload. Admin-owned columns (fsi_assessmentstatus,
+    # fsi_assessment, fsi_assessedby, fsi_assesseddate, fsi_actionstaken,
+    # fsi_impactsagents, fsi_notifiedon) are deliberately EXCLUDED so the
+    # update path cannot clobber them. fsi_assessmentstatus is added later in
+    # the create-only payload.
     $record = @{
         fsi_messagecenterid        = $messageId
         fsi_title                  = $msg.title
@@ -341,43 +343,68 @@ foreach ($msg in $allMessages) {
         continue
     }
 
-    # Default-on-create: include NotAssessed so newly created records start in
-    # the right state. On update Dataverse honors If-None-Match-style upserts;
-    # we send the field unconditionally because admins should re-trigger
-    # assessment when severity/body change anyway. If preserving existing
-    # assessment status across re-syncs becomes a requirement, switch to a
-    # GET-then-PATCH guarded by the existing record's assessmentstatus value.
-    $record.fsi_assessmentstatus = $assessmentNotAssessed
-    $jsonBody = $record | ConvertTo-Json -Depth 5
+    # Conditional create vs preserve-on-update.
+    #
+    # Step 1: try a create-only PATCH with `If-None-Match: *`. If the row does
+    # not exist, Dataverse creates it (HTTP 201) with fsi_assessmentstatus
+    # initialised to NotAssessed.
+    #
+    # Step 2: if the row already exists, Dataverse returns HTTP 412
+    # PreconditionFailed. We then issue a second PATCH WITHOUT
+    # If-None-Match and WITHOUT any admin-owned fields, so we refresh the
+    # platform-managed columns (title/category/severity/services/dates/
+    # body/tags/hasAttachments) without clobbering admin assessments
+    # (fsi_assessmentstatus, fsi_assessment, fsi_assessedby, fsi_assesseddate,
+    # fsi_actionstaken, fsi_impactsagents, fsi_notifiedon).
+    $createPayload = $record.Clone()
+    $createPayload['fsi_assessmentstatus'] = $assessmentNotAssessed
 
+    $createHeaders = @{}
+    foreach ($k in $dvHeaders.Keys) { $createHeaders[$k] = $dvHeaders[$k] }
+    $createHeaders['If-None-Match'] = '*'
+
+    $created = $false
+    $existed = $false
     try {
-        $response = Invoke-McmRest -Uri $upsertUrl -Headers $dvHeaders -Method Patch -Body $jsonBody
-        # Prefer: return=representation echoes the row; created vs updated is
-        # surfaced via @odata.context only on create. Use a HEAD-style heuristic:
-        # if @odata.etag is present and createdon equals modifiedon, treat as new.
-        $isNew = $false
-        try {
-            if ($response.createdon -and $response.modifiedon -and $response.createdon -eq $response.modifiedon) {
-                $isNew = $true
-            }
-        } catch {}
-        if ($isNew) {
-            $newCount++
-            Write-Verbose "Created: $messageId — $($msg.title)"
-        } else {
-            $updatedCount++
-            Write-Verbose "Updated: $messageId — $($msg.title)"
-        }
+        Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch -Body ($createPayload | ConvertTo-Json -Depth 5) | Out-Null
+        $created = $true
     }
     catch {
         $errMsg = $_.Exception.Message
-        if ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
-            Write-Warning "Upsert failed for $messageId : Alternate key fsi_MessageCenterIdKey not found — re-run create_mcm_dataverse_schema.py to provision it."
-        } else {
-            Write-Warning "Failed to upsert message $messageId : $errMsg"
+        if ($errMsg -match 'status=412' -or $errMsg -match 'PreconditionFailed') {
+            $existed = $true
         }
-        $failedCount++
-        [void]$failedIds.Add($messageId)
+        elseif ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
+            Write-Warning "Upsert failed for $messageId : Alternate key fsi_MessageCenterIdKey not found — re-run create_mcm_dataverse_schema.py to provision it."
+            $failedCount++
+            [void]$failedIds.Add($messageId)
+            continue
+        }
+        else {
+            Write-Warning "Create failed for $messageId : $errMsg"
+            $failedCount++
+            [void]$failedIds.Add($messageId)
+            continue
+        }
+    }
+
+    if ($existed) {
+        try {
+            # Update path: the $record hash deliberately excludes admin-owned
+            # columns so PATCH cannot overwrite them.
+            Invoke-McmRest -Uri $upsertUrl -Headers $dvHeaders -Method Patch -Body ($record | ConvertTo-Json -Depth 5) | Out-Null
+            $updatedCount++
+            Write-Verbose "Updated: $messageId — $($msg.title) (admin assessment preserved)"
+        }
+        catch {
+            Write-Warning "Update failed for $messageId : $($_.Exception.Message)"
+            $failedCount++
+            [void]$failedIds.Add($messageId)
+        }
+    }
+    elseif ($created) {
+        $newCount++
+        Write-Verbose "Created: $messageId — $($msg.title)"
     }
 }
 

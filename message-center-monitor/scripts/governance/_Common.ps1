@@ -50,7 +50,31 @@ function Get-McmAccessToken {
             return Get-MsalToken -ManagedIdentity -Resource $resource
         }
         'WorkloadIdentity' {
-            throw "WorkloadIdentity auth not yet implemented; use ManagedIdentity or DeviceCode"
+            # Workload identity federation (GitHub Actions OIDC, Azure DevOps OIDC, etc.).
+            # Exchanges a federated token for an Azure AD access token.
+            if (-not $ClientId) { throw "ClientId is required for WorkloadIdentity auth." }
+            if (-not $TenantId) { throw "TenantId is required for WorkloadIdentity auth." }
+
+            # Resolve the federated token from one of three standard locations.
+            $federatedToken = $null
+            if ($env:AZURE_FEDERATED_TOKEN) {
+                $federatedToken = $env:AZURE_FEDERATED_TOKEN
+            }
+            elseif ($env:AZURE_FEDERATED_TOKEN_FILE -and (Test-Path -LiteralPath $env:AZURE_FEDERATED_TOKEN_FILE)) {
+                $federatedToken = (Get-Content -LiteralPath $env:AZURE_FEDERATED_TOKEN_FILE -Raw).Trim()
+            }
+            elseif ($env:ACTIONS_ID_TOKEN_REQUEST_URL -and $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) {
+                # GitHub Actions OIDC: request a token scoped to api://AzureADTokenExchange
+                $reqUri = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=api://AzureADTokenExchange"
+                $reqHeaders = @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" }
+                $resp = Invoke-RestMethod -Uri $reqUri -Headers $reqHeaders -Method Get
+                $federatedToken = $resp.value
+            }
+            else {
+                throw "WorkloadIdentity auth requires one of: `$env:AZURE_FEDERATED_TOKEN, `$env:AZURE_FEDERATED_TOKEN_FILE, or GitHub Actions OIDC env vars (ACTIONS_ID_TOKEN_REQUEST_URL + ACTIONS_ID_TOKEN_REQUEST_TOKEN)."
+            }
+
+            return Get-MsalToken -TenantId $TenantId -ClientId $ClientId -ClientAssertion $federatedToken -Scopes @($Scope)
         }
         'Interactive' {
             if (-not $ClientId) { throw "ClientId is required for Interactive auth." }
@@ -165,12 +189,23 @@ function Invoke-McmRest {
             $status = $null
             try { $status = [int]$_.Exception.Response.StatusCode } catch {}
 
-            $isRetryable = ($status -eq 429 -or $status -eq 503)
+            $isRetryable = ($status -eq 429 -or ($status -ge 500 -and $status -le 599))
             if ($isRetryable -and $attempt -le $MaxRetries) {
                 $retryAfter = 0
                 try {
-                    $hdr = $_.Exception.Response.Headers['Retry-After']
-                    if ($hdr) { $retryAfter = [int]$hdr }
+                    # PS 7+ throws HttpResponseException whose .Headers is
+                    # HttpResponseHeaders. String indexing returns $null, so
+                    # use TryGetValues and fall back to PS 5.1 dictionary access.
+                    $hdrs = $_.Exception.Response.Headers
+                    $values = $null
+                    if ($hdrs -and $hdrs.GetType().GetMethod('TryGetValues')) {
+                        if ($hdrs.TryGetValues('Retry-After', [ref]$values)) {
+                            $retryAfter = [int]([System.Linq.Enumerable]::FirstOrDefault($values))
+                        }
+                    } elseif ($hdrs) {
+                        $hdr = $hdrs['Retry-After']
+                        if ($hdr) { $retryAfter = [int]$hdr }
+                    }
                 } catch {}
                 if ($retryAfter -le 0) {
                     $retryAfter = [Math]::Min($MaxDelaySeconds, $BaseDelaySeconds * [Math]::Pow(2, $attempt - 1))

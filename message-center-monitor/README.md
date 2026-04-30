@@ -37,7 +37,7 @@ Create an app registration for Message Center access:
 
 ### 1.5. Recommended: Certificate or Federated Credential
 
-Per the repository [authentication standard](../AGENTS.md#authentication-standard-managed-identity-first), credentials follow this priority order: managed identity → workload identity federation → certificate → device-code → client secret (legacy fallback). For app registrations that cannot use managed identity (Power Automate cloud flows fall into this category), prefer **certificates** or **workload identity federation** over client secrets.
+Per the repository [authentication standard](../AGENTS.md#authentication-standard-managed-identity-first), credentials follow this priority order: managed identity → workload identity federation → certificate (uploaded to the app registration; consumed via `-AuthMode WorkloadIdentity`/MSAL token, not as its own AuthMode value) → device-code → client secret (legacy fallback). For app registrations that cannot use managed identity (Power Automate cloud flows fall into this category), prefer **certificates** or **workload identity federation** over client secrets.
 
 In your app registration, under **Certificates & secrets**:
 
@@ -154,7 +154,7 @@ See [Flow Configuration](docs/flow-configuration.md) for complete flow creation 
 1. Trigger: Daily recurrence (e.g., 9 AM)
 2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
-4. For each message: Upsert to Dataverse using messagecenterid
+4. For each message: Upsert to Dataverse using `fsi_messagecenterid`
 5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
 6. Teams notification: Post adaptive card to your channel
 

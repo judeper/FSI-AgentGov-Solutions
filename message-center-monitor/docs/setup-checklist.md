@@ -165,10 +165,13 @@ Validate auth and Dataverse access end-to-end before relying on the scheduled fl
   ```powershell
   pwsh ./scripts/governance/Invoke-MessageCenterSync.ps1 `
       -DryRun `
+      -AuthMode DeviceCode `
       -TenantId <tenant-guid> `
       -ClientId <app-id> `
       -EnvironmentUrl https://<org>.crm.dynamics.com
   ```
+
+  > **AuthMode tip:** Use the credential you actually have on this workstation. `DeviceCode` (interactive browser sign-in) or `ClientSecret` (with `$env:MCM_CLIENT_SECRET`) are the typical choices for an admin laptop. `ManagedIdentity` (the script default) only works when the script runs in a host that has a managed identity assigned — not on a laptop.
 
 - [ ] Confirm: token acquisition succeeds, Dataverse list/upsert simulated rows match the schema, no `401`/`403` errors
 - [ ] Then enable the flow and run it once manually from the Power Automate designer

@@ -18,4 +18,4 @@ verification: Confirm the daily poll imports a Message Center post into fsi_mess
 zones:
 - enterprise
 dataClassification: internal
-retention: no regulatory retention required; operational only
+retention: operational only — no statutory retention obligation declared by this solution

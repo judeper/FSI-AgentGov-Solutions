@@ -91,6 +91,9 @@ Build the card dynamically using expressions:
 | `{actionRequiredByDateTime}` | `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}` |
 | `{id}` | `@{items('Apply_to_each')?['id']}` |
 | `{recordId}` | `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}` |
+| `{environment}` | The Dataverse host portion of your environment URL (e.g., `contoso` for `https://contoso.crm.dynamics.com`). |
+| `{appId}` | The Application ID GUID of the model-driven app (visible in the URL when the app is open in `make.powerapps.com`). |
+| `{publisherPrefix}` | The publisher prefix used when the schema script created the table — `fsi` by default. |
 
 ## Step 4: Configure Notification Conditions
 
@@ -300,7 +303,7 @@ In your Power Automate flow, replace the placeholder URL:
 {
   "type": "Action.OpenUrl",
   "title": "Assess Record",
-  "url": "https://contoso.crm.dynamics.com/main.aspx?appid=12345678-1234-1234-1234-123456789abc&pagetype=entityrecord&etn=[publisher-prefix]_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/[publisher-prefix]_messagecenterlogid']}"
+  "url": "https://{environment}.crm.dynamics.com/main.aspx?appid={appId}&pagetype=entityrecord&etn={publisherPrefix}_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/{publisherPrefix}_messagecenterlogid']}"
 }
 ```
 
