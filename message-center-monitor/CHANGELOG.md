@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-04-30
+
+### Added
+- **Lab dry-run automation** (`lab/`) — numbered idempotent PowerShell scripts that bootstrap a complete non-prod deployment and exercise the v2.4.0 fix end-to-end against a live Power Platform environment.
+  - `00_Install-Prereqs.ps1` — installs PS modules + pip packages; verifies runtimes; optional `-CheckRoles` for directory role check.
+  - `01_New-AppRegistration.ps1` — creates app reg + SP, resolves Graph `ServiceMessage.Read.All` AppRole and Dataverse `user_impersonation` scope **dynamically** (no hardcoded GUIDs), admin-consents, polls for consent confirmation, rotates client secret only when no existing credential is valid for ≥30 days. `-ForceRotate` to mint a new secret unconditionally. Cross-process secret handoff uses a gitignored, owner-ACL'd `lab/.secret-handoff` file (consumed and deleted by 02); when a Key Vault is already recorded in `lab-state.json`, the rotated secret is also pushed to KV directly so 02 becomes optional.
+  - `02_New-KeyVault.ps1` — RBAC-mode Key Vault with `Key Vault Secrets User` role for the runner; reads + deletes the `.secret-handoff` file written by 01 (env-var handoff was unreliable across pwsh process boundaries). Never logs the secret value.
+  - `03_Deploy-Schema.ps1` — wraps the 3 Python setup scripts; **polls `EntityDefinitions.../Keys` for `EntityKeyIndexStatus = Active` for up to 15 min** (configurable) before returning success.
+  - `04_New-AppUser.ps1` — Dataverse Application User + role association (`FSI Message Center Sync` with `System Customizer` lab fallback) + **effective-access probe with retry**. Probe re-acquires the SP token before each attempt so the role just granted is reflected in the token claims.
+  - `05_Set-EnvVarValues.ps1` — populates the **6 `fsi_MCM_*` environment variable definitions** (`PollingIntervalDays`, `NotifySeverities`, `TeamsTeamId`, `TeamsChannelId`, `DataverseUrl`, `KeyVaultSecretName`) from `lab-config.json`.
+  - `06_Invoke-LabSmokeTest.ps1` — **the dry-run.** 10-step orchestrator: unit tests → DryRun sync → live sync → idempotent re-sync (asserts `UpdatedRecords ≥ 1`, `FailedRecords == 0`, `NewRecords == 0` parsed from sync output) → flip ALL 7 admin-owned columns on a row → back-date `fsi_lastupdated` and re-sync (asserts the C1 update branch actually fired AND all 7 admin columns are byte-identical) → assessment status → evidence export → integrity verify → manual cloud-flow gate.
+  - `99_Remove-LabDeployment.ps1` — state-driven idempotent teardown that refuses to touch resources not in `lab-state.json` unless `-ForceExternalResource`. Removes the same 6 `fsi_MCM_*` env-var definitions that 05 created.
+  - `lib/Write-LabLog.ps1` — shared logger that scrubs Bearer tokens, `client_secret`, `Authorization` headers, `access_token`, `refresh_token` from every log line. Also exports `Assert-NonProdAcknowledgement` and the `.secret-handoff` helpers.
+  - `lab-config.example.json` — fill-in template; `lab-state.schema.json` — JSON-Schema for the ownership manifest; `.gitignore` excludes config + state + handoff + logs.
+- **Non-prod safety guard**: every mutating lab script (`01`-`06`, `99`) calls `Assert-NonProdAcknowledgement` before any side-effect. The guard requires `lab-config.json` to contain the literal string `"I understand this lab must not target production"` in `nonProd.acknowledgement` (case + punctuation sensitive). An explicit `-AllowProduction` switch on each script bypasses the guard with a loud warning, intended only for deliberate prod re-validation.
+- **`docs/lab-dry-run.md`** — engineer runbook with prereqs, execution order, **council-finding-to-test traceability matrix**, and a troubleshooting tree.
+- **README "Lab dry-run" section** linking to the runbook above the Quick Start.
+
+### Changed
+- Manifest bumped to `2.5.0`. No control or prerequisite changes.
+
 ## [2.4.0] - 2026-04-30
 
 ### Added

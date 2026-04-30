@@ -1,0 +1,8 @@
+# Lab artifacts must never be committed - they may contain tenant identifiers,
+# resource IDs, secret KeyVault references, or transient run state.
+lab-config.json
+lab-state.json
+.secret-handoff
+logs/
+*.log
+evidence/

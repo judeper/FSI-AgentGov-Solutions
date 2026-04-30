@@ -1,7 +1,7 @@
 id: message-center-monitor
 name: Message Center Monitor
 description: Monitor Microsoft 365 Message Center for platform changes affecting AI agents.
-version: 2.4.0
+version: 2.5.0
 status: live
 domain: lifecycle-ops
 tier: '2'
