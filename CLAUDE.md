@@ -180,14 +180,14 @@ When writing documentation in this repository, follow the language guidelines fr
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), the home-page hero metrics block, and copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens).
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json` (pinned to `${{ vars.FRAMEWORK_REF || 'v1.4.0' }}` in CI), then emits `solutions.json` (repo root, schemaVersion **1.4.2**), the README solutions table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), the home-page hero metrics block, the deployment-guide `<!-- BEGIN:DEPLOY_LAYERS -->` and `<!-- BEGIN:ZONE_ROADMAP -->` blocks, and copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens).
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag, validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
@@ -202,7 +202,27 @@ Edit files under `{slug}/docs/`. `build-manifest.py` copies them into `site-docs
 
 ### Schema evolution policy
 
-`solutions.json` schema 1.4.x is **additive-only**. Optional fields may be added in 1.4.1+. Field renames, new required fields, or shape changes require **1.5.0** with a coordinated `judeper/fsi-agentgov` update.
+`solutions.json` schema 1.4.x is **additive-only**. Optional fields may be added in 1.4.x+ (1.4.2 added `zones`, `dataClassification`, `dataResidency`, `retention` per solution). Field renames, new required fields, or shape changes require **1.5.0** with a coordinated `judeper/fsi-agentgov` update — this is when `zones` will become required.
+
+### Manifest fields
+
+`<slug>/manifest.yaml` carries (schema in `scripts/manifest.schema.json`):
+
+- **Required**: `id`, `name`, `description`, `version`, `domain`, `tier`, `controls[]`, `prerequisites[]`, `verification`, `status`.
+- **Optional (1.4.2)**: `zones` (subset of `personal|team|enterprise`), `dataClassification` (`internal|confidential|restricted`), `dataResidency`, `retention`. Backfilled across all 35 solutions with sentinel comments pending product-team confirmation.
+
+### Security and release CI
+
+- **`gitleaks.yml`** — secret scanning on every push/PR.
+- **`codeql.yml`** — Python CodeQL on push/PR/weekly cron (C# pending plugin `.csproj`).
+- **`dependency-review.yml`** — GitHub-native dependency review on PRs.
+- **`language-rules.yml`** — bans `ensures compliance` / `guarantees compliance` outside the rule-documenting files.
+- **`odata-lint.yml` + `scripts/lint-odata-columns.py`** — narrow OData-context Dataverse-logical-name linter (soft-gate; flip to `--strict` after 5 known bugs in `conditional-access-automation` and `cross-solution-integration` are fixed).
+- **`ci-python.yml`** — ruff + pytest (soft-gate).
+- **`ci-powershell.yml`** — PSScriptAnalyzer + Pester (soft-gate).
+- **`release.yml`** — on tag, builds source tarball + SPDX/CycloneDX SBOMs + SHA-256 manifest + GitHub build-provenance attestation, attaches to the GitHub Release.
+
+See `SECURITY.md` for vulnerability disclosure and `THREAT-MODEL.md` for the STRIDE-by-asset model.
 
 ### To verify before committing
 

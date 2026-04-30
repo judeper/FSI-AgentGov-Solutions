@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.4.1",
+  "schemaVersion": "1.4.2",
   "generatedBy": "scripts/build-manifest.py",
   "solutions": {
     "action-confirmation-auditor": {
@@ -19,7 +19,13 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix."
       },
-      "verification": "Confirm Test-ActionConfirmationCompliance.ps1 writes rows to `fsi_actionscanrun` and `fsi_actionauditresult`."
+      "verification": "Confirm Test-ActionConfirmationCompliance.ps1 writes rows to `fsi_actionscanrun` and `fsi_actionauditresult`.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "agent-365-lifecycle-governance": {
       "id": "agent-365-lifecycle-governance",
@@ -45,7 +51,11 @@
         "security-admin": "Entra ID Governance P2, app permissions, security groups, and admin consent.",
         "power-platform-admin": "Managed Dataverse environment, Power Automate Premium, and LTR-enabled schema deployment."
       },
-      "verification": "Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row."
+      "verification": "Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "agent-access-monitor": {
       "id": "agent-access-monitor",
@@ -64,7 +74,12 @@
         "power-platform-admin": "Power Platform admin or Dynamics 365 Service Admin for tenant queries, baseline capture, and Dataverse schema setup.",
         "m365-admin": "Global Admin is the fallback for tenant-level setup when Power Platform admin access is unavailable."
       },
-      "verification": "Run Test-AgentAccessCompliance.ps1 and confirm rows are written to fsi_accessvalidationhistory and fsi_accessviolations."
+      "verification": "Run Test-AgentAccessCompliance.ps1 and confirm rows are written to fsi_accessvalidationhistory and fsi_accessviolations.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "agent-communication-restriction-detector": {
       "id": "agent-communication-restriction-detector",
@@ -82,7 +97,12 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix."
       },
-      "verification": "Confirm Test-CommRestrictionCompliance.ps1 writes rows to `fsi_CommScanRun` and `fsi_AgentCommViolation`."
+      "verification": "Confirm Test-CommRestrictionCompliance.ps1 writes rows to `fsi_CommScanRun` and `fsi_AgentCommViolation`.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "agent-knowledge-source-scanner": {
       "id": "agent-knowledge-source-scanner",
@@ -103,7 +123,13 @@
         "sharepoint-admin": "SharePoint Site Collection Admin or Site Member access is required to read item permissions in each target knowledge source library.",
         "global-reader": "Entra ID Reader or GroupMember.Read.All is required when resolving agent user scope from -AgentUserGroupId."
       },
-      "verification": "Run Get-KnowledgeSourceItemPermissions.ps1 and confirm RiskScore values in ./output/item-permissions-report.csv, then cross-check any flagged items in SharePoint Manage Access."
+      "verification": "Run Get-KnowledgeSourceItemPermissions.ps1 and confirm RiskScore values in ./output/item-permissions-report.csv, then cross-check any flagged items in SharePoint Manage Access.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "agent-observability-foundation": {
       "id": "agent-observability-foundation",
@@ -126,7 +152,13 @@
         "power-platform-admin": "Power Platform admin tenant role for Copilot Studio telemetry source configuration.",
         "m365-admin": "Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation."
       },
-      "verification": "Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors."
+      "verification": "Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "agent-registry-automation": {
       "id": "agent-registry-automation",
@@ -149,7 +181,13 @@
         "security-admin": "Entra Global Admin/Application Administrator for app registration, admin consent, and Graph permissions.",
         "m365-admin": "Microsoft 365 admin for Teams notifications and owner-status lookups."
       },
-      "verification": "Confirm Test-AgentRegistryCompliance.ps1 succeeds and the inventory pipeline records a new compliance event."
+      "verification": "Confirm Test-AgentRegistryCompliance.ps1 succeeds and the inventory pipeline records a new compliance event.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "agent-sharing-access-restriction-detector": {
       "id": "agent-sharing-access-restriction-detector",
@@ -169,7 +207,12 @@
         "power-platform-admin": "Power Platform admin or Entra Global Admin for BAP Admin API access, Dataverse setup, and remediation flows.",
         "m365-admin": "Teams administrator or delegated permissions for adaptive card delivery and notification posting."
       },
-      "verification": "Confirm fsi_agentsharingcompliances and fsi_approvedsecuritygrouppolicies are populated after a sharing scan and remediation test."
+      "verification": "Confirm fsi_agentsharingcompliances and fsi_approvedsecuritygrouppolicies are populated after a sharing scan and remediation test.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "audit-compliance-manager": {
       "id": "audit-compliance-manager",
@@ -190,7 +233,12 @@
         "power-platform-admin": "Power Platform admin tenant role and Dataverse System Administrator access in the target environment with the fsi publisher prefix.",
         "compliance-admin": "Microsoft Purview Compliance Administrator for audit log review, retention policy checks, and evidence export."
       },
-      "verification": "Verify rows land in AuditValidationHistory and EnvironmentRegistry in Dataverse after a validation run, and confirm the audit dashboard reflects the latest tenant or environment status."
+      "verification": "Verify rows land in AuditValidationHistory and EnvironmentRegistry in Dataverse after a validation run, and confirm the audit dashboard reflects the latest tenant or environment status.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "coi-testing": {
       "id": "coi-testing",
@@ -211,7 +259,12 @@
         "security-admin": "Entra app registration and admin consent for Dataverse API access.",
         "power-platform-admin": "Power Platform/Dataverse admin for the fsi_coitestresults table, flow setup, and scheduled runner deployment."
       },
-      "verification": "Confirm run_coi_tests.py writes a row to fsi_coitestresults when executed with --allow-skipped."
+      "verification": "Confirm run_coi_tests.py writes a row to fsi_coitestresults when executed with --allow-skipped.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "compliance-dashboard": {
       "id": "compliance-dashboard",
@@ -238,7 +291,11 @@
         "m365-admin": "Power BI workspace owner or capacity admin with M365 E5 or E5 Compliance licensing for dashboard access.",
         "global-reader": "Read-only tenant visibility for configuration validation and troubleshooting."
       },
-      "verification": "Confirm fsi_controlmasters contains the 78-control baseline, then open the Power BI dashboard and verify the latest Dataverse-synced tiles refresh successfully."
+      "verification": "Confirm fsi_controlmasters contains the 78-control baseline, then open the Power BI dashboard and verify the latest Dataverse-synced tiles refresh successfully.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "conditional-access-automation": {
       "id": "conditional-access-automation",
@@ -261,7 +318,12 @@
         "m365-admin": "Application Administrator for service principal registration and Graph permission consent.",
         "global-reader": "Global Reader for read-only audit and report validation."
       },
-      "verification": "Confirm the compliance scan populates fsi_capolicyvalidationhistories and fsi_capolicyviolations, with active baselines in fsi_capolicybaselines."
+      "verification": "Confirm the compliance scan populates fsi_capolicyvalidationhistories and fsi_capolicyviolations, with active baselines in fsi_capolicybaselines.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "content-moderation-monitor": {
       "id": "content-moderation-monitor",
@@ -280,7 +342,13 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and read bot records; Dataverse access requires System Administrator or System Customizer in each target environment."
       },
-      "verification": "Run Test-ContentModerationCompliance.ps1 -ExcludeSandbox and confirm new rows in fsi_moderationvalidationhistory and fsi_moderationviolations with a matching fsi_validationtime and fsi_runid."
+      "verification": "Run Test-ContentModerationCompliance.ps1 -ExcludeSandbox and confirm new rows in fsi_moderationvalidationhistory and fsi_moderationviolations with a matching fsi_validationtime and fsi_runid.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "copilot-studio-analytics": {
       "id": "copilot-studio-analytics",
@@ -301,7 +369,13 @@
         "log-analytics-reader": "Reader access to the Agent Observability workspace and Application Insights from Agent Observability Foundation.",
         "power-platform-admin": "Power Platform admin tenant role for Dataverse, Copilot Studio configuration, and solution deployment."
       },
-      "verification": "Run the Dataverse session sync and confirm CopilotSessionOutcome events and workbook queries return data."
+      "verification": "Run the Dataverse session sync and confirm CopilotSessionOutcome events and workbook queries return data.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "credential-oversharing-detector": {
       "id": "credential-oversharing-detector",
@@ -321,7 +395,13 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix."
       },
-      "verification": "Confirm Invoke-CredentialScan.ps1 writes rows to `fsi_credentialscans` and `fsi_credentialviolations`."
+      "verification": "Confirm Invoke-CredentialScan.ps1 writes rows to `fsi_credentialscans` and `fsi_credentialviolations`.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "cross-solution-integration": {
       "id": "cross-solution-integration",
@@ -348,7 +428,13 @@
         "m365-admin": "Power BI workspace owner or dashboard admin for the Compliance Dashboard integration.",
         "global-reader": "Read-only visibility for source-solution and tenant configuration checks during sync validation."
       },
-      "verification": "Run Sync-SolutionAssessments.ps1 and confirm rows are written or updated in fsi_controlassessments for the expected control IDs, with the Power Automate feed collector completing successfully."
+      "verification": "Run Sync-SolutionAssessments.ps1 and confirm rows are written or updated in fsi_controlassessments for the expected control IDs, with the Power Automate feed collector completing successfully.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "cross-tenant-external-sharing-governance": {
       "id": "cross-tenant-external-sharing-governance",
@@ -376,7 +462,11 @@
         "m365-admin": "Entra Global Admin or Cross-Tenant Access Administrator for Graph consent and partner policy changes.",
         "compliance-admin": "Optional compliance/audit reviewer for the Dataverse compliance event log and retention checks."
       },
-      "verification": "Confirm fsi_crosstenantcomplianceevent receives events and fsi_approvedexternaltenant is updated during onboarding and remediation runs."
+      "verification": "Confirm fsi_crosstenantcomplianceevent receives events and fsi_approvedexternaltenant is updated during onboarding and remediation runs.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "deny-event-correlation-report": {
       "id": "deny-event-correlation-report",
@@ -401,7 +491,12 @@
         "log-analytics-reader": "Monitoring Reader on Application Insights for RAI telemetry correlation.",
         "m365-admin": "Azure subscription access for Storage, Automation, and scheduled runbook deployment."
       },
-      "verification": "Confirm the daily runbook produces CSV exports and current-day audit/RAI correlations without errors."
+      "verification": "Confirm the daily runbook produces CSV exports and current-day audit/RAI correlations without errors.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "dr-testing-framework": {
       "id": "dr-testing-framework",
@@ -422,7 +517,11 @@
         "power-platform-admin": "Power Platform admin for PPAC restore operations and managed target environment access.",
         "security-admin": "Entra app registration/admin consent and Dataverse system administrator access for evidence writes."
       },
-      "verification": "Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence."
+      "verification": "Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "environment-lifecycle-management": {
       "id": "environment-lifecycle-management",
@@ -446,7 +545,13 @@
         "security-admin": "Entra Global Admin/Application Administrator for app registration, admin consent, and Dataverse schema setup.",
         "m365-admin": "Microsoft 365 admin for cross-service notifications and governance operations."
       },
-      "verification": "Confirm a request provisions a managed environment and writes a provisioning log row to Dataverse."
+      "verification": "Confirm a request provisions a managed environment and writes a provisioning log row to Dataverse.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "file-upload-security": {
       "id": "file-upload-security",
@@ -466,7 +571,13 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and write Dataverse baseline and violation records."
       },
-      "verification": "Run Test-FileUploadCompliance.ps1 and confirm new rows in fsi_fileuploadvalidationhistory and fsi_fileuploadviolation, with the latest fsi_runtimestamp reflecting the scan."
+      "verification": "Run Test-FileUploadCompliance.ps1 and confirm new rows in fsi_fileuploadvalidationhistory and fsi_fileuploadviolation, with the latest fsi_runtimestamp reflecting the scan.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "finra-supervision-workflow": {
       "id": "finra-supervision-workflow",
@@ -488,7 +599,11 @@
         "compliance-admin": "Microsoft Purview Compliance Administrator for Communication Compliance policy access and alert review.",
         "security-admin": "Entra Application Administrator or equivalent for service principal registration and consent."
       },
-      "verification": "Create a test queue item and confirm rows appear in fsi_supervisionqueue and fsi_supervisionlog, then verify the Power BI supervision report shows the new item."
+      "verification": "Create a test queue item and confirm rows appear in fsi_supervisionqueue and fsi_supervisionlog, then verify the Power BI supervision report shows the new item.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "restricted"
     },
     "generative-ai-config-auditor": {
       "id": "generative-ai-config-auditor",
@@ -506,7 +621,12 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix."
       },
-      "verification": "Confirm Test-GenAIConfigCompliance.ps1 writes rows to `fsi_GACValidationHistory` and `fsi_GACViolation`."
+      "verification": "Confirm Test-GenAIConfigCompliance.ps1 writes rows to `fsi_GACValidationHistory` and `fsi_GACViolation`.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "hallucination-tracker": {
       "id": "hallucination-tracker",
@@ -528,7 +648,13 @@
         "global-reader": "Read-only Dataverse access for the analysis script's Basic User-style queries.",
         "m365-admin": "Power BI workspace/admin setup for dashboard publishing and service access."
       },
-      "verification": "Run pattern analysis and verify the scorecard and query outputs populate for recent feedback records."
+      "verification": "Run pattern analysis and verify the scorecard and query outputs populate for recent feedback records.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "hitl-workflow-governance": {
       "id": "hitl-workflow-governance",
@@ -549,7 +675,13 @@
         "power-platform-admin": "Power Platform admin tenant role or Dataverse environment administration for Copilot Studio scanning and schema deployment.",
         "security-admin": "Entra Global Admin or Application Administrator permissions for app registration, consent, and service principal setup."
       },
-      "verification": "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal."
+      "verification": "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "inactivity-timeout-enforcement": {
       "id": "inactivity-timeout-enforcement",
@@ -570,7 +702,12 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin permissions with a Dataverse environment and Power Automate Premium license for the daily compliance flow."
       },
-      "verification": "Check fsi_inactivitytimeoutcompliances for scan results and fsi_inactivitytimeouterrorlogs for any MissingPolicy or API error entries."
+      "verification": "Check fsi_inactivitytimeoutcompliances for scan results and fsi_inactivitytimeouterrorlogs for any MissingPolicy or API error entries.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "message-center-monitor": {
       "id": "message-center-monitor",
@@ -590,7 +727,11 @@
         "m365-admin": "Microsoft 365 admin for Message Center Graph access, admin consent, and Teams notifications.",
         "power-platform-admin": "Power Platform admin for the Dataverse application user, flow deployment, and connector setup."
       },
-      "verification": "Confirm the daily poll imports a Message Center post into fsi_messagecenterlog and posts the Teams alert."
+      "verification": "Confirm the daily poll imports a Message Center post into fsi_messagecenterlog and posts the Teams alert.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "mime-type-restrictions": {
       "id": "mime-type-restrictions",
@@ -617,7 +758,13 @@
         "power-platform-admin": "Dataverse System Administrator access to register the plugin, import the DLP policy, and manage solution components.",
         "log-analytics-reader": "Access to the Microsoft Sentinel or Log Analytics workspace that hosts PowerPlatformDlpActivity_CL for query validation."
       },
-      "verification": "Run scripts/query-mime-blocks.kql and scripts/query-exception-usage.kql against PowerPlatformDlpActivity_CL and confirm blocked uploads plus exception-usage events are returned."
+      "verification": "Run scripts/query-mime-blocks.kql and scripts/query-exception-usage.kql against PowerPlatformDlpActivity_CL and confirm blocked uploads plus exception-usage events are returned.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "model-risk-management-automation": {
       "id": "model-risk-management-automation",
@@ -643,7 +790,11 @@
         "security-admin": "Entra Global Admin or Application Administrator permissions for managed identity setup and API consent.",
         "sharepoint-admin": "SharePoint admin rights to create the MRM Governance site and Agent Card library."
       },
-      "verification": "Confirm rows exist in fsi_modelinventory and fsi_validationcycle, and verify the Agent Card file is published in the SharePoint library."
+      "verification": "Confirm rows exist in fsi_modelinventory and fsi_validationcycle, and verify the Agent Card file is published in the SharePoint library.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "restricted"
     },
     "pipeline-governance-cleanup": {
       "id": "pipeline-governance-cleanup",
@@ -663,7 +814,12 @@
         "power-platform-admin": "Power Platform admin for environment inventory, Deployment Pipeline Configuration access, and cleanup actions.",
         "security-admin": "Entra Global Admin/Application Administrator for Graph permissions, app registration, and admin consent."
       },
-      "verification": "Confirm the custom pipelines host is set as default and no personal hosts remain in Deployment Pipeline Configuration."
+      "verification": "Confirm the custom pipelines host is set as default and no personal hosts remain in Deployment Pipeline Configuration.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "rag-source-validator": {
       "id": "rag-source-validator",
@@ -684,7 +840,13 @@
         "sharepoint-admin": "SharePoint Online access to the document libraries, lists, pages, blobs, or APIs used as knowledge sources.",
         "power-platform-admin": "Dataverse access to fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange for source registry and audit tracking."
       },
-      "verification": "Run Invoke-SourceValidation.ps1 and confirm fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange records update with the expected fsi_result and fsi_lastvalidated values."
+      "verification": "Run Invoke-SourceValidation.ps1 and confirm fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange records update with the expected fsi_result and fsi_lastvalidated values.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "scope-drift-monitor": {
       "id": "scope-drift-monitor",
@@ -708,7 +870,13 @@
         "power-platform-admin": "System Administrator / Environment Maker access for Dataverse tables, flows, and solution import.",
         "m365-admin": "Microsoft 365 E5 or E5 Compliance licensing plus Office 365 Management API app consent for audit collection."
       },
-      "verification": "Run a test scan and confirm a drift violation is detected and alerted within the 15-minute cycle."
+      "verification": "Run a test scan and confirm a drift violation is detected and alerted within the 15-minute cycle.",
+      "zones": [
+        "personal",
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "segregation-detector": {
       "id": "segregation-detector",
@@ -729,7 +897,12 @@
         "global-reader": "Global Reader access for Entra ID role assignment queries.",
         "power-platform-admin": "Power Platform administrator access for Dataverse schema deployment and environment role queries."
       },
-      "verification": "Run Invoke-SoDScan.ps1 and confirm rows are created in fsi_sodviolation for enabled records in fsi_conflictrule."
+      "verification": "Run Invoke-SoDScan.ps1 and confirm rows are created in fsi_sodviolation for enabled records in fsi_conflictrule.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "session-security-configurator": {
       "id": "session-security-configurator",
@@ -749,7 +922,12 @@
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.",
         "security-admin": "Microsoft Entra ID Security Administrator for Conditional Access and PIM policy management."
       },
-      "verification": "Confirm Test-SessionCompliance.ps1 writes rows to `fsi_ValidationHistory` and `fsi_DriftViolation` for a Zone 3 run."
+      "verification": "Confirm Test-SessionCompliance.ps1 writes rows to `fsi_ValidationHistory` and `fsi_DriftViolation` for a Zone 3 run.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     },
     "unrestricted-agent-sharing-detector": {
       "id": "unrestricted-agent-sharing-detector",
@@ -768,7 +946,12 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin or Entra Global Admin for Dataverse schema, cloud flows, and remediation setup."
       },
-      "verification": "Verify fsi_sharingviolations and fsi_sharingexceptions update after running the detection and remediation flows."
+      "verification": "Verify fsi_sharingviolations and fsi_sharingexceptions update after running the detection and remediation flows.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     }
   }
 }

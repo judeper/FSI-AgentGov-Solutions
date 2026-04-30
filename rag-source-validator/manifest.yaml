@@ -14,3 +14,11 @@ prerequisites:
   sharepoint-admin: SharePoint Online access to the document libraries, lists, pages, blobs, or APIs used as knowledge sources.
   power-platform-admin: Dataverse access to fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange for source registry and audit tracking.
 verification: Run Invoke-SourceValidation.ps1 and confirm fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange records update with the expected fsi_result and fsi_lastvalidated values.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: confidential

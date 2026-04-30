@@ -145,7 +145,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag, validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
@@ -160,7 +160,13 @@ Edit files under `{slug}/docs/`. `build-manifest.py` copies them with filename n
 
 ### Schema evolution policy
 
-`solutions.json` schema 1.4.x is **additive-only**. Field renames, new required fields, or shape changes require 1.5.0 with a coordinated `judeper/fsi-agentgov` update.
+`solutions.json` schema 1.4.x is **additive-only** (current: **1.4.2**, added optional `zones`/`dataClassification`/`dataResidency`/`retention`). Field renames, new required fields, or shape changes require 1.5.0 with a coordinated `judeper/fsi-agentgov` update — `zones` will become required at that point.
+
+### Security and release CI
+
+- `gitleaks.yml` (secret scan), `codeql.yml` (Python), `dependency-review.yml`, `language-rules.yml`, `odata-lint.yml`, `ci-python.yml`, `ci-powershell.yml`, `release.yml` (SBOM + provenance on tag).
+- See `SECURITY.md` and `THREAT-MODEL.md` for vulnerability reporting and trust boundaries.
+- Authentication standard: managed-identity-first; client secrets are dev-only legacy (see AGENTS.md "Coding Patterns / Authentication").
 
 ### To verify before committing
 

@@ -13,3 +13,10 @@ prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
   security-admin: Microsoft Entra ID Security Administrator for Conditional Access and PIM policy management.
 verification: Confirm Test-SessionCompliance.ps1 writes rows to `fsi_ValidationHistory` and `fsi_DriftViolation` for a Zone 3 run.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: internal

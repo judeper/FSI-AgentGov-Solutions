@@ -12,3 +12,10 @@ prerequisites:
   power-platform-admin: "Power Platform admin or Dynamics 365 Service Admin for tenant queries, baseline capture, and Dataverse schema setup."
   m365-admin: "Global Admin is the fallback for tenant-level setup when Power Platform admin access is unavailable."
 verification: "Run Test-AgentAccessCompliance.ps1 and confirm rows are written to fsi_accessvalidationhistory and fsi_accessviolations."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: confidential

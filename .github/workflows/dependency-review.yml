@@ -1,0 +1,24 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        # Soft-gate: this action requires the Dependency graph feature to be
+        # enabled at the repo level. Until that is enabled, surface findings
+        # but do not block the PR. Track enabling at:
+        # https://github.com/judeper/FSI-AgentGov-Solutions/settings/security_analysis
+        continue-on-error: true
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

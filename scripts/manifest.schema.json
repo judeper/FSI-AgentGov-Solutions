@@ -87,6 +87,26 @@
       "minLength": 1,
       "description": "One-line description of how to verify deployment is healthy."
     },
+    "zones": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["personal", "team", "enterprise"] },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "Governance zones in which this solution applies. 'personal' = individual maker/Default environment, 'team' = departmental/managed, 'enterprise' = regulated/Managed. Optional in 1.4.2 to allow staged backfill; will become REQUIRED in 1.5.0."
+    },
+    "dataClassification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "restricted"],
+      "description": "Highest classification of data this solution may process or surface in evidence. Optional; defaults to 'internal' when absent."
+    },
+    "dataResidency": {
+      "type": "string",
+      "description": "Optional data residency note (e.g., 'tenant-region', 'us-only'). Free-form."
+    },
+    "retention": {
+      "type": "string",
+      "description": "Optional retention guidance for any evidence/output the solution produces (e.g., '7 years per SEC 17a-4')."
+    },
     "extras": {
       "type": "object",
       "description": "Free-form additive fields preserved across regeneration. NOT projected into solutions.json."

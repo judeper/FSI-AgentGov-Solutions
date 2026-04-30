@@ -1,0 +1,56 @@
+name: Python CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest pyyaml jsonschema
+
+      - name: Compile-check all Python sources
+        run: |
+          python -m compileall -q scripts */scripts || true
+          python -m compileall -f -q scripts/build-manifest.py scripts/_backfill-zones.py
+
+      - name: Ruff (lint)
+        # Soft-gate to start: report findings but do not fail CI yet.
+        # Flip to `--exit-non-zero-on-fix` and remove `|| true` once baseline is clean.
+        run: ruff check scripts */scripts || true
+
+      - name: Pytest (only where tests exist)
+        # Soft-gate: pre-existing test files (e.g.
+        # finra-supervision-workflow/scripts/test_export_supervision_evidence.py)
+        # call sys.exit() at import time when env vars are missing, which
+        # crashes pytest collection. Until those tests are refactored, run
+        # pytest with --continue-on-collection-errors and ignore known-broken
+        # test files. Tracked separately from this PR.
+        continue-on-error: true
+        run: |
+          set +e
+          test_files=$(git ls-files '*test_*.py' '*_test.py' '**/tests/**/*.py' | head -50)
+          if [ -z "$test_files" ]; then
+            echo "No pytest files discovered; skipping."
+            exit 0
+          fi
+          pytest -q \
+            --continue-on-collection-errors \
+            --ignore=finra-supervision-workflow/scripts/test_export_supervision_evidence.py \
+            || echo "::warning::pytest reported failures (soft-gated)."

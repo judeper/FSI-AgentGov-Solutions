@@ -16,3 +16,11 @@ prerequisites:
   power-platform-admin: Power Platform admin tenant role for Copilot Studio telemetry source configuration.
   m365-admin: Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation.
 verification: Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

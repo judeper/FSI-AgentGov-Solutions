@@ -14,3 +14,10 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/inactivity-timeo
 prerequisites:
   power-platform-admin: "Power Platform admin permissions with a Dataverse environment and Power Automate Premium license for the daily compliance flow."
 verification: "Check fsi_inactivitytimeoutcompliances for scan results and fsi_inactivitytimeouterrorlogs for any MissingPolicy or API error entries."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- team
+- enterprise
+dataClassification: internal

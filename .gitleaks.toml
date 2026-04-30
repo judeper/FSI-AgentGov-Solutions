@@ -1,0 +1,22 @@
+# gitleaks configuration for FSI-AgentGov-Solutions.
+# Extends the default ruleset; allowlists known-safe documentation strings.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for governance documentation"
+paths = [
+  '''CHANGELOG\.md''',
+  '''.*/CHANGELOG\.md''',
+  '''site-docs/.*''',
+]
+regexes = [
+  # Sample/placeholder identifiers used in docs and templates.
+  '''00000000-0000-0000-0000-000000000000''',
+  '''<TENANT-ID>''',
+  '''<CLIENT-ID>''',
+  '''<CLIENT-SECRET>''',
+  '''YOUR_TENANT_ID''',
+  '''YOUR_CLIENT_ID''',
+]

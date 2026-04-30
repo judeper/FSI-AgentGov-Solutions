@@ -19,3 +19,9 @@ prerequisites:
   security-admin: "Entra Global Admin or Application Administrator permissions for managed identity setup and API consent."
   sharepoint-admin: "SharePoint admin rights to create the MRM Governance site and Agent Card library."
 verification: "Confirm rows exist in fsi_modelinventory and fsi_validationcycle, and verify the Agent Card file is published in the SharePoint library."
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: restricted

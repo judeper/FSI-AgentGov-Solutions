@@ -16,3 +16,11 @@ prerequisites:
   security-admin: Entra Global Admin/Application Administrator for app registration, admin consent, and Graph permissions.
   m365-admin: Microsoft 365 admin for Teams notifications and owner-status lookups.
 verification: Confirm Test-AgentRegistryCompliance.ps1 succeeds and the inventory pipeline records a new compliance event.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

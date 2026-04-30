@@ -47,6 +47,23 @@ require a 1.5.0 bump AND a coordinated PR against fsi-agentgov:
 
 This guarantee lets the framework pin `v1.4.0` and consume any later 1.4.x
 patch release without code changes.
+
+1.4.2 changelog (additive only):
+* Optional `zones` field — array of {personal, team, enterprise}.
+* Optional `dataClassification` field — public|internal|confidential|restricted.
+* Optional `dataResidency` and `retention` free-form notes.
+These will become REQUIRED in 1.5.0 once product-team review of the inferred
+zones is complete.
+
+Framework version pinning
+-------------------------
+
+`build-manifest.py` reads `controls.json` from the path given by the
+`FRAMEWORK_CONTROLS` env var (preferred) or a sibling `FSI-AgentGov` checkout.
+CI workflows pin the framework checkout to a release tag via the
+`FRAMEWORK_REF` repository variable (default `v1.4.0`). Local development
+should also point at a tagged checkout — never `main` — so build artifacts
+are reproducible.
 """
 from __future__ import annotations
 
@@ -91,6 +108,12 @@ SOLUTIONS_BEGIN = "<!-- BEGIN:SOLUTIONS -->"
 SOLUTIONS_END = "<!-- END:SOLUTIONS -->"
 HERO_BEGIN = "<!-- BEGIN:HERO_METRICS -->"
 HERO_END = "<!-- END:HERO_METRICS -->"
+DEPLOY_LAYERS_BEGIN = "<!-- BEGIN:DEPLOY_LAYERS -->"
+DEPLOY_LAYERS_END = "<!-- END:DEPLOY_LAYERS -->"
+ZONE_ROADMAP_BEGIN = "<!-- BEGIN:ZONE_ROADMAP -->"
+ZONE_ROADMAP_END = "<!-- END:ZONE_ROADMAP -->"
+
+DEPLOYMENT_GUIDE = ROOT / "DEPLOYMENT-GUIDE.md"
 
 CHANGELOG_PATTERNS = {"acv-changelog.md", "alca-changelog.md"}
 
@@ -248,7 +271,7 @@ def validate_manifests(
 # ---------------------------------------------------------------------------
 def project_to_lock(m: dict) -> dict:
     """Project a manifest to the framework solutions-lock.json shape."""
-    return {
+    out = {
         "id": m["id"],
         "name": m["name"],
         "version": m["version"],
@@ -262,11 +285,22 @@ def project_to_lock(m: dict) -> dict:
         "prerequisites": dict(m["prerequisites"]),
         "verification": m["verification"],
     }
+    # Additive 1.4.2 fields. Only project when present so absent manifests
+    # remain valid for staged backfill.
+    if "zones" in m:
+        out["zones"] = list(m["zones"])
+    if "dataClassification" in m:
+        out["dataClassification"] = m["dataClassification"]
+    if "dataResidency" in m:
+        out["dataResidency"] = m["dataResidency"]
+    if "retention" in m:
+        out["retention"] = m["retention"]
+    return out
 
 
 def emit_solutions_json(
     manifests: dict[str, dict],
-    schema_version: str = "1.4.1",
+    schema_version: str = "1.4.2",
 ) -> str:
     """Return the canonical solutions.json content (deterministic)."""
     out = {
@@ -289,13 +323,15 @@ def emit_readme_table(manifests: dict[str, dict]) -> str:
     rows.append("")
     rows.append(f"This repository currently includes **{len(manifests)} live solution implementations**.")
     rows.append("")
-    rows.append("| Solution | Description | Version | Controls |")
-    rows.append("|----------|-------------|---------|----------|")
+    rows.append("| Solution | Description | Version | Status | Zones | Controls |")
+    rows.append("|----------|-------------|---------|--------|-------|----------|")
     for slug in sorted(manifests):
         m = manifests[slug]
         controls = ", ".join(m.get("controls", [])) or "—"
+        zones = ", ".join(m.get("zones", [])) or "—"
+        status = m.get("status", "live")
         rows.append(
-            f"| [{m['name']}](./{slug}/) | {m['description']} | v{m['version']} | {controls} |"
+            f"| [{m['name']}](./{slug}/) | {m['description']} | v{m['version']} | {status} | {zones} | {controls} |"
         )
     rows.append("")
     rows.append(SOLUTIONS_END)
@@ -335,13 +371,15 @@ def emit_site_catalog(manifests: dict[str, dict]) -> str:
         lines.append("")
         lines.append(DOMAIN_DESCRIPTIONS[domain])
         lines.append("")
-        lines.append("| Solution | Description | Version | Controls |")
-        lines.append("|----------|-------------|---------|----------|")
+        lines.append("| Solution | Description | Version | Status | Zones | Controls |")
+        lines.append("|----------|-------------|---------|--------|-------|----------|")
         for slug in slugs:
             m = manifests[slug]
             controls = ", ".join(m.get("controls", [])) or "—"
+            zones = ", ".join(m.get("zones", [])) or "—"
+            status = m.get("status", "live")
             lines.append(
-                f"| [{m['name']}]({slug}/index.md) | {m['description']} | v{m['version']} | {controls} |"
+                f"| [{m['name']}]({slug}/index.md) | {m['description']} | v{m['version']} | {status} | {zones} | {controls} |"
             )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -362,6 +400,10 @@ def emit_solution_detail(slug: str, m: dict, sub_docs: list[str]) -> str:
         f"**Domain:** {domain_label}",
         f"**Tier:** {m['tier']}",
     ]
+    if m.get("zones"):
+        badges.append(f"**Zones:** {', '.join(m['zones'])}")
+    if m.get("dataClassification"):
+        badges.append(f"**Data classification:** {m['dataClassification']}")
     lines.append(" | ".join(badges))
     lines.append("")
     lines.append(m["description"])
@@ -488,6 +530,133 @@ def emit_control_mapping(
     lines.append("!!! info \"Framework Reference\"")
     lines.append("    Full control specifications are available in the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/controls/).")
     lines.append("")
+    return "\n".join(lines)
+
+
+# Short-form codes for the dependency-tree references in DEPLOYMENT-GUIDE.
+_SLUG_SHORT = {
+    "agent-observability-foundation": "AOF",
+    "cross-solution-integration": "CSI",
+    "compliance-dashboard": "CD",
+    "audit-compliance-manager": "ACM",
+    "copilot-studio-analytics": "CSA",
+    "deny-event-correlation-report": "DECR",
+    "scope-drift-monitor": "SDM",
+    "agent-registry-automation": "ARA",
+    "unrestricted-agent-sharing-detector": "UASD",
+    "cross-tenant-external-sharing-governance": "CTESG",
+    "environment-lifecycle-management": "ELM",
+}
+
+
+def _layer_for(m: dict) -> str:
+    """Bucket a manifest into the deployment-guide layer model.
+
+    Layer 1: Tier 1 foundational solutions.
+    Layer 2: Tier 2 solutions wired into Compliance Dashboard via CSI.
+    Layer 3: All other solutions (Tier 3 and standalone).
+    """
+    if m["tier"] == "1":
+        return "1"
+    # Tier 2 solutions that show up as CSI dependents in current docs.
+    csi_dashboard = {
+        "audit-compliance-manager",
+        "session-security-configurator",
+        "agent-access-monitor",
+        "content-moderation-monitor",
+        "file-upload-security",
+        "conditional-access-automation",
+    }
+    if m["id"] in csi_dashboard:
+        return "2"
+    return "3"
+
+
+def emit_deploy_layers_block(manifests: dict[str, dict]) -> str:
+    """Render the Layer 1/2/3 deployment tables for DEPLOYMENT-GUIDE.md."""
+    by_layer: dict[str, list[dict]] = defaultdict(list)
+    for slug in sorted(manifests):
+        by_layer[_layer_for(manifests[slug])].append(manifests[slug])
+
+    lines = [
+        DEPLOY_LAYERS_BEGIN,
+        "<!-- Generated by scripts/build-manifest.py — do not edit by hand. -->",
+        "",
+        "### Layer 1: Foundational Infrastructure",
+        "",
+        "These solutions provide shared infrastructure that other solutions depend on:",
+        "",
+        "| Solution | Role | Version |",
+        "|----------|------|---------|",
+    ]
+    for m in by_layer["1"]:
+        lines.append(f"| [{m['name']}](./{m['id']}/) | {m['description']} | v{m['version']} |")
+    lines.append("")
+    lines.append("### Layer 2: Tier 2 Governance Solutions")
+    lines.append("")
+    lines.append(
+        "These solutions operate independently but can be wired into the "
+        "Compliance Dashboard via [Cross-Solution Integration](./cross-solution-integration/):"
+    )
+    lines.append("")
+    lines.append("| Solution | Version | Controls |")
+    lines.append("|----------|---------|----------|")
+    for m in by_layer["2"]:
+        controls = ", ".join(m.get("controls", [])) or "—"
+        lines.append(f"| [{m['name']}](./{m['id']}/) | v{m['version']} | {controls} |")
+    lines.append("")
+    lines.append("### Layer 3: Tier 3 / Standalone Solutions")
+    lines.append("")
+    lines.append(
+        "All other solutions operate independently and can be deployed in any "
+        "order based on customer needs."
+    )
+    lines.append("")
+    lines.append("| Solution | Tier | Version | Zones |")
+    lines.append("|----------|------|---------|-------|")
+    for m in by_layer["3"]:
+        zones = ", ".join(m.get("zones", [])) or "—"
+        lines.append(
+            f"| [{m['name']}](./{m['id']}/) | {m['tier']} | v{m['version']} | {zones} |"
+        )
+    lines.append("")
+    lines.append(DEPLOY_LAYERS_END)
+    return "\n".join(lines)
+
+
+def emit_zone_roadmap_block(manifests: dict[str, dict]) -> str:
+    """Render the Personal/Team/Enterprise zone applicability matrix."""
+    lines = [
+        ZONE_ROADMAP_BEGIN,
+        "<!-- Generated by scripts/build-manifest.py — do not edit by hand. -->",
+        "",
+    ]
+    by_tier: dict[str, list[dict]] = defaultdict(list)
+    for slug in sorted(manifests, key=lambda s: manifests[s]["name"].lower()):
+        m = manifests[slug]
+        by_tier[m["tier"]].append(m)
+
+    tier_labels = {
+        "1": "Tier 1 (Foundational)",
+        "2": "Tier 2 (Governance)",
+        "3": "Tier 3 (Enterprise)",
+    }
+    for tier in sorted(by_tier):
+        lines.append(f"### {tier_labels.get(tier, f'Tier {tier}')}")
+        lines.append("")
+        lines.append("| Solution | Personal | Team | Enterprise | Data class |")
+        lines.append("|----------|----------|------|------------|------------|")
+        for m in by_tier[tier]:
+            zones = set(m.get("zones", []))
+            p = "✅" if "personal" in zones else "—"
+            t = "✅" if "team" in zones else "—"
+            e = "✅" if "enterprise" in zones else "—"
+            dc = m.get("dataClassification", "—")
+            lines.append(
+                f"| [{m['name']}](./{m['id']}/) | {p} | {t} | {e} | {dc} |"
+            )
+        lines.append("")
+    lines.append(ZONE_ROADMAP_END)
     return "\n".join(lines)
 
 
@@ -621,16 +790,24 @@ def _rewrite_root_doc_links(content: str, slugs: set[str]) -> str:
     return pattern.sub(replace, content)
 
 
-def copy_root_docs(write_files: bool, slugs: set[str] | None = None) -> dict[Path, str]:
+def copy_root_docs(
+    write_files: bool,
+    slugs: set[str] | None = None,
+    overrides: dict[Path, str] | None = None,
+) -> dict[Path, str]:
     pending: dict[Path, str] = {}
+    overrides = overrides or {}
     mappings = [
         (ROOT / "DEPLOYMENT-GUIDE.md", SITE_DOCS / "getting-started" / "deployment-guide.md"),
         (ROOT / "CHANGELOG.md", SITE_DOCS / "reference" / "changelog.md"),
     ]
     for src, dst in mappings:
-        if not src.is_file():
+        if src in overrides:
+            content = overrides[src]
+        elif src.is_file():
+            content = src.read_text(encoding="utf-8")
+        else:
             continue
-        content = src.read_text(encoding="utf-8")
         if slugs:
             content = _rewrite_root_doc_links(content, slugs)
         pending[dst] = content
@@ -708,8 +885,25 @@ def run(check: bool) -> int:
     for path, content in sub_doc_pending.items():
         record(path, content, drift)
 
+    # 5b. DEPLOYMENT-GUIDE: regenerate deploy-layers and zone-roadmap blocks
+    #     before copying to site-docs so the copy reflects the updated content.
+    deployment_overrides: dict[Path, str] = {}
+    if DEPLOYMENT_GUIDE.is_file():
+        original = DEPLOYMENT_GUIDE.read_text(encoding="utf-8")
+        updated = original
+        layers_block = emit_deploy_layers_block(manifests)
+        updated = replace_block(updated, DEPLOY_LAYERS_BEGIN, DEPLOY_LAYERS_END, layers_block)
+        roadmap_block = emit_zone_roadmap_block(manifests)
+        updated = replace_block(updated, ZONE_ROADMAP_BEGIN, ZONE_ROADMAP_END, roadmap_block)
+        record(DEPLOYMENT_GUIDE, updated, drift)
+        deployment_overrides[DEPLOYMENT_GUIDE] = updated
+
     # 6. Root doc copy
-    root_doc_pending = copy_root_docs(write_files=False, slugs=set(manifests))
+    root_doc_pending = copy_root_docs(
+        write_files=False,
+        slugs=set(manifests),
+        overrides=deployment_overrides,
+    )
     for path, content in root_doc_pending.items():
         record(path, content, drift)
 

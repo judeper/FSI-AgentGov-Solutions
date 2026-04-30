@@ -14,3 +14,11 @@ prerequisites:
 verification: Run the Dataverse session sync and confirm CopilotSessionOutcome events and workbook queries return data.
 dependencies:
 - agent-observability-foundation
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

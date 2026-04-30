@@ -13,3 +13,11 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/file-upload-secu
 prerequisites:
   power-platform-admin: Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and write Dataverse baseline and violation records.
 verification: Run Test-FileUploadCompliance.ps1 and confirm new rows in fsi_fileuploadvalidationhistory and fsi_fileuploadviolation, with the latest fsi_runtimestamp reflecting the scan.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: internal

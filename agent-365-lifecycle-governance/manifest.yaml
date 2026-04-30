@@ -19,3 +19,9 @@ prerequisites:
   security-admin: Entra ID Governance P2, app permissions, security groups, and admin consent.
   power-platform-admin: Managed Dataverse environment, Power Automate Premium, and LTR-enabled schema deployment.
 verification: Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row.
+
+# zones/dataClassification backfilled by scripts/_backfill-zones.py
+# INFERRED from domain/tier/controls — product team must review.
+zones:
+- enterprise
+dataClassification: confidential

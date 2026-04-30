@@ -1,0 +1,71 @@
+name: PowerShell CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  powershell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer + Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+          Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Parse-validate every .ps1
+        shell: pwsh
+        run: |
+          $errors = 0
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs.Count -gt 0) {
+              Write-Host "PARSE FAIL: $($_.FullName)"
+              $errs | ForEach-Object { Write-Host "  $_" }
+              $errors++
+            }
+          }
+          if ($errors -gt 0) { exit 1 }
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        # Soft-gate: report findings but do not break the build until the
+        # baseline is cleaned up. Flip continue-on-error to false (and remove
+        # the trailing print) once existing PSAvoidUsingConvertToSecureStringWithPlainText
+        # and similar findings are remediated.
+        continue-on-error: true
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          $results | Format-Table -AutoSize
+          if ($results.Count -gt 0) {
+            Write-Host "::warning::PSScriptAnalyzer reported $($results.Count) Error-severity findings (soft-gated)."
+          }
+
+      - name: Pester (only where tests exist)
+        shell: pwsh
+        # Soft-gate: surface failing Pester tests as warnings until the
+        # baseline (audit-compliance-manager Validators.Tests.ps1 etc.) is
+        # green.
+        continue-on-error: true
+        run: |
+          $tests = Get-ChildItem -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue
+          if (-not $tests) {
+            Write-Host "No Pester tests discovered; skipping."
+            exit 0
+          }
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = $tests.FullName
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
