@@ -712,26 +712,28 @@
     "message-center-monitor": {
       "id": "message-center-monitor",
       "name": "Message Center Monitor",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
       "description": "Monitor Microsoft 365 Message Center for platform changes affecting AI agents.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/message-center-monitor/",
       "controls": [
-        "2.3",
-        "2.10"
+        "2.3"
       ],
       "dependencies": [],
       "prerequisites": {
-        "m365-admin": "Microsoft 365 admin for Message Center Graph access, admin consent, and Teams notifications.",
-        "power-platform-admin": "Power Platform admin for the Dataverse application user, flow deployment, and connector setup."
+        "m365-admin": "Microsoft 365 admin with Entra consent privileges (e.g., Cloud Application Administrator) for Message Center Graph access and admin consent.",
+        "power-platform-admin": "Power Platform admin for the Dataverse application user, flow deployment, and connector setup.",
+        "azure-admin": "Azure subscription Owner or Contributor + Key Vault Secrets Officer for storing the client credential.",
+        "teams-admin": "Teams team owner for the alerts channel where adaptive card notifications post."
       },
       "verification": "Confirm the daily poll imports a Message Center post into fsi_messagecenterlog and posts the Teams alert.",
       "zones": [
         "enterprise"
       ],
-      "dataClassification": "internal"
+      "dataClassification": "internal",
+      "retention": "no regulatory retention required; operational only"
     },
     "mime-type-restrictions": {
       "id": "mime-type-restrictions",
