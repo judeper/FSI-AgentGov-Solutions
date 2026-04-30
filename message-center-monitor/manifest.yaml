@@ -1,21 +1,21 @@
 id: message-center-monitor
 name: Message Center Monitor
 description: Monitor Microsoft 365 Message Center for platform changes affecting AI agents.
-version: 2.3.0
+version: 2.4.0
 status: live
 domain: lifecycle-ops
 tier: '2'
 controls:
 - '2.3'
-- '2.10'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/message-center-monitor/
 prerequisites:
-  m365-admin: Microsoft 365 admin for Message Center Graph access, admin consent, and Teams notifications.
+  m365-admin: Microsoft 365 admin with Entra consent privileges (e.g., Cloud Application Administrator) for Message Center Graph access and admin consent.
   power-platform-admin: Power Platform admin for the Dataverse application user, flow deployment, and connector setup.
+  azure-admin: Azure subscription Owner or Contributor + Key Vault Secrets Officer for storing the client credential.
+  teams-admin: Teams team owner for the alerts channel where adaptive card notifications post.
 verification: Confirm the daily poll imports a Message Center post into fsi_messagecenterlog and posts the Teams alert.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
 zones:
 - enterprise
 dataClassification: internal
+retention: no regulatory retention required; operational only

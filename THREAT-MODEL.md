@@ -81,6 +81,32 @@ The MIME validation plugin runs **inside the Dataverse sandbox** under the calli
 | Plugin fails open (allows upload) on exception | Plugin throws `InvalidPluginExecutionException` to halt the operation, not catch-and-continue. |
 | Plugin assemblies redistributed without signature verification | Customers should rebuild from source and sign with their own key. We do not publish a binary today. |
 
+## Per-solution threat models
+
+### message-center-monitor
+
+**Assets**
+
+- Microsoft Graph access token with `ServiceMessage.Read.All`.
+- Key Vault client secret or certificate used by the Power Automate flow / governance scripts.
+- Dataverse rows in `fsi_messagecenterlog` (Microsoft service announcement metadata + assessment fields).
+- Adaptive card posts in the configured Teams alerts channel.
+
+**Trust boundaries**
+
+```
+Microsoft Graph  ─▶  Power Automate (flow identity)  ─▶  Azure Key Vault  ─▶  Dataverse  ─▶  Teams channel
+```
+
+| STRIDE | Threat | Mitigation |
+|--------|--------|------------|
+| **S** Spoofing | Stolen service-principal credentials → unauthorized Graph reads + Dataverse writes against `fsi_messagecenterlog`. | Conditional Access policy on the SP (documented in README + setup checklist); Key Vault access policies; secret rotation ≤90 days for production tenants per `docs/secrets-management.md`. |
+| **T** Tampering | Tampered Message Center body HTML rendered in custom apps → XSS in admin UI consuming `fsi_body`. | Body field excluded from the default Teams adaptive card; HTML sanitization warning called out in README and `docs/teams-integration.md`. |
+| **R** Repudiation | Assessment edits (`fsi_assessmentstatus`, `fsi_assessedby`) made without an audit trail. | Dataverse table audit enabled in the schema (`IsAuditEnabled: True` in `create_mcm_dataverse_schema.py`); `Export-MessageCenterEvidence.ps1` produces SHA-256-hashed evidence packages verifiable with `Test-EvidenceIntegrity.ps1`. |
+| **I** Information disclosure | Microsoft service announcement metadata posted to a broad Teams channel could expose unannounced platform changes to non-need-to-know users. | Channel access controls; scope `fsi_assessedby` (and write access) to authorized governance committee members; `dataClassification: internal` in manifest. |
+| **D** Denial of service | Microsoft Graph throttling (`429`/`Retry-After`) halts the daily sync. | Shared retry-with-backoff helper honors `Retry-After`; pagination capped at 1000 pages with `Prefer: odata.maxpagesize=500`; non-zero exit on terminal failure surfaces issues to the scheduler. |
+| **E** Elevation of privilege | Application user granted System Administrator in production. | Setup checklist provisions a custom security role scoped to `fsi_messagecenterlog` only for production; SysAdmin permitted only in non-prod environments. |
+
 ## Out of scope
 
 - Threats originating inside Microsoft cloud services (Power Platform, Dataverse, Entra ID). Report those to MSRC.
