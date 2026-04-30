@@ -11,7 +11,7 @@ This guide explains how to securely store and access the client secret for the M
 
 ## Overview
 
-```
+```text
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │ Power Automate  │────▶│  Azure Key Vault │────▶│ Client Secret   │
 │     Flow        │     │                 │     │                 │
@@ -55,9 +55,10 @@ az keyvault create \
   --name kv-messagecenter-monitor \
   --resource-group rg-messagecenter-monitor \
   --location eastus \
-  --enable-soft-delete true \
   --enable-purge-protection true
 ```
+
+> **Note:** Soft-delete is enabled by default in Azure CLI ≥ 2.39 and cannot be disabled. The deprecated `--enable-soft-delete true` flag has been removed.
 
 ## Step 2: Add Client Secret to Key Vault
 
@@ -76,7 +77,7 @@ Configure:
 
 4. Click **Create**
 
-### Via Azure CLI
+### Via Azure CLI (bash)
 
 ```bash
 # Pipe the secret via stdin to avoid exposing it in shell history or process listings
@@ -86,7 +87,26 @@ az keyvault secret set \
   --value @- <<< "your-client-secret-value"
 ```
 
-> **Security note:** Avoid passing secrets directly as `--value` command-line arguments, which are visible in shell history (`~/.bash_history`) and process listings (`ps`). Use `--value @-` with piped stdin or `--value @secret.txt` with a file.
+### Via PowerShell
+
+```powershell
+# Read the secret interactively (never echoed) and write it to Key Vault
+$secret = Read-Host -AsSecureString -Prompt "Enter client secret"
+Set-AzKeyVaultSecret `
+  -VaultName 'kv-messagecenter-monitor' `
+  -Name 'MessageCenterClientSecret' `
+  -SecretValue $secret
+```
+
+> **Security note:** Avoid passing secrets directly as `--value` command-line arguments, which are visible in shell history (`~/.bash_history`, PowerShell `(Get-History)`) and process listings (`ps`, `Get-Process`). Use `--value @-` with piped stdin (bash), `--value @secret.txt` with a file, or `Read-Host -AsSecureString` (PowerShell).
+
+### Rotation cadence
+
+- **Production tenants:** rotate the client secret every **90 days** per FFIEC IT Examination Handbook and CIS Microsoft Azure Foundations Benchmark guidance.
+- **Non-production tenants:** rotation interval ≤ **365 days** is acceptable.
+- Set the **secret expiration** in the Microsoft Entra app registration to match this cadence so unrotated credentials fail closed rather than continuing to authenticate past their intended life.
+- Configure **Key Vault secret expiration alerts** via Azure Monitor (Action Group → email/Teams webhook) at 30 / 14 / 7 days before expiry.
+- Track rotation evidence in the [audit-compliance-manager](../../audit-compliance-manager/) solution if you are reporting credential hygiene to internal audit.
 
 ## Step 3: Grant Power Automate Access
 
