@@ -48,6 +48,10 @@ jobs:
             echo "No pytest files in message-center-monitor/tests; skipping."
             exit 0
           fi
+          # The schema script imports `requests` and `msal` at module top.
+          # These are runtime deps of the solution itself (not test deps), so
+          # install them just before running the hard-gated suite.
+          pip install requests msal
           pytest -q message-center-monitor/tests
 
       - name: Pytest (repo-wide, soft-gated baseline)
