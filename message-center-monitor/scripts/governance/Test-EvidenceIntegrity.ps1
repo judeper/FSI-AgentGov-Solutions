@@ -12,13 +12,9 @@
     Returns boolean result for automation compatibility, with optional console
     output for interactive verification workflows.
 
-    Evidence files produced by Export-MessageCenterEvidence include SHA-256
-    companion files that enable tamper detection. This verification script
-    supports compliance workflows by confirming evidence files have not been
-    modified after export.
-
-    Hash verification aids in meeting evidence integrity requirements for
-    FINRA Rule 4511(a), SEC Rule 17a-4, and SOX Section 302 / SOX Section 404.
+    Internal evidence integrity for change-tracking workflows. Confirms
+    machine-readable JSON artifacts produced by Export-MessageCenterEvidence.ps1
+    have not been modified after export (operational, not regulatory).
 
 .PARAMETER EvidenceFilePath
     Full path to the JSON evidence file to verify.
@@ -29,7 +25,9 @@
 
 .PARAMETER Quiet
     Suppress console output. Returns only the boolean result ($true/$false).
-    Useful for batch verification scripts and automated workflows.
+    In Quiet mode, errors (missing files, invalid hash file) are written to the
+    verbose stream and the function returns $false; the script also exits with
+    a non-zero exit code so batch callers can detect failure.
 
 .EXAMPLE
     .\Test-EvidenceIntegrity.ps1 -EvidenceFilePath ".\evidence\mcm-evidence-20260209-143022.json"
@@ -60,10 +58,10 @@
     calling script to handle verification result programmatically.
 
 .OUTPUTS
-    Boolean - $true if hash matches (file integrity verified), $false if mismatch.
+    Boolean - $true if hash matches (file integrity verified), $false otherwise.
 
 .NOTES
-    Version: 1.0.0
+    Version: 2.4.0
     Requires PowerShell 7.0 or later (Get-FileHash cmdlet availability).
 
     SHA-256 companion file format:
@@ -73,13 +71,7 @@
     - Example: "abc123...  mcm-evidence-20260209-143022.json"
 
     This format is compatible with standard checksum tools (shasum, certutil,
-    sha256sum) enabling cross-platform verification and audit workflows.
-
-    Regulatory context:
-    Hash verification supports evidence integrity requirements for:
-    - FINRA Rule 4511(a) (audit trail accuracy)
-    - SEC Rule 17a-4 (record integrity)
-    - SOX Section 302 / SOX Section 404 (internal control verification)
+    sha256sum) enabling cross-platform verification workflows.
 #>
 
 [CmdletBinding()]
@@ -152,14 +144,21 @@ try {
             Write-Warning "Actual hash:   $actualHash"
             Write-Warning ""
             Write-Warning "INTEGRITY CHECK FAILED. Evidence file may have been modified or corrupted."
+        } else {
+            Write-Verbose "Hash mismatch for $EvidenceFilePath (expected $expectedHash, got $actualHash)"
         }
+        $script:LASTEXITCODE = 1
         return $false
     }
 }
 catch {
-    # Handle errors (missing files, invalid format, etc.)
-    if (-not $Quiet) {
-        Write-Error "Evidence integrity verification failed: $($_.Exception.Message)"
+    # Honor the .OUTPUTS Boolean contract: in Quiet mode return $false and exit
+    # non-zero rather than throwing, so batch callers can rely on the boolean.
+    if ($Quiet) {
+        Write-Verbose "Evidence integrity verification failed: $($_.Exception.Message)"
+        $script:LASTEXITCODE = 1
+        return $false
     }
+    Write-Error "Evidence integrity verification failed: $($_.Exception.Message)"
     throw
 }

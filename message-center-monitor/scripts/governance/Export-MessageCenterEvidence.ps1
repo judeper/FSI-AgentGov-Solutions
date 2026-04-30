@@ -3,19 +3,16 @@
 
 <#
 .SYNOPSIS
-    Exports Message Center Monitor evidence from Dataverse to JSON with SHA-256 integrity hashing.
+    Exports Message Center Monitor records from Dataverse to JSON with SHA-256 integrity hashing.
 
 .DESCRIPTION
-    Produces machine-readable compliance evidence packages containing Message Center
-    posts, assessment status, and cryptographic integrity verification for the
-    Message Center Monitor (MCM) solution.
+    Internal evidence integrity for change-tracking workflows. Generates
+    machine-readable JSON artifacts with SHA-256 hashing for archival or
+    audit-trail purposes (operational, not regulatory).
 
     Each export generates:
-    - JSON evidence file with metadata, summary, and message records
-    - SHA-256 hash companion file for integrity verification
-
-    Evidence files support regulatory examination workflows by providing tamper-evident
-    exports with full assessment history and timestamps.
+    - JSON file containing metadata, summary, and message records
+    - SHA-256 companion file for tamper-evident integrity verification
 
     Supports Controls 2.3 (Change Management) and 2.10 (Platform Change Monitoring)
     from the FSI Agent Governance Framework.
@@ -24,7 +21,8 @@
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER TenantId
-    Microsoft Entra ID tenant ID.
+    Microsoft Entra ID tenant ID. Required for Interactive, DeviceCode, and
+    ClientSecret auth modes.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -36,20 +34,36 @@
 .PARAMETER ToDate
     End of date range filter (inclusive). Defaults to current timestamp.
 
-.PARAMETER Interactive
-    Use interactive browser-based authentication instead of service principal.
+.PARAMETER AuthMode
+    Authentication mode. ManagedIdentity (default), WorkloadIdentity, Interactive,
+    DeviceCode, or ClientSecret. ManagedIdentity requires MSAL.PS 4.37 or later.
 
 .PARAMETER ClientId
-    Application (client) ID for service principal authentication.
+    Application (client) ID. Required for Interactive, DeviceCode, and
+    ClientSecret auth modes.
+
+.PARAMETER ClientSecret
+    Client secret as a SecureString. Required only when -AuthMode ClientSecret.
+    legacy: dev-only path; prefer ManagedIdentity in production.
+
+.PARAMETER Quiet
+    Suppress informational banner output.
+
+.EXAMPLE
+    .\Export-MessageCenterEvidence.ps1 `
+        -DataverseUrl "https://org.crm.dynamics.com" `
+        -AuthMode ManagedIdentity
+
+    Recommended: exports the past 30 days using the host's managed identity.
 
 .EXAMPLE
     .\Export-MessageCenterEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "contoso.onmicrosoft.com" `
-        -Interactive
+        -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
+        -AuthMode DeviceCode
 
-    Exports all Message Center records from the past 30 days using interactive
-    authentication. Generates JSON evidence file and SHA-256 hash.
+    Admin-workstation export with device-code auth.
 
 .EXAMPLE
     $secret = ConvertTo-SecureString "mySecret" -AsPlainText -Force
@@ -57,11 +71,13 @@
         -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
-        -OutputDirectory "C:\compliance\evidence" `
+        -ClientSecret $secret `
+        -AuthMode ClientSecret `
+        -OutputDirectory "C:\evidence" `
         -FromDate (Get-Date).AddDays(-90) `
         -ToDate (Get-Date)
 
-    Exports 90 days of Message Center evidence using service principal authentication.
+    (dev only) Exports 90 days of records using a client secret.
 
 .OUTPUTS
     PSCustomObject with properties:
@@ -72,10 +88,10 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 2.4.0
     Requires:
     - PowerShell 7.0 or later
-    - MSAL.PS module
+    - MSAL.PS module (4.37+ for ManagedIdentity)
     - Dataverse fsi_messagecenterlog table deployed
 
     Evidence file naming convention:
@@ -84,13 +100,8 @@
 
     SHA-256 companion file format:
     - {hash}  {filename}  (two spaces, standard checksum format)
-    - Verifiable via Test-EvidenceIntegrity or standard tools (shasum, certutil)
-
-    Regulatory context:
-    Hash verification aids in meeting evidence integrity requirements for:
-    - FINRA Rule 4511(a) (audit trail accuracy)
-    - SEC Rule 17a-4 (record integrity)
-    - SOX Section 302 / SOX Section 404 (internal control verification)
+    - Verifiable via Test-EvidenceIntegrity.ps1, sha256sum, or certutil
+    - Files written as UTF-8 without BOM so sha256sum -c works on Linux/macOS.
 #>
 
 [CmdletBinding()]
@@ -111,29 +122,36 @@ param(
     [datetime]$ToDate = (Get-Date),
 
     [Parameter(Mandatory = $false)]
-    [switch]$Interactive,
+    [ValidateSet('ManagedIdentity', 'WorkloadIdentity', 'Interactive', 'DeviceCode', 'ClientSecret')]
+    [string]$AuthMode = 'ManagedIdentity',
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientId
+    [string]$ClientId,
+
+    [Parameter(Mandatory = $false)]
+    [SecureString]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Quiet
 )
 
+. "$PSScriptRoot\_Common.ps1"
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 #region Banner
 
-Write-Host "`n╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  Message Center Evidence Export                   ║" -ForegroundColor Cyan
-Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Cyan
-Write-Host "║  FSI-AgentGov Message Center Monitor             ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Message Center Evidence Export — FSI-AgentGov Message Center Monitor" -InformationAction Continue
+}
 
 #endregion
 
 #region Ensure Output Directory
 
 if (-not (Test-Path -Path $OutputDirectory)) {
-    Write-Host "Creating output directory: $OutputDirectory" -ForegroundColor Cyan
+    if (-not $Quiet) { Write-Information "Creating output directory: $OutputDirectory" -InformationAction Continue }
     New-Item -Path $OutputDirectory -ItemType Directory -Force | Out-Null
 }
 
@@ -141,81 +159,77 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 #region Authentication
 
-Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Authenticating to Dataverse (mode: $AuthMode)..." -InformationAction Continue }
 
-Import-Module MSAL.PS -ErrorAction Stop
+if ($AuthMode -in @('Interactive', 'DeviceCode', 'ClientSecret')) {
+    if (-not $TenantId) {
+        throw "TenantId is required for -AuthMode $AuthMode."
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for -AuthMode $AuthMode."
+    }
+}
+if ($AuthMode -eq 'ClientSecret' -and -not $ClientSecret) {
+    throw "ClientSecret is required when -AuthMode ClientSecret. Use -AuthMode ManagedIdentity for production."
+}
 
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
-if ($Interactive) {
-    $msalParams = @{
-        TenantId    = $TenantId
-        Scopes      = @($dataverseScope)
-        Interactive = $true
+# Lookup display names are surfaced via FormattedValue annotations.
+$dvHeaders = Get-McmDvHeaders -AuthMode $AuthMode -Scope $dataverseScope `
+    -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret `
+    -ExtraHeaders @{
+        Prefer = 'odata.maxpagesize=500,odata.include-annotations="OData.Community.Display.V1.FormattedValue"'
     }
-    if ($ClientId) {
-        $msalParams.ClientId = $ClientId
-    }
-    $authResult = Get-MsalToken @msalParams
-}
-else {
-    if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
-    }
-
-    # Prompt for client secret when not using interactive auth
-    $clientSecret = Read-Host -AsSecureString -Prompt "Enter Client Secret"
-
-    $authResult = Get-MsalToken `
-        -TenantId $TenantId `
-        -ClientId $ClientId `
-        -ClientSecret $clientSecret `
-        -Scopes @($dataverseScope)
-}
-
-$accessToken = $authResult.AccessToken
-
-$dvHeaders = @{
-    Authorization      = "Bearer $accessToken"
-    'Content-Type'     = 'application/json'
-    'OData-MaxVersion' = '4.0'
-    'OData-Version'    = '4.0'
-}
 
 $dvBaseUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
-Write-Host "Authentication successful." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) { Write-Information "Authentication successful." -InformationAction Continue }
 
 #endregion
 
 #region Query Dataverse Records
 
-$fromDateStr = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$toDateStr = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+$fromDateStr = Format-McmODataDate $FromDate
+$toDateStr   = Format-McmODataDate $ToDate
 
-Write-Host "Querying Message Center records..." -ForegroundColor Cyan
-Write-Host "  From Date: $($FromDate.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
-Write-Host "  To Date:   $($ToDate.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Cyan
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Querying Message Center records..." -InformationAction Continue
+    Write-Information "  From Date: $($FromDate.ToString('yyyy-MM-dd HH:mm:ss'))" -InformationAction Continue
+    Write-Information "  To Date:   $($ToDate.ToString('yyyy-MM-dd HH:mm:ss'))" -InformationAction Continue
+}
 
-$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_services,fsi_startdatetime,fsi_enddatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_ismajorchange,fsi_body,fsi_tags,fsi_hasattachments,fsi_assessmentstatus,fsi_assessment,fsi_impactsagents,fsi_assesseddate,fsi_actionstaken,fsi_notifiedon"
+# fsi_assessedby is a Lookup; reference its raw value as _fsi_assessedby_value.
+$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_services,fsi_startdatetime,fsi_enddatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_ismajorchange,fsi_body,fsi_tags,fsi_hasattachments,fsi_assessmentstatus,fsi_assessment,fsi_impactsagents,_fsi_assessedby_value,fsi_assesseddate,fsi_actionstaken,fsi_notifiedon"
 $filter = "fsi_startdatetime ge $fromDateStr and fsi_startdatetime le $toDateStr"
 $queryUrl = "$dvBaseUrl/fsi_messagecenterlogs?`$select=$selectFields&`$filter=$filter&`$orderby=fsi_startdatetime desc"
 
 $allRecords = [System.Collections.Generic.List[object]]::new()
 $pageUrl = $queryUrl
+$pageCount = 0
 
 while ($pageUrl) {
-    $response = Invoke-RestMethod -Uri $pageUrl -Headers $dvHeaders -Method Get
+    $pageCount++
+    Write-Verbose "Page $pageCount"
+    if ($pageCount -gt 1000) {
+        throw "Pagination exceeded 1000 pages — possible infinite loop"
+    }
+    try {
+        $response = Invoke-McmRest -Uri $pageUrl -Headers $dvHeaders -Method Get
+    }
+    catch {
+        Write-Error "Dataverse pagination failed at page $pageCount : $($_.Exception.Message)"
+        exit 1
+    }
     if ($response.value) {
         $allRecords.AddRange($response.value)
     }
     $pageUrl = $response.'@odata.nextLink'
 }
 
-Write-Host "Retrieved $($allRecords.Count) records." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Retrieved $($allRecords.Count) records." -InformationAction Continue
+}
 
 #endregion
 
@@ -245,6 +259,13 @@ $severityLabels = @{
 
 # Convert records to readable format
 $messagesReadable = $allRecords | ForEach-Object {
+    $assessedByDisplay = $null
+    try {
+        $annot = '_fsi_assessedby_value@OData.Community.Display.V1.FormattedValue'
+        if ($_.PSObject.Properties.Name -contains $annot) {
+            $assessedByDisplay = $_.$annot
+        }
+    } catch {}
     [PSCustomObject]@{
         messageCenterId       = $_.fsi_messagecenterid
         title                 = $_.fsi_title
@@ -261,6 +282,8 @@ $messagesReadable = $allRecords | ForEach-Object {
         assessmentStatus      = if ($statusLabels.ContainsKey($_.fsi_assessmentstatus)) { $statusLabels[$_.fsi_assessmentstatus] } else { $_.fsi_assessmentstatus }
         assessment            = $_.fsi_assessment
         impactsAgents         = $_.fsi_impactsagents
+        assessedBy            = $assessedByDisplay
+        assessedById          = $_._fsi_assessedby_value
         assessedDate          = $_.fsi_assesseddate
         actionsTaken          = $_.fsi_actionstaken
     }
@@ -280,10 +303,10 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Message Center Monitor"
-    solutionVersion = "2.2.0"
-    fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    exportVersion   = "1.0.0"
+    solutionVersion = "2.4.0"
+    fromDate        = Format-McmODataDate $FromDate
+    toDate          = Format-McmODataDate $ToDate
+    exportVersion   = "1.1.0"
     recordCount     = $totalMessages
     organizationUrl = $DataverseUrl
 }
@@ -312,12 +335,13 @@ $fileTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $fileName = "mcm-evidence-$fileTimestamp.json"
 $evidenceFilePath = Join-Path -Path $OutputDirectory -ChildPath $fileName
 
-Write-Host "Writing evidence file: $evidenceFilePath" -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Writing evidence file: $evidenceFilePath" -InformationAction Continue }
 
 try {
     $jsonContent = $evidence | ConvertTo-Json -Depth 10
-    $jsonContent | Out-File -FilePath $evidenceFilePath -Encoding utf8 -Force
-    Write-Host "Evidence file written successfully." -ForegroundColor Green
+    # utf8NoBOM so sha256sum -c on Linux/macOS computes a matching digest.
+    $jsonContent | Out-File -FilePath $evidenceFilePath -Encoding utf8NoBOM -Force
+    if (-not $Quiet) { Write-Information "Evidence file written successfully." -InformationAction Continue }
 }
 catch {
     Write-Error "Failed to write evidence file: $($_.Exception.Message)"
@@ -328,7 +352,7 @@ catch {
 
 #region Generate SHA-256 Hash
 
-Write-Host "Generating SHA-256 integrity hash..." -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Generating SHA-256 integrity hash..." -InformationAction Continue }
 
 try {
     $hashResult = Get-FileHash -Path $evidenceFilePath -Algorithm SHA256
@@ -338,9 +362,10 @@ try {
     $hashFileName = "$fileName.sha256"
     $hashFilePath = Join-Path -Path $OutputDirectory -ChildPath $hashFileName
     $hashContent = "$hashValue  $fileName"
-    $hashContent | Out-File -FilePath $hashFilePath -Encoding utf8 -Force
+    # utf8NoBOM so sha256sum -c parses cleanly on Linux/macOS.
+    $hashContent | Out-File -FilePath $hashFilePath -Encoding utf8NoBOM -Force
 
-    Write-Host "SHA-256 hash file created: $hashFilePath" -ForegroundColor Green
+    if (-not $Quiet) { Write-Information "SHA-256 hash file created: $hashFilePath" -InformationAction Continue }
 }
 catch {
     Write-Error "Failed to generate SHA-256 hash: $($_.Exception.Message)"
@@ -352,20 +377,20 @@ catch {
 #region Display Summary
 
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║       Evidence Export Summary                    ║" -ForegroundColor Cyan
-Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Cyan
-Write-Host ("║ Evidence File:  {0,-33}║" -f (Split-Path -Leaf $evidenceFilePath)) -ForegroundColor Cyan
-Write-Host ("║ Hash File:      {0,-33}║" -f (Split-Path -Leaf $hashFilePath)) -ForegroundColor Cyan
-Write-Host ("║ Total Messages: {0,-33}║" -f $totalMessages) -ForegroundColor Cyan
-Write-Host ("║ Not Assessed:   {0,-33}║" -f $notAssessedCount) -ForegroundColor Cyan
-Write-Host ("║ High Severity:  {0,-33}║" -f $highSeverityCount) -ForegroundColor Cyan
-Write-Host ("║ Critical:       {0,-33}║" -f $criticalCount) -ForegroundColor Cyan
-Write-Host ("║ SHA-256:        {0,-33}║" -f $hashValue.Substring(0, 33)) -ForegroundColor Cyan
-Write-Host ("║                 {0,-33}║" -f $hashValue.Substring(33)) -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║       Evidence Export Summary                    ║" -ForegroundColor Green
+Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Green
+Write-Host ("║ Evidence File:  {0,-33}║" -f (Split-Path -Leaf $evidenceFilePath)) -ForegroundColor Green
+Write-Host ("║ Hash File:      {0,-33}║" -f (Split-Path -Leaf $hashFilePath)) -ForegroundColor Green
+Write-Host ("║ Total Messages: {0,-33}║" -f $totalMessages) -ForegroundColor Green
+Write-Host ("║ Not Assessed:   {0,-33}║" -f $notAssessedCount) -ForegroundColor Green
+Write-Host ("║ High Severity:  {0,-33}║" -f $highSeverityCount) -ForegroundColor Green
+Write-Host ("║ Critical:       {0,-33}║" -f $criticalCount) -ForegroundColor Green
+Write-Host ("║ SHA-256:        {0,-33}║" -f $hashValue.Substring(0, 33)) -ForegroundColor Green
+Write-Host ("║                 {0,-33}║" -f $hashValue.Substring(33)) -ForegroundColor Green
+Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
-Write-Host "Evidence files ready for compliance verification." -ForegroundColor Green
+Write-Host "Evidence files ready for archival or audit-trail use." -ForegroundColor Green
 Write-Host ""
 
 #endregion
