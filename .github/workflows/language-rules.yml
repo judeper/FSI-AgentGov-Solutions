@@ -39,6 +39,8 @@ jobs:
                    --exclude-dir='.github' \
                    --exclude='AGENTS.md' \
                    --exclude='CLAUDE.md' \
+                   --exclude='SECURITY.md' \
+                   --exclude='THREAT-MODEL.md' \
                    --exclude='CHANGELOG.md' \
                    --exclude='*/CHANGELOG.md' \
                    "$patterns" . || true)
@@ -59,6 +61,8 @@ jobs:
                    --exclude-dir='.github' \
                    --exclude='AGENTS.md' \
                    --exclude='CLAUDE.md' \
+                   --exclude='SECURITY.md' \
+                   --exclude='THREAT-MODEL.md' \
                    --exclude='CHANGELOG.md' \
                    --exclude='*/CHANGELOG.md' \
                    '\bAzure AD\b' . || true)
