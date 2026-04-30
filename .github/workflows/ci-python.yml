@@ -35,7 +35,22 @@ jobs:
         # Flip to `--exit-non-zero-on-fix` and remove `|| true` once baseline is clean.
         run: ruff check scripts */scripts || true
 
-      - name: Pytest (only where tests exist)
+      - name: Pytest - message-center-monitor (HARD-GATED)
+        # Hard gate: message-center-monitor v2.4.0 schema script (create_keys
+        # alternate-key creation) ships with pytest cases under
+        # message-center-monitor/tests. They MUST pass.
+        run: |
+          if [ ! -d message-center-monitor/tests ]; then
+            echo "message-center-monitor/tests not present; skipping (will be added in v2.4.0)."
+            exit 0
+          fi
+          if ! ls message-center-monitor/tests/test_*.py >/dev/null 2>&1; then
+            echo "No pytest files in message-center-monitor/tests; skipping."
+            exit 0
+          fi
+          pytest -q message-center-monitor/tests
+
+      - name: Pytest (repo-wide, soft-gated baseline)
         # Soft-gate: pre-existing test files (e.g.
         # finra-supervision-workflow/scripts/test_export_supervision_evidence.py)
         # call sys.exit() at import time when env vars are missing, which
@@ -45,12 +60,13 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          test_files=$(git ls-files '*test_*.py' '*_test.py' '**/tests/**/*.py' | head -50)
+          test_files=$(git ls-files '*test_*.py' '*_test.py' '**/tests/**/*.py' | grep -v '^message-center-monitor/tests/' | head -50)
           if [ -z "$test_files" ]; then
-            echo "No pytest files discovered; skipping."
+            echo "No additional pytest files discovered; skipping."
             exit 0
           fi
           pytest -q \
             --continue-on-collection-errors \
+            --ignore=message-center-monitor/tests \
             --ignore=finra-supervision-workflow/scripts/test_export_supervision_evidence.py \
             || echo "::warning::pytest reported failures (soft-gated)."

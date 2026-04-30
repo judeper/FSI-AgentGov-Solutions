@@ -328,12 +328,6 @@ foreach ($msg in $allMessages) {
             Prefer = 'return=representation,odata.maxpagesize=500'
         }
 
-    # Single-call upsert via alternate-key URL. Created by Agent A's schema fix
-    # (fsi_MessageCenterIdKey on fsi_messagecenterid). Eliminates SELECT-then-POST
-    # race and halves API calls.
-    $escapedId = Format-McmODataLiteral $messageId
-    $upsertUrl = "$dvBaseUrl/fsi_messagecenterlogs(fsi_messagecenterid='$escapedId')"
-
     if ($DryRun) {
         Write-Verbose "DryRun: would upsert $messageId — $($msg.title)"
         continue
@@ -343,68 +337,28 @@ foreach ($msg in $allMessages) {
         continue
     }
 
-    # Conditional create vs preserve-on-update.
-    #
-    # Step 1: try a create-only PATCH with `If-None-Match: *`. If the row does
-    # not exist, Dataverse creates it (HTTP 201) with fsi_assessmentstatus
-    # initialised to NotAssessed.
-    #
-    # Step 2: if the row already exists, Dataverse returns HTTP 412
-    # PreconditionFailed. We then issue a second PATCH WITHOUT
-    # If-None-Match and WITHOUT any admin-owned fields, so we refresh the
-    # platform-managed columns (title/category/severity/services/dates/
-    # body/tags/hasAttachments) without clobbering admin assessments
-    # (fsi_assessmentstatus, fsi_assessment, fsi_assessedby, fsi_assesseddate,
-    # fsi_actionstaken, fsi_impactsagents, fsi_notifiedon).
-    $createPayload = $record.Clone()
-    $createPayload['fsi_assessmentstatus'] = $assessmentNotAssessed
-
-    $createHeaders = @{}
-    foreach ($k in $dvHeaders.Keys) { $createHeaders[$k] = $dvHeaders[$k] }
-    $createHeaders['If-None-Match'] = '*'
-
-    $created = $false
-    $existed = $false
+    # Conditional create vs preserve-on-update branching is encapsulated in
+    # Invoke-McmDvUpsertMessage (in _Common.ps1) so the C1 logic is unit-testable.
+    # The function returns Action=Created or Action=Updated; throws on terminal
+    # failure (alt-key 404, create errors other than 412, update errors).
     try {
-        Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch -Body ($createPayload | ConvertTo-Json -Depth 5) | Out-Null
-        $created = $true
-    }
-    catch {
-        $errMsg = $_.Exception.Message
-        if ($errMsg -match 'status=412' -or $errMsg -match 'PreconditionFailed') {
-            $existed = $true
-        }
-        elseif ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
-            Write-Warning "Upsert failed for $messageId : Alternate key fsi_MessageCenterIdKey not found — re-run create_mcm_dataverse_schema.py to provision it."
-            $failedCount++
-            [void]$failedIds.Add($messageId)
-            continue
+        $result = Invoke-McmDvUpsertMessage -DataverseBaseUrl $dvBaseUrl `
+            -MessageId $messageId -Record $record `
+            -DataverseHeaders $dvHeaders `
+            -AssessmentNotAssessedValue $assessmentNotAssessed
+        if ($result.Action -eq 'Created') {
+            $newCount++
+            Write-Verbose "Created: $messageId — $($msg.title)"
         }
         else {
-            Write-Warning "Create failed for $messageId : $errMsg"
-            $failedCount++
-            [void]$failedIds.Add($messageId)
-            continue
-        }
-    }
-
-    if ($existed) {
-        try {
-            # Update path: the $record hash deliberately excludes admin-owned
-            # columns so PATCH cannot overwrite them.
-            Invoke-McmRest -Uri $upsertUrl -Headers $dvHeaders -Method Patch -Body ($record | ConvertTo-Json -Depth 5) | Out-Null
             $updatedCount++
             Write-Verbose "Updated: $messageId — $($msg.title) (admin assessment preserved)"
         }
-        catch {
-            Write-Warning "Update failed for $messageId : $($_.Exception.Message)"
-            $failedCount++
-            [void]$failedIds.Add($messageId)
-        }
     }
-    elseif ($created) {
-        $newCount++
-        Write-Verbose "Created: $messageId — $($msg.title)"
+    catch {
+        Write-Warning $_.Exception.Message
+        $failedCount++
+        [void]$failedIds.Add($messageId)
     }
 }
 

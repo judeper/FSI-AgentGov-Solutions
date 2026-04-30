@@ -5,6 +5,14 @@
 ## [2.4.0] - 2026-04-30
 
 ### Added
+- **Mock-based test suite** (`tests/`) — Pester (PowerShell) and pytest (Python) coverage for the high-risk surfaces introduced in this release. Hard-gated in CI on every PR; no tenant required.
+  - `Upsert.Tests.ps1`: 8 cases for `Invoke-McmDvUpsertMessage` covering create→412→update branching with set-intersection JSON-body assertions on all 7 admin-owned columns (the C1 regression class).
+  - `Common.Tests.ps1`: formatters, `Invoke-McmRest` retry on 429/5xx with `Retry-After` parsing (H2/H3), `Get-McmAccessToken` auth-mode dispatch (H1), and secret-redaction helper.
+  - `Sync.Tests.ps1`: orchestration counter math + refactor wiring guards.
+  - `Guards.Tests.ps1`: every HTTP-using governance script dot-sources `_Common.ps1`; no direct `Invoke-RestMethod` outside the helper; no `az` CLI.
+  - `test_schema.py`: `create_keys()` payload shape, idempotency on 412/`DuplicateRecord`, and `--dry-run` honoring.
+- **`Invoke-McmDvUpsertMessage` helper** in `_Common.ps1` — encapsulates the conditional create-with-`If-None-Match: *` → 412 → update branching so it can be unit-tested in isolation. Caller's `$Record` hashtable is never mutated; admin-owned columns are added only to a clone for the create payload.
+- **`Write-McmRedacted` helper** in `_Common.ps1` — scrubs Bearer tokens, `client_secret`, and `Authorization` headers from log lines.
 - Alternate key `fsi_MessageCenterIdKey` on `fsi_messagecenterid` provisioned by `create_mcm_dataverse_schema.py` — enables idempotent upsert via `PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxx')`.
 - `-AuthMode` parameter on all 3 PowerShell governance scripts (`ManagedIdentity` default, plus `WorkloadIdentity`, `Interactive`, `DeviceCode`, and `ClientSecret` legacy fallback).
 - `SupportsShouldProcess` (`-WhatIf`/`-Confirm`) on `Invoke-MessageCenterSync.ps1`.

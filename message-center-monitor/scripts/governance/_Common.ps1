@@ -228,6 +228,162 @@ function Invoke-McmRest {
     }
 }
 
+function Invoke-McmDvUpsertMessage {
+    <#
+    .SYNOPSIS
+        Upserts a Message Center record into Dataverse, preserving admin-owned assessment fields.
+
+    .DESCRIPTION
+        Implements the conditional create -> 412 -> update branching that protects
+        admin-owned columns (fsi_assessmentstatus, fsi_assessment, fsi_assessedby,
+        fsi_assesseddate, fsi_actionstaken, fsi_impactsagents, fsi_notifiedon) from
+        being clobbered on subsequent syncs.
+
+        Step 1: PATCH with `If-None-Match: *` (create-only). On HTTP 201 the row is
+                created with fsi_assessmentstatus = NotAssessed.
+        Step 2: On HTTP 412 the row exists. Issue a second PATCH WITHOUT
+                If-None-Match and WITHOUT any admin-owned columns. The caller MUST
+                ensure $Record excludes admin-owned columns (the function enforces
+                this contract by adding only fsi_assessmentstatus to the create
+                payload, never to the update payload).
+        404:    Alternate key not provisioned -> throws with actionable hint.
+
+        Extracted from Invoke-MessageCenterSync.ps1 in v2.4.0 to make C1 branching
+        unit-testable. No behavioural change.
+
+    .PARAMETER DataverseBaseUrl
+        Dataverse Web API base URL (e.g. https://org.crm.dynamics.com/api/data/v9.2).
+
+    .PARAMETER MessageId
+        The Message Center post id (used as the alternate-key value).
+
+    .PARAMETER Record
+        Hashtable of Graph-owned columns to write. MUST NOT include admin-owned
+        columns. Caller is responsible for honoring this contract; see
+        Guards.Tests.ps1 for the static check.
+
+    .PARAMETER DataverseHeaders
+        Dataverse REST headers (Authorization, Content-Type, OData-* etc.).
+
+    .PARAMETER AssessmentNotAssessedValue
+        Integer choice value for "NotAssessed" status. Provided by the caller so
+        this function stays free of solution-specific constants.
+
+    .OUTPUTS
+        [pscustomobject] @{ Action = 'Created' | 'Updated'; MessageId = <string> }
+
+    .NOTES
+        On terminal failure throws a descriptive message; caller catches and
+        increments its own failed counter.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string]$DataverseBaseUrl,
+        [Parameter(Mandatory)] [string]$MessageId,
+        [Parameter(Mandatory)] [hashtable]$Record,
+        [Parameter(Mandatory)] [hashtable]$DataverseHeaders,
+        [Parameter(Mandatory)] [int]$AssessmentNotAssessedValue
+    )
+
+    $escapedId = Format-McmODataLiteral $MessageId
+    $upsertUrl = "$DataverseBaseUrl/fsi_messagecenterlogs(fsi_messagecenterid='$escapedId')"
+
+    # Create-only payload: clone $Record then ADD fsi_assessmentstatus.
+    # The original $Record is never mutated and is reused verbatim for the
+    # update branch, guaranteeing admin-owned columns are never sent on update.
+    $createPayload = $Record.Clone()
+    $createPayload['fsi_assessmentstatus'] = $AssessmentNotAssessedValue
+
+    $createHeaders = @{}
+    foreach ($k in $DataverseHeaders.Keys) { $createHeaders[$k] = $DataverseHeaders[$k] }
+    $createHeaders['If-None-Match'] = '*'
+
+    $existed = $false
+    try {
+        Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch `
+            -Body ($createPayload | ConvertTo-Json -Depth 5) | Out-Null
+        return [pscustomobject]@{ Action = 'Created'; MessageId = $MessageId }
+    }
+    catch {
+        $errMsg = $_.Exception.Message
+        if ($errMsg -match 'status=412' -or $errMsg -match 'PreconditionFailed') {
+            $existed = $true
+        }
+        elseif ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
+            throw "Upsert failed for ${MessageId}: Alternate key fsi_MessageCenterIdKey not found - re-run create_mcm_dataverse_schema.py to provision it."
+        }
+        else {
+            throw "Create failed for ${MessageId}: $errMsg"
+        }
+    }
+
+    if ($existed) {
+        try {
+            # Update path: $Record (NOT $createPayload) is sent. By contract it
+            # excludes admin-owned columns, so PATCH cannot overwrite them.
+            Invoke-McmRest -Uri $upsertUrl -Headers $DataverseHeaders -Method Patch `
+                -Body ($Record | ConvertTo-Json -Depth 5) | Out-Null
+            return [pscustomobject]@{ Action = 'Updated'; MessageId = $MessageId }
+        }
+        catch {
+            throw "Update failed for ${MessageId}: $($_.Exception.Message)"
+        }
+    }
+}
+
+function Write-McmRedacted {
+    <#
+    .SYNOPSIS
+        Writes a log line with Bearer tokens, client secrets, and Authorization
+        headers redacted.
+
+    .DESCRIPTION
+        Centralised secret-scrubbing for lab and governance scripts. Use this
+        instead of Write-Host / Write-Information when emitting strings that
+        could contain HTTP bodies, headers, or token responses.
+
+        Redactions:
+          - Bearer <token>                   -> Bearer <REDACTED>
+          - "access_token":"..."             -> "access_token":"<REDACTED>"
+          - client_secret=<value>            -> client_secret=<REDACTED>
+          - "client_secret":"..."            -> "client_secret":"<REDACTED>"
+          - Authorization: <value>           -> Authorization: <REDACTED>
+
+    .PARAMETER Message
+        The string to scrub. Multiline OK.
+
+    .PARAMETER Stream
+        Output stream: Host (default), Verbose, Warning, Information.
+
+    .EXAMPLE
+        Write-McmRedacted "Authorization: Bearer eyJhbGc..."
+        # writes: Authorization: Bearer <REDACTED>
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)] [AllowEmptyString()] [string]$Message,
+        [ValidateSet('Host', 'Verbose', 'Warning', 'Information')]
+        [string]$Stream = 'Host'
+    )
+    process {
+        $scrubbed = $Message
+        $scrubbed = $scrubbed -replace '(?i)Bearer\s+[A-Za-z0-9._\-+/=]+', 'Bearer <REDACTED>'
+        $scrubbed = $scrubbed -replace '(?i)"access_token"\s*:\s*"[^"]*"', '"access_token":"<REDACTED>"'
+        $scrubbed = $scrubbed -replace '(?i)"refresh_token"\s*:\s*"[^"]*"', '"refresh_token":"<REDACTED>"'
+        $scrubbed = $scrubbed -replace '(?i)"id_token"\s*:\s*"[^"]*"', '"id_token":"<REDACTED>"'
+        $scrubbed = $scrubbed -replace '(?i)"client_secret"\s*:\s*"[^"]*"', '"client_secret":"<REDACTED>"'
+        $scrubbed = $scrubbed -replace '(?i)client_secret=[^&\s"]+', 'client_secret=<REDACTED>'
+        $scrubbed = $scrubbed -replace '(?im)^(\s*Authorization\s*:\s*).+$', '$1<REDACTED>'
+
+        switch ($Stream) {
+            'Verbose'     { Write-Verbose     $scrubbed }
+            'Warning'     { Write-Warning     $scrubbed }
+            'Information' { Write-Information $scrubbed -InformationAction Continue }
+            default       { Write-Host        $scrubbed }
+        }
+    }
+}
+
 function Format-McmODataLiteral {
     <#
     .SYNOPSIS

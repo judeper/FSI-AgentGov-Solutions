@@ -52,16 +52,38 @@ jobs:
             Write-Host "::warning::PSScriptAnalyzer reported $($results.Count) Error-severity findings (soft-gated)."
           }
 
-      - name: Pester (only where tests exist)
+      - name: Pester - message-center-monitor (HARD-GATED)
         shell: pwsh
-        # Soft-gate: surface failing Pester tests as warnings until the
-        # baseline (audit-compliance-manager Validators.Tests.ps1 etc.) is
-        # green.
+        # Hard gate: the message-center-monitor v2.4.0 fix (C1 admin-field
+        # preservation, retry on 5xx, Retry-After parsing on PS7) ships with
+        # mock unit tests under message-center-monitor/tests. They MUST pass.
+        run: |
+          $testRoot = Join-Path $PWD 'message-center-monitor/tests'
+          if (-not (Test-Path $testRoot)) {
+            Write-Host "message-center-monitor/tests not present; skipping (will be added in v2.4.0)."
+            exit 0
+          }
+          $tests = Get-ChildItem -Path $testRoot -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue
+          if (-not $tests) {
+            Write-Host "No Pester tests in message-center-monitor/tests; skipping."
+            exit 0
+          }
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = $tests.FullName
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
+
+      - name: Pester (repo-wide, soft-gated baseline)
+        shell: pwsh
+        # Soft-gate: surface failing Pester tests outside message-center-monitor
+        # as warnings until the broader baseline is green.
         continue-on-error: true
         run: |
-          $tests = Get-ChildItem -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue
+          $tests = Get-ChildItem -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '[\\/]message-center-monitor[\\/]tests[\\/]' }
           if (-not $tests) {
-            Write-Host "No Pester tests discovered; skipping."
+            Write-Host "No additional Pester tests discovered; skipping."
             exit 0
           }
           $cfg = New-PesterConfiguration
