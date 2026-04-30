@@ -8,6 +8,12 @@
 |---|---|---|---|
 | fsi_MessageCenterLog | fsi_messagecenterlog | M365 Message Center post tracking with agent impact assessments | fsi_messagecenterid |
 
+## Alternate Keys
+
+| Key Name | Table | Key Attributes | Purpose |
+|---|---|---|---|
+| fsi_MessageCenterIdKey | fsi_messagecenterlog | `fsi_messagecenterid` | Enables idempotent upsert via `PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxx')` |
+
 ## Columns
 
 ### fsi_MessageCenterLog (`fsi_messagecenterlog`)

@@ -7,19 +7,33 @@ and connection settings for M365 Message Center monitoring.
 """
 
 import argparse
+import logging
 import os
 import sys
-from typing import Optional
+
+import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
+
+logger = logging.getLogger(__name__)
+
+# Dataverse environment variable type option-set values
+TYPE_CODES = {
+    "String": 100000000,
+    "Number": 100000001,
+    "Boolean": 100000002,
+    "JSON": 100000003,
+    "DataSource": 100000004,
+    "Secret": 100000005,
+}
 
 ENV_VARIABLES = [
     {
         "schemaname": "fsi_MCM_PollingIntervalDays",
         "displayname": "MCM - Polling Interval (Days)",
         "description": "Days between Message Center polling cycles (default: 1)",
-        "type": "Decimal",
+        "type": "Number",
         "defaultvalue": "1",
     },
     {
@@ -84,20 +98,20 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                     filter_expr=f"schemaname eq '{schemaname}'",
                 )
                 if existing:
-                    print(f"  {schemaname}: already exists, skipping")
+                    logger.info(f"  {schemaname}: already exists, skipping")
                     results["skipped"] += 1
                     continue
             elif dry_run or client.dry_run:
-                print(f"  [DRY RUN] {schemaname}: would check if exists")
+                logger.info(f"  [DRY RUN] {schemaname}: would check if exists [dry-run: existence not verified]")
 
             # Create variable
             if dry_run or client.dry_run:
-                print(f"  [DRY RUN] {schemaname}: would create")
-                print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
+                logger.info(f"  [DRY RUN] {schemaname}: would create  [dry-run: existence not verified]")
+                logger.info(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
                 results["created"] += 1
             else:
-                # Map type to Dataverse type code
-                type_code = 100000001 if var["type"] == "Decimal" else 100000000
+                # Map type to Dataverse type code (raises KeyError on unknown)
+                type_code = TYPE_CODES[var["type"]]
 
                 # Create definition
                 definition_data = {
@@ -118,25 +132,25 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                     }
                     client.create_record("environmentvariablevalues", value_data)
                 except Exception as val_err:
-                    print(f"  {schemaname}: value creation failed, rolling back definition - {val_err}")
+                    logger.error(f"  {schemaname}: value creation failed, rolling back definition - {val_err}")
                     try:
                         client.delete_record("environmentvariabledefinitions", definition_id)
                     except Exception as cleanup_err:
-                        print(f"  {schemaname}: WARNING - rollback failed, orphaned definition {definition_id} - {cleanup_err}")
+                        logger.warning(f"  {schemaname}: WARNING - rollback failed, orphaned definition {definition_id} - {cleanup_err}")
                     raise
 
-                print(f"  {schemaname}: created")
-                print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
+                logger.info(f"  {schemaname}: created")
+                logger.info(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
                 results["created"] += 1
 
         except Exception as e:
-            print(f"  {schemaname}: ERROR - {e}")
+            logger.error(f"  {schemaname}: ERROR - {e}")
             results["errors"] += 1
 
-    print()
-    print(f"  Summary: {results['created']} created, {results['skipped']} skipped")
+    logger.info("")
+    logger.info(f"  Summary: {results['created']} created, {results['skipped']} skipped")
     if results["errors"] > 0:
-        print(f"  Errors: {results['errors']}")
+        logger.error(f"  Errors: {results['errors']}")
 
     return results
 
@@ -201,16 +215,27 @@ Examples:
         action="store_true",
         help="Preview changes without creating resources"
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging verbosity (default: INFO)"
+    )
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
 
     # Validate required arguments
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Handle client secret for Service Principal auth
+    # Handle client secret for Service Principal auth (skip prompt in dry-run)
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
-    if not args.interactive and not client_secret:
+    if not args.interactive and not client_secret and not args.dry_run:
         if args.client_id:
             import getpass
             client_secret = getpass.getpass("Client secret: ")
@@ -233,9 +258,15 @@ Examples:
         if results["errors"] > 0:
             sys.exit(1)
 
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+    except requests.HTTPError as e:
+        logger.error(f"HTTP Error: {e}")
+        sys.exit(2)
+    except RuntimeError as e:
+        logger.error(f"Authentication Error: {e}")
         sys.exit(1)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        sys.exit(4)
 
 
 if __name__ == "__main__":
