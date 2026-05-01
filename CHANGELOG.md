@@ -6,7 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [v1.4.2] - Unreleased — Critique remediation (P0/P1/P2)
+## [v1.4.3] - Unreleased — message-center-monitor hardening + lab dry-run
+
+### Changed
+- **`message-center-monitor` v2.3.0 → v2.4.0** (PR #40): release-ready polish addressing 44 council findings.
+  - **C1 fix (admin assessment preservation)**: `Invoke-MessageCenterSync.ps1` now routes update PATCH bodies through the new `Invoke-McmDvUpsertMessage` helper in `_Common.ps1`, which excludes all 7 admin-owned columns from the update payload. Previously the inline upsert clobbered any value an admin set during their assessment workflow.
+  - **Schema correctness**: alternate key `fsi_MessageCenterIdKey` on `fsi_messagecenterid` enables idempotent upsert via `PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxx')`.
+  - **Auth modernization**: `-AuthMode` parameter on all 3 governance scripts (`ManagedIdentity` default; plus `WorkloadIdentity`, `Interactive`, `DeviceCode`, and `ClientSecret` legacy fallback). `SupportsShouldProcess` (`-WhatIf`/`-Confirm`) added.
+  - **Mock-based test suite** (`tests/`): Pester (57 tests across 4 files) + pytest (13 tests). Hard-gated in CI on every PR; no tenant required.
+  - Shared `_Common.ps1` helper module: retry-with-backoff REST helper, token cache with refresh-near-expiry, OData URL escape utilities, `Write-McmRedacted` log scrubber.
+- **`message-center-monitor` v2.4.0 → v2.5.0** (PR #41): lab dry-run automation.
+  - Added `lab/` directory with 8 numbered idempotent PowerShell scripts (`00`-`06`, `99`) that bootstrap a complete non-prod deployment and exercise the C1 fix end-to-end against a live Power Platform environment.
+  - **Hard non-prod safety guard** on every mutating script — refuses to run unless `lab-config.json` contains the literal string `"I understand this lab must not target production"`. `-AllowProduction` switch bypasses with a loud warning.
+  - **C1 verified end-to-end**: lab Step 6 back-dates `fsi_lastupdated` to force the update path, captures sync output and parses counters (`UpdatedRecords>=1` + `Failed==0`), and asserts byte-equality of all 7 admin-owned columns.
+  - **Cross-process secret handoff** via gitignored owner-ACL'd `lab/.secret-handoff` file (the env-var approach broke when each `pwsh ./script.ps1` ran in its own process).
+  - `docs/lab-dry-run.md` runbook with execution order, traceability matrix, non-prod ack section, and troubleshooting tree. README "Lab dry-run" section added above Quick Start.
+
+---
+
+## [v1.4.2]- Unreleased — Critique remediation (P0/P1/P2)
 
 Addresses the external review of FSI-AgentGov + FSI-AgentGov-Solutions. Solutions-side scope only; framework-side items (evaluator coverage, etc.) tracked separately.
 
@@ -402,6 +420,6 @@ Individual solution changelogs:
 - [Conditional Access Automation](./conditional-access-automation/CHANGELOG.md) - v1.0.0
 - [FINRA Supervision Workflow](./finra-supervision-workflow/CHANGELOG.md) - v1.0.0
 - [Environment Lifecycle Management](./environment-lifecycle-management/CHANGELOG.md) - v1.1.2
-- [Message Center Monitor](./message-center-monitor/CHANGELOG.md) - v2.1.1
+- [Message Center Monitor](./message-center-monitor/CHANGELOG.md) - v2.5.0
 - [Pipeline Governance Cleanup](./pipeline-governance-cleanup/CHANGELOG.md) - v1.0.8
 - [Deny Event Correlation Report](./deny-event-correlation-report/CHANGELOG.md) - v2.0.0
