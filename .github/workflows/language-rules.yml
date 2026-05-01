@@ -28,7 +28,9 @@ jobs:
 
       - name: Banned compliance phrases
         # Excludes files that DOCUMENT the rule (instruction files contain
-        # the banned phrases as examples) and CHANGELOG history.
+        # the banned phrases as examples), CHANGELOG history, and any
+        # `research/` subdirectory (preserved LLM outputs and meta-discussions
+        # of the rule itself).
         run: |
           set +e
           patterns='ensures compliance|guarantees compliance|guarantee compliance|will prevent|eliminates risk'
@@ -37,6 +39,7 @@ jobs:
                    --exclude-dir='site' \
                    --exclude-dir='site-docs' \
                    --exclude-dir='.github' \
+                   --exclude-dir='research' \
                    --exclude='AGENTS.md' \
                    --exclude='CLAUDE.md' \
                    --exclude='SECURITY.md' \
@@ -59,6 +62,7 @@ jobs:
                    --exclude-dir='site' \
                    --exclude-dir='site-docs' \
                    --exclude-dir='.github' \
+                   --exclude-dir='research' \
                    --exclude='AGENTS.md' \
                    --exclude='CLAUDE.md' \
                    --exclude='SECURITY.md' \
