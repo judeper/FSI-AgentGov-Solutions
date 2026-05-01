@@ -7,15 +7,33 @@ option sets for tracking M365 Message Center posts and agent impact assessments.
 """
 
 import argparse
+import logging
 import os
 import sys
 from typing import Optional
+from urllib.parse import urljoin
 
 import requests
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient
 
+logger = logging.getLogger(__name__)
+
 PUBLISHER_PREFIX = "fsi"
+
+# Alternate-key definitions: enables idempotent upsert via
+# PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxx')
+ALTERNATE_KEYS = [
+    {
+        "table_logical": "fsi_messagecenterlog",
+        "metadata": {
+            "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
+            "SchemaName": "fsi_MessageCenterIdKey",
+            "DisplayName": {"LocalizedLabels": [{"Label": "Message Center ID Key", "LanguageCode": 1033}]},
+            "KeyAttributes": ["fsi_messagecenterid"],
+        },
+    },
+]
 
 # MCM-specific option sets
 OPTIONSETS = {
@@ -435,17 +453,17 @@ def generate_schema_docs() -> str:
 
 def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     """Create global option sets."""
-    print("\n=== Creating Option Sets ===")
+    logger.info("=== Creating Option Sets ===")
     created = 0
     skipped = 0
 
-    print("\nMCM-specific option sets:")
+    logger.info("MCM-specific option sets:")
     for name, metadata in OPTIONSETS.items():
         if client.get_global_optionset(name):
-            print(f"  {name}: Already exists")
+            logger.info(f"  {name}: Already exists")
             skipped += 1
         else:
-            print(f"  {name}: Creating")
+            logger.info(f"  {name}: Creating")
             client.create_option_set(metadata)
             created += 1
 
@@ -454,16 +472,16 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
 
 def create_tables(client: DataverseClient, dry_run: bool) -> dict:
     """Create tables."""
-    print("\n=== Creating Tables ===")
+    logger.info("=== Creating Tables ===")
     created = 0
     skipped = 0
     for table_name, metadata in TABLES.items():
         logical_name = table_name.lower()
         if client.check_table_exists(logical_name):
-            print(f"  {table_name}: Already exists")
+            logger.info(f"  {table_name}: Already exists")
             skipped += 1
         else:
-            print(f"  {table_name}: Creating")
+            logger.info(f"  {table_name}: Creating")
             client.create_table(metadata)
             created += 1
     return {"created": created, "skipped": skipped}
@@ -471,36 +489,99 @@ def create_tables(client: DataverseClient, dry_run: bool) -> dict:
 
 def create_columns(client: DataverseClient, dry_run: bool) -> None:
     """Create columns on tables."""
-    print("\n=== Creating Columns ===")
+    logger.info("=== Creating Columns ===")
     for table_logical_name, columns in COLUMNS.items():
-        print(f"\n{table_logical_name}:")
+        logger.info(f"{table_logical_name}:")
         for column_metadata in columns:
             schema_name = column_metadata.get("SchemaName", "")
             col_logical_name = schema_name.lower()
             if client.get_attribute_metadata(table_logical_name, col_logical_name):
-                print(f"  {schema_name}: Already exists")
+                logger.info(f"  {schema_name}: Already exists")
             else:
-                print(f"  {schema_name}: Creating")
+                logger.info(f"  {schema_name}: Creating")
                 client.create_column(table_logical_name, column_metadata)
+
+
+def create_keys(client: DataverseClient, dry_run: bool) -> dict:
+    """Create alternate keys (EntityKeys) on tables.
+
+    Posts each EntityKeyMetadata to /EntityDefinitions(LogicalName='...')/Keys.
+    The shared DataverseClient lacks a key helper, so we issue the request
+    inline using its session/auth/dry-run conventions. Honors --dry-run.
+    Treats HTTP 412 or duplicate-name errors as "already exists, skipping".
+    """
+    logger.info("=== Creating Alternate Keys ===")
+    created = 0
+    skipped = 0
+
+    for entry in ALTERNATE_KEYS:
+        table = entry["table_logical"]
+        meta = entry["metadata"]
+        schema_name = meta.get("SchemaName", "")
+
+        if client.dry_run:
+            logger.info(f"  [DRY RUN] {schema_name}: would create alternate key on {table}")
+            created += 1
+            continue
+
+        url = urljoin(client.api_url, f"EntityDefinitions(LogicalName='{table}')/Keys")
+        response = client._session.post(url, headers=client._get_headers(), json=meta)
+
+        if response.status_code in (200, 201, 204):
+            logger.info(f"  {schema_name}: Created on {table}")
+            created += 1
+            continue
+
+        if response.status_code == 412:
+            logger.info(f"  {schema_name}: exists, skipping")
+            skipped += 1
+            continue
+
+        # Inspect error payload to detect duplicate-name conditions
+        duplicate = False
+        try:
+            err = response.json().get("error", {})
+            code = err.get("code", "") or ""
+            msg = err.get("message", "") or ""
+            if (
+                "DuplicateRecord" in code
+                or "duplicate" in msg.lower()
+                or "already exists" in msg.lower()
+            ):
+                duplicate = True
+        except ValueError:
+            pass
+
+        if duplicate:
+            logger.info(f"  {schema_name}: exists, skipping")
+            skipped += 1
+            continue
+
+        response.raise_for_status()
+
+    if not ALTERNATE_KEYS:
+        logger.info("  No alternate keys to create")
+
+    return {"created": created, "skipped": skipped}
 
 
 def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
     """Create one-to-many relationships (lookup columns)."""
-    print("\n=== Creating Relationships ===")
+    logger.info("=== Creating Relationships ===")
     created = 0
     skipped = 0
     for rel_metadata in RELATIONSHIPS:
         schema_name = rel_metadata.get("SchemaName", "")
         if client.get_relationship(schema_name):
-            print(f"  {schema_name}: Already exists")
+            logger.info(f"  {schema_name}: Already exists")
             skipped += 1
         else:
-            print(f"  {schema_name}: Creating")
+            logger.info(f"  {schema_name}: Creating")
             if not dry_run:
                 client.create_relationship(rel_metadata)
             created += 1
     if not RELATIONSHIPS:
-        print("  No relationships to create")
+        logger.info("  No relationships to create")
     return {"created": created, "skipped": skipped}
 
 
@@ -509,12 +590,14 @@ def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
+    key_results = create_keys(client, dry_run)
     relationship_results = create_relationships(client, dry_run)
-    print("\n=== Schema Creation Complete ===")
+    logger.info("=== Schema Creation Complete ===")
     return {
         "errors": 0,
         "option_sets": option_set_results,
         "tables": table_results,
+        "keys": key_results,
         "relationships": relationship_results,
     }
 
@@ -524,24 +607,34 @@ def main() -> None:
         description="Create Dataverse schema for Message Center Monitor",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--tenant-id", default=os.environ.get("MCM_TENANT_ID"), help="Entra ID tenant ID (or set MCM_TENANT_ID env var)")
+    parser.add_argument("--tenant-id", default=os.environ.get("MCM_TENANT_ID"), help="Microsoft Entra tenant ID (or set MCM_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("MCM_CLIENT_ID"), help="Application (client) ID (or set MCM_CLIENT_ID env var)")
     parser.add_argument("--environment-url", default=os.environ.get("MCM_ENVIRONMENT_URL"), help="Dataverse environment URL (or set MCM_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
     parser.add_argument("--dry-run", action="store_true", help="Preview schema operations without API calls")
     parser.add_argument("--output-docs", action="store_true", help="Generate docs/dataverse-schema.md and exit (no credentials required)")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging verbosity (default: INFO)")
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+    )
 
     # --output-docs: generate schema reference docs and exit immediately
     if args.output_docs:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         solution_root = os.path.dirname(script_dir)
         docs_dir = os.path.join(solution_root, "docs")
-        os.makedirs(docs_dir, exist_ok=True)
-        out_path = os.path.join(docs_dir, "dataverse-schema.md")
-        md = generate_schema_docs()
-        with open(out_path, "w", encoding="utf-8") as fh:
-            fh.write(md)
+        try:
+            os.makedirs(docs_dir, exist_ok=True)
+            out_path = os.path.join(docs_dir, "dataverse-schema.md")
+            md = generate_schema_docs()
+            with open(out_path, "w", encoding="utf-8") as fh:
+                fh.write(md)
+        except OSError as e:
+            print(f"Error: failed to write schema docs: {e}", file=sys.stderr)
+            sys.exit(1)
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
@@ -551,7 +644,7 @@ def main() -> None:
         parser.error("--client-id is required (or set MCM_CLIENT_ID env var) unless --interactive is specified")
 
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
-    if not args.interactive:
+    if not args.interactive and not args.dry_run:
         if not client_secret:
             import getpass
             client_secret = getpass.getpass("Client secret: ")
@@ -567,22 +660,22 @@ def main() -> None:
         )
 
         if args.dry_run:
-            print("=== DRY RUN MODE - No changes will be made ===")
+            logger.info("=== DRY RUN MODE - No changes will be made ===")
 
         create_schema(client, args.dry_run)
 
         if not args.dry_run:
-            print("\nSchema deployment: SUCCESS")
+            logger.info("Schema deployment: SUCCESS")
 
         sys.exit(0)
     except requests.HTTPError as e:
-        print(f"HTTP Error: {e}", file=sys.stderr)
+        logger.error(f"HTTP Error: {e}")
         sys.exit(2)
     except RuntimeError as e:
-        print(f"Authentication Error: {e}", file=sys.stderr)
+        logger.error(f"Authentication Error: {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(4)

@@ -35,6 +35,8 @@ Before starting, ensure you have:
 
 ## Step 2: Get Client Secret from Key Vault (Recommended)
 
+> **Authentication note:** Power Automate cloud flows do **not** natively support managed identity. For production deployments where managed-identity-first authentication is required by policy, run this workload in **Logic Apps Standard** or an **Azure Function** with a system-assigned managed identity instead. The remaining steps assume the client-secret + Key Vault path that is the supported fallback for cloud flows.
+
 If using Azure Key Vault:
 
 1. Add action: **Azure Key Vault - Get secret**
@@ -63,7 +65,7 @@ Configure:
 
 ### Authentication Screenshot Reference
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │ Authentication                              │
 ├─────────────────────────────────────────────┤
@@ -143,7 +145,7 @@ When more results exist than fit in one response, Graph API includes `@odata.nex
 
 ### Simplified Flow Diagram
 
-```
+```text
 ┌─ Initialize nextLink = Graph URL
 ├─ Initialize allMessages = []
 │
@@ -206,52 +208,33 @@ Add action: **Apply to each**
 
 Inside the loop, add these actions:
 
-### 6a: Compose Message ID
-
-Add action: **Compose**
-- **Inputs:** `@{items('Apply_to_each')?['id']}`
-
-### 6b: Compose Severity
-
-Add action: **Compose**
-- **Inputs:** `@{items('Apply_to_each')?['severity']}`
-
-### 6c: Upsert to Dataverse
+### 6a: Upsert to Dataverse
 
 **Recommended: Alternate Key Approach**
 
-If you can configure an alternate key on your Dataverse table, use the simpler "Upsert a row" action:
+The schema script `scripts/create_mcm_dataverse_schema.py` already provisions an alternate key (`EntityKey` on `fsi_messagecenterid`) when you run it with `--output-docs`. No manual key creation in the maker UI is required for tenants deployed via the script. If you deployed an earlier schema version manually, re-run the script to provision the key.
 
-**Creating the Alternate Key:**
+Use the **Dataverse — Update or insert (upsert) a row** action:
 
-1. Go to [make.powerapps.com](https://make.powerapps.com)
-2. Select your environment from the environment picker (top right)
-3. Navigate to **Tables** in the left menu
-4. Find and open **MessageCenterLog** table
-5. Click **Keys** in the left submenu (under Schema)
-6. Click **+ New key**
-7. Configure:
-   - **Display name:** `messagecenterid Key`
-   - **Name:** (auto-generated, or customize)
-   - **Columns:** Select `messagecenterid`
-8. Click **Save**
-9. Wait for the key to be created (status changes from "In Progress" to "Active")
+1. Table: **Message Center Logs** (entity set `fsi_messagecenterlogs`)
+2. Alternate Key column: `fsi_messagecenterid`
+3. Alternate Key value: `@{items('Apply_to_each')?['id']}`
 
-**Using the Alternate Key in Power Automate:**
+The Web API resolves this to the canonical alternate-key URL:
 
-1. In your flow, use **Dataverse - Update or insert (upsert) a row**
-   - Table: MessageCenterLog
-   - Alternate Key: messagecenterid = `@{items('Apply_to_each')?['id']}`
+```text
+…/api/data/v9.2/fsi_messagecenterlogs(fsi_messagecenterid='<MC######>')
+```
 
 This replaces the List + Condition logic.
 
 **Alternative: Manual Check Pattern**
 
-If you cannot modify the table schema, use this pattern:
+If you cannot use the upsert action (e.g., the alternate key has not propagated yet, or you are on a region that does not support the action), use this pattern:
 
 1. Add action: **Dataverse - List rows**
-   - Table: MessageCenterLog
-   - Filter: `messagecenterid eq '@{items('Apply_to_each')?['id']}'`
+   - Table: Message Center Logs
+   - Filter: `fsi_messagecenterid eq '@{items('Apply_to_each')?['id']}'`
 
 2. Add **Condition**: Check if row exists
    - If yes: **Update a row**
@@ -259,32 +242,30 @@ If you cannot modify the table schema, use this pattern:
 
 > **Duplicate prevention with List rows:** When using this pattern instead of upsert, check the `notifiedOn` field from the List rows response in your notification condition: `equals(first(outputs('List_rows')?['body/value'])?['fsi_notifiedon'], null)`.  If no row exists yet (new post), `first()` returns null and the condition is satisfied, allowing the first notification.
 
-**Field mappings for Add/Update:**
+**Field mappings for Add/Update/Upsert:**
+
+> **Naming:** Column shown is the **logical name** (lowercased, no underscores between words). The Power Automate column picker may display a different label (Display Name) — confirm the underlying logical name matches before saving.
 
 | Dataverse Column | Expression |
 |------------------|------------|
-| messagecenterid | `@{items('Apply_to_each')?['id']}` |
-| title | `@{items('Apply_to_each')?['title']}` |
-| category | Map to choice value (see below) |
-| severity | Map to choice value (see below) |
-| services | `@{join(coalesce(items('Apply_to_each')?['services'], json('[]')), ', ')}` |
-| startDateTime | `@{items('Apply_to_each')?['startDateTime']}` |
-| actionRequiredByDateTime | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
-| lastModifiedDateTime | `@{items('Apply_to_each')?['lastModifiedDateTime']}` |
-| isMajorChange | `@{items('Apply_to_each')?['isMajorChange']}` |
-| body | `@{coalesce(items('Apply_to_each')?['body']?['content'], '')}` |
+| `fsi_messagecenterid` | `@{items('Apply_to_each')?['id']}` |
+| `fsi_title` | `@{items('Apply_to_each')?['title']}` |
+| `fsi_category` | Integer from Switch (see **Choice Field Implementation with Switch** below) |
+| `fsi_severity` | Integer from Switch (see **Choice Field Implementation with Switch** below) |
+| `fsi_services` | `@{join(coalesce(items('Apply_to_each')?['services'], json('[]')), ', ')}` |
+| `fsi_startdatetime` | `@{items('Apply_to_each')?['startDateTime']}` |
+| `fsi_actionrequiredbydatetime` | `@{items('Apply_to_each')?['actionRequiredByDateTime']}` |
+| `fsi_lastmodifieddatetime` | `@{items('Apply_to_each')?['lastModifiedDateTime']}` |
+| `fsi_enddatetime` | `@{items('Apply_to_each')?['endDateTime']}` |
+| `fsi_ismajorchange` | `@{items('Apply_to_each')?['isMajorChange']}` |
+| `fsi_body` | `@{coalesce(items('Apply_to_each')?['body']?['content'], '')}` |
+| `fsi_tags` | `@{join(coalesce(items('Apply_to_each')?['tags'], json('[]')), ', ')}` |
+| `fsi_hasattachments` | `@{items('Apply_to_each')?['hasAttachments']}` |
+| `fsi_assessmentstatus` | `100000000` (NotAssessed — set on insert only; do not overwrite on update) |
 
-**Category mapping:**
-- planForChange → Feature
-- stayInformed → Admin
-- preventOrFixIssue → Security
+> **Severity and category mapping:** These columns are Choice (Picklist) fields backed by global option sets. Dataverse rejects text labels — bind them to the integer values produced by the Switch blocks below.
 
-**Severity mapping:**
-- high → High
-- normal → Normal
-- critical → Critical
-
-### Choice Field Implementation with Switch
+### 6b: Choice Field Implementation with Switch
 
 Category and severity columns are Dataverse Choice (Picklist) fields backed by global option sets — they reject text labels and require the integer values defined in `create_mcm_dataverse_schema.py` (and reflected in `docs/dataverse-schema.md`). Use a **Switch** action to map the Microsoft Graph API enum values to the option-set integers, then write the integer to the Choice column.
 
@@ -308,7 +289,7 @@ Category and severity columns are Dataverse Choice (Picklist) fields backed by g
    - Case `critical`: Set variable `severityValue` = `100000002` (Critical)
    - Default: Set variable `severityValue` = `100000001` (Normal)
 
-The variables are typed as **Integer** so the Update Row action can write them directly to the Choice column. See `docs/dataverse-schema.md` for the canonical option-set definitions, or `create_mcm_dataverse_schema.py:OPTION_SETS` for the source of truth.
+The variables are typed as **Integer** so the Update/Upsert Row action can write them directly to the Choice column. See `docs/dataverse-schema.md` for the canonical option-set definitions, or `create_mcm_dataverse_schema.py:OPTION_SETS` for the source of truth.
 
 ## Step 7: Teams Notification for High Severity
 
@@ -318,18 +299,23 @@ Add **Condition** to notify when action is truly needed:
 
 **Notification Condition (includes duplicate prevention):**
 
-> **Important:** The flow runs daily and re-evaluates ALL posts. Without duplicate prevention, previously notified posts trigger alerts again on every run. The `notifiedOn` column (added in Step 1) tracks which posts have already been notified.
+> **Important:** The flow runs daily and re-evaluates ALL posts. Without duplicate prevention, previously notified posts trigger alerts again on every run. The `fsi_notifiedon` column (defined in `docs/dataverse-schema.md`) tracks which posts have already been notified.
+
+> **Action naming:** If you delete and re-add the upsert action, Power Automate may rename it to `Upsert_a_row_2`. Verify the action name in any expression like `outputs('Upsert_a_row')?['body/fsi_notifiedon']` matches your flow's actual action name — otherwise the expression resolves to `null` and duplicate prevention silently breaks.
 
 **Option A: Basic Check**
-```
+
+```text
 @and(
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
-  or(
-    equals(items('Apply_to_each')?['severity'], 'high'),
-    equals(items('Apply_to_each')?['severity'], 'critical')
+  contains(
+    split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+    toLower(items('Apply_to_each')?['severity'])
   )
 )
 ```
+
+The `contains(split(<env-var>, ','), …)` pattern reads the comma-separated severity list from the `fsi_NotifySeverities` environment variable (e.g., `high,critical`) instead of hard-coding literal `'high'`/`'critical'` checks. Replace the `<replace-with-fsi_NotifySeverities-env-var>` token with whichever expression you use to retrieve the env var value (e.g., `outputs('Get_Environment_Variable')?['body/value']`).
 
 > **Note:** The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
 
@@ -348,12 +334,14 @@ In the condition editor, create the following structure:
 
 Use an expression to only notify when `actionRequiredByDateTime` is in the future:
 
-```
+```text
 @and(
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
-    equals(items('Apply_to_each')?['severity'], 'high'),
-    equals(items('Apply_to_each')?['severity'], 'critical'),
+    contains(
+      split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+      toLower(items('Apply_to_each')?['severity'])
+    ),
     and(
       not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
       greater(items('Apply_to_each')?['actionRequiredByDateTime'], utcNow())
@@ -362,20 +350,20 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
 )
 ```
 
-> **Note:**  See the Option A note above for details.
-
 This prevents notifications for posts with past deadlines and means each post triggers at most one notification.
 
-**After sending a Teams notification**, add a **Dataverse - Update a row** action to set `notifiedOn` to `@{utcNow()}`. This marks the post as notified so it won't trigger again on the next run. If you later want to re-notify (e.g., deadline approaching), reset `notifiedOn` to null or add a separate reminder condition.
+**After sending a Teams notification**, add a **Dataverse - Update a row** action to set `fsi_notifiedon` to `@{utcNow()}`. This marks the post as notified so it won't trigger again on the next run. If you later want to re-notify (e.g., deadline approaching), reset `fsi_notifiedon` to null or add a separate reminder condition.
 
 **Optional Enhancement:** Also check `isMajorChange`:
 
-```
+```text
 @and(
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
-    equals(items('Apply_to_each')?['severity'], 'high'),
-    equals(items('Apply_to_each')?['severity'], 'critical'),
+    contains(
+      split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+      toLower(items('Apply_to_each')?['severity'])
+    ),
     equals(items('Apply_to_each')?['isMajorChange'], true),
     and(
       not(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null)),
@@ -384,8 +372,6 @@ This prevents notifications for posts with past deadlines and means each post tr
   )
 )
 ```
-
-> **Note:** 
 
 **If yes:**
 
@@ -430,11 +416,13 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 4. Configure "Catch" to run after "Try" has failed
 5. In "Catch", add a Teams notification for errors:
    - Post a message using this expression to include the error details and timestamp:
-     ```
+
+     ```text
      Message Center Monitor flow failed at @{utcNow()}.
      Error: @{result('Try')?[0]?['error']?['message']}
      Check run history for details.
      ```
+
    - This enables faster operational triage without requiring manual navigation to flow run history.
 
 > **Why include Apply to each in Try?** If a single message fails to process (e.g., malformed data), the entire loop stops. Wrapping it in Try means you get notified of partial failures. For even more granular handling, you can add a nested Try/Catch inside the Apply to each loop to handle individual message failures without stopping the entire run.
@@ -450,7 +438,7 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 
 ## Complete Flow Structure
 
-```
+```text
 ┌─ Recurrence (Daily at 9 AM)
 │
 ├─ [Scope: Try]
@@ -533,7 +521,7 @@ The steps above hardcode the polling schedule, severity thresholds, and Teams ch
 | Teams Channel ID | `fsi_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
 | Teams Team ID | `fsi_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
-> **Note:**  Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**.
+> **Note:** Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**. The env vars are also auto-provisioned by `scripts/create_mcm_environment_variables.py`.
 
 To reference an environment variable in the flow, use the **Dataverse - List rows** action to query the `Environment Variable Values` table, or use the `@{outputs('Get_Environment_Variable')?['body/value']}` pattern after adding a dedicated lookup action. This aligns with ALM best practices and simplifies managed solution deployments.
 
@@ -553,14 +541,16 @@ After your first sync, you can filter to only retrieve recently modified posts. 
    - Flow variable persisted to a file/SharePoint
 
 2. On subsequent runs, filter the API call:
-   ```
+
+   ```text
    https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$filter=lastModifiedDateTime ge 2025-01-25T00:00:00Z
    ```
 
 3. Update the stored timestamp after successful processing
 
 **Expression for filter:**
-```
+
+```text
 $filter=lastModifiedDateTime ge @{variables('lastSyncTime')}
 ```
 
@@ -574,7 +564,7 @@ $filter=lastModifiedDateTime ge @{variables('lastSyncTime')}
 
 For busy tenants, combine pagination with delta tracking:
 
-```
+```text
 ┌─ Get lastSyncTime from config
 ├─ Set API URL with $filter parameter
 ├─ Do Until (pagination loop)

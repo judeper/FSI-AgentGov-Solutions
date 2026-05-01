@@ -39,6 +39,10 @@ In your Power Automate flow:
 
 > **Action Name Update:** Microsoft has renamed several Teams connector actions. The current action is "Post card in a chat or channel". If you have existing flows using "Post adaptive card in a chat or channel", they will continue to work, but new flows should use the current name.
 
+> **Office 365 Connectors retirement (2026-03-31):** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native Power Automate "Post adaptive card in chat or channel" Teams connector, which is unaffected. If you have other integrations using O365 webhooks, plan migration to Power Automate or Adaptive Card actions before that date.
+
+> **Body field handling (security):** The `fsi_body` field stores raw HTML from Microsoft Graph. Do **not** render it directly in custom HTML web resources or canvas-app HTML controls without sanitization. The shipped Teams adaptive card intentionally excludes the body field. If you customize the card to include body content, sanitize it first or render only the `bodyPlainText` derivation.
+
 ## Step 3: Use the Adaptive Card Template
 
 The file `templates/teams-notification-card.json` contains the notification template.
@@ -61,7 +65,7 @@ Build the card dynamically using expressions:
 ```json
 {
   "type": "AdaptiveCard",
-  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
   "version": "1.4",
   "body": [
     {
@@ -86,7 +90,10 @@ Build the card dynamically using expressions:
 | `{startDateTime}` | `@{formatDateTime(items('Apply_to_each')?['startDateTime'], 'MMM dd, yyyy')}` |
 | `{actionRequiredByDateTime}` | `@{if(equals(items('Apply_to_each')?['actionRequiredByDateTime'], null), 'None', formatDateTime(items('Apply_to_each')?['actionRequiredByDateTime'], 'MMM dd, yyyy'))}` |
 | `{id}` | `@{items('Apply_to_each')?['id']}` |
-| `{recordId}` | `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}` — ) |
+| `{recordId}` | `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}` |
+| `{environment}` | The Dataverse host portion of your environment URL (e.g., `contoso` for `https://contoso.crm.dynamics.com`). |
+| `{appId}` | The Application ID GUID of the model-driven app (visible in the URL when the app is open in `make.powerapps.com`). |
+| `{publisherPrefix}` | The publisher prefix used when the schema script created the table — `fsi` by default. |
 
 ## Step 4: Configure Notification Conditions
 
@@ -97,7 +104,7 @@ Only send notifications for important posts. In your flow:
 
 **High Severity OR Action Required (with duplicate prevention):**
 
-```
+```text
 @and(
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
@@ -108,7 +115,7 @@ Only send notifications for important posts. In your flow:
 )
 ```
 
-> **Note:**  The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
+> **Note:** The `notifiedOn` check uses the Dataverse upsert response (not the Graph API message) to prevent re-notifying posts that were already sent to Teams. See [Flow Configuration Step 7](flow-configuration.md#step-7-teams-notification-for-high-severity) for full details and alternative expressions.
 
 Or use the visual editor:
 - Condition 1: `@{outputs('Upsert_a_row')?['body/fsi_notifiedon']}` is equal to `null`
@@ -211,7 +218,7 @@ See `templates/teams-notification-card.json` for the complete template with:
 
 Route different severity levels to different channels:
 
-```
+```text
 High Severity → #platform-alerts-urgent (with @mentions)
 Normal Severity → #platform-alerts (no notification)
 ```
@@ -220,7 +227,7 @@ Normal Severity → #platform-alerts (no notification)
 
 Route by affected service:
 
-```
+```text
 Power Platform → #powerplatform-team
 Microsoft 365 → #m365-team
 Azure → #azure-team
@@ -260,14 +267,13 @@ After upserting to Dataverse, the response includes the row GUID:
 
 1. In your flow, after the Dataverse upsert action, add a **Compose** action
 2. Set the input to: `@{outputs('Upsert_a_row')?['body/fsi_messagecenterlogid']}`
-   - 
 3. Use this value for `{recordId}` in the adaptive card URL
 
 ### URL Format
 
 The Dataverse record URL follows this pattern:
 
-```
+```text
 https://[your-environment].crm.dynamics.com/main.aspx?appid=[app-id]&pagetype=entityrecord&etn=[table-logical-name]&id=[record-guid]
 ```
 
@@ -297,7 +303,7 @@ In your Power Automate flow, replace the placeholder URL:
 {
   "type": "Action.OpenUrl",
   "title": "Assess Record",
-  "url": "https://contoso.crm.dynamics.com/main.aspx?appid=12345678-1234-1234-1234-123456789abc&pagetype=entityrecord&etn=[publisher-prefix]_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/[publisher-prefix]_messagecenterlogid']}"
+  "url": "https://{environment}.crm.dynamics.com/main.aspx?appid={appId}&pagetype=entityrecord&etn={publisherPrefix}_messagecenterlog&id=@{outputs('Upsert_a_row')?['body/{publisherPrefix}_messagecenterlogid']}"
 }
 ```
 
@@ -329,7 +335,7 @@ Dataverse column logical names include a publisher prefix (e.g., `fsi_messagecen
 2. Check the flow run history
 3. Look at the upsert action output—the returned field names show the prefix
 
-> **Common prefixes:** Default environments often use `cr...` prefixes (e.g., `fsi_`). Custom publishers use the prefix you specified when creating the publisher.
+> **Publisher prefix:** This solution requires the `fsi_` prefix produced by `create_mcm_dataverse_schema.py`. Tenants that previously deployed under a default `cr…` publisher prefix must redeploy via the script to align with the shipped governance scripts and flow expressions.
 
 ### Monitor Flow Health
 

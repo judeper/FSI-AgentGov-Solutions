@@ -11,8 +11,7 @@
     with approaching action-required deadlines (within 7 days) that have not
     been assessed.
 
-    Supports Controls 2.3 (Change Management) and 2.10 (Platform Change Monitoring)
-    from the FSI Agent Governance Framework.
+    Supports Control 2.3 (Change Management) from the FSI Agent Governance Framework.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
@@ -24,28 +23,30 @@
     Application (client) ID for service principal authentication.
 
 .PARAMETER ClientSecret
-    Client secret as a SecureString.
+    Client secret as a SecureString. Required only when -AuthMode ClientSecret.
+    legacy: dev-only path; prefer ManagedIdentity in production.
+
+.PARAMETER AuthMode
+    Authentication mode. ManagedIdentity (default), WorkloadIdentity, Interactive,
+    DeviceCode, or ClientSecret. ManagedIdentity requires MSAL.PS 4.37 or later.
 
 .PARAMETER Status
     Filter by assessment status. Default: All.
 
 .PARAMETER DaysBack
-    Number of days to look back from today. Default: 30.
+    Number of days to look back from today. Default: 30. Range: 1-365.
 
 .PARAMETER OutputFormat
     Output format for the report. Table, JSON, or Object.
     Default: Table.
 
 .EXAMPLE
-    $secret = ConvertTo-SecureString "mySecret" -AsPlainText -Force
     .\Get-MessageCenterAssessmentStatus.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
-        -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
-        -ClientSecret $secret `
+        -AuthMode ManagedIdentity `
         -Status NotAssessed
 
-    Lists all Message Center posts that have not been assessed yet.
+    Recommended: lists unassessed posts using the host's managed identity.
 
 .EXAMPLE
     $secret = ConvertTo-SecureString "mySecret" -AsPlainText -Force
@@ -54,10 +55,11 @@
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
         -ClientSecret $secret `
+        -AuthMode ClientSecret `
         -DaysBack 90 `
         -OutputFormat JSON
 
-    Reports all assessment statuses from the past 90 days as JSON.
+    (dev only) Reports 90 days of assessment status as JSON.
 
 .OUTPUTS
     PSCustomObject with summary counts and an array of message records.
@@ -87,31 +89,39 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [SecureString]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('ManagedIdentity', 'WorkloadIdentity', 'Interactive', 'DeviceCode', 'ClientSecret')]
+    [string]$AuthMode = 'ManagedIdentity',
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('All', 'NotAssessed', 'Reviewed', 'ImpactsAgents', 'NoImpact')]
     [string]$Status = 'All',
 
     [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 365)]
     [int]$DaysBack = 30,
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('Table', 'JSON', 'Object')]
-    [string]$OutputFormat = 'Table'
+    [string]$OutputFormat = 'Table',
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Quiet
 )
 
+. "$PSScriptRoot\_Common.ps1"
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 #region Banner
 
-Write-Host "`n╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  Message Center Assessment Status                ║" -ForegroundColor Cyan
-Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Cyan
-Write-Host "║  FSI-AgentGov Message Center Monitor             ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Message Center Assessment Status — FSI-AgentGov Message Center Monitor" -InformationAction Continue
+}
 
 #endregion
 
@@ -131,51 +141,52 @@ $statusLabels = @{
     100000003 = 'No Impact'
 }
 
+# Severity option-set labels (mirror of Export-MessageCenterEvidence.ps1).
+$severityLabels = @{
+    100000000 = 'High'
+    100000001 = 'Normal'
+    100000002 = 'Critical'
+}
+
 #endregion
 
 #region Authentication
 
-Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Authenticating to Dataverse (mode: $AuthMode)..." -InformationAction Continue }
 
-if (-not $TenantId) {
-    throw "TenantId is required. Pass -TenantId or set AZURE_TENANT_ID environment variable."
+if ($AuthMode -in @('Interactive', 'DeviceCode', 'ClientSecret')) {
+    if (-not $TenantId) {
+        throw "TenantId is required for -AuthMode $AuthMode. Pass -TenantId or set AZURE_TENANT_ID environment variable."
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for -AuthMode $AuthMode. Pass -ClientId or set AZURE_CLIENT_ID environment variable."
+    }
 }
-if (-not $ClientId) {
-    throw "ClientId is required. Pass -ClientId or set AZURE_CLIENT_ID environment variable."
+if ($AuthMode -eq 'ClientSecret' -and -not $ClientSecret) {
+    throw "ClientSecret is required when -AuthMode ClientSecret. Use -AuthMode ManagedIdentity for production."
 }
-
-Import-Module MSAL.PS -ErrorAction Stop
 
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
-$msalParams = @{
-    TenantId     = $TenantId
-    ClientId     = $ClientId
-    ClientSecret = $ClientSecret
-    Scopes       = @($dataverseScope)
-}
-
-$authResult = Get-MsalToken @msalParams
-$accessToken = $authResult.AccessToken
-
-$dvHeaders = @{
-    Authorization      = "Bearer $accessToken"
-    'Content-Type'     = 'application/json'
-    'OData-MaxVersion' = '4.0'
-    'OData-Version'    = '4.0'
-}
+# Lookup display names are surfaced via FormattedValue annotations.
+$dvHeaders = Get-McmDvHeaders -AuthMode $AuthMode -Scope $dataverseScope `
+    -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret `
+    -ExtraHeaders @{
+        Prefer = 'odata.maxpagesize=500,odata.include-annotations="OData.Community.Display.V1.FormattedValue"'
+    }
 
 $dvBaseUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
-Write-Host "Authentication successful." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) { Write-Information "Authentication successful." -InformationAction Continue }
 
 #endregion
 
 #region Build Query
 
-$cutoffDate = (Get-Date).AddDays(-$DaysBack).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_assessedby,fsi_assesseddate,fsi_ismajorchange"
+$cutoffDate = Format-McmODataDate ((Get-Date).AddDays(-$DaysBack))
+# fsi_assessedby is a Lookup; reference its raw value and request FormattedValue
+# annotations (set in Authentication header) to surface the display name.
+$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,_fsi_assessedby_value,fsi_assesseddate,fsi_ismajorchange"
 
 $filterParts = @("fsi_startdatetime ge $cutoffDate")
 
@@ -191,21 +202,36 @@ $queryUrl = "$dvBaseUrl/fsi_messagecenterlogs?`$select=$selectFields&`$filter=$f
 
 #region Fetch Records with Pagination
 
-Write-Host "Querying assessment status (last $DaysBack days, filter: $Status)..." -ForegroundColor Cyan
+if (-not $Quiet) {
+    Write-Information "Querying assessment status (last $DaysBack days, filter: $Status)..." -InformationAction Continue
+}
 
 $allRecords = [System.Collections.Generic.List[object]]::new()
 $pageUrl = $queryUrl
+$pageCount = 0
 
 while ($pageUrl) {
-    $response = Invoke-RestMethod -Uri $pageUrl -Headers $dvHeaders -Method Get
+    $pageCount++
+    Write-Verbose "Page $pageCount"
+    if ($pageCount -gt 1000) {
+        throw "Pagination exceeded 1000 pages — possible infinite loop"
+    }
+    try {
+        $response = Invoke-McmRest -Uri $pageUrl -Headers $dvHeaders -Method Get
+    }
+    catch {
+        Write-Error "Dataverse pagination failed at page $pageCount : $($_.Exception.Message)"
+        exit 1
+    }
     if ($response.value) {
         $allRecords.AddRange($response.value)
     }
     $pageUrl = $response.'@odata.nextLink'
 }
 
-Write-Host "Retrieved $($allRecords.Count) records." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Retrieved $($allRecords.Count) records." -InformationAction Continue
+}
 
 #endregion
 
@@ -255,10 +281,12 @@ if ($urgentMessages -and $urgentMessages.Count -gt 0) {
 
 # Build readable records for output
 $outputRecords = $allRecords | ForEach-Object {
+    $sevValue = $null
+    try { if ($null -ne $_.fsi_severity) { $sevValue = [int]$_.fsi_severity } } catch {}
     [PSCustomObject]@{
         MessageId       = $_.fsi_messagecenterid
         Title           = $_.fsi_title
-        Severity        = $_.fsi_severity
+        Severity        = if ($null -ne $sevValue -and $severityLabels.ContainsKey($sevValue)) { $severityLabels[$sevValue] } else { $sevValue }
         Status          = if ($statusLabels.ContainsKey($_.fsi_assessmentstatus)) { $statusLabels[$_.fsi_assessmentstatus] } else { 'Unknown' }
         StartDate       = $_.fsi_startdatetime
         ActionRequired  = $_.fsi_actionrequiredbydatetime

@@ -1,5 +1,76 @@
 # Changelog
 
+## [Unreleased]
+
+## [2.4.0] - 2026-04-30
+
+### Added
+- **Mock-based test suite** (`tests/`) — Pester (PowerShell) and pytest (Python) coverage for the high-risk surfaces introduced in this release. Hard-gated in CI on every PR; no tenant required.
+  - `Upsert.Tests.ps1`: 8 cases for `Invoke-McmDvUpsertMessage` covering create→412→update branching with set-intersection JSON-body assertions on all 7 admin-owned columns (the C1 regression class).
+  - `Common.Tests.ps1`: formatters, `Invoke-McmRest` retry on 429/5xx with `Retry-After` parsing (H2/H3), `Get-McmAccessToken` auth-mode dispatch (H1), and secret-redaction helper.
+  - `Sync.Tests.ps1`: orchestration counter math + refactor wiring guards.
+  - `Guards.Tests.ps1`: every HTTP-using governance script dot-sources `_Common.ps1`; no direct `Invoke-RestMethod` outside the helper; no `az` CLI.
+  - `test_schema.py`: `create_keys()` payload shape, idempotency on 412/`DuplicateRecord`, and `--dry-run` honoring.
+- **`Invoke-McmDvUpsertMessage` helper** in `_Common.ps1` — encapsulates the conditional create-with-`If-None-Match: *` → 412 → update branching so it can be unit-tested in isolation. Caller's `$Record` hashtable is never mutated; admin-owned columns are added only to a clone for the create payload.
+- **`Write-McmRedacted` helper** in `_Common.ps1` — scrubs Bearer tokens, `client_secret`, and `Authorization` headers from log lines.
+- Alternate key `fsi_MessageCenterIdKey` on `fsi_messagecenterid` provisioned by `create_mcm_dataverse_schema.py` — enables idempotent upsert via `PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxx')`.
+- `-AuthMode` parameter on all 3 PowerShell governance scripts (`ManagedIdentity` default, plus `WorkloadIdentity`, `Interactive`, `DeviceCode`, and `ClientSecret` legacy fallback).
+- `SupportsShouldProcess` (`-WhatIf`/`-Confirm`) on `Invoke-MessageCenterSync.ps1`.
+- Shared `_Common.ps1` helper module: retry-with-backoff REST helper, token cache with refresh-near-expiry, OData URL escape utilities.
+- `--update`/`--force` flag on `create_mcm_connection_references.py`.
+- `--log-level` argument on all 3 Python setup scripts; structured logging via the `logging` module.
+- Setup checklist Step 6: explicit Dataverse Application User creation.
+- Setup checklist Step 12: smoke test via `Invoke-MessageCenterSync.ps1 -DryRun`.
+- Conditional Access guidance for the service principal in README and setup checklist.
+- Secret rotation cadence guidance (90 days production, ≤365 days non-production) in `docs/secrets-management.md`.
+- 2026-03-31 Office 365 Connectors retirement callout in `docs/teams-integration.md`.
+- HTML sanitization security note for the `fsi_body` field in README and `docs/teams-integration.md`.
+- Per-solution STRIDE threat model entry in repo root `THREAT-MODEL.md`.
+
+### Changed
+- **Critical:** Rewrote `docs/setup-checklist.md` end-to-end against the v2.3.0+ schema-script deployment path. The previous v2.2.0 manual-table flow contradicted the README and would have produced a broken deployment under any non-`fsi_` publisher prefix.
+- **High:** All customer-facing docs reordered to recommend certificate / federated credential as the primary auth path; client secret marked as legacy fallback. Aligns with the repository's managed-identity-first authentication standard.
+- **High:** `Invoke-MessageCenterSync.ps1` replaced SELECT-then-POST/PATCH with a single-call alternate-key upsert. Eliminates the read-then-write race condition and halves API calls per record.
+- **High:** `Get-MessageCenterAssessmentStatus.ps1` and `Export-MessageCenterEvidence.ps1` now use the shared retry/backoff helper for all Dataverse calls (previously only the Sync script honored throttling).
+- **High:** `docs/flow-configuration.md` field-mapping table now uses Dataverse logical names (`fsi_*`) and adds previously-omitted columns: `fsi_enddatetime`, `fsi_tags`, `fsi_hasattachments`, default `fsi_assessmentstatus = 100000000`.
+- **Medium:** `create_mcm_environment_variables.py` `type_code` mapping replaced with an explicit dict (`String/Number/Boolean/JSON/DataSource/Secret`) keyed by exact label.
+- Pinned upper bounds in `requirements.txt` (`msal<2.0`, `requests<3.0`).
+- Token cache now refreshes within 5 minutes of expiry so long-running syncs no longer 401 mid-loop.
+- All pagination loops now request `Prefer: odata.maxpagesize=500` and abort safely after 1000 pages.
+- Severity values now displayed as labels (High/Normal/Critical) in `Get-MessageCenterAssessmentStatus.ps1` output, matching `Export-MessageCenterEvidence.ps1`.
+- `Test-EvidenceIntegrity.ps1 -Quiet` now returns `$false` instead of throwing, honoring the documented `.OUTPUTS Boolean` contract.
+- Hash and JSON files written by `Export-MessageCenterEvidence.ps1` now use UTF-8 without BOM (compatible with `sha256sum -c`).
+- Adaptive card `$schema` URL upgraded to `https://`; `[bracket]` placeholders replaced with `{curly}` tokens that Power Automate substitutes.
+- Manifest control mapping reduced to `2.3` only — Control 2.10 (Patch Management) was an aspirational stretch; this solution does not patch anything.
+- Manifest prerequisites expanded to include `azure-admin` (Key Vault) and `teams-admin` (channel owner).
+- README header version updated to 2.4.0; status changed to "Live" to match the manifest enum.
+
+### Fixed
+- **Critical:** Setup checklist no longer instructs admins to manually create the Dataverse table with display-label columns and text option values, which contradicted the v2.3.0 README and broke every governance script.
+- **Critical:** Setup checklist now includes the Dataverse Application User step (previously documented only in the README and missing from the canonical checklist).
+- **High:** `docs/flow-configuration.md` OData filter changed from `messagecenterid eq …` (would fail at runtime) to `fsi_messagecenterid eq …`.
+- **High:** Removed regulatory citations (FINRA Rule 4511(a), SEC Rule 17a-4, SOX 302/404) from `Export-MessageCenterEvidence.ps1` and `Test-EvidenceIntegrity.ps1`. The README explicitly disclaims compliance/audit scope; prior CHANGELOG entries had stripped these claims and they had drifted back in.
+- **High:** Repaired corrupt markdown table cell at `teams-integration.md:89`; resolved self-contradictory publisher-prefix note at `teams-integration.md:332`; removed multiple empty `> **Note:**` placeholders.
+- **Medium:** `Export-MessageCenterEvidence.ps1` `$select` changed from `fsi_assessedby` (returned null) to `_fsi_assessedby_value` with FormattedValue annotation for Lookup column display.
+- **Medium:** OData literals (`$messageId`, dates) now URL-encoded and apostrophe-escaped to prevent filter injection.
+- **Medium:** `[ValidateRange(1, 365)]` on `DaysBack` parameters prevents zero/negative values producing empty windows or excessive ranges that hit Graph throttling.
+- Removed unused `from typing import Optional` imports (ruff would flag).
+- Wrapped `--output-docs` write with `try/except OSError` for clear permission-error messages.
+- Setup script `getpass` prompt now skipped in `--dry-run` mode.
+- Setup scripts now mirror the shared client's exit-code taxonomy (1/2/4).
+- All triple-backtick code blocks now have language tags for MkDocs Material syntax highlighting.
+- Replaced `Write-Host` operational banners with `Write-Information -InformationAction Continue` (suppressible in CI).
+- "Microsoft Entra tenant ID" wording now consistent across all 3 setup scripts.
+
+### Removed
+- Control mapping `2.10` (Patch Management) — solution does not patch anything.
+
+### Security
+- Customer-facing docs no longer prescribe client secret as the recommended auth path; certificate-based / federated credential is now the primary recommendation. Aligns with the repository's managed-identity-first authentication standard.
+- Added per-solution STRIDE threat model entry in repo root `THREAT-MODEL.md`.
+- `docs/secrets-management.md` adds 90-day rotation cadence for production tenants.
+- README and `docs/teams-integration.md` add an HTML sanitization warning for the `fsi_body` field (raw HTML from Microsoft Graph).
+
 ## [2.3.0] - 2026-04-17
 
 ### Fixed

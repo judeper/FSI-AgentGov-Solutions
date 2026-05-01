@@ -1,6 +1,6 @@
 # Message Center Monitor
 
-> **Status:** Completed
+> **Status:** Live
 
 Monitor Microsoft 365 Message Center for platform changes that could impact AI agent deployments (Copilot Studio, Agent Builder).
 
@@ -33,25 +33,62 @@ Create an app registration for Message Center access:
    - Add permission > Microsoft Graph > **Application permissions**
    - Select `ServiceMessage.Read.All`
    - Click **Grant admin consent** (requires an administrator with permission to consent)
-4. Under "Certificates & secrets", create a client secret
-5. Note the Application (client) ID, Directory (tenant) ID, and client secret
+4. Note the Application (client) ID and Directory (tenant) ID
 
-### 2. Azure Key Vault (Recommended)
+### 1.5. Recommended: Certificate or Federated Credential
 
-Store your client secret securely:
+Per the repository [authentication standard](../AGENTS.md#authentication-standard-managed-identity-first), credentials follow this priority order: managed identity → workload identity federation → certificate (uploaded to the app registration; consumed via `-AuthMode WorkloadIdentity`/MSAL token, not as its own AuthMode value) → device-code → client secret (legacy fallback). For app registrations that cannot use managed identity (Power Automate cloud flows fall into this category), prefer **certificates** or **workload identity federation** over client secrets.
+
+In your app registration, under **Certificates & secrets**:
+
+- **Certificate (recommended for on-prem or hybrid runners):** click **Certificates** > **Upload certificate**, then upload a PEM/CRT issued by your internal CA. Store the corresponding private key in Azure Key Vault as a certificate object.
+- **Federated credential (recommended for GitHub Actions / Azure DevOps):** click **Federated credentials** > **Add credential**, choose the appropriate scenario (e.g., GitHub Actions deploying Azure resources), and bind the credential to your CI workflow. No long-lived secret needs to be stored.
+
+```powershell
+# Example: upload a certificate via Microsoft Graph PowerShell
+Connect-MgGraph -Scopes "Application.ReadWrite.All"
+$cert = Get-Item Cert:\CurrentUser\My\<thumbprint>
+$keyCreds = @{
+    Type        = "AsymmetricX509Cert"
+    Usage       = "Verify"
+    Key         = $cert.RawData
+    DisplayName = "MessageCenterMonitor-Prod"
+}
+Update-MgApplication -ApplicationId <object-id> -KeyCredentials @($keyCreds)
+```
+
+### 1.6. Recommended: Apply Conditional Access policy to the service principal
+
+Restrict the app registration's sign-ins to expected source IPs (the Power Automate Azure region IP ranges, or your CI runner egress) and require workload identity policies where supported. The companion [conditional-access-automation](../conditional-access-automation/) solution can deploy and monitor these CA policies.
+
+### 2. Client Secret (Fallback)
+
+Use a client secret only when certificate-based or federated credential auth is not available. Secrets land in shell history (`~/.bash_history`) and process listings (`ps`) when passed as CLI args — always pull them from Key Vault into an environment variable instead.
+
+1. In your app registration, go to **Certificates & secrets** > **Client secrets** > **+ New client secret**
+2. Set expiration (≤ 90 days for production, ≤ 365 days for non-prod — see [Secrets Management — Rotation cadence](docs/secrets-management.md#rotation-cadence))
+3. Store the value in Azure Key Vault immediately (see Section 3 below)
+
+### 3. Azure Key Vault
+
+Store credentials securely (cert thumbprint preferred; client secret only as fallback):
 
 1. Create a Key Vault in Azure Portal
-2. Add your client secret as a secret
-3. Grant your Power Automate connection access
+2. Add your certificate or client secret
+3. Grant your Power Automate connection (or managed identity) read access
 
 See [Secrets Management](docs/secrets-management.md) for detailed steps.
 
-### 3. Power Platform Environment
+### Authentication
+
+The PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageCenterAssessmentStatus.ps1`, `Export-MessageCenterEvidence.ps1`) accept an `-AuthMode` parameter with values `ManagedIdentity` (default), `WorkloadIdentity`, `Interactive`, `DeviceCode`, or `ClientSecret`. The Python schema/setup scripts use the shared `scripts/shared/dataverse_client.py`, which accepts an MSAL token from any source (managed identity, device-code, or client secret). Pick the strongest auth method available in your environment.
+
+### 4. Power Platform Environment
 
 - Dataverse environment (included with most Power Platform licenses)
 - Power Automate Premium license (required for Dataverse and HTTP connectors)
 
-### 4. Dataverse Application User (required for governance scripts)
+### 5. Dataverse Application User (required for governance scripts)
 
 The PowerShell governance scripts call the Dataverse Web API as the same app registration used for Microsoft Graph. Without an application user with read/write access to `fsi_messagecenterlog`, the scripts will fail with `401 Unauthorized` or `403 Forbidden`.
 
@@ -60,7 +97,7 @@ The PowerShell governance scripts call the Dataverse Web API as the same app reg
 3. Assign a security role with read/write/append/append-to access to `fsi_messagecenterlog` (a custom role scoped to the table is recommended; **System Administrator** is acceptable for non-prod)
 4. Confirm the application user appears under **Application users** with status **Enabled**
 
-### 5. DLP Policy (If Applicable)
+### 6. DLP Policy (If Applicable)
 
 If your environment has DLP policies:
 
@@ -75,16 +112,29 @@ If your environment has DLP policies:
 
 The packaged schema uses the `fsi_` publisher prefix and is the **canonical deployment path** — the included PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageCenterAssessmentStatus.ps1`, `Export-MessageCenterEvidence.ps1`) all target `fsi_messagecenterlog`. Manual table creation under a different publisher prefix (such as a tenant default `cr123_`) is **not supported** by the shipped automation.
 
-Run the schema script to create the table, columns, option sets, and alternate key:
+Run the schema script to create the table, columns, option sets, and alternate key. Pull the client secret from Key Vault into an environment variable rather than passing it as a CLI argument (CLI args are visible in shell history and process listings):
+
+```powershell
+# PowerShell — recommended pattern
+$env:MCM_CLIENT_SECRET = (Get-Secret -Vault MyVault -Name MessageCenterClientSecret -AsPlainText)
+python scripts\create_mcm_dataverse_schema.py `
+    --tenant-id <tenant-guid> `
+    --client-id <app-id> `
+    --environment-url https://<org>.crm.dynamics.com `
+    --output-docs
+```
 
 ```bash
+# bash — recommended pattern
+export MCM_CLIENT_SECRET=$(az keyvault secret show --vault-name kv-mcm --name MessageCenterClientSecret --query value -o tsv)
 python scripts/create_mcm_dataverse_schema.py \
     --tenant-id <tenant-guid> \
     --client-id <app-id> \
-    --client-secret <secret> \
     --environment-url https://<org>.crm.dynamics.com \
     --output-docs
 ```
+
+> **Note:** The schema script also accepts MSAL device-code or managed-identity tokens via the shared `scripts/shared/dataverse_client.py`. See [Secrets Management](docs/secrets-management.md) for production patterns.
 
 The script provisions:
 
@@ -104,7 +154,7 @@ See [Flow Configuration](docs/flow-configuration.md) for complete flow creation 
 1. Trigger: Daily recurrence (e.g., 9 AM)
 2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
-4. For each message: Upsert to Dataverse using messagecenterid
+4. For each message: Upsert to Dataverse using `fsi_messagecenterid`
 5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
 6. Teams notification: Post adaptive card to your channel
 
@@ -118,7 +168,7 @@ See [Teams Integration](docs/teams-integration.md) for Teams setup.
 2. Use the provided adaptive card template
 3. Configure the flow to post high-severity alerts
 
-> **Note on Office 365 Connectors Deprecation:** Microsoft is retiring Office 365 incoming webhook connectors on **March 31, 2026**. This solution uses the native **Power Automate "Post to Teams" connector**, which is unaffected by this deprecation. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
+> **Note on Office 365 Connectors Deprecation:** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native **Power Automate "Post adaptive card in chat or channel" Teams connector**, which is unaffected by this retirement. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
 
 ### Step 4: Verify It Works
 
@@ -128,7 +178,7 @@ See [Teams Integration](docs/teams-integration.md) for Teams setup.
 
 ## Workflow
 
-```
+```text
 Microsoft Message Center
         │
         ▼
@@ -156,7 +206,7 @@ Log assessment + take action if needed
 
 This solution uses a single table design for simplicity:
 
-```
+```text
 MessageCenterLog
 ├── messagecenterid (PK, MC######)
 ├── title
@@ -206,7 +256,7 @@ Microsoft Message Center has no webhook/push notification. The solution polls Gr
 |----------|-------------|
 | [Flow Configuration](docs/flow-configuration.md) | Step-by-step Power Automate flow build guide |
 | [Secrets Management](docs/secrets-management.md) | Key Vault integration for secure credential storage |
-| [Setup Checklist](docs/setup-checklist.md) | Quick 10-step deployment checklist |
+| [Setup Checklist](docs/setup-checklist.md) | End-to-end deployment checklist (~12 steps) |
 | [Teams Integration](docs/teams-integration.md) | Teams channel notification setup |
 
 ## Customization
@@ -218,6 +268,8 @@ This solution is designed to be modified:
 - **Add views:** Filter by service, category, or date
 - **Integrate:** Connect to your change management system
 - **Plain-text body:** The `body` field stores HTML from Microsoft. For search or cleaner display, add a `bodyPlainText` column and use Power Automate's `stripHtml()` expression or a custom function to convert content
+
+> **Security note:** The `fsi_body` field stores raw HTML from Microsoft Graph. Do not render it directly in custom HTML web resources or canvas-app HTML controls without sanitization. The shipped Teams adaptive card intentionally excludes the body field. If you add a `bodyPlainText` column, prefer that for display surfaces.
 
 > **Environment Promotion Tip:** When moving this solution between environments (dev → test → prod), use [Dataverse environment variables](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/environmentvariables) instead of hardcoding values in the flow. Store the polling schedule (recurrence interval), severity thresholds, and Teams channel ID as environment variables so they can be updated per-environment without editing the flow definition. This aligns with ALM best practices and simplifies managed solution deployments.
 
@@ -243,14 +295,13 @@ This solution is designed to be modified:
 
 ## Version
 
-2.2.0 - April 2026
+2.4.0 - April 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
 ## Related Controls
 
 - [Control 2.3: Change Management and Release Planning](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md)
-- [Control 2.10: Patch Management and System Updates](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.10-patch-management-and-system-updates.md)
 
 ## Playbook Reference
 

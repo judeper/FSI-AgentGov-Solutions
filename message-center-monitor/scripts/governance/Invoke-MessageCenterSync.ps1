@@ -26,13 +26,18 @@
     Defaults to $env:AZURE_CLIENT_ID.
 
 .PARAMETER ClientSecret
-    Client secret as a SecureString. Required for client-credentials authentication.
+    Client secret as a SecureString. Required only when -AuthMode ClientSecret.
+    legacy: dev-only path; prefer ManagedIdentity in production.
+
+.PARAMETER AuthMode
+    Authentication mode. ManagedIdentity (default), WorkloadIdentity, Interactive,
+    DeviceCode, or ClientSecret. ManagedIdentity requires MSAL.PS 4.37 or later.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
 
 .PARAMETER DaysBack
-    Number of days to look back for modified messages. Default: 7.
+    Number of days to look back for modified messages. Default: 7. Range: 1-365.
 
 .PARAMETER NotifySeverities
     Severity levels that should be flagged in the summary output.
@@ -43,13 +48,21 @@
     Default: Table.
 
 .EXAMPLE
-    $secret = ConvertTo-SecureString "mySecret" -AsPlainText -Force
     .\Invoke-MessageCenterSync.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -ClientSecret $secret
+        -AuthMode ManagedIdentity
 
-    Syncs the last 7 days of Message Center posts using environment variables
-    for TenantId and ClientId.
+    Recommended: syncs the last 7 days using the host's managed identity.
+    No secrets required; works in Azure Functions, Automation, ACI, and AKS.
+
+.EXAMPLE
+    .\Invoke-MessageCenterSync.ps1 `
+        -DataverseUrl "https://org.crm.dynamics.com" `
+        -TenantId "contoso.onmicrosoft.com" `
+        -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
+        -AuthMode DeviceCode
+
+    One-off admin-workstation run with device-code auth.
 
 .EXAMPLE
     $secret = Read-Host -AsSecureString -Prompt "Client Secret"
@@ -57,11 +70,13 @@
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
         -ClientSecret $secret `
+        -AuthMode ClientSecret `
         -DataverseUrl "https://org.crm.dynamics.com" `
         -DaysBack 30 `
         -OutputFormat JSON
 
-    Syncs 30 days of posts and outputs results as JSON.
+    (dev only) Syncs 30 days of posts using a client secret. Use ManagedIdentity
+    in production.
 
 .OUTPUTS
     PSCustomObject with sync summary: TotalSynced, NewRecords, UpdatedRecords,
@@ -76,7 +91,7 @@
     - Dataverse fsi_messagecenterlog table deployed
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
 param(
     [Parameter(Mandatory = $false)]
     [string]$TenantId = $env:AZURE_TENANT_ID,
@@ -84,13 +99,18 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [SecureString]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('ManagedIdentity', 'WorkloadIdentity', 'Interactive', 'DeviceCode', 'ClientSecret')]
+    [string]$AuthMode = 'ManagedIdentity',
 
     [Parameter(Mandatory = $true)]
     [string]$DataverseUrl,
 
     [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 365)]
     [int]$DaysBack = 7,
 
     [Parameter(Mandatory = $false)]
@@ -98,129 +118,111 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('Table', 'JSON', 'Object')]
-    [string]$OutputFormat = 'Table'
+    [string]$OutputFormat = 'Table',
+
+    [Parameter(Mandatory = $false)]
+    [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Quiet
 )
 
+. "$PSScriptRoot\_Common.ps1"
+
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 #region Validation
 
-if (-not $TenantId) {
-    throw "TenantId is required. Provide -TenantId or set `$env:AZURE_TENANT_ID."
+if ($AuthMode -in @('Interactive', 'DeviceCode', 'ClientSecret')) {
+    if (-not $TenantId) {
+        throw "TenantId is required for -AuthMode $AuthMode. Provide -TenantId or set `$env:AZURE_TENANT_ID."
+    }
+    if (-not $ClientId) {
+        throw "ClientId is required for -AuthMode $AuthMode. Provide -ClientId or set `$env:AZURE_CLIENT_ID."
+    }
 }
-if (-not $ClientId) {
-    throw "ClientId is required. Provide -ClientId or set `$env:AZURE_CLIENT_ID."
+if ($AuthMode -eq 'ClientSecret' -and -not $ClientSecret) {
+    throw "ClientSecret is required when -AuthMode ClientSecret. Use -AuthMode ManagedIdentity for production."
 }
 
 #endregion
 
 #region Banner
 
-Write-Host "`n╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  Message Center Sync                             ║" -ForegroundColor Cyan
-Write-Host "╠══════════════════════════════════════════════════╣" -ForegroundColor Cyan
-Write-Host "║  FSI-AgentGov Message Center Monitor             ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Message Center Sync — FSI-AgentGov Message Center Monitor" -InformationAction Continue
+}
 
 #endregion
 
 #region Authentication — Graph API
 
-Write-Host "Authenticating to Microsoft Graph..." -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Authenticating to Microsoft Graph (mode: $AuthMode)..." -InformationAction Continue }
 
-Import-Module MSAL.PS -ErrorAction Stop
-
-$graphToken = Get-MsalToken `
-    -TenantId $TenantId `
-    -ClientId $ClientId `
-    -ClientSecret $ClientSecret `
-    -Scopes @('https://graph.microsoft.com/.default')
+$graphScope = 'https://graph.microsoft.com/.default'
+$graphTokenObj = Get-McmAccessToken -AuthMode $AuthMode -Scope $graphScope `
+    -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
 
 $graphHeaders = @{
-    Authorization  = "Bearer $($graphToken.AccessToken)"
+    Authorization  = "Bearer $($graphTokenObj.AccessToken)"
     'Content-Type' = 'application/json'
 }
 
-Write-Host "Graph API authentication successful." -ForegroundColor Green
+if (-not $Quiet) { Write-Information "Graph API authentication successful." -InformationAction Continue }
 
 #endregion
 
 #region Authentication — Dataverse
 
-Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
+if (-not $Quiet) { Write-Information "Authenticating to Dataverse..." -InformationAction Continue }
 
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-$dvToken = Get-MsalToken `
-    -TenantId $TenantId `
-    -ClientId $ClientId `
-    -ClientSecret $ClientSecret `
-    -Scopes @($dataverseScope)
 
-$dvHeaders = @{
-    Authorization    = "Bearer $($dvToken.AccessToken)"
-    'Content-Type'   = 'application/json'
-    'OData-MaxVersion' = '4.0'
-    'OData-Version'    = '4.0'
-    Prefer           = 'return=representation'
-}
+# Use Get-McmDvHeaders to populate the cache; the loop below re-calls it per
+# message so that long-running syncs transparently refresh near token expiry.
+$dvHeaders = Get-McmDvHeaders -AuthMode $AuthMode -Scope $dataverseScope `
+    -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret `
+    -ExtraHeaders @{ Prefer = 'return=representation,odata.maxpagesize=500' }
 
 $dvBaseUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
-Write-Host "Dataverse authentication successful." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Dataverse authentication successful." -InformationAction Continue
+    if ($DryRun) { Write-Information "DryRun mode: no Dataverse mutations will be performed." -InformationAction Continue }
+}
 
 #endregion
 
 #region Fetch Message Center Posts
 
-$cutoffDate = (Get-Date).AddDays(-$DaysBack).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+$cutoffDate = Format-McmODataDate ((Get-Date).AddDays(-$DaysBack))
 $selectFields = "id,title,category,severity,services,startDateTime,endDateTime,lastModifiedDateTime,isMajorChange,actionRequiredByDateTime,body,tags,hasAttachments"
 $graphUrl = "https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?`$select=$selectFields&`$filter=lastModifiedDateTime ge $cutoffDate"
 
-Write-Host "Fetching Message Center posts (last $DaysBack days)..." -ForegroundColor Cyan
-
-# Throttling-aware REST helper. Honors Retry-After (seconds or HTTP-date) for
-# 429 / 503 responses; falls back to exponential backoff if header is missing.
-function Invoke-MCMRest {
-    param(
-        [Parameter(Mandatory)] [string]$Uri,
-        [Parameter(Mandatory)] [hashtable]$Headers,
-        [Parameter(Mandatory)] [string]$Method,
-        [string]$Body,
-        [int]$MaxRetries = 5
-    )
-    $attempt = 0
-    while ($true) {
-        $attempt++
-        try {
-            if ($PSBoundParameters.ContainsKey('Body') -and $Body) {
-                return Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method -Body $Body
-            } else {
-                return Invoke-RestMethod -Uri $Uri -Headers $Headers -Method $Method
-            }
-        }
-        catch {
-            $status = $null
-            try { $status = [int]$_.Exception.Response.StatusCode } catch {}
-            if (($status -eq 429 -or $status -eq 503) -and $attempt -le $MaxRetries) {
-                $retryAfter = 0
-                try { $retryAfter = [int]$_.Exception.Response.Headers['Retry-After'] } catch {}
-                if ($retryAfter -le 0) { $retryAfter = [Math]::Min(60, [Math]::Pow(2, $attempt)) }
-                Write-Warning "  Throttled ($status). Sleeping $retryAfter s (attempt $attempt/$MaxRetries)..."
-                Start-Sleep -Seconds $retryAfter
-                continue
-            }
-            throw
-        }
-    }
+if (-not $Quiet) {
+    Write-Information "Fetching Message Center posts (last $DaysBack days)..." -InformationAction Continue
 }
 
-$allMessages = [System.Collections.Generic.List[object]]::new()
+# Honor server-side page size; cap pagination at 1000 pages as a safety net.
+$graphHeaders['Prefer'] = 'odata.maxpagesize=500'
 
+$allMessages = [System.Collections.Generic.List[object]]::new()
 $pageUrl = $graphUrl
+$pageCount = 0
 while ($pageUrl) {
-    $response = Invoke-MCMRest -Uri $pageUrl -Headers $graphHeaders -Method Get
+    $pageCount++
+    Write-Verbose "Page $pageCount"
+    if ($pageCount -gt 1000) {
+        throw "Pagination exceeded 1000 pages — possible infinite loop"
+    }
+    try {
+        $response = Invoke-McmRest -Uri $pageUrl -Headers $graphHeaders -Method Get
+    }
+    catch {
+        Write-Error "Graph pagination failed at page $pageCount : $($_.Exception.Message)"
+        exit 1
+    }
     if ($response.value) {
         $allMessages.AddRange($response.value)
     }
@@ -230,8 +232,9 @@ while ($pageUrl) {
     }
 }
 
-Write-Host "Retrieved $($allMessages.Count) messages from Message Center." -ForegroundColor Green
-Write-Host ""
+if (-not $Quiet) {
+    Write-Information "Retrieved $($allMessages.Count) messages from Message Center." -InformationAction Continue
+}
 
 #endregion
 
@@ -290,19 +293,11 @@ foreach ($msg in $allMessages) {
         $bodyContent = $bodyContent.Substring(0, $bodyMaxLength) + "`n[truncated — original length $($bodyContent.Length) chars]"
     }
 
-    # Check if record exists by fsi_messagecenterid
-    $filterUrl = "$dvBaseUrl/fsi_messagecenterlogs?`$filter=fsi_messagecenterid eq '$messageId'&`$select=fsi_messagecenterlogid&`$top=1"
-    try {
-        $existing = Invoke-MCMRest -Uri $filterUrl -Headers $dvHeaders -Method Get
-    }
-    catch {
-        Write-Warning "Failed to query Dataverse for message $messageId : $($_.Exception.Message)"
-        $failedCount++
-        [void]$failedIds.Add($messageId)
-        continue
-    }
-
-    # Build the record payload
+    # Build the upsert payload. Admin-owned columns (fsi_assessmentstatus,
+    # fsi_assessment, fsi_assessedby, fsi_assesseddate, fsi_actionstaken,
+    # fsi_impactsagents, fsi_notifiedon) are deliberately EXCLUDED so the
+    # update path cannot clobber them. fsi_assessmentstatus is added later in
+    # the create-only payload.
     $record = @{
         fsi_messagecenterid        = $messageId
         fsi_title                  = $msg.title
@@ -325,39 +320,45 @@ foreach ($msg in $allMessages) {
         $record.fsi_actionrequiredbydatetime = $msg.actionRequiredByDateTime
     }
 
-    $jsonBody = $record | ConvertTo-Json -Depth 5
+    # Refresh the cached Dataverse headers; this returns immediately unless the
+    # token is within 5 min of expiry, in which case it transparently re-acquires.
+    $dvHeaders = Get-McmDvHeaders -AuthMode $AuthMode -Scope $dataverseScope `
+        -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret `
+        -ExtraHeaders @{
+            Prefer = 'return=representation,odata.maxpagesize=500'
+        }
 
-    if ($existing.value -and $existing.value.Count -gt 0) {
-        # Update existing record
-        $recordId = $existing.value[0].fsi_messagecenterlogid
-        $patchUrl = "$dvBaseUrl/fsi_messagecenterlogs($recordId)"
-        try {
-            Invoke-MCMRest -Uri $patchUrl -Headers $dvHeaders -Method Patch -Body $jsonBody | Out-Null
-            $updatedCount++
-            Write-Verbose "Updated: $messageId — $($msg.title)"
-        }
-        catch {
-            Write-Warning "Failed to update message $messageId : $($_.Exception.Message)"
-            $failedCount++
-            [void]$failedIds.Add($messageId)
-        }
+    if ($DryRun) {
+        Write-Verbose "DryRun: would upsert $messageId — $($msg.title)"
+        continue
     }
-    else {
-        # Create new record with NotAssessed status
-        $record.fsi_assessmentstatus = $assessmentNotAssessed
-        $jsonBody = $record | ConvertTo-Json -Depth 5
 
-        $postUrl = "$dvBaseUrl/fsi_messagecenterlogs"
-        try {
-            Invoke-MCMRest -Uri $postUrl -Headers $dvHeaders -Method Post -Body $jsonBody | Out-Null
+    if (-not $PSCmdlet.ShouldProcess($messageId, 'Upsert MessageCenterLog')) {
+        continue
+    }
+
+    # Conditional create vs preserve-on-update branching is encapsulated in
+    # Invoke-McmDvUpsertMessage (in _Common.ps1) so the C1 logic is unit-testable.
+    # The function returns Action=Created or Action=Updated; throws on terminal
+    # failure (alt-key 404, create errors other than 412, update errors).
+    try {
+        $result = Invoke-McmDvUpsertMessage -DataverseBaseUrl $dvBaseUrl `
+            -MessageId $messageId -Record $record `
+            -DataverseHeaders $dvHeaders `
+            -AssessmentNotAssessedValue $assessmentNotAssessed
+        if ($result.Action -eq 'Created') {
             $newCount++
             Write-Verbose "Created: $messageId — $($msg.title)"
         }
-        catch {
-            Write-Warning "Failed to create message $messageId : $($_.Exception.Message)"
-            $failedCount++
-            [void]$failedIds.Add($messageId)
+        else {
+            $updatedCount++
+            Write-Verbose "Updated: $messageId — $($msg.title) (admin assessment preserved)"
         }
+    }
+    catch {
+        Write-Warning $_.Exception.Message
+        $failedCount++
+        [void]$failedIds.Add($messageId)
     }
 }
 
