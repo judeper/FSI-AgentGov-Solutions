@@ -13,6 +13,15 @@ Monitor Microsoft 365 Message Center for platform changes that could impact AI a
 
 **This is operational monitoring** - it helps your platform team stay informed about Microsoft updates. It is not a compliance or audit system.
 
+## Lab dry-run
+
+Want to validate this solution end-to-end in a non-prod tenant before
+deploying to production? See **[`docs/lab-dry-run.md`](docs/lab-dry-run.md)**
+for an idempotent, numbered automation sequence (`lab/00..06_*.ps1`) that
+provisions everything, runs a 10-step smoke test (including the C1
+admin-field-clobber regression check end-to-end against live wires), and
+tears down cleanly.
+
 ## Who Should Use This
 
 | Audience | Use Case |

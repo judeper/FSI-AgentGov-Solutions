@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/message-center-monitor/lab-state.schema.json",
+  "title": "MCM Lab State",
+  "description": "Ownership manifest written by lab automation scripts. Drives idempotent re-runs and the teardown script. Refusing to delete resources NOT in this state is a deliberate safety net to prevent the lab from clobbering production resources that happen to share names.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "createdAt",
+    "createdBy",
+    "tenantId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Lab state schema version. Bump when fields are added/renamed."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this lab deployment was first provisioned (UTC ISO 8601)."
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "UPN of the engineer who provisioned this lab (from lab-config.json operator.runnerUpn)."
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "subscriptionId": { "type": ["string", "null"], "format": "uuid" },
+    "resourceGroup": { "type": ["string", "null"] },
+
+    "appRegistration": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "applicationId": { "type": "string", "format": "uuid" },
+        "objectId":      { "type": "string", "format": "uuid" },
+        "displayName":   { "type": "string" },
+        "servicePrincipalObjectId": { "type": "string", "format": "uuid" },
+        "secretKeyId":   { "type": "string", "format": "uuid" },
+        "secretExpiresOn": { "type": "string", "format": "date-time" },
+        "consentedPermissions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Resolved Graph/Dataverse permission display names that have been admin-consented."
+        }
+      }
+    },
+
+    "keyVault": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "name":          { "type": "string" },
+        "resourceId":    { "type": "string" },
+        "vaultUri":      { "type": "string", "format": "uri" },
+        "secretName":    { "type": "string" }
+      }
+    },
+
+    "dataverse": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "environmentUrl":  { "type": "string", "format": "uri" },
+        "environmentId":   { "type": "string", "format": "uuid" },
+        "tableLogicalName":{ "type": "string", "const": "fsi_messagecenterlog" },
+        "alternateKeyName":{ "type": "string", "const": "fsi_MessageCenterIdKey" },
+        "applicationUserId":{ "type": ["string", "null"], "format": "uuid" },
+        "assignedRole":    { "type": ["string", "null"] }
+      }
+    },
+
+    "smoke": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "lastRunAt": { "type": "string", "format": "date-time" },
+        "lastRunOutcome": { "type": "string", "enum": ["pass", "fail", "skipped"] },
+        "manualFlowConfirmedBy": { "type": ["string", "null"] },
+        "manualFlowConfirmedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "./lab-config.schema.json",
+  "_comment": "Copy to lab-config.json and fill in. lab-config.json is gitignored. All lab scripts read this file from the lab/ directory by default; pass -ConfigPath to override.",
+
+  "tenant": {
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "_tenantIdHelp": "Microsoft Entra tenant GUID. Get with: (Get-MgContext).TenantId or az account show --query tenantId"
+  },
+
+  "azure": {
+    "subscriptionId": "00000000-0000-0000-0000-000000000000",
+    "resourceGroup": "rg-mcm-lab",
+    "region": "eastus",
+    "_regionHelp": "Azure region for Key Vault. Use a region close to the Power Platform environment."
+  },
+
+  "powerPlatform": {
+    "environmentUrl": "https://orgxxxxxxxx.crm.dynamics.com",
+    "environmentId": "",
+    "_environmentIdHelp": "Leave empty to auto-resolve from environmentUrl. Get with: pac admin list"
+  },
+
+  "keyVault": {
+    "name": "kv-mcm-lab-001",
+    "secretName": "MessageCenterClientSecret",
+    "_help": "Key Vault names are globally unique and limited to 24 chars."
+  },
+
+  "appRegistration": {
+    "displayName": "fsi-message-center-monitor-lab",
+    "_help": "Re-runs are idempotent: if an app reg with this display name exists, it is reused (and the secret is rotated only if no credential is valid for >=30 days)."
+  },
+
+  "operator": {
+    "runnerUpn": "engineer@contoso.onmicrosoft.com",
+    "_runnerUpnHelp": "UPN of the engineer running the lab. Granted Key Vault Secrets User role and recorded as createdBy in lab-state.json."
+  },
+
+  "nonProd": {
+    "acknowledgement": "REPLACE_THIS_WITH_THE_LITERAL_PHRASE",
+    "_help": "Hard guard: every mutating script refuses to run unless this value EXACTLY equals 'I understand this lab must not target production' (case + punctuation sensitive). This prevents accidentally pointing the lab at a prod tenant. To intentionally bypass on a prod tenant (NOT recommended), pass -AllowProduction on each script call."
+  },
+
+  "notification": {
+    "teamId": "",
+    "channel": "",
+    "_help": "Optional. Empty values are accepted by the lab; the smoke test does not require Teams. Populate to validate Teams notification end-to-end."
+  },
+
+  "smoke": {
+    "knownMessageId": "",
+    "daysBack": 14,
+    "_knownMessageIdHelp": "Optional MC###### that you know exists in your tenant's Message Center. If empty, smoke test picks the first row returned by the live sync.",
+    "_daysBackHelp": "How many days of Message Center history to pull during the smoke test. 14 is usually enough to find rows in any tenant."
+  },
+
+  "thresholds": {
+    "schemaKeyActivationMaxSeconds": 900,
+    "schemaKeyActivationInitialBackoffSeconds": 5,
+    "_help": "Dataverse alternate key index activation can take up to ~15 min after creation. Adjust if your environment is consistently faster/slower."
+  }
+}
