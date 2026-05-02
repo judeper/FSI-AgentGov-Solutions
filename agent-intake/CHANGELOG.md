@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Validation** — `scripts/smoke_test.ps1` end-to-end Express-path smoke test
 - **Runbook** — `docs/pilot-deployment-runbook.md` step-by-step deployment + rollback procedures
 - **Research artifacts** — `research/` carries the Phase A fit assessment, question-catalog evaluation, intake form design v1, API verification spike, and PO-resolved open questions (all from prior commits)
+- **Adoption polish** (added during preview) — `docs/maker-quick-start.md` (1-page maker guide), `docs/sponsor-cheat-sheet.md` (1-page sponsor guide with FINRA 3110 attestation walkthrough), `docs/onboarding-checklist.md` (single-file customer admin checklist), `docs/decisions.md` (ADR consolidating PO-locked decisions), Mermaid architecture diagram added to README
 
 ### Out of scope — deferred
 

@@ -30,6 +30,26 @@ Higher-risk requests (Standard and Full paths) are flagged for the maker as "thi
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    M[Maker] -->|10-Q Express form| PP[Power Pages Portal]
+    PP --> CL[Auto-classification rules<br/>tier / zone / retention]
+    CL -->|T1-T6 all No<br/>+ Tier-3 + Zone-3| EX{Express path<br/>eligible?}
+    CL -->|Any Yes / Not sure| DEF[Saved as draft<br/>'Use full intake v0.2']
+    EX -->|Yes| FA[Power Automate flow]
+    FA -->|Teams adaptive card<br/>FINRA 3110 attestation| SP[Sponsor]
+    SP -->|1-click approve| LOG[(Immutable<br/>fsi_intakedecisionlog<br/>FSI-AgentIntake-7yr label)]
+    SP -->|Deny / Timeout| ESC[Manager auto-escalation<br/>then maker notified]
+    LOG --> HO[Handoff script]
+    HO -->|Mints| EID[Entra Agent ID]
+    HO -->|Writes| REG[agent-registry-automation]
+    HO -->|Notifies| MN[Maker via Teams]
+    LOG -.->|Passive log<br/>10% sample| ISEC[InfoSec audit queue]
+    EID -.-> DRIFT[Drift integration:<br/>unrestricted-agent-sharing-detector<br/>scope-drift-monitor<br/>agent-access-monitor<br/>agent-365-lifecycle-governance]
+```
+
+ASCII fallback:
+
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                       Agent Intake (v0.1)                          │
@@ -131,6 +151,10 @@ See `docs/pilot-deployment-runbook.md` for the full step-by-step. High level:
 | Path | Purpose |
 |------|---------|
 | `docs/dataverse-schema.md` | Auto-generated schema reference (do not edit; regenerate via `--output-docs`) |
+| `docs/maker-quick-start.md` | 1-page maker-facing overview: the 10 questions and what happens after submit |
+| `docs/sponsor-cheat-sheet.md` | 1-page sponsor-facing guide: the Teams card, FINRA 3110 attestation, SLA |
+| `docs/onboarding-checklist.md` | Customer onboarding checklist (prereqs → setup → verify → go-live) |
+| `docs/decisions.md` | Architecture Decision Record consolidating PO-locked decisions |
 | `docs/portal-configuration.md` | Power Pages Express form build instructions |
 | `docs/flow-configuration.md` | Power Automate flow build instructions (no exported JSON) |
 | `docs/auto-detect-playbook.md` | API endpoints used for auto-fill (Graph, PPAC) |
