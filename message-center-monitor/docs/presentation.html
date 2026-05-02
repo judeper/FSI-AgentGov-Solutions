@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Message Center Monitor v2.5.0 — Presentation</title>
+<meta name="description" content="Self-contained slide deck explaining the FSI Message Center Monitor solution: architecture, end-to-end flow, configuration, and day-to-day use." />
+<style>
+  :root {
+    --fsi-blue:        #0078D4;
+    --fsi-blue-dark:   #005A9E;
+    --fsi-teal:        #007A7E;
+    --fsi-amber:       #B45309;
+    --fsi-red:         #B42318;
+    --fsi-green:       #027A48;
+    --bg:              #FFFFFF;
+    --bg-muted:        #F4F6F9;
+    --bg-elev:         #FFFFFF;
+    --fg:              #1A1F2B;
+    --fg-muted:        #5A6679;
+    --border:          #D5DBE3;
+    --code-bg:         #0F172A;
+    --code-fg:         #E2E8F0;
+    --shadow:          0 6px 24px rgba(15,23,42,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:           #0E1422;
+      --bg-muted:     #16203A;
+      --bg-elev:      #18233D;
+      --fg:           #ECEFF4;
+      --fg-muted:     #97A1B2;
+      --border:       #2C3A55;
+      --shadow:       0 6px 24px rgba(0,0,0,.4);
+      --fsi-blue:     #4DA3E0;
+      --fsi-teal:     #4DB6B9;
+    }
+  }
+  * { box-sizing: border-box; }
+  html,body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size:16px; line-height:1.55; }
+  a { color: var(--fsi-blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--bg-muted); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+  pre  { background: var(--code-bg); color: var(--code-fg); padding: 14px 18px; border-radius: 8px; overflow-x:auto; font-size: 0.88em; line-height:1.5; }
+
+  /* ---- DECK CHROME ---- */
+  #deck { position: fixed; inset: 0; overflow: hidden; }
+  .slide { position: absolute; inset: 0; padding: 56px 80px 80px 80px; display: none;
+           overflow-y: auto; }
+  .slide.active { display: block; animation: fade .25s ease-out; }
+  @keyframes fade { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+  h1 { font-size: 2.4rem; font-weight: 700; margin: 0 0 12px; line-height:1.15; color: var(--fsi-blue); letter-spacing:-.01em; }
+  h2 { font-size: 1.7rem; font-weight: 700; margin: 0 0 18px; line-height:1.2; color: var(--fsi-blue); letter-spacing:-.005em; }
+  h3 { font-size: 1.15rem; font-weight: 600; margin: 18px 0 8px; color: var(--fsi-teal); }
+  p, li { font-size: 1.02rem; }
+  ul { padding-left: 1.3em; margin: 8px 0 14px; }
+  li { margin: 6px 0; }
+  .lede { font-size: 1.18rem; color: var(--fg-muted); margin: 8px 0 20px; max-width: 60ch; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:0.78rem; font-weight:600;
+          background: var(--bg-muted); color: var(--fg-muted); border: 1px solid var(--border); }
+  .pill.blue   { background: color-mix(in srgb, var(--fsi-blue) 12%, transparent); color: var(--fsi-blue); border-color: color-mix(in srgb, var(--fsi-blue) 30%, transparent); }
+  .pill.teal   { background: color-mix(in srgb, var(--fsi-teal) 12%, transparent); color: var(--fsi-teal); border-color: color-mix(in srgb, var(--fsi-teal) 30%, transparent); }
+  .pill.amber  { background: color-mix(in srgb, var(--fsi-amber) 14%, transparent); color: var(--fsi-amber); border-color: color-mix(in srgb, var(--fsi-amber) 35%, transparent); }
+  .pill.red    { background: color-mix(in srgb, var(--fsi-red) 12%, transparent); color: var(--fsi-red); border-color: color-mix(in srgb, var(--fsi-red) 30%, transparent); }
+  .pill.green  { background: color-mix(in srgb, var(--fsi-green) 12%, transparent); color: var(--fsi-green); border-color: color-mix(in srgb, var(--fsi-green) 30%, transparent); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.96rem; margin: 8px 0 16px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-muted); font-weight: 600; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+          padding: 16px 18px; box-shadow: var(--shadow); }
+  .card h3 { margin-top: 0; }
+  .callout { padding: 14px 18px; border-radius: 10px; margin: 10px 0;
+             border-left: 4px solid var(--fsi-blue); background: var(--bg-muted); }
+  .callout.amber { border-left-color: var(--fsi-amber); }
+  .callout.red   { border-left-color: var(--fsi-red); }
+  .callout.green { border-left-color: var(--fsi-green); }
+
+  /* ---- TOP BAR + BOTTOM BAR ---- */
+  .topbar { position: fixed; top:0; left:0; right:0; height:46px; padding:0 18px;
+            display:flex; align-items:center; justify-content: space-between;
+            background: var(--bg); border-bottom: 1px solid var(--border); z-index:50; }
+  .topbar .brand { display:flex; align-items:center; gap:10px; font-weight:600; color: var(--fg); font-size: 0.95rem; }
+  .topbar .brand svg { display:block; }
+  .topbar .meta { font-size: 0.85rem; color: var(--fg-muted); }
+  .botbar { position: fixed; bottom:0; left:0; right:0; height:46px; padding:0 18px;
+            display:flex; align-items:center; justify-content: space-between;
+            background: var(--bg); border-top: 1px solid var(--border); z-index:50; font-size:.85rem; color:var(--fg-muted); }
+  .botbar nav { display:flex; gap:8px; align-items:center; }
+  .botbar button { background: var(--bg-muted); border: 1px solid var(--border); color: var(--fg);
+                   padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+  .botbar button:hover { background: color-mix(in srgb, var(--fsi-blue) 12%, var(--bg-muted)); border-color: var(--fsi-blue); }
+  .progress { flex: 0 0 auto; }
+  .slide { padding-top: 70px; padding-bottom: 70px; }
+
+  /* ---- TITLE SLIDE ---- */
+  .title-slide { display:flex; flex-direction:column; justify-content:center; min-height: calc(100vh - 140px); }
+  .title-slide h1 { font-size: 3.2rem; margin-bottom: 4px; }
+  .title-slide .subtitle { font-size: 1.3rem; color: var(--fg-muted); margin-bottom: 32px; max-width: 60ch; }
+  .title-slide .meta-row { display:flex; gap:14px; flex-wrap:wrap; }
+
+  /* ---- SVG WRAPPER ---- */
+  .svg-wrap { background: var(--bg-elev); border:1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); margin: 8px 0 16px; }
+  .svg-wrap svg { display:block; width:100%; height:auto; max-height: 420px; }
+  .svg-wrap .caption { font-size: 0.86rem; color: var(--fg-muted); margin-top: 6px; text-align:center; }
+
+  /* ---- OVERVIEW (Esc) ---- */
+  body.overview #deck { overflow-y: auto; padding: 60px 24px 60px; }
+  body.overview .slide { position: relative; display: block; inset: auto;
+                          width: 32%; height: 220px; padding: 22px;
+                          margin: 8px; border:1px solid var(--border);
+                          border-radius: 10px; background: var(--bg-elev);
+                          overflow: hidden; cursor: pointer; transform: scale(.98);
+                          transition: transform .15s, border-color .15s; box-shadow: var(--shadow); }
+  body.overview .slide:hover { transform: scale(1); border-color: var(--fsi-blue); }
+  body.overview .slide h1, body.overview .slide h2 { font-size: 1.05rem; }
+  body.overview .slide p, body.overview .slide li { font-size: 0.78rem; }
+  body.overview #deck { display:flex; flex-wrap:wrap; align-content:flex-start; }
+  body.overview .topbar, body.overview .botbar { z-index: 60; }
+
+  /* ---- HELP OVERLAY ---- */
+  .help-modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index:100; display:none;
+                align-items: center; justify-content: center; padding: 30px; }
+  .help-modal.show { display: flex; }
+  .help-modal .panel { background: var(--bg-elev); border-radius: 12px; padding: 26px; max-width: 520px; box-shadow: var(--shadow); }
+  .help-modal h2 { margin-top:0; }
+  .help-modal kbd { background: var(--bg-muted); border: 1px solid var(--border); border-bottom-width: 2px; padding: 2px 7px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.85em; }
+
+  /* Print friendly */
+  @media print {
+    .topbar, .botbar { display: none; }
+    .slide { display: block !important; position: static !important;
+             page-break-after: always; height: auto; padding: 28px; overflow: visible; }
+    body { background: white; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="topbar">
+  <div class="brand">
+    <!-- Inline FSI shield+circuit logo -->
+    <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+      <defs>
+        <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0078D4"/>
+          <stop offset="100%" stop-color="#005A9E"/>
+        </linearGradient>
+      </defs>
+      <path d="M16 2 L28 7 V16 C28 24 22 28 16 30 C10 28 4 24 4 16 V7 Z" fill="url(#lg1)"/>
+      <g stroke="#fff" stroke-width="1.5" fill="none">
+        <circle cx="16" cy="13" r="2.5"/>
+        <line x1="16" y1="15.5" x2="16" y2="22"/>
+        <line x1="11" y1="22" x2="21" y2="22"/>
+        <circle cx="11" cy="22" r="1.4" fill="#fff"/>
+        <circle cx="21" cy="22" r="1.4" fill="#fff"/>
+      </g>
+    </svg>
+    <span>FSI Message Center Monitor</span>
+  </div>
+  <div class="meta">v2.5.0 · slide deck</div>
+</header>
+
+<!-- ===================== DECK ===================== -->
+<main id="deck">
+
+<!-- 01 TITLE -->
+<section class="slide title-slide" data-title="Title">
+  <h1>Message Center Monitor</h1>
+  <div class="subtitle">Daily-poll, supervised assessment, tamper-evident evidence — for AI agent platform-change risk in regulated Financial Services environments.</div>
+  <div class="meta-row">
+    <span class="pill blue">v2.5.0</span>
+    <span class="pill teal">Pillar 2 · Lifecycle &amp; Operations</span>
+    <span class="pill">Controls 2.3, 2.10</span>
+    <span class="pill amber">Enterprise zone</span>
+    <span class="pill green">Live</span>
+  </div>
+  <p class="lede" style="margin-top:48px;">Use ← → or Space to navigate · <kbd>Esc</kbd> for slide overview · <kbd>?</kbd> for help</p>
+</section>
+
+<!-- 02 PROBLEM -->
+<section class="slide" data-title="The problem">
+  <h2>The problem</h2>
+  <p class="lede">Microsoft posts platform changes to the M365 Message Center every day. Some change how Copilot Studio agents behave. In a regulated environment, "we read the e-mail digest" is not enough.</p>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Regulatory pressure</h3>
+      <ul>
+        <li><strong>FINRA Rule 3110</strong> — supervisory system must address technology changes affecting client communications.</li>
+        <li><strong>FINRA Rule 4511</strong> — books-and-records retention for the assessment trail.</li>
+        <li><strong>SOX 302/404</strong> — controls over change-management for systems supporting financial reporting.</li>
+        <li><strong>OCC 2011-12 / SR 11-7</strong> — model risk management for AI/ML-driven decisions.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Operational reality</h3>
+      <ul>
+        <li>Message Center e-mail digest goes to a shared mailbox; gets ignored.</li>
+        <li>No audit trail for "did anyone assess MCxxxxxx?"</li>
+        <li>When an admin <em>does</em> assess a post, their notes live in a Wiki / e-mail / Teams thread — disconnected from the platform record.</li>
+        <li>Re-syncing the post wipes out the admin's work (the C1 regression class).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 03 THE SOLUTION -->
+<section class="slide" data-title="The solution">
+  <h2>The solution at a glance</h2>
+  <p class="lede">A Dataverse-backed, supervised assessment workflow with three guarantees engineers care about.</p>
+  <div class="grid-3">
+    <div class="card">
+      <h3>1. Daily sync</h3>
+      <p>A scheduled PowerShell job pulls Message Center posts from Microsoft Graph and upserts them into a custom Dataverse table — idempotent, retry-aware, managed-identity-first.</p>
+    </div>
+    <div class="card">
+      <h3>2. Admin assessment workflow</h3>
+      <p>Each row exposes 7 admin-owned columns (status, notes, who, when, actions, agent-impact flag, notify date). Power Apps form, model-driven view, or Power Automate — pick your front end.</p>
+    </div>
+    <div class="card">
+      <h3>3. Sync never overwrites the admin</h3>
+      <p>The "C1 invariant": once an admin sets any of those 7 columns, no future Graph sync may touch them. Enforced by code — and verified end-to-end by the lab dry-run.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>Bonus (v2.5.0):</strong> a numbered <code>lab/</code> harness (00→06, 99) bootstraps a complete non-prod deployment in &lt; 30 minutes and runs an end-to-end smoke test that proves the C1 invariant against live Power Platform wires.
+  </div>
+</section>
+
+<!-- 04 ARCHITECTURE DIAGRAM -->
+<section class="slide" data-title="Architecture">
+  <h2>Architecture</h2>
+  <div class="svg-wrap">
+    <svg viewBox="0 0 880 360" role="img" aria-labelledby="arch-title arch-desc">
+      <title id="arch-title">Message Center Monitor architecture</title>
+      <desc id="arch-desc">Microsoft Graph polled by a scheduled PowerShell script that authenticates via Managed Identity and Azure Key Vault; upserts to a Dataverse table; surfaces to admins via a model-driven app; notifies via Teams.</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/>
+        </marker>
+        <linearGradient id="bx" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFFFFF"/>
+          <stop offset="100%" stop-color="#F4F6F9"/>
+        </linearGradient>
+      </defs>
+      <style>
+        .b  { fill: url(#bx); stroke: #0078D4; stroke-width: 1.5; rx: 10; ry: 10; }
+        .bd { fill: #007A7E; stroke: #005A5C; stroke-width: 1.5; rx: 10; ry: 10; }
+        .ba { fill: #B45309; stroke: #8A4108; stroke-width: 1.5; rx: 10; ry: 10; }
+        .lbl { font: 600 13px -apple-system, "Segoe UI", sans-serif; fill: #1A1F2B; }
+        .lblw { font: 600 13px -apple-system, "Segoe UI", sans-serif; fill: #FFFFFF; }
+        .sub { font: 400 11px -apple-system, "Segoe UI", sans-serif; fill: #5A6679; }
+        .subw{ font: 400 11px -apple-system, "Segoe UI", sans-serif; fill: #E8ECF4; }
+        .arrow { stroke: #0078D4; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+        .arlbl { font: 500 11px -apple-system, "Segoe UI", sans-serif; fill: #5A6679; }
+      </style>
+      <!-- Microsoft Graph -->
+      <rect class="b" x="20"  y="40"  width="170" height="60"/>
+      <text class="lbl" x="105" y="65" text-anchor="middle">Microsoft Graph</text>
+      <text class="sub" x="105" y="84" text-anchor="middle">/admin/serviceAnnouncement/messages</text>
+      <!-- Az KV -->
+      <rect class="b" x="20"  y="150" width="170" height="60"/>
+      <text class="lbl" x="105" y="175" text-anchor="middle">Azure Key Vault</text>
+      <text class="sub" x="105" y="194" text-anchor="middle">client secret (legacy auth)</text>
+      <!-- Identity -->
+      <rect class="b" x="20"  y="260" width="170" height="60"/>
+      <text class="lbl" x="105" y="285" text-anchor="middle">Managed / Workload Id</text>
+      <text class="sub" x="105" y="304" text-anchor="middle">recommended auth</text>
+      <!-- Sync runner -->
+      <rect class="bd" x="290" y="120" width="200" height="120"/>
+      <text class="lblw" x="390" y="155" text-anchor="middle">Invoke-MessageCenterSync</text>
+      <text class="subw" x="390" y="175" text-anchor="middle">PowerShell 7 + MSAL.PS</text>
+      <text class="subw" x="390" y="195" text-anchor="middle">_Common.ps1 helpers</text>
+      <text class="subw" x="390" y="215" text-anchor="middle">retry · token cache · redaction</text>
+      <!-- Dataverse -->
+      <rect class="b" x="580" y="40" width="180" height="100"/>
+      <text class="lbl" x="670" y="65" text-anchor="middle">Dataverse</text>
+      <text class="sub" x="670" y="84" text-anchor="middle">fsi_messagecenterlog</text>
+      <text class="sub" x="670" y="102" text-anchor="middle">+ alt key fsi_MessageCenterIdKey</text>
+      <text class="sub" x="670" y="120" text-anchor="middle">21 columns (6 Graph + 7 admin)</text>
+      <!-- Admin assessment app -->
+      <rect class="ba" x="580" y="170" width="180" height="60"/>
+      <text class="lblw" x="670" y="195" text-anchor="middle">Model-driven app / Form</text>
+      <text class="subw" x="670" y="214" text-anchor="middle">analyst sets 7 admin columns</text>
+      <!-- Teams -->
+      <rect class="b" x="580" y="260" width="180" height="60"/>
+      <text class="lbl" x="670" y="285" text-anchor="middle">Teams channel</text>
+      <text class="sub" x="670" y="304" text-anchor="middle">adaptive card on high/critical</text>
+      <!-- Arrows -->
+      <path class="arrow" d="M190 70 C 240 70, 240 160, 290 160"/>
+      <text class="arlbl" x="220" y="105">poll</text>
+      <path class="arrow" d="M190 180 L 290 180"/>
+      <text class="arlbl" x="195" y="172">secret</text>
+      <path class="arrow" d="M190 290 C 240 290, 240 220, 290 220"/>
+      <text class="arlbl" x="200" y="265">token</text>
+      <path class="arrow" d="M490 150 C 540 150, 540 80, 580 80"/>
+      <text class="arlbl" x="505" y="105">upsert (alt-key)</text>
+      <path class="arrow" d="M490 200 L 580 200"/>
+      <text class="arlbl" x="500" y="192">read</text>
+      <path class="arrow" d="M490 230 C 540 230, 540 290, 580 290"/>
+      <text class="arlbl" x="505" y="278">notify</text>
+      <!-- Admin dotted -->
+      <path d="M670 230 L 670 260" stroke="#5A6679" stroke-width="1.5" stroke-dasharray="3,3" fill="none"/>
+    </svg>
+    <div class="caption">Daily poll → managed-identity auth → idempotent upsert → admin assessment → Teams alert (severity-gated).</div>
+  </div>
+</section>
+
+<!-- 05 STORAGE / COLUMN MODEL -->
+<section class="slide" data-title="Storage model">
+  <h2>The Dataverse table — two ownership zones</h2>
+  <p class="lede">Every column on <code>fsi_messagecenterlog</code> belongs to exactly one of two owners. The C1 invariant is: <strong>sync only ever writes to Graph-owned columns.</strong></p>
+  <div class="svg-wrap">
+    <svg viewBox="0 0 880 290" role="img" aria-labelledby="own-title">
+      <title id="own-title">Column ownership boundary diagram</title>
+      <defs>
+        <linearGradient id="gz" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#0078D4"/>
+          <stop offset="100%" stop-color="#4DA3E0"/>
+        </linearGradient>
+        <linearGradient id="az" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#B45309"/>
+          <stop offset="100%" stop-color="#D97706"/>
+        </linearGradient>
+      </defs>
+      <style>
+        .zone { stroke: rgba(0,0,0,.1); stroke-width: 1; rx: 12; ry: 12; }
+        .zlbl { font: 700 14px -apple-system, "Segoe UI", sans-serif; fill: #fff; }
+        .col  { font: 500 12px ui-monospace, Menlo, Consolas, monospace; fill: #1A1F2B; }
+        .colw { font: 500 12px ui-monospace, Menlo, Consolas, monospace; fill: #fff; }
+        .cap  { font: 600 11px -apple-system, "Segoe UI", sans-serif; fill: #fff; }
+      </style>
+      <!-- Graph zone -->
+      <rect class="zone" x="20" y="20" width="410" height="250" fill="url(#gz)"/>
+      <text class="zlbl" x="40" y="50">Graph-owned (sync writes; admin reads)</text>
+      <text class="cap" x="40" y="68">re-sync may overwrite these</text>
+      <g transform="translate(40,90)">
+        <text class="colw" y="0">fsi_messagecenterid · fsi_title</text>
+        <text class="colw" y="22">fsi_category · fsi_severity · fsi_services</text>
+        <text class="colw" y="44">fsi_startdatetime · fsi_actionrequiredbydatetime</text>
+        <text class="colw" y="66">fsi_lastmodifieddatetime · fsi_enddatetime</text>
+        <text class="colw" y="88">fsi_ismajorchange · fsi_body</text>
+        <text class="colw" y="110">fsi_tags · fsi_hasattachments</text>
+      </g>
+      <!-- Admin zone -->
+      <rect class="zone" x="450" y="20" width="410" height="250" fill="url(#az)"/>
+      <text class="zlbl" x="470" y="50">Admin-owned (admin writes; sync MUST NOT touch)</text>
+      <text class="cap" x="470" y="68">the C1 invariant — 7 columns</text>
+      <g transform="translate(470,90)">
+        <text class="colw" y="0">fsi_assessmentstatus  ← Picklist</text>
+        <text class="colw" y="22">fsi_assessment        ← Memo</text>
+        <text class="colw" y="44">fsi_assessedby        ← UPN string</text>
+        <text class="colw" y="66">fsi_assesseddate      ← DateTime</text>
+        <text class="colw" y="88">fsi_actionstaken      ← Memo</text>
+        <text class="colw" y="110">fsi_impactsagents     ← Boolean</text>
+        <text class="colw" y="132">fsi_notifiedon        ← DateTime</text>
+      </g>
+    </svg>
+    <div class="caption">21 total columns (13 Graph + 7 admin + 1 system primary). The 7 admin-owned columns are the audit trail FINRA / SOX cares about.</div>
+  </div>
+</section>
+
+<!-- 06 END TO END FLOW -->
+<section class="slide" data-title="End-to-end flow">
+  <h2>End-to-end flow (re-sync, the C1 path)</h2>
+  <div class="svg-wrap">
+    <svg viewBox="0 0 880 380" role="img" aria-labelledby="seq-title">
+      <title id="seq-title">Sequence: Graph → Sync runner → Dataverse upsert with admin-column protection</title>
+      <style>
+        .lane { stroke: #D5DBE3; stroke-width: 1; }
+        .lanelbl { font: 700 13px -apple-system, "Segoe UI", sans-serif; fill: #1A1F2B; text-anchor: middle; }
+        .msg { stroke: #0078D4; stroke-width: 1.8; fill: none; marker-end: url(#arr2); }
+        .ret { stroke: #007A7E; stroke-width: 1.8; fill: none; stroke-dasharray: 4,4; marker-end: url(#arr2t); }
+        .mlbl { font: 500 11.5px -apple-system, "Segoe UI", sans-serif; fill: #1A1F2B; }
+        .note { font: 500 11px -apple-system, "Segoe UI", sans-serif; fill: #B45309; }
+      </style>
+      <defs>
+        <marker id="arr2"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0078D4"/></marker>
+        <marker id="arr2t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#007A7E"/></marker>
+      </defs>
+      <!-- Lanes -->
+      <g>
+        <line class="lane" x1="120" y1="50" x2="120" y2="370"/>
+        <line class="lane" x1="380" y1="50" x2="380" y2="370"/>
+        <line class="lane" x1="640" y1="50" x2="640" y2="370"/>
+        <line class="lane" x1="820" y1="50" x2="820" y2="370"/>
+        <text class="lanelbl" x="120" y="40">Microsoft Graph</text>
+        <text class="lanelbl" x="380" y="40">Sync runner</text>
+        <text class="lanelbl" x="640" y="40">Dataverse</text>
+        <text class="lanelbl" x="820" y="40">Admin / app</text>
+      </g>
+      <!-- Step 1: poll -->
+      <path class="msg" d="M380 80 L 120 80"/>
+      <text class="mlbl" x="135" y="74">GET messages?modified&gt;X</text>
+      <path class="ret" d="M120 110 L 380 110"/>
+      <text class="mlbl" x="135" y="104">200 OK [N posts]</text>
+      <!-- Step 2: build record -->
+      <text class="mlbl" x="280" y="140">build $Record (excludes 7 admin cols)</text>
+      <!-- Step 3: try create -->
+      <path class="msg" d="M380 170 L 640 170"/>
+      <text class="mlbl" x="395" y="164">PATCH .../fsi_messagecenterlogs(fsi_messagecenterid='MCxxxxxx')</text>
+      <text class="mlbl" x="395" y="184">If-None-Match: *  body=$Record + fsi_assessmentstatus=NotAssessed</text>
+      <path class="ret" d="M640 210 L 380 210"/>
+      <text class="mlbl" x="395" y="204">412 Precondition Failed (row exists)</text>
+      <!-- Step 4: update without admin cols -->
+      <path class="msg" d="M380 250 L 640 250"/>
+      <text class="mlbl" x="395" y="244">PATCH same URL — body=$Record (NO admin cols, NO If-None-Match)</text>
+      <path class="ret" d="M640 280 L 380 280"/>
+      <text class="mlbl" x="395" y="274">204 No Content</text>
+      <text class="note" x="395" y="298">↑ admin columns untouched ✓ — the C1 invariant holds</text>
+      <!-- Step 5: notify -->
+      <path class="msg" d="M380 330 L 820 330"/>
+      <text class="mlbl" x="500" y="324">if severity ∈ NotifySeverities → adaptive card to Teams channel</text>
+    </svg>
+    <div class="caption">First PATCH attempts CREATE; on 412 the row exists, so a second PATCH without <code>If-None-Match</code> and without admin columns merges only Graph-owned fields. Idempotent and admin-safe.</div>
+  </div>
+</section>
+
+<!-- 07 C1 BEFORE/AFTER -->
+<section class="slide" data-title="C1 BEFORE/AFTER">
+  <h2>C1 — what the v2.4.0 fix actually changed</h2>
+  <p class="lede">In v2.3.0 the inline upsert sent <code>fsi_assessmentstatus</code> on every PATCH — silently resetting any value the admin had just set. v2.4.0 routes the update through a helper that excludes ALL 7 admin columns from the update payload.</p>
+  <div class="grid-2">
+    <div class="card" style="border-color: var(--fsi-red);">
+      <h3 style="color: var(--fsi-red);">Before (v2.3.0)</h3>
+<pre>
+# 09:00 — admin assessed MC54321
+fsi_assessmentstatus = Reviewed
+fsi_assessment       = "No agent impact, FYI only"
+fsi_assessedby       = jane@contoso.com
+fsi_assesseddate     = 09:00 UTC
+fsi_actionstaken     = "Filed in change log"
+
+# 09:15 — sync runs again
+PATCH fsi_messagecenterlogs(fsi_messagecenterid='MC54321')
+  fsi_assessmentstatus = NotAssessed   ← clobbered
+  fsi_title            = "..."
+  fsi_body             = "..."
+
+# Result: admin's work GONE.
+</pre>
+    </div>
+    <div class="card" style="border-color: var(--fsi-green);">
+      <h3 style="color: var(--fsi-green);">After (v2.4.0)</h3>
+<pre>
+# 09:00 — admin assessed MC54321 (same as before)
+
+# 09:15 — sync runs again
+PATCH fsi_messagecenterlogs(fsi_messagecenterid='MC54321')
+  If-None-Match: *
+  body = { fsi_title, fsi_body, ..., fsi_assessmentstatus=NotAssessed }
+  → 412 Precondition Failed
+
+PATCH same URL (no If-None-Match)
+  body = { fsi_title, fsi_body, ... }   ← NO admin columns
+  → 204 No Content
+
+# Result: admin's 7 columns untouched. ✓
+</pre>
+    </div>
+  </div>
+  <div class="callout green"><strong>Verified by:</strong> 8 mock unit tests in <code>tests/Upsert.Tests.ps1</code> (set-intersection assertions on the JSON body) + lab Step 6 against live Dataverse (back-dates <code>fsi_lastupdated</code> to force the update path, then asserts byte-equality of all 7 admin columns).</div>
+</section>
+
+<!-- 08 AUTH MODES -->
+<section class="slide" data-title="Auth modes">
+  <h2>Authentication — managed-identity-first</h2>
+  <p class="lede">All three governance scripts accept <code>-AuthMode</code>. Pick the highest-trust mode the host supports.</p>
+  <table>
+    <thead>
+      <tr><th>Mode</th><th>When to use</th><th>Secrets on disk?</th><th>Recommended for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>ManagedIdentity</code></td><td>Azure-hosted runner (Functions, Automation, ACI, AKS, App Service)</td><td>None</td><td><span class="pill green">Production (default)</span></td></tr>
+      <tr><td><code>WorkloadIdentity</code></td><td>GitHub Actions OIDC, Azure DevOps OIDC, federated SP</td><td>None</td><td><span class="pill green">CI / pipelines</span></td></tr>
+      <tr><td><code>Interactive</code></td><td>Admin workstation, one-off run</td><td>None</td><td>Ad-hoc admin</td></tr>
+      <tr><td><code>DeviceCode</code></td><td>Headless workstation, no browser</td><td>None</td><td>Ad-hoc admin</td></tr>
+      <tr><td><code>ClientSecret</code></td><td>Power Automate cloud flow, legacy environments</td><td>Yes — Key Vault required</td><td><span class="pill amber">Lab / legacy only</span></td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <strong>Why managed identity matters here:</strong> Message Center sync runs every day, unattended. ClientSecret leaves a 24-month-rotating credential in Key Vault that must be audited, rotated, and explained to FSI Security. Managed identity has none of those obligations.
+  </div>
+</section>
+
+<!-- 09 ENV VARS -->
+<section class="slide" data-title="Configuration cheat sheet">
+  <h2>Configuration — the 6 environment variables</h2>
+  <p class="lede">Power Platform environment variable definitions (created by <code>create_mcm_environment_variables.py</code>). Set values once per environment; scripts and flows read them at runtime.</p>
+  <table>
+    <thead><tr><th>Schema name</th><th>Type</th><th>Default</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>fsi_MCM_PollingIntervalDays</code></td><td>Number</td><td>1</td><td>Days between sync runs (DaysBack window).</td></tr>
+      <tr><td><code>fsi_MCM_NotifySeverities</code></td><td>String</td><td><code>high,critical</code></td><td>CSV of severity levels that trigger Teams notifications.</td></tr>
+      <tr><td><code>fsi_MCM_TeamsTeamId</code></td><td>String</td><td>(empty)</td><td>Team ID for the alerts channel. Empty = notification skipped.</td></tr>
+      <tr><td><code>fsi_MCM_TeamsChannelId</code></td><td>String</td><td>(empty)</td><td>Channel ID inside that team.</td></tr>
+      <tr><td><code>fsi_MCM_DataverseUrl</code></td><td>String</td><td>(empty)</td><td>Org URL — used by flow connection refs and child flows.</td></tr>
+      <tr><td><code>fsi_MCM_KeyVaultSecretName</code></td><td>String</td><td><code>MessageCenterClientSecret</code></td><td>Secret name in Key Vault (only relevant for <code>ClientSecret</code> auth mode).</td></tr>
+    </tbody>
+  </table>
+  <div class="callout amber"><strong>Naming pitfall:</strong> Dataverse logical names are the schema name, lowercased, with NO underscores between words. So <code>fsi_MCM_TeamsTeamId</code> ⇒ <code>fsi_mcm_teamsteamid</code> in OData filters. Source of truth is always <code>scripts/create_mcm_environment_variables.py</code>.</div>
+</section>
+
+<!-- 10 INSTALL OVERVIEW -->
+<section class="slide" data-title="Installation overview">
+  <h2>Installation paths</h2>
+  <div class="grid-3">
+    <div class="card">
+      <h3>① Lab dry-run (recommended first)</h3>
+      <p>Run <code>lab/00→06</code>. Bootstraps app reg, Key Vault, schema, app user, env vars, then runs a 10-step smoke test that exercises C1 against live Dataverse. ~30 minutes.</p>
+      <p><span class="pill teal">Engineer-runnable</span></p>
+    </div>
+    <div class="card">
+      <h3>② Production deployment</h3>
+      <p>Follow <code>docs/setup-checklist.md</code>: app reg + Graph permission + Key Vault + Dataverse import + cloud flow build + connection refs. Schedule via Azure Automation or scheduled cloud flow.</p>
+      <p><span class="pill blue">M365 + PP admins</span></p>
+    </div>
+    <div class="card">
+      <h3>③ Pipeline-driven (advanced)</h3>
+      <p>Wrap the Python schema scripts in your ALM pipeline; deploy env vars + connection refs + flows via the standard Power Platform pipelines. Sync runner ships as PowerShell module.</p>
+      <p><span class="pill">DevOps / pipeline owner</span></p>
+    </div>
+  </div>
+  <div class="callout"><strong>Repo policy:</strong> no exported flow JSON ships in this repo. Cloud flow build is documented step-by-step in <code>docs/flow-configuration.md</code> so admins understand what they are building.</div>
+</section>
+
+<!-- 11 LAB DRY RUN -->
+<section class="slide" data-title="Lab dry-run">
+  <h2>Lab dry-run — what it proves</h2>
+  <p class="lede">8 numbered idempotent PowerShell scripts under <code>message-center-monitor/lab/</code>. Every mutating script enforces a non-prod safety guard before any side effect.</p>
+  <table>
+    <thead><tr><th>#</th><th>Script</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td><code>00_Install-Prereqs.ps1</code></td><td>Installs <code>Microsoft.Graph</code>, <code>Az.*</code>, <code>MSAL.PS</code>; verifies runtimes and (optional) directory roles.</td></tr>
+      <tr><td>1</td><td><code>01_New-AppRegistration.ps1</code></td><td>App reg + SP; resolves <code>ServiceMessage.Read.All</code> + Dataverse <code>user_impersonation</code> dynamically; admin-consents; rotates secret.</td></tr>
+      <tr><td>2</td><td><code>02_New-KeyVault.ps1</code></td><td>RBAC vault; uploads the secret. Reads gitignored owner-ACL <code>.secret-handoff</code> from 01.</td></tr>
+      <tr><td>3</td><td><code>03_Deploy-Schema.ps1</code></td><td>Wraps the 3 Python schema scripts; polls until alt-key is <code>Active</code>.</td></tr>
+      <tr><td>4</td><td><code>04_New-AppUser.ps1</code></td><td>Dataverse Application User + role + token-refreshing access probe.</td></tr>
+      <tr><td>5</td><td><code>05_Set-EnvVarValues.ps1</code></td><td>Populates the 6 <code>fsi_MCM_*</code> env-var values from <code>lab-config.json</code>.</td></tr>
+      <tr><td>6</td><td><code>06_Invoke-LabSmokeTest.ps1</code></td><td><strong>The dry-run.</strong> 10 steps. Step 6 forces the update path then asserts byte-equality of all 7 admin columns.</td></tr>
+      <tr><td>99</td><td><code>99_Remove-LabDeployment.ps1</code></td><td>State-driven idempotent teardown of everything 01–05 created.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout amber"><strong>Non-prod guard:</strong> every script refuses to run unless <code>lab-config.json</code> contains the literal string <code>"I understand this lab must not target production"</code>. Bypass with <code>-AllowProduction</code> only for deliberate prod re-validation.</div>
+</section>
+
+<!-- 12 DAY TO DAY -->
+<section class="slide" data-title="Day-to-day use">
+  <h2>Day-to-day use — the assessment workflow</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Step 1 — Triage</h3>
+      <p>Open the model-driven app (or a saved Dataverse view). Filter <code>fsi_assessmentstatus = NotAssessed</code> and <code>fsi_severity ∈ {High, Critical}</code> to surface what needs human eyes.</p>
+      <h3>Step 2 — Assess</h3>
+      <p>For each row, fill in the 7 admin-owned columns:</p>
+      <ul>
+        <li><code>fsi_assessmentstatus</code> → Reviewed / ImpactsAgents / NoImpact</li>
+        <li><code>fsi_assessment</code> → narrative notes</li>
+        <li><code>fsi_assessedby</code> → your UPN (auto-populate via Power Apps)</li>
+        <li><code>fsi_assesseddate</code> → now</li>
+        <li><code>fsi_actionstaken</code> → "Filed change log entry CR-1234"</li>
+        <li><code>fsi_impactsagents</code> → boolean</li>
+        <li><code>fsi_notifiedon</code> → if you informed downstream teams</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Step 3 — Verify the trail</h3>
+      <p>Tomorrow's sync re-runs against the same MC ID. Open the row again — your 7 columns are <em>exactly</em> what you typed. The Graph-owned fields (title, body, services) may have changed; that's expected.</p>
+      <h3>Step 4 — Export evidence</h3>
+      <p>Quarterly: run <code>Export-MessageCenterEvidence.ps1</code> for the auditor. Output is hash-chained JSON; <code>Test-EvidenceIntegrity.ps1</code> verifies the chain end-to-end.</p>
+      <h3>Step 5 — React to Teams alerts</h3>
+      <p>If a high/critical post lands, the adaptive card in your Teams channel links straight to the Dataverse row. One click → assessment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13 NOTIFICATION -->
+<section class="slide" data-title="Notification">
+  <h2>Teams notification</h2>
+  <p class="lede">Severity-gated. Only posts where <code>fsi_severity</code> matches one of the comma-separated levels in <code>fsi_MCM_NotifySeverities</code> (default <code>high,critical</code>) trigger an adaptive card.</p>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Where</h3>
+      <ul>
+        <li><strong>Team</strong> — <code>fsi_MCM_TeamsTeamId</code></li>
+        <li><strong>Channel</strong> — <code>fsi_MCM_TeamsChannelId</code></li>
+        <li>Empty values = notification skipped (the sync still runs successfully).</li>
+        <li>Built by a Power Automate cloud flow you assemble manually (template payload in <code>templates/teams-notification-card.json</code>).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Card content</h3>
+      <ul>
+        <li>Title + severity badge</li>
+        <li>One-line summary</li>
+        <li><strong>Affected services</strong> chips</li>
+        <li><strong>Action required by</strong> date (red if &lt; 7 days)</li>
+        <li>Two buttons: <em>Open in Dataverse</em>, <em>Open in MAC</em></li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout"><strong>By design:</strong> the card never includes the full body. FSI customers do not want potentially confidential M365 admin commentary echoed into a wide-distribution Teams channel.</div>
+</section>
+
+<!-- 14 OPERATIONAL GUARDRAILS -->
+<section class="slide" data-title="Operational guardrails">
+  <h2>Operational guardrails — what's in the code</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Built-in protections</h3>
+      <ul>
+        <li><strong>Secret redaction</strong> — <code>Write-McmRedacted</code> scrubs Bearer tokens, <code>Authorization</code> headers, <code>client_secret</code>, <code>access_token</code>, <code>refresh_token</code> from every log line.</li>
+        <li><strong>Retry with backoff</strong> — <code>Invoke-McmRest</code> honours <code>Retry-After</code> headers (H2/H3 parsing) on 429/5xx.</li>
+        <li><strong>Token caching</strong> — refreshes ~5 minutes before expiry; cached per scope.</li>
+        <li><strong>Idempotent upsert</strong> — alt-key based; safe to re-run.</li>
+        <li><strong>SupportsShouldProcess</strong> — <code>-WhatIf</code> / <code>-Confirm</code> on the sync entry point.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Test coverage</h3>
+      <ul>
+        <li><strong>Pester (PowerShell)</strong> — 57 tests across 4 files, all mock-based, hard-gated in CI.
+          <ul style="margin-top:4px">
+            <li><code>Upsert.Tests.ps1</code> — 8 cases for the C1 invariant.</li>
+            <li><code>Common.Tests.ps1</code> — formatters + retry + token cache + redaction.</li>
+            <li><code>Sync.Tests.ps1</code> — orchestration counter math.</li>
+            <li><code>Guards.Tests.ps1</code> — guards every HTTP-using script through the helpers.</li>
+          </ul>
+        </li>
+        <li><strong>pytest (Python)</strong> — 13 tests covering schema script idempotency + key creation payload.</li>
+        <li><strong>Lab smoke</strong> — Step 6 verifies C1 against live wires.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 15 TROUBLESHOOTING -->
+<section class="slide" data-title="Troubleshooting">
+  <h2>Top 5 things that go wrong</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Root cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>404 from sync — "fsi_MessageCenterIdKey not found"</td><td>Alt-key not yet <code>Active</code> after schema deploy.</td><td>Wait — <code>03_Deploy-Schema.ps1</code> polls for up to 15 min. Or check <code>EntityDefinitions(LogicalName='fsi_messagecenterlog')/Keys</code>.</td></tr>
+      <tr><td>401/403 from sync</td><td>Dataverse Application User missing or wrong role.</td><td>Re-run <code>04_New-AppUser.ps1</code>. Probe re-acquires SP token before each attempt.</td></tr>
+      <tr><td>"Definition not found" for env var in 05</td><td>Schema script not run yet, or wrong env var name.</td><td>Run <code>03_Deploy-Schema.ps1</code> first. The 6 names are <code>fsi_MCM_*</code> (case sensitive in PATCH bodies).</td></tr>
+      <tr><td>Admin assessment disappeared after sync</td><td><strong>This is C1 regression.</strong> Should not happen in v2.4.0+.</td><td>Verify version: <code>git -C ... show HEAD:message-center-monitor/manifest.yaml</code>. If &lt; 2.4.0, upgrade.</td></tr>
+      <tr><td>No Teams card despite high-severity post</td><td><code>fsi_MCM_TeamsTeamId</code> or <code>fsi_MCM_TeamsChannelId</code> empty; or severity not in <code>fsi_MCM_NotifySeverities</code>.</td><td>Check env-var values via <code>Get-MessageCenterAssessmentStatus.ps1</code>. Cloud flow logs show whether it was triggered.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 16 FAQ -->
+<section class="slide" data-title="FAQ">
+  <h2>FAQ</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Why Dataverse, not just SharePoint?</h3>
+      <p>Need an alternate key + idempotent upsert + row-level audit + role-scoped security + Power Automate native binding. SharePoint's audit/security model doesn't meet FINRA 4511 in practice.</p>
+      <h3>Can I use this in a multi-environment ALM pipeline?</h3>
+      <p>Yes. The schema scripts and env-var scripts both honour <code>--dry-run</code>; wrap them in your standard Power Platform pipeline (sandbox → test → prod).</p>
+      <h3>How does it handle Microsoft renaming a service in MAC?</h3>
+      <p><code>fsi_services</code> is Graph-owned, so it gets refreshed on the next sync. Your assessment narrative in <code>fsi_assessment</code> stays intact (it's admin-owned).</p>
+    </div>
+    <div class="card">
+      <h3>Government cloud / DoD?</h3>
+      <p>v2.5.0 is commercial cloud only. Gov/DoD endpoints + sovereign Key Vault tier are tracked as future work.</p>
+      <h3>What happens if Microsoft adds a new severity level?</h3>
+      <p>The sync stores whatever Graph returns; you'll see the new value in <code>fsi_severity</code>. Add it to <code>fsi_MCM_NotifySeverities</code> if you want Teams alerts for it.</p>
+      <h3>Can I attach the assessment to a Power BI dashboard?</h3>
+      <p>Yes — Dataverse table is accessible via the standard Dataverse Power BI connector. Build whatever views/queries fit your governance KPIs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 17 WHERE NEXT -->
+<section class="slide" data-title="Where to go next">
+  <h2>Where to go next</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>For implementers</h3>
+      <ul>
+        <li><a href="../README.md">README</a> — solution overview and prerequisites</li>
+        <li><a href="./setup-checklist.md">setup-checklist.md</a> — production deployment</li>
+        <li><a href="./flow-configuration.md">flow-configuration.md</a> — manual cloud flow build steps</li>
+        <li><a href="./lab-dry-run.md">lab-dry-run.md</a> — non-prod end-to-end validation</li>
+        <li><a href="./dataverse-schema.md">dataverse-schema.md</a> — auto-generated column reference</li>
+        <li><a href="./explainer.html">explainer.html</a> — long-scroll reference (this deck's expanded twin)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>For governance / compliance</h3>
+      <ul>
+        <li><a href="https://judeper.github.io/FSI-AgentGov/docs/controls/2.3/">Control 2.3 — Change Management</a></li>
+        <li><a href="https://judeper.github.io/FSI-AgentGov/docs/controls/2.10/">Control 2.10 — Platform Change Monitoring</a></li>
+        <li><a href="https://judeper.github.io/FSI-AgentGov/docs/playbooks/advanced-implementations/platform-change-governance/">Playbook — Platform change governance</a></li>
+        <li><a href="../CHANGELOG.md">CHANGELOG.md</a> — what changed when</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 18 APPENDIX -->
+<section class="slide" data-title="Appendix">
+  <h2>Appendix — full column dictionary</h2>
+  <table>
+    <thead><tr><th>Schema name</th><th>Type</th><th>Owner</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>fsi_messagecenterid</code></td><td>String (PK + alt key)</td><td>Graph</td><td>The MC post ID, e.g. <code>MC123456</code>.</td></tr>
+      <tr><td><code>fsi_title</code></td><td>String 500</td><td>Graph</td><td>Post title.</td></tr>
+      <tr><td><code>fsi_category</code></td><td>Picklist</td><td>Graph</td><td>Feature / Admin / Security.</td></tr>
+      <tr><td><code>fsi_severity</code></td><td>Picklist</td><td>Graph</td><td>High / Normal / Critical.</td></tr>
+      <tr><td><code>fsi_services</code></td><td>String 2000</td><td>Graph</td><td>CSV of affected services.</td></tr>
+      <tr><td><code>fsi_startdatetime</code></td><td>DateTime</td><td>Graph</td><td>Effective start.</td></tr>
+      <tr><td><code>fsi_actionrequiredbydatetime</code></td><td>DateTime</td><td>Graph</td><td>Deadline.</td></tr>
+      <tr><td><code>fsi_lastmodifieddatetime</code></td><td>DateTime</td><td>Graph</td><td>Used by the change-detection diff.</td></tr>
+      <tr><td><code>fsi_enddatetime</code></td><td>DateTime</td><td>Graph</td><td>Sunset / completion.</td></tr>
+      <tr><td><code>fsi_ismajorchange</code></td><td>Boolean</td><td>Graph</td><td>Microsoft's major-change flag.</td></tr>
+      <tr><td><code>fsi_body</code></td><td>Memo</td><td>Graph</td><td>Full announcement body.</td></tr>
+      <tr><td><code>fsi_tags</code></td><td>String 1000</td><td>Graph</td><td>Microsoft-supplied tags.</td></tr>
+      <tr><td><code>fsi_hasattachments</code></td><td>Boolean</td><td>Graph</td><td>Whether MAC has attachments for this post.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_assessmentstatus</code></td><td>Picklist</td><td><strong>Admin</strong></td><td>NotAssessed / Reviewed / ImpactsAgents / NoImpact.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_assessment</code></td><td>Memo</td><td><strong>Admin</strong></td><td>Narrative analysis.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_assessedby</code></td><td>String 200</td><td><strong>Admin</strong></td><td>Analyst UPN.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_assesseddate</code></td><td>DateTime</td><td><strong>Admin</strong></td><td>When assessed.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_actionstaken</code></td><td>Memo</td><td><strong>Admin</strong></td><td>What was done.</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_impactsagents</code></td><td>Boolean</td><td><strong>Admin</strong></td><td>Did this affect agents?</td></tr>
+      <tr style="background: color-mix(in srgb, var(--fsi-amber) 10%, transparent);"><td><code>fsi_notifiedon</code></td><td>DateTime</td><td><strong>Admin</strong></td><td>When you informed others.</td></tr>
+    </tbody>
+  </table>
+  <p class="lede" style="margin-top:18px;font-size:.95rem;">Highlighted rows = admin-owned. The C1 invariant says sync must never write to those.</p>
+</section>
+
+<!-- 19 SUMMARY -->
+<section class="slide title-slide" data-title="Thank you">
+  <h1>Thank you</h1>
+  <div class="subtitle">Message Center Monitor v2.5.0 — daily sync, supervised assessment, tamper-evident evidence, and a non-prod harness that proves the C1 invariant against live Power Platform wires.</div>
+  <div class="meta-row">
+    <a href="../README.md" class="pill blue">README</a>
+    <a href="./lab-dry-run.md" class="pill teal">Lab runbook</a>
+    <a href="./explainer.html" class="pill">Explainer (long-scroll)</a>
+    <a href="../CHANGELOG.md" class="pill">CHANGELOG</a>
+  </div>
+  <p class="lede" style="margin-top:64px;color:var(--fg-muted);">This deck is one of two self-contained HTML files. Open the explainer for an in-depth read.</p>
+</section>
+
+</main>
+
+<!-- ===================== BOTTOM BAR ===================== -->
+<footer class="botbar">
+  <div>← / → · Space · <kbd>Esc</kbd> overview · <kbd>?</kbd> help · <kbd>P</kbd> print</div>
+  <nav>
+    <button id="prevBtn" aria-label="Previous slide">‹ Prev</button>
+    <span class="progress" id="progress">1 / 19</span>
+    <button id="nextBtn" aria-label="Next slide">Next ›</button>
+  </nav>
+</footer>
+
+<!-- ===================== HELP ===================== -->
+<div class="help-modal" id="help" role="dialog" aria-labelledby="help-title">
+  <div class="panel">
+    <h2 id="help-title">Keyboard shortcuts</h2>
+    <p><kbd>←</kbd> / <kbd>→</kbd> · <kbd>Page Up</kbd> / <kbd>Page Down</kbd> · <kbd>Space</kbd> — navigate</p>
+    <p><kbd>Esc</kbd> — slide overview (click any thumbnail to jump)</p>
+    <p><kbd>Home</kbd> / <kbd>End</kbd> — first / last slide</p>
+    <p><kbd>P</kbd> — print (one slide per page)</p>
+    <p><kbd>?</kbd> — toggle this help</p>
+    <p style="margin-top:18px;text-align:right;"><button onclick="document.getElementById('help').classList.remove('show')">Close</button></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let idx = 0;
+  const prog = document.getElementById('progress');
+  function render() {
+    slides.forEach((s,i) => s.classList.toggle('active', i === idx));
+    prog.textContent = (idx+1) + ' / ' + slides.length;
+    history.replaceState(null, '', '#' + (idx+1));
+  }
+  function go(n) { idx = Math.max(0, Math.min(slides.length-1, n)); render(); }
+
+  document.getElementById('prevBtn').addEventListener('click', () => go(idx-1));
+  document.getElementById('nextBtn').addEventListener('click', () => go(idx+1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (document.body.classList.contains('overview')) {
+      if (e.key === 'Escape') { document.body.classList.remove('overview'); }
+      return;
+    }
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ':
+        e.preventDefault(); go(idx+1); break;
+      case 'ArrowLeft':  case 'PageUp':
+        e.preventDefault(); go(idx-1); break;
+      case 'Home': go(0); break;
+      case 'End':  go(slides.length-1); break;
+      case 'Escape':
+        document.body.classList.add('overview'); break;
+      case '?': case '/':
+        document.getElementById('help').classList.toggle('show'); break;
+      case 'p': case 'P':
+        window.print(); break;
+    }
+  });
+
+  // Click in overview = jump
+  document.getElementById('deck').addEventListener('click', (e) => {
+    if (!document.body.classList.contains('overview')) return;
+    const s = e.target.closest('.slide');
+    if (!s) return;
+    const i = slides.indexOf(s);
+    if (i >= 0) { idx = i; document.body.classList.remove('overview'); render(); }
+  });
+
+  // Initial slide from hash
+  const h = parseInt(location.hash.replace('#',''),10);
+  if (!isNaN(h) && h >= 1 && h <= slides.length) idx = h - 1;
+  render();
+})();
+</script>
+</body>
+</html>
