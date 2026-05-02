@@ -16,45 +16,41 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
-| action-confirmation-auditor | v1.1.1 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
+| action-confirmation-auditor | v1.1.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
+| agent-intake | v0.1.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) — FSI risk-tiered request workflow with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff to agent-registry-automation |
 | agent-365-lifecycle-governance | v1.1.3 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
-| agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
-| agent-communication-restriction-detector | v1.1.1 | 2.17 | Detects unauthorized agent-to-agent communication, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
-| agent-knowledge-source-scanner | v1.1.1 | 4.3, 1.4, 1.5 | Item-level permission scanning for SharePoint libraries backing agent knowledge sources |
-| agent-registry-automation | v2.1.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
+| agent-access-monitor | v1.1.0 | 3.8 | Automated detection of overly permissive agent access configurations |
+|  | 2.17 | Inter-agent communication restriction validation |
+| agent-knowledge-source-scanner | v1.1.0 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
+| agent-registry-automation | v2.0.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.2.0 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
-| agent-sharing-access-restriction-detector | v2.0.1 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
-| audit-compliance-manager | v1.0.4 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
-| coi-testing | v1.1.1 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.4 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
-| conditional-access-automation | v2.0.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
-| content-moderation-monitor | v1.1.1 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
-| copilot-studio-analytics | v2.0.1 | 3.2 | Business impact analytics for Copilot Studio agents |
-| credential-oversharing-detector | v2.0.1 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
-| cross-solution-integration | v2.0.1 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
-| cross-tenant-external-sharing-governance | v1.0.3 |  1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
-| deny-event-correlation-report | v2.0.3 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
+| agent-sharing-access-restriction-detector | v2.0.0 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
+| audit-compliance-manager | v1.0.3 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
+| coi-testing | v1.1.0 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
+| compliance-dashboard | v1.0.3 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| conditional-access-automation | v1.2.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
+| content-moderation-monitor | v1.1.0 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
+| copilot-studio-analytics | v2.0.0 | 3.2 | Business impact analytics for Copilot Studio agents |
+| credential-oversharing-detector | v2.0.0 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
+| cross-solution-integration | v2.0.0 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
+| cross-tenant-external-sharing-governance | v1.0.2 |  1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
+| deny-event-correlation-report | v2.0.2 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
 | dr-testing-framework | v2.0.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
-| environment-lifecycle-management | v1.2.1 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
-| file-upload-security | v1.1.1 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
-| finra-supervision-workflow | v1.1.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
-| generative-ai-config-auditor | v1.1.1 | 2.24 | GenAI feature enablement governance per zone |
-| hallucination-tracker | v1.2.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
-| hitl-workflow-governance | v1.1.1 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
-| inactivity-timeout-enforcement | v1.1.1 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
-| message-center-monitor | v2.5.1 | 2.3 | M365 Message Center monitoring for platform changes |
+| environment-lifecycle-management | v1.2.0 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| file-upload-security | v1.1.0 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
+| finra-supervision-workflow | v1.0.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
+| generative-ai-config-auditor | v1.1.0 | 2.24 | GenAI feature enablement governance per zone |
+| hallucination-tracker | v1.1.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
+| hitl-workflow-governance | v1.1.0 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
+| inactivity-timeout-enforcement | v1.1.0 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
+| message-center-monitor | v2.3.0 | 2.3, 2.10 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
-| mime-type-restrictions | v1.2.1 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
+| mime-type-restrictions | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.2.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.2.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
-<<<<<<< HEAD
-| scope-drift-monitor | v1.2.1 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
-| segregation-detector | v1.1.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
-=======
 | scope-drift-monitor | v1.2.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
-| segregation-detector | v1.2.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker separation |
->>>>>>> e86abf1 (tech-review(segregation-detector): refresh Microsoft Learn guidance)
-| session-security-configurator | v1.1.1 | 1.23, 1.11 | Session security validation per governance zone with drift detection |
+| segregation-detector | v1.1.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
+| session-security-configurator | v1.1.0 | 1.23, 1.11 | Session security validation per governance zone with drift detection |
 | unrestricted-agent-sharing-detector | v2.0.0 | 1.1, 3.8 | Continuous detection of overly permissive agent sharing |
 
 ## Directory Structure
@@ -234,7 +230,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release** (auto-derived via `gh api repos/.../releases/latest --jq .tag_name`; see Issue #39), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. No manual `LATEST_TAG` bump is required after a release; see `DEPLOYMENT-GUIDE.md` "Post-Release Operations" for the full checklist.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
 
 ### To change overview / catalog content
 

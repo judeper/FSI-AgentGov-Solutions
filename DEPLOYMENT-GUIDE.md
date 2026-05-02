@@ -64,7 +64,8 @@ These solutions provide shared infrastructure that other solutions depend on:
 
 | Solution | Role | Version |
 |----------|------|---------|
-| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.1 |
+| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.0 |
+| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.0 |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -72,12 +73,12 @@ These solutions operate independently but can be wired into the Compliance Dashb
 
 | Solution | Version | Controls |
 |----------|---------|----------|
-| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.1 | 3.8 |
-| [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.4 | 1.7 |
-| [Conditional Access Automation](./conditional-access-automation/) | v2.0.1 | 1.11, 1.23, 1.18 |
-| [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.1 | 1.27, 1.8 |
-| [File Upload Security](./file-upload-security/) | v1.1.1 | 1.14, 1.8, 1.4 |
-| [Session Security Configurator](./session-security-configurator/) | v1.1.1 | 1.23, 1.11 |
+| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.0 | 3.8 |
+| [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.3 | 1.7 |
+| [Conditional Access Automation](./conditional-access-automation/) | v1.2.2 | 1.11, 1.23, 1.18 |
+| [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.0 | 1.8, 1.14 |
+| [File Upload Security](./file-upload-security/) | v1.1.0 | 1.14, 1.8, 1.4 |
+| [Session Security Configurator](./session-security-configurator/) | v1.1.0 | 1.23, 1.11 |
 
 ### Layer 3: Tier 3 / Standalone Solutions
 
@@ -85,34 +86,34 @@ All other solutions operate independently and can be deployed in any order based
 
 | Solution | Tier | Version | Zones |
 |----------|------|---------|-------|
-| [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.1 | personal, team, enterprise |
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
-| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.1 | team, enterprise |
-| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.1 | personal, team, enterprise |
-| [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
-| [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
-| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
-| [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.4 | enterprise |
-| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
-| [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.2 | personal, team, enterprise |
-| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.3 | enterprise |
-| [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
-| [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.1 | team, enterprise |
-| [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.1 | personal, team, enterprise |
-| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.1 | team, enterprise |
-| [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
-| [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |
-| [Model Risk Management Automation](./model-risk-management-automation/) | 2 | v1.0.3 | enterprise |
-| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | 2 | v1.2.1 | team, enterprise |
-| [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.0 | personal, team, enterprise |
-| [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.1 | personal, team, enterprise |
-| [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.2.0 | team, enterprise |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |
+| [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.0 | personal, team, enterprise |
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 3 | v1.1.3 | enterprise |
+| [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.0 | team, enterprise |
+| [Agent Intake](./agent-intake/) | 3 | v0.1.0-preview | personal, team, enterprise |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.0 | personal, team, enterprise |
+| [Agent Registry Automation](./agent-registry-automation/) | 3 | v2.0.0 | personal, team, enterprise |
+| [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.0 | team, enterprise |
+| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.0 | team, enterprise |
+| [Compliance Dashboard](./compliance-dashboard/) | 3 | v1.0.3 | enterprise |
+| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.0 | personal, team, enterprise |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.0 | personal, team, enterprise |
+| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.2 | enterprise |
+| [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.2 | team, enterprise |
+| [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.0 | enterprise |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | 3 | v1.2.0 | personal, team, enterprise |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.0.1 | enterprise |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.0 | team, enterprise |
+| [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.1.0 | personal, team, enterprise |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.0 | personal, team, enterprise |
+| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.0 | team, enterprise |
+| [Message Center Monitor](./message-center-monitor/) | 2 | v2.3.0 | enterprise |
+| [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.1.0 | personal, team, enterprise |
+| [Model Risk Management Automation](./model-risk-management-automation/) | 2 | v1.0.2 | enterprise |
+| [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | 2 | v1.2.0 | team, enterprise |
+| [RAG Source Validator](./rag-source-validator/) | 2 | v1.2.0 | personal, team, enterprise |
+| [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.0 | personal, team, enterprise |
+| [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.1.0 | team, enterprise |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.0 | team, enterprise |
 
 <!-- END:DEPLOY_LAYERS -->
 
@@ -178,30 +179,25 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
 | [Agent Observability Foundation](./agent-observability-foundation/) | ✅ | ✅ | ✅ | internal |
+| [Cross-Solution Integration](./cross-solution-integration/) | ✅ | ✅ | ✅ | internal |
 
 ### Tier 2 (Governance)
 
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | ✅ | ✅ | ✅ | internal |
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | — | — | ✅ | confidential |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | — | ✅ | ✅ | confidential |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | — | ✅ | ✅ | internal |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | ✅ | ✅ | ✅ | confidential |
-| [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | — | ✅ | ✅ | confidential |
-| [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
-| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
 | [Conditional Access Automation](./conditional-access-automation/) | — | ✅ | ✅ | confidential |
 | [Conflict of Interest Testing](./coi-testing/) | — | ✅ | ✅ | confidential |
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | ✅ | ✅ | ✅ | internal |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | ✅ | ✅ | ✅ | confidential |
-| [Cross-Solution Integration](./cross-solution-integration/) | ✅ | ✅ | ✅ | internal |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | — | — | ✅ | confidential |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | — | ✅ | ✅ | confidential |
 | [DR Testing Framework](./dr-testing-framework/) | — | — | ✅ | confidential |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
 | [File Upload Security](./file-upload-security/) | ✅ | ✅ | ✅ | internal |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | — | — | ✅ | restricted |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | — | ✅ | ✅ | internal |
@@ -218,32 +214,24 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Session Security Configurator](./session-security-configurator/) | — | ✅ | ✅ | internal |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | — | ✅ | ✅ | confidential |
 
+### Tier 3 (Enterprise)
+
+| Solution | Personal | Team | Enterprise | Data class |
+|----------|----------|------|------------|------------|
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | — | — | ✅ | confidential |
+| [Agent Intake](./agent-intake/) | ✅ | ✅ | ✅ | confidential |
+| [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
+| [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
+| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
+
 <!-- END:ZONE_ROADMAP -->
 
-## Post-Release Operations
+## Related Documentation
 
-After publishing a new tagged release (`vX.Y.Z`), the published-artifact health probe automatically targets the new tag — no manual workflow edit is required.
-
-### Health probe ([`.github/workflows/health-check.yml`](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/.github/workflows/health-check.yml))
-
-- Runs every 30 minutes on cron and on demand via `gh workflow run health-check.yml`.
-- Probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release**, resolved dynamically via `gh api repos/${{ github.repository }}/releases/latest --jq .tag_name`.
-- Validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`).
-- Opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if any check fails.
-
-If the workflow logs `No published release found`, tag and publish at least one release for the repository — the probe requires at least one release to compare against.
-
-### Recommended post-release checklist
-
-1. Tag the release (`git tag -a vX.Y.Z -m "release notes" && git push origin vX.Y.Z`).
-2. Publish a GitHub Release pointing at the tag (the `release.yml` workflow attaches SBOMs + provenance attestations).
-3. Trigger the health probe manually to confirm the new artifacts are reachable: `gh workflow run health-check.yml`.
-4. Update the entry count in `health-check.yml` (currently `35`) only if the manifest count changes; this is the one value still hardcoded.
-
-
+- [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) — Detailed descriptions and framework alignment
 - [Solutions Coverage Gaps](https://judeper.github.io/FSI-AgentGov/reference/solutions-coverage-gaps/) — Coverage analysis across the 78-control baseline
 - [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov) — Full framework documentation
 - [SECURITY.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/SECURITY.md) — Vulnerability disclosure and supported versions
 - [THREAT-MODEL.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/THREAT-MODEL.md) — Cross-solution threat model and trust boundaries
-- [RELEASING.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/RELEASING.md) — Maintainer release procedure, schema evolution policy, and Issue #37 unblock steps
 
