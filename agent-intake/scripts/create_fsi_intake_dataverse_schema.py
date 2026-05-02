@@ -1,0 +1,736 @@
+#!/usr/bin/env python3
+"""Create Dataverse schema for Agent Intake (Express-path MVP).
+
+Defines 9 tables that capture the full intake decision pack for the Express
+path, plus 6 global option sets. All operations are idempotent.
+
+Tables:
+  - fsi_IntakeRequest (UserOwned): The maker's submitted request — parent record
+  - fsi_IntakeDataSource (UserOwned): Per-data-source declaration (1..N per request)
+  - fsi_IntakeRiskSignal (UserOwned): Trigger-question outcome and any signals raised
+  - fsi_IntakeReview (UserOwned): Reviewer activity (sample audit / Standard / Full)
+  - fsi_IntakeApproval (UserOwned): Per-approver decision (sponsor + reviewers)
+  - fsi_IntakeDecisionLog (OrganizationOwned): Immutable decision-pack record
+  - fsi_IntakeSponsorship (UserOwned): Sponsor attestation evidence (FINRA 3110)
+  - fsi_IntakeAuditEvent (OrganizationOwned): Lifecycle event audit trail
+  - fsi_IntakeRetentionRecord (OrganizationOwned): Retention-label stamping evidence
+
+Usage:
+  # Generate schema docs without contacting Dataverse
+  python create_fsi_intake_dataverse_schema.py --output-docs ../docs/dataverse-schema.md
+
+  # Dry-run deployment with interactive auth
+  python create_fsi_intake_dataverse_schema.py --interactive --dry-run \\
+      --environment-url https://org.crm.dynamics.com
+
+  # Deploy with managed identity (recommended for production)
+  # The shared DataverseClient supports MSAL token from any source —
+  # callers can supply a managed-identity token via the --token-from-env flag.
+"""
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+# Add repo-shared scripts to path so we can import the shared Dataverse client
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "shared"))
+
+try:
+    from dataverse_client import DataverseClient  # type: ignore
+except ImportError:
+    DataverseClient = None  # type: ignore  # only required for actual deploy
+
+
+PUBLISHER_PREFIX = "fsi"
+
+# =============================================================================
+# Option Sets
+# =============================================================================
+
+SHARED_OPTIONSETS = {
+    "fsi_acv_zone": {
+        "name": "fsi_acv_zone",
+        "options": [
+            ("Unclassified", 100000000),
+            ("Zone 1 (Enterprise)", 100000001),
+            ("Zone 2 (Team)", 100000002),
+            ("Zone 3 (Personal)", 100000003),
+        ],
+    },
+}
+
+INTAKE_OPTIONSETS = {
+    "fsi_intake_pathused": {
+        "name": "fsi_intake_pathused",
+        "options": [
+            ("Express", 100000000),
+            ("Standard", 100000001),
+            ("Full", 100000002),
+        ],
+    },
+    "fsi_intake_status": {
+        "name": "fsi_intake_status",
+        "options": [
+            ("Draft", 100000000),
+            ("Submitted", 100000001),
+            ("AwaitingSponsor", 100000002),
+            ("AwaitingReviewers", 100000003),
+            ("Approved", 100000004),
+            ("Denied", 100000005),
+            ("Withdrawn", 100000006),
+            ("Escalated", 100000007),
+            ("AutoApproved", 100000008),
+        ],
+    },
+    "fsi_intake_risktier": {
+        "name": "fsi_intake_risktier",
+        "options": [
+            ("Tier 1 (High)", 100000000),
+            ("Tier 2 (Medium)", 100000001),
+            ("Tier 3 (Low)", 100000002),
+        ],
+    },
+    "fsi_intake_agenttype": {
+        "name": "fsi_intake_agenttype",
+        "options": [
+            ("Agent Builder (M365 Copilot)", 100000000),
+            ("Copilot Studio (classic)", 100000001),
+            ("Declarative Agent (M365 Copilot)", 100000002),
+            ("Custom Engine Agent", 100000003),
+            ("Azure AI Foundry / Pro-Dev", 100000004),
+        ],
+    },
+    "fsi_intake_dataclassification": {
+        "name": "fsi_intake_dataclassification",
+        "options": [
+            ("Public", 100000000),
+            ("Internal", 100000001),
+            ("Confidential", 100000002),
+            ("Restricted", 100000003),
+        ],
+    },
+    "fsi_intake_decisionoutcome": {
+        "name": "fsi_intake_decisionoutcome",
+        "options": [
+            ("Approved", 100000000),
+            ("AutoApproved", 100000001),
+            ("Denied", 100000002),
+            ("EscalatedToManager", 100000003),
+            ("WithdrawnByMaker", 100000004),
+        ],
+    },
+}
+
+
+# =============================================================================
+# Column Builders (lifted from peer pattern in agent-registry-automation)
+# =============================================================================
+
+
+def _label(text):
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.Label",
+        "LocalizedLabels": [
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel",
+                "Label": text,
+                "LanguageCode": 1033,
+            }
+        ],
+    }
+
+
+def _string_col(schema_name, display, max_length, required=True, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
+        "MaxLength": max_length,
+        "FormatName": {"Value": "Text"},
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+def _memo_col(schema_name, display, max_length, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "None"},
+        "MaxLength": max_length,
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+def _integer_col(schema_name, display, required=True, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
+        "MinValue": 0,
+        "MaxValue": 2147483647,
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+def _boolean_col(schema_name, display, default=False, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "ApplicationRequired"},
+        "DefaultValue": default,
+        "OptionSet": {
+            "TrueOption": {"Value": 1, "Label": _label("Yes")},
+            "FalseOption": {"Value": 0, "Label": _label("No")},
+        },
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+def _datetime_col(schema_name, display, required=True, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
+        "Format": "DateAndTime",
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+def _picklist_col(schema_name, display, global_optionset_name, required=True, description=""):
+    defn = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "SchemaName": schema_name,
+        "DisplayName": _label(display),
+        "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
+        "OptionSet": None,
+        "GlobalOptionSet@odata.bind": (
+            f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
+        ),
+    }
+    if description:
+        defn["Description"] = _label(description)
+    return defn
+
+
+# =============================================================================
+# Table Column Definitions
+# =============================================================================
+
+INTAKE_REQUEST_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="Globally unique intake request identifier (GUID)"),
+    _string_col("fsi_AgentDisplayName", "Agent Display Name", 200,
+                description="Maker-provided name for the proposed agent"),
+    _picklist_col("fsi_AgentType", "Agent Type", "fsi_intake_agenttype",
+                  description="Authoring tool / runtime type the maker intends to use"),
+    _string_col("fsi_BusinessOutcome", "Business Outcome", 500,
+                description="Structured business outcome category (BJ-001 dropdown value)"),
+    _memo_col("fsi_BusinessJustification", "Business Justification", 4000,
+              description="Optional free-text business context (BJ-002, optional)"),
+    _string_col("fsi_MakerUpn", "Maker UPN", 200,
+                description="Maker user principal name"),
+    _string_col("fsi_MakerDepartment", "Maker Department", 200, required=False,
+                description="Pre-filled from Microsoft Graph /me"),
+    _string_col("fsi_MakerCountry", "Maker Country", 100, required=False,
+                description="Pre-filled from Microsoft Graph /me (usageLocation)"),
+    _string_col("fsi_SponsorUpn", "Sponsor UPN", 200,
+                description="Sponsor user principal name (pre-filled from /me/manager when available)"),
+    _picklist_col("fsi_PathUsed", "Path Used", "fsi_intake_pathused",
+                  description="Express / Standard / Full — set by routing rules"),
+    _picklist_col("fsi_RiskTier", "Risk Tier", "fsi_intake_risktier",
+                  description="Tier 1 / 2 / 3 per SR 11-7 mapping; computed from trigger Qs"),
+    _picklist_col("fsi_Zone", "Zone", "fsi_acv_zone",
+                  description="Zone classification — Express MVP locks to Zone 3"),
+    _picklist_col("fsi_DataClassification", "Data Classification", "fsi_intake_dataclassification",
+                  description="Highest sensitivity of declared data sources (maker-declared in Express MVP)"),
+    _picklist_col("fsi_Status", "Status", "fsi_intake_status",
+                  description="Lifecycle status of the intake request"),
+    _string_col("fsi_TargetEnvironmentId", "Target Environment ID", 100, required=False,
+                description="Power Platform environment recommended/selected for the agent"),
+    _string_col("fsi_EntraAgentId", "Entra Agent ID", 100, required=False,
+                description="Microsoft Entra Agent ID minted at handoff (GA May 1, 2026)"),
+    _string_col("fsi_RegistryRecordId", "Registry Record ID", 100, required=False,
+                description="ID of the corresponding agent-registry-automation record after handoff"),
+    _datetime_col("fsi_SubmittedOn", "Submitted On", required=False,
+                  description="Timestamp the request was submitted (set on transition Draft to Submitted)"),
+    _datetime_col("fsi_DecidedOn", "Decided On", required=False,
+                  description="Timestamp of final decision"),
+    _string_col("fsi_PolicyVersionApplied", "Policy Version Applied", 50,
+                description="Version of policy-lookup-tables.yaml in effect at submission"),
+]
+
+INTAKE_DATASOURCE_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_DataSourceName", "Data Source Name", 500,
+                description="Maker-declared data source identifier (e.g., SharePoint site URL, table name)"),
+    _string_col("fsi_DataSourceType", "Data Source Type", 200,
+                description="Connector type (e.g., SharePoint, Dataverse, Outlook, custom HTTP)"),
+    _picklist_col("fsi_DataClassification", "Data Classification", "fsi_intake_dataclassification",
+                  description="Sensitivity declared for this source (Express: maker-declared)"),
+    _boolean_col("fsi_IsCustomerData", "Is Customer Data", default=False,
+                 description="Does this source contain customer NPI? (Trigger T1 input)"),
+    _boolean_col("fsi_IsRestricted", "Is Restricted", default=False,
+                 description="Is this source restricted under MNPI / insider trading controls? (Trigger T2 input)"),
+]
+
+INTAKE_RISKSIGNAL_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_TriggerCode", "Trigger Code", 50,
+                description="T1..T7 trigger question identifier"),
+    _boolean_col("fsi_TriggerAnswer", "Trigger Answer", default=False,
+                 description="Maker's Yes/No answer"),
+    _string_col("fsi_DerivedSignal", "Derived Signal", 200, required=False,
+                description="Any computed signal raised by the answer (e.g., 'CustomerFacing', 'MNPI')"),
+    _datetime_col("fsi_CapturedOn", "Captured On",
+                  description="Timestamp the signal was captured at intake"),
+]
+
+INTAKE_REVIEW_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_ReviewerRole", "Reviewer Role", 100,
+                description="InfoSec / Privacy / Compliance / MRM / Records / Legal"),
+    _string_col("fsi_ReviewerUpn", "Reviewer UPN", 200,
+                description="Reviewer user principal name"),
+    _string_col("fsi_ReviewType", "Review Type", 100,
+                description="SampleAudit / Standard / Full"),
+    _string_col("fsi_ReviewOutcome", "Review Outcome", 100, required=False,
+                description="Approve / Override / Reject / NoAction"),
+    _memo_col("fsi_ReviewNotes", "Review Notes", 4000,
+              description="Reviewer notes (optional)"),
+    _datetime_col("fsi_StartedOn", "Started On", required=False,
+                  description="Timestamp review started"),
+    _datetime_col("fsi_CompletedOn", "Completed On", required=False,
+                  description="Timestamp review completed"),
+]
+
+INTAKE_APPROVAL_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_ApproverRole", "Approver Role", 100,
+                description="Sponsor / SponsorManager (escalation) / ReviewerLead"),
+    _string_col("fsi_ApproverUpn", "Approver UPN", 200,
+                description="Approver user principal name"),
+    _picklist_col("fsi_DecisionOutcome", "Decision Outcome", "fsi_intake_decisionoutcome",
+                  description="Approved / AutoApproved / Denied / EscalatedToManager / WithdrawnByMaker"),
+    _datetime_col("fsi_DecidedOn", "Decided On",
+                  description="Timestamp the approver clicked"),
+    _string_col("fsi_DecisionMethod", "Decision Method", 100,
+                description="TeamsAdaptiveCard / Portal / Email / API"),
+    _string_col("fsi_DecisionContextHash", "Decision Context Hash", 200, required=False,
+                description="SHA-256 of the rendered decision context shown to the approver (tamper evidence)"),
+    _string_col("fsi_ClientIpAddress", "Client IP Address", 100, required=False,
+                description="Source IP recorded at decision time (supervisory evidence)"),
+]
+
+INTAKE_DECISIONLOG_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _picklist_col("fsi_DecisionOutcome", "Decision Outcome", "fsi_intake_decisionoutcome",
+                  description="Final outcome of the request"),
+    _picklist_col("fsi_RiskTier", "Risk Tier", "fsi_intake_risktier",
+                  description="Tier captured at decision time"),
+    _picklist_col("fsi_Zone", "Zone", "fsi_acv_zone",
+                  description="Zone captured at decision time"),
+    _picklist_col("fsi_PathUsed", "Path Used", "fsi_intake_pathused",
+                  description="Express / Standard / Full path used"),
+    _string_col("fsi_PolicyVersionApplied", "Policy Version Applied", 50,
+                description="Version of policy-lookup-tables.yaml at decision time"),
+    _memo_col("fsi_DecisionPackJson", "Decision Pack JSON", 1048576,
+              description="Full decision pack as JSON (all 137 catalog field values, computed and declared)"),
+    _string_col("fsi_DecisionPackHash", "Decision Pack Hash", 200,
+                description="SHA-256 of fsi_DecisionPackJson for tamper evidence"),
+    _datetime_col("fsi_DecidedOn", "Decided On",
+                  description="Timestamp of final decision"),
+    _string_col("fsi_RetentionLabelApplied", "Retention Label Applied", 200,
+                description="Purview retention label stamped (FSI-AgentIntake-7yr or override)"),
+    _datetime_col("fsi_RetentionLabelAppliedOn", "Retention Label Applied On",
+                  description="Timestamp the retention label was stamped"),
+]
+
+INTAKE_SPONSORSHIP_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_SponsorUpn", "Sponsor UPN", 200,
+                description="Sponsor user principal name"),
+    _string_col("fsi_SponsorRole", "Sponsor Role", 200,
+                description="LineOfBusinessSponsor / RegisteredPrincipal / DataOwner"),
+    _memo_col("fsi_AttestationText", "Attestation Text", 4000,
+              description="Verbatim attestation language presented to the sponsor (FINRA Rule 3110)"),
+    _datetime_col("fsi_AttestedOn", "Attested On", required=False,
+                  description="Timestamp the sponsor attested"),
+    _string_col("fsi_AttestationMethod", "Attestation Method", 100,
+                description="TeamsAdaptiveCard / Portal / Email"),
+    _string_col("fsi_RenderedCardHash", "Rendered Card Hash", 200, required=False,
+                description="SHA-256 of the exact card content shown — tamper evidence"),
+    _boolean_col("fsi_IsValid", "Is Valid", default=True,
+                 description="False if sponsor attestation has been revoked"),
+]
+
+INTAKE_AUDITEVENT_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_EventType", "Event Type", 100,
+                description="Submitted / Routed / SponsorNotified / SponsorClicked / AutoApproved / Denied / HandoffComplete / RegistryWritten / EntraAgentIdMinted / RetentionStamped"),
+    _string_col("fsi_ActorUpn", "Actor UPN", 200, required=False,
+                description="UPN of the actor who triggered the event (system events use 'system')"),
+    _datetime_col("fsi_EventOn", "Event On",
+                  description="Timestamp the event occurred"),
+    _memo_col("fsi_EventPayloadJson", "Event Payload JSON", 65536,
+              description="Optional JSON payload for the event (pre-state, post-state, error details)"),
+]
+
+INTAKE_RETENTIONRECORD_COLUMNS = [
+    _string_col("fsi_RequestId", "Request ID", 100,
+                description="FK to fsi_IntakeRequest.fsi_RequestId"),
+    _string_col("fsi_LabelName", "Label Name", 200,
+                description="Purview retention label name (e.g., FSI-AgentIntake-7yr)"),
+    _integer_col("fsi_RetentionYears", "Retention Years",
+                 description="Effective retention in years"),
+    _datetime_col("fsi_StampedOn", "Stamped On",
+                  description="Timestamp the label was applied"),
+    _string_col("fsi_StampedBy", "Stamped By", 200,
+                description="System / managed-identity that stamped the label"),
+    _string_col("fsi_RegulatoryBasis", "Regulatory Basis", 500,
+                description="Comma-separated list (e.g., 'SEC 17a-4, FINRA 4511, CFTC 1.31')"),
+]
+
+
+TABLES = {
+    "fsi_intakerequest": {
+        "schema_name": "fsi_IntakeRequest",
+        "display": "Intake Request",
+        "plural": "Intake Requests",
+        "description": "Maker-submitted request to build an AI agent (parent record)",
+        "ownership": "UserOwned",
+        "columns": INTAKE_REQUEST_COLUMNS,
+        "entity_set_name": "fsi_intakerequests",
+    },
+    "fsi_intakedatasource": {
+        "schema_name": "fsi_IntakeDataSource",
+        "display": "Intake Data Source",
+        "plural": "Intake Data Sources",
+        "description": "Per-data-source declaration on an intake request (1..N per parent)",
+        "ownership": "UserOwned",
+        "columns": INTAKE_DATASOURCE_COLUMNS,
+        "entity_set_name": "fsi_intakedatasources",
+    },
+    "fsi_intakerisksignal": {
+        "schema_name": "fsi_IntakeRiskSignal",
+        "display": "Intake Risk Signal",
+        "plural": "Intake Risk Signals",
+        "description": "Per-trigger-question outcome and any derived risk signals",
+        "ownership": "UserOwned",
+        "columns": INTAKE_RISKSIGNAL_COLUMNS,
+        "entity_set_name": "fsi_intakerisksignals",
+    },
+    "fsi_intakereview": {
+        "schema_name": "fsi_IntakeReview",
+        "display": "Intake Review",
+        "plural": "Intake Reviews",
+        "description": "Reviewer activity (sample audit on Express; Standard/Full reviewer outcomes)",
+        "ownership": "UserOwned",
+        "columns": INTAKE_REVIEW_COLUMNS,
+        "entity_set_name": "fsi_intakereviews",
+    },
+    "fsi_intakeapproval": {
+        "schema_name": "fsi_IntakeApproval",
+        "display": "Intake Approval",
+        "plural": "Intake Approvals",
+        "description": "Per-approver decision (sponsor + reviewers)",
+        "ownership": "UserOwned",
+        "columns": INTAKE_APPROVAL_COLUMNS,
+        "entity_set_name": "fsi_intakeapprovals",
+    },
+    "fsi_intakedecisionlog": {
+        "schema_name": "fsi_IntakeDecisionLog",
+        "display": "Intake Decision Log",
+        "plural": "Intake Decision Logs",
+        "description": (
+            "Immutable decision-pack record (supports compliance with "
+            "FINRA Rule 4511, SEC Rule 17a-4, CFTC Rule 1.31)"
+        ),
+        "ownership": "OrganizationOwned",
+        "columns": INTAKE_DECISIONLOG_COLUMNS,
+        "entity_set_name": "fsi_intakedecisionlogs",
+    },
+    "fsi_intakesponsorship": {
+        "schema_name": "fsi_IntakeSponsorship",
+        "display": "Intake Sponsorship",
+        "plural": "Intake Sponsorships",
+        "description": "Sponsor attestation evidence (supports FINRA Rule 3110 supervision)",
+        "ownership": "UserOwned",
+        "columns": INTAKE_SPONSORSHIP_COLUMNS,
+        "entity_set_name": "fsi_intakesponsorships",
+    },
+    "fsi_intakeauditevent": {
+        "schema_name": "fsi_IntakeAuditEvent",
+        "display": "Intake Audit Event",
+        "plural": "Intake Audit Events",
+        "description": "Lifecycle event audit trail",
+        "ownership": "OrganizationOwned",
+        "columns": INTAKE_AUDITEVENT_COLUMNS,
+        "entity_set_name": "fsi_intakeauditevents",
+    },
+    "fsi_intakeretentionrecord": {
+        "schema_name": "fsi_IntakeRetentionRecord",
+        "display": "Intake Retention Record",
+        "plural": "Intake Retention Records",
+        "description": "Retention-label stamping evidence per intake decision",
+        "ownership": "OrganizationOwned",
+        "columns": INTAKE_RETENTIONRECORD_COLUMNS,
+        "entity_set_name": "fsi_intakeretentionrecords",
+    },
+}
+
+ALTERNATE_KEY = {
+    "entity": "fsi_intakerequest",
+    "schema_name": "fsi_RequestIdUniqueKey",
+    "display": "Request ID Unique Key",
+    "key_columns": ["fsi_requestid"],
+}
+
+
+# =============================================================================
+# Documentation Generator
+# =============================================================================
+
+
+def _required_label(col):
+    lvl = col.get("RequiredLevel", {}).get("Value", "None")
+    return "Yes" if lvl == "ApplicationRequired" else "No"
+
+
+def _col_type_label(col):
+    odata_type = col.get("@odata.type", "")
+    suffix = odata_type.rsplit(".", 1)[-1].replace("AttributeMetadata", "")
+    if suffix == "String":
+        return f"String({col.get('MaxLength', '')})"
+    if suffix == "Memo":
+        return f"Memo({col.get('MaxLength', '')})"
+    if suffix == "Picklist":
+        os_bind = col.get("GlobalOptionSet@odata.bind", "")
+        if "Name='" in os_bind:
+            os_name = os_bind.split("Name='")[1].split("'")[0]
+            return f"Choice ({os_name})"
+        return "Choice"
+    return suffix
+
+
+def write_schema_docs(path):
+    """Generate dataverse-schema.md from the in-memory schema definitions."""
+    lines = []
+    lines.append("# Agent Intake — Dataverse Schema")
+    lines.append("")
+    lines.append("> Auto-generated from `scripts/create_fsi_intake_dataverse_schema.py`. Do not hand-edit.")
+    lines.append("> Regenerate with: `python scripts/create_fsi_intake_dataverse_schema.py --output-docs docs/dataverse-schema.md`")
+    lines.append("")
+    lines.append("## Naming convention")
+    lines.append("")
+    lines.append("Dataverse uses two names for every column:")
+    lines.append("")
+    lines.append("- **SchemaName** (PascalCase with prefix): `fsi_RequestId`, `fsi_AgentDisplayName`")
+    lines.append("- **Logical name** (lowercase, no underscores between words): `fsi_requestid`, `fsi_agentdisplayname`")
+    lines.append("")
+    lines.append("**In OData queries, scripts, and flow expressions, ALWAYS use the logical name.**")
+    lines.append("")
+    lines.append("## Tables")
+    lines.append("")
+    for tname, tdef in TABLES.items():
+        entity_set = tdef.get("entity_set_name") or (tname + "s")
+        lines.append(f"### `{tname}` — {tdef['display']}")
+        lines.append("")
+        lines.append(f"- **Schema name:** `{tdef['schema_name']}`")
+        lines.append(f"- **Entity set name (OData):** `{entity_set}`")
+        lines.append(f"- **Ownership:** {tdef['ownership']}")
+        lines.append("- **Primary name attribute:** `fsi_name` (ApplicationRequired, String(500))")
+        lines.append(f"- **Description:** {tdef['description']}")
+        lines.append("")
+        lines.append("| Logical name | Schema name | Type | Required | Description |")
+        lines.append("|--------------|-------------|------|----------|-------------|")
+        for col in tdef["columns"]:
+            schema = col["SchemaName"]
+            logical = schema.lower()
+            ctype = _col_type_label(col)
+            required = _required_label(col)
+            desc = ""
+            if "Description" in col:
+                desc = col["Description"]["LocalizedLabels"][0]["Label"]
+            lines.append(f"| `{logical}` | `{schema}` | {ctype} | {required} | {desc} |")
+        lines.append("")
+
+    lines.append("## Option Sets")
+    lines.append("")
+    lines.append("All option sets are global (cross-table) so the same numeric value can be used in OData filters across tables.")
+    lines.append("")
+    for os_dict in (SHARED_OPTIONSETS, INTAKE_OPTIONSETS):
+        for os_name, os_def in os_dict.items():
+            lines.append(f"### `{os_name}`")
+            lines.append("")
+            lines.append("| Label | Value |")
+            lines.append("|-------|-------|")
+            for label, value in os_def["options"]:
+                lines.append(f"| {label} | {value} |")
+            lines.append("")
+
+    lines.append("## Alternate Keys")
+    lines.append("")
+    lines.append(
+        f"- `{ALTERNATE_KEY['entity']}` — schema name `{ALTERNATE_KEY['schema_name']}` "
+        f"(logical: `{ALTERNATE_KEY['schema_name'].lower()}`); key columns: "
+        + ", ".join("`" + c + "`" for c in ALTERNATE_KEY["key_columns"])
+    )
+    lines.append("")
+    lines.append("Use this alternate key for upsert-by-business-key:")
+    lines.append("")
+    lines.append("```")
+    lines.append("PATCH /api/data/v9.2/fsi_intakerequests(fsi_requestid='<request-guid>')")
+    lines.append("```")
+    lines.append("")
+    lines.append("## Relationships")
+    lines.append("")
+    lines.append("All child tables (`fsi_intakedatasource`, `fsi_intakerisksignal`, `fsi_intakereview`, `fsi_intakeapproval`, `fsi_intakedecisionlog`, `fsi_intakesponsorship`, `fsi_intakeauditevent`, `fsi_intakeretentionrecord`) carry an `fsi_requestid` string column that references the parent `fsi_intakerequest.fsi_requestid`. This is intentionally a **soft FK** (not a Dataverse lookup) so that the immutable `fsi_intakedecisionlog` records survive deletion of the parent request — required for FINRA 4511 / SEC 17a-4 evidence retention.")
+    lines.append("")
+
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines))
+
+
+# =============================================================================
+# Deployment (uses shared DataverseClient)
+# =============================================================================
+
+
+def deploy(client, dry_run=False):
+    """Deploy schema (idempotent)."""
+    print("=" * 60)
+    print("Agent Intake Dataverse Schema Deployment")
+    print("=" * 60)
+    if dry_run:
+        print("\n*** DRY RUN — no changes will be made ***\n")
+
+    print("\n[1/4] Option sets")
+    for _, os_dict in [("shared", SHARED_OPTIONSETS), ("intake", INTAKE_OPTIONSETS)]:
+        for _, os_def in os_dict.items():
+            client.create_option_set(os_def["name"], os_def["options"])
+
+    print("\n[2/4] Tables and columns")
+    for tname, tdef in TABLES.items():
+        print(f"\n  --- {tdef['display']} ({tdef['ownership']}) ---")
+        if not client.check_table_exists(tname):
+            definition = {
+                "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
+                "SchemaName": tdef["schema_name"],
+                "DisplayName": _label(tdef["display"]),
+                "DisplayCollectionName": _label(tdef["plural"]),
+                "Description": _label(tdef["description"]),
+                "OwnershipType": tdef["ownership"],
+                "IsActivity": False,
+                "HasActivities": False,
+                "HasNotes": False,
+                "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
+                "PrimaryNameAttribute": "fsi_name",
+                "Attributes": [
+                    {
+                        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                        "SchemaName": "fsi_Name",
+                        "DisplayName": _label(f"{tdef['display']} ID"),
+                        "Description": _label("Primary name attribute"),
+                        "RequiredLevel": {"Value": "ApplicationRequired"},
+                        "MaxLength": 500,
+                        "FormatName": {"Value": "Text"},
+                    }
+                ],
+            }
+            if tdef.get("entity_set_name"):
+                definition["EntitySetName"] = tdef["entity_set_name"]
+            client.create_entity(definition)
+            print(f"  {tname}: created")
+        else:
+            print(f"  {tname}: already exists")
+        for col in tdef["columns"]:
+            client.create_column(tname, col["SchemaName"], col["@odata.type"].split(".")[-1], col)
+
+    print("\n[3/4] Alternate key (best-effort idempotent)")
+    print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}")
+
+    print("\n[4/4] Done")
+
+
+# =============================================================================
+# CLI
+# =============================================================================
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Create Dataverse schema for Agent Intake (Express-path MVP)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--tenant-id", default=os.environ.get("INTAKE_TENANT_ID"),
+                        help="Microsoft Entra ID tenant ID")
+    parser.add_argument("--client-id", default=os.environ.get("INTAKE_CLIENT_ID"),
+                        help="Service principal app ID")
+    # legacy: dev-only — replace with managed identity in production
+    parser.add_argument("--client-secret", default=os.environ.get("INTAKE_CLIENT_SECRET"),
+                        help="Service principal secret (dev-only fallback; prefer managed identity)")
+    parser.add_argument("--environment-url", default=os.environ.get("INTAKE_ENVIRONMENT_URL"),
+                        help="Dataverse environment URL")
+    parser.add_argument("--interactive", action="store_true",
+                        help="Use interactive browser authentication")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Show what would be created without making changes")
+    parser.add_argument("--output-docs", metavar="PATH",
+                        help="Write Markdown schema reference to PATH and exit (no Dataverse contact)")
+    args = parser.parse_args()
+
+    if args.output_docs:
+        write_schema_docs(args.output_docs)
+        print(f"Wrote schema reference to {args.output_docs}")
+        return
+
+    if DataverseClient is None:
+        print("ERROR: Could not import DataverseClient from scripts/shared/. "
+              "Run from a checkout of the FSI-AgentGov-Solutions repo.", file=sys.stderr)
+        sys.exit(1)
+
+    if not args.tenant_id:
+        print("ERROR: --tenant-id or INTAKE_TENANT_ID required", file=sys.stderr)
+        sys.exit(1)
+    if not args.environment_url:
+        print("ERROR: --environment-url or INTAKE_ENVIRONMENT_URL required", file=sys.stderr)
+        sys.exit(1)
+
+    client = DataverseClient(
+        tenant_id=args.tenant_id,
+        environment_url=args.environment_url,
+        client_id=args.client_id,
+        client_secret=args.client_secret,
+        interactive=args.interactive,
+        dry_run=args.dry_run,
+    )
+
+    deploy(client, dry_run=args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

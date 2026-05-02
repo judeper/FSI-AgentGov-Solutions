@@ -1,0 +1,29 @@
+id: agent-intake
+name: Agent Intake
+description: Pre-build user intake workflow for AI agent requests — captures business case, classifies risk, routes for sponsor approval, and hands off to agent-registry-automation. MVP supports the Express path (low-risk Tier-3/Zone-3 personal agents) with sponsor 1-click approval.
+version: 0.1.0-preview
+status: preview
+domain: lifecycle-ops
+tier: '3'
+controls:
+- '1.2'
+- '1.7'
+- '2.1'
+- '2.13'
+- '3.1'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-intake/
+prerequisites:
+  power-platform-admin: Power Platform Admin to deploy Dataverse schema, configure Power Pages portal, and provision Express-path environment.
+  records-management-admin: Microsoft 365 Records Management Admin to create the FSI-AgentIntake-7yr Purview retention label one-time at setup (covers SEC 17a-4, FINRA 4511, CFTC 1.31).
+  security-admin: Microsoft Entra Global Admin or Application Administrator to grant AgentIdentity.ReadWrite.All for the handoff script (Entra Agent ID GA May 1, 2026).
+  m365-admin: Microsoft 365 admin for Teams notifications (sponsor adaptive card delivery) and Graph /me/manager pre-fill.
+verification: After deployment, submit a test Express-path intake from the Power Pages portal; confirm sponsor receives the Teams adaptive card; confirm 1-click approval writes an immutable fsi_intakedecisionlog row stamped with the FSI-AgentIntake-7yr retention label; confirm handoff to agent-registry-automation creates the registry entry with the minted Entra Agent ID.
+
+# Express-path MVP runs in any zone where personal agents are allowed.
+# Standard (v0.2) and Full (v0.3) paths will extend to team and enterprise zones.
+zones:
+- personal
+- team
+- enterprise
+dataClassification: confidential
+retention: 7 years per SEC 17a-4 / FINRA 4511 / CFTC 1.31 (decision-pack records); 3 years for denied intakes per FINRA 4511 supervision artifacts default.
