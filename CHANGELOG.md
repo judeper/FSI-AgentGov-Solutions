@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **Handoff:** `setup_entra_agent_id.py` mints Entra Agent ID on approval (GA May 1, 2026); `setup_purview_retention_label.py` emits one-time label spec + manual setup steps.
   - **Validation & ops:** `scripts/smoke_test.ps1` (7 read-only checks), `docs/pilot-deployment-runbook.md` (6-stage deploy + rollback), `docs/drift-detection-integration.md` (wires intake to four peer solutions).
   - **Research record preserved** under `agent-intake/research/` (Phase A reports, question catalog evaluation, intake form design, API verification spike, PO-resolved opens).
+  - **Adoption polish** (added in same preview): `docs/maker-quick-start.md` (1-page maker guide), `docs/sponsor-cheat-sheet.md` (1-page sponsor guide with FINRA 3110 attestation walkthrough), `docs/onboarding-checklist.md` (Stage 0–8 customer admin checklist + rollback), `docs/decisions.md` (ADR consolidating 10 PO-locked decisions + OCC 2026-13 framing), Mermaid architecture diagram in `agent-intake/README.md`.
+  - **Status & external gates** clearly enumerated at the top of `agent-intake/README.md` so reviewers can see what is shipped vs. what external steps remain (pilot walkthrough, governance review, customer admin Graph consents, Purview label creation, release tag).
 - **Catalog updates:** README, AGENTS.md, CLAUDE.md, .github/copilot-instructions.md, mkdocs.yml nav (Lifecycle & Operations section), solutions.json lock file (now 36 entries, schemaVersion 1.4.2).
 
 ### Status

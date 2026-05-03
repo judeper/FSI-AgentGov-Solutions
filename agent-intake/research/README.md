@@ -33,6 +33,16 @@ The proposed `agent-intake` solution would help Financial Services organizations
 
 Phase B (Dataverse schema + portal spec + flow build docs + classification engine + auto-detect + handoff scripts + smoke test + pilot runbook) is COMPLETE in `../scripts/`, `../docs/`, and `../templates/`. The MVP ships only the **Express path** (Tier-3 + Zone-3 + no-risk-signal + sponsor 1-click → auto-approve). Standard / Full deferred to v0.2.0+.
 
+## Phase D status: COMPLETE — adoption polish shipped
+
+Pre-pilot polish artifacts shipped to drive maker + sponsor + admin adoption:
+
+- `../docs/maker-quick-start.md` — 1-page maker guide
+- `../docs/sponsor-cheat-sheet.md` — 1-page sponsor guide with FINRA 3110 attestation walkthrough
+- `../docs/onboarding-checklist.md` — single-file customer admin checklist (Stage 0–8 + rollback)
+- `../docs/decisions.md` — Architecture Decision Record consolidating the 10 PO-locked decisions in `04-open-questions-resolved.md`
+- Mermaid architecture diagram in `../README.md`
+
 **Held as draft PR pending:**
 
 - Pilot-firm walkthrough of the open stakeholder questions captured in `04-open-questions-resolved.md` (resolved with PO defaults that customers can override via `../templates/policy-lookup-tables.yaml`)

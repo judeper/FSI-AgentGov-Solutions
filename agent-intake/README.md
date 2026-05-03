@@ -15,6 +15,38 @@ When a user wants a new Copilot Studio agent, Agent Builder agent, declarative a
 
 Without a structured intake, those decisions happen in chat threads, in tickets that never close, or not at all — and agents ship without records of who approved what. This solution closes that loop with a workflow proportional to risk: low-risk requests take three minutes and one sponsor click; high-risk requests get full review.
 
+## Status and external next steps
+
+This solution is **complete and self-deployable** at v0.1.0-preview. It is held as a **draft PR** ([#42](https://github.com/judeper/FSI-AgentGov-Solutions/pull/42)) pending external gates that are outside this repo's control.
+
+**What is done in this branch:**
+
+| Layer | Status |
+|---|---|
+| Manifest, README, CHANGELOG, ADR | ✅ Shipped |
+| 9-table Dataverse schema + auto-generated docs | ✅ Shipped |
+| Express-form spec, sponsor card, flow build instructions | ✅ Shipped |
+| Classification engine + auto-detect scripts (3/3 self-test PASS) | ✅ Shipped |
+| Handoff scripts (Entra Agent ID, Purview retention) | ✅ Shipped |
+| Smoke test, pilot deployment runbook (6-stage + rollback) | ✅ Shipped |
+| Adoption docs: maker quick-start, sponsor cheat-sheet, onboarding checklist, decisions ADR | ✅ Shipped |
+| Catalog registration + mkdocs nav + solutions.json (36 entries) | ✅ Shipped |
+
+**External gates before merge to `main`:**
+
+1. **Pilot-firm walkthrough** of the 10 PO-locked decisions captured in [`docs/decisions.md`](docs/decisions.md) — confirm or override the defaults
+2. **Governance review** of PR #42 by AI Governance Committee + InfoSec + Compliance + Legal + IT-architecture
+3. **Customer admin grants** of the 3 Microsoft Graph application permissions documented in `docs/onboarding-checklist.md` Stage 0
+4. **Purview retention label** (`FSI-AgentIntake-7yr`) created manually in the Purview portal (Graph does not yet support label creation)
+5. **Tag and release** `v1.5.0-preview` after PR merge — supports SBOM + provenance attestation per the repo's release workflow
+
+**External gates before scaling beyond pilot:**
+
+1. 30-day InfoSec sample-audit shows no undetected high-risk requests passed through Express
+2. Sponsor SLA adherence (≥90% of cards clicked within 3 business days)
+3. AI Governance Committee approves general availability for the next maker cohort
+4. v0.2 (Standard path) shipped to handle the requests this preview defers
+
 ## What v0.1.0-preview ships (Express path only)
 
 The MVP supports the **Express path** — for low-risk requests where the answers to all six trigger questions are "No" and the resulting tier/zone classification is the lowest. For these requests:
