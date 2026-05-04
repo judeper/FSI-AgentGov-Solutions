@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules MSAL.PS
+#Requires -Modules @{ ModuleName='MSAL.PS'; ModuleVersion='4.37.0.0' }
 
 <#
 .SYNOPSIS
@@ -83,7 +83,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.1
+    Version: 2.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b)
@@ -324,7 +324,7 @@ $evidence = [PSCustomObject]@{
     metadata   = [PSCustomObject]@{
         exportedAt      = $exportTimestamp
         solution        = "Credential Oversharing Detector"
-        solutionVersion = "1.0.1"
+        solutionVersion = "2.0.1"
         fromDate        = $fromDateStr
         toDate          = $toDateStr
         zoneFilter      = $Zone

@@ -2,6 +2,17 @@
 
 All notable changes to this solution are documented here.
 
+## [2.0.1] — 2026-05-04
+
+### Fixed
+
+- Refreshed Microsoft release-plan references for credential oversharing detection: current Microsoft Learn guidance lists public preview for July 2026 and general availability for September 2026, with standard release-plan caveats.
+- Updated prerequisite module guidance for Microsoft.PowerApps.Administration.PowerShell 2.0.217+, Az.Accounts 2.17.0+ (5.3.4 validated), Microsoft.Graph 2.36.1+ for optional enrichment, and MSAL.PS 4.37.0.0+ for evidence export.
+- Corrected service-principal setup instructions to include Power Platform management application registration via `New-PowerAppManagementApp`, and clarified that Graph application permissions are only needed for optional enrichment.
+- Corrected `fsi_violationstatus` option-set values in the flow guide to match the Dataverse schema: Open, Remediated, ExceptionApproved, FalsePositive, UnderReview.
+- Reworded Teams alert template metadata to use the Power Automate Teams connector rather than webhook terminology, consistent with Microsoft 365 connector retirement guidance.
+- Bumped solution metadata and script note versions to 2.0.1.
+
 ## [2.0.0] — 2026-04-17 — BREAKING
 
 This release applies the AI Council technical-accuracy review (Opus 4.7 + Goldeneye + GPT-5.4). It tightens detection correctness, hardens unattended execution, fixes API-shape bugs that would 400 against Dataverse, and replaces several misapplied regulatory citations.
@@ -98,9 +109,9 @@ This release applies the AI Council technical-accuracy review (Opus 4.7 + Golden
 - Upgraded from documentation-only placeholder (v0.1.0-preview) to full solution
 
 ### Notes
-- This solution leverages the Microsoft "Enforce safe sharing by detecting credential oversharing" feature (public preview April 2026)
-- Organizations should verify feature availability in their tenant before production deployment
-- See [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) for current status
+- This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" feature; current release-plan timing was refreshed in 2.0.1.
+- Organizations should verify feature availability in their tenant before production deployment.
+- See [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) for current status.
 
 ## [0.1.0-preview] — 2026-03-01
 

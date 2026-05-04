@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts, Microsoft.PowerApps.Administration.PowerShell
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }, @{ ModuleName='Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion='2.0.217' }
 
 <#
 .SYNOPSIS
@@ -94,7 +94,7 @@
     - Violations: Array of violation detail objects
 
 .NOTES
-    Version: 1.0.1
+    Version: 2.0.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
     Regulations: FINRA Rule 4511, SEC 17a-4, SOX 302/404, GLBA 501(b), OCC 2011-12

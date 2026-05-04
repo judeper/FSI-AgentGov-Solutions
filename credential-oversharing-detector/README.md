@@ -1,8 +1,8 @@
 # Credential Oversharing Detector
 
-> **Version:** v1.0.1 | **Controls:** 1.14, 1.4, 1.18 | **Status:** Public Preview
+> **Version:** v2.0.1 | **Controls:** 1.14, 1.4, 1.18 | **Status:** Public Preview
 >
-> ⚠️ **Preview Feature Dependency:** This solution leverages the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, which entered public preview in April 2026. Verify current feature status at the [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) before production deployment.
+> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, which the Microsoft release plan currently lists for public preview in July 2026 and general availability in September 2026. Verify current feature status at the [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) before production deployment.
 
 ## Overview
 
@@ -164,7 +164,7 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 ## Known Limitations
 
-1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a feature in public preview. Signal availability may vary by tenant.
+1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature currently listed for public preview in July 2026 and general availability in September 2026. Release-plan timelines may change, and signal availability may vary by tenant.
 2. **Connector scope visibility** — Not all connector types expose OAuth scope details through the admin API.
 3. **Service principal resolution** — Cross-environment credential detection requires consistent service principal IDs across environments.
 4. **Scan performance** — Large tenants (100+ environments) may require environment filters or batched scanning.
@@ -179,6 +179,7 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.0.1 | May 2026 | Microsoft Learn 2026-Q2 refresh: release-plan dates, module prerequisites, service-principal setup, Dataverse option-set corrections, and Teams connector wording. |
 | v2.0.0 | April 2026 | BREAKING: AI Council review fixes — switch→bool params, JSON-only return, single scan-record write, V2 PP connector, sovereign-cloud, multi-connector evaluation, regulatory citation accuracy. See CHANGELOG. |
 | v1.0.1 | April 2026 | Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation, and templates |
 | v0.1.0-preview | March 2026 | Initial documentation-only placeholder |

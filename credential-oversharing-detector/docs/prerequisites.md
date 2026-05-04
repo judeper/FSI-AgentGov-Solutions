@@ -5,10 +5,11 @@
 | Component | Version | Purpose |
 |-----------|---------|---------|
 | PowerShell | 7.1+ | Core scanning and governance scripts |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment and agent queries |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.217+ | Power Platform environment and agent queries (`Add-PowerAppsAccount`, `Get-AdminPowerAppEnvironment`) |
 | Python | 3.9+ | Dataverse schema setup and evidence export |
-| Az.Accounts | Latest | Service principal authentication |
-| Microsoft.Graph (optional) | 2.0+ | Entra ID service principal queries |
+| Az.Accounts | 2.17.0+ (5.3.4 validated) | Dataverse token acquisition for compliance persistence |
+| MSAL.PS | 4.37.0.0+ | Dataverse evidence export authentication |
+| Microsoft.Graph (optional) | 2.36.1+ | Entra ID service principal queries when Graph enrichment is enabled |
 
 ## Licensing
 
@@ -36,10 +37,11 @@ principal ownership, the minimal least-privilege scopes are:
 
 ### Service Principal Setup
 
-1. Register an application in Entra ID (requires Entra Global Admin or Application Administrator)
-2. Grant Power Platform admin consent for required Graph API scopes
-3. Store client secret in Azure Key Vault (recommended for production deployments)
-4. Create an application user in each target Dataverse environment with System Administrator role
+1. Register an application in Microsoft Entra ID (requires Entra Global Admin or Application Administrator).
+2. Register the application with Microsoft Power Platform using `New-PowerAppManagementApp -ApplicationId <appId>` from an administrator context. Microsoft Learn notes that a service principal cannot register itself and that Power Platform treats the registered app similarly to a Power Platform administrator for supported admin operations.
+3. Grant Microsoft Graph application permissions only if you enable optional Graph enrichment (`Application.Read.All` and `ServicePrincipal.Read.All`). The scanner's Power Platform admin cmdlets do not require Graph scopes.
+4. Prefer certificate-backed service principal credentials where supported. If a client secret is used for this release's scanner scripts, store it in Azure Key Vault and rotate it per policy.
+5. Create an application user in each target Dataverse environment with the System Administrator role for Dataverse table operations.
 
 ### Network Endpoints
 
@@ -58,6 +60,6 @@ If using the Environment Lifecycle Management (ELM) solution, zone classificatio
 
 ## Important Notes
 
-- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is in public preview as of April 2026. Verify current feature status before production deployment.
+- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is currently listed for public preview in July 2026 and general availability in September 2026. Verify current feature status before production deployment.
 - Preview features may have different security, compliance, and data residency commitments. Review Microsoft Power Platform preview terms.
-- This solution supports compliance with FINRA Rule 4511(a) record-keeping and OCC 2011-12 operational risk requirements but does not guarantee regulatory compliance on its own. Organizations should verify configuration helps meet their specific obligations.
+- This solution supports compliance with FINRA Rule 4511(a) record-keeping and OCC 2011-12 operational risk requirements but does not provide regulatory compliance on its own. Organizations should verify configuration helps meet their specific obligations.

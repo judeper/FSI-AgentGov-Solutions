@@ -50,8 +50,8 @@ Create each connection reference in your solution before building the flows. Bin
 
 > **Required columns when inserting Dataverse rows:**
 > - `fsi_credentialscans` requires `fsi_scanid` (string), `fsi_scanrunid` (string), `fsi_scanstartedat` (datetime), `fsi_scanstatus` (option set: 100000000 Completed / 100000001 CompletedWithFindings / 100000002 Failed / 100000003 InProgress).
-> - `fsi_credentialviolations` requires `fsi_violationid` (string, must be unique — append a GUID suffix), `fsi_violationstatus` (option set: 100000000 Open / 100000001 Acknowledged / 100000002 ExceptionApproved / 100000003 Remediated / 100000004 Closed), `fsi_severity`, `fsi_violationtype`, `fsi_zone`.
-> - `fsi_credentialexceptions` requires `fsi_exceptionid` (string), `fsi_justification` (multiline string), `fsi_exceptionstatus` (option set: 100000000 Pending / 100000001 Approved / 100000002 Rejected / 100000003 Expired).
+> - `fsi_credentialviolations` requires `fsi_violationid` (string, must be unique — append a GUID suffix), `fsi_violationstatus` (option set: 100000000 Open / 100000001 Remediated / 100000002 ExceptionApproved / 100000003 FalsePositive / 100000004 UnderReview), `fsi_severity`, `fsi_violationtype`, `fsi_zone`.
+> - `fsi_credentialexceptions` requires `fsi_exceptionid` (string), `fsi_justification` (multiline string), `fsi_exceptionstatus` (option set: 100000000 Pending / 100000001 Approved / 100000002 Rejected / 100000003 Expired / 100000004 Revoked).
 > See `docs/dataverse-schema.md` for the full column list and option-set values.
 5. **Condition: violations found?**
    - **Yes:** Post adaptive card to Teams channel
