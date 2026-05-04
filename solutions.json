@@ -439,7 +439,7 @@
     "cross-tenant-external-sharing-governance": {
       "id": "cross-tenant-external-sharing-governance",
       "name": "Cross-Tenant External Sharing Governance",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
@@ -450,7 +450,7 @@
         "1.18",
         "2.1",
         "2.8",
-        "3.1",
+        "1.7",
         "1.11"
       ],
       "dependencies": [

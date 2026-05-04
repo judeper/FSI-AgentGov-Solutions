@@ -1,35 +1,28 @@
 # Delivery Checklist
 
-Pre-deployment validation items for Cross-Tenant External Sharing Governance. Complete **ALL** items before setting `IsCrossTenantGovernanceEnabled = "true"`.
+Pre-deployment validation items for Cross-Tenant External Sharing Governance. Complete **ALL** items before setting `fsi_CTSG_IsCrossTenantGovernanceEnabled = "true"`.
 
 > **Warning:** Activating governance flows without completing this checklist may trigger false-positive remediation actions against legitimate cross-tenant relationships.
 
 ## API Schema Validation
 
-- [ ] **API 1:** `GET /governance/tenantSettings?api-version=2022-03-01-preview`
-  - Confirmed property name: `tenantIsolationEnabled`
-  - Confirmed value: _______________
+- [ ] **Power Platform tenant isolation:** Validate the tenant isolation policy with the documented Microsoft.PowerApps.Administration.PowerShell cmdlet before enabling Flow 1.
+  - Command run: `Get-PowerAppTenantIsolationPolicy -TenantId <tenantId>`
+  - Confirmed tenant isolation state property in returned policy: _______________
+  - Confirmed allow-list/rules collection property and entry shape: _______________
+  - Confirmed each rule exposes tenant identifier and allowed direction: Yes / No
   - Date validated: _______________
   - Validated by: _______________
 
-- [ ] **API 2:** `GET /governance/crossTenantPolicies?api-version=2022-03-01-preview`
-  - Confirmed `value[]` array structure: Yes / No
-  - Confirmed `tenantId` field name: _______________
-  - Confirmed `direction` field name: _______________
+- [ ] **Power Platform tenant isolation updates:** If Flow 4/5 will request policy updates, validate `Set-PowerAppTenantIsolationPolicy -TenantId <tenantId> -TenantIsolationPolicy <policyObject>` in a non-production tenant first.
+  - Write endpoint/cmdlet availability confirmed: Yes / Not available (use manual PPAC steps)
   - Date validated: _______________
 
-- [ ] **API 7:** `GET .../bots/{botId}/roleAssignments?api-version=2022-03-01-preview`
+- [ ] **Copilot Studio agent role assignments:** `GET .../bots/{botId}/roleAssignments?api-version=<confirmed-version>`
   - Returns guest user role assignments: Yes / No
   - Identifiable `principalType` field: Yes / No
   - Confirmed response field names: _______________
   - If principalType not available, fallback to guestUserIndex comparison: Confirmed / Not needed
-
-## Power Platform Admin API Write Endpoints
-
-- [ ] PPAC allow-list write endpoint for tenant isolation management:
-  - Endpoint URL: _______________
-  - Availability confirmed: Yes / Not available (use manual PPAC steps)
-  - Date validated: _______________
 
 ## Dependent Solution Validation
 
@@ -59,6 +52,13 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - `fsi_ctsg_ppisolationdirection`: Inbound=0, Outbound=1, Both=2, None=3
   - `fsi_ctsg_isolationcompliancestatus`: Compliant=0, Non-Compliant - Isolation Disabled=1, Non-Compliant - Unapproved Entries=2
   - `fsi_ctsg_eventtype`: Tenant Isolation Validated=0, Tenant Isolation Violation=1, External Share Detected=2, External Share Remediated=3, Entra CTA Audited=4, Entra CTA Violation=5, Tenant Onboarding Initiated=6, Tenant Approved=7, Tenant Expired=8, Tenant Suspended=9, Tenant Revoked=10, Annual Review Due=11, Annual Review Overdue=12, Annual Review Completed=13, Remediation Approved=14, Remediation Rejected=15, API Schema Validation Failed=16, Feature Flag Skip=17, Flow Error=18, Duplicate Remediation Skipped=19, Critical Finding Manual Remediation Required=20
+
+## Adjacent Control Validation
+
+- [ ] Tenant Restrictions v2 policy reviewed in Microsoft Entra cross-tenant access settings / Global Secure Access for outbound authentication-plane enforcement.
+- [ ] SharePoint tenant external sharing reviewed with `Set-SPOTenant` settings and representative `Get-SPOSite -Detailed | Select SharingCapability` output.
+- [ ] OneDrive sharing capability reviewed with `Set-SPOTenant -OneDriveSharingCapability` or user-level OneDrive sharing settings where applicable.
+- [ ] Copilot Studio Managed Environment agent sharing limits reviewed; existing agent access reviewed separately because sharing limits affect future sharing attempts.
 
 ## Managed Identity Configuration
 

@@ -27,7 +27,7 @@ All choice/option-set fields in OData expressions use **integer values**, not st
 | `fsi_ctsg_findingtype` | 0=Unapproved Tenant Isolation Exception, 1=Unapproved Guest Share, 2=Unapproved B2B Access, 3=Tenant Isolation Disabled, 4=Approved Tenant - Review Required |
 | `fsi_ctsg_governancelayer` | 0=Layer 1 (Tenant Isolation), 1=Layer 2 (Entra CTA), 2=Layer 3 (Agent Share) |
 | `fsi_ctsg_remediationstatus` | 0=Pending, 1=Approved for Auto-Remediation, 2=Manually Remediated, 3=Deferred |
-| `fsi_ctsg_eventtype` | 0–16 (see `create_ctsg_dataverse_schema.py` for full mapping) |
+| `fsi_ctsg_eventtype` | 0–20 (see `create_ctsg_dataverse_schema.py` for full mapping) |
 | `fsi_acv_zone` | 0=Unclassified, 1=Zone 1, 2=Zone 2, 3=Zone 3 |
 
 ## Prerequisites
@@ -60,7 +60,7 @@ All choice/option-set fields in OData expressions use **integer values**, not st
 
 ## Feature Flag
 
-> **CRITICAL:** Every flow must check the `IsCrossTenantGovernanceEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Feature Flag Skip"` and terminate with `Cancelled` status and message `"Cross-Tenant Governance not enabled"`. This gate prevents API calls before the solution is fully configured.
+> **CRITICAL:** Every flow must check the `fsi_CTSG_IsCrossTenantGovernanceEnabled` environment variable as its **first action**. If the value is `"false"`, the flow must log a skip event to `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Feature Flag Skip"` and terminate with `Cancelled` status and message `"Cross-Tenant Governance not enabled"`. This gate prevents API calls before the solution is fully configured.
 
 ---
 
@@ -80,7 +80,7 @@ All choice/option-set fields in OData expressions use **integer values**, not st
 
 2. **Check Feature Flag**
    - Action: Environment Variable — Get value
-   - Variable: `IsCrossTenantGovernanceEnabled`
+   - Variable: `fsi_CTSG_IsCrossTenantGovernanceEnabled`
    - **Condition:** Value equals `"false"`
    - **If true:**
      1. Create record in `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Feature Flag Skip"`
@@ -91,22 +91,27 @@ All choice/option-set fields in OData expressions use **integer values**, not st
    - `timestamp`: Expression `utcNow()`
    - `runId`: Expression `guid()`
    - `findingsCount`: Integer `0`
-   - `tenantIsolationEnabled`: Boolean `false`
+   - `tenantIsolationPolicyEnabled`: Boolean `false`
 
-4. **Validate API 1 Schema — Tenant Settings**
-   - Action: HTTP with Microsoft Entra ID
+4. **Validate Tenant Isolation Policy Schema**
+   - Action: Power Platform tenant isolation validation (documented source of truth: Microsoft.PowerApps.Administration.PowerShell)
 
-   | Parameter | Value |
-   |-----------|-------|
-   | Method | `GET` |
-   | Base Resource URL | `https://api.powerplatform.com` |
-   | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
-   | URI | `/governance/tenantSettings?api-version=2022-03-01-preview` |
+   Current Microsoft Learn guidance documents tenant isolation configuration through PPAC and the PowerApps Administration PowerShell cmdlets:
 
-   - **Condition:** Response body contains `tenantIsolationEnabled` property
-   - **If false (schema validation failed):**
-     1. Send Teams alert to `FlowAdministrators` channel: `"API Schema Validation Failed — tenantSettings endpoint does not contain tenantIsolationEnabled property. API may have changed."`
-     2. Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"API Schema Validation Failed"`, `fsi_eventdetails` = full response body
+   ```powershell
+   Get-PowerAppTenantIsolationPolicy -TenantId <tenantId>
+   Set-PowerAppTenantIsolationPolicy -TenantId <tenantId> -TenantIsolationPolicy <policyObject>
+   ```
+
+   For a Power Automate implementation, use a Power Platform for Admins action, custom connector, or HTTP action only after the Delivery Checklist confirms the live endpoint/action and response shape in your tenant. Do **not** hard-code legacy preview governance paths.
+
+   - Normalize the returned policy into:
+     - `tenantIsolationPolicyEnabled`: Boolean tenant isolation state
+     - `tenantIsolationRules`: Array of allow-list entries
+     - Per-entry fields: external tenant ID/domain and allowed direction (`Inbound`, `Outbound`, or `Both`)
+   - **If schema validation fails:**
+     1. Send Teams alert to `fsi_CTSG_FlowAdministrators` channel: `"API Schema Validation Failed — tenant isolation policy response did not match the confirmed checklist shape."`
+     2. Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"API Schema Validation Failed"`, `fsi_eventdetails` = sanitized response metadata
      3. Terminate with status `Failed`
    - **If true:** Continue
 
@@ -121,21 +126,13 @@ All choice/option-set fields in OData expressions use **integer values**, not st
    }
    ```
 
-5. **Validate API 2 Schema — Cross-Tenant Policies**
-   - Action: HTTP with Microsoft Entra ID
-
-   | Parameter | Value |
-   |-----------|-------|
-   | Method | `GET` |
-   | Base Resource URL | `https://api.powerplatform.com` |
-   | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
-   | URI | `/governance/crossTenantPolicies?api-version=2022-03-01-preview` |
-
-   - **Condition:** Response body `value` array exists and entries contain `tenantId` and `direction` fields
-   - **If false:** Same schema-failure handling as Step 4
+5. **Validate Tenant Isolation Rules**
+   - Use the normalized `tenantIsolationRules` array from Step 4.
+   - Confirm each entry includes a tenant identifier and allowed direction.
+   - If PPAC reports tenant isolation off, allow-list entries may exist but are not enforced until isolation is turned on.
 
 6. **Check Tenant Isolation Status**
-   - **Condition:** `tenantIsolationEnabled` equals `false`
+   - **Condition:** `tenantIsolationPolicyEnabled` equals `false`
    - **If true (isolation disabled):**
      1. Set `findingsCount` = `findingsCount + 1`
      2. Create `fsi_externalsharefinding` record:
@@ -161,7 +158,7 @@ All choice/option-set fields in OData expressions use **integer values**, not st
    - Map `fsi_tenantid` → full record (including `fsi_ppisolationdirection`)
 
 9. **For Each Allow-List Entry**
-   - Action: Apply to each on cross-tenant policy entries from Step 5
+   - Action: Apply to each on tenant isolation rules from Step 5
    - **Concurrency:** Set degree of parallelism to `1` (sequential to avoid throttling)
 
    9a. **Check Against Approved Registry**
@@ -196,10 +193,10 @@ All choice/option-set fields in OData expressions use **integer values**, not st
     - Table: `fsi_tenantisolationrecord`
     - Fields:
       - `fsi_name`: Expression `concat('TI-Snapshot-', variables('runId'))`
-      - `fsi_isolationenabled`: Variable `tenantIsolationEnabled`
-      - `fsi_allowlistcount`: Length of cross-tenant policy entries
+      - `fsi_isolationenabled`: Variable `tenantIsolationPolicyEnabled`
+      - `fsi_allowlistcount`: Length of normalized tenant isolation rules
       - `fsi_findingscreated`: Variable `findingsCount`
-      - `fsi_allowlistsnapshot`: Full response body from Steps 4 and 5 serialized
+      - `fsi_allowlistsnapshot`: Normalized tenant isolation policy and rules from Steps 4 and 5 serialized
       - `fsi_auditdate`: Variable `timestamp`
 
 11. **Log Compliance Event**
@@ -214,7 +211,7 @@ All choice/option-set fields in OData expressions use **integer values**, not st
 Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Catch** configured with **Run after** → Failed, Timed out, Cancelled:
 
 1. Log error to `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Flow Error"`, `fsi_eventdetails` = error message
-2. Send Teams alert to `FlowAdministrators` with flow name, run ID, and error details
+2. Send Teams alert to `fsi_CTSG_FlowAdministrators` with flow name, run ID, and error details
 3. Terminate with status `Failed`
 
 ---
@@ -438,7 +435,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
 
 11. **Send Daily Summary**
     - Action: Microsoft Teams → Post Adaptive Card in a chat or channel
-    - Channel: Environment variable `GovernanceTeamChannelId`
+    - Channel: Environment variable `fsi_CTSG_GovernanceTeamChannelId`
     - Card: Daily scan summary Adaptive Card (see [Teams Adaptive Card Templates](#teams-adaptive-card-templates) — Template 1)
 
 ### Error Handling
@@ -505,8 +502,14 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
 
 5. **Evaluate Default Policy Against Baseline**
 
+   Microsoft Graph v1.0 CTA settings do not expose a single `isBlocked` field. Normalize each B2B setting from `usersAndGroups.accessType` and `applications.accessType`:
+
+   - `inboundB2BBlocked`: both `b2bCollaborationInbound.usersAndGroups.accessType` and `b2bCollaborationInbound.applications.accessType` are `blocked`
+   - `outboundB2BBlocked`: both `b2bCollaborationOutbound.usersAndGroups.accessType` and `b2bCollaborationOutbound.applications.accessType` are `blocked`
+   - `directConnectBlocked`: inbound and outbound direct-connect user/group and application target configurations are `blocked`
+
    5a. **Check Inbound B2B**
-   - **Condition:** Default inbound B2B `isBlocked` does NOT match `baselineInboundBlocked`
+   - **Condition:** `inboundB2BBlocked` does NOT match `baselineInboundBlocked`
    - **If true:**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
@@ -516,15 +519,23 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
         - `fsi_detectedby`: `"Audit-EntraCrossTenantSettings-Weekly"`
         - `fsi_governancelayer`: `1` (Layer 2 — Entra CTA)
         - `fsi_remediationstatus`: `0` (Pending)
-        - `fsi_remediationnotes`: Expression `concat('Expected inbound B2B blocked=', baselineInboundBlocked, '; Actual=', actualValue)`
+        - `fsi_remediationnotes`: Expression `concat('Expected inbound B2B blocked=', baselineInboundBlocked, '; Actual accessType values=', serializedAccessTypes)`
 
    5b. **Check Outbound B2B**
-   - Same pattern — compare against `baselineOutboundBlocked`
+   - Same pattern — compare `outboundB2BBlocked` against `baselineOutboundBlocked`
    - Finding type: `"Unapproved B2B Access"`
 
    5c. **Check Direct Connect**
-   - Same pattern — compare against `baselineDirectConnectBlocked`
+   - Same pattern — compare `directConnectBlocked` against `baselineDirectConnectBlocked`
    - Finding type: `"Unapproved B2B Access"`
+
+   5d. **Check Default Inbound Trust**
+   - Review `inboundTrust.isMfaAccepted`, `inboundTrust.isCompliantDeviceAccepted`, and `inboundTrust.isHybridAzureADJoinedDeviceAccepted`.
+   - If any trust flag is enabled outside an approved governance decision, create an `Unapproved B2B Access` finding with `fsi_remediationnotes` documenting the accepted claim.
+
+   5e. **Check Automatic User Consent / Redemption**
+   - Default `automaticUserConsentSettings.inboundAllowed` and `outboundAllowed` are read-only and always `false` in the default configuration.
+   - Partner policies can override automatic consent; evaluate partner-specific values in Step 8 and require explicit approval before allowing automatic redemption.
 
 6. **Get All Partner CTA Policies**
    - Action: HTTP with Microsoft Entra ID
@@ -561,7 +572,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic**. Add parallel **Scope: Catch** with
         - `fsi_remediationnotes`: `"Partner CTA policy exists for tenant not in approved registry"`
 
    8b. **Check Scope Against Approval**
-   - **Condition:** Partner entry exists in approved registry but scope exceeds approved level (e.g., approved for inbound-only but outbound also enabled)
+   - **Condition:** Partner entry exists in approved registry but scope exceeds approved level (e.g., approved for inbound-only but outbound also enabled, `inboundTrust` accepts unapproved external claims, or `automaticUserConsentSettings` allows automatic redemption without approval)
    - **If true:**
      1. Increment `findingsCount`
      2. Create `fsi_externalsharefinding`:
@@ -624,8 +635,8 @@ Same scope-based try/catch pattern as Flow 1.
    - `timestamp`: Expression `utcNow()`
    - `requestId`: Expression `guid()`
    - `annualReviewDate`: Expression `addMonths(utcNow(), 12)`
-   - `securityTeamUpn`: Environment variable `SecurityTeamUPN`
-   - `governanceCommitteeUpn`: Environment variable `GovernanceCommitteeUPN`
+   - `securityTeamUpn`: Environment variable `fsi_CTSG_SecurityTeamUPN`
+   - `governanceCommitteeUpn`: Environment variable `fsi_CTSG_GovernanceCommitteeUPN`
 
 5. **Input Validation**
 
@@ -719,7 +730,7 @@ Same scope-based try/catch pattern as Flow 1.
     2. Update PPAC tenant isolation allow-list (if applicable):
        - Action: HTTP with Microsoft Entra ID — PATCH to add tenant to allow-list
     3. Update Entra CTA partner policy (if applicable):
-       - Action: HTTP with Microsoft Entra ID — create or update partner CTA policy
+       - Action: HTTP with Microsoft Entra ID — create or update `/v1.0/policies/crossTenantAccessPolicy/partners` with the Graph v1.0 partner configuration shape (`b2bCollaborationInbound`, `b2bCollaborationOutbound`, `b2bDirectConnectInbound`, `b2bDirectConnectOutbound`, `inboundTrust`, and `automaticUserConsentSettings`)
     4. Close any open findings for this tenant:
        - Query `fsi_externalsharefindings` where `fsi_externaltenanttenantid eq '{tenantId}' and fsi_findingstatus eq 0`
        - Update each to `fsi_findingstatus` = `2` (Remediated), `fsi_assignedto` = `"Onboarding Approval"`, `fsi_remediationdate` = `utcNow()`
@@ -787,7 +798,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
      1. Update finding:
         - `fsi_remediationstatus`: `3` (Deferred)
         - `fsi_remediationnotes`: `"Tenant isolation cannot be enabled via automation. Manual action required in Power Platform Admin Center → Tenant Settings → Tenant Isolation → Enable."`
-     2. Send **CRITICAL** Teams alert to `FlowAdministrators` and `SecurityTeamUPN`:
+     2. Send **CRITICAL** Teams alert to `fsi_CTSG_FlowAdministrators` and `fsi_CTSG_SecurityTeamUPN`:
         - Use Adaptive Card with red banner: `"CRITICAL: Power Platform tenant isolation is DISABLED"`
         - Include manual remediation steps in card body
      3. Log `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `"Critical Finding — Manual Remediation Required"`
@@ -797,7 +808,7 @@ Same scope-based try/catch pattern. For approval actions specifically, configure
    - Action: Approvals → Start and wait for an approval
    - Approval type: Approve/Reject — First to respond
    - Title: Expression `concat('Remediation Approval: ', fsi_findingtype, ' — ', fsi_externaltenantname)`
-   - Assigned to: Environment variable `SecurityTeamUPN`
+   - Assigned to: Environment variable `fsi_CTSG_SecurityTeamUPN`
    - Details: Remediation approval Adaptive Card (see [Template 2](#template-2-remediation-approval-request))
    - **Timeout:** `P3D` (3 days)
 
@@ -884,9 +895,9 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
 
 | Threshold | Timing | Recipients | Deduplication Window |
 |-----------|--------|------------|---------------------|
-| 90-day advance | 90 days before `fsi_annualreviewdue` | `GovernanceTeamEmail` + requesting team | Check `fsi_crosstenantcomplianceevent` for matching event in past 30 days |
-| 30-day advance | 30 days before `fsi_annualreviewdue` | `GovernanceTeamEmail` + requesting team + `GovernanceCommitteeUPN` | Check `fsi_crosstenantcomplianceevent` for matching event in past 7 days |
-| Overdue | Past `fsi_annualreviewdue` | `GovernanceTeamEmail` + requesting team + `GovernanceCommitteeUPN` | No deduplication — sends daily until resolved |
+| 90-day advance | 90 days before `fsi_annualreviewdue` | `fsi_CTSG_GovernanceTeamEmail` + requesting team | Check `fsi_crosstenantcomplianceevent` for matching event in past 30 days |
+| 30-day advance | 30 days before `fsi_annualreviewdue` | `fsi_CTSG_GovernanceTeamEmail` + requesting team + `fsi_CTSG_GovernanceCommitteeUPN` | Check `fsi_crosstenantcomplianceevent` for matching event in past 7 days |
+| Overdue | Past `fsi_annualreviewdue` | `fsi_CTSG_GovernanceTeamEmail` + requesting team + `fsi_CTSG_GovernanceCommitteeUPN` | No deduplication — sends daily until resolved |
 
 ### Build Steps
 
@@ -903,8 +914,8 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
    - `today`: Expression `startOfDay(utcNow())`
    - `ninetyDayWindow`: Expression `addDays(utcNow(), 90)`
    - `thirtyDayWindow`: Expression `addDays(utcNow(), 30)`
-   - `governanceTeamEmail`: Environment variable `GovernanceTeamEmail`
-   - `governanceCommitteeUpn`: Environment variable `GovernanceCommitteeUPN`
+   - `governanceTeamEmail`: Environment variable `fsi_CTSG_GovernanceTeamEmail`
+   - `governanceCommitteeUpn`: Environment variable `fsi_CTSG_GovernanceCommitteeUPN`
    - `remindersQueued`: Integer `0`
 
 4. **Get All Approved Tenants**
@@ -922,14 +933,14 @@ Same scope-based try/catch pattern. For HTTP DELETE/PATCH actions, configure ind
      1. **Deduplication Check:**
         - Query `fsi_crosstenantcomplianceevent`:
           ```
-          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 11 and fsi_externaltenantid eq '{tenantId}' and createdon ge {thirtyDaysAgo}&$top=1
+          fsi_crosstenantcomplianceevents?$filter=fsi_eventtype eq 11 and fsi_externaltenanttenantid eq '{tenantId}' and createdon ge {thirtyDaysAgo}&$top=1
           ```
         - **If reminder already sent in past 30 days:** Skip
      2. **If no recent reminder:**
         - Send Teams notification to `governanceTeamEmail` and requesting team (`fsi_notes`):
           - Use Annual Review Reminder Adaptive Card (see [Template 3](#template-3-annual-review-reminder))
           - Set urgency indicator: `"Upcoming"`
-        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `11` (Annual Review Due), `fsi_externaltenantid` = `fsi_tenantid`
+        - Create `fsi_crosstenantcomplianceevent` with `fsi_eventtype` = `11` (Annual Review Due), `fsi_externaltenanttenantid` = `fsi_tenantid`
         - Increment `remindersQueued`
 
    5b. **Evaluate 30-Day Threshold**
@@ -997,7 +1008,7 @@ Same scope-based try/catch pattern as Flow 1.
 
 ## Teams Adaptive Card Templates
 
-All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execute`).
+All cards use Adaptive Cards schema v1.3 with `Action.Submit` (NOT `Action.Execute`).
 
 ### Template 1: Daily Scan Summary
 
@@ -1005,7 +1016,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "TextBlock",
@@ -1111,7 +1122,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "TextBlock",
@@ -1182,7 +1193,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "TextBlock",
@@ -1240,7 +1251,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "TextBlock",
@@ -1330,7 +1341,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "TextBlock",
@@ -1427,7 +1438,7 @@ All cards use Adaptive Cards schema v1.2 with `Action.Submit` (NOT `Action.Execu
 
 After building all flows:
 
-- [ ] Feature flag check — set `IsCrossTenantGovernanceEnabled` to `"false"` and verify all flows terminate gracefully
+- [ ] Feature flag check — set `fsi_CTSG_IsCrossTenantGovernanceEnabled` to `"false"` and verify all flows terminate gracefully
 - [ ] Flow 1 — Run manually; verify `fsi_tenantisolationrecord` created with snapshot
 - [ ] Flow 1 — Disable tenant isolation in test environment; verify Critical finding created
 - [ ] Flow 2 — Run manually; verify guest users detected and domain resolution works
@@ -1454,7 +1465,7 @@ After building all flows:
 
 **Issue: PPAC tenant settings API returns unexpected schema**
 - **Cause:** API version may have changed or the `api-version` parameter is outdated
-- **Resolution:** Verify the API version in the URI. Flow 1 Step 4 includes schema validation that alerts `FlowAdministrators` when the expected property is missing. Update the URI parameter if Microsoft publishes a new API version.
+- **Resolution:** Verify the tenant isolation policy action or custom connector against the Delivery Checklist. Flow 1 Step 4 includes schema validation that alerts `fsi_CTSG_FlowAdministrators` when the confirmed response shape changes.
 
 **Issue: Guest UPN parsing fails for MSA guests**
 - **Cause:** Microsoft Account (MSA) guests use `live.com`, `outlook.com`, or `hotmail.com` domains which follow different UPN encoding

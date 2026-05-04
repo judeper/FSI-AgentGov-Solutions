@@ -986,7 +986,7 @@ def main() -> None:
             "Examples:\n"
             "  # Dry run with interactive auth\n"
             "  python create_ctsg_dataverse_schema.py --dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Deploy with service principal (legacy dev-only)\n"
             "  python create_ctsg_dataverse_schema.py \\\n"
             "    --tenant-id $CTSG_TENANT_ID \\\n"
             "    --client-id $CTSG_CLIENT_ID \\\n"
@@ -1010,7 +1010,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CTSG_CLIENT_SECRET"),
-        help="Service principal secret (or set CTSG_CLIENT_SECRET env var)",
+        help="Service principal secret (legacy dev-only; prefer managed identity or interactive auth)",
     )
     parser.add_argument(
         "--environment-url",

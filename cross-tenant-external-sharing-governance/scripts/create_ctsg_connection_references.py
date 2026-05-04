@@ -163,7 +163,7 @@ Examples:
       --environment-url https://org.crm.dynamics.com \\
       --interactive
 
-  # Service Principal authentication
+  # Service Principal authentication (legacy dev-only)
   python create_ctsg_connection_references.py \\
       --tenant-id <tenant-id> \\
       --environment-url https://org.crm.dynamics.com \\
@@ -211,6 +211,7 @@ Examples:
         parser.error("--tenant-id and --environment-url are required")
 
     # Handle client secret for Service Principal auth
+    # legacy: dev-only — replace with managed identity in production
     client_secret = os.environ.get("CTSG_CLIENT_SECRET")
     if not args.interactive and not client_secret:
         if args.client_id:

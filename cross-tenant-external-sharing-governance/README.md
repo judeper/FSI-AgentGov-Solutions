@@ -1,6 +1,6 @@
 # Cross-Tenant and External Sharing Governance
 
-> **Version:** v1.0.1
+> **Version:** v1.0.3
 > **Status:** Completed
 
 Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments.
@@ -69,7 +69,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 ┌─────────────────────────────────────────────────────────────────┐
 │  LAYER 1: Power Platform Tenant Isolation                       │
 │  Scope: Connector-level blocking/allowing at tenant boundary    │
-│  API: GET /governance/tenantSettings                            │
+│  API: PPAC / Get-PowerAppTenantIsolationPolicy                  │
 │  Detection: Flow 1 — Validate-TenantIsolation-Daily             │
 ├─────────────────────────────────────────────────────────────────┤
 │  LAYER 2: Entra Cross-Tenant Access Policies                    │
@@ -152,7 +152,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 
 > **Warning:** Complete ALL items in the [Delivery Checklist](DELIVERY-CHECKLIST.md) before setting `fsi_CTSG_IsCrossTenantGovernanceEnabled = "true"`. Activating governance flows without a fully populated approved tenant list may trigger false-positive remediation actions.
 
-> **Adjacent controls to consider alongside this solution:** Tenant Restrictions v2 (TRv2) for outbound device-level enforcement, SharePoint external sharing settings (`Set-SPOTenant -SharingCapability`), Conditional Access policies for guest sessions, and OneDrive external sharing controls. Cross-tenant governance is necessary but not sufficient on its own — sharing surfaces outside Power Platform require their own governance.
+> **Adjacent controls to consider alongside this solution:** Tenant Restrictions v2 (TRv2) for outbound authentication-plane enforcement, SharePoint/OneDrive external sharing settings (`Set-SPOTenant -SharingCapability`, `Get-SPOSite -Detailed | Select SharingCapability`), Conditional Access policies for guest sessions, and Copilot Studio managed-environment sharing limits. Cross-tenant governance is necessary but not sufficient on its own — sharing surfaces outside Power Platform require their own governance.
 
 ## Documentation
 
@@ -173,11 +173,13 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 - **Guest detection method limitations**: The 5-value guest detection method (`EXT# Parsing`, `Mail Field`, `CreationType`, `Multi-Method Agreed`, `Unresolved`) relies on user profile attributes that may not be consistently populated across all tenants. The `Unresolved` status indicates cases where no single method produced a definitive result.
 - **IAM approval delays**: Dual-approval onboarding (Flow 4) depends on timely approver responses. Approvals that exceed the configured timeout transition to `Expired` status and must be re-initiated.
 - **Entra CTA baseline drift**: Weekly CTA audits (Flow 3) compare against a point-in-time baseline. Organizations with frequent CTA policy changes should consider increasing scan frequency.
-- **No real-time blocking**: This solution detects and remediates but does not provide real-time blocking of cross-tenant access attempts. Real-time prevention requires Conditional Access policies configured separately.
+- **No real-time blocking**: This solution detects and remediates but does not provide real-time blocking of cross-tenant access attempts. Real-time blocking requires controls such as Conditional Access, Tenant Restrictions v2, and workload-specific sharing restrictions configured separately.
+- **SharePoint and OneDrive are adjacent surfaces**: Power Platform tenant isolation does not govern standalone SharePoint or OneDrive external sharing. Validate `Set-SPOTenant` tenant settings and `Get-SPOSite -Detailed` site `SharingCapability` separately.
+- **Copilot Studio sharing limits are forward-looking**: Managed Environment sharing rules restrict future agent shares; existing agent access should be reviewed and removed through inventory/remediation workflows.
 
 ## Version
 
-- **Current:** v1.0.1
+- **Current:** v1.0.3
 - **Framework:** FSI-AgentGov v1.1
 
 ## License

@@ -22,7 +22,7 @@ Usage:
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --interactive --tables-only
 
-    # With Service Principal (for CI/CD — set CTSG_CLIENT_SECRET env var)
+    # With Service Principal (legacy dev-only — set CTSG_CLIENT_SECRET env var)
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --client-id <app-id>
 """
@@ -182,7 +182,7 @@ Examples:
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --interactive --vars-only
 
-  # With Service Principal (for CI/CD — set CTSG_CLIENT_SECRET env var)
+  # With Service Principal (legacy dev-only — set CTSG_CLIENT_SECRET env var)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --client-id <app-id>
         """,
@@ -209,7 +209,7 @@ Examples:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CTSG_CLIENT_SECRET"),
-        help="Client secret for Service Principal auth (or set CTSG_CLIENT_SECRET env var)",
+        help="Client secret for Service Principal auth (legacy dev-only; prefer managed identity or interactive auth)",
     )
     parser.add_argument(
         "--interactive",
@@ -259,6 +259,7 @@ Examples:
         parser.error("Cannot use multiple selective deployment flags together")
 
     # Get client secret if needed for SP auth
+    # legacy: dev-only — replace with managed identity in production
     client_secret = args.client_secret
     if not args.interactive and args.client_id and not client_secret:
         import getpass
