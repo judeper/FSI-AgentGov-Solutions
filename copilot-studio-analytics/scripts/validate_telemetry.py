@@ -200,19 +200,34 @@ def verify_copilot_session_events(
             timespan=timedelta(hours=hours),
         )
 
-    # KQL query: check for CopilotSessionOutcome events
+    # KQL query: check for CopilotSessionOutcome events. Support both the
+    # classic Application Insights schema (`customEvents`/`customDimensions`)
+    # and workspace-based Log Analytics schema (`AppEvents`/`Properties`).
     query = f"""
-    customEvents
-    | where timestamp > ago({hours}h)
-    | where name == "CopilotSessionOutcome"
+    let CSAEvents =
+        union isfuzzy=true
+            (customEvents
+            | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+            (AppEvents
+            | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+        | where EventName == "CopilotSessionOutcome"
+        | extend SessionId = tostring(EventProperties["sessionId"])
+        | extend SessionTime = coalesce(
+            todatetime(EventProperties["sessionClosedOn"]),
+            todatetime(EventProperties["sessionCreatedOn"]),
+            EventTime)
+        | where SessionTime > ago({hours}h)
+        | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+        | summarize arg_max(EventTime, *) by DedupKey;
+    CSAEvents
     | summarize
         EventCount=count(),
-        DistinctSessions=dcount(tostring(customDimensions["sessionId"])),
-        HasRecipientId=countif(isnotempty(tostring(customDimensions["recipientId"]))),
-        HasSessionOutcome=countif(isnotempty(tostring(customDimensions["sessionOutcome"]))),
-        HasAgentMode=countif(isnotempty(tostring(customDimensions["agentMode"]))),
-        ConversationalCount=countif(tostring(customDimensions["agentMode"]) == "Conversational"),
-        AutonomousCount=countif(tostring(customDimensions["agentMode"]) == "Autonomous")
+        DistinctSessions=dcount(SessionId),
+        HasRecipientId=countif(isnotempty(tostring(EventProperties["recipientId"]))),
+        HasSessionOutcome=countif(isnotempty(tostring(EventProperties["sessionOutcome"]))),
+        HasAgentMode=countif(isnotempty(tostring(EventProperties["agentMode"]))),
+        ConversationalCount=countif(tostring(EventProperties["agentMode"]) == "Conversational"),
+        AutonomousCount=countif(tostring(EventProperties["agentMode"]) == "Autonomous")
     """
 
     try:
@@ -318,22 +333,46 @@ def query_outcome_distribution(
 
     logs_client = LogsQueryClient(credential)
 
+    is_arm_id = isinstance(workspace_id, str) and workspace_id.startswith("/subscriptions/")
+
+    def _run_query():
+        if is_arm_id:
+            return logs_client.query_resource(
+                resource_id=workspace_id,
+                query=query,
+                timespan=timedelta(hours=hours),
+            )
+        return logs_client.query_workspace(
+            workspace_id=workspace_id,
+            query=query,
+            timespan=timedelta(hours=hours),
+        )
+
     query = f"""
-    customEvents
-    | where timestamp > ago({hours}h)
-    | where name == "CopilotSessionOutcome"
-    | extend agentMode = tostring(customDimensions["agentMode"]),
-             sessionOutcome = tostring(customDimensions["sessionOutcome"])
+    let CSAEvents =
+        union isfuzzy=true
+            (customEvents
+            | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+            (AppEvents
+            | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+        | where EventName == "CopilotSessionOutcome"
+        | extend SessionId = tostring(EventProperties["sessionId"])
+        | extend SessionTime = coalesce(
+            todatetime(EventProperties["sessionClosedOn"]),
+            todatetime(EventProperties["sessionCreatedOn"]),
+            EventTime)
+        | where SessionTime > ago({hours}h)
+        | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+        | summarize arg_max(EventTime, *) by DedupKey;
+    CSAEvents
+    | extend agentMode = tostring(EventProperties["agentMode"]),
+             sessionOutcome = tostring(EventProperties["sessionOutcome"])
     | summarize Count=count() by agentMode, sessionOutcome
     | order by agentMode asc, Count desc
     """
 
     try:
-        response = logs_client.query_workspace(
-            workspace_id=workspace_id,
-            query=query,
-            timespan=timedelta(hours=hours),
-        )
+        response = _run_query()
     except HttpResponseError:
         return []
 
@@ -445,7 +484,7 @@ def print_verification_summary(
         print()
         print("  Next steps:")
         print("    1. Verify sync_dataverse_sessions.py ran successfully")
-        print("    2. Check APPINSIGHTS_INSTRUMENTATIONKEY is correct")
+        print("    2. Check APPLICATIONINSIGHTS_CONNECTION_STRING is correct")
         print("    3. Verify Dataverse msdyn_botsession contains session data")
         print("    4. Run sync with --verbose for detailed diagnostics")
         print()
@@ -573,7 +612,8 @@ Examples:
         print("Run one of the following to authenticate:")
         print("  - az login (Azure CLI)")
         print("  - Connect-AzAccount (PowerShell)")
-        print("  - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET")
+        print("  - Use workload identity or managed identity via DefaultAzureCredential")
+        print("  - For legacy dev-only runs, set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET")
         sys.exit(1)
     except AzureError as e:
         print(f"ERROR: Azure SDK error - {e.message}")

@@ -28,10 +28,10 @@ This library contains 15 KQL queries organized into 4 categories. All queries op
 
 ## Data Source
 
-All queries target the `customEvents` table in Application Insights, filtering on:
+Queries use a dual-table source so they work in both the classic Application Insights query experience (`customEvents`) and workspace-based Log Analytics (`AppEvents`), filtering on:
 
 ```kql
-| where name == "CopilotSessionOutcome"
+| where EventName == "CopilotSessionOutcome"
 ```
 
 These events are synced from Copilot Studio's built-in analytics via the CSA sync pipeline. Design mode sessions are already filtered during the sync process.
@@ -139,5 +139,5 @@ queries/
 
 ---
 
-*Query Library version: 2.0.0*
-*Last updated: February 2026*
+*Query Library version: 2.0.1*
+*Last updated: 2026-Q2*

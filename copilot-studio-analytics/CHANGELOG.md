@@ -2,6 +2,15 @@
 
 All notable changes to this solution are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Target version v2.0.1 for the Microsoft Learn 2026-Q2 refresh.
+- Updated KQL and workbook queries to support both classic Application Insights (`customEvents`/`timestamp`/`customDimensions`) and workspace-based Log Analytics (`AppEvents`/`TimeGenerated`/`Properties`) event schemas.
+- Re-binned session analytics on `sessionClosedOn`/`sessionCreatedOn` with telemetry ingestion time as a fallback, and de-duplicated `CopilotSessionOutcome` rows by session ID to account for lookback-window re-emission.
+- Refreshed validation and setup guidance for connection strings, managed identity-first authentication, Microsoft Copilot Dashboard in Viva Insights, and Microsoft 365 admin center Copilot usage reports.
+
 ## [2.0.0] - 2026-04-17
 
 > **Breaking release.** Multiple math, code, and documentation corrections affect the values of every business-impact KQL query. Re-baseline dashboards before promoting; do not compare numbers across the v1.x → v2.0 boundary. See "Migration notes" below.

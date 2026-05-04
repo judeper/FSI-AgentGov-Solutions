@@ -1,6 +1,6 @@
 # Azure Monitor Workbooks
 
-**Version:** 1.0.0
+**Version:** 2.0.1
 
 ## Overview
 
@@ -183,6 +183,6 @@ Workbook queries use parameter reference syntax like `{TimeRange:ms}`, `"{Zone}"
 
 ---
 
-*Version: 2.0.0*
-*Last Updated: February 2026*
+*Version: 2.0.1*
+*Last Updated: 2026-Q2*
 *Part of FSI-AgentGov-Solutions*

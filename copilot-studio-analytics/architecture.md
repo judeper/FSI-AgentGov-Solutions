@@ -32,7 +32,7 @@ graph LR
     end
 
     subgraph "Azure Monitor"
-        AI[Application Insights<br/>customEvents]
+        AI[Application Insights<br/>customEvents / AppEvents]
         LA[Log Analytics<br/>Workspace]
     end
 
@@ -199,5 +199,5 @@ See [docs/agent-assisted-hours-methodology.md](docs/agent-assisted-hours-methodo
 
 ---
 
-*Architecture version: 2.0.0*
-*Last updated: April 2026*
+*Architecture version: 2.0.1*
+*Last updated: 2026-Q2*

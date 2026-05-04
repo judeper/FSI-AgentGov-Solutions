@@ -32,17 +32,31 @@
 
 let TimeRange = {TimeRange:30d};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotSessionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
-| extend AgentId = tostring(customDimensions["recipientId"])
-| extend AgentType = tostring(customDimensions["agentMode"])
+let CSAEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotSessionOutcome"
+    | extend SessionId = tostring(EventProperties["sessionId"])
+    | extend SessionTime = coalesce(
+        todatetime(EventProperties["sessionClosedOn"]),
+        todatetime(EventProperties["sessionCreatedOn"]),
+        EventTime)
+    | where SessionTime > ago(TimeRange)
+    | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+    | summarize arg_max(EventTime, *) by DedupKey;
+
+CSAEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(EventProperties['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(EventProperties["recipientId"])
+| extend AgentType = tostring(EventProperties["agentMode"])
 | summarize
     ActiveAgents = dcount(AgentId),
     ConversationalCount = dcountif(AgentId, AgentType == "Conversational"),
     AutonomousCount = dcountif(AgentId, AgentType == "Autonomous")
-    by bin(timestamp, 1d)
-| project Timestamp = timestamp, ActiveAgents, ConversationalCount, AutonomousCount
+    by bin(SessionTime, 1d)
+| project Timestamp = SessionTime, ActiveAgents, ConversationalCount, AutonomousCount
 | order by Timestamp desc

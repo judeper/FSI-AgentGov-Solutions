@@ -10,7 +10,7 @@ CSA depends on infrastructure deployed by the [Agent Observability Foundation](.
 |---------------|-------------|--------------|
 | Application Insights | CopilotSessionOutcome event destination | `az monitor app-insights component show --app {name}` |
 | Log Analytics workspace | KQL queries and workbook data source | `az monitor log-analytics workspace show --workspace-name {name}` |
-| Copilot Studio integration | Native telemetry events (BotMessage*, GenerativeAnswers) | Query `customEvents` for recent BotMessageSend events |
+| Copilot Studio integration | Native telemetry events (BotMessage*, GenerativeAnswers) | Query `customEvents` or `AppEvents` for recent BotMessageSend events |
 
 ## Dataverse Access Requirements
 
@@ -24,14 +24,17 @@ CSA depends on infrastructure deployed by the [Agent Observability Foundation](.
 | conversationtranscript (Tier 2 — planned) | Read | Detailed behavior metrics *(not yet used by sync pipeline)* |
 | fsi_csasyncwatermarks | Read/Write | Sync tracking table (created by schema script) |
 
-### App Registration Setup
+### Authentication Setup
 
-1. Create an app registration in Entra ID (or reuse an existing one)
-2. Add the Dataverse API permission: `https://org.api.crm.dynamics.com/.default`
-3. Create a client secret or configure certificate authentication
-4. Create an application user in Power Platform admin center:
+Use the strongest credential available for the runtime:
+
+1. Prefer managed identity for Azure-hosted jobs, or workload identity federation for GitHub Actions and other CI runners.
+2. For app-only Dataverse access, create or reuse an Entra ID app registration and add the Dataverse API permission: `https://org.api.crm.dynamics.com/.default`.
+3. Configure certificate authentication for production app credentials when managed identity or workload identity is not available.
+4. Use client secrets only as a legacy development fallback; do not store secrets in configuration files or source control.
+5. Create an application user in Power Platform admin center:
    - Navigate to **Environments** > your environment > **Settings** > **Users + permissions** > **Application users**
-   - Click **+ New app user** and select your app registration
+   - Click **+ New app user** and select your app registration or managed identity enterprise application
    - Assign a security role with read access to the tables listed above
 
 ### Required Configuration Values
@@ -39,9 +42,11 @@ CSA depends on infrastructure deployed by the [Agent Observability Foundation](.
 | Config Key | Source | Example |
 |-----------|--------|---------|
 | `dataverse.environment_url` | Power Platform admin center > Environment URL | `https://org12345.api.crm.dynamics.com` |
-| `dataverse.tenant_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `dataverse.client_id` | Entra ID > App registration > Overview | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `DATAVERSE_CLIENT_SECRET` env var | Entra ID > App registration > Certificates & secrets | (stored securely as environment variable, not in config file) |
+| `dataverse.auth_mode` | Runtime credential type | `managed-identity`, `workload-identity`, `certificate`, `interactive`, or legacy `client-secret` |
+| `dataverse.tenant_id` | Entra ID > App registration > Overview | Required for workload identity, certificate, interactive, and legacy client-secret auth |
+| `dataverse.client_id` | Entra ID > App registration > Overview | Required for workload identity, certificate, interactive, and legacy client-secret auth |
+| `dataverse.managed_identity_client_id` | Managed identity resource | Optional; use only for user-assigned managed identity |
+| `DATAVERSE_CLIENT_SECRET` env var | Entra ID > App registration > Certificates & secrets | Legacy development fallback only; store securely outside config files |
 | `subscription_id` | Azure Portal > Subscriptions | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `resource_group` | Azure Portal > Resource Groups | `rg-agent-observability-dev` |
 | `application_insights.name` | Azure Portal > Application Insights | `ai-copilot-analytics-dev` |
@@ -61,7 +66,7 @@ Install via `pip install -r scripts/requirements.txt`:
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| msal | 1.24.0+ | Dataverse authentication (MSAL confidential client) |
+| msal | 1.24.0+ | Dataverse interactive and legacy confidential-client authentication |
 | requests | 2.31.0+ | Dataverse Web API calls |
 | applicationinsights | 0.11.10+ | Application Insights telemetry export |
 | pyyaml | 6.0+ | Configuration file parsing |
@@ -153,9 +158,9 @@ python scripts/validate_telemetry.py --config config/config.yml --verbose
 ## Pre-Deployment Checklist
 
 - [ ] **AOF deployed** -- Application Insights and Log Analytics workspace operational
-- [ ] **App registration created** -- With Dataverse API permissions and application user
-- [ ] **Configuration values collected** -- Dataverse URL, tenant ID, client ID, App Insights connection string
-- [ ] **Client secret stored securely** -- Environment variable or key vault reference
+- [ ] **Runtime identity configured** -- Managed identity, workload identity, certificate, or legacy development secret has Dataverse application-user access
+- [ ] **Configuration values collected** -- Dataverse URL, auth mode, identity IDs where required, and App Insights connection string
+- [ ] **Legacy secret protected if used** -- Store development-only client secrets in an environment variable or key vault reference
 - [ ] **Python environment ready** -- Python 3.9+ with dependencies installed
 - [ ] **Transcript retention reviewed** -- Default 30-day bulk delete extended if Tier 2 analytics is planned
 - [ ] **CSAT survey enabled** -- On agents where customer satisfaction tracking is desired
@@ -163,5 +168,5 @@ python scripts/validate_telemetry.py --config config/config.yml --verbose
 
 ---
 
-*Prerequisites version: 2.0.0*
-*Last updated: April 2026*
+*Prerequisites version: 2.0.1*
+*Last updated: 2026-Q2*

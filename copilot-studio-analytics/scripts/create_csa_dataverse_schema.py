@@ -327,9 +327,21 @@ def main() -> None:
     )
     parser.add_argument("--tenant-id", default=os.environ.get("CSA_TENANT_ID"), help="Entra ID tenant ID (or set CSA_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("CSA_CLIENT_ID"), help="Application (client) ID (or set CSA_CLIENT_ID env var)")
-    parser.add_argument("--client-secret", default=os.environ.get("CSA_CLIENT_SECRET"), help="Client secret (or set CSA_CLIENT_SECRET env var)")
+    parser.add_argument(
+        "--client-secret",
+        default=os.environ.get("CSA_CLIENT_SECRET"),
+        help="Legacy dev-only client secret (or set CSA_CLIENT_SECRET env var)",
+    )
     parser.add_argument("--environment-url", default=os.environ.get("CSA_ENVIRONMENT_URL"), help="Dataverse environment URL (or set CSA_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
+    parser.add_argument(
+        "--auth-mode",
+        choices=["managed-identity", "workload-identity", "certificate", "interactive", "client-secret"],
+        default=os.environ.get("CSA_AUTH_MODE"),
+        help="Dataverse auth mode; defaults to managed identity unless CSA_CLIENT_SECRET or --interactive is used",
+    )
+    parser.add_argument("--certificate-path", default=os.environ.get("CSA_CERTIFICATE_PATH"), help="Path to certificate for --auth-mode certificate")
+    parser.add_argument("--certificate-password", default=os.environ.get("CSA_CERTIFICATE_PASSWORD"), help="Certificate password for --auth-mode certificate")
     parser.add_argument("--dry-run", action="store_true", help="Preview schema operations without API calls")
     parser.add_argument("--output-docs", action="store_true", help="Generate docs/dataverse-schema.md and exit (no credentials required)")
     args = parser.parse_args()
@@ -347,16 +359,23 @@ def main() -> None:
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
-    if not args.tenant_id or not args.environment_url:
-        parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set CSA_TENANT_ID and CSA_ENVIRONMENT_URL env vars)")
-    if not args.client_id and not args.interactive:
-        parser.error("--client-id is required (or set CSA_CLIENT_ID env var) unless --interactive is specified")
+    if not args.environment_url:
+        parser.error("Missing required argument. Provide --environment-url (or set CSA_ENVIRONMENT_URL env var)")
+
+    auth_mode = args.auth_mode or ("interactive" if args.interactive else None) or ("client-secret" if args.client_secret else "managed-identity")
+    if auth_mode in {"client-secret", "workload-identity", "certificate", "interactive"}:
+        if not args.tenant_id:
+            parser.error("--tenant-id is required for the selected auth mode (or set CSA_TENANT_ID env var)")
+        if not args.client_id:
+            parser.error("--client-id is required for the selected auth mode (or set CSA_CLIENT_ID env var)")
+    if auth_mode == "certificate" and not args.certificate_path:
+        parser.error("--certificate-path is required for certificate authentication")
 
     client_secret = args.client_secret
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    if auth_mode == "client-secret" and not client_secret:
+        # legacy: dev-only — replace with managed identity in production
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
 
     try:
         client = DataverseClient(
@@ -364,8 +383,11 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
-            interactive=args.interactive,
+            interactive=(auth_mode == "interactive"),
             dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=args.certificate_password,
         )
 
         if args.dry_run:

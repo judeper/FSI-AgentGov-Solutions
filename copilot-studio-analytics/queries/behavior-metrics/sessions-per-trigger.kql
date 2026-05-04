@@ -28,21 +28,35 @@
 //
 // Notes:
 //   - Filters to agentMode == "Autonomous" only
-//   - Uses sessionDurationSeconds from customDimensions for completion time
+//   - Uses sessionDurationSeconds from EventProperties for completion time
 //   - P95 completion times above SLA thresholds may indicate performance issues
 //   - Null or empty trigger types are grouped as "Unknown"
 //   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
 
 let TimeRange = {TimeRange:7d};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotSessionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where tostring(customDimensions['agentMode']) == "Autonomous"
-| extend AgentId = tostring(customDimensions["recipientId"])
-| extend TriggerType = coalesce(tostring(customDimensions["triggerType"]), "Unknown")
-| extend DurationSeconds = todouble(customDimensions["sessionDurationSeconds"])
+let CSAEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotSessionOutcome"
+    | extend SessionId = tostring(EventProperties["sessionId"])
+    | extend SessionTime = coalesce(
+        todatetime(EventProperties["sessionClosedOn"]),
+        todatetime(EventProperties["sessionCreatedOn"]),
+        EventTime)
+    | where SessionTime > ago(TimeRange)
+    | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+    | summarize arg_max(EventTime, *) by DedupKey;
+
+CSAEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where tostring(EventProperties['agentMode']) == "Autonomous"
+| extend AgentId = tostring(EventProperties["recipientId"])
+| extend TriggerType = coalesce(tostring(EventProperties["triggerType"]), "Unknown")
+| extend DurationSeconds = todouble(EventProperties["sessionDurationSeconds"])
 | summarize
     SessionCount = count(),
     AvgCompletionSeconds = round(avg(DurationSeconds), 1),

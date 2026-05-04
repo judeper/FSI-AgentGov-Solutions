@@ -33,17 +33,31 @@
 
 let TimeRange = {TimeRange:30d};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotSessionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where tostring(customDimensions['agentMode']) == "Conversational"
-| where isnotnull(customDimensions["csatScore"]) and tostring(customDimensions["csatScore"]) != ""
-| extend AgentId = tostring(customDimensions["recipientId"])
-| extend CSATScore = todouble(customDimensions["csatScore"])
+let CSAEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotSessionOutcome"
+    | extend SessionId = tostring(EventProperties["sessionId"])
+    | extend SessionTime = coalesce(
+        todatetime(EventProperties["sessionClosedOn"]),
+        todatetime(EventProperties["sessionCreatedOn"]),
+        EventTime)
+    | where SessionTime > ago(TimeRange)
+    | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+    | summarize arg_max(EventTime, *) by DedupKey;
+
+CSAEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where tostring(EventProperties['agentMode']) == "Conversational"
+| where isnotnull(EventProperties["csatScore"]) and tostring(EventProperties["csatScore"]) != ""
+| extend AgentId = tostring(EventProperties["recipientId"])
+| extend CSATScore = todouble(EventProperties["csatScore"])
 | summarize
     AvgCSAT = round(avg(CSATScore), 1),
     ResponseCount = count()
-    by bin(timestamp, 1d), AgentId
-| project Timestamp = timestamp, AgentId, AvgCSAT, ResponseCount
+    by bin(SessionTime, 1d), AgentId
+| project Timestamp = SessionTime, AgentId, AvgCSAT, ResponseCount
 | order by Timestamp desc, AgentId asc

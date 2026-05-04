@@ -88,9 +88,11 @@ Monthly GB = (SessionsPerDay x EventSizeKB x 30) / (1024 x 1024)
 Use this KQL query to measure CSA-specific ingestion volume:
 
 ```kusto
-customEvents
-| where name == "CopilotSessionOutcome"
-| where timestamp > ago(30d)
+union isfuzzy=true
+    (customEvents | project EventTime = timestamp, EventName = name),
+    (AppEvents | project EventTime = TimeGenerated, EventName = Name)
+| where EventName == "CopilotSessionOutcome"
+| where EventTime > ago(30d)
 | summarize
     EventCount = count(),
     EstimatedGB = sum(estimate_data_size(*)) / 1024 / 1024 / 1024
@@ -203,5 +205,5 @@ CopilotSessionOutcome events inherit the Log Analytics workspace retention confi
 
 ---
 
-*Cost Tuning Guide version: 2.0.0*
-*Last updated: February 2026*
+*Cost Tuning Guide version: 2.0.1*
+*Last updated: 2026-Q2*

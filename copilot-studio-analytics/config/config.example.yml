@@ -51,13 +51,22 @@ application_insights:
 # -----------------------------------------------------------------------------
 
 dataverse:
-  # Entra ID tenant ID
+  # Authentication mode. Prefer managed-identity for Azure-hosted jobs or
+  # workload-identity for CI. Use client-secret only as a legacy dev fallback.
+  auth_mode: "managed-identity"
+  # Entra ID tenant ID (required for workload-identity, certificate, interactive,
+  # and legacy client-secret auth)
   tenant_id: ""
   # Dataverse environment URL (e.g., https://org.crm.dynamics.com)
   environment_url: ""
-  # App registration client ID
+  # App registration client ID for workload-identity, certificate, interactive,
+  # and legacy client-secret auth
   client_id: ""
-  # Client secret via DATAVERSE_CLIENT_SECRET env var (never in config file)
+  # Optional client ID for user-assigned managed identity; leave blank for
+  # system-assigned managed identity
+  managed_identity_client_id: ""
+  # Client secret via DATAVERSE_CLIENT_SECRET env var only for legacy dev fallback
+  # (never in config file)
 
 # -----------------------------------------------------------------------------
 # OPTIONAL: Sync Configuration

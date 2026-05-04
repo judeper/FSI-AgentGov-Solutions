@@ -251,5 +251,5 @@ GET /api/data/v9.2/msdyn_botcomponentsessions
 
 ---
 
-*Dataverse Data Sources version: 2.0.0*
-*Last updated: February 2026*
+*Dataverse Data Sources version: 2.0.1*
+*Last updated: 2026-Q2*
