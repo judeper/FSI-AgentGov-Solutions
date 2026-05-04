@@ -1,22 +1,22 @@
 # Hallucination Feedback Tracker
 
-> **Version:** 1.0.0 — This solution provides Dataverse schema deployment scripts, Python pattern analysis, PowerShell governance scripts (evidence export with SHA-256 integrity, evidence verification, summary dashboard), environment variables, and connection references.
+> **Version:** 1.2.0 — This solution provides Dataverse schema deployment scripts, Python pattern analysis, PowerShell governance scripts, environment variables, and connection references for feedback aggregation and hallucination pattern review.
 
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 
 ## Overview
 
-The Hallucination Feedback Tracker collects user feedback, supervisor rejections, and automated checks to identify and analyze patterns in AI agent hallucinations, enabling targeted improvements and risk mitigation.
+The Hallucination Feedback Tracker collects user reactions, feedback comments, supervisor rejections, Microsoft 365 Copilot Product Feedback exports, customer complaints, and automated evaluation results to identify patterns in AI agent hallucinations. The solution normalizes those signals into Dataverse, then reports clusters by category, agent, topic, channel, and time window.
 
 ## Features
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Multi-Source Collection** | Feedback from users, supervisors, and automated checks | Documented |
-| **Pattern Detection** | Identify recurring error patterns | Implemented |
+| **Multi-Source Collection** | Feedback from users, supervisors, Microsoft 365 Copilot exports, automated checks, and customer complaints | Documented |
+| **Pattern Detection** | Identify recurring error patterns by category, agent, topic, channel, and day | Implemented |
 | **Agent Comparison** | Compare risk profile across agents | Implemented |
-| **Auto-Categorization** | Classify hallucination types automatically | Planned |
-| **Trend Analysis** | Track hallucination report volume over time | Implemented (PowerShell summary; Python analyzer aggregates point-in-time only) |
+| **Groundedness Signal** | Optional Azure AI Content Safety groundedness detection / Microsoft Foundry evaluation ingestion | Documented |
+| **Trend Analysis** | Track hallucination report volume over time | Implemented (PowerShell weekly summary; Python daily distribution) |
 
 ## Architecture
 
@@ -39,24 +39,38 @@ The Hallucination Feedback Tracker collects user feedback, supervisor rejections
                               │ Feedback Sources
                               │
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
-│ User        │ Supervisor    │ Automated     │ Customer          │
-│ Thumbs-Down │ Rejections    │ Checks        │ Complaints        │
+│ Copilot     │ Microsoft 365 │ Supervisor    │ Automated /       │
+│ Studio      │ Copilot       │ Rejections    │ Customer Sources  │
 └─────────────┴───────────────┴───────────────┴───────────────────┘
 ```
 
 ## Feedback Sources
 
-### 1. User Feedback
+### 1. Copilot Studio custom-agent reactions
 
-Direct user reactions captured via Copilot Studio feedback mechanism.
+Copilot Studio custom agents can collect thumbs-up/thumbs-down reactions and comments for supported channels. Current Microsoft Learn guidance documents reactions as an Analytics feature that is on by default and configurable under **Settings > User feedback**. Feedback is visible in Analytics and stored with conversation transcript data in Dataverse; downloaded session CSV files include `SessionID`, `TopicName`, `TopicId`, `ChannelId`, `CSAT`, and `Comments` fields.
 
 | Signal | Weight | Description |
 |--------|--------|-------------|
-| Thumbs down | High | User explicitly marks response as wrong |
-| Regenerate request | Medium | User asks for different answer |
-| Abandonment | Low | User leaves without completing task |
+| Thumbs down + factual comment | High | User explicitly marks a response as wrong and explains the concern |
+| Low CSAT with comment | Medium | Session-level dissatisfaction with usable comment context |
+| Repeated topic comments | Medium | Multiple comments cluster around the same topic or knowledge source |
 
-### 2. Supervisor Rejections
+> **Channel caveat:** Agents published to the Microsoft 365 Copilot channel don't support Copilot Studio reactions. Use Microsoft 365 Product Feedback export for Microsoft 365 Copilot experiences.
+
+### 2. Microsoft 365 Copilot Product Feedback
+
+Microsoft 365 Copilot feedback is controlled by Microsoft 365 feedback policies. Administrators can view and export organizational feedback from **Microsoft 365 admin center > Health > Product Feedback**. Import exported rows into `fsi_hallucinationreports` with `fsi_source = 100000004`.
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| Copilot thumbs down | High | User flags a Microsoft 365 Copilot response as incorrect, incomplete, or not useful |
+| Comment mentions unsupported claim | High | Feedback indicates missing citations or unsupported facts |
+| Repeated app/workload feedback | Medium | Feedback clusters by Teams, Outlook, Word, or another app area |
+
+Microsoft Graph Copilot interaction history can provide governed prompt/response context for licensed Microsoft 365 Copilot users, but it is not a feedback API and does not retrieve Copilot Studio agent interactions.
+
+### 3. Supervisor Rejections
 
 Feedback from FINRA Supervision Workflow.
 
@@ -64,37 +78,39 @@ Feedback from FINRA Supervision Workflow.
 |--------|--------|-------------|
 | Factual rejection | Critical | Supervisor marks content as factually incorrect |
 | Citation missing | High | Required citation not provided |
-| Needs revision | Medium | Content requires modification |
+| Outdated guidance | Medium | Content uses stale policy, product, or regulatory information |
 
-### 3. Automated Checks
+### 4. Automated Checks
 
-Programmatic verification where possible.
+Programmatic verification where approved by governance and data-handling policy.
 
 | Check | Capability | Limitation |
 |-------|------------|------------|
-| Citation verification | Verify cited sources exist | Cannot verify accuracy of content |
-| Date validation | Check dates are plausible | Limited to format checking |
+| Azure AI Content Safety groundedness detection (preview) | Flags ungrounded generated content against supplied grounding sources | Preview API; validate region, API version, and data handling before production use |
+| Microsoft Foundry evaluations | Offline/online evaluation for groundedness, relevance, safety, and quality | Requires curated datasets and evaluation governance |
+| Citation verification | Verify cited sources exist | Does not by itself verify that the claim is correct |
+| Date validation | Check dates are plausible/current | Limited to source data and rule quality |
 | Number sanity | Flag outlier numeric values | Context-dependent |
 
-### 4. Customer Complaints
+### 5. Customer Complaints
 
 Feedback derived from customer complaints routed through support channels.
 
 | Signal | Weight | Description |
 |--------|--------|-------------|
 | Accuracy complaint | Critical | Customer reports factually incorrect information |
-| Misleading response | High | Customer flags response as misleading |
+| Misleading response | High | Customer flags response as misleading or unsupported |
 | General dissatisfaction | Medium | Complaint citing poor answer quality |
 
 ## Hallucination Categories
 
-| Category | Description | Example |
-|----------|-------------|---------|
-| **Factual Error** | Incorrect statement of fact | "The S&P 500 was founded in 1892" |
-| **Fabricated Data** | Made-up statistics or figures | "Our fund returned 45% last year" (false) |
-| **Citation Missing** | Claim without required source | Unsubstantiated performance claim |
-| **Outdated Info** | Stale information presented as current | Old regulatory guidance |
-| **Confidence Overstatement** | Uncertain info stated as fact | "This will definitely..." |
+| Category | Dataverse value | Description | Example |
+|----------|-----------------|-------------|---------|
+| **Factual Error** | 100000000 | Incorrect statement of fact | "The S&P 500 was founded in 1892" |
+| **Fabricated Data** | 100000001 | Made-up statistics or figures | "Our fund returned 45% last year" (false) |
+| **Citation Missing** | 100000002 | Claim without required source | Unsubstantiated performance claim |
+| **Outdated Info** | 100000003 | Stale information presented as current | Old regulatory guidance |
+| **Confidence Overstatement** | 100000004 | Uncertain info stated as fact | "This will definitely..." |
 
 ## Prerequisites
 
@@ -102,17 +118,24 @@ Feedback derived from customer complaints routed through support channels.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows |
+| **Power Platform Premium** | Power Automate flows or approved automation |
 | **Dataverse capacity** | Feedback storage |
 | **Power BI Pro** | Dashboard visualization |
+| **Azure AI Content Safety** | Optional groundedness detection |
+| **Microsoft Foundry project** | Optional evaluation and cluster analysis |
 
 ### Permissions
 
 | Role | Required For |
 |------|--------------|
-| **Basic User** (or custom read-only role) | Dataverse table read access (the analysis script performs read-only queries) |
+| **Basic User** (or custom read-only role) | Dataverse table read access |
+| **Bot Transcript Viewer** | Copilot Studio feedback comments/transcripts |
 | **Power BI Creator** | Dashboard development |
 | **Environment Maker** | Solution import |
+
+### Authentication
+
+Use managed identity first for Azure-hosted automation, workload identity federation for CI, and interactive/developer credentials for admin workstations. Client-secret authentication is a legacy development fallback only.
 
 ### Dependencies
 
@@ -128,7 +151,7 @@ Feedback derived from customer complaints routed through support channels.
 # Generate schema documentation
 python scripts/create_ht_dataverse_schema.py --output-docs
 
-# Deploy schema (interactive auth)
+# Deploy schema (interactive admin workstation auth)
 python scripts/create_ht_dataverse_schema.py \
     --tenant-id <tenant-id> \
     --environment-url https://your-org.crm.dynamics.com \
@@ -149,9 +172,11 @@ See [docs/source-configuration.md](docs/source-configuration.md).
 
 ### 3. Run Pattern Analysis
 
-Set required Microsoft Entra ID app registration credentials, then run:
-
 ```powershell
+# Preferred for Azure-hosted automation: managed identity or workload identity.
+python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.com"
+
+# Legacy dev-only fallback — replace with managed identity in production.
 $env:AZURE_TENANT_ID     = "<tenant-guid>"
 $env:AZURE_CLIENT_ID     = "<app-registration-client-id>"
 $env:AZURE_CLIENT_SECRET = "<client-secret>"
@@ -166,13 +191,13 @@ Use `--dry-run` to validate the script with sample data without contacting Datav
 
 ## Deployment
 
-The Dataverse setup scripts (`create_ht_*.py`) require the same `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` environment variables and a `--environment` URL.
+The Dataverse setup scripts (`create_ht_*.py`) support interactive admin-workstation authentication and non-interactive application-user authentication. Use managed identity or workload identity for production automation where available; `HT_CLIENT_SECRET` is a legacy development fallback.
 
-1. Deploy Dataverse schema: `python scripts/create_ht_dataverse_schema.py --environment "https://your-org.crm.dynamics.com"`
-2. Create environment variables: `python scripts/create_ht_environment_variables.py --environment "https://your-org.crm.dynamics.com"`
-3. Create connection references: `python scripts/create_ht_connection_references.py --environment "https://your-org.crm.dynamics.com"`
+1. Deploy Dataverse schema: `python scripts/create_ht_dataverse_schema.py --environment-url "https://your-org.crm.dynamics.com" --tenant-id "<tenant-id>" --interactive`
+2. Create environment variables: `python scripts/create_ht_environment_variables.py --environment-url "https://your-org.crm.dynamics.com" --tenant-id "<tenant-id>" --interactive`
+3. Create connection references: `python scripts/create_ht_connection_references.py --environment-url "https://your-org.crm.dynamics.com" --tenant-id "<tenant-id>" --interactive`
 4. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
-5. Build Power Automate flows per source configuration documentation
+5. Build Power Automate flows or approved import scripts per source configuration documentation
 6. Deploy the Power BI dashboard (template planned for future release)
 
 ## Documentation
@@ -191,8 +216,8 @@ The Dataverse setup scripts (`create_ht_*.py`) require the same `AZURE_TENANT_ID
 
 | Metric | Target | Description |
 |--------|--------|-------------|
-| **Hallucination Rate** | < 2% | Flagged responses / total responses (current implementation uses rate-based weighted penalty scoring — see [Pattern Analysis](docs/pattern-analysis.md)) |
-| **Critical Rate** | < 0.1% | Critical hallucinations / total |
+| **Hallucination Rate** | < 2% | Flagged responses / total responses when total response volume is available |
+| **Critical Rate** | < 0.1% | Critical hallucinations / total responses or total reports, depending on source denominator |
 | **Resolution Time** | < 24 hours | Time to address reported issue |
 | **Repeat Rate** | < 10% | Same error recurring after fix |
 
@@ -207,26 +232,25 @@ The Dataverse setup scripts (`create_ht_*.py`) require the same `AZURE_TENANT_ID
 
 ## Pattern Detection
 
-### Pattern Analysis
+Pattern analysis uses frequency thresholds to identify recurring hallucination categories, agent-specific clusters, topic clusters, and daily spikes. The analyzer flags any category with 3+ occurrences, any agent with 5+ reports, any populated topic with 3+ reports, and any day with at least three reports and at least 2× the observed daily average.
 
-Pattern analysis uses frequency counting with frequency thresholds to identify recurring hallucination categories. The analyzer groups feedback by category and by agent, flagging any category with 3+ occurrences or any agent with 5+ reports as a pattern requiring investigation.
-
-> **Note:** Advanced pattern detection (clustering, semantic similarity) is planned for a future release.
+> **Note:** Semantic similarity and Microsoft Foundry cluster analysis are recommended future enhancements after governance approval for prompt/response/comment data handling.
 
 ### Root Cause Analysis
 
 | Pattern | Likely Cause | Remediation |
 |---------|--------------|-------------|
-| Topic clustering | Knowledge gap | Add training data |
-| Time-based spike | Model update | Review recent changes |
-| Agent-specific | Configuration issue | Audit agent setup |
+| Topic clustering | Knowledge gap or prompt issue | Add approved training/knowledge content and retest |
+| Time-based spike | Release, model, or source update | Review recent changes and incidents |
+| Agent-specific | Configuration issue | Audit instructions, knowledge sources, and connectors |
 | Source-linked | Bad RAG source | Validate source integrity |
+| Groundedness failures | Unsupported response relative to source documents | Review grounding data and generation settings |
 
 ## Integration
 
 ### FINRA Supervision Workflow
 
-Supervisor rejections automatically feed into hallucination tracking:
+Supervisor rejections feed into hallucination tracking:
 
 ```
 Supervisor Rejects → Categorize → Pattern Analysis → Remediation
@@ -240,14 +264,15 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Solution Artifacts** | Not yet implemented | No solution.xml, customizations.xml, or cloud flow definitions |
-| **DLP Enforcement** | Not yet implemented | No data loss prevention policies for feedback data |
-| **Sharing Restrictions** | Not yet implemented | No security role definitions or row-level security |
-| **Audit Logging** | Not yet implemented | No Dataverse auditing configuration |
-| **Power BI Dashboard** | Not yet implemented | Template planned for future release |
+| **Solution Artifacts** | Not implemented | No solution.xml, customizations.xml, or cloud flow definitions |
+| **DLP Enforcement** | Not implemented | No data loss prevention policies for feedback data |
+| **Sharing Restrictions** | Not implemented | No security role definitions or row-level security |
+| **Audit Logging** | Partial | Dataverse table auditing is enabled in schema; environment-level audit configuration remains an admin responsibility |
+| **Power BI Dashboard** | Not implemented | Template planned for future release |
+| **Import Connectors** | Not implemented | Copilot Studio transcript and Microsoft 365 Product Feedback importers are documented patterns only |
 
 > These controls are required for production use in regulated environments. The regulatory alignment
-> claims below describe the *intended* coverage once the solution is fully implemented.
+> claims below describe the *intended* coverage once the solution is fully implemented and configured.
 
 ## Regulatory Alignment
 
@@ -282,6 +307,8 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2026-Q2 | Microsoft Learn refresh: feedback source guidance, managed-identity-first auth, enriched clustering fields |
+| 1.1.0 | April 2026 | Dataverse and analyzer corrections |
 | 1.0.0 | April 2026 | Full deployment scripts, governance automation, evidence export |
 | 0.1.0-preview | February 2026 | Initial release |
 
@@ -291,4 +318,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - Hallucination Feedback Tracker v1.1.0*
+*FSI Agent Governance Framework - Hallucination Feedback Tracker v1.2.0*

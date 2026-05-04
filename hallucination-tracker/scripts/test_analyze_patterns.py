@@ -179,6 +179,40 @@ class TestNullFieldValues(unittest.TestCase):
         self.assertIn("Total Reports: 1", report)
 
 
+
+class TestCurrentFeedbackDimensions(unittest.TestCase):
+    """Test topic, channel, and time-window clustering fields."""
+
+    def setUp(self):
+        self.analyzer = PatternAnalyzer("https://example.crm.dynamics.com", "t", "c", "s")
+        self.feedback = [
+            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "a1", "fsi_source": 100000000, "fsi_topicname": "Fees", "fsi_channelid": "msteams", "createdon": "2026-05-01T10:00:00Z"},
+            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "a1", "fsi_source": 100000000, "fsi_topicname": "Fees", "fsi_channelid": "msteams", "createdon": "2026-05-01T11:00:00Z"},
+            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "a2", "fsi_source": 100000004, "fsi_topicname": "Fees", "fsi_channelid": "m365copilot", "createdon": "2026-05-02T10:00:00Z"},
+            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "a3", "fsi_source": 100000002, "fsi_topicname": "Citations", "fsi_channelid": "webchat", "createdon": "2026-05-03T10:00:00Z"},
+        ]
+
+    def test_topic_distribution(self):
+        result = self.analyzer.analyze_by_topic(self.feedback)
+        self.assertEqual(result["Fees"], 3)
+
+    def test_channel_distribution(self):
+        result = self.analyzer.analyze_by_channel(self.feedback)
+        self.assertEqual(result["msteams"], 2)
+        self.assertEqual(result["m365copilot"], 1)
+
+    def test_daily_distribution(self):
+        result = self.analyzer.analyze_by_day(self.feedback)
+        self.assertEqual(result["2026-05-01"], 2)
+
+    def test_detects_topic_cluster(self):
+        patterns = self.analyzer.detect_patterns(self.feedback)
+        self.assertTrue(any(p["type"] == "topic_cluster" and p["topic"] == "Fees" for p in patterns))
+
+    def test_m365_copilot_source_label(self):
+        result = self.analyzer.analyze_by_source(self.feedback)
+        self.assertEqual(result["microsoft_365_copilot"], 1)
+
 class TestGenerateReportPartialData(unittest.TestCase):
     """Test generate_report with is_complete=False."""
 
@@ -268,12 +302,13 @@ class TestMainErrorPaths(unittest.TestCase):
             self.assertEqual(e.code, 0)
 
     def test_missing_env_vars_exits(self):
-        """Missing auth env vars should exit with code 1 (non-dry-run)."""
+        """Unavailable auth credentials should exit with code 1 (non-dry-run)."""
         # Ensure env vars are unset
         env_backup = {}
         for var in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET"):
             env_backup[var] = os.environ.pop(var, None)
         try:
+            os.environ["AZURE_CLIENT_SECRET"] = "legacy-secret-without-required-ids"
             sys.argv = ["analyze_patterns.py", "--environment", "https://test.crm.dynamics.com", "--days", "7"]
             with self.assertRaises(SystemExit) as ctx:
                 main()
@@ -282,6 +317,8 @@ class TestMainErrorPaths(unittest.TestCase):
             for var, val in env_backup.items():
                 if val is not None:
                     os.environ[var] = val
+                else:
+                    os.environ.pop(var, None)
 
 
 if __name__ == "__main__":

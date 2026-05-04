@@ -28,7 +28,7 @@
     Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication.
+    Client secret for service principal authentication (legacy dev-only fallback; prefer managed identity or workload identity for production automation).
 
 .PARAMETER DaysBack
     Number of days of history to analyze. Default: 30.
@@ -75,7 +75,7 @@
     - Object: PSCustomObject with OverallStatus, Metrics, Distributions, TopAgents, Trends, Patterns
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.2.0
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -137,6 +137,7 @@ $SourceMap = @{
     100000001 = 'Supervisor'
     100000002 = 'Automated'
     100000003 = 'Customer'
+    100000004 = 'Microsoft 365 Copilot'
 }
 
 # Thresholds for pattern detection
@@ -196,11 +197,13 @@ else {
         throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
     }
     if (-not $ClientSecret) {
-        throw "ClientSecret is required for service principal authentication."
+        throw "ClientSecret is required for legacy service principal authentication. Prefer managed identity or workload identity for production automation."
     }
     if (-not $TenantId) {
         throw "TenantId is required for service principal authentication."
     }
+
+    Write-Warning "Client-secret service principal authentication is a legacy dev-only fallback. Prefer managed identity or workload identity for production automation."
 
     try {
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
@@ -246,7 +249,7 @@ $headers = @{
 }
 
 $filter = "createdon ge $fromDate"
-$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_isresolved,createdon,modifiedon"
+$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_topicname,fsi_channelid,fsi_isresolved,createdon,modifiedon"
 
 $queryUrl = "$apiBase/fsi_hallucinationreports?`$select=$select&`$filter=$filter&`$orderby=createdon desc"
 
@@ -283,6 +286,8 @@ $reports = $allReports | ForEach-Object {
         severity   = if ($null -ne $_.fsi_severity) { $SeverityMap[[int]$_.fsi_severity] } else { 'Unknown' }
         agentId    = $_.fsi_agentid
         source     = if ($null -ne $_.fsi_source) { $SourceMap[[int]$_.fsi_source] } else { 'Unknown' }
+        topicName  = $_.fsi_topicname
+        channelId  = $_.fsi_channelid
         isResolved = $_.fsi_isresolved
         createdOn  = $_.createdon
         modifiedOn = $_.modifiedon
@@ -325,6 +330,24 @@ foreach ($report in $reports) {
     $src = $report.source
     if (-not $sourceDistribution.ContainsKey($src)) { $sourceDistribution[$src] = 0 }
     $sourceDistribution[$src]++
+}
+
+# Topic distribution (when source metadata is available)
+$topicDistribution = @{}
+foreach ($report in $reports) {
+    if ($report.topicName) {
+        if (-not $topicDistribution.ContainsKey($report.topicName)) { $topicDistribution[$report.topicName] = 0 }
+        $topicDistribution[$report.topicName]++
+    }
+}
+
+# Channel distribution (when source metadata is available)
+$channelDistribution = @{}
+foreach ($report in $reports) {
+    if ($report.channelId) {
+        if (-not $channelDistribution.ContainsKey($report.channelId)) { $channelDistribution[$report.channelId] = 0 }
+        $channelDistribution[$report.channelId]++
+    }
 }
 
 # Top 5 agents by report count with hallucination rate
@@ -429,6 +452,8 @@ $summaryResult = [PSCustomObject]@{
         ByCategory = $categoryDistribution
         BySeverity = $severityDistribution
         BySource   = $sourceDistribution
+        ByTopic    = $topicDistribution
+        ByChannel  = $channelDistribution
     }
     TopAgents     = @($topAgents)
     Trends        = @($trendSorted)
@@ -499,6 +524,15 @@ switch ($OutputFormat) {
             Write-Host "── Source Distribution ───────────────────────────" -ForegroundColor Cyan
             foreach ($entry in ($sourceDistribution.GetEnumerator() | Sort-Object -Property Value -Descending)) {
                 Write-Host ("  {0,-20} {1}" -f $entry.Key, $entry.Value)
+            }
+            Write-Host ""
+        }
+
+        # Topic distribution
+        if ($topicDistribution.Count -gt 0) {
+            Write-Host "── Topic Distribution ───────────────────────────" -ForegroundColor Cyan
+            foreach ($entry in ($topicDistribution.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 10)) {
+                Write-Host ("  {0,-30} {1}" -f $entry.Key, $entry.Value)
             }
             Write-Host ""
         }

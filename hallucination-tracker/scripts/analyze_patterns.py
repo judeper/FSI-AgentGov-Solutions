@@ -15,16 +15,35 @@ import sys
 import time
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 try:
-    from msal import ConfidentialClientApplication
     import requests
 except ImportError:
-    print("Error: Required packages not installed.")
-    print("Run: pip install msal requests")
+    print("Error: Required package not installed: requests")
+    print("Run: pip install -r scripts/requirements.txt")
     sys.exit(1)
+
+try:
+    from azure.identity import (
+        AzureCliCredential,
+        AzurePowerShellCredential,
+        ChainedTokenCredential,
+        ManagedIdentityCredential,
+        WorkloadIdentityCredential,
+    )
+except ImportError:  # Optional unless using managed identity / workload identity auth.
+    AzureCliCredential = None
+    AzurePowerShellCredential = None
+    ChainedTokenCredential = None
+    ManagedIdentityCredential = None
+    WorkloadIdentityCredential = None
+
+try:
+    from msal import ConfidentialClientApplication
+except ImportError:  # Optional legacy fallback only.
+    ConfidentialClientApplication = None
 
 
 # Hallucination categories (Dataverse option set values)
@@ -55,9 +74,26 @@ SOURCES = {
     100000001: "supervisor",
     100000002: "automated",
     100000003: "customer",
+    100000004: "microsoft_365_copilot",
 }
 
 SEVERITY_LABEL_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "unknown": 0}
+
+FEEDBACK_SELECT_FIELDS = [
+    "fsi_category",
+    "fsi_severity",
+    "fsi_agentid",
+    "fsi_source",
+    "fsi_topicname",
+    "fsi_topicid",
+    "fsi_channelid",
+    "fsi_feedbackcomment",
+    "fsi_groundednessdetected",
+    "fsi_reportedat",
+    "createdon",
+]
+
+LEGACY_SELECT_FIELDS = ["fsi_category", "fsi_severity", "fsi_agentid", "fsi_source"]
 
 
 class PatternAnalyzer:
@@ -71,34 +107,81 @@ class PatternAnalyzer:
         self.token = None
 
     def authenticate(self):
-        """Acquire access token."""
-        app = ConfidentialClientApplication(
-            self.client_id,
-            authority=f"https://login.microsoftonline.com/{self.tenant_id}",
-            client_credential=self.client_secret
+        """Acquire a Dataverse access token using managed-identity-first auth."""
+        scope = f"{self.environment}/.default"
+        credential_errors: list[str] = []
+
+        if ChainedTokenCredential is not None:
+            credentials = []
+            if ManagedIdentityCredential:
+                managed_identity_client_id = os.environ.get("AZURE_MANAGED_IDENTITY_CLIENT_ID")
+                credentials.append(ManagedIdentityCredential(client_id=managed_identity_client_id))
+
+            federated_token_file = os.environ.get("AZURE_FEDERATED_TOKEN_FILE")
+            if federated_token_file and self.tenant_id and self.client_id and WorkloadIdentityCredential:
+                credentials.append(
+                    WorkloadIdentityCredential(
+                        tenant_id=self.tenant_id,
+                        client_id=self.client_id,
+                        token_file_path=federated_token_file,
+                    )
+                )
+
+            if AzureCliCredential:
+                credentials.append(AzureCliCredential())
+            if AzurePowerShellCredential:
+                credentials.append(AzurePowerShellCredential())
+
+            try:
+                token = ChainedTokenCredential(*credentials).get_token(scope)
+                self.token = token.token
+                return
+            except Exception as exc:
+                credential_errors.append(str(exc))
+
+        if self.client_secret:
+            # legacy: dev-only - replace with managed identity in production
+            if ConfidentialClientApplication is None:
+                raise RuntimeError(
+                    "msal is required for legacy client-secret authentication. "
+                    "Install dependencies with: pip install -r scripts/requirements.txt"
+                )
+            if not self.tenant_id or not self.client_id:
+                raise RuntimeError(
+                    "AZURE_TENANT_ID and AZURE_CLIENT_ID are required with legacy AZURE_CLIENT_SECRET auth."
+                )
+            print(
+                "Warning: using client-secret authentication (legacy dev-only - replace with managed identity in production).",
+                file=sys.stderr,
+            )
+            app = ConfidentialClientApplication(
+                self.client_id,
+                authority=f"https://login.microsoftonline.com/{self.tenant_id}",
+                client_credential=self.client_secret,
+            )
+            result = app.acquire_token_for_client(scopes=[scope])
+            if "access_token" not in result:
+                raise RuntimeError(f"Authentication failed: {result.get('error_description')}")
+            self.token = result["access_token"]
+            return
+
+        guidance = (
+            "Authentication failed. Configure a managed identity, workload identity federation, "
+            "Azure CLI/PowerShell sign-in for workstation runs, or legacy dev-only "
+            "AZURE_CLIENT_SECRET credentials."
         )
-        result = app.acquire_token_for_client(scopes=[f"{self.environment}/.default"])
-        if "access_token" not in result:
-            raise Exception(f"Authentication failed: {result.get('error_description')}")
-        self.token = result["access_token"]
+        if credential_errors:
+            guidance += f" Last credential error: {credential_errors[-1]}"
+        raise RuntimeError(guidance)
 
-    def get_feedback(self, days: int = 30) -> Tuple[List[Dict], bool]:
-        """Retrieve hallucination feedback from Dataverse.
-
-        Returns:
-            A tuple of (records, is_complete) where is_complete indicates
-            whether all pages were successfully retrieved.
-        """
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Content-Type": "application/json",
-            "OData-MaxVersion": "4.0",
-            "OData-Version": "4.0"
-        }
-
+    def _feedback_url(self, days: int, select_fields: List[str]) -> str:
+        """Build the Dataverse hallucination report query URL."""
         start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
-        url = f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select=fsi_category,fsi_severity,fsi_agentid,fsi_source&$filter=createdon ge {start_date}"
+        select = ",".join(select_fields)
+        return f"{self.environment}/api/data/v9.2/fsi_hallucinationreports?$select={select}&$filter=createdon ge {start_date}"
 
+    def _fetch_feedback_pages(self, url: str, headers: Dict[str, str]) -> Tuple[List[Dict], bool, Optional[int], str]:
+        """Fetch Dataverse pages for a prepared query URL."""
         results = []
         is_complete = False
         max_retries = 5
@@ -120,19 +203,47 @@ class PatternAnalyzer:
                     time.sleep(retry_after)
                     continue
                 if response.status_code != 200:
-                    print(f"Warning: API returned status {response.status_code}: {response.text[:200]}")
-                    break
+                    return results, False, response.status_code, response.text[:500]
                 data = response.json()
                 results.extend(data.get("value", []))
                 url = data.get("@odata.nextLink")
                 retry_count = 0
             else:
                 is_complete = True
-            return results, is_complete
+            return results, is_complete, None, ""
         except requests.RequestException as e:
-            print(f"Warning: Could not fetch feedback: {e}")
+            return results, is_complete, None, str(e)
 
-        return results, is_complete
+    def get_feedback(self, days: int = 30) -> Tuple[List[Dict], bool]:
+        """Retrieve hallucination feedback from Dataverse.
+
+        Returns:
+            A tuple of (records, is_complete) where is_complete indicates
+            whether all pages were successfully retrieved.
+        """
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0",
+        }
+
+        for select_fields in (FEEDBACK_SELECT_FIELDS, LEGACY_SELECT_FIELDS):
+            url = self._feedback_url(days, select_fields)
+            results, is_complete, status_code, error_text = self._fetch_feedback_pages(url, headers)
+            if status_code is None and (is_complete or results):
+                return results, is_complete
+            if select_fields is FEEDBACK_SELECT_FIELDS and status_code == 400:
+                print(
+                    "Warning: enriched feedback columns are unavailable; falling back to legacy v1.1.0 columns. "
+                    "Redeploy the v1.2.0 Dataverse schema to enable topic/channel/time clustering."
+                )
+                continue
+            if error_text:
+                print(f"Warning: API returned status {status_code}: {error_text[:200]}")
+            return results, is_complete
+
+        return [], False
 
     def analyze_by_category(self, feedback: List[Dict]) -> Dict:
         """Analyze feedback distribution by category."""
@@ -161,7 +272,7 @@ class PatternAnalyzer:
     def calculate_agent_scores(self, feedback: List[Dict]) -> Dict:
         """Calculate per-agent risk scores using weighted severity penalty.
 
-        IMPORTANT: This is NOT an accuracy metric — the denominator is the
+        IMPORTANT: This is NOT an accuracy metric - the denominator is the
         agent's *hallucination report count*, not the agent's total response
         count. The score expresses the *severity profile of reported issues*
         for an agent, not the actual hallucination rate. To compute true
@@ -212,8 +323,38 @@ class PatternAnalyzer:
             sources[SOURCES.get(src, "unknown")] += 1
         return dict(sources)
 
+    def analyze_by_topic(self, feedback: List[Dict]) -> Dict:
+        """Analyze feedback distribution by topic where the source provides topic metadata."""
+        topics = Counter()
+        for item in feedback:
+            topic = item.get("fsi_topicname") or item.get("fsi_topicid")
+            if topic:
+                topics[str(topic)] += 1
+        return dict(topics)
+
+    def analyze_by_channel(self, feedback: List[Dict]) -> Dict:
+        """Analyze feedback distribution by channel where channel metadata is available."""
+        channels = Counter()
+        for item in feedback:
+            channel = item.get("fsi_channelid")
+            if channel:
+                channels[str(channel)] += 1
+        return dict(channels)
+
+    def analyze_by_day(self, feedback: List[Dict]) -> Dict:
+        """Analyze feedback distribution by reported/created UTC day."""
+        days = Counter()
+        for item in feedback:
+            timestamp = item.get("fsi_reportedat") or item.get("createdon")
+            if not timestamp:
+                continue
+            day = str(timestamp)[:10]
+            if len(day) == 10:
+                days[day] += 1
+        return dict(days)
+
     def detect_patterns(self, feedback: List[Dict]) -> List[Dict]:
-        """Detect recurring patterns in feedback."""
+        """Detect recurring category, agent, topic, and time-window patterns in feedback."""
         patterns = []
 
         # Group by category and count
@@ -238,6 +379,31 @@ class PatternAnalyzer:
                     "recommendation": f"Review agent {agent_id} configuration"
                 })
 
+        # Group by topic when source data includes topic metadata.
+        topic_counts = self.analyze_by_topic(feedback)
+        for topic, count in topic_counts.items():
+            if count >= 3:
+                patterns.append({
+                    "type": "topic_cluster",
+                    "topic": topic,
+                    "count": count,
+                    "recommendation": f"Review topic {topic} knowledge sources, instructions, and citations"
+                })
+
+        # Detect simple daily spikes for operational triage.
+        daily_counts = self.analyze_by_day(feedback)
+        if len(daily_counts) >= 2:
+            average = sum(daily_counts.values()) / len(daily_counts)
+            spike_threshold = max(3, average * 2)
+            for day, count in daily_counts.items():
+                if count >= spike_threshold:
+                    patterns.append({
+                        "type": "time_spike",
+                        "date": day,
+                        "count": count,
+                        "recommendation": f"Review releases, content updates, or incidents around {day}"
+                    })
+
         return patterns
 
     def generate_report(self, feedback: List[Dict], days: int = 30, is_complete: bool = True) -> str:
@@ -245,6 +411,9 @@ class PatternAnalyzer:
         category_analysis = self.analyze_by_category(feedback)
         severity_analysis = self.analyze_severity(feedback)
         source_analysis = self.analyze_by_source(feedback)
+        topic_analysis = self.analyze_by_topic(feedback)
+        channel_analysis = self.analyze_by_channel(feedback)
+        daily_analysis = self.analyze_by_day(feedback)
         agent_scores = self.calculate_agent_scores(feedback)
         patterns = self.detect_patterns(feedback)
 
@@ -286,6 +455,24 @@ Category Distribution:
         for sev, count in sorted(severity_analysis.items(), key=lambda x: -SEVERITY_LABEL_ORDER.get(x[0], 0)):
             pct = (count / total * 100) if total > 0 else 0
             report += f"  {sev}: {count} ({pct:.1f}%)\n"
+
+        if topic_analysis:
+            report += "\nTopic Distribution:\n"
+            for topic, count in sorted(topic_analysis.items(), key=lambda x: -x[1]):
+                pct = (count / total * 100) if total > 0 else 0
+                display = f"{topic[:40]}..." if len(topic) > 40 else topic
+                report += f"  {display}: {count} ({pct:.1f}%)\n"
+
+        if channel_analysis:
+            report += "\nChannel Distribution:\n"
+            for channel, count in sorted(channel_analysis.items(), key=lambda x: -x[1]):
+                pct = (count / total * 100) if total > 0 else 0
+                report += f"  {channel}: {count} ({pct:.1f}%)\n"
+
+        if daily_analysis:
+            report += "\nDaily Feedback Volume:\n"
+            for day, count in sorted(daily_analysis.items()):
+                report += f"  {day}: {count}\n"
 
         report += "\nAgent Scores:\n"
         for agent_id, score in sorted(agent_scores.items(), key=lambda x: (x[1] is None, x[1] if x[1] is not None else 0)):
@@ -336,11 +523,11 @@ def main() -> None:
         print(f"  Got: {parsed.netloc}")
         sys.exit(1)
 
-    if not args.dry_run:
-        missing = [v for v in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET")
-                   if not os.environ.get(v)]
+    if not args.dry_run and os.environ.get("AZURE_CLIENT_SECRET"):
+        # legacy: dev-only - replace with managed identity in production
+        missing = [v for v in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID") if not os.environ.get(v)]
         if missing:
-            print(f"Error: Missing required environment variables: {', '.join(missing)}")
+            print(f"Error: Missing required environment variables for legacy client-secret auth: {', '.join(missing)}")
             sys.exit(1)
 
     is_json = args.format == "json"
@@ -364,16 +551,20 @@ def main() -> None:
         status_print("\n[DRY RUN - Using sample data]")
         # Sample data for testing
         feedback = [
-            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001", "fsi_source": 100000000},
-            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001", "fsi_source": 100000001},
-            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002", "fsi_source": 100000002},
-            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001", "fsi_source": 100000001},
-            {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003", "fsi_source": 100000003},
+            {"fsi_category": 100000000, "fsi_severity": 100000002, "fsi_agentid": "agent-001", "fsi_source": 100000000, "fsi_topicname": "Account fees", "fsi_channelid": "msteams", "createdon": "2026-05-01T10:00:00Z"},
+            {"fsi_category": 100000000, "fsi_severity": 100000001, "fsi_agentid": "agent-001", "fsi_source": 100000001, "fsi_topicname": "Account fees", "fsi_channelid": "msteams", "createdon": "2026-05-01T11:00:00Z"},
+            {"fsi_category": 100000002, "fsi_severity": 100000002, "fsi_agentid": "agent-002", "fsi_source": 100000002, "fsi_topicname": "Citations", "fsi_channelid": "webchat", "createdon": "2026-05-02T10:00:00Z"},
+            {"fsi_category": 100000001, "fsi_severity": 100000003, "fsi_agentid": "agent-001", "fsi_source": 100000001, "fsi_topicname": "Account fees", "fsi_channelid": "msteams", "createdon": "2026-05-02T11:00:00Z"},
+            {"fsi_category": 100000000, "fsi_severity": 100000000, "fsi_agentid": "agent-003", "fsi_source": 100000003, "fsi_topicname": "General", "fsi_channelid": "webchat", "createdon": "2026-05-03T10:00:00Z"},
         ]
         is_complete = True
     else:
         status_print("\nAuthenticating...")
-        analyzer.authenticate()
+        try:
+            analyzer.authenticate()
+        except RuntimeError as exc:
+            print(f"Error: {exc}")
+            sys.exit(1)
         status_print("  Authenticated")
         status_print("\nFetching feedback data...")
         feedback, is_complete = analyzer.get_feedback(args.days)
@@ -390,6 +581,9 @@ def main() -> None:
             "severity_distribution": analyzer.analyze_severity(feedback),
             "agent_scores": analyzer.calculate_agent_scores(feedback),
             "source_distribution": analyzer.analyze_by_source(feedback),
+            "topic_distribution": analyzer.analyze_by_topic(feedback),
+            "channel_distribution": analyzer.analyze_by_channel(feedback),
+            "daily_distribution": analyzer.analyze_by_day(feedback),
             "patterns": analyzer.detect_patterns(feedback),
         }
         print(json.dumps(output, indent=2))

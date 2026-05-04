@@ -59,6 +59,7 @@ OPTIONSETS = {
             {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Supervisor", "LanguageCode": 1033}]}},
             {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Automated", "LanguageCode": 1033}]}},
             {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Customer", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Microsoft365Copilot", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -179,6 +180,54 @@ COLUMNS = {
             "Description": {"LocalizedLabels": [{"Label": "The user query or prompt that triggered the hallucination", "LanguageCode": 1033}]},
             "MaxLength": 100000,
             "Format": "Text",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TopicName",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Topic Name", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Copilot Studio topic or Microsoft 365 Copilot app area associated with the feedback", "LanguageCode": 1033}]},
+            "MaxLength": 200,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TopicId",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Topic ID", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Topic, session, or app-scoped identifier used for feedback clustering", "LanguageCode": 1033}]},
+            "MaxLength": 200,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ChannelId",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Channel ID", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Channel where the feedback-producing interaction occurred", "LanguageCode": 1033}]},
+            "MaxLength": 100,
+            "FormatName": {"Value": "Text"},
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_FeedbackComment",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Feedback Comment", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "User, supervisor, or evaluator comment associated with the hallucination report", "LanguageCode": 1033}]},
+            "MaxLength": 100000,
+            "Format": "Text",
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_GroundednessDetected",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Ungrounded Content Detected", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Whether an automated groundedness check flagged content as ungrounded", "LanguageCode": 1033}]},
+            "DefaultValue": False,
+            "OptionSet": {
+                "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}] }},
+                "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}] }},
+            },
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
@@ -519,11 +568,12 @@ def main() -> None:
     if not args.client_id and not args.interactive:
         parser.error("--client-id is required (or set HT_CLIENT_ID env var) unless --interactive is specified")
 
+    # legacy: dev-only - replace with managed identity in production
     client_secret = os.environ.get("HT_CLIENT_SECRET")
     if not args.interactive:
         if not client_secret:
             import getpass
-            client_secret = getpass.getpass("Client secret: ")
+            client_secret = getpass.getpass("Client secret (legacy dev-only): ")
 
     try:
         client = DataverseClient(

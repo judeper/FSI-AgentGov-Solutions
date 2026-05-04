@@ -1,7 +1,7 @@
 id: hallucination-tracker
 name: Hallucination Feedback Tracker
 description: Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
-version: 1.1.0
+version: 1.2.0
 status: live
 domain: monitoring-analytics
 tier: '2'

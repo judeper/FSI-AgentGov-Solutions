@@ -630,7 +630,7 @@
     "hallucination-tracker": {
       "id": "hallucination-tracker",
       "name": "Hallucination Feedback Tracker",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",
