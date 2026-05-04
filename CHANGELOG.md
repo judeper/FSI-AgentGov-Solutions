@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — Repo health sweep (docs)
+
+### Added
+- **`RELEASING.md`** (new) — maintainer-facing release procedure, schema evolution policy, and the Issue #37 schema 1.5.0 unblock steps. Documents the four-stage process: (1) product-team review of the 35 inferred zone backfills, (2) sentinel-comment removal, (3) coordinated PRs with `judeper/fsi-agentgov` to make `zones` required, (4) issue closure. Includes rollback procedure.
+- **`DEPLOYMENT-GUIDE.md`** — Related Documentation section now links to `RELEASING.md`.
+
+---
+
 ## [v1.4.3] - Unreleased — message-center-monitor hardening + lab dry-run
 
 ### Changed
