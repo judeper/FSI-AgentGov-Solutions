@@ -103,7 +103,7 @@
 | fsi_AgentId | fsi_agentid | String | Yes | Agent identifier (stored as string for immutability) |  |
 | fsi_AgentName | fsi_agentname | String | No | Agent display name at the time of the event |  |
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier at event time |  |
-| fsi_EventType | fsi_eventtype | Picklist | Yes | Type of lifecycle compliance event | **fsi_ALG_eventtype**: `100000000` = Sponsor Assigned, `100000001` = Sponsor Departed, `100000002` = Orphan Detected, `100000003` = Access Review Started, `100000004` = Access Review Completed, `100000005` = Access Review Overdue, `100000006` = Access Review Escalated, `100000007` = Inactivity Detected, `100000008` = Deactivation Requested, `100000009` = Deactivation Approved, `100000010` = Deactivation Rejected, `100000011` = Agent Disabled, `100000012` = Agent Deleted, `100000013` = Zone Assigned, `100000014` = CA Policy Validated |
+| fsi_EventType | fsi_eventtype | Picklist | Yes | Type of lifecycle compliance event | **fsi_ALG_eventtype**: `100000000` = Sponsor Assigned, `100000001` = Sponsor Departed, `100000002` = Orphan Detected, `100000003` = Access Review Started, `100000004` = Access Review Completed, `100000005` = Access Review Overdue, `100000006` = Access Review Escalated, `100000007` = Inactivity Detected, `100000008` = Deactivation Requested, `100000009` = Deactivation Approved, `100000010` = Deactivation Rejected, `100000011` = Agent Disabled, `100000012` = Agent Deleted, `100000013` = Zone Assigned, `100000014` = CA Policy Validated, `100000015` = Feature Flag Skip, `100000016` = Activity Data Unavailable, `100000017` = Duplicate Request Skipped, `100000018` = Deletion Hold Extended, `100000019` = Access Review Denied |
 | fsi_EventDetails | fsi_eventdetails | Memo | No | Detailed description or JSON payload for the event |  |
 | fsi_ComplianceImpact | fsi_complianceimpact | Picklist | Yes | Compliance impact level of the event | **fsi_ALG_complianceimpact**: `100000000` = None, `100000001` = Low, `100000002` = Medium, `100000003` = High, `100000004` = Critical |
 | fsi_TriggeredBy | fsi_triggeredby | String | Yes | Flow name or UPN that triggered the event |  |
@@ -278,6 +278,11 @@ Type of lifecycle compliance event
 | 100000012 | Agent Deleted |
 | 100000013 | Zone Assigned |
 | 100000014 | CA Policy Validated |
+| 100000015 | Feature Flag Skip |
+| 100000016 | Activity Data Unavailable |
+| 100000017 | Duplicate Request Skipped |
+| 100000018 | Deletion Hold Extended |
+| 100000019 | Access Review Denied |
 
 #### fsi_ALG_complianceimpact
 

@@ -1362,11 +1362,32 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create Dataverse schema for Agent 365 Lifecycle Governance",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate schema documentation (no credentials required)
+  python create_alg_dataverse_schema.py --output-docs
+
+  # Managed identity authentication (system-assigned)
+  python create_alg_dataverse_schema.py \\
+      --tenant-id <tenant-id> \\
+      --environment-url https://org.crm.dynamics.com \\
+      --auth-mode managed-identity
+
+  # Legacy dev-only client-secret fallback (ALG_CLIENT_SECRET)
+  python create_alg_dataverse_schema.py \\
+      --tenant-id <tenant-id> \\
+      --environment-url https://org.crm.dynamics.com \\
+      --auth-mode client-secret \\
+      --client-id <app-id>
+        """,
     )
     parser.add_argument("--tenant-id", default=os.environ.get("ALG_TENANT_ID"), help="Entra ID tenant ID (or set ALG_TENANT_ID env var)")
-    parser.add_argument("--client-id", default=os.environ.get("ALG_CLIENT_ID"), help="Application (client) ID (or set ALG_CLIENT_ID env var)")
+    parser.add_argument("--client-id", default=os.environ.get("ALG_CLIENT_ID"), help="Application (client) ID for user-assigned managed identity, workload identity, certificate, interactive, or legacy client-secret auth (or set ALG_CLIENT_ID env var)")
     parser.add_argument("--environment-url", default=os.environ.get("ALG_ENVIRONMENT_URL"), help="Dataverse environment URL (or set ALG_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
+    parser.add_argument("--auth-mode", choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"], default=os.environ.get("ALG_AUTH_MODE"), help="Authentication mode. Prefer managed-identity, workload-identity, or certificate for automation; client-secret is legacy dev-only.")
+    parser.add_argument("--certificate-path", default=os.environ.get("ALG_CERTIFICATE_PATH"), help="Certificate path for certificate auth (or ALG_CERTIFICATE_PATH env var)")
+    parser.add_argument("--certificate-password-env", default="ALG_CERTIFICATE_PASSWORD", help="Environment variable containing certificate password")
     parser.add_argument("--dry-run", action="store_true", help="Preview schema operations without API calls")
     parser.add_argument("--output-docs", action="store_true", help="Generate docs/dataverse-schema.md and exit (no credentials required)")
     args = parser.parse_args()
@@ -1386,14 +1407,16 @@ def main() -> None:
 
     if not args.tenant_id or not args.environment_url:
         parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set ALG_TENANT_ID and ALG_ENVIRONMENT_URL env vars)")
-    if not args.client_id and not args.interactive:
-        parser.error("--client-id is required (or set ALG_CLIENT_ID env var) unless --interactive is specified")
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if os.environ.get("ALG_CLIENT_SECRET") else "managed-identity"))
+    if auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        parser.error("--client-id is required for the selected auth mode (or set ALG_CLIENT_ID env var)")
 
     client_secret = os.environ.get("ALG_CLIENT_SECRET")
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    if auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
 
     try:
         client = DataverseClient(
@@ -1403,6 +1426,9 @@ def main() -> None:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=certificate_password,
         )
 
         if args.dry_run:

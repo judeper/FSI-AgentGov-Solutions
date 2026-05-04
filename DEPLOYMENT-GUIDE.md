@@ -87,7 +87,7 @@ All other solutions operate independently and can be deployed in any order based
 | Solution | Tier | Version | Zones |
 |----------|------|---------|-------|
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.1 | personal, team, enterprise |
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 3 | v1.1.3 | enterprise |
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.1 | team, enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.0 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 3 | v2.0.0 | personal, team, enterprise |
@@ -185,6 +185,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | ✅ | ✅ | ✅ | internal |
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | — | — | ✅ | confidential |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | — | ✅ | ✅ | confidential |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | — | ✅ | ✅ | internal |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | ✅ | ✅ | ✅ | confidential |
@@ -217,7 +218,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | — | — | ✅ | confidential |
 | [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
 | [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |

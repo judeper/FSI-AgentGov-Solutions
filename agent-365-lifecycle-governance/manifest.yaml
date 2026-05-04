@@ -1,10 +1,10 @@
 id: agent-365-lifecycle-governance
 name: Agent 365 Lifecycle Governance
 description: Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds.
-version: 1.1.3
+version: 1.1.4
 status: live
 domain: lifecycle-ops
-tier: '3'
+tier: '2'
 controls:
 - '2.3'
 - '1.2'
@@ -15,8 +15,8 @@ controls:
 - '3.1'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-365-lifecycle-governance/
 prerequisites:
-  m365-admin: Microsoft 365/Agent 365 licensing and admin-center governance for sponsor and lifecycle workflows.
-  security-admin: Entra ID Governance P2, app permissions, security groups, and admin consent.
+  m365-admin: Microsoft Agent 365 licensing and Microsoft 365 admin center governance for owner assignment and lifecycle workflows.
+  security-admin: Microsoft Entra ID Governance or Microsoft Entra Suite, AgentInstance Graph permissions, security groups, and admin consent.
   power-platform-admin: Managed Dataverse environment, Power Automate Premium, and LTR-enabled schema deployment.
 verification: Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row.
 

@@ -5,8 +5,8 @@
     Deploys baseline configuration for Agent 365 Lifecycle Governance.
 
 .DESCRIPTION
-    Queries the Entra Agent Registry for all agents, identifies those without
-    sponsors, and exports a baseline report. Designed for Azure Automation
+    Queries the Microsoft Agent 365 agent registry for all agent instances, identifies those without
+    owners, and exports a baseline report. Designed for Azure Automation
     Runbook execution using System-Assigned Managed Identity.
 
     This script supports the FSI Agent Governance Framework and helps meet
@@ -56,22 +56,22 @@ try {
             [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($graphToken))
     }
 } catch {
-    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
+    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has AgentInstance.Read.All (or AgentInstance.ReadWrite.All where updates are needed) and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
 }
 
 $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "application/json" }
 
-Write-Host "Querying Entra Agent Registry for all agents..." -ForegroundColor Cyan
+Write-Host "Querying Microsoft Agent 365 agent registry for all agent instances..." -ForegroundColor Cyan
 
-# Retrieve all agents — filter client-side for unsponsored agents
-# Server-side sponsor filter syntax must be validated in test tenant
+# Retrieve all agent instances — filter client-side for instances without owners
+# Server-side ownerIds filter syntax must be validated in a test tenant
 # NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
-# The /beta/agentRegistry endpoint may now have a v1.0 equivalent.
-# Test with v1.0 in your tenant before migrating.
-# Autonomous agents with full Entra identities remain in Frontier preview.
+# Microsoft Learn currently documents Agent Registry APIs under Graph beta and includes
+# May 2026 convergence notices for Agent 365-powered APIs. Validate this endpoint
+# in a non-production tenant before enabling lifecycle flows.
 try {
-    $next = "https://graph.microsoft.com/beta/agentRegistry/agents"
+    $next = "https://graph.microsoft.com/beta/agentRegistry/agentInstances"
     $registryAgents = @()
     do {
         $resp = Invoke-RestMethod -Uri $next -Headers $graphHeaders -ErrorAction Stop
@@ -79,18 +79,18 @@ try {
         $next = $resp.'@odata.nextLink'
     } while ($next)
 } catch {
-    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
+    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has AgentInstance.Read.All. Error: $($_.Exception.Message)"
     exit 1
 }
 if (-not $registryAgents) { $registryAgents = @() }
 $agents = $registryAgents
-Write-Host "Found $($agents.Count) agents in Entra Agent Registry." -ForegroundColor Green
+Write-Host "Found $($agents.Count) agents in Microsoft Agent 365 agent registry." -ForegroundColor Green
 
-# Client-side filter for agents without sponsors
+# Client-side filter for agent instances without owners
 $unsponsored = $agents | Where-Object {
-    -not $_.sponsor -or ($_.sponsor | Measure-Object).Count -eq 0
+    -not $_.ownerIds -or ($_.ownerIds | Measure-Object).Count -eq 0
 }
-Write-Host "Agents without sponsors: $($unsponsored.Count)" -ForegroundColor Yellow
+Write-Host "Agent instances without owners: $($unsponsored.Count)" -ForegroundColor Yellow
 
 # Export baseline report
 $baseline = @{
