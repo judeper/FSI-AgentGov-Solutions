@@ -117,5 +117,5 @@ CSA focuses on a single governance control: **Control 3.2 -- Usage Analytics and
 
 ---
 
-*Governance Mapping version: 2.0.0*
-*Last updated: February 2026*
+*Governance Mapping version: 2.0.1*
+*Last updated: 2026-Q2*

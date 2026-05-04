@@ -53,11 +53,17 @@
     "dataverse": {
       "type": "object",
       "description": "Dataverse connection settings for reading session data",
-      "required": ["tenant_id", "environment_url", "client_id"],
+      "required": ["environment_url"],
       "properties": {
+        "auth_mode": {
+          "type": "string",
+          "description": "Dataverse authentication mode. Prefer managed identity or workload identity; client-secret is a legacy development fallback.",
+          "enum": ["managed-identity", "workload-identity", "certificate", "interactive", "client-secret"],
+          "default": "managed-identity"
+        },
         "tenant_id": {
           "type": "string",
-          "description": "Entra ID tenant ID",
+          "description": "Entra ID tenant ID, required for workload identity, certificate, interactive, and legacy client-secret auth",
           "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
           "examples": ["00000000-0000-0000-0000-000000000000"]
         },
@@ -70,9 +76,19 @@
         },
         "client_id": {
           "type": "string",
-          "description": "App registration client ID for Dataverse access",
+          "description": "App registration client ID for workload identity, certificate, interactive, and legacy client-secret auth",
           "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
           "examples": ["00000000-0000-0000-0000-000000000000"]
+        },
+        "managed_identity_client_id": {
+          "type": "string",
+          "description": "Optional user-assigned managed identity client ID. Omit for system-assigned managed identity.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          "examples": ["00000000-0000-0000-0000-000000000000"]
+        },
+        "certificate_path": {
+          "type": "string",
+          "description": "Optional certificate path for certificate authentication"
         }
       }
     },

@@ -37,15 +37,29 @@
 let TimeRange = {TimeRange:30d};
 let TimeSavingsMinutes = {TimeSavingsMinutes:6};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotSessionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where tostring(customDimensions['agentMode']) == "Conversational"
-| where tobool(customDimensions["isEngaged"]) == true
-| extend AgentId = tostring(customDimensions["recipientId"])
-| extend HasKS = tobool(customDimensions["hasKnowledgeSource"])
-| extend Outcome = tostring(customDimensions["sessionOutcome"])
+let CSAEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotSessionOutcome"
+    | extend SessionId = tostring(EventProperties["sessionId"])
+    | extend SessionTime = coalesce(
+        todatetime(EventProperties["sessionClosedOn"]),
+        todatetime(EventProperties["sessionCreatedOn"]),
+        EventTime)
+    | where SessionTime > ago(TimeRange)
+    | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+    | summarize arg_max(EventTime, *) by DedupKey;
+
+CSAEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where tostring(EventProperties['agentMode']) == "Conversational"
+| where tobool(EventProperties["isEngaged"]) == true
+| extend AgentId = tostring(EventProperties["recipientId"])
+| extend HasKS = tobool(EventProperties["hasKnowledgeSource"])
+| extend Outcome = tostring(EventProperties["sessionOutcome"])
 | summarize
     KSReferences = countif(HasKS == true),
     ResolvedNoKS = countif(HasKS != true and Outcome == "Resolved"),

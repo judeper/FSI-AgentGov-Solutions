@@ -31,13 +31,27 @@
 
 let TimeRange = {TimeRange:7d};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotSessionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where tostring(customDimensions['agentMode']) == "Autonomous"
-| where tobool(customDimensions["isEngaged"]) == true
-| extend Outcome = tostring(customDimensions["sessionOutcome"])
+let CSAEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotSessionOutcome"
+    | extend SessionId = tostring(EventProperties["sessionId"])
+    | extend SessionTime = coalesce(
+        todatetime(EventProperties["sessionClosedOn"]),
+        todatetime(EventProperties["sessionCreatedOn"]),
+        EventTime)
+    | where SessionTime > ago(TimeRange)
+    | extend DedupKey = iff(isempty(SessionId), strcat(tostring(EventTime), "|", tostring(EventProperties["recipientId"]), "|", EventName), SessionId)
+    | summarize arg_max(EventTime, *) by DedupKey;
+
+CSAEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where tostring(EventProperties['agentMode']) == "Autonomous"
+| where tobool(EventProperties["isEngaged"]) == true
+| extend Outcome = tostring(EventProperties["sessionOutcome"])
 | summarize SessionCount = count() by Outcome
 | as T
 | extend TotalSessions = toscalar(T | summarize sum(SessionCount))

@@ -34,20 +34,27 @@
 // parsing ships, this query will return zero rows in production.
 //
 // Notes:
-//   - This query uses actionName from customDimensions, populated during Tier 2 sync
+//   - This query uses actionName from EventProperties, populated during Tier 2 sync
 //   - When Tier 2 data is not available, this query returns no results
 //   - High invocation counts on specific actions may indicate automation opportunities
 //   - For Log Analytics testing, replace {TimeRange:7d} with literal 7d
 
 let TimeRange = {TimeRange:7d};
 
-customEvents
-| where timestamp > ago(TimeRange)
-| where name == "CopilotActionOutcome"
-| where "{Zone}" == "all" or tostring(customDimensions['Zone']) == "{Zone}"
-| where "{AgentType}" == "All" or tostring(customDimensions['agentMode']) == "{AgentType}"
-| extend AgentId = tostring(customDimensions["recipientId"])
-| extend ActionName = tostring(customDimensions["actionName"])
+let ActionEvents =
+    union isfuzzy=true
+        (customEvents
+        | project EventTime = timestamp, EventName = name, EventProperties = customDimensions),
+        (AppEvents
+        | project EventTime = TimeGenerated, EventName = Name, EventProperties = Properties)
+    | where EventName == "CopilotActionOutcome"
+    | where EventTime > ago(TimeRange);
+
+ActionEvents
+| where "{Zone}" == "all" or tostring(EventProperties['Zone']) == "{Zone}"
+| where "{AgentType}" == "All" or tostring(EventProperties['agentMode']) == "{AgentType}"
+| extend AgentId = tostring(EventProperties["recipientId"])
+| extend ActionName = tostring(EventProperties["actionName"])
 | where isnotempty(ActionName)
 | summarize InvocationCount = count() by AgentId, ActionName
 | order by AgentId asc, InvocationCount desc

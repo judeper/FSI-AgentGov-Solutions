@@ -85,12 +85,13 @@ WATERMARK_TIER_1 = 100000000
 WATERMARK_TIER_2 = 100000001
 
 
-def load_config(config_path: str) -> dict[str, Any]:
+def load_config(config_path: str, auth_mode_override: Optional[str] = None) -> dict[str, Any]:
     """
     Load and validate YAML configuration.
 
     Args:
         config_path: Path to YAML config file
+        auth_mode_override: Optional Dataverse auth mode from CLI
 
     Returns:
         Configuration dictionary with defaults applied
@@ -117,10 +118,23 @@ def load_config(config_path: str) -> dict[str, Any]:
         raise ValueError("application_insights.name is required")
 
     dv_config = config.get("dataverse", {})
-    dv_required = ["tenant_id", "environment_url", "client_id"]
+    dv_auth_mode = (
+        auth_mode_override
+        or os.environ.get("DATAVERSE_AUTH_MODE")
+        or dv_config.get("auth_mode")
+        or ("client-secret" if os.environ.get("DATAVERSE_CLIENT_SECRET") else "managed-identity")
+    )
+    config["dataverse"]["auth_mode"] = dv_auth_mode
+
+    dv_required = ["environment_url"]
+    if dv_auth_mode in {"client-secret", "workload-identity", "certificate", "interactive"}:
+        dv_required.extend(["tenant_id", "client_id"])
+    elif dv_auth_mode != "managed-identity":
+        raise ValueError(f"Unsupported dataverse.auth_mode: {dv_auth_mode}")
+
     dv_missing = [f for f in dv_required if not dv_config.get(f)]
     if dv_missing:
-        raise ValueError(f"Missing required dataverse fields: {', '.join(dv_missing)}")
+        raise ValueError(f"Missing required dataverse fields for {dv_auth_mode}: {', '.join(dv_missing)}")
 
     # Apply sync defaults
     config.setdefault("sync", {})
@@ -847,6 +861,25 @@ Examples:
         action="store_true",
         help="Show detailed output",
     )
+    parser.add_argument(
+        "--auth-mode",
+        choices=["managed-identity", "workload-identity", "certificate", "interactive", "client-secret"],
+        default=os.environ.get("DATAVERSE_AUTH_MODE"),
+        help=(
+            "Dataverse authentication mode. Defaults to managed identity unless "
+            "DATAVERSE_CLIENT_SECRET is set, which selects legacy client-secret auth."
+        ),
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("DATAVERSE_CERTIFICATE_PATH"),
+        help="Path to certificate for --auth-mode certificate",
+    )
+    parser.add_argument(
+        "--certificate-password",
+        default=os.environ.get("DATAVERSE_CERTIFICATE_PASSWORD"),
+        help="Certificate password for --auth-mode certificate",
+    )
 
     args = parser.parse_args()
 
@@ -865,7 +898,7 @@ Examples:
     try:
         # 1. Load configuration
         logger.info("Loading configuration from %s", args.config)
-        config = load_config(args.config)
+        config = load_config(args.config, auth_mode_override=args.auth_mode)
 
         tier = args.tier or config["sync"]["tier"]
         batch_size = config["sync"]["batch_size"]
@@ -883,19 +916,29 @@ Examples:
         print()
 
         # 2. Initialize Dataverse client
+        auth_mode = dv_config.get("auth_mode") or args.auth_mode or "managed-identity"
         client_secret = os.environ.get("DATAVERSE_CLIENT_SECRET", "")
-        if not client_secret and not args.dry_run:
-            raise ValueError(
-                "DATAVERSE_CLIENT_SECRET environment variable is required. "
-                "Set it before running the sync."
-            )
+        if auth_mode == "client-secret":
+            # legacy: dev-only — replace with managed identity in production
+            if not client_secret and not args.dry_run:
+                raise ValueError(
+                    "DATAVERSE_CLIENT_SECRET environment variable is required for legacy client-secret auth. "
+                    "Use --auth-mode managed-identity, workload-identity, or certificate in production."
+                )
+
+        dataverse_client_id = dv_config.get("client_id")
+        if auth_mode == "managed-identity":
+            dataverse_client_id = dv_config.get("managed_identity_client_id")
 
         dv_client = DataverseClient(
-            tenant_id=dv_config["tenant_id"],
+            tenant_id=dv_config.get("tenant_id"),
             environment_url=dv_config["environment_url"],
-            client_id=dv_config["client_id"],
-            client_secret=client_secret or "dry-run-placeholder",
+            client_id=dataverse_client_id,
+            client_secret=(client_secret or "dry-run-placeholder") if auth_mode == "client-secret" else None,
             dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path or dv_config.get("certificate_path"),
+            certificate_password=args.certificate_password,
         )
 
         # 3. Get instrumentation key
