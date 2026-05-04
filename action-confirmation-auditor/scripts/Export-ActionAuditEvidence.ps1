@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 #Requires -Modules MSAL.PS
 
 <#
@@ -113,7 +113,7 @@
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Requires:
-    - PowerShell 7.0 or later
+    - Windows PowerShell 5.1 or later
     - MSAL.PS module for Dataverse authentication
     - ACA Dataverse schema deployed (fsi_actionscanrun,
       fsi_actionauditresults, fsi_actionconfirmationexceptions tables)
@@ -179,7 +179,7 @@ Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  Action Confirmation Evidence Export" -ForegroundColor Cyan
 Write-Host "  FSI-AgentGov ACA Solution" -ForegroundColor Cyan
-Write-Host "  Control 1.23 - Step-Up Authentication" -ForegroundColor Gray
+Write-Host "  Control 2.12 - Human-in-the-Loop Checkpoints" -ForegroundColor Gray
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 

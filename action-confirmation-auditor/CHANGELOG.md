@@ -2,6 +2,15 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
+
+### Fixed
+
+- Aligned Power Platform admin PowerShell scripts and runbook guidance with Microsoft Learn's Windows PowerShell 5.x compatibility requirement for `Microsoft.PowerApps.Administration.PowerShell`.
+- Replaced stale Control 1.23 output metadata with Control 2.12 / 1.10 mappings for HITL confirmation evidence.
+- Regenerated Dataverse schema documentation so `fsi_IsActive` shows the schema default `false` and confirmation wording matches the current HITL control mapping.
+- Updated setup examples to prefer interactive authentication for workstation deployment and label client-secret flows as legacy dev-only.
+
 ## [1.1.0] - 2026-04-17 - BREAKING
 
 ### Changed (BREAKING)

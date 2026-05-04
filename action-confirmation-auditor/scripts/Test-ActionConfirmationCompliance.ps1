@@ -13,7 +13,7 @@
 
     This is the primary validation script for the Action Confirmation Auditor
     (ACA) solution. It validates per-agent action confirmation posture against
-    zone-based governance policies defined by Control 1.23.
+    zone-based governance policies defined by Control 2.12.
 
     Combines Get-AgentActionSettings and zone policy evaluation into a single
     validation workflow with dry-run mode, multiple output formats, summary
@@ -29,7 +29,7 @@
     Part of FSI Agent Governance Framework
 #>
 
-#Requires -Version 7.0
+#Requires -Version 5.1
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Test-ActionConfirmationCompliance {
@@ -380,7 +380,7 @@ function Test-ActionConfirmationCompliance {
                         WarningCount         = 0
                         ScanTimestamp        = (Get-Date).ToUniversalTime().ToString('o')
                         DryRun               = $WhatIfPreference
-                        Control              = '1.23'
+                        Control              = '2.12'
                     }
                     results = @()
                 } | ConvertTo-Json -Depth 5
@@ -582,7 +582,7 @@ function Test-ActionConfirmationCompliance {
     Write-Host ""
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "  Action Confirmation Compliance Scan" -ForegroundColor Cyan
-    Write-Host "  Control 1.23 - Step-Up Authentication" -ForegroundColor Gray
+    Write-Host "  Control 2.12 - Human-in-the-Loop Checkpoints" -ForegroundColor Gray
     Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC" -ForegroundColor Gray
     Write-Host "  RunId: $runId" -ForegroundColor Gray
     Write-Host "==========================================" -ForegroundColor Cyan
@@ -771,7 +771,7 @@ function Test-ActionConfirmationCompliance {
                     ScanTimestamp         = $summary.ScanTimestamp
                     DryRun                = $summary.DryRun
                     OverallStatus         = $overallStatus
-                    Control               = '1.23'
+                    Control               = '2.12'
                 }
                 results = @($outputResults | ForEach-Object {
                     @{

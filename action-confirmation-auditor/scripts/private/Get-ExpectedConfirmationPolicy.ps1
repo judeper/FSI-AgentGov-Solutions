@@ -27,10 +27,10 @@
 .NOTES
     File: Get-ExpectedConfirmationPolicy.ps1
     Version: 1.1.0
-    Requires: PowerShell 7.0+
+    Requires: Windows PowerShell 5.1+
 #>
 
-#requires -Version 7.0
+#requires -Version 5.1
 
 [CmdletBinding()]
 param(

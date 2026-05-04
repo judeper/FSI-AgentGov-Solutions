@@ -21,7 +21,7 @@
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 #>
 
-#Requires -Version 7.0
+#Requires -Version 5.1
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Get-AgentActionSettings {

@@ -263,7 +263,7 @@ ACTION_AUDIT_RESULT_COLUMNS = [
                 description="Zone-based risk level (hardcoded in v1.0)"),
     _picklist_col("fsi_ConfirmationStatus", "Confirmation Status",
                   "fsi_ACA_confirmationstatus",
-                  description="Whether step-up confirmation is present/missing/partial"),
+                  description="Whether HITL confirmation is present/missing/partial"),
     _picklist_col("fsi_ViolationStatus", "Violation Status",
                   "fsi_ACA_violationstatus",
                   description="Current violation lifecycle status"),
@@ -316,7 +316,7 @@ ACTION_CONFIRMATION_EXCEPTION_COLUMNS = [
     _memo_col("fsi_RejectionNotes", "Rejection Notes", 5000,
               description="Approver comments on rejection decision"),
     _boolean_col("fsi_IsActive", "Is Active", default=False,
-                 description="Whether this exception is currently active. Defaults to false on create — must be set true only by approver flow after Maker/Checker review (prevents control bypass during pending-approval window)."),
+                 description="Whether this exception is currently active. Defaults to false on create — must be set true only by approver flow after Maker/Checker review (helps avoid control bypass during the pending-approval window)."),
 ]
 
 ACTION_SCAN_RUN_COLUMNS = [
@@ -329,9 +329,9 @@ ACTION_SCAN_RUN_COLUMNS = [
     _integer_col("fsi_TotalActions", "Total Actions",
                  description="Total actions evaluated across all agents"),
     _integer_col("fsi_ActionsWithConfirmation", "Actions With Confirmation",
-                 description="Actions that have step-up confirmation configured"),
+                 description="Actions that have HITL confirmation configured"),
     _integer_col("fsi_ActionsMissingConfirmation", "Actions Missing Confirmation",
-                 description="Actions missing required step-up confirmation"),
+                 description="Actions missing required HITL confirmation"),
     _integer_col("fsi_ViolationCount", "Violation Count",
                  description="Total violations detected in this scan run"),
     _string_col("fsi_OverallStatus", "Overall Status", 50,
@@ -354,7 +354,7 @@ TABLES = {
         "display": "Action Audit Result",
         "plural": "Action Audit Results",
         "description": (
-            "Per-action violation records tracking step-up confirmation "
+            "Per-action violation records tracking HITL confirmation "
             "presence for agent operations across Power Platform environments"
         ),
         "ownership": "UserOwned",
@@ -367,7 +367,7 @@ TABLES = {
         "plural": "Action Confirmation Exceptions",
         "description": (
             "Approved exceptions for actions that do not require "
-            "step-up confirmation, with expiration and audit trail"
+            "HITL confirmation, with expiration and audit trail"
         ),
         "ownership": "UserOwned",
         "columns": ACTION_CONFIRMATION_EXCEPTION_COLUMNS,
@@ -491,7 +491,7 @@ def generate_docs(output_path: str) -> None:
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"  Documentation written to: {output_path}")
 
@@ -649,7 +649,7 @@ def main() -> None:
             "Examples:\n"
             "  # Dry run with interactive auth\n"
             "  python create_dataverse_schema.py --dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Legacy dev-only client secret deployment\n"
             "  python create_dataverse_schema.py \\\n"
             "    --tenant-id $ACA_TENANT_ID \\\n"
             "    --client-id $ACA_CLIENT_ID \\\n"
@@ -673,7 +673,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACA_CLIENT_SECRET"),
-        help="Service principal secret (or set ACA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ACA_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",

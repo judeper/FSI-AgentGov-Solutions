@@ -24,7 +24,7 @@ Auto-generated schema documentation. Do not edit manually.
 ### Action Audit Result (`fsi_ActionAuditResult`)
 
 **Ownership:** UserOwned
-**Description:** Per-action violation records tracking step-up confirmation presence for agent operations across Power Platform environments
+**Description:** Per-action violation records tracking HITL confirmation presence for agent operations across Power Platform environments
 
 | Column (SchemaName) | Type | Required | Description |
 |-------------------|------|----------|-------------|
@@ -41,7 +41,7 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_ConnectorName | String(500) | No | Connector name if action is a connector action |
 | fsi_HttpMethod | String(20) | No | HTTP method for HTTP request actions |
 | fsi_RiskLevel | String(50) | Yes | Zone-based risk level (hardcoded in v1.0) |
-| fsi_ConfirmationStatus | Picklist (fsi_ACA_confirmationstatus) | Yes | Whether step-up confirmation is present/missing/partial |
+| fsi_ConfirmationStatus | Picklist (fsi_ACA_confirmationstatus) | Yes | Whether HITL confirmation is present/missing/partial |
 | fsi_ViolationStatus | Picklist (fsi_ACA_violationstatus) | Yes | Current violation lifecycle status |
 | fsi_ViolationType | String(200) | No | Violation type identifier (e.g., MissingConfirmation, MissingUserDefinedActionMessage) |
 | fsi_Severity | String(50) | Yes | Violation severity (Critical/High/Medium/Warning) |
@@ -52,7 +52,7 @@ Auto-generated schema documentation. Do not edit manually.
 ### Action Confirmation Exception (`fsi_ActionConfirmationException`)
 
 **Ownership:** UserOwned
-**Description:** Approved exceptions for actions that do not require step-up confirmation, with expiration and audit trail
+**Description:** Approved exceptions for actions that do not require HITL confirmation, with expiration and audit trail
 
 | Column (SchemaName) | Type | Required | Description |
 |-------------------|------|----------|-------------|
@@ -70,7 +70,7 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_RejectedBy | String(200) | No | UPN of administrator who rejected the exception |
 | fsi_ApprovalNotes | Memo(5000) | No | Approver comments on approval decision |
 | fsi_RejectionNotes | Memo(5000) | No | Approver comments on rejection decision |
-| fsi_IsActive | Boolean (default: true) | Yes | Whether this exception is currently active |
+| fsi_IsActive | Boolean (default: false) | Yes | Whether this exception is currently active. Defaults to false on create — must be set true only by approver flow after Maker/Checker review (helps avoid control bypass during the pending-approval window). |
 
 ### Action Scan Run (`fsi_ActionScanRun`)
 
@@ -84,8 +84,8 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_ValidationTime | DateTime | Yes | When scan executed |
 | fsi_TotalAgents | Integer | Yes | Total agents scanned |
 | fsi_TotalActions | Integer | Yes | Total actions evaluated across all agents |
-| fsi_ActionsWithConfirmation | Integer | Yes | Actions that have step-up confirmation configured |
-| fsi_ActionsMissingConfirmation | Integer | Yes | Actions missing required step-up confirmation |
+| fsi_ActionsWithConfirmation | Integer | Yes | Actions that have HITL confirmation configured |
+| fsi_ActionsMissingConfirmation | Integer | Yes | Actions missing required HITL confirmation |
 | fsi_ViolationCount | Integer | Yes | Total violations detected in this scan run |
 | fsi_OverallStatus | String(50) | Yes | Passed/Failed/Warning/Critical |
 | fsi_EnvironmentsScanned | String(2000) | No | Comma-separated environments covered |

@@ -75,7 +75,7 @@ Requirements for deploying the Action Confirmation Auditor.
    - Location: Same region as Power Platform environment
 
 2. **Import Runbook**
-   - Import `Start-ActionConfirmationValidationRunbook.ps1` as PowerShell 7.2 runbook
+   - Import `Start-ActionConfirmationValidationRunbook.ps1` as a Windows PowerShell 5.1 runbook. Microsoft Learn documents `Microsoft.PowerApps.Administration.PowerShell` as a .NET Framework module that is incompatible with PowerShell 6.0 and later.
    - Publish the runbook
 
 3. **Configure Authentication**
@@ -83,8 +83,9 @@ Requirements for deploying the Action Confirmation Auditor.
    - The runbook uses certificate-based auth via `-ClientId` and `-CertificateThumbprint` parameters
 
 4. **Install Required Modules**
-   - `Az.Accounts` (for authentication)
-   - `MSAL.PS` (if using client credential flow)
+   - `Microsoft.PowerApps.Administration.PowerShell` in Windows PowerShell 5.1
+   - `MSAL.PS` for certificate-based token acquisition
+   - `Az.Accounts` only if using interactive workstation authentication helpers
 
 ---
 
@@ -103,9 +104,8 @@ Deploy using:
 ```bash
 python scripts/create_dataverse_schema.py \
   --environment-url https://yourorg.crm.dynamics.com \
-  --client-id <app-id> \
-  --client-secret <secret> \
-  --tenant-id <tenant-id>
+  --tenant-id <tenant-id> \
+  --interactive
 ```
 
 See [dataverse-schema.md](dataverse-schema.md) for the auto-generated column reference.
@@ -148,4 +148,4 @@ If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive
 
 ---
 
-*Action Confirmation Auditor v1.1.0*
+*Action Confirmation Auditor v1.1.1*

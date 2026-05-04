@@ -41,7 +41,7 @@
     Status: Deferred to v1.1
 #>
 
-#requires -Version 7.0
+#requires -Version 5.1
 
 [CmdletBinding(SupportsShouldProcess)]
 param(

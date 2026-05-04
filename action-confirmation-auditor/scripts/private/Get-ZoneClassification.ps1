@@ -23,7 +23,7 @@
     Returns the zone classification for the specified environment.
 #>
 
-#requires -Version 7.0
+#requires -Version 5.1
 
 [CmdletBinding()]
 param(

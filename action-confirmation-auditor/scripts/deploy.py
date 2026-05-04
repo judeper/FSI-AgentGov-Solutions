@@ -43,7 +43,7 @@ Post-Deployment Steps
    - fsi_cr_azureautomation_actionconfirmationauditor -> Select Azure Automation connection
 
 3. EXCEPTIONS -- Populate fsi_ActionConfirmationException table:
-   - Add approved exceptions for actions that do not require step-up confirmation
+   - Add approved exceptions for actions that do not require HITL confirmation
    - Set fsi_IsActive to true for active exceptions
    - Set fsi_ExpiresAt for time-limited exceptions
 
@@ -171,7 +171,7 @@ def main() -> None:
             "  python deploy.py --interactive\n\n"
             "  # Dry run (preview all changes)\n"
             "  python deploy.py --dry-run --interactive\n\n"
-            "  # Deploy only tables with service principal\n"
+            "  # Legacy dev-only client secret deployment for tables\n"
             "  python deploy.py --tables-only \\\n"
             "    --tenant-id $ACA_TENANT_ID \\\n"
             "    --client-id $ACA_CLIENT_ID \\\n"
@@ -184,7 +184,7 @@ def main() -> None:
             "Environment variables:\n"
             "  ACA_TENANT_ID        Microsoft Entra ID tenant ID\n"
             "  ACA_CLIENT_ID        Service principal app ID\n"
-            "  ACA_CLIENT_SECRET    Service principal secret\n"
+            "  ACA_CLIENT_SECRET    Legacy dev-only service principal secret\n"
             "  ACA_ENVIRONMENT_URL  Dataverse environment URL\n"
         ),
     )
@@ -203,7 +203,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACA_CLIENT_SECRET"),
-        help="Service principal secret (or set ACA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ACA_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -254,7 +254,7 @@ def main() -> None:
         sys.exit(1)
     if not args.interactive and (not args.client_id or not args.client_secret):
         print(
-            "ERROR: --client-id and --client-secret required "
+            "ERROR: --client-id and legacy dev-only --client-secret required "
             "(or use --interactive)"
         )
         sys.exit(1)

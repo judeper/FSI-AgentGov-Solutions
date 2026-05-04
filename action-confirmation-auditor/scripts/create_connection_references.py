@@ -165,7 +165,7 @@ def main() -> None:
             "  # Dry run with interactive auth\n"
             "  python create_connection_references.py "
             "--dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Legacy dev-only client secret deployment\n"
             "  python create_connection_references.py \\\n"
             "    --tenant-id $ACA_TENANT_ID \\\n"
             "    --client-id $ACA_CLIENT_ID \\\n"
@@ -187,7 +187,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACA_CLIENT_SECRET"),
-        help="Service principal secret (or set ACA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ACA_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
