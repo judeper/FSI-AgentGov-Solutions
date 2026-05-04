@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '5.3.4' }
 
 <#
 .SYNOPSIS

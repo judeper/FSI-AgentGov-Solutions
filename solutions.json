@@ -163,9 +163,9 @@
     "agent-registry-automation": {
       "id": "agent-registry-automation",
       "name": "Agent Registry Automation",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "domain": "lifecycle-ops",
-      "tier": "3",
+      "tier": "2",
       "status": "live",
       "description": "Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-registry-automation/",

@@ -1,6 +1,6 @@
 {
   "solutionName": "agent-registry-automation",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Sample configuration for Agent Registry Automation. Customize values for your environment.",
   "zonePolicy": {
     "zone1": {
@@ -8,7 +8,7 @@
       "registrationRequired": false,
       "approvalRequired": false,
       "quarantineOnViolation": false,
-      "description": "Inventory only — agents are discovered and tracked but no approval gate is enforced"
+      "description": "Inventory only — agents are discovered and tracked but no approval gate is required"
     },
     "zone2": {
       "label": "Team/Departmental",
@@ -46,7 +46,7 @@
   "entraSync": {
     "enabled": false,
     "frameworkVersion": "FSI-AgentGov-v1.1",
-    "description": "Feature-flagged sync to Entra Agent Registry. Enable only after confirming API availability."
+    "description": "Feature-flagged sync to Microsoft Entra Agent ID. Enable only after confirming API availability."
   },
   "notifications": {
     "governanceTeamEmail": "",

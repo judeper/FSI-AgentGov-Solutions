@@ -1,6 +1,6 @@
 # Agent Registry Automation — Customer Delivery Checklist
 
-**Version:** v1.0.2
+**Version:** v2.1.0
 **Solution:** Agent Registry Automation
 
 ---
@@ -32,7 +32,7 @@
 - [ ] Verify target environment is Managed Environment
 - [ ] Register Microsoft Entra ID application for Bots API and Graph API access
 - [ ] Grant required API permissions and admin consent (see `docs/prerequisites.md`)
-- [ ] Create client secret and store securely (Azure Key Vault recommended)
+- [ ] Configure managed identity, workload identity federation, or certificate authentication; use client secrets only for legacy development fallback
 - [ ] Verify Dataverse capacity is sufficient for agent inventory and compliance events
 - [ ] Confirm DLP policies allow required connectors:
   - Dataverse
@@ -105,9 +105,9 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 - [ ] **Flow 3: Sync-EntraAgentRegistry** (optional — feature-flagged)
   - Build trigger (Dataverse — when agent inventory updated)
   - Build feature flag gate (`fsi_ARA_IsEntraRegistrySyncEnabled`)
-  - Build Entra Agent Registry API call
+  - Build Microsoft Entra Agent ID API call
   - Build sync status update
-  - **Note:** Skip if Entra Agent Registry API is not available
+  - **Note:** Skip if Microsoft Entra Agent ID API is not available
 - [ ] **Flow 4: Detect-OrphanedAgents-Weekly**
   - Build trigger (Recurrence — weekly)
   - Build Graph API user status check
@@ -162,9 +162,9 @@ The `properties.botFrameworkEndpoint` field path in the Bots API response has be
 
 Flow 2 uses the Office 365 Users connector to look up the approver's time zone for business-day SLA calculations. If the customer's DLP policies classify this connector as "Blocked," configure the `fsi_ARA_DefaultTimeZone` environment variable as a fallback (e.g., `Eastern Standard Time`).
 
-### Entra Agent Registry Availability
+### Microsoft Entra Agent ID Availability
 
-Flow 3 (Sync-EntraAgentRegistry) is feature-flagged off by default. The Entra Agent Registry API requires Agent 365 / Frontier licensing and may not be available in all tenants. Confirm API availability before enabling this flow.
+Flow 3 (Sync-EntraAgentRegistry) is feature-flagged off by default. The Microsoft Entra Agent ID API requires Microsoft Agent 365 or Microsoft 365 E7 licensing and may not be available in all tenants. Confirm API availability before enabling this flow.
 
 ### Long-Term Retention (LTR)
 
@@ -184,6 +184,6 @@ Do NOT include these repository management files:
 
 ---
 
-**Package Version:** v1.0.2
+**Package Version:** v2.1.0
 **Release Date:** April 2026
 **Solution:** Agent Registry Automation

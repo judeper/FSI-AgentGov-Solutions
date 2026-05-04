@@ -1,12 +1,12 @@
 # Agent Registry Automation
 
-> **Status:** Production Ready (v2.0.0)
+> **Status:** Production Ready (v2.1.0)
 
 Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform environments, supporting FSI agent inventory and record-keeping requirements.
 
 ## Overview
 
-Many organizations deploy AI agents across multiple Power Platform environments without a centralized registry. This creates governance blind spots — agents may operate without documented ownership, risk classification, or regulatory approval. The Agent Registry Automation solution addresses this gap by continuously scanning environments for unregistered agents, enforcing zone-based registration and approval workflows, and maintaining an immutable compliance event log for examiner reporting.
+Many organizations deploy AI agents across multiple Power Platform environments without a centralized registry. This creates governance blind spots — agents may operate without documented ownership, risk classification, or regulatory approval. The Agent Registry Automation solution addresses this gap by continuously scanning environments for unregistered agents, applying zone-based registration and approval workflows, and maintaining an immutable compliance event log for examiner reporting.
 
 ## Features
 
@@ -15,7 +15,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 | **Daily Discovery** | Scans all Power Platform environments via Bots API for unregistered agents |
 | **Auto-Quarantine** | Zone 3 agents without committee approval are automatically quarantined |
 | **Registration Workflow** | Teams-based approval with configurable SLA tracking and escalation |
-| **Entra Sync** | Syncs registered agents to Entra Agent Registry (feature-flagged) |
+| **Agent ID Sync** | Syncs registered agents to Microsoft Entra Agent ID when the preview API is enabled (feature-flagged) |
 | **Orphan Detection** | Weekly check for agents whose owners have departed or become inactive |
 | **Examiner Dashboard** | Compliance reporting with zone-filtered inventory and audit trail |
 
@@ -40,9 +40,9 @@ Many organizations deploy AI agents across multiple Power Platform environments 
          │                 │
          ▼                 ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  Bots API        │  │  Microsoft       │  │  Entra Agent     │
-│  (2022-03-01-    │  │  Graph API       │  │  Registry        │
-│   preview)       │  │                  │  │  (feature-flagged)│
+│  Bots API        │  │  Microsoft       │  │  Entra Agent ID  │
+│  (2022-03-01-    │  │  Graph API       │  │  (feature-       │
+│   preview)       │  │                  │  │   flagged)       │
 └──────────────────┘  └──────────────────┘  └──────────────────┘
          │                 │
          ▼                 ▼
@@ -123,12 +123,18 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 ### 1. Deploy Dataverse Schema
 
 ```powershell
-# Deploy tables, option sets, and alternate keys
+# Deploy tables, option sets, and alternate keys with managed identity or workload identity federation
+python scripts/create_dataverse_schema.py `
+    --environment-url "https://your-org.crm.dynamics.com" `
+    --tenant-id "your-tenant-id"
+
+# Certificate auth fallback for admin workstations
 python scripts/create_dataverse_schema.py `
     --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id" `
     --client-id "your-client-id" `
-    --client-secret "your-client-secret"
+    --client-certificate-path ".\certs\ara-app.pem" `
+    --client-certificate-thumbprint "your-cert-thumbprint"
 ```
 
 ### 2. Deploy Environment Variables
@@ -171,7 +177,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 
 ## Key Configuration Notes
 
-- **Entra Agent Registry (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming Entra Agent Registry API availability (requires Agent 365 / Frontier licensing).
+- **Microsoft Entra Agent ID (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming the current Microsoft Graph beta endpoint, Agent ID permissions, and Microsoft Agent 365 or Microsoft 365 E7 licensing in your tenant.
 - **BotFrameworkEndpoint field name:** The `properties.botFrameworkEndpoint` field from the Bots API response needs live API confirmation. Verify the exact field path in your environment before enabling Flow 1.
 - **Office 365 connector for SLA:** The SLA calculation in Flow 2 uses the Office 365 Users connector to determine the approver's time zone for business-day calculations. If DLP policies block this connector, configure a fallback time zone in the `fsi_ARA_DefaultTimeZone` environment variable.
 - **7-year retention (LTR):** The `fsi_agentcomplianceevent` table is designed for Dataverse Long-Term Retention. Enable LTR policies after deployment to support SEC 17a-3/4 retention requirements.
@@ -196,9 +202,9 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 
 ## Platform Update Notes
 
-### M365 Copilot Agent Store (April 2026)
+### Microsoft 365 Copilot Agent Store (April 2026)
 
-Microsoft has introduced the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), a centralized marketplace for discovering, deploying, and managing agents within Microsoft 365 Copilot. The Agent Store supports three deployment paths:
+Microsoft has introduced the [Microsoft 365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), a centralized marketplace for discovering, deploying, and managing agents within Microsoft 365 Copilot. The Agent Store supports three deployment paths:
 
 | Path | Source | Governance Implication |
 |------|--------|----------------------|
@@ -214,7 +220,7 @@ Microsoft has introduced the [M365 Copilot Agent Store](https://learn.microsoft.
 
 Future enhancements should consider:
 
-- Adding Graph API queries for the [M365 Agents admin guide](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide) endpoints to discover Agent Store deployments
+- Adding Graph API queries for the [Microsoft 365 Agents admin guide](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide) endpoints to discover Agent Store deployments
 - Extending the `fsi_agentsource` choice set to include Agent Store (Prebuilt) and External Platform categories
 - Monitoring the Agent Store admin center for new agent deployments as a supplementary discovery channel
 
@@ -223,7 +229,7 @@ Future enhancements should consider:
 ## Known Limitations
 
 - **Bots API preview:** The Power Platform Bots API (`2022-03-01-preview`) may change at GA. Monitor Microsoft documentation for breaking changes to the endpoint schema.
-- **Entra Agent Registry:** Flow 3 (Entra Sync) requires Agent 365 / Frontier licensing and is feature-flagged off by default. API availability should be confirmed before enabling.
+- **Microsoft Entra Agent ID:** Flow 3 (Entra Sync) requires Microsoft Agent 365 or Microsoft 365 E7 licensing and is feature-flagged off by default. Confirm the current preview endpoint and permission names before enabling.
 - **BotFrameworkEndpoint field:** The exact field path (`properties.botFrameworkEndpoint`) in the Bots API response needs live API confirmation. The flow includes error handling for missing fields.
 - **Sandbox environments:** By default, sandbox environments are excluded from discovery scans. Set `fsi_ARA_IncludeSandboxEnvironments` to `true` to include them.
 
@@ -233,6 +239,8 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1.0 | 2026-Q2 | Microsoft Learn refresh for authentication, paging, and Agent ID preview guidance |
+| 2.0.0 | 2026-04-30 | Schema-generated docs and flow alignment fixes |
 | 1.0.2 | 2026-04-16 | Data integrity fixes, parameter corrections |
 | 1.0.1 | 2026-04-15 | Schema alignment fixes, verb corrections |
 | 1.0.0 | 2026-03-15 | Initial release |
@@ -247,4 +255,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Agent Registry Automation v2.0.0*
+*FSI Agent Governance Framework — Agent Registry Automation v2.1.0*

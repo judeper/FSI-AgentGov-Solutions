@@ -52,7 +52,7 @@ Configure these connection references before building the flows.
 | Connection Reference | Connector | Purpose |
 |---------------------|-----------|---------|
 | `fsi_cr_dataverse_agentregistry` | Dataverse | Read/write agent inventory and compliance events |
-| `fsi_cr_http_agentregistry` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Entra Agent Registry calls |
+| `fsi_cr_http_agentregistry` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Microsoft Entra Agent ID calls |
 | `fsi_cr_teams_agentregistry` | Microsoft Teams | Post adaptive cards and notifications |
 | `fsi_cr_office365_agentregistry` | Office 365 | Business day calculation for SLA deadlines |
 
@@ -78,7 +78,7 @@ Configure these values before enabling the flows.
 | `fsi_ARA_GovernanceTeamEmail` | String | Governance team email for approvals and notifications | `ai-governance@example.com` |
 | `fsi_ARA_TeamsChannelId` | String | Teams channel ID for notifications | `19:xxxxx@thread.tacv2` |
 | `fsi_ARA_ApprovalDeadlineDays` | String | Number of business days for approval SLA | `5` |
-| `fsi_ARA_IsEntraRegistrySyncEnabled` | String | Feature flag for Entra Agent Registry sync | `false` |
+| `fsi_ARA_IsEntraRegistrySyncEnabled` | String | Feature flag for Microsoft Entra Agent ID sync | `false` |
 | `fsi_ARA_DefaultTimeZone` | String | Fallback time zone for SLA calculations | `Eastern Standard Time` |
 | `fsi_ARA_FrameworkVersion` | String | FSI-AgentGov framework version tag | `FSI-AgentGov-v1.1` |
 | `fsi_ARA_EscalationApproverUPN` | String | Skip-level approver UPN for SLA escalation | `ciso@example.com` |
@@ -186,48 +186,60 @@ Add **Compose** action to classify the environment's zone. Use a lookup against 
 ```json
 if(
   contains(items('Apply_to_each')?['properties']?['environmentSku'], 'Production'),
-  100000002,
+  100000003,
   if(
     contains(items('Apply_to_each')?['properties']?['environmentSku'], 'Teams'),
-    100000001,
-    100000000
+    100000002,
+    100000001
   )
 )
 ```
 
-> **Note:** Zone classification logic should be customized based on your organization's environment naming conventions and metadata. The above is a simplified example.
+> **Note:** Zone classification logic should be customized based on your organization's environment naming conventions and metadata. The simplified example maps Production to Zone 3, Teams to Zone 2, and all other environments to Zone 1.
 
-##### Step 5d-ii: Upsert Agent Record
+##### Step 5d-ii: Create or Update Agent Record
 
-Add **Dataverse — Update a row** action with alternate key:
+Use the `fsi_agentid` + `fsi_environmentid` business key to avoid duplicates while preserving approval workflow state on rediscovery.
 
-- **Table name:** Agent Inventories (`fsi_agentinventories`)
-- **Row ID:** `fsi_agentid='@{items('Apply_to_each_Bot')?['name']}',fsi_environmentid='@{items('Apply_to_each')?['name']}'`
-- **Columns to set:**
-  - `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
-  - `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
-  - `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
-  - `fsi_zone`: Zone value from Step 5d-i
-  - `fsi_lastscannedat`: `@{utcNow()}`
-- **Configure Run After:** Set to run on **success** and **failure** (for new records, the upsert creates; for existing records, it updates)
+1. Add **Dataverse — List rows** on Agent Inventories (`fsi_agentinventories`):
+   - **Filter rows:** `fsi_agentid eq '@{items('Apply_to_each_Bot')?['name']}' and fsi_environmentid eq '@{items('Apply_to_each')?['name']}'`
+   - **Top count:** 1
+2. Add a **Condition** on whether the list returned a row.
 
-> **Important:** The alternate key `fsi_ak_agentinventory_agentenv` must be in **Active** status before this step will work. If the key is still **Pending**, the upsert will fail with a 404 error.
+**Existing row branch:** update only discovery-tracking columns:
+
+- `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
+- `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
+- `fsi_lastscannedat`: `@{utcNow()}`
+- `fsi_rawjson`: body from Step 5a for this agent
+
+**Missing row branch:** add a new Agent Inventory row with all `ApplicationRequired` columns:
+
+- `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['name']}`
+- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_environmentid`: `@{items('Apply_to_each')?['name']}`
+- `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
+- `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
+- `fsi_registrationstatus`: `100000000` (Unregistered)
+- `fsi_publishedstatus`: `100000001` (Draft) unless the API returns a mapped published status
+- `fsi_zone`: Zone value from Step 5d-i
+- `fsi_ownerupn`: owner UPN from the API, or `unknown@unassigned.local` when unavailable
+- `fsi_isorphaned`: `true` when owner UPN is unavailable; otherwise `false`
+- `fsi_lastscannedat`: `@{utcNow()}`
+- `fsi_rawjson`: body from Step 5a for this agent
+
+> **Important:** The alternate key `fsi_ak_agentinventory_agentenv` must be in **Active** status before using alternate-key upsert patterns. Dataverse Web API upsert can create rows when the key is absent, so create payloads must include every required non-key column.
 
 ##### Step 5d-iii: Check If New Record
 
-Add **Condition** — check if this was a new record creation (HTTP response status 201) vs. update (200/204).
-
-For new records only:
-
-##### Step 5d-iv: Set Default Registration Status
-
-Add **Dataverse — Update a row** to set:
-- `fsi_registrationstatus`: `100000000` (Unregistered)
-- `fsi_lastscannedat`: `@{utcNow()}`
+The **Missing row branch** is the new-record path. Increment `varNewCount` there before evaluating quarantine.
 
 ##### Step 5d-v: Check Zone 3 Auto-Quarantine
 
-Add **Condition** — if zone equals `100000002` AND `fsi_registrationstatus` equals `100000000` (Unregistered):
+Add **Condition** — if zone equals `100000003` AND `fsi_registrationstatus` equals `100000000` (Unregistered):
 
 **Yes branch:**
 - Add **Dataverse — Update a row** to set:
@@ -247,7 +259,7 @@ Add **Dataverse — Add a new row** to `fsi_agentcomplianceevents`:
 - `fsi_zone`: Zone value from Step 5d-i
 - `fsi_details`: `{"correlationId":"@{variables('varDiscoveryCorrelationId')}","quarantined":@{variables('varQuarantined')}}`
 - `fsi_eventtimestamp`: `@{utcNow()}`
-- `fsi_frameworkversion`: `2.0.0`
+- `fsi_frameworkversion`: `FSI-AgentGov-v1.1`
 
 ##### Step 5d-vii: Increment Counters
 
@@ -379,7 +391,7 @@ Add **Switch** on `outputs('Start_Approval')?['body/outcome']`:
 
 ### Purpose
 
-Syncs registered agent metadata to the Entra Agent Registry. This flow is **feature-flagged** and disabled by default. Enable only after confirming Entra Agent Registry API availability.
+Syncs registered agent metadata to the Microsoft Entra Agent ID. This flow is **feature-flagged** and disabled by default. Enable only after confirming Microsoft Entra Agent ID API availability.
 
 ### Trigger
 
@@ -425,29 +437,30 @@ Add **Compose** action:
 }
 ```
 
-#### Step 5: Call Entra Agent Registry API
+#### Step 5: Call Microsoft Entra Agent ID API
 
-Add **HTTP with Microsoft Entra ID** action:
+Add **HTTP with Microsoft Entra ID** action only after confirming the current Microsoft Graph beta endpoint and permission names in your tenant:
 
-- **Method:** POST (or PUT for upsert)
-- **URI:** `https://graph.microsoft.com/beta/agentRegistrations` *(confirm actual endpoint)*
+- **Method:** POST or PATCH, based on the current Agent ID API guidance
+- **URI:** `https://graph.microsoft.com/beta/{tenant-confirmed-agent-id-endpoint}`
 - **Body:** Output from Step 4
 - **Headers:**
   - `Content-Type`: `application/json`
 
-> **Note:** The Entra Agent Registry API endpoint is subject to change. Confirm the actual endpoint and required permissions before enabling this flow.
+> **Note:** Microsoft Entra Agent ID for Copilot Studio is in preview. Current Microsoft Learn terminology describes agent identity blueprints, blueprint principals, agent identities, and agent users. Do not hard-code the legacy `agentRegistrations` endpoint or permission names until they are confirmed in your tenant.
 
 #### Step 6: Handle Response
 
 Add **Condition** on response status code:
 
 **Success (2xx):**
-1. Update agent inventory: `fsi_entrasynced` = `true`, `fsi_entrasyncedon` = `utcNow()`
-2. Log compliance event: `fsi_eventtype` = `10010` (Entra Sync Completed)
+1. Update agent inventory: `fsi_entraregistrystatus` = `Synced @{utcNow()}`
+2. Log compliance event: `fsi_eventtype` = `100000009` (EntraSynced)
 
 **Failure:**
-1. Log compliance event: `fsi_eventtype` = `10011` (Entra Sync Failed), include error details
-2. Send notification to governance team
+1. Update agent inventory: `fsi_entraregistrystatus` = `Failed @{utcNow()} — @{body('Call_Microsoft_Entra_Agent_ID_API')?['error']?['message']}`
+2. Log error details in `fsi_details` on an operational notification or extend the schema before adding a distinct failure event type. Do not use unmodeled event codes such as `10010` or `10011`.
+3. Send notification to governance team
 
 ---
 
@@ -568,10 +581,10 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 - **Bots API preview:** The `2022-03-01-preview` API version may change at GA. Monitor the [Power Platform API documentation](https://learn.microsoft.com/en-us/rest/api/power-platform/) for updates.
 - **BotFrameworkEndpoint field:** The exact field path in the Bots API response needs live API confirmation. The flow includes null-check error handling for this field.
 - **Office 365 Users connector:** Used for time zone lookup in SLA calculations. If blocked by DLP policies, configure `fsi_ARA_DefaultTimeZone` as a fallback.
-- **Entra Agent Registry API:** Flow 3 is disabled by default. The API endpoint and required permissions are subject to change.
+- **Microsoft Entra Agent ID API:** Flow 3 is disabled by default. The API endpoint and required permissions are subject to change.
 - **Graph signInActivity:** Requires Microsoft Entra ID P1/P2 license for the `signInActivity` property in the Graph API response. Without this license, the inactive-owner detection in Flow 4 is limited to account-enabled checks only.
 - **Alternate key pending status:** The upsert in Flow 1 requires the alternate key to be in **Active** status. New deployments may need to wait up to 30 minutes after schema creation.
 
 ---
 
-*Agent Registry Automation v2.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.1.0 — FSI Agent Governance Framework*

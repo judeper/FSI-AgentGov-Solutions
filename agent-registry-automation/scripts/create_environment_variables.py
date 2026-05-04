@@ -6,7 +6,7 @@ sync behavior, SLA escalation, and alerting configuration. All operations
 are idempotent — safe to re-run.
 
 Variables consumed by Power Automate flows:
-  - fsi_ARA_IsEntraRegistrySyncEnabled: Feature flag for Entra Agent Registry sync
+  - fsi_ARA_IsEntraRegistrySyncEnabled: Feature flag for Microsoft Entra Agent ID sync
   - fsi_ARA_FrameworkVersion: FSI-AgentGov version tag for registry entries
   - fsi_ARA_EscalationApproverUPN: Skip-level approver for SLA escalation
   - fsi_ARA_GovernanceTeamEmail: Distribution list for unregistered agent alerts
@@ -39,12 +39,13 @@ from ara_client import ARAClient
 ENV_VAR_DEFINITIONS = [
     {
         "schema_name": "fsi_ARA_IsEntraRegistrySyncEnabled",
-        "display_name": "ARA - Entra Registry Sync Enabled",
+        "display_name": "ARA - Agent ID Sync Enabled",
         "type": 100000000,  # String
         "default_value": "false",
         "description": (
-            "Feature flag for Microsoft Entra Agent Registry sync (Flow 3). "
-            "Set to 'true' when Agent 365 / Frontier is enabled in tenant."
+            "Feature flag for Microsoft Entra Agent ID sync (Flow 3). "
+            "Set to 'true' only after Microsoft Agent 365 or Microsoft 365 E7 "
+            "licensing and preview API availability are confirmed in tenant."
         ),
     },
     {
@@ -54,7 +55,7 @@ ENV_VAR_DEFINITIONS = [
         "default_value": "FSI-AgentGov-v1.1",
         "description": (
             "FSI-AgentGov framework version tag applied to "
-            "Entra registry entries."
+            "Microsoft Entra Agent ID entries."
         ),
     },
     {
@@ -253,11 +254,12 @@ def main() -> None:
             "  # Dry run with interactive auth\n"
             "  python create_environment_variables.py "
             "--dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Deploy with certificate auth\n"
             "  python create_environment_variables.py \\\n"
             "    --tenant-id $ARA_TENANT_ID \\\n"
             "    --client-id $ARA_CLIENT_ID \\\n"
-            "    --client-secret $ARA_CLIENT_SECRET \\\n"
+            "    --client-certificate-path $ARA_CLIENT_CERTIFICATE_PATH \\\n"
+            "    --client-certificate-thumbprint $ARA_CLIENT_CERTIFICATE_THUMBPRINT \\\n"
             "    --environment-url $ARA_ENVIRONMENT_URL\n"
         ),
     )
@@ -270,12 +272,27 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ARA_CLIENT_ID"),
-        help="Service principal app ID (or set ARA_CLIENT_ID env var)",
+        help="App ID for certificate or legacy secret auth (or set ARA_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ARA_CLIENT_SECRET"),
-        help="Service principal secret (or set ARA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ARA_CLIENT_SECRET env var)",
+    )
+    parser.add_argument(
+        "--client-certificate-path",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_PATH"),
+        help="PEM certificate/private key path for certificate authentication",
+    )
+    parser.add_argument(
+        "--client-certificate-thumbprint",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_THUMBPRINT"),
+        help="Certificate thumbprint for certificate authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("ARA_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID",
     )
     parser.add_argument(
         "--environment-url",
@@ -309,6 +326,9 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            client_certificate_path=args.client_certificate_path,
+            client_certificate_thumbprint=args.client_certificate_thumbprint,
+            managed_identity_client_id=args.managed_identity_client_id,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

@@ -153,7 +153,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 1. Classify `HTTP with Microsoft Entra ID` in the **Business** connector group
 2. If organization-wide reclassification is not possible, create an environment-specific DLP policy that allows this connector in the governance environment
 
-> **Note:** The HTTP with Microsoft Entra ID connector is used for Bots API (Flow 1), Entra Agent Registry (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate.
+> **Note:** The HTTP with Microsoft Entra ID connector is used for Bots API (Flow 1), Microsoft Entra Agent ID (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate.
 
 ---
 
@@ -348,4 +348,4 @@ $response.value | Format-Table fsi_agentname, fsi_approvalstatus, fsi_sladeadlin
 
 ---
 
-*Agent Registry Automation v2.0.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.1.0 — FSI Agent Governance Framework*
