@@ -2,6 +2,15 @@
 
 All notable changes to agent-knowledge-source-scanner will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Bumped solution metadata to v1.1.1 for the Microsoft Learn 2026-Q2 refresh.
+- Added managed identity and certificate authentication modes while keeping interactive authentication for admin workstation scans.
+- Updated Entra group expansion to use `Get-PnPEntraIDGroupMember -Transitive` when PnP.PowerShell 3.x is available, with PnP 2.x legacy fallback.
+- Refreshed documentation for Copilot Studio SharePoint knowledge source patterns, Microsoft Graph permission shapes, throttling guidance, and Microsoft Purview sensitivity label caveats.
+
 ## [1.1.0] - 2026-04-17
 
 ### Breaking

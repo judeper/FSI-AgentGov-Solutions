@@ -39,7 +39,7 @@ git rev-parse --show-toplevel
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.1 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication, zone boundary violations, and maker/checker violations in Copilot Studio multi-agent orchestration | PowerShell/Python | v1.1.1 |
-| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.1.0 |
+| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for SharePoint libraries backing agent knowledge sources | PowerShell | v1.1.1 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.2.0 |
 | [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.1.0 |
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v2.0.1 |
@@ -79,7 +79,7 @@ git rev-parse --show-toplevel
 | agent-365-lifecycle-governance | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Agent lifecycle governance with sponsor enforcement and access reviews |
 | agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
-| agent-knowledge-source-scanner | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source libraries |
+| agent-knowledge-source-scanner | 4.3, 1.4, 1.5 | Item-level permission scanning for SharePoint libraries backing agent knowledge sources |
 | agent-observability-foundation | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure |
 | agent-registry-automation | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance |
 | agent-sharing-access-restriction-detector | 1.18, 2.8 | Zone-based sharing policy enforcement |

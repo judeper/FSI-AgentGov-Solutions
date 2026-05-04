@@ -3,8 +3,8 @@
     Enumerates item-level permissions in agent knowledge source SharePoint libraries.
 
 .DESCRIPTION
-    Scans SharePoint document libraries connected to Copilot Studio agents as
-    knowledge sources and identifies files with overshared permissions.
+    Scans SharePoint libraries backing Copilot Studio agent knowledge sources
+    and identifies files with overshared permissions.
 
     Key capabilities:
     - Enumerates all items in agent-connected SharePoint libraries
@@ -48,10 +48,45 @@
 
 .PARAMETER ClientId
     Entra app registration Client ID for PnP.PowerShell authentication.
-    REQUIRED for PnP.PowerShell 3.x (the multi-tenant PnP Management Shell app
-    was retired in September 2024). Create a tenant-specific app via
-    `Register-PnPEntraIDApp` and pass the resulting Client ID here. See
-    docs/prerequisites.md for full setup.
+    Required for PnP.PowerShell 3.x interactive authentication unless an
+    ENTRAID_CLIENT_ID / ENTRAID_APP_ID environment variable
+    supplies the client ID. Required for certificate authentication.
+
+.PARAMETER AuthenticationMode
+    Authentication mode for Connect-PnPOnline. Use ManagedIdentity for Azure
+    Automation, Azure Functions, or other managed identity-capable hosts; use
+    Certificate for legacy unattended jobs; use Interactive for admin workstation
+    scans. Defaults to Interactive for backward compatibility.
+
+.PARAMETER Tenant
+    Microsoft Entra tenant name or ID. Required for certificate authentication.
+
+.PARAMETER ManagedIdentityClientId
+    Client ID of a user-assigned managed identity. Use only with
+    -AuthenticationMode ManagedIdentity.
+
+.PARAMETER ManagedIdentityObjectId
+    Object/principal ID of a user-assigned managed identity. Use only with
+    -AuthenticationMode ManagedIdentity.
+
+.PARAMETER ManagedIdentityAzureResourceId
+    Azure resource ID of a user-assigned managed identity. Use only with
+    -AuthenticationMode ManagedIdentity.
+
+.PARAMETER CertificateThumbprint
+    Certificate thumbprint for app-only PnP authentication. Use only with
+    -AuthenticationMode Certificate.
+
+.PARAMETER CertificatePath
+    Path to a PFX certificate for app-only PnP authentication. Use only with
+    -AuthenticationMode Certificate.
+
+.PARAMETER CertificateBase64Encoded
+    Base64-encoded PFX certificate for app-only PnP authentication. Use only
+    with -AuthenticationMode Certificate.
+
+.PARAMETER CertificatePassword
+    Password for CertificatePath or CertificateBase64Encoded when required.
 
 .PARAMETER ConfigPath
     Path to the item-scope-config.json configuration file.
@@ -71,9 +106,14 @@
     By default, only items with identified risks are included.
 
 .EXAMPLE
+    .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://example.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -AuthenticationMode ManagedIdentity
+
+    Scans a single library for the HR Agent's knowledge source from a managed identity-capable host.
+
+.EXAMPLE
     .\Get-KnowledgeSourceItemPermissions.ps1 -SiteUrl "https://example.sharepoint.com/sites/AgentKB" -LibraryName "Documents" -AgentName "HR-Agent" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "00000000-0000-0000-0000-000000000099"
 
-    Scans a single library for the HR Agent's knowledge source using a tenant-specific app registration.
+    Scans a single library for the HR Agent's knowledge source using interactive authentication and a tenant-specific app registration.
 
 .EXAMPLE
     .\Get-KnowledgeSourceItemPermissions.ps1 -LibraryList "./output/agent-knowledge-sources.csv" -AgentUserGroupId "00000000-0000-0000-0000-000000000001" -ClientId "00000000-0000-0000-0000-000000000099" -OutputPath "./output/item-risk-report.csv"
@@ -91,7 +131,7 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.1.0
+    Version:    1.1.1
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
     Requires:   PowerShell 7.2+ (7.4+ for PnP.PowerShell 3.x)
@@ -99,15 +139,15 @@
     Controls:   4.3, 1.4, 1.5
 
     Known limitations (documented in .ralph-config.json and docs/troubleshooting.md):
-    - Group membership expansion uses Get-PnPEntraIDGroupMember which does NOT
-      resolve nested groups. Items granted to a parent group whose members are
-      themselves groups will report only direct members.
+    - PnP.PowerShell 3.x uses Get-PnPEntraIDGroupMember -Transitive for nested
+      group expansion. PnP.PowerShell 2.x fallback uses Get-PnPAzureADGroupMember
+      and reports direct members only.
     - SensitivityLabel comparison matches against display names. If your tenant
       labels store as GUIDs in `_SensitivityLabel`, populate
       `sensitivityLabelRiskTiers` with the GUID values rather than display names.
-    - App-only (certificate / managed identity) authentication is not currently
-      wired in this entry point — the script uses interactive auth. Add a parameter
-      set with cert/thumbprint for unattended execution.
+    - Specific-people sharing links are surfaced as FlexibleLink via PnP role
+      assignments. Microsoft Graph driveItem permissions can provide richer
+      grantedToIdentitiesV2 details for future correlation.
 #>
 
 #Requires -Version 7.2
@@ -135,8 +175,36 @@ param(
     [Parameter(Mandatory = $false)]
     [string[]]$AgentUserGroupMembers,
 
-    [Parameter(Mandatory = $false, HelpMessage = "Entra app registration Client ID for PnP.PowerShell authentication. Required for PnP.PowerShell 3.x.")]
+    [Parameter(Mandatory = $false, HelpMessage = "Entra app registration Client ID for PnP.PowerShell authentication. Required for PnP.PowerShell 3.x interactive auth and certificate auth.")]
     [string]$ClientId,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Interactive", "ManagedIdentity", "Certificate")]
+    [string]$AuthenticationMode = "Interactive",
+
+    [Parameter(Mandatory = $false)]
+    [string]$Tenant,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityObjectId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityAzureResourceId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CertificateThumbprint,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CertificatePath,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CertificateBase64Encoded,
+
+    [Parameter(Mandatory = $false)]
+    [securestring]$CertificatePassword,
 
     [Parameter(Mandatory = $false)]
     [string]$ConfigPath,
@@ -267,6 +335,111 @@ function Get-LibraryTargets {
     return $targets
 }
 
+function Get-SelectedValueCount {
+    param([object[]]$Values)
+
+    return @($Values | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count
+}
+
+function Connect-KnowledgeSourceScanner {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Interactive", "ManagedIdentity", "Certificate")]
+        [string]$Mode,
+
+        [string]$ClientId,
+        [string]$Tenant,
+        [string]$ManagedIdentityClientId,
+        [string]$ManagedIdentityObjectId,
+        [string]$ManagedIdentityAzureResourceId,
+        [string]$CertificateThumbprint,
+        [string]$CertificatePath,
+        [string]$CertificateBase64Encoded,
+        [securestring]$CertificatePassword
+    )
+
+    $connectParams = @{ Url = $Url }
+
+    switch ($Mode) {
+        "ManagedIdentity" {
+            $identitySelectors = Get-SelectedValueCount -Values @(
+                $ManagedIdentityClientId,
+                $ManagedIdentityObjectId,
+                $ManagedIdentityAzureResourceId
+            )
+            if ($identitySelectors -gt 1) {
+                throw "Specify only one user-assigned managed identity selector: -ManagedIdentityClientId, -ManagedIdentityObjectId, or -ManagedIdentityAzureResourceId."
+            }
+
+            $connectParams["ManagedIdentity"] = $true
+            if ($ManagedIdentityClientId) {
+                $connectParams["UserAssignedManagedIdentityClientId"] = $ManagedIdentityClientId
+            }
+            if ($ManagedIdentityObjectId) {
+                $connectParams["UserAssignedManagedIdentityObjectId"] = $ManagedIdentityObjectId
+            }
+            if ($ManagedIdentityAzureResourceId) {
+                $connectParams["UserAssignedManagedIdentityAzureResourceId"] = $ManagedIdentityAzureResourceId
+            }
+        }
+        "Certificate" {
+            if (-not $ClientId -or -not $Tenant) {
+                throw "Certificate authentication requires -ClientId and -Tenant."
+            }
+
+            $certificateSelectors = Get-SelectedValueCount -Values @(
+                $CertificateThumbprint,
+                $CertificatePath,
+                $CertificateBase64Encoded
+            )
+            if ($certificateSelectors -ne 1) {
+                throw "Certificate authentication requires exactly one of -CertificateThumbprint, -CertificatePath, or -CertificateBase64Encoded."
+            }
+
+            $connectParams["ClientId"] = $ClientId
+            $connectParams["Tenant"] = $Tenant
+            if ($CertificateThumbprint) { $connectParams["Thumbprint"] = $CertificateThumbprint }
+            if ($CertificatePath) { $connectParams["CertificatePath"] = $CertificatePath }
+            if ($CertificateBase64Encoded) {
+                $connectParams["CertificateBase64Encoded"] = $CertificateBase64Encoded
+            }
+            if (($CertificatePath -or $CertificateBase64Encoded) -and $CertificatePassword) {
+                $connectParams["CertificatePassword"] = $CertificatePassword
+            }
+        }
+        default {
+            $connectParams["Interactive"] = $true
+            if ($ClientId) { $connectParams["ClientId"] = $ClientId }
+        }
+    }
+
+    Connect-PnPOnline @connectParams -ErrorAction Stop
+}
+
+function Get-EntraGroupMembersForScope {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$GroupId
+    )
+
+    try {
+        return @(Get-PnPEntraIDGroupMember -Identity $GroupId -Transitive -ErrorAction Stop)
+    }
+    catch [System.Management.Automation.CommandNotFoundException] {
+        Write-AuditLog "Get-PnPEntraIDGroupMember is not available; falling back to Get-PnPAzureADGroupMember direct membership." "WARN"
+        return @(Get-PnPAzureADGroupMember -Identity $GroupId -ErrorAction Stop)
+    }
+    catch [System.Management.Automation.ParameterBindingException] {
+        Write-AuditLog "Get-PnPEntraIDGroupMember in this module version does not support -Transitive; falling back to direct membership." "WARN"
+        return @(Get-PnPEntraIDGroupMember -Identity $GroupId -ErrorAction Stop)
+    }
+}
+
 function Get-AgentUserScope {
     param(
         [string]$GroupId,
@@ -285,12 +458,7 @@ function Get-AgentUserScope {
 
     if ($GroupId) {
         try {
-            try {
-                $groupMembers = Get-PnPEntraIDGroupMember -Identity $GroupId
-            } catch [System.Management.Automation.CommandNotFoundException] {
-                # Fallback for PnP.PowerShell 2.x
-                $groupMembers = Get-PnPAzureADGroupMember -Identity $GroupId
-            }
+            $groupMembers = Get-EntraGroupMembersForScope -GroupId $GroupId
             foreach ($member in $groupMembers) {
                 if ($member.UserPrincipalName) {
                     [void]$scope.Add($member.UserPrincipalName)
@@ -460,18 +628,14 @@ function Get-ItemPermissionDetails {
                         }
                     }
                     elseif ($member.PrincipalType -eq "SecurityGroup" -or $member.PrincipalType -eq "FederatedUser") {
-                        # Entra ID security group assigned directly. Resolve direct members
-                        # only (nested groups not resolved — known limitation).
+                        # Entra ID security group assigned directly. PnP.PowerShell 3.x
+                        # resolves transitive members; PnP 2.x fallback is direct-only.
                         $groupId = $null
                         if ($memberLoginName -match "c:0[ot]\.t\|tenant\|([0-9a-f\-]{36})") { $groupId = $Matches[1] }
                         if ($groupId) {
                             try {
                                 $grpMembers = $null
-                                try {
-                                    $grpMembers = Get-PnPEntraIDGroupMember -Identity $groupId -ErrorAction Stop
-                                } catch [System.Management.Automation.CommandNotFoundException] {
-                                    $grpMembers = Get-PnPAzureADGroupMember -Identity $groupId -ErrorAction Stop
-                                }
+                                $grpMembers = Get-EntraGroupMembersForScope -GroupId $groupId
                                 $allInScope = $true
                                 foreach ($gm in $grpMembers) {
                                     if ($gm.UserPrincipalName -and -not $AgentUserScope.Contains($gm.UserPrincipalName)) {
@@ -551,7 +715,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.1.0                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.1.1                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -574,9 +738,24 @@ try {
 
     # Detect PnP.PowerShell version once before scanning
     $pnpModule = Get-Module PnP.PowerShell -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
-    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and -not $ClientId) {
-        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. The -ClientId parameter is required for PnP.PowerShell 3.x (the multi-tenant app was removed in Sept 2024). Use Register-PnPEntraIDApp to create a tenant-specific app registration." "ERROR"
-        throw "PnP.PowerShell 3.x requires -ClientId. See docs/prerequisites.md for setup instructions."
+    if ($pnpModule -and $pnpModule.Version.Major -ge 3 -and
+        $AuthenticationMode -eq "Interactive" -and -not $ClientId -and
+        -not $env:ENTRAID_CLIENT_ID -and -not $env:ENTRAID_APP_ID) {
+        Write-AuditLog "PnP.PowerShell $($pnpModule.Version) detected. Interactive authentication requires -ClientId or an ENTRAID_CLIENT_ID / ENTRAID_APP_ID environment variable. Use Register-PnPEntraIDAppForInteractiveLogin to create a tenant-specific app registration." "ERROR"
+        throw "PnP.PowerShell 3.x interactive authentication requires a tenant-specific client ID. See docs/prerequisites.md for setup instructions."
+    }
+
+    $authOptions = @{
+        Mode                           = $AuthenticationMode
+        ClientId                       = $ClientId
+        Tenant                         = $Tenant
+        ManagedIdentityClientId        = $ManagedIdentityClientId
+        ManagedIdentityObjectId        = $ManagedIdentityObjectId
+        ManagedIdentityAzureResourceId = $ManagedIdentityAzureResourceId
+        CertificateThumbprint          = $CertificateThumbprint
+        CertificatePath                = $CertificatePath
+        CertificateBase64Encoded       = $CertificateBase64Encoded
+        CertificatePassword            = $CertificatePassword
     }
 
     # Bootstrap a PnP connection BEFORE resolving the agent user scope. Get-PnPEntraIDGroupMember
@@ -585,9 +764,7 @@ try {
     $bootstrapTarget = $targets | Select-Object -First 1
     if ($bootstrapTarget -and $AgentUserGroupId -and -not $AgentUserGroupMembers) {
         try {
-            $bootstrapParams = @{ Url = $bootstrapTarget.SiteUrl; Interactive = $true }
-            if ($ClientId) { $bootstrapParams['ClientId'] = $ClientId }
-            Connect-PnPOnline @bootstrapParams -ErrorAction Stop
+            Connect-KnowledgeSourceScanner -Url $bootstrapTarget.SiteUrl @authOptions
             Write-AuditLog "Bootstrap connection established for scope resolution" "SUCCESS"
         } catch {
             Write-AuditLog "Bootstrap connection failed; agent user scope cannot be resolved from -AgentUserGroupId: $($_.Exception.Message)" "WARN"
@@ -628,9 +805,7 @@ try {
 
         if ($PSCmdlet.ShouldProcess("$($target.SiteUrl)/$($target.LibraryName)", "Scan item permissions")) {
             try {
-                $connectParams = @{ Url = $target.SiteUrl; Interactive = $true }
-                if ($ClientId) { $connectParams['ClientId'] = $ClientId }
-                Connect-PnPOnline @connectParams -ErrorAction Stop
+                Connect-KnowledgeSourceScanner -Url $target.SiteUrl @authOptions
                 Write-AuditLog "Connected to $($target.SiteUrl)" "SUCCESS"
 
                 $items = Get-PnPListItem -List $target.LibraryName `

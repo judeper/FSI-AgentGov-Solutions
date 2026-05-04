@@ -107,11 +107,11 @@
     "agent-knowledge-source-scanner": {
       "id": "agent-knowledge-source-scanner",
       "name": "Agent Knowledge Source Scanner",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "content-data",
       "tier": "2",
       "status": "live",
-      "description": "Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.",
+      "description": "Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-knowledge-source-scanner/",
       "controls": [
         "4.3",
