@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ValidateMimeTypePlugin
+    FSI Agent Governance — Zone 3 Server-Side MIME Validation Plugin
+
+    SDK-style csproj targeting .NET Framework 4.6.2, the platform supported
+    by Microsoft Dataverse plugin sandbox isolation as of Dataverse SDK 9.0.
+
+    CI build:           dotnet build -c Release
+    Production build:   dotnet build -c Release -p:SignAssembly=true \
+                                   -p:AssemblyOriginatorKeyFile=<path-to-snk>
+                        (followed by an ILRepack step — see docs/build-and-sign.md)
+
+    Issue #38: introduces this csproj so the plugin can be built in CI,
+    analyzed by CodeQL, and shipped as a signed binary in release.yml.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RootNamespace>FsiAgentGovernance.Plugins</RootNamespace>
+    <AssemblyName>FsiAgentGovernance.Plugins</AssemblyName>
+    <LangVersion>8.0</LangVersion>
+
+    <!-- Dataverse plugin guidance:
+         * Plugins must be strong-name signed for sandbox isolation.
+         * In CI we build unsigned (validate compilability + CodeQL); the
+           release workflow signs the assembly when PLUGIN_SNK_BASE64 is
+           available. Customers who build locally provide their own .snk. -->
+    <SignAssembly>false</SignAssembly>
+    <DelaySign>false</DelaySign>
+
+    <!-- Reproducible build: deterministic outputs + continuous integration
+         flag set when running under GitHub Actions / Azure DevOps. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Dataverse sandbox isolation only loads GAC-resident assemblies, so
+         every transitive dependency must be merged into the plugin DLL.
+         Disable per-package deps.json emission to keep ILRepack inputs
+         predictable. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+
+    <!-- Quality gates for the plugin source. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>NU1701</NoWarn> <!-- Microsoft.CrmSdk targets older NuGet metadata -->
+    <Nullable>disable</Nullable>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Title>FSI Agent Governance — MIME Validation Plugin</Title>
+    <Description>Dataverse pre-validation plugin enforcing MIME type allow/deny rules for annotation (Note) attachments in Copilot Studio agent file upload scenarios. See FSI-AgentGov-Solutions/mime-type-restrictions/.</Description>
+    <Authors>FSI Agent Governance contributors</Authors>
+    <Copyright>Copyright (c) FSI Agent Governance contributors</Copyright>
+    <RepositoryUrl>https://github.com/judeper/FSI-AgentGov-Solutions</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft Dataverse plugin SDK. The 9.0.2.x range targets net462 and
+         provides Microsoft.Xrm.Sdk + Microsoft.Crm.Sdk.Proxy used by the
+         IPlugin implementation in ValidateMimeTypePlugin.cs. -->
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.60" />
+
+    <!-- System.Text.Json is used to parse the mime-config.json payload from
+         the environment variable. ILRepack merges this DLL into the plugin
+         output for sandbox isolation. -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+
+    <!-- ILRepack is invoked manually after build (see docs/build-and-sign.md)
+         rather than as a PackageReference so the merge step is explicit and
+         scriptable from CI. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System.IO.Compression provides ZipArchive used for OpenXML inspection.
+         It is part of the .NET Framework reference assemblies, not a NuGet
+         package. -->
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+</Project>

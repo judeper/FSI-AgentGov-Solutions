@@ -1,0 +1,70 @@
+name: ci-dotnet
+
+# Builds the FSI Agent Governance Dataverse plugin on every push and PR
+# that touches the C# source or the csproj. Soft-gate while baseline cleanup
+# lands; flip `continue-on-error: false` once the build is green for one
+# release cycle.
+#
+# Issue #38: introduces this workflow so the MIME validation plugin can be
+# compiled in CI alongside the rest of the repo's quality gates.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mime-type-restrictions/src/**"
+      - ".github/workflows/ci-dotnet.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mime-type-restrictions/src/**"
+      - ".github/workflows/ci-dotnet.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: dotnet build (${{ matrix.config }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Restore packages
+        working-directory: mime-type-restrictions/src
+        run: dotnet restore ValidateMimeTypePlugin.csproj
+
+      - name: Build
+        working-directory: mime-type-restrictions/src
+        # Soft-gate: do not block PRs while baseline warnings clear up.
+        # Flip to `set -e` (or remove `continue-on-error`) once green.
+        continue-on-error: true
+        run: |
+          dotnet build ValidateMimeTypePlugin.csproj `
+            --configuration ${{ matrix.config }} `
+            --no-restore `
+            --nologo `
+            /p:TreatWarningsAsErrors=true
+
+      - name: Upload build output
+        if: always() && matrix.config == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ValidateMimeTypePlugin-${{ matrix.config }}
+          path: |
+            mime-type-restrictions/src/bin/${{ matrix.config }}/net462/FsiAgentGovernance.Plugins.dll
+            mime-type-restrictions/src/bin/${{ matrix.config }}/net462/FsiAgentGovernance.Plugins.pdb
+          if-no-files-found: warn
+          retention-days: 14

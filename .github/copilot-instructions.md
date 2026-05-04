@@ -41,7 +41,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | inactivity-timeout-enforcement | v1.1.0 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
 | message-center-monitor | v2.5.0 | 2.3 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
-| mime-type-restrictions | v1.1.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
+| mime-type-restrictions | v1.2.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.2.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.2.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.2.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |

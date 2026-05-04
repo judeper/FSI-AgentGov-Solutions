@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - **`RELEASING.md`** (new) — maintainer-facing release procedure, schema evolution policy, and the Issue #37 schema 1.5.0 unblock steps. Documents the four-stage process: (1) product-team review of the 35 inferred zone backfills, (2) sentinel-comment removal, (3) coordinated PRs with `judeper/fsi-agentgov` to make `zones` required, (4) issue closure. Includes rollback procedure.
 - **`DEPLOYMENT-GUIDE.md`** — Related Documentation section now links to `RELEASING.md`.
+- **`.github/workflows/ci-dotnet.yml`** (new) — Debug + Release builds of the FSI MIME validation plugin on `windows-latest` for every push/PR touching `mime-type-restrictions/src/**`. Soft-gate while baseline cleanup lands (Issue #38).
+- **`mime-type-restrictions/src/ValidateMimeTypePlugin.csproj`** (new) — SDK-style csproj targeting net462 with explicit `Microsoft.CrmSdk.CoreAssemblies` 9.0.2.60 and `System.Text.Json` 8.0.5 package references. Supports unsigned CI builds and strong-name-signed local production builds (Issue #38).
+- **`mime-type-restrictions/src/.gitignore`** (new) — excludes build outputs (`bin/`, `obj/`), strong-name keys (`*.snk`), and cosign signing artifacts.
+- **`mime-type-restrictions/docs/build-and-sign.md`** (new) — full build / sign / verify guide. Covers local CI parity build, local production build (strong-name + ILRepack merge), customer verification of published DLL via SHA-256 + cosign Sigstore bundle + GitHub build provenance attestation.
 
 ### Changed — BREAKING (per-solution)
 - **`conditional-access-automation` v1.2.2 → v2.0.0** — CAA Dataverse schema renamed from underscored snake_case SchemaNames to single-word PascalCase (Issue #36). Customers must drop and recreate the three CAA tables before upgrading. See `conditional-access-automation/CHANGELOG.md` for migration steps. The OData lint workflow (`.github/workflows/odata-lint.yml`) is now `--strict` and the soft-gate is removed.
@@ -18,6 +22,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed — CI / release ops
 - **`.github/workflows/health-check.yml`** — `LATEST_TAG` is now auto-derived via `gh api repos/.../releases/latest --jq .tag_name` (Issue #39). The previous hardcoded `LATEST_TAG: v1.4.1` env value has been replaced by a "Resolve latest release tag" step. Maintainers no longer need to bump the workflow manually after each release. Fails loudly if no release exists.
+- **`.github/workflows/codeql.yml`** — added `csharp` to the language matrix. C# analysis now runs on `windows-latest`, restores packages, and builds the plugin before invoking CodeQL. Python analysis remains on `ubuntu-latest` (Issue #38).
+- **`.github/workflows/release.yml`** — new `build-plugin` job that compiles, hashes, **cosign keyless signs** (Sigstore OIDC), and attests the FSI MIME validation plugin DLL on every tagged release. The signed DLL + SHA-256 + signature + certificate + Sigstore bundle are attached to the GitHub Release alongside the existing source tarball + SBOMs + attestation (Issue #38).
+- **`mime-type-restrictions` v1.1.0 → v1.2.0** — version bump for the new CI / release surface (no plugin behavior change).
 - **`DEPLOYMENT-GUIDE.md`** — added "Post-Release Operations" section documenting the auto-derive mechanism + recommended post-release checklist.
 - Doc references in `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` updated to reflect the auto-derive behavior.
 
