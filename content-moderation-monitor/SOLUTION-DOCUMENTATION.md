@@ -1,7 +1,7 @@
 # Monitoring AI Agent Content Moderation Compliance
 ## Content Moderation Monitor
 
-**Version:** 1.0.3
+**Version:** 1.1.1
 **Solution Type:** Automated Per-Agent Validation + Drift Detection
 **Platform:** PowerShell + Power Automate + Dataverse
 
@@ -15,8 +15,8 @@ Copilot Studio agents with insufficient content moderation settings create signi
 
 **Risk Exposure:**
 - **Customer Harm:** Low-moderation customer-facing agents may generate offensive or harmful content
-- **Compliance Violations:** Insufficient content controls violate supervisory requirements (FINRA 3110, SOX 404, GLBA 501(b))
-- **Reputation Damage:** Inappropriate AI-generated responses damage brand trust and customer relationships
+- **Compliance Risk:** Insufficient content controls can conflict with supervisory requirements (FINRA 3110, SOX 404, GLBA 501(b))
+- **Reputation Risk:** Inappropriate AI-generated responses can damage brand trust and customer relationships
 - **Regulatory Examinations:** Missing content moderation evidence creates audit findings
 - **Inconsistent Governance:** Some agents properly configured while others remain unmoderated
 
@@ -34,10 +34,10 @@ The **Content Moderation Monitor** provides automated per-agent validation of co
 - **Evidence Export:** SHA-256 integrity-hashed JSON evidence for audit examinations
 
 **Business Value:**
-- Help ensure consistent content moderation across all AI agents (100% coverage)
+- Support consistent content moderation checks across all AI agents (100% coverage target)
 - Detect and remediate High/Critical violations within 24 hours (daily scans)
 - Support regulatory examinations with automated compliance evidence
-- Prevent customer-facing agents from operating with insufficient content controls
+- Reduce the risk of customer-facing agents operating with insufficient content controls
 - Enable zone-based risk management with tailored moderation requirements
 
 ---
@@ -93,7 +93,7 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 |------|-------------|-------------------|-----------|
 | **Zone 1** | Personal Productivity | Medium | Baseline content protection for individual use |
 | **Zone 2** | Team Collaboration | High | Shared agents require stronger content controls |
-| **Zone 3** | Enterprise Managed | High | Customer-facing agents require maximum protection |
+| **Zone 3** | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
 
 ### Violation Severity Matrix
 
@@ -129,8 +129,8 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 
 3. **Per-Agent Moderation Level Extraction:**
    - Parse agent JSON configuration (`bot.configuration` field)
-   - Extract content moderation by probing the keys `ContentModeration`, `contentModeration`, `ContentModerationSetting`, and `contentModerationSetting` (case-insensitive); the value may be either a simple string (`"Low"`/`"Medium"`/`"High"`) or an object with a `level` property
-   - Normalize values: `"Low"`, `"Medium"`, `"High"`, or `"Unknown"`
+   - Extract content moderation by probing the keys `ContentModeration`, `contentModeration`, `ContentModerationSetting`, and `contentModerationSetting` (case-insensitive); the value may be either a simple string (`"Lowest"`/`"Low"`/`"Medium"`/`"High"`/`"Highest"`) or an object with a `level` property
+   - Normalize values to CMM's canonical scale: `"Low"`, `"Medium"`, `"High"`, or `"Unknown"`
    - **Best-effort heuristic.** Copilot Studio does not currently expose a documented public moderation field; if the underlying key name changes in a future Copilot Studio release, agents will normalize to `"Unknown"`. Treat scans where every agent resolves to `Unknown` as **unverified**, not compliant.
 
 4. **Zone Classification:**
@@ -271,7 +271,7 @@ Test-ContentModerationCompliance -OutputFormat Json | Out-File violations.json
   "metadata": {
     "exportedAt": "2026-02-14T15:30:00Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.0.3",
+    "solutionVersion": "1.1.1",
     "fromDate": "2025-11-14T00:00:00Z",
     "toDate": "2026-02-14T15:30:00Z",
     "runId": null,
@@ -425,7 +425,7 @@ Purpose: Per-agent moderation level snapshots for drift detection (one active ba
 **PowerShell Modules:**
 - `Microsoft.PowerApps.Administration.PowerShell` (2.0+)
 - `Az.Accounts` (2.0+) — For Dataverse authentication
-- `MSAL.PS` (4.37+) — For service principal authentication
+- `MSAL.PS` (4.37+) — For interactive/certificate authentication in legacy runbooks; prefer managed identity or workload identity for hosted automation when available
 
 **Permissions:**
 
@@ -440,9 +440,9 @@ Purpose: Per-agent moderation level snapshots for drift detection (one active ba
 **Step 1: Install PowerShell Modules**
 
 ```powershell
-Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force
-Install-Module -Name Az.Accounts -Force
-Install-Module -Name MSAL.PS -Force
+Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force -Scope CurrentUser
+Install-Module -Name Az.Accounts -Force -Scope CurrentUser
+Install-Module -Name MSAL.PS -RequiredVersion 4.37.0 -Force -Scope CurrentUser
 ```
 
 **Step 2: Connect to Power Platform**
@@ -591,7 +591,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 **Requirement:** Management must establish and maintain adequate internal controls, including IT controls for content validation.
 
 **Solution Support:**
-- Automated daily validation helps maintain content moderation controls effective
+- Automated daily validation helps maintain evidence that content moderation controls remain configured as expected
 - Drift detection identifies when controls are weakened (High → Low)
 - Evidence export provides audit trail of control effectiveness
 
@@ -600,7 +600,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 **Requirement:** Financial institutions must implement administrative, technical, and physical safeguards to protect customer information.
 
 **Solution Support:**
-- Content moderation prevents inappropriate disclosures via AI agents
+- Content moderation helps reduce inappropriate disclosure risk via AI agents
 - Zone-based requirements align with data sensitivity (customer data = Zone 3 = High moderation)
 - Monitoring helps maintain active safeguards
 
@@ -608,7 +608,7 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.3
+**Solution Version:** 1.1.1
 **Release Date:** February 2026
 **License:** MIT License
 

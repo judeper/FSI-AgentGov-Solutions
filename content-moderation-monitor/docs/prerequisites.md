@@ -44,14 +44,17 @@ To query bot records, the executing identity needs read access to the `bot` and 
 | System Administrator or System Customizer | Target environments | Read bot table records |
 | Dataverse User | Governance environment | Write validation results (Phase 2+) |
 
-### Service Principal (Automated Scans)
+### Automation Identity (Managed Identity First)
 
-For non-interactive automation:
+For non-interactive automation, use the strongest identity available in this order:
 
-1. Register an app in Entra ID
-2. Create a client secret or certificate
-3. Add the app as an application user in each Dataverse environment
-4. Grant appropriate security roles
+1. System-assigned managed identity for Azure Automation or Azure-hosted runners.
+2. User-assigned managed identity when the same identity must be shared across resources.
+3. Workload identity federation for GitHub Actions or other CI/CD runners.
+4. Certificate-based app registration when managed identity or federation is not available.
+5. Client secret only as a legacy development fallback — `# legacy: dev-only — replace with managed identity in production`.
+
+Add the automation identity as an application user in each Dataverse environment and grant the least-privilege security roles required for bot reads and CMM evidence writes.
 
 ## Network Requirements
 

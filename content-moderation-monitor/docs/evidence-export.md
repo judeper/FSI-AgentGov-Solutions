@@ -11,8 +11,8 @@ The Content Moderation Monitor produces JSON evidence files containing validatio
 ## Prerequisites
 
 - Dataverse deployed with CMM schema and at least one validation scan completed
-- PowerShell 7.0+
-- MSAL.PS module for authentication: `Install-Module MSAL.PS -Scope CurrentUser`
+- PowerShell 7.2+
+- MSAL.PS module for legacy interactive/certificate authentication: `Install-Module MSAL.PS -RequiredVersion 4.37.0 -Scope CurrentUser`
 - Dataverse read permissions for `fsi_moderationvalidationhistory`, `fsi_moderationviolations`, and `fsi_moderationbaselines`
 
 ---
@@ -31,9 +31,9 @@ For ad-hoc exports during investigations or audit preparation:
     -Interactive
 ```
 
-### Service Principal Mode
+### Certificate-Based App Mode
 
-For automated or scheduled exports:
+For automated or scheduled exports when managed identity or workload identity federation is not available:
 
 ```powershell
 .\scripts\Export-ContentModerationEvidence.ps1 `
@@ -177,7 +177,7 @@ sha256sum -c exports/cmm-evidence-All-20260210-143022.json.sha256
   "metadata": {
     "exportedAt": "2026-02-10T14:30:22Z",
     "solution": "Content Moderation Governance Monitor",
-    "solutionVersion": "1.1.0",
+    "solutionVersion": "1.1.1",
     "fromDate": "2026-01-11T00:00:00Z",
     "toDate": "2026-02-10T14:30:22Z",
     "runId": null,
@@ -270,4 +270,4 @@ For quarterly regulatory preparation, include baselines (`-IncludeBaselines`) to
 
 ---
 
-*Content Moderation Governance Monitor — Evidence Export Guide v1.1.0*
+*Content Moderation Governance Monitor — Evidence Export Guide v1.1.1*

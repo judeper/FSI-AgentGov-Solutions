@@ -165,7 +165,7 @@ def main() -> None:
             "  python deploy.py --interactive\n\n"
             "  # Dry run (preview all changes)\n"
             "  python deploy.py --dry-run --interactive\n\n"
-            "  # Deploy only tables with service principal\n"
+            "  # Deploy only tables with legacy client-secret service principal (dev only)\n"
             "  python deploy.py --tables-only \\\n"
             "    --tenant-id $CMM_TENANT_ID \\\n"
             "    --client-id $CMM_CLIENT_ID \\\n"
@@ -177,8 +177,8 @@ def main() -> None:
             "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
             "  CMM_TENANT_ID        Microsoft Entra ID tenant ID\n"
-            "  CMM_CLIENT_ID        Service principal app ID\n"
-            "  CMM_CLIENT_SECRET    Service principal secret\n"
+            "  CMM_CLIENT_ID        Service principal app ID for legacy client-secret fallback\n"
+            "  CMM_CLIENT_SECRET    Service principal secret (legacy dev-only fallback)\n"
             "  CMM_ENVIRONMENT_URL  Dataverse environment URL\n"
         ),
     )
@@ -192,12 +192,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("CMM_CLIENT_ID"),
-        help="Service principal app ID (or set CMM_CLIENT_ID env var)",
+        help="Service principal app ID for legacy client-secret fallback (or set CMM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CMM_CLIENT_SECRET"),
-        help="[DEPRECATED: use CMM_CLIENT_SECRET env var instead] Service principal secret",
+        help="[DEPRECATED: legacy dev-only fallback; prefer managed identity or workload identity] Service principal secret",
     )
     parser.add_argument(
         "--environment-url",
