@@ -232,4 +232,5 @@ The table below maps each solution to the governance zones (Personal / Team / En
 - [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov) — Full framework documentation
 - [SECURITY.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/SECURITY.md) — Vulnerability disclosure and supported versions
 - [THREAT-MODEL.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/THREAT-MODEL.md) — Cross-solution threat model and trust boundaries
+- [RELEASING.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/RELEASING.md) — Maintainer release procedure, schema evolution policy, and Issue #37 unblock steps
 
