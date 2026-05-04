@@ -134,7 +134,7 @@ if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name 
             ModerationCompliant     = $false
             Severity                = 'Medium'
             ViolationType           = 'Unknown_Zone_FileUploadEnabled'
-            RegulatoryContext       = 'FINRA 4511 — File upload enabled on agent in unclassified environment; zone classification required for governance policy enforcement'
+            RegulatoryContext       = 'FINRA 4511 — File upload enabled on agent in unclassified environment; zone classification required for governance policy validation'
         }
     }
 

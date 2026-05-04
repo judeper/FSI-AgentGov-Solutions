@@ -15,12 +15,19 @@ from typing import Any, Optional
 try:
     import msal
     import requests
+    from azure.identity import (
+        AzureCliCredential,
+        AzurePowerShellCredential,
+        ChainedTokenCredential,
+        ManagedIdentityCredential,
+        WorkloadIdentityCredential,
+    )
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
 except ImportError:
     print(
         "ERROR: Required packages missing. Install with:\n"
-        "  pip install msal requests\n"
+        "  pip install msal requests azure-identity\n"
         "  -- or --\n"
         "  pip install -r requirements.txt",
         file=sys.stderr,
@@ -41,6 +48,7 @@ class FUSClient:
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        managed_identity_client_id: Optional[str] = None,
     ):
         self.tenant_id = tenant_id
         self.environment_url = environment_url.rstrip("/")
@@ -49,6 +57,9 @@ class FUSClient:
         self.client_secret = client_secret
         self.interactive = interactive
         self.dry_run = dry_run
+        self.managed_identity_client_id = managed_identity_client_id or os.environ.get(
+            "FUS_MANAGED_IDENTITY_CLIENT_ID"
+        )
         self._token: Optional[str] = None
         self._token_expires: float = 0
         self._session = requests.Session()
@@ -56,14 +67,50 @@ class FUSClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
 
+    def _get_azure_identity_token(self, scope: str) -> str:
+        """Acquire a token using managed identity, workload identity, or local dev credentials."""
+        credentials = []
+        if self.managed_identity_client_id:
+            credentials.append(
+                ManagedIdentityCredential(client_id=self.managed_identity_client_id)
+            )
+        else:
+            credentials.append(ManagedIdentityCredential())
+
+        workload_token_file = os.environ.get("AZURE_FEDERATED_TOKEN_FILE")
+        workload_client_id = os.environ.get("AZURE_CLIENT_ID") or self.client_id
+        workload_tenant_id = os.environ.get("AZURE_TENANT_ID") or self.tenant_id
+        if workload_token_file and workload_client_id and workload_tenant_id:
+            credentials.append(
+                WorkloadIdentityCredential(
+                    tenant_id=workload_tenant_id,
+                    client_id=workload_client_id,
+                    token_file_path=workload_token_file,
+                )
+            )
+
+        credentials.extend([AzurePowerShellCredential(), AzureCliCredential()])
+        token = ChainedTokenCredential(*credentials).get_token(scope)
+        self._token = token.token
+        self._token_expires = token.expires_on
+        return self._token
+
     def _get_token(self) -> str:
         """Acquire or refresh OAuth2 token."""
         now = time.time()
         if self._token and now < self._token_expires - 300:
             return self._token
 
+        scope = f"{self.environment_url}/.default"
+
+        if not self.interactive and not self.client_secret:
+            return self._get_azure_identity_token(scope)
+
+        if not self.tenant_id:
+            raise ValueError("tenant_id is required for MSAL authentication")
+
         authority = f"https://login.microsoftonline.com/{self.tenant_id}"
-        scope = [f"{self.environment_url}/.default"]
+        msal_scope = [scope]
 
         if self.interactive:
             if not self.client_id:
@@ -74,18 +121,19 @@ class FUSClient:
                 self.client_id,
                 authority=authority,
             )
-            result = app.acquire_token_interactive(scopes=scope)
+            result = app.acquire_token_interactive(scopes=msal_scope)
         else:
-            if not self.client_id or not self.client_secret:
+            if not self.client_id:
                 raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
+                    "client_id is required when using legacy client secret auth"
                 )
+            # legacy: dev-only — replace with managed identity in production
             app = msal.ConfidentialClientApplication(
                 self.client_id,
                 authority=authority,
                 client_credential=self.client_secret,
             )
-            result = app.acquire_token_for_client(scopes=scope)
+            result = app.acquire_token_for_client(scopes=msal_scope)
 
         if "access_token" not in result:
             error = result.get("error_description", result.get("error", "Unknown"))

@@ -2,6 +2,14 @@
 
 All notable changes to the File Upload Security Configurator will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Bumped target version to 1.1.1 for the Microsoft Learn 2026-Q2 refresh.
+- Updated Copilot Studio file-input limits, channel caveats, Dataverse MIME controls, Graph attachment guidance, Defender for Cloud Apps scope, and Purview DLP limitations.
+- Added managed-identity-first Python Dataverse authentication with workload identity and local developer credential fallback; client-secret auth is retained only as a legacy development fallback.
+
 ## [1.1.0] — 2026-04-17
 
 AI Council technical-accuracy review (Claude Opus 4.7 + Goldeneye). Bug fixes, regulatory-language corrections, and runtime hardening; existing column writes are preserved (non-breaking).

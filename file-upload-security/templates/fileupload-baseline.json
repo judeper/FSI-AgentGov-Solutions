@@ -1,16 +1,16 @@
 {
     "metadata": {
         "solution": "file-upload-security",
-        "version": "1.0.2",
+        "version": "1.1.1",
         "description": "Zone-specific file upload governance policies for Copilot Studio agents",
-        "lastUpdated": "2026-02-10"
+        "lastUpdated": "2026-05-04"
     },
     "zoneRequirements": {
         "Zone 1": {
             "fileUploadAllowed": true,
             "requiresApproval": false,
             "minimumModerationLevel": "Low",
-            "description": "Personal Productivity — file upload at maker discretion; moderation recommended but only enforced when absent"
+            "description": "Personal Productivity — file upload at maker discretion; moderation recommended and checked when absent"
         },
         "Zone 2": {
             "fileUploadAllowed": true,
@@ -58,10 +58,11 @@
         }
     },
     "supportedFileTypes": {
-        "note": "Platform-level restriction — not configurable per agent",
+        "note": "Copilot Studio platform-level user-upload restrictions — not configurable per agent",
         "images": {
-            "types": ["JPG", "PNG", "WebP", "GIF"],
-            "maxSize": "15 MB"
+            "types": ["JPG", "PNG", "WebP", "nonanimated GIF"],
+            "maxSize": "15 MB",
+            "directLineMaxSize": "4 MB"
         },
         "documents": {
             "types": ["PDF"],
@@ -70,6 +71,17 @@
         "text": {
             "types": ["TXT", "CSV"],
             "maxSize": "180 KB"
-        }
+        },
+        "channelCaveats": [
+            "SharePoint channel agents do not support user file uploads",
+            "CMK-enabled Copilot Studio environments allow file input but do not process uploaded files"
+        ]
+    },
+    "dataverseMimeControls": {
+        "note": "Environment-level server-side controls that complement per-agent file-upload validation",
+        "extensionBlockListColumn": "organization.blockedattachments",
+        "blockedMimeTypesColumn": "organization.blockedmimetypes",
+        "allowedMimeTypesColumn": "organization.allowedmimetypes",
+        "precedence": "When allowedmimetypes is populated, blockedmimetypes is ignored"
     }
 }
