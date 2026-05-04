@@ -15,8 +15,8 @@ Quick deployment checklist for the Pipeline Governance Cleanup solution.
 - [ ] Confirm Power Platform Admin role assigned
 - [ ] **[MANUAL]** Install Power Platform Pipelines app on host environment
 - [ ] **[MANUAL]** Verify Deployment Pipeline Configuration app is accessible
-- [ ] **[MANUAL]** Verify pipelines host is a Managed Environment
-- [ ] **[MANUAL]** Verify target environments are Managed Environments (required starting Feb 2026)
+- [ ] **[MANUAL]** Verify pipelines host is a dedicated Dataverse environment (Production recommended)
+- [ ] **[MANUAL]** Verify target environments are Managed Environments (Microsoft starts enabling unmanaged pipeline targets in Feb 2026)
 - [ ] Install Power Platform CLI (`pac`): [Download](https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction)
 - [ ] Install Microsoft Graph PowerShell SDK: `Install-Module Microsoft.Graph`
 

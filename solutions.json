@@ -801,7 +801,7 @@
     "pipeline-governance-cleanup": {
       "id": "pipeline-governance-cleanup",
       "name": "Pipeline Governance Cleanup",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",

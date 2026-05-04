@@ -10,7 +10,7 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 
 | Capability | Method | Documentation |
 |------------|--------|---------------|
-| List all environments | PowerShell + PAC CLI | [scripts/Get-PipelineInventory.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Get-PipelineInventory.ps1) |
+| List all environments | PowerShell + PAC CLI, or `Get-AdminPowerAppEnvironment` for admin inventory | [scripts/Get-PipelineInventory.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Get-PipelineInventory.ps1) |
 | Detect pipeline presence | PowerShell + PAC CLI | Use `-ProbePipelines` switch |
 | Send owner notifications | PowerShell + Microsoft Graph | [scripts/Send-OwnerNotifications.ps1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/pipeline-governance-cleanup/scripts/Send-OwnerNotifications.ps1) |
 | Monitor deployment events | Power Automate triggers | This document (below) |
@@ -22,7 +22,7 @@ This guide covers what CAN be automated for pipeline governance - and what canno
 |------------|--------|-------------|
 | Query DeploymentPipeline table | System table not exposed to "List rows" action | Use pipeline triggers only |
 | Identify host associations | No API returns pipeline-to-host mapping | Manual verification in admin portal |
-| Force-link environments | No API or CLI command exists | [Portal Walkthrough](./portal-walkthrough.md) |
+| Force-link environments | No Learn-documented API, CLI command, or Microsoft.PowerApps.Administration.PowerShell cmdlet exists | [Portal Walkthrough](./portal-walkthrough.md) |
 | Deactivate pipelines directly | Requires host environment access | Manual action in maker portal |
 
 See [Limitations](./limitations.md) for technical details.
@@ -136,62 +136,60 @@ Sends governance notification emails to environment/pipeline owners.
 
 ---
 
-## Service Principal Setup for Unattended Automation
+## Authentication for Unattended Automation
 
-For fully automated notification workflows (e.g., scheduled Azure Automation runbooks), configure an Entra ID app registration with application permissions.
+Use the strongest authentication pattern available in the runtime that hosts the automation. Microsoft Learn documents `pac auth create --managedIdentity` for Azure Identity-capable environments and federation switches for GitHub/Azure DevOps service-principal auth.
 
-### Prerequisites
+### Authentication priority
 
-- Entra Global Admin or Application Administrator role
-- Certificate (recommended) or client secret for authentication
+| Priority | Pattern | When to use |
+|----------|---------|-------------|
+| 1 | Managed identity | Azure Automation, Azure VM, Azure Functions, or other Azure-hosted automation |
+| 2 | Workload identity federation | GitHub Actions or Azure DevOps automation without stored secrets |
+| 3 | Certificate-backed app registration | Scheduled jobs where managed identity or federation is unavailable |
+| 4 | Device-code or interactive sign-in | One-off administrator workstation runs |
+| 5 | Client secret | Legacy dev-only fallback — replace with managed identity in production |
 
-### Step 1: Create App Registration
-
-1. Navigate to [Azure Portal](https://portal.azure.com) > **Microsoft Entra ID** > **App registrations**
-2. Click **New registration**
-3. Configure:
-   - **Name:** `Pipeline-Governance-Notifications`
-   - **Supported account types:** Single tenant (this organization only)
-   - **Redirect URI:** Leave blank (not needed for daemon apps)
-4. Click **Register**
-5. Note the **Application (client) ID** and **Directory (tenant) ID**
-
-### Step 2: Configure API Permissions
-
-1. In your app registration, click **API permissions**
-2. Click **Add a permission** > **Microsoft Graph**
-3. Select **Application permissions** (not delegated)
-4. Add these permissions:
-   - `Mail.Send` - Send mail as any user
-5. Click **Add permissions**
-6. Click **Grant admin consent for [your tenant]**
-7. Verify status shows green checkmarks
-
-### Step 3: Create Certificate or Secret
-
-**Option A: Certificate (Security Best Practice)**
-
-1. Go to **Certificates & secrets** > **Certificates** tab
-2. Click **Upload certificate**
-3. Upload a certificate from your organization's PKI (or self-signed for dev/test)
-4. Note the **Thumbprint** value
-
-**Option B: Client Secret (Development Only)**
-
-1. Go to **Certificates & secrets** > **Client secrets** tab
-2. Click **New client secret**
-3. Set expiration (recommend 90 days maximum)
-4. Note the **Value** immediately (it won't be shown again)
-
-> **Security Note:** Client secrets are less secure than certificates and must be rotated frequently. For production FSI environments, use certificates aligned with your organization's PKI policy.
-
-### Step 4: Run Script with Application Permissions
+### Option A: Managed identity (preferred)
 
 ```powershell
-# Connect with certificate authentication
+# PAC CLI uses DefaultAzureCredential when --managedIdentity is provided.
+pac auth create --managedIdentity --environment <host-environment-id>
+
+# For a user-assigned managed identity, set AZURE_CLIENT_ID to the identity client ID first.
+$env:AZURE_CLIENT_ID = "00000000-0000-0000-0000-000000000000"
+pac auth create --managedIdentity --environment <host-environment-id>
+
+# Microsoft Graph PowerShell supports managed identity in Azure-hosted automation.
+Connect-MgGraph -Identity
+```
+
+Grant the managed identity only the permissions it needs: Power Platform environment access for inventory and `Mail.Send` application permission if it sends notifications.
+
+### Option B: Workload identity federation
+
+Use PAC CLI federation flags for CI/CD where supported:
+
+```powershell
+# GitHub Actions OIDC -> Microsoft Entra app
+pac auth create --githubFederated --applicationId <app-id> --tenant <tenant-id> --environment <host-environment-id>
+
+# Azure DevOps workload identity federation
+pac auth create --azureDevOpsFederated --applicationId <app-id> --tenant <tenant-id> --environment <host-environment-id>
+```
+
+### Option C: Certificate-backed app registration
+
+Use a certificate when managed identity and federation are not available.
+
+1. Create a single-tenant Microsoft Entra app registration.
+2. Grant Microsoft Graph `Mail.Send` application permission and admin consent.
+3. Add the app/service principal to required Power Platform environments if it also runs PAC CLI inventory.
+4. Upload a certificate from your organization's PKI.
+
+```powershell
 Connect-MgGraph -ClientId "your-app-id" -TenantId "your-tenant-id" -CertificateThumbprint "your-thumbprint"
 
-# Run notification script with sender email (required for app permissions)
 .\scripts\Send-OwnerNotifications.ps1 `
     -InputPath ".\reports\non-compliant.csv" `
     -EnforcementDate "2026-03-01" `
@@ -199,25 +197,20 @@ Connect-MgGraph -ClientId "your-app-id" -TenantId "your-tenant-id" -CertificateT
     -SupportEmail "platform-ops@contoso.com"
 ```
 
-### Security Considerations for FSI
+### Option D: Client secret (legacy dev-only)
+
+Client secrets are a development fallback only. Do not prescribe client secrets for production FSI automation; replace them with managed identity, workload federation, or certificate-backed app auth.
+
+### Security considerations for FSI
 
 | Consideration | Recommendation |
 |---------------|----------------|
-| **Conditional Access** | Consider policies to restrict app access by IP range (corporate network only) |
-| **Audit logging** | Enable Microsoft Entra ID sign-in logs for the app registration |
+| **Conditional Access** | Consider policies to restrict app access by workload identity and trusted locations |
+| **Audit logging** | Enable Microsoft Entra ID sign-in logs for the identity used by automation |
 | **Certificate rotation** | Align with organizational PKI policy (typically 1-2 years) |
-| **Secret rotation** | If using secrets, rotate every 90 days maximum |
-| **Documentation** | Document service principal in change management for operational handoff |
-| **Least privilege** | Only grant Mail.Send; do not add unnecessary permissions |
-
-### Azure Automation Integration (Optional)
-
-For scheduled runs via Azure Automation:
-
-1. Upload certificate to Azure Automation account (Certificates blade)
-2. Create runbook with `Connect-MgGraph` using certificate
-3. Schedule runbook for desired frequency
-4. Store CSV input in Azure Blob Storage or SharePoint
+| **Secret rotation** | If a legacy dev-only secret is temporarily used, rotate every 90 days maximum and track removal |
+| **Documentation** | Document managed identities, federated credentials, or app registrations in change management for operational handoff |
+| **Least privilege** | Only grant required permissions such as Mail.Send; do not add broad Graph or Dataverse permissions |
 
 ---
 
@@ -302,12 +295,12 @@ This flow alerts your team when deployments occur.
 
 | Setting | Value |
 |---------|-------|
-| Catalog | Deployment Pipeline |
-| Category | Pipeline Extensibility |
-| Table name | Deployment Stage Run |
+| Catalog | Microsoft Dataverse Common |
+| Category | Power Platform Pipelines |
+| Table name | (None) |
 | Action name | OnDeploymentCompleted |
 
-> **Note:** The trigger names and configuration may vary based on your Dataverse version. If you don't see "Deployment Pipeline" in the catalog, ensure the Power Platform Pipelines app is installed on your host environment.
+> **Note:** Pipeline triggers are available in the pipelines host environment under the Dataverse **When an action is performed** trigger. Approval and pre-deployment events only appear when the corresponding gated extension is enabled. If you don't see **Power Platform Pipelines** as a category, update the Power Platform Pipelines app in the host environment.
 
 #### Step 3: Extract Deployment Information
 
@@ -318,8 +311,8 @@ Add a **Compose** action to capture key information:
 {
   "DeploymentId": "@{triggerOutputs()?['body/OutputParameters/StageRunId']}",
   "DeploymentStatus": "@{triggerOutputs()?['body/OutputParameters/Status']}",
-  "PipelineName": "@{triggerOutputs()?['body/OutputParameters/PipelineName']}",
-  "StageName": "@{triggerOutputs()?['body/OutputParameters/StageName']}",
+  "DeploymentPipelineName": "@{triggerOutputs()?['body/OutputParameters/DeploymentPipelineName']}",
+  "DeploymentStageName": "@{triggerOutputs()?['body/OutputParameters/DeploymentStageName']}",
   "Timestamp": "@{utcNow()}"
 }
 ```
@@ -344,8 +337,8 @@ Add a **Compose** action to capture key information:
 ```
 **Pipeline Deployment Completed**
 
-- **Pipeline:** @{outputs('Compose')?['PipelineName']}
-- **Stage:** @{outputs('Compose')?['StageName']}
+- **Pipeline:** @{outputs('Compose')?['DeploymentPipelineName']}
+- **Stage:** @{outputs('Compose')?['DeploymentStageName']}
 - **Status:** @{outputs('Compose')?['DeploymentStatus']}
 - **Time:** @{outputs('Compose')?['Timestamp']}
 
@@ -368,6 +361,39 @@ You can detect when new pipelines are created by monitoring the first deployment
 4. Add pipeline to tracking list
 
 **Limitation:** This only detects pipelines when they're first used, not when created.
+
+---
+
+## Optional Solution Checker Gate
+
+Use solution checker as a quality gate before approving a pipeline deployment. Microsoft Learn documents `pac solution check` as the current CLI command for uploading a solution package to the Power Apps Checker service, with `Solution Checker` as the default rule set.
+
+### Recommended pattern
+
+1. Add a **Pre-export Step Required** or **Pre-deployment Step Required** gated extension to the pipeline stage.
+2. Trigger a cloud flow on `OnDeploymentRequested` (pre-export) or `OnPreDeploymentStarted` (pre-deployment).
+3. Export or clone the solution source, package it, then run solution checker.
+4. Complete or reject the gated step with the corresponding Dataverse unbound action. Use status `20` to complete or `30` to reject.
+
+### Current PAC CLI syntax
+
+```powershell
+# Clone the current solution source from Dataverse for inspection/source control
+pac solution clone --name <solution-unique-name> --outputDirectory ".\src\<solution-unique-name>"
+
+# If you already have a solution zip from your build, use that file directly.
+# Otherwise, package the cloned/unpacked solution before checking.
+pac solution pack --folder ".\src\<solution-unique-name>" --zipfile ".\out\<solution-unique-name>.zip" --packagetype Managed
+
+# Run solution checker; choose the geo for your tenant.
+pac solution check --path ".\out\<solution-unique-name>.zip" --outputDirectory ".\checker" --geo UnitedStates --ruleSet "Solution Checker"
+```
+
+### Severity handling
+
+Solution checker and Power Platform Build Tools use severity levels `Critical`, `High`, `Medium`, `Low`, and `Informational`. For FSI deployment gates, reject the gated step when Critical findings are present, and require documented remediation or approval for High findings. If using rule overrides, store the JSON file in source control and review it through change management.
+
+> **Implementation caveat:** This solution documents the gate pattern only. It does not include exported cloud flow artifacts; build the flow manually in Power Automate following your organization's ALM process.
 
 ---
 
@@ -448,13 +474,13 @@ formatDateTime(triggerOutputs()?['body/Timestamp'], 'MMMM d, yyyy h:mm tt')
 ### Check if Value is Empty
 
 ```
-empty(triggerOutputs()?['body/OutputParameters/StageName'])
+empty(triggerOutputs()?['body/OutputParameters/DeploymentStageName'])
 ```
 
 ### Build Alert Message
 
 ```
-concat('Pipeline ', triggerOutputs()?['body/OutputParameters/PipelineName'], ' deployment completed at ', utcNow())
+concat('Pipeline ', triggerOutputs()?['body/OutputParameters/DeploymentPipelineName'], ' deployment completed at ', utcNow())
 ```
 
 ---

@@ -81,4 +81,4 @@ Solutions for environment provisioning, agent lifecycle, and operational testing
 | [DR Testing Framework](dr-testing-framework/index.md) | Post-recovery validation and evidence packaging for Power Platform DR testing. | v2.0.0 | live | enterprise | 2.4, 2.1, 1.9 |
 | [Environment Lifecycle Management](environment-lifecycle-management/index.md) | Automated Power Platform environment provisioning with zone-based governance. | v1.2.0 | live | personal, team, enterprise | 2.1, 2.2, 2.3, 2.8, 1.7 |
 | [Message Center Monitor](message-center-monitor/index.md) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.5.0 | live | enterprise | 2.3 |
-| [Pipeline Governance Cleanup](pipeline-governance-cleanup/index.md) | Discover and clean up personal Power Platform pipelines before central ALM governance. | v1.2.0 | live | team, enterprise | 2.3, 2.1 |
+| [Pipeline Governance Cleanup](pipeline-governance-cleanup/index.md) | Discover and clean up personal Power Platform pipelines before central ALM governance. | v1.2.1 | live | team, enterprise | 2.3, 2.1 |

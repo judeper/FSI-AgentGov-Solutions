@@ -43,7 +43,7 @@ These sample CSV files demonstrate the expected format for solution scripts.
 
 ## Version Validation
 
-These samples are validated against script version **1.1.0**. If you're using a different script version, verify column names match before use.
+These samples are validated against script version **1.2.1**. If you're using a different script version, verify column names match before use.
 
 ## See Also
 

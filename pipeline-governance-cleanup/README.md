@@ -46,12 +46,12 @@ See [Limitations](docs/limitations.md) for detailed explanation of technical con
 You must have a designated pipelines host environment:
 
 1. Identify or create your organization's pipelines host environment
-2. Ensure it's a Managed Environment
+2. Use a dedicated Production or Sandbox environment with a Dataverse database for the custom host (Microsoft recommends a dedicated Production host)
 3. **Install Power Platform Pipelines app** (required for Deployment Pipeline Configuration)
 4. Verify the Deployment Pipeline Configuration model-driven app is accessible
 5. Note the environment ID for configuration
 
-> **Important:** Starting February 2026, Microsoft requires all pipeline target environments to be Managed Environments. Verify your target environments are managed before force-linking. See [Microsoft Learn: Managed Environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview).
+> **Important:** All target environments used in pipelines must be Managed Environments. Starting February 2026, Microsoft will start enabling Managed Environments for pipeline targets that are not already enabled. Review targets now and either enable them manually or configure the pipelines host setting for automatic conversion. See [Microsoft Learn: Managed Environments](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-overview).
 
 See [Microsoft Learn: Set Up Pipelines](https://learn.microsoft.com/en-us/power-platform/alm/set-up-pipelines) for host environment setup.
 
@@ -93,7 +93,7 @@ Complete these checks before proceeding:
 - [ ] **Confirm no existing custom hosts** - Run [Part 0 of the Portal Walkthrough](docs/portal-walkthrough.md#part-0-identify-your-pipelines-host-environment) to verify no environments have the Power Platform Pipelines app installed
 - [ ] **Verify admin role** - Confirm you have Power Platform Admin or Entra Global Admin role
 - [ ] **Identify host environment** - Select an environment to become your custom host (must have Dataverse provisioned)
-- [ ] **Confirm target is (or can be) Managed Environment** - Starting February 2026, all pipeline targets must be Managed Environments
+- [ ] **Confirm target environments are (or can be) Managed Environments** - all pipeline targets must be Managed Environments; Microsoft will start enabling unmanaged targets beginning February 2026
 - [ ] **Document planned pipeline structure** - Sketch your intended deployment stages (e.g., Dev → Test → Prod)
 - [ ] **Identify initial makers** - List users who will need pipeline creation access
 
@@ -121,15 +121,15 @@ If all pre-flight checks pass, follow these steps:
    - See [Portal Walkthrough Part 3](docs/portal-walkthrough.md#part-3-force-link-an-environment)
 
 5. **Restrict pipeline creation (Security Best Practice)**
-   - Remove or restrict the "Deployment pipeline default" role to control who can create pipelines
-   - This limits makers from creating personal hosts
+   - Grant the **Deployment Pipeline Default** role only to approved makers, or manage access through the **Deployment Pipeline Makers** team in the Deployment Pipeline Configuration app
+   - In custom hosts, lightweight pipeline creation is not granted to all users by default
    - See [Portal Walkthrough Part 7](docs/portal-walkthrough.md#part-7-managing-pipeline-creator-access)
 
 6. **Skip to monitoring**
    - No cleanup needed for greenfield deployments
    - Proceed directly to [Step 6: Set Up Ongoing Monitoring](#step-6-set-up-ongoing-monitoring-optional)
 
-> **FSI Note:** For U.S. Financial Services organizations, restricting the "Deployment pipeline default" role is a security best practice. It limits makers from creating ungoverned personal pipeline hosts. See [Limitations Section 6](docs/limitations.md#6-force-link-controls-environment-host-association) for details on what this controls.
+> **FSI Note:** For U.S. Financial Services organizations, restricting the **Deployment Pipeline Default** role is a security best practice. It narrows who can create lightweight pipelines in the default custom host. See [Limitations Section 6](docs/limitations.md#6-force-link-controls-environment-host-association) for details on what this controls.
 
 ### Greenfield vs Brownfield
 
@@ -145,48 +145,68 @@ If all pre-flight checks pass, follow these steps:
 
 ### System Tables (Pipelines Host Environment)
 
-Power Platform pipelines use several system-managed Dataverse tables. These tables are **not queryable via standard "List rows" actions** - they require pipeline trigger events or direct admin access.
+Power Platform pipelines use system-managed Dataverse tables in the pipelines host environment. Logical names below follow Dataverse convention: the Microsoft Learn `SchemaName` lowercased with no extra underscores. Use [Microsoft Learn: Pipeline table reference](https://learn.microsoft.com/power-platform/developer/pipelines/table-reference) as the source of truth.
 
-#### DeploymentPipeline
+These tables are **not queryable via standard Power Automate "List rows" actions** for governance inventory. Use pipeline trigger events, the Deployment Pipeline Configuration app, or supported PAC CLI commands for operational workflows.
 
-Primary pipeline definition table.
+#### DeploymentArtifact (`deploymentartifact`)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| deploymentpipelineid | GUID (PK) | Unique identifier |
-| name | Text | Pipeline name |
-| ownerid | Lookup (User) | Pipeline owner |
-| createdon | DateTime | When pipeline was created |
-| modifiedon | DateTime | Last modification date |
-| statecode | Choice | Active/Inactive |
-| statuscode | Choice | Status reason |
+Stores managed and unmanaged solution artifacts exported during pipeline runs.
 
-#### DeploymentStage
+| Logical name | Type | Description |
+|--------------|------|-------------|
+| deploymentartifactid | GUID (PK) | Unique identifier for artifact instances |
+| name | Text | Artifact record name |
+| artifactversion | Text | Solution artifact version |
+| generatedon | DateTime | Date/time when the artifact was generated |
+| artifactfile | File | Managed artifact file (not valid for create) |
+| artifactfileunmanaged | File | Unmanaged artifact file (not valid for create) |
+| ownerid | Owner | Artifact owner |
+| statuscode | Status | `1` Active, `2` Inactive |
 
-Links pipelines to target environments.
+#### DeploymentPipeline (`deploymentpipeline`)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| deploymentstageid | GUID (PK) | Unique identifier |
-| name | Text | Stage name (e.g., "Dev", "Test", "Prod") |
+Stores pipeline configuration records.
+
+| Logical name | Type | Description |
+|--------------|------|-------------|
+| deploymentpipelineid | GUID (PK) | Unique identifier for pipeline instances |
+| name | Text | Pipeline record name |
+| description | Text | Optional pipeline description |
+| ownerid | Owner | Pipeline owner |
+| statuscode | Status | `1` Active, `2` Inactive |
+
+#### DeploymentStage (`deploymentstage`)
+
+Stores deployment-stage configuration such as target environment and prerequisite stage.
+
+| Logical name | Type | Description |
+|--------------|------|-------------|
+| deploymentstageid | GUID (PK) | Unique identifier for the stage instance |
+| name | Text | Stage name (for example, `Dev`, `Test`, `Prod`) |
+| description | Text | Optional stage description |
 | deploymentpipelineid | Lookup | Parent pipeline |
-| targetdeploymentenvironmentid | Lookup | Target environment |
-| previousdeploymentstageid | Lookup | Previous stage (for sequencing) |
+| targetdeploymentenvironmentid | Lookup | Target deployment environment |
+| previousdeploymentstageid | Lookup | Previous stage required before this stage can run |
+| ownerid | Owner | Stage owner |
+| statuscode | Status | `1` Active, `2` Inactive |
 
-#### DeploymentEnvironment
+#### DeploymentEnvironment (`deploymentenvironment`)
 
-Environment records linked to the pipelines host.
+Stores environment records linked to the pipelines host.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| deploymentenvironmentid | GUID (PK) | Unique identifier |
-| name | Text | Environment display name |
+| Logical name | Type | Description |
+|--------------|------|-------------|
+| deploymentenvironmentid | GUID (PK) | Unique identifier for deployment environment instances |
+| name | Text | Deployment environment record name |
 | environmentid | String | Power Platform environment ID |
-| environmenttype | Picklist | Environment type (Production, Sandbox, etc.) |
-| validationstatus | Picklist | Validation status of the environment link |
-| errormessage | Text | Error details if validation failed |
+| environmenttype | Picklist | `200000000` Development Environment, `200000001` Target Environment |
+| validationstatus | Picklist | `200000000` Pending, `200000001` Success, `200000002` Failed (not valid for create) |
+| errormessage | Text | Environment validation failure details |
+| ownerid | Owner | Environment record owner |
+| statuscode | Status | `1` Active, `2` Inactive |
 
-**Important:** The DeploymentPipeline table does NOT have a direct reference to which host environment it belongs to. The relationship is implicit through the environment where the table resides.
+**Important:** The `deploymentpipeline` table does NOT have a direct reference to which host environment it belongs to. The relationship is implicit through the environment where the table resides.
 
 ### Custom Tracking Table: PipelineCleanupLog (Optional)
 
@@ -356,7 +376,7 @@ Trigger-Based Monitoring (Power Automate)
 | Environment not listed | Filtered by type | Ensure including all environment types |
 | Power Platform Pipelines app not visible | Using platform host instead of custom host | See Portal Walkthrough Part 0; platform host is infrastructure-managed |
 | PAC CLI returns no pipelines | Wrong auth context | Run `pac auth list`; must authenticate to HOST environment, not dev/target |
-| Users still creating personal pipelines | Force Link controls host association, not creation | See Limitations section 6; restrict "Deployment pipeline default" role |
+| Users still creating personal pipelines | Force Link controls host association, not creation | See Limitations section 6; restrict **Deployment Pipeline Default** or **Deployment Pipeline Makers** access |
 
 ### Error Recovery Procedures
 
@@ -474,7 +494,7 @@ This solution supports:
 
 ## Version
 
-1.1.0 - April 2026
+1.2.1 - Microsoft Learn 2026-Q2 refresh
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
