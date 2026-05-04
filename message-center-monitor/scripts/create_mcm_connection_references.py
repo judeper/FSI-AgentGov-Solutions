@@ -3,7 +3,7 @@
 Create connection references for Message Center Monitor.
 
 Connection references enable Power Automate flows to access Dataverse, Teams,
-Key Vault, and the Graph API for Message Center post monitoring and notifications.
+Key Vault, and Microsoft Graph through HTTP with Microsoft Entra ID for Message Center post monitoring and notifications.
 """
 
 import argparse
@@ -39,9 +39,9 @@ CONNECTION_REFS = [
     },
     {
         "logical_name": "fsi_cr_http_messagecenter",
-        "display_name": "HTTP - MCM",
-        "connector": "shared_httppremium",
-        "description": "HTTP connector for Microsoft Graph API calls to Message Center",
+        "display_name": "HTTP with Microsoft Entra ID - MCM",
+        "connector": "shared_webcontents",
+        "description": "HTTP with Microsoft Entra ID connector for Microsoft Graph service communications API calls",
     },
 ]
 
@@ -144,7 +144,7 @@ Connection references created:
   - fsi_cr_dataverse_messagecenter (Dataverse connector)
   - fsi_cr_teams_messagecenter (Teams connector)
   - fsi_cr_keyvault_messagecenter (Key Vault connector)
-  - fsi_cr_http_messagecenter (HTTP Premium connector)
+  - fsi_cr_http_messagecenter (HTTP with Microsoft Entra ID connector)
 
 These connection references must be bound to actual connections in Power Automate
 before flows can use them.
@@ -220,6 +220,7 @@ Examples:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
+    # legacy: dev-only — replace with managed identity in production
     # Handle client secret for Service Principal auth (skip prompt in dry-run)
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
     if not args.interactive and not client_secret and not args.dry_run:

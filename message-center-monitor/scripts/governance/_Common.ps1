@@ -51,7 +51,7 @@ function Get-McmAccessToken {
         }
         'WorkloadIdentity' {
             # Workload identity federation (GitHub Actions OIDC, Azure DevOps OIDC, etc.).
-            # Exchanges a federated token for an Azure AD access token.
+            # Exchanges a federated token for a Microsoft Entra ID access token.
             if (-not $ClientId) { throw "ClientId is required for WorkloadIdentity auth." }
             if (-not $TenantId) { throw "TenantId is required for WorkloadIdentity auth." }
 
@@ -87,7 +87,7 @@ function Get-McmAccessToken {
             return Get-MsalToken -ClientId $ClientId -TenantId $TenantId -DeviceCode -Scopes @($Scope)
         }
         'ClientSecret' {
-            # legacy: dev-only path; prefer ManagedIdentity in production
+            # legacy: dev-only — replace with managed identity in production
             if (-not $ClientId) { throw "ClientId is required for ClientSecret auth." }
             if (-not $TenantId) { throw "TenantId is required for ClientSecret auth." }
             if (-not $ClientSecret) { throw "ClientSecret is required for -AuthMode ClientSecret." }

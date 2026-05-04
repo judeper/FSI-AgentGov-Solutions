@@ -39,7 +39,7 @@ In your Power Automate flow:
 
 > **Action Name Update:** Microsoft has renamed several Teams connector actions. The current action is "Post card in a chat or channel". If you have existing flows using "Post adaptive card in a chat or channel", they will continue to work, but new flows should use the current name.
 
-> **Office 365 Connectors retirement (2026-03-31):** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native Power Automate "Post adaptive card in chat or channel" Teams connector, which is unaffected. If you have other integrations using O365 webhooks, plan migration to Power Automate or Adaptive Card actions before that date.
+> **Office 365 Connectors retirement (2026-03-31):** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native Power Automate "Post card in a chat or channel" Teams connector with an Adaptive Card payload, which is unaffected. If you have other integrations using O365 webhooks, plan migration to Power Automate or Adaptive Card actions before that date.
 
 > **Body field handling (security):** The `fsi_body` field stores raw HTML from Microsoft Graph. Do **not** render it directly in custom HTML web resources or canvas-app HTML controls without sanitization. The shipped Teams adaptive card intentionally excludes the body field. If you customize the card to include body content, sanitize it first or render only the `bodyPlainText` derivation.
 
@@ -49,7 +49,7 @@ The file `templates/teams-notification-card.json` contains the notification temp
 
 ### Adaptive Card Version Compatibility
 
-Teams supports Adaptive Cards versions 1.0 through 1.5. This solution uses version 1.4, which provides a good balance of features and compatibility. If you need features from version 1.5 (like table elements), update the version in your card JSON.
+Teams broadly supports Adaptive Cards versions 1.0 through 1.5, and Universal Actions guidance is based on schema 1.5. This solution uses version 1.5 while keeping simple `Action.OpenUrl` actions for connector compatibility. Use 1.6-only elements only after validating support in your target Teams clients.
 
 ### Option A: Copy-Paste Method
 
@@ -66,7 +66,7 @@ Build the card dynamically using expressions:
 {
   "type": "AdaptiveCard",
   "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.4",
+  "version": "1.5",
   "body": [
     {
       "type": "TextBlock",
@@ -137,7 +137,7 @@ To @mention specific users for urgent posts:
 ```json
 {
   "type": "AdaptiveCard",
-  "version": "1.4",
+  "version": "1.5",
   "body": [
     {
       "type": "TextBlock",
@@ -179,7 +179,7 @@ Shows just the essentials:
 ```json
 {
   "type": "AdaptiveCard",
-  "version": "1.4",
+  "version": "1.5",
   "body": [
     {
       "type": "TextBlock",
@@ -348,7 +348,7 @@ Dataverse column logical names include a publisher prefix (e.g., `fsi_messagecen
 ### Card Not Displaying
 
 - Validate JSON at [adaptivecards.io/designer](https://adaptivecards.io/designer)
-- Ensure version is "1.4" or "1.5" (Teams supports versions 1.0-1.5)
+- Ensure version is "1.5" and avoid 1.6-only elements unless your target Teams clients support them
 - Check for unsupported features in Teams (some Adaptive Card features are desktop-only)
 
 ### Mentions Not Working
@@ -371,3 +371,4 @@ Teams has rate limits for incoming messages:
 - Per-app: 50 messages per minute
 
 Daily polling is well within these limits.
+

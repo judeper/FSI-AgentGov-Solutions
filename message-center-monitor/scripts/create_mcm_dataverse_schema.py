@@ -362,6 +362,21 @@ def generate_schema_docs() -> str:
         lines.append(f"| {schema_name} | {logical} | {desc} | {pna} |")
     lines.append("")
 
+    # ── Alternate Keys ──────────────────────────────────────────────────
+    if ALTERNATE_KEYS:
+        lines.append("## Alternate Keys")
+        lines.append("")
+        lines.append("| Key Name | Table | Key Attributes | Purpose |")
+        lines.append("|---|---|---|---|")
+        for entry in ALTERNATE_KEYS:
+            meta = entry.get("metadata", {})
+            key_name = meta.get("SchemaName", "")
+            table = entry.get("table_logical", "")
+            key_attrs = ", ".join(f"`{attr}`" for attr in meta.get("KeyAttributes", []))
+            purpose = f"Enables idempotent upsert via `PATCH .../{table}s(fsi_messagecenterid='MCxxxxx')`"
+            lines.append(f"| {key_name} | {table} | {key_attrs} | {purpose} |")
+        lines.append("")
+
     # ── Columns (per table) ─────────────────────────────────────────────
     lines.append("## Columns")
     lines.append("")
@@ -643,6 +658,7 @@ def main() -> None:
     if not args.client_id and not args.interactive:
         parser.error("--client-id is required (or set MCM_CLIENT_ID env var) unless --interactive is specified")
 
+    # legacy: dev-only — replace with managed identity in production
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
     if not args.interactive and not args.dry_run:
         if not client_secret:

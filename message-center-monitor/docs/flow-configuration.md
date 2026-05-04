@@ -16,9 +16,9 @@ Before starting, ensure you have:
 
 - [ ] Microsoft Entra ID app registration with `ServiceMessage.Read.All` permission
 - [ ] Admin consent granted for the app (any administrator with permission to consent)
-- [ ] Client ID, Tenant ID, and Client Secret ready
+- [ ] Client ID and Tenant ID ready; client secret only when using the legacy cloud-flow fallback, preferably retrieved from Key Vault
 - [ ] Dataverse table created (see README.md)
-- [ ] Azure Key Vault with client secret stored (recommended)
+- [ ] Azure Key Vault with the legacy client secret stored, if using the cloud-flow fallback
 
 ## Step 1: Create a New Flow
 
@@ -45,23 +45,23 @@ If using Azure Key Vault:
    - Secret name: Your client secret name
 3. The output `value` contains your client secret
 
-If not using Key Vault, you'll enter the secret directly in the HTTP action (less secure).
+If not using Key Vault, direct secret entry in the HTTP action is a legacy non-prod fallback and is not recommended for production.
 
 ## Step 3: Call Microsoft Graph API
 
-Add action: **HTTP**
+Add action: **HTTP with Microsoft Entra ID (preauthorized)**. In older designers this may appear as **HTTP** with an OAuth authentication panel; bind the connection reference `fsi_cr_http_messagecenter` to the current HTTP with Microsoft Entra ID connector.
 
 Configure:
 - **Method:** GET
 - **URI:** `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$select=id,title,category,severity,services,startDateTime,endDateTime,lastModifiedDateTime,isMajorChange,actionRequiredByDateTime,body,tags,hasAttachments`
-- **Authentication:** Active Directory OAuth
-  - **Authority:** `https://login.microsoftonline.com`
-  - **Tenant:** Your tenant ID (GUID)
-  - **Audience:** `https://graph.microsoft.com`
-  - **Client ID:** Your app registration client ID
-  - **Credential Type:** Secret
-  - **Secret:** From Key Vault output, or entered directly
+- **Microsoft Entra ID resource / Audience:** `https://graph.microsoft.com`
+- **Tenant:** Your tenant ID (GUID)
+- **Client ID:** Your app registration client ID
+- **Credential Type:** Secret (legacy cloud-flow fallback)
+- **Secret:** From Key Vault output; avoid direct entry except in disposable non-prod validation
 - **Retry policy:** Change from default to **Fixed interval** — Count: `3`, Interval: `PT30S` (30 seconds). This handles transient Graph API errors (429 throttling, 503 service unavailable) without manual re-runs.
+
+> **Microsoft Graph endpoint note:** The Message Center API is available in Microsoft Graph v1.0 at `/admin/serviceAnnouncement/messages`; beta is not required for this solution. The separate `healthOverviews` and `issues` endpoints require `ServiceHealth.Read.All` and are intentionally out of scope unless you add service-health monitoring.
 
 ### Authentication Screenshot Reference
 
@@ -69,14 +69,13 @@ Configure:
 ┌─────────────────────────────────────────────┐
 │ Authentication                              │
 ├─────────────────────────────────────────────┤
-│ Authentication type: Active Directory OAuth │
+│ Connector: HTTP with Microsoft Entra ID     │
 │                                             │
-│ Authority:   https://login.microsoftonline.com
 │ Tenant:      xxxxxxxx-xxxx-xxxx-xxxx-xxxx   │
 │ Audience:    https://graph.microsoft.com    │
 │ Client ID:   xxxxxxxx-xxxx-xxxx-xxxx-xxxx   │
-│ Credential Type: Secret                     │
-│ Secret:      [Key Vault output or direct]   │
+│ Credential Type: Secret (legacy fallback)   │
+│ Secret:      [Key Vault output]             │
 └─────────────────────────────────────────────┘
 ```
 
@@ -115,6 +114,12 @@ Add action: **Parse JSON**
 ```
 
 > **Note:** The `@odata.nextLink` field appears when there are more results. Include it in your schema so Parse JSON doesn't fail when pagination is present.
+
+### Current Message Center categorization
+
+Microsoft Graph `serviceUpdateMessage` returns category values `planForChange`, `stayInformed`, `preventOrFixIssue`, and `unknownFutureValue`; severity values are `normal`, `high`, `critical`, and `unknownFutureValue`. The Switch mappings below handle the documented values and default unknown future values to Admin/Normal for safe triage.
+
+Message Center UI filtering is based on **Service**, **Tag**, and **Message state**. Tags currently include Admin impact, Data privacy, Feature update, Major update, New feature, Retirement, User impact, and Updated message. Graph returns `services[]` and `tags[]` as Microsoft-controlled strings, so route Copilot Studio, Power Platform, or other AI-related posts through configurable rules instead of hard-coding a closed service list.
 
 ## Step 5: Handle Pagination (Important)
 
@@ -309,13 +314,13 @@ Add **Condition** to notify when action is truly needed:
 @and(
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   contains(
-    split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+    split(toLower(<replace-with-fsi_MCM_NotifySeverities-env-var>), ','),
     toLower(items('Apply_to_each')?['severity'])
   )
 )
 ```
 
-The `contains(split(<env-var>, ','), …)` pattern reads the comma-separated severity list from the `fsi_NotifySeverities` environment variable (e.g., `high,critical`) instead of hard-coding literal `'high'`/`'critical'` checks. Replace the `<replace-with-fsi_NotifySeverities-env-var>` token with whichever expression you use to retrieve the env var value (e.g., `outputs('Get_Environment_Variable')?['body/value']`).
+The `contains(split(<env-var>, ','), …)` pattern reads the comma-separated severity list from the `fsi_MCM_NotifySeverities` environment variable (e.g., `high,critical`) instead of hard-coding literal `'high'`/`'critical'` checks. Replace the `<replace-with-fsi_MCM_NotifySeverities-env-var>` token with whichever expression you use to retrieve the env var value (e.g., `outputs('Get_Environment_Variable')?['body/value']`).
 
 > **Note:** The `Upsert_a_row` response body returns the full Dataverse record, including the existing `notifiedOn` value. Do **not** use `items('Apply_to_each')?['notifiedOn']` — Graph API messages do not contain this field.
 
@@ -339,7 +344,7 @@ Use an expression to only notify when `actionRequiredByDateTime` is in the futur
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     contains(
-      split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+      split(toLower(<replace-with-fsi_MCM_NotifySeverities-env-var>), ','),
       toLower(items('Apply_to_each')?['severity'])
     ),
     and(
@@ -361,7 +366,7 @@ This prevents notifications for posts with past deadlines and means each post tr
   equals(outputs('Upsert_a_row')?['body/fsi_notifiedon'], null),
   or(
     contains(
-      split(toLower(<replace-with-fsi_NotifySeverities-env-var>), ','),
+      split(toLower(<replace-with-fsi_MCM_NotifySeverities-env-var>), ','),
       toLower(items('Apply_to_each')?['severity'])
     ),
     equals(items('Apply_to_each')?['isMajorChange'], true),
@@ -377,7 +382,7 @@ This prevents notifications for posts with past deadlines and means each post tr
 
 Add action: **Microsoft Teams - Post card in a chat or channel**
 
-> **Note:** The action was previously called "Post adaptive card in a chat or channel" but has been renamed. If you see the old name in your flow, it will continue to work.
+> **Note:** The action was previously called "Post adaptive card in a chat or channel" but has been renamed. If you see the old name in an existing flow, it should continue to work; new flows should use the current connector action name.
 
 - **Post as:** Flow bot
 - **Post in:** Channel
@@ -500,11 +505,9 @@ Wrap the main processing logic in a **Scope** action for better error handling:
 
 ## Rate Limits
 
-Microsoft Graph API has rate limits:
-- Per-app: 10,000 requests per 10 minutes
-- Per-tenant: 150,000 requests per 5 minutes
+Microsoft Graph service communications API calls are throttled per tenant and application. Honor `429` responses and `Retry-After` headers; the retry policy above handles transient throttling for cloud flows.
 
-Daily polling is well within these limits. Even hourly polling (not recommended) would only use ~24 requests/day.
+Daily polling is well within typical operational needs. Even hourly polling is usually unnecessary because most Message Center posts are planning updates rather than urgent incident signals.
 
 ---
 
@@ -516,10 +519,12 @@ The steps above hardcode the polling schedule, severity thresholds, and Teams ch
 
 | Display Name | Schema Name | Type | Example Value |
 |-------------|-------------|------|---------------|
-| Polling Interval (days) | `fsi_PollingIntervalDays` | Integer | `1` |
-| Notification Severity Threshold | `fsi_NotifySeverities` | Text | `high,critical` |
-| Teams Channel ID | `fsi_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
-| Teams Team ID | `fsi_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| Polling Interval (days) | `fsi_MCM_PollingIntervalDays` | Integer | `1` |
+| Notification Severity Threshold | `fsi_MCM_NotifySeverities` | Text | `high,critical` |
+| Teams Channel ID | `fsi_MCM_TeamsChannelId` | Text | `19:abc123@thread.tacv2` |
+| Teams Team ID | `fsi_MCM_TeamsTeamId` | Text | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| Dataverse URL | `fsi_MCM_DataverseUrl` | Text | `https://org.crm.dynamics.com` |
+| Key Vault Secret Name | `fsi_MCM_KeyVaultSecretName` | Text | `MessageCenterClientSecret` |
 
 > **Note:** Create these in your solution via **Solutions** > your solution > **Add** > **Environment variable**. The env vars are also auto-provisioned by `scripts/create_mcm_environment_variables.py`.
 
@@ -573,3 +578,4 @@ For busy tenants, combine pagination with delta tracking:
 ```
 
 This approach minimizes both API calls and processing time while ensuring you don't miss any posts.
+

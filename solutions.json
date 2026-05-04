@@ -711,7 +711,7 @@
     "message-center-monitor": {
       "id": "message-center-monitor",
       "name": "Message Center Monitor",
-      "version": "2.5.0",
+      "version": "2.5.1",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",

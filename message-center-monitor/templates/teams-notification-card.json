@@ -2,7 +2,7 @@
   "_comment": "Power Automate substitutes {curly} tokens at runtime, not [bracket] placeholders. Edit the Action.OpenUrl URL template before deploying — replace {environment}, {appId}, and {publisherPrefix} with your tenant-specific values, and bind {recordId} to the Dataverse upsert response (see docs/teams-integration.md).",
   "type": "AdaptiveCard",
   "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.4",
+  "version": "1.5",
   "body": [
     {
       "type": "Container",

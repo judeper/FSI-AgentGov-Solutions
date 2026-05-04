@@ -233,6 +233,7 @@ Examples:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
+    # legacy: dev-only — replace with managed identity in production
     # Handle client secret for Service Principal auth (skip prompt in dry-run)
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
     if not args.interactive and not client_secret and not args.dry_run:

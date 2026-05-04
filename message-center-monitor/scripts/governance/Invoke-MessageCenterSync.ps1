@@ -11,12 +11,12 @@
     assessment status of NotAssessed; existing posts are updated with the latest
     body, tags, and timestamps.
 
-    Supports Controls 2.3 (Change Management) and 2.10 (Platform Change Monitoring)
-    from the FSI Agent Governance Framework.
+    Supports Control 2.3 (Change Management and Release Planning) from the FSI Agent
+    Governance Framework.
 
-    The script authenticates to Graph API via client credentials, pages through all
-    matching announcements, and performs per-message upsert against Dataverse using
-    the fsi_messagecenterid alternate key.
+    The script authenticates to Microsoft Graph using managed-identity-first modes,
+    pages through matching announcements, and performs per-message upsert against
+    Dataverse using the fsi_messagecenterid alternate key.
 
 .PARAMETER TenantId
     Microsoft Entra ID tenant ID. Defaults to $env:AZURE_TENANT_ID.
@@ -27,7 +27,7 @@
 
 .PARAMETER ClientSecret
     Client secret as a SecureString. Required only when -AuthMode ClientSecret.
-    legacy: dev-only path; prefer ManagedIdentity in production.
+    legacy: dev-only — replace with managed identity in production.
 
 .PARAMETER AuthMode
     Authentication mode. ManagedIdentity (default), WorkloadIdentity, Interactive,
@@ -83,7 +83,7 @@
     HighSeverityCount, CriticalCount, SyncTimestamp.
 
 .NOTES
-    Version: 1.0.0
+    Version: 2.5.1
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module
