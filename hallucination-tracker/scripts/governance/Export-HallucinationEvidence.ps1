@@ -33,7 +33,7 @@
     Microsoft Entra ID application (client) ID for service principal authentication.
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication.
+    Client secret for service principal authentication (legacy dev-only fallback; prefer managed identity or workload identity for production automation).
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -83,7 +83,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.2.0
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -155,6 +155,7 @@ $SourceMap = @{
     100000001 = 'Supervisor'
     100000002 = 'Automated'
     100000003 = 'Customer'
+    100000004 = 'Microsoft 365 Copilot'
 }
 
 # Reverse severity map for OData filter
@@ -219,11 +220,13 @@ else {
         throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
     }
     if (-not $ClientSecret) {
-        throw "ClientSecret is required for service principal authentication."
+        throw "ClientSecret is required for legacy service principal authentication. Prefer managed identity or workload identity for production automation."
     }
     if (-not $TenantId) {
         throw "TenantId is required for service principal authentication."
     }
+
+    Write-Warning "Client-secret service principal authentication is a legacy dev-only fallback. Prefer managed identity or workload identity for production automation."
 
     try {
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
@@ -278,7 +281,7 @@ if ($Severity -ne 'All') {
 }
 
 $filter = $filterParts -join ' and '
-$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_reportname,fsi_isresolved,fsi_resolvedby,fsi_resolvedat,createdon,modifiedon"
+$select = "fsi_hallucinationreportid,fsi_category,fsi_severity,fsi_agentid,fsi_description,fsi_source,fsi_reportname,fsi_conversationid,fsi_userquery,fsi_agentresponse,fsi_topicname,fsi_topicid,fsi_channelid,fsi_feedbackcomment,fsi_groundednessdetected,fsi_isresolved,fsi_resolvedby,fsi_resolvedat,fsi_reportedat,createdon,modifiedon"
 
 $queryUrl = "$apiBase/fsi_hallucinationreports?`$select=$select&`$filter=$filter&`$orderby=createdon desc"
 
@@ -317,6 +320,13 @@ $reportsReadable = $allReports | ForEach-Object {
         agentId     = $_.fsi_agentid
         description = $_.fsi_description
         source      = if ($null -ne $_.fsi_source) { $SourceMap[[int]$_.fsi_source] } else { 'Unknown' }
+        conversationId = $_.fsi_conversationid
+        topicName   = $_.fsi_topicname
+        topicId     = $_.fsi_topicid
+        channelId   = $_.fsi_channelid
+        feedbackComment = $_.fsi_feedbackcomment
+        groundednessDetected = $_.fsi_groundednessdetected
+        reportedAt  = $_.fsi_reportedat
         createdOn   = $_.createdon
         modifiedOn  = $_.modifiedon
     }
@@ -370,7 +380,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Hallucination Feedback Tracker"
-    solutionVersion = "1.0.0"
+    solutionVersion = "1.2.0"
     fromDate        = $fromDate
     daysBack        = $DaysBack
     severityFilter  = $Severity

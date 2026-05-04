@@ -4,6 +4,24 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
+## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
+
+### Changed
+
+- Bumped solution manifest to 1.2.0 for the Microsoft Learn 2026-Q2 technical review.
+- Updated Copilot Studio feedback source guidance to use current reactions/comments, Analytics, transcript CSV, and Dataverse transcript patterns, including Microsoft 365 Copilot channel limitations.
+- Added Microsoft 365 Copilot Product Feedback export guidance and clarified that Microsoft Graph Copilot interaction history is not a feedback API and does not retrieve Copilot Studio agent interactions.
+- Updated authentication guidance and `analyze_patterns.py` to prefer managed identity / workload identity and label client-secret authentication as a legacy development fallback.
+- Added optional Dataverse fields for topic, channel, feedback comment, and groundedness metadata so pattern analysis can cluster by topic, agent, source, and time.
+- Added optional Azure AI Content Safety groundedness detection and Microsoft Foundry evaluation guidance for automated checks.
+
+### Fixed
+
+- Corrected `docs/source-configuration.md` category mappings to match `create_ht_dataverse_schema.py` option-set values.
+- Corrected README version drift from 1.0.0 to 1.2.0.
+
+---
+
 ## [1.1.0] - 2026-04-17
 
 ### Fixed

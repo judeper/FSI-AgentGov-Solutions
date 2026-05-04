@@ -67,7 +67,7 @@
     Boolean - $true if hash matches (file integrity verified), $false if mismatch.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.2.0
     Requires PowerShell 7.0 or later.
 
     SHA-256 companion file format:

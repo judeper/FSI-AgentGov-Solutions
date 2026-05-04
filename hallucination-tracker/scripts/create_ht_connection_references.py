@@ -159,11 +159,12 @@ Examples:
         parser.error("--tenant-id and --environment-url are required")
 
     # Handle client secret for Service Principal auth
+    # legacy: dev-only - replace with managed identity in production
     client_secret = os.environ.get("HT_CLIENT_SECRET")
     if not args.interactive and not client_secret:
         if args.client_id:
             import getpass
-            client_secret = getpass.getpass("Client secret: ")
+            client_secret = getpass.getpass("Client secret (legacy dev-only): ")
 
     try:
         # Initialize client
