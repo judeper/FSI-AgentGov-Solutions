@@ -41,7 +41,8 @@ This module is optional — the core solution operates independently without it.
 | Document | Description |
 |----------|-------------|
 | [Flow Configuration](docs/flow-configuration.md) | Solution architecture and configuration guide |
-| [Build Instructions](docs/build-instructions.md) | C# plugin build and deployment steps |
+| [Build Instructions](docs/build-instructions.md) | Legacy Visual Studio walkthrough for the plugin DLL |
+| [Build and Sign](docs/build-and-sign.md) | dotnet CLI build, cosign Sigstore signing, and DLL verification |
 | [Delivery Checklist](docs/delivery-checklist.md) | Pre-deployment verification checklist |
 
 ## Components
@@ -52,10 +53,12 @@ mime-type-restrictions/
 ├── CHANGELOG.md
 ├── docs/
 │   ├── flow-configuration.md         # Solution architecture and configuration guide
-│   ├── build-instructions.md         # Step-by-step guide to build the plugin DLL
+│   ├── build-instructions.md         # Legacy Visual Studio walkthrough for the plugin DLL
+│   ├── build-and-sign.md             # dotnet build, cosign signing, and verification
 │   └── delivery-checklist.md         # Pre-deployment verification checklist
 ├── src/
-│   └── ValidateMimeTypePlugin.cs     # Dataverse plugin for server-side MIME validation
+│   ├── ValidateMimeTypePlugin.cs     # Dataverse plugin for server-side MIME validation
+│   └── ValidateMimeTypePlugin.csproj # SDK-style csproj (net462)
 ├── scripts/
 │   ├── query-mime-blocks.kql         # Sentinel query for blocked MIME type events
 │   └── query-exception-usage.kql    # Sentinel query for exception usage tracking

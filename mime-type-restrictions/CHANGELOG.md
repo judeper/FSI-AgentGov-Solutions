@@ -2,6 +2,45 @@
 
 All notable changes to MIME Type Restrictions for File Uploads are documented here.
 
+## [1.2.0] — Unreleased — CI build, CodeQL, signed binary release (#38)
+
+### Added
+
+- **`src/ValidateMimeTypePlugin.csproj`** — SDK-style csproj targeting
+  .NET Framework 4.6.2 with explicit `Microsoft.CrmSdk.CoreAssemblies` 9.0.2.59
+  and `System.Text.Json` 8.0.5 package references. Supports both unsigned
+  CI builds and strong-name-signed local production builds (see
+  `docs/build-and-sign.md`).
+- **`src/.gitignore`** — excludes build outputs (`bin/`, `obj/`), strong-name
+  keys (`*.snk`, `*.pfx`), local NuGet artifacts, and cosign signing
+  artifacts (`*.sig`, `*.cert`, `*.bundle`).
+- **`docs/build-and-sign.md`** — full build / sign / verify guide:
+  - Local CI parity build (unsigned, validates compilability)
+  - Local production build (strong-name + ILRepack merge)
+  - Customer verification of published DLL via SHA-256, cosign Sigstore
+    bundle, cosign legacy signature/cert split, and GitHub build
+    provenance attestation
+  - Trust boundary notes distinguishing cosign signing from strong-name
+    signing
+- **`.github/workflows/ci-dotnet.yml`** (new repo-level workflow) —
+  Debug and Release builds on `windows-latest` for every push/PR touching
+  `mime-type-restrictions/src/**` or the workflow file itself. Soft-gate
+  while baseline cleanup lands.
+- **CodeQL `csharp` analysis** — `.github/workflows/codeql.yml` now
+  analyses both Python (Linux) and C# (Windows). The C# job restores
+  packages and builds the plugin before invoking CodeQL.
+- **Signed plugin binary in releases** — `.github/workflows/release.yml`
+  gained a `build-plugin` job that builds, hashes, and **cosign keyless
+  signs** (Sigstore OIDC) the plugin DLL on every tagged release. The DLL,
+  hash, signature, certificate, and Sigstore bundle are attached to the
+  GitHub Release alongside the existing source tarball + SBOMs +
+  build-provenance attestation.
+
+### Changed
+
+- Version bumped to **1.2.0** to reflect the new CI/release surface
+  (no behavior change in the plugin itself).
+
 ## [1.1.0] — 2026-04-17 — BREAKING (control-coverage scope reduction)
 
 ### Changed (BREAKING)

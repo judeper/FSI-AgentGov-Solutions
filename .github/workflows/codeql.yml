@@ -17,14 +17,28 @@ permissions:
 jobs:
   analyze:
     name: Analyze ${{ matrix.language }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        language: [python]
+        # csharp uses windows-latest because Microsoft.CrmSdk.CoreAssemblies
+        # targets net462 which builds reliably on Windows. python uses the
+        # default ubuntu-latest. (Issue #38: added csharp.)
+        include:
+          - language: python
+            runner: ubuntu-latest
+          - language: csharp
+            runner: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -32,7 +46,22 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-and-quality
 
+      - name: Restore plugin packages
+        if: matrix.language == 'csharp'
+        working-directory: mime-type-restrictions/src
+        run: dotnet restore ValidateMimeTypePlugin.csproj
+
+      - name: Build plugin (csharp)
+        if: matrix.language == 'csharp'
+        working-directory: mime-type-restrictions/src
+        run: |
+          dotnet build ValidateMimeTypePlugin.csproj `
+            --configuration Release `
+            --no-restore `
+            --nologo
+
       - name: Autobuild
+        if: matrix.language != 'csharp'
         uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis

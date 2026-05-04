@@ -1,7 +1,7 @@
 id: mime-type-restrictions
 name: MIME Type Restrictions for File Uploads
 description: Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.
-version: 1.1.0
+version: 1.2.0
 status: live
 domain: content-data
 tier: '2'

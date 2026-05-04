@@ -17,9 +17,111 @@ permissions:
   attestations: write
 
 jobs:
+  build-plugin:
+    name: Build and sign Dataverse plugin DLL
+    # Issue #38: builds the FSI MIME validation plugin, signs with cosign
+    # keyless OIDC, and emits artifacts for the release job to attach.
+    # Uses windows-latest because the plugin targets net462 which is most
+    # reliable on Windows runners.
+    runs-on: windows-latest
+    outputs:
+      dll-path: ${{ steps.layout.outputs.dll-path }}
+      sig-path: ${{ steps.layout.outputs.sig-path }}
+      cert-path: ${{ steps.layout.outputs.cert-path }}
+      bundle-path: ${{ steps.layout.outputs.bundle-path }}
+      sha256: ${{ steps.layout.outputs.sha256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Restore packages
+        working-directory: mime-type-restrictions/src
+        run: dotnet restore ValidateMimeTypePlugin.csproj
+
+      - name: Build (Release)
+        working-directory: mime-type-restrictions/src
+        shell: bash
+        run: |
+          set -eu
+          dotnet build ValidateMimeTypePlugin.csproj \
+            --configuration Release \
+            --no-restore \
+            --nologo \
+            /p:TreatWarningsAsErrors=true
+
+      - name: Stage and hash plugin artifacts
+        id: layout
+        working-directory: mime-type-restrictions/src
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p ../../dist/plugin
+          src=bin/Release/net462/FsiAgentGovernance.Plugins.dll
+          if [ ! -f "$src" ]; then
+            echo "::error::Expected plugin output not found: $src"
+            exit 1
+          fi
+          cp "$src" "../../dist/plugin/FsiAgentGovernance.Plugins.dll"
+          (cd ../../dist/plugin && sha256sum FsiAgentGovernance.Plugins.dll > FsiAgentGovernance.Plugins.dll.sha256)
+          echo "dll-path=dist/plugin/FsiAgentGovernance.Plugins.dll" >> "$GITHUB_OUTPUT"
+          echo "sig-path=dist/plugin/FsiAgentGovernance.Plugins.dll.sig" >> "$GITHUB_OUTPUT"
+          echo "cert-path=dist/plugin/FsiAgentGovernance.Plugins.dll.pem" >> "$GITHUB_OUTPUT"
+          echo "bundle-path=dist/plugin/FsiAgentGovernance.Plugins.dll.bundle" >> "$GITHUB_OUTPUT"
+          sha=$(awk '{print $1}' "../../dist/plugin/FsiAgentGovernance.Plugins.dll.sha256")
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: "v2.4.1"
+
+      - name: Cosign keyless sign (sigstore)
+        # Uses GitHub OIDC; no long-lived keys. Produces a Sigstore bundle
+        # plus the legacy --signature/--certificate split for clients that
+        # cannot yet read bundles.
+        shell: bash
+        run: |
+          set -eu
+          cd dist/plugin
+          cosign sign-blob \
+            --yes \
+            --bundle FsiAgentGovernance.Plugins.dll.bundle \
+            --output-signature FsiAgentGovernance.Plugins.dll.sig \
+            --output-certificate FsiAgentGovernance.Plugins.dll.pem \
+            FsiAgentGovernance.Plugins.dll
+
+      - name: Attest plugin provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist/plugin/FsiAgentGovernance.Plugins.dll
+
+      - name: Upload plugin artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-release
+          path: |
+            dist/plugin/FsiAgentGovernance.Plugins.dll
+            dist/plugin/FsiAgentGovernance.Plugins.dll.sha256
+            dist/plugin/FsiAgentGovernance.Plugins.dll.sig
+            dist/plugin/FsiAgentGovernance.Plugins.dll.pem
+            dist/plugin/FsiAgentGovernance.Plugins.dll.bundle
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     name: Build SBOM and signed release artifacts
     runs-on: ubuntu-latest
+    needs: build-plugin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,10 +160,27 @@ jobs:
           format: cyclonedx-json
           output-file: dist/sbom.cyclonedx.json
 
+      - name: Download plugin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-release
+          path: dist/plugin/
+
       - name: Compute SHA-256 manifest
         run: |
           cd dist
-          sha256sum * > SHA256SUMS
+          # SHA256SUMS covers the source tarball, SBOMs, and the plugin DLL +
+          # its signing artifacts so verifiers can detect tampering of any
+          # release-attached file.
+          sha256sum \
+            FSI-AgentGov-Solutions-*.tar.gz \
+            sbom.spdx.json \
+            sbom.cyclonedx.json \
+            plugin/FsiAgentGovernance.Plugins.dll \
+            plugin/FsiAgentGovernance.Plugins.dll.sig \
+            plugin/FsiAgentGovernance.Plugins.dll.pem \
+            plugin/FsiAgentGovernance.Plugins.dll.bundle \
+            > SHA256SUMS
           cat SHA256SUMS
 
       - name: Generate build provenance attestation
@@ -88,4 +207,9 @@ jobs:
             dist/sbom.spdx.json
             dist/sbom.cyclonedx.json
             dist/SHA256SUMS
+            dist/plugin/FsiAgentGovernance.Plugins.dll
+            dist/plugin/FsiAgentGovernance.Plugins.dll.sha256
+            dist/plugin/FsiAgentGovernance.Plugins.dll.sig
+            dist/plugin/FsiAgentGovernance.Plugins.dll.pem
+            dist/plugin/FsiAgentGovernance.Plugins.dll.bundle
           generate_release_notes: true
