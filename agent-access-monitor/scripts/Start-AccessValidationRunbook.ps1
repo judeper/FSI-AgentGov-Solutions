@@ -79,7 +79,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.1
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -298,8 +298,8 @@ try {
     if ($ExcludeSandbox) { $envSettingsParams['ExcludeSandbox'] = $true }
     if ($ExcludeTrial) { $envSettingsParams['ExcludeTrial'] = $true }
     # Pass Dataverse context so zone classification uses ELM lookup, not name-based fallback.
-    if ($DataverseUrl)  { $envSettingsParams['DataverseUrl'] = $DataverseUrl }
-    if ($AccessToken)   { $envSettingsParams['AccessToken']  = $AccessToken }
+    if ($DataverseUrl)     { $envSettingsParams['DataverseUrl'] = $DataverseUrl }
+    if ($dataverseToken)   { $envSettingsParams['AccessToken']  = $dataverseToken }
     $allEnvironments = & $getSettingsScript @envSettingsParams
 
     $driftResults = @()

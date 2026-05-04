@@ -23,7 +23,7 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
     -Interactive
 ```
 
-### Service Principal Mode
+### Certificate App Authentication
 
 ```powershell
 ./scripts/Export-AgentAccessEvidence.ps1 `
@@ -71,8 +71,8 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
 | `-ToDate` | No | Now | End of date range (inclusive) |
 | `-IncludeBaselines` | No | false | Include active baselines in export |
 | `-Interactive` | No | false | Use browser-based authentication |
-| `-ClientId` | Cond. | — | Required for service principal auth |
-| `-CertificateThumbprint` | Cond. | — | Required for service principal auth |
+| `-ClientId` | Cond. | — | Required for certificate app authentication |
+| `-CertificateThumbprint` | Cond. | — | Required for certificate app authentication |
 
 ## Output Files
 
@@ -88,7 +88,7 @@ Each export produces two files:
   "metadata": {
     "exportedAt": "2026-02-09T14:30:22Z",
     "solution": "Agent Access Governance Monitor",
-    "solutionVersion": "1.1.0",
+    "solutionVersion": "1.1.1",
     "fromDate": "...", "toDate": "...",
     "zoneFilter": "All",
     "recordCount": 30, "violationCount": 5
@@ -138,7 +138,7 @@ sha256sum -c aam-evidence-All-20260209-143022.json.sha256
 | Quarterly | Regulatory examination preparation (FINRA, SEC) |
 | On-demand | Incident investigations and ad-hoc auditor requests |
 
-> **Tip:** Use service principal authentication with Azure Automation for scheduled exports. See [flow-configuration.md](flow-configuration.md) for automation patterns.
+> **Tip:** Prefer managed identity where available for scheduled exports. When MSAL.PS certificate authentication is required, store the certificate in the automation host and review rotation procedures. See [flow-configuration.md](flow-configuration.md) for automation patterns.
 
 ## Troubleshooting
 

@@ -2,8 +2,9 @@
 """
 Dataverse Web API client for Agent Access Governance Monitor.
 
-Uses MSAL for authentication (interactive browser or service principal).
-Includes retry logic and dry-run mode for safe deployments.
+Uses Azure Identity for managed identity/workload identity and MSAL for interactive
+or legacy dev-only client secret authentication. Includes retry logic and dry-run mode
+for safe deployments.
 """
 
 import argparse
@@ -14,6 +15,8 @@ from urllib.parse import urljoin
 
 import msal
 import requests
+from azure.core.exceptions import ClientAuthenticationError
+from azure.identity import ManagedIdentityCredential, WorkloadIdentityCredential
 from requests.adapters import HTTPAdapter, Retry
 
 
@@ -30,6 +33,9 @@ class AAMClient:
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        managed_identity: bool = False,
+        managed_identity_client_id: Optional[str] = None,
+        workload_identity: bool = False,
     ):
         """
         Initialize AAM client.
@@ -37,10 +43,13 @@ class AAMClient:
         Args:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
-            client_id: Application (client) ID (required for all auth modes)
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
+            client_id: Application (client) ID for interactive, workload identity, or legacy fallback
+            client_secret: Client secret value (legacy dev-only fallback)
+            interactive: Use interactive browser auth instead of unattended auth
             dry_run: If True, log API calls without executing them
+            managed_identity: Use system-assigned managed identity
+            managed_identity_client_id: User-assigned managed identity client ID
+            workload_identity: Use workload identity federation
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
@@ -49,6 +58,7 @@ class AAMClient:
         self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}/"
         self.interactive = interactive
         self.dry_run = dry_run
+        self._azure_credential = None
 
         # Dataverse requires the environment URL as the scope
         self._scope = [f"{self.environment_url}/.default"]
@@ -77,17 +87,44 @@ class AAMClient:
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
         else:
-            # Confidential client for service-to-service auth
-            if not client_id or not client_secret:
-                raise ValueError("client_id and client_secret required for non-interactive auth")
-            self._app = msal.ConfidentialClientApplication(
-                client_id=client_id,
-                client_credential=client_secret,
-                authority=f"https://login.microsoftonline.com/{tenant_id}",
-            )
+            if managed_identity or managed_identity_client_id:
+                # Managed identity is preferred for Azure-hosted automation.
+                credential_kwargs = {}
+                if managed_identity_client_id:
+                    credential_kwargs["client_id"] = managed_identity_client_id
+                self._azure_credential = ManagedIdentityCredential(**credential_kwargs)
+                self._app = None
+            elif workload_identity:
+                if not client_id:
+                    raise ValueError("client_id is required for workload identity authentication")
+                self._azure_credential = WorkloadIdentityCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                )
+                self._app = None
+            else:
+                # legacy: dev-only — replace with managed identity in production
+                if not client_id or not client_secret:
+                    raise ValueError(
+                        "non-interactive auth requires --managed-identity, "
+                        "--managed-identity-client-id, --workload-identity, or legacy "
+                        "client_id/client_secret credentials"
+                    )
+                self._app = msal.ConfidentialClientApplication(
+                    client_id=client_id,
+                    client_credential=client_secret,
+                    authority=f"https://login.microsoftonline.com/{tenant_id}",
+                )
 
     def _get_token(self) -> str:
         """Acquire access token with caching."""
+        if self._azure_credential is not None:
+            try:
+                access_token = self._azure_credential.get_token(self._scope[0])
+            except ClientAuthenticationError as exc:
+                raise RuntimeError(f"Failed to acquire token: {exc.message}") from exc
+            return access_token.token
+
         # Try to get cached token first
         accounts = self._app.get_accounts() if self.interactive else None
         result = self._app.acquire_token_silent(
@@ -100,7 +137,7 @@ class AAMClient:
                 # Interactive browser flow
                 result = self._app.acquire_token_interactive(scopes=self._scope)
             else:
-                # Client credentials flow
+                # legacy: dev-only — replace with managed identity in production
                 result = self._app.acquire_token_for_client(scopes=self._scope)
 
         if "access_token" not in result:
@@ -484,12 +521,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("AAM_CLIENT_ID"),
-        help="Application (client) ID - required for all auth modes (or set AAM_CLIENT_ID env var)",
+        help="Application (client) ID for interactive, workload identity, or legacy fallback (or set AAM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
+        help="Client secret (legacy dev-only fallback; prefer managed identity, workload identity, or AAM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -500,6 +537,21 @@ def main() -> None:
         "--interactive",
         action="store_true",
         help="Use interactive browser authentication",
+    )
+    parser.add_argument(
+        "--managed-identity",
+        action="store_true",
+        help="Use system-assigned managed identity for unattended authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("AAM_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID (or set AAM_MANAGED_IDENTITY_CLIENT_ID env var)",
+    )
+    parser.add_argument(
+        "--workload-identity",
+        action="store_true",
+        help="Use workload identity federation for unattended authentication",
     )
     parser.add_argument(
         "--test-connection",
@@ -521,16 +573,32 @@ def main() -> None:
             "(or set AAM_TENANT_ID and AAM_ENVIRONMENT_URL env vars)"
         )
 
-    # Validate client_id is provided for all modes
-    if not args.client_id:
-        parser.error("--client-id is required (or set AAM_CLIENT_ID env var)")
-
-    # For non-interactive mode, need client secret
+    # For unattended auth, prefer managed identity or workload identity.
     client_secret = args.client_secret
-    if not args.interactive:
-        if not client_secret:
+    if args.interactive and not args.client_id:
+        parser.error("--client-id is required with --interactive (or set AAM_CLIENT_ID env var)")
+    if args.workload_identity and not args.client_id:
+        parser.error("--client-id is required with --workload-identity")
+    if not args.interactive and not (
+        args.managed_identity
+        or args.managed_identity_client_id
+        or args.workload_identity
+        or client_secret
+    ):
+        if args.client_id:
             import getpass
-            client_secret = getpass.getpass("Client secret: ")
+
+            # legacy: dev-only — replace with managed identity in production
+            client_secret = getpass.getpass("Client secret (legacy dev-only): ")
+        else:
+            parser.error(
+                "For unattended auth, use --managed-identity, --managed-identity-client-id, "
+                "or --workload-identity. Client secrets are a legacy dev-only fallback."
+            )
+    if not args.interactive and client_secret and not args.client_id and not (
+        args.managed_identity or args.managed_identity_client_id
+    ):
+        parser.error("--client-id is required with legacy client secret fallback")
 
     try:
         client = AAMClient(
@@ -540,6 +608,9 @@ def main() -> None:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            managed_identity=args.managed_identity,
+            managed_identity_client_id=args.managed_identity_client_id,
+            workload_identity=args.workload_identity,
         )
 
         if args.test_connection:

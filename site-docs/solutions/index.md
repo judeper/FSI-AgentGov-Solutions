@@ -12,8 +12,8 @@ Solutions for controlling who can access, share, and publish AI agents.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.0 | live | team, enterprise | 3.8 |
-| [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.1 | live | team, enterprise | 1.18, 2.8 |
+| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.1 | live | team, enterprise | 3.8 |
+| [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.0 | live | team, enterprise | 1.18, 2.8 |
 | [Conditional Access Automation](conditional-access-automation/index.md) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v2.0.0 | live | team, enterprise | 1.11, 1.23, 1.18 |
 | [Cross-Tenant External Sharing Governance](cross-tenant-external-sharing-governance/index.md) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.0.2 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
 | [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.0 | live | team, enterprise | 2.22, 1.23, 3.7, 3.8 |
@@ -80,5 +80,5 @@ Solutions for environment provisioning, agent lifecycle, and operational testing
 | [Conflict of Interest Testing](coi-testing/index.md) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.1 | live | team, enterprise | 2.18, 2.11, 2.5 |
 | [DR Testing Framework](dr-testing-framework/index.md) | Post-recovery validation and evidence packaging for Power Platform DR testing. | v2.0.1 | live | enterprise | 2.4, 2.1, 1.9 |
 | [Environment Lifecycle Management](environment-lifecycle-management/index.md) | Automated Power Platform environment provisioning with zone-based governance. | v1.2.1 | live | personal, team, enterprise | 2.1, 2.2, 2.8, 1.7 |
-| [Message Center Monitor](message-center-monitor/index.md) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.5.1 | live | enterprise | 2.3 |
+| [Message Center Monitor](message-center-monitor/index.md) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.5.0 | live | enterprise | 2.3 |
 | [Pipeline Governance Cleanup](pipeline-governance-cleanup/index.md) | Discover and clean up personal Power Platform pipelines before central ALM governance. | v1.2.1 | live | team, enterprise | 2.3, 2.1 |

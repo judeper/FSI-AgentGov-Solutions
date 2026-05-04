@@ -2,6 +2,23 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.1.1] - 2026-05-13
+
+### Added
+
+- Python deployment entry points now support managed identity and workload identity federation for Dataverse authentication, with client secrets retained only as a legacy dev-only fallback.
+- Sharing comparison now normalizes broad-sharing values from adjacent Agent 365 and Agent Builder surfaces (`all`, `AllUsers`, `OrgWide`, and tenant-wide variants) to the Managed Environment `noLimit` equivalent for severity evaluation.
+
+### Fixed
+
+- `Start-AccessValidationRunbook` drift detection now passes the acquired Dataverse token to `Get-EnvironmentAccessSettings.ps1`, preserving ELM-based zone classification during per-environment drift checks.
+- Solution version metadata is synchronized to `1.1.1` across the manifest, README, module metadata, script notes, and evidence export payloads.
+
+### Changed
+
+- Documentation clarifies that AAM evaluates Managed Environment agent sharing settings, while Microsoft Graph Package Management and Agent Registry APIs remain preview candidates for future agent inventory expansion.
+- Authentication guidance now recommends managed identity or workload identity for unattended Python deployment automation, with certificate app authentication documented for current PowerShell runbook paths.
+
 ## [1.1.0] - 2026-05-12
 
 ### BREAKING

@@ -163,7 +163,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("AAM_CLIENT_SECRET"),
-        help="Client secret (INSECURE: visible in process listings; prefer AAM_CLIENT_SECRET env var or interactive prompt)",
+        help="Client secret (legacy dev-only fallback; prefer managed identity, workload identity, or AAM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -174,6 +174,21 @@ def main() -> None:
         "--interactive",
         action="store_true",
         help="Use interactive browser authentication",
+    )
+    parser.add_argument(
+        "--managed-identity",
+        action="store_true",
+        help="Use system-assigned managed identity for unattended authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("AAM_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID (or set AAM_MANAGED_IDENTITY_CLIENT_ID env var)",
+    )
+    parser.add_argument(
+        "--workload-identity",
+        action="store_true",
+        help="Use workload identity federation for unattended authentication",
     )
     parser.add_argument(
         "--dry-run",
@@ -187,15 +202,30 @@ def main() -> None:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Get client secret if needed
+    # For unattended auth, prefer managed identity or workload identity.
     client_secret = args.client_secret
     if args.interactive and not args.client_id:
         parser.error("--client-id is required even with --interactive (MSAL PublicClientApplication mandate).")
-    if not args.interactive and not client_secret:
+    if args.workload_identity and not args.client_id:
+        parser.error("--client-id is required with --workload-identity")
+    if not args.interactive and not (
+        args.managed_identity
+        or args.managed_identity_client_id
+        or args.workload_identity
+        or client_secret
+    ):
         if args.client_id:
             import getpass
 
-            client_secret = getpass.getpass("Client secret: ")
+            # legacy: dev-only — replace with managed identity in production
+            client_secret = getpass.getpass("Client secret (legacy dev-only): ")
+        else:
+            parser.error(
+                "For unattended auth, use --managed-identity, --managed-identity-client-id, "
+                "or --workload-identity. Client secrets are a legacy dev-only fallback."
+            )
+    if not args.interactive and client_secret and not args.client_id:
+        parser.error("--client-id is required with legacy client secret fallback")
 
     try:
         client = AAMClient(
@@ -205,6 +235,9 @@ def main() -> None:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            managed_identity=args.managed_identity,
+            managed_identity_client_id=args.managed_identity_client_id,
+            workload_identity=args.workload_identity,
         )
 
         results = create_environment_variables(client, dry_run=args.dry_run)
