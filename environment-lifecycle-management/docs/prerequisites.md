@@ -9,7 +9,7 @@ Complete requirements for deploying the Environment Lifecycle Management solutio
 | **Power Apps Premium** | Dataverse tables, model-driven app | Per User or Per App |
 | **Copilot Studio** | Intake agent for environment requests | Separate license required (not included in M365 E3/E5) |
 | **Power Automate Premium** | HTTP with Entra ID connector, child flows | Per User or Per Flow |
-| **Azure Subscription** | Key Vault for credential storage | Pay-as-you-go |
+| **Azure Subscription** | Key Vault for credential/certificate storage | Pay-as-you-go |
 | **Microsoft 365** | End-user licenses, Entra ID | E3 or E5 |
 
 ### License Notes
@@ -64,7 +64,7 @@ Create three environment groups before deployment:
 | `FSI-Zone2-TeamCollaboration` | Zone 2 | Team collaboration, restricted DLP |
 | `FSI-Zone3-EnterpriseManagedEnvironment` | Zone 3 | Enterprise managed, highly restricted DLP |
 
-> **Note:** Environment Groups can be created via the Environment Groups API (`POST .../environmentGroups`) or manually in Power Platform admin center. Manual creation is recommended for initial setup to establish audit trail documentation.
+> **Note:** Environment Groups are a premium governance capability. Groups can be created manually in the Power Platform admin center or through the current Power Platform API (`POST https://api.powerplatform.com/environmentmanagement/environmentGroups?api-version=2022-03-01-preview`). Only Managed Environments can be assigned to groups, each environment can belong to only one group, and published group rules lock the corresponding per-environment settings until the environment is removed from the group. Manual creation is recommended for initial setup to establish audit trail documentation.
 
 ## Azure Key Vault
 
@@ -89,7 +89,8 @@ Create three environment groups before deployment:
 
 | Secret Name | Content | Rotation |
 |-------------|---------|----------|
-| `ELM-ServicePrincipal-Secret` | SP client secret | 90 days |
+| `ELM-ServicePrincipal-Secret` | Legacy dev-only SP client secret, if certificate/managed identity is unavailable | 90 days |
+| `ELM-ServicePrincipal-Certificate` | Preferred certificate-backed app credential where supported | 1 year |
 
 ## Network Requirements
 
@@ -103,7 +104,7 @@ The solution requires outbound access to:
 | `*.crm.dynamics.com` | Dataverse environment URLs |
 | `login.microsoftonline.com` | Entra ID authentication |
 | `graph.microsoft.com` | Microsoft Graph (user/group lookup) |
-| `api.bap.microsoft.com` | Power Platform Admin API |
+| `api.powerplatform.com` | Power Platform API, including Environment Groups (`environmentmanagement`) |
 | `*.vault.azure.net` | Azure Key Vault |
 
 ### Firewall Considerations
@@ -118,13 +119,13 @@ If running scripts from on-premises or restricted networks:
 
 ### Connectors Required
 
-The provisioning flows require these connectors in Business/Non-Blockable group:
+The provisioning flows require these connectors to be allowed by the applicable tenant and environment data policies. Classify them consistently with your DLP strategy; if multiple policies apply, the most restrictive policy wins and environment-scoped policies cannot override tenant-wide policies. Some Microsoft connectors are non-blockable in classic DLP.
 
 | Connector | Purpose |
 |-----------|---------|
 | **Dataverse** | Read/write EnvironmentRequest, ProvisioningLog |
 | **Power Platform for Admins** | Create environments, enable managed |
-| **HTTP with Microsoft Entra ID** | BAP API calls, Graph API |
+| **HTTP with Microsoft Entra ID** | Power Platform API calls, Graph API |
 | **Azure Key Vault** | Retrieve SP credentials |
 | **Office 365 Outlook** | Send notifications (optional) |
 | **Microsoft Teams** | Post notifications (optional) |
@@ -161,11 +162,12 @@ azure-keyvault-secrets>=4.7.0
 
 ### Authentication
 
-Scripts use MSAL Confidential Client authentication:
+Scripts and flows should follow a managed-identity-first authentication pattern for production:
 
-1. Obtain tenant ID, client ID, client secret
-2. Scripts authenticate to Dataverse Web API using app-only flow
-3. No interactive login required (suitable for automation)
+1. Prefer system-assigned or user-assigned managed identity for Azure-hosted automation, or workload identity federation for CI/CD.
+2. Use certificate-backed app authentication where the connector or runtime supports it.
+3. Use interactive authentication for one-off administrator workstations.
+4. Use client secrets only as a legacy dev-only fallback; store them in Key Vault, never pass them on the command line, and rotate at least quarterly.
 
 ## Pre-Deployment Checklist
 

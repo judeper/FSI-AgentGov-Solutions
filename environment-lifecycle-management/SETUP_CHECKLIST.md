@@ -74,7 +74,7 @@ python scripts/deploy.py \
   - [ ] Configure auto-number primary column: `REQ-{SEQNUM:5}`
   - [ ] Add all 22 columns per [docs/dataverse-schema.md](./docs/dataverse-schema.md)
 - [ ] Create `ProvisioningLog` table:
-  - [ ] Set ownership to Organization (enforces immutability)
+  - [ ] Set ownership to Organization (supports immutability)
   - [ ] Enable auditing
   - [ ] Configure relationship to EnvironmentRequest (Restrict Delete)
   - [ ] Add all 11 columns per [docs/dataverse-schema.md](./docs/dataverse-schema.md)
@@ -235,7 +235,7 @@ Create topics per [docs/copilot-agent-setup.md](./docs/copilot-agent-setup.md):
 - [ ] Select Power Platform for Admins V2
 - [ ] Choose Service Principal authentication
 - [ ] Enter Tenant ID, Client ID
-- [ ] Configure Key Vault reference for Client Secret
+- [ ] Configure Key Vault reference for the certificate or legacy dev-only client secret
 
 ### Create Main Provisioning Flow **[MANUAL]**
 
@@ -243,7 +243,7 @@ Per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
 - [ ] Create flow with Dataverse trigger:
   - [ ] Table: EnvironmentRequest
-  - [ ] Filter: `fsi_state eq 4`
+  - [ ] Filter: `fsi_state eq 100000004`
 - [ ] Add Key Vault action to retrieve SP secret
 - [ ] Add Create Environment action (Power Platform for Admins V2)
 - [ ] Add Do-Until loop for async polling:
@@ -260,7 +260,7 @@ Per [docs/flow-configuration.md](./docs/flow-configuration.md):
 
 - [ ] Create flow with Dataverse trigger:
   - [ ] Table: EnvironmentRequest
-  - [ ] Filter: `fsi_state eq 7 and fsi_environmentid ne null and fsi_securitygroupid ne null`
+  - [ ] Filter: `fsi_state eq 100000007 and fsi_environmentid ne null and fsi_securitygroupid ne null`
 - [ ] Add Graph API call to validate security group
 - [ ] Add Force Sync User action for Service Principal
 - [ ] Add Security Group binding via Power Platform connector

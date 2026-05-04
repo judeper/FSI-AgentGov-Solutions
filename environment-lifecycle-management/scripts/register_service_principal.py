@@ -2,7 +2,10 @@
 """
 Register Service Principal for Environment Lifecycle Management.
 
-Creates Entra ID app registration and stores credentials in Azure Key Vault.
+Creates a Microsoft Entra app registration and stores credentials in Azure Key Vault.
+Prefer managed identity, workload identity federation, or certificate-backed
+authentication for production; client secrets are retained as a legacy
+development fallback.
 """
 
 import argparse
@@ -23,6 +26,8 @@ except ImportError:
 
 
 _GRAPH_SESSION: Optional[requests.Session] = None
+GRAPH_RESOURCE_APP_ID = "00000003-0000-0000-c000-000000000000"
+GRAPH_GROUP_READ_ALL_APP_ROLE_ID = "5b567255-7703-4780-807c-7be8301ae99b"
 
 
 def _get_graph_session() -> requests.Session:
@@ -96,11 +101,21 @@ def create_app_registration(
         print(f"  [DRY RUN] Would create application: {app_name}")
         return {"appId": "dry-run-app-id", "id": "dry-run-object-id"}
 
-    # Create new application
+    # Create new application with Graph app permission required by group validation.
     app_data = {
         "displayName": app_name,
         "signInAudience": "AzureADMyOrg",
-        "requiredResourceAccess": [],  # No Graph permissions needed
+        "requiredResourceAccess": [
+            {
+                "resourceAppId": GRAPH_RESOURCE_APP_ID,
+                "resourceAccess": [
+                    {
+                        "id": GRAPH_GROUP_READ_ALL_APP_ROLE_ID,
+                        "type": "Role",
+                    }
+                ],
+            }
+        ],
     }
 
     response = _get_graph_session().post(
@@ -135,6 +150,7 @@ def create_client_secret(
     Returns:
         Secret details including secretText
     """
+    # legacy: dev-only — replace with managed identity in production
     if dry_run:
         print(f"  [DRY RUN] Would create secret with {expiry_days}-day expiry")
         return {"secretText": "dry-run-secret", "keyId": "dry-run-key-id"}
@@ -201,6 +217,7 @@ def remove_existing_secrets(
         print("  No existing secrets to revoke")
         return 0
 
+    # legacy: dev-only — replace with managed identity in production
     if dry_run:
         print(f"  [DRY RUN] Would revoke {len(credentials)} existing secret(s)")
         return len(credentials)
@@ -238,6 +255,7 @@ def store_in_keyvault(
     """
     vault_url = f"https://{vault_name}.vault.azure.net"
 
+    # legacy: dev-only — replace with managed identity in production
     if dry_run:
         print(f"  [DRY RUN] Would store secret in {vault_url}")
         print(f"  [DRY RUN] Secret name: {secret_name}")
@@ -398,6 +416,7 @@ Examples:
         print("      3. Service principal > New service principal")
         print(f"      4. Enter Application ID: {app['appId']}")
         print("      5. Click Create")
+        print("      6. Grant admin consent for Microsoft Graph Group.Read.All")
         print()
 
         if args.dry_run:

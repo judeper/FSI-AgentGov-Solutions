@@ -272,7 +272,10 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret",
+        help=(
+            "Client secret (legacy dev-only fallback; prefer managed identity "
+            "or certificate auth in production)"
+        ),
     )
     parser.add_argument(
         "--environment-url",
@@ -297,6 +300,7 @@ def main() -> None:
     if not args.tenant_id:
         parser.error("--tenant-id is required")
 
+    # legacy: dev-only — replace with managed identity in production
     # Get client secret if needed
     client_secret = args.client_secret
     if not args.interactive and not client_secret:

@@ -265,7 +265,7 @@ See [security-roles.md](./security-roles.md) for privilege configuration.
   "fsi_requestnumber": "REQ-00001",
   "fsi_environmentname": "FIN-QuarterlyReporting-PROD",
   "fsi_environmenttype": 100000002,
-  "fsi_region": 10000000100000001,
+  "fsi_region": 100000001,
   "fsi_zone": 100000003,
   "fsi_zonerationale": "Processes quarterly financial reports with customer account data",
   "fsi_zoneautoflags": "CUSTOMER_PII,FINANCIAL_TRANSACTIONS",

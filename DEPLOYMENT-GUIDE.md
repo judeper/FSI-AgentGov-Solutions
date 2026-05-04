@@ -99,7 +99,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.2 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.2 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | 3 | v1.2.0 | personal, team, enterprise |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.0.1 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.1.0 | personal, team, enterprise |
@@ -136,7 +136,7 @@ The diagram below is generated from the `dependencies:` field in each solution's
 ```mermaid
 graph TD
     AOF[Agent Observability Foundation<br/>Tier 1 root]
-    ELM[Environment Lifecycle Management<br/>Tier 3 root]
+    ELM[Environment Lifecycle Management<br/>Tier 2 root]
     ARA[Agent Registry Automation<br/>Tier 3 root]
     UASD[Unrestricted Agent Sharing Detector<br/>Tier 2 root]
 
@@ -199,6 +199,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | — | — | ✅ | confidential |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | — | ✅ | ✅ | confidential |
 | [DR Testing Framework](./dr-testing-framework/) | — | — | ✅ | confidential |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
 | [File Upload Security](./file-upload-security/) | ✅ | ✅ | ✅ | internal |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | — | — | ✅ | restricted |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | — | ✅ | ✅ | internal |
@@ -221,7 +222,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 |----------|----------|------|------------|------------|
 | [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
 | [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
 
 <!-- END:ZONE_ROADMAP -->
 

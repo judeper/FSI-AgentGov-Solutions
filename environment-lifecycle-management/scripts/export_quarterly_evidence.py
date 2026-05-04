@@ -116,7 +116,10 @@ Examples:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret (or set ELM_CLIENT_SECRET)",
+        help=(
+            "Client secret (legacy dev-only fallback; or set "
+            "ELM_CLIENT_SECRET)"
+        ),
     )
     parser.add_argument(
         "--environment-url",

@@ -184,7 +184,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
 
     print("\n[Important Notes]")
     print("  - Field Security Profiles are NOT associated with security roles.")
-    print("    Add users (or AAD security teams) directly to the 'ELM Approver Fields'")
+    print("    Add users (or Microsoft Entra security teams) directly to the 'ELM Approver Fields'")
     print("    profile from Power Platform Admin Center > Environments > Settings >")
     print("    Users + permissions > Field security profiles. Those users must also")
     print("    hold the 'ELM Approver' security role.")
@@ -214,7 +214,10 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret",
+        help=(
+            "Client secret (legacy dev-only fallback; prefer managed identity "
+            "or certificate auth in production)"
+        ),
     )
     parser.add_argument(
         "--environment-url",
@@ -238,6 +241,7 @@ def main() -> None:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
+    # legacy: dev-only — replace with managed identity in production
     # Get client secret if needed
     client_secret = args.client_secret
     if not args.interactive and not client_secret:

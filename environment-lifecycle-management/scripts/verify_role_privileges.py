@@ -256,7 +256,10 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret",
+        help=(
+            "Client secret (legacy dev-only fallback; prefer managed identity "
+            "or certificate auth in production)"
+        ),
     )
     parser.add_argument(
         "--environment-url",
