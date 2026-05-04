@@ -6,7 +6,7 @@ Requirements for deploying the Generative AI Config Auditor (GAC) solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime |
+| PowerShell | 7.4+ | Core runtime matching the solution scripts' `#Requires -Version 7.4` declarations |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
 | MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
@@ -77,7 +77,7 @@ The executing user or service principal must have one of:
 
 - Power Platform Admin role
 - Dynamics 365 Service Admin role
-- Global Admin role
+- Entra Global Admin role
 
 These roles are required to enumerate environments and query bot records across the tenant.
 
@@ -104,7 +104,7 @@ For non-interactive automation:
 For scheduled daily scans via Power Automate:
 
 1. Create an Azure Automation account (or reuse an existing governance account)
-2. Import the `Start-GenAIConfigValidationRunbook.ps1` as a PowerShell 7.2 runbook
+2. Import the `Start-GenAIConfigValidationRunbook.ps1` as a PowerShell 7.4 runbook
 3. Upload the authentication certificate to the Certificates blade
 4. Install required modules: `MSAL.PS`, `Microsoft.PowerApps.Administration.PowerShell`
 5. Configure runbook parameters (tenant ID, client ID, certificate thumbprint, Dataverse URL)

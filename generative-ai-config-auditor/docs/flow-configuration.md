@@ -16,7 +16,7 @@ This guide covers two flows:
 Before creating the flows, confirm you have:
 
 - [ ] **Azure Automation Account** with:
-  - `Start-GenAIConfigValidationRunbook.ps1` imported as a PowerShell 7.2 runbook
+  - `Start-GenAIConfigValidationRunbook.ps1` imported as a PowerShell 7.4 runbook
   - Certificate uploaded (Certificates blade)
   - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
   - Application permissions granted as required by Power Platform admin APIs
@@ -378,4 +378,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Generative AI Config Auditor -- Flow Setup Guide v1.1.0*
+*Generative AI Config Auditor -- Flow Setup Guide v1.1.1*
