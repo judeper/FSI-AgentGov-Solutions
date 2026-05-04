@@ -139,6 +139,36 @@ Baselines are classified by governance zone, affecting detection behavior.
 
 ---
 
+
+## Manifest-Based Scope Declarations
+
+For controlled deployments, maintain agent scope declarations in source control before loading them into Dataverse. A manifest review should compare the declared purpose, allowed resources, data owner, and review date against the agent's design documentation.
+
+### Recommended manifest shape
+
+```json
+{
+  "agentId": "CopilotStudio.CustomEngine.12345678-1234-1234-1234-123456789012",
+  "environmentId": "87654321-4321-4321-4321-210987654321",
+  "purpose": "Answer customer inquiries using approved knowledge sources",
+  "zone": 10003,
+  "dataOwner": "data.owner@contoso.com",
+  "allowedConnectors": ["SharePoint", "Dataverse"],
+  "allowedSites": ["https://contoso.sharepoint.com/sites/CustomerKB"],
+  "allowedTables": ["contact", "case", "knowledgearticle"],
+  "allowedApis": [],
+  "nextReview": "2026-08-01",
+  "alertThreshold": {
+    "newHighSeverityResourcesPerDay": 1,
+    "newMediumSeverityResourcesPerDay": 3
+  }
+}
+```
+
+Use the manifest as the review artifact, then copy approved values into `fsi_agentscope` JSON fields. Alert thresholds are review metadata in v1.2.1; the provided detector still creates one violation per out-of-scope resource and does not suppress alerts based on thresholds.
+
+---
+
 ## Scope Array Format
 
 All scope arrays must be valid JSON arrays of strings.
@@ -238,10 +268,11 @@ Update-DataverseRecord -EntityName "fsi_agentscope" -RecordId $scopeId -Data @{
 
 ### Initial Setup
 
-1. **Start with audit-generated baseline** - Captures actual access patterns
-2. **Review before activating** - Remove unexpected or one-time access
-3. **Set appropriate zone** - Affects detection frequency and approval rigor
-4. **Document purpose clearly** - Helps reviewers understand expected access
+1. **Start with manifest review** - Approve purpose, owners, and allowed resources before activating high-impact agents
+2. **Use audit-generated baseline as input** - Captures actual access patterns for reviewer validation
+3. **Review before activating** - Remove unexpected or one-time access
+4. **Set appropriate zone** - Affects detection frequency and approval rigor
+5. **Document purpose clearly** - Helps reviewers understand expected access
 
 ### Ongoing Maintenance
 
@@ -280,4 +311,4 @@ Update-DataverseRecord -EntityName "fsi_agentscope" -RecordId $scopeId -Data @{
 
 ---
 
-*Scope Drift Monitor v1.2.0*
+*Scope Drift Monitor v1.2.1*

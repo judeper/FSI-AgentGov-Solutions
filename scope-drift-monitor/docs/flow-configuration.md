@@ -77,12 +77,12 @@ Configure environment variables for your organization.
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts | `19:xxxxx@thread.tacv2` |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals | `security@contoso.com` |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes | `15` (minutes) |
-| `fsi_SDM_ClientId` | Microsoft Entra ID application client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
-| `fsi_SDM_ClientSecret` | Microsoft Entra ID application client secret | *(stored securely)* |
+| `fsi_SDM_ClientId` | Legacy dev-only Microsoft Entra ID application client ID for local script fallback | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `fsi_SDM_ClientSecret` | Legacy dev-only Microsoft Entra ID application secret for local script fallback; use managed identity for Azure-hosted production automation | *(stored securely for dev only)* |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on `fsi_agentscope` (default: `10002`) | `10002` |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL | `https://manage.office.com` (commercial) |
 
-> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against known Microsoft Management API endpoints (`manage.office.com`, `manage.office365.us`, `manage.office.eaglex.ic.gov`, `manage.protection.outlook.com`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints.
+> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against known Microsoft Management API endpoints (`manage.office.com`, `manage.office365.us`, `manage.office.eaglex.ic.gov`, `manage.protection.outlook.com`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints. PowerShell scripts now try managed identity first and use client-secret OAuth only as a legacy development fallback.
 
 ### Configuring Environment Variables
 
@@ -130,9 +130,12 @@ Configure environment variables for your organization.
 
 **Detection sources:**
 
-1. **Office 365 Management API** - CopilotInteraction events (RecordType 261)
+1. **Office 365 Management API** - CopilotInteraction events (RecordType 261) with `CopilotEventData.AccessedResources`, `AISystemPlugin`, `AgentId`/`BotId`, and transcript thread metadata
 
-> **Note:** The flow uses only the Office 365 Management API (Unified Audit Log) for detection. Ensure Management API subscriptions are configured per the [prerequisites](prerequisites.md).
+> **Note:** The flow uses only the Office 365 Management API (Unified Audit Log) for detection. Ensure Management API subscriptions, Dataverse auditing, and Power Platform **Enable SAS Logging in Purview** are configured per the [prerequisites](prerequisites.md). Microsoft Graph `/security/auditLog/queries` is v1.0 and should be treated as a future collector option for this solution rather than an active dependency.
+
+
+> **Copilot audit payload note:** Copilot Studio usage events in the Purview Audit solution include metadata and a transcript thread ID. Full chat text is retrieved through Data Security Posture Management (DSPM) for AI, not directly from the Audit solution record. Avoid storing prompt/response text in `fsi_accessdetails` unless your retention and privacy controls explicitly allow it.
 
 > **Known limitation:** The detection summary (`Compose_Detection_Summary`) is built at the end of each cycle but is not persisted to Dataverse or any external store. Operational telemetry (events processed, violations created, source availability) is only available through Power Automate's 28-day run history. Organizations with FSI audit retention requirements should export flow run data to a long-term store (see [Troubleshooting > Export Flow Run Data](troubleshooting.md#export-flow-run-data)).
 
@@ -230,4 +233,4 @@ For common issues and resolutions, see [Troubleshooting Guide](troubleshooting.m
 
 ---
 
-*Scope Drift Monitor v1.2.0*
+*Scope Drift Monitor v1.2.1*

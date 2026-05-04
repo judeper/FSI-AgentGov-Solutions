@@ -848,7 +848,7 @@
     "scope-drift-monitor": {
       "id": "scope-drift-monitor",
       "name": "Scope Drift Monitor",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",

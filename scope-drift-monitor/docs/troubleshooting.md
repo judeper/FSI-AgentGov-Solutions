@@ -16,9 +16,9 @@ Common issues and resolutions for the Scope Drift Monitor.
 |-------|------------|
 | No out-of-scope access occurred | Expected behavior - no violations to detect |
 | Agent has no baseline defined | Create baseline with `New-AgentBaseline.ps1` or manually |
-| Audit logging not enabled | Enable Unified Audit Log in Microsoft 365 |
+| Audit logging not enabled | Enable Microsoft Purview auditing and configure Power Platform environment auditing/SAS Logging in Purview |
 | Wrong lookback window | Extend lookback in flow configuration |
-| Office 365 Management API subscription inactive | Verify subscription is active (see below) |
+| Office 365 Management API subscription inactive | Verify subscription is active (see below); Graph `/security/auditLog/queries` v1.0 is not used by this solution's current collector |
 
 **Verify audit subscription:**
 
@@ -67,6 +67,19 @@ Invoke-RestMethod -Uri $uri -Headers $headers
 | `403 Forbidden` | Missing permissions | Grant admin consent |
 | `AF20024` | Subscription not started | Start subscription (see flow) |
 | `AF20010` | Content not ready | Wait and retry (transient) |
+
+---
+
+### Managed Identity Authentication
+
+**Symptoms:** Script authentication fails before querying Office 365 Management API or Dataverse.
+
+**Resolution:**
+
+1. For Azure-hosted production runs, enable system-assigned managed identity or set `AZURE_MANAGED_IDENTITY_CLIENT_ID` for a user-assigned identity.
+2. Grant the identity Office 365 Management API `ActivityFeed.Read` application permission and the required Dataverse application-user security role.
+3. Use `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` only as a legacy local-development fallback.
+4. Review Microsoft Entra **Managed identity sign-ins** and **Service principal sign-ins** when investigating failed token requests.
 
 ---
 
@@ -209,7 +222,7 @@ The SDM-ExpansionProcessor flow binds `fsi_securityapprovedby` using `/systemuse
 
 | Environment Type | Impact |
 |-----------------|--------|
-| Cloud-native (standard) | No issue — `systemuserid` equals AAD OID |
+| Cloud-native (standard) | No issue — `systemuserid` equals Microsoft Entra object ID |
 | Migrated from on-premises | May fail — IDs may differ |
 | On-premises-derived | May fail — IDs may differ |
 
@@ -355,4 +368,4 @@ For issues not covered here:
 
 ---
 
-*Scope Drift Monitor v1.2.0*
+*Scope Drift Monitor v1.2.1*
