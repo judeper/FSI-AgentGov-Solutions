@@ -145,7 +145,7 @@ Three connection references enable Power Automate flows to interact with platfor
 | `fsi_cr_office365_conditionalaccessautomation` | Office 365 - Conditional Access Automation | `shared_office365` | Email notification delivery |
 | `fsi_cr_teams_conditionalaccessautomation` | Teams - Conditional Access Automation | `shared_teams` | Adaptive card alert delivery |
 
-> **Note:** A Microsoft Graph connection reference (`fsi_cr_graph_conditionalaccessautomation`) is planned for future phases to enable direct CA policy reads from Power Automate flows. Current flows authenticate via HTTP actions with Managed Service Identity.
+> **Note:** A Microsoft Graph connection reference (`fsi_cr_graph_conditionalaccessautomation`) is planned for future phases to enable direct CA policy reads from Power Automate flows. Current flows authenticate via HTTP actions with managed identity.
 
 ---
 
@@ -207,4 +207,4 @@ Manual deployment steps:
 
 ---
 
-*Schema Version: 1.2.2 | Publisher Prefix: fsi_ | Last Updated: April 2026*
+*Schema Version: 2.0.1 | Publisher Prefix: fsi_ | Last Updated: 2026-Q2*

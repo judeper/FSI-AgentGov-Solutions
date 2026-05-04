@@ -41,9 +41,11 @@ Connect-MgGraph -Scopes "RoleManagement.Read.Directory","Group.Read.All","User.R
 
 ---
 
-## Step 2: Service Principal Setup
+## Step 2: Automation identity setup
 
-### 2.1 Create App Registration
+Managed identity is the preferred unattended authentication pattern for Azure Automation. Use `Register-ServicePrincipal.ps1` only when you need a certificate-backed app registration fallback; client secrets are legacy dev-only.
+
+### 2.1 Create App Registration (certificate fallback)
 
 ```powershell
 .\scripts\Register-ServicePrincipal.ps1 `
@@ -79,12 +81,15 @@ Admin consent URL: https://login.microsoftonline.com/<tenant-id>/adminconsent?cl
 ```powershell
 # Connect using the service principal
 $clientId = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientId" -AsPlainText
-$clientSecret = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientSecret" -AsPlainText
+$thumbprint = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-CertThumbprint" -AsPlainText
 
-$secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+Connect-MgGraph -TenantId "<tenant-id>" -ClientId $clientId -CertificateThumbprint $thumbprint
 
-Connect-MgGraph -TenantId "<tenant-id>" -ClientSecretCredential $credential
+# legacy: dev-only — replace with managed identity in production
+# $clientSecret = Get-AzKeyVaultSecret -VaultName "<vault-name>" -Name "CAA-SP-ClientSecret" -AsPlainText
+# $secureSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
+# $credential = New-Object System.Management.Automation.PSCredential($clientId, $secureSecret)
+# Connect-MgGraph -TenantId "<tenant-id>" -ClientSecretCredential $credential
 
 # Verify access
 Get-MgIdentityConditionalAccessPolicy | Select-Object DisplayName, State | Format-Table
@@ -141,7 +146,8 @@ Create `config/tenant-config.json`:
   "applications": {
     "copilotStudio": "<copilot-studio-app-id>",
     "agentBuilder": "<agent-builder-app-id>",
-    "m365Copilot": "fb8d773d-7ef8-4ec0-a117-179f88add510"
+    "m365Copilot": "fb8d773d-7ef8-4ec0-a117-179f88add510",
+    "microsoftFlowService": "7df0a125-d3be-4c96-aa54-591f83ff541c"
   },
   "policyPrefix": "CA-FSI"
 }
@@ -263,7 +269,11 @@ Invoke-MgGraphRequest -Method POST `
     -Body ($testParams | ConvertTo-Json -Depth 10)
 ```
 
-### 5.4 Validate Coverage
+### 5.4 Authentication strengths and CAE validation
+
+If your tenant adopts phishing-resistant authentication strength for Zone 3, validate the policy references `grantControls.authenticationStrength` and does not also include `builtInControls: ["mfa"]`. Confirm FIDO2/passkey, Windows Hello for Business, or certificate-based authentication registration before enabling the policy. CAE is on by default; treat strict location enforcement as preview and validate named locations before use.
+
+### 5.5 Validate Coverage
 
 ```powershell
 .\scripts\Test-PolicyCompliance.ps1 `

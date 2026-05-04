@@ -306,14 +306,18 @@ foreach ($v in $validations) {
 
 # --- Resolve tenant ID ---
 $tenantId = 'unknown'
-try {
-    $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-    if ($mgContext -and $mgContext.TenantId) {
-        $tenantId = $mgContext.TenantId
+if ($TenantId) {
+    $tenantId = $TenantId
+} else {
+    try {
+        $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+        if ($mgContext -and $mgContext.TenantId) {
+            $tenantId = $mgContext.TenantId
+        }
     }
-}
-catch {
-    Write-Verbose "Could not determine tenant ID from Graph context: $_"
+    catch {
+        Write-Verbose "Could not determine tenant ID from Graph context: $_"
+    }
 }
 
 # --- Build evidence object ---
@@ -330,7 +334,7 @@ $evidence = [ordered]@{
         toDate         = $ToDate.ToUniversalTime().ToString('o')
         runId          = if ($RunId) { $RunId } else { $null }
         exportVersion  = '1.0.0'
-        solutionVersion = '1.2.1'
+        solutionVersion = '2.0.1'
         recordCount    = $validations.Count
         violationCount = $violations.Count
         baselineCount  = $baselines.Count

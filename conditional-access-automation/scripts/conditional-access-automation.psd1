@@ -3,7 +3,7 @@
     RootModule = 'conditional-access-automation.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.2.2'
+    ModuleVersion     = '2.0.1'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -102,6 +102,13 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 2.0.1 - 2026-Q2 Microsoft Learn refresh
+
+### Fixed
+- Managed identity-first guidance for unattended runbooks.
+- Authentication-strength-aware compliance and drift checks.
+- Microsoft Entra ID branding cleanup outside historical changelog text.
+
 ## 1.2.2 - 2026-04-22
 
 ### Fixed
@@ -120,7 +127,7 @@
 ### Changed
 - README zone-policy table rewritten to match the actual templates (Zone 2/3 ship without sign-in risk levels by default; Entra ID P2 add-on template included).
 - New optional template: CA-RiskBased-Zone3-Block.json for tenants with Entra ID P2 that want risk-based blocking on Zone 3 workloads.
-- Stripped legacy "Azure AD" parenthetical references from PowerShell help blocks.
+- Removed legacy Microsoft Entra ID parenthetical branding from PowerShell help blocks.
 
 ## 1.1.0 - 2026-02-10
 

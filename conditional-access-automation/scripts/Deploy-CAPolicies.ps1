@@ -64,7 +64,7 @@
 
 .NOTES
     File: Deploy-CAPolicies.ps1
-    Version: 2.0.0
+    Version: 2.0.1
     Supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12
     through auditable, zone-based Conditional Access deployment.
 #>

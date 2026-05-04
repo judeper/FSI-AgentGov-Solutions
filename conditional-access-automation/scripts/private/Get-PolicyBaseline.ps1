@@ -117,6 +117,27 @@ function Get-CAAPolicyBaseline {
     # callers (Test-PolicyCompliance, Watch-PolicyDrift) that expected a
     # baseline array.
 
+    function Get-CAANestedValue {
+        param(
+            [Parameter(Mandatory = $false)] [object]$InputObject,
+            [Parameter(Mandatory)] [string[]]$Path
+        )
+
+        $current = $InputObject
+        foreach ($segment in $Path) {
+            if ($null -eq $current) { return $null }
+            if ($current -is [hashtable]) {
+                if (-not $current.ContainsKey($segment)) { return $null }
+                $current = $current[$segment]
+                continue
+            }
+            $property = $current.PSObject.Properties[$segment]
+            if (-not $property) { return $null }
+            $current = $property.Value
+        }
+        return $current
+    }
+
     # Retrieve all CA policies with pagination
     Write-Verbose "Retrieving all Conditional Access policies from Graph..."
     $allPolicies = Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop
@@ -148,44 +169,76 @@ function Get-CAAPolicyBaseline {
                 elseif ($policy.DisplayName -match 'AllZones') { 'AllZones' }
                 else { 'Common' }
 
-        # Normalize conditions
+        # Normalize conditions. Keep the fields that Microsoft Graph v1.0 exposes
+        # for conditionalAccessConditionSet so drift detection can see risk,
+        # location, device, client-app, and authentication-flow changes.
         $conditions = @{
-            Users              = @{
-                IncludeUsers  = @($policy.Conditions.Users.IncludeUsers)
-                ExcludeUsers  = @($policy.Conditions.Users.ExcludeUsers)
-                IncludeGroups = @($policy.Conditions.Users.IncludeGroups)
-                ExcludeGroups = @($policy.Conditions.Users.ExcludeGroups)
+            Users                      = @{
+                IncludeUsers                 = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'IncludeUsers'))
+                ExcludeUsers                 = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'ExcludeUsers'))
+                IncludeGroups                = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'IncludeGroups'))
+                ExcludeGroups                = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'ExcludeGroups'))
+                IncludeRoles                 = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'IncludeRoles'))
+                ExcludeRoles                 = @(Get-CAANestedValue $policy @('Conditions', 'Users', 'ExcludeRoles'))
+                ExcludeGuestsOrExternalUsers = Get-CAANestedValue $policy @('Conditions', 'Users', 'ExcludeGuestsOrExternalUsers')
             }
-            Applications       = @{
-                IncludeApplications = @($policy.Conditions.Applications.IncludeApplications)
-                ExcludeApplications = @($policy.Conditions.Applications.ExcludeApplications)
+            Applications               = @{
+                IncludeApplications = @(Get-CAANestedValue $policy @('Conditions', 'Applications', 'IncludeApplications'))
+                ExcludeApplications = @(Get-CAANestedValue $policy @('Conditions', 'Applications', 'ExcludeApplications'))
+                IncludeUserActions  = @(Get-CAANestedValue $policy @('Conditions', 'Applications', 'IncludeUserActions'))
+                IncludeAuthenticationContextClassReferences = @(Get-CAANestedValue $policy @('Conditions', 'Applications', 'IncludeAuthenticationContextClassReferences'))
             }
-            SignInRiskLevels   = @($policy.Conditions.SignInRiskLevels)
-            ClientAppTypes     = @($policy.Conditions.ClientAppTypes)
-            Platforms          = @{
-                IncludePlatforms = @($policy.Conditions.Platforms.IncludePlatforms)
-                ExcludePlatforms = @($policy.Conditions.Platforms.ExcludePlatforms)
+            ClientApplications         = @{
+                IncludeServicePrincipals = @(Get-CAANestedValue $policy @('Conditions', 'ClientApplications', 'IncludeServicePrincipals'))
+                ExcludeServicePrincipals = @(Get-CAANestedValue $policy @('Conditions', 'ClientApplications', 'ExcludeServicePrincipals'))
+            }
+            SignInRiskLevels           = @(Get-CAANestedValue $policy @('Conditions', 'SignInRiskLevels'))
+            UserRiskLevels             = @(Get-CAANestedValue $policy @('Conditions', 'UserRiskLevels'))
+            ServicePrincipalRiskLevels = @(Get-CAANestedValue $policy @('Conditions', 'ServicePrincipalRiskLevels'))
+            InsiderRiskLevels          = Get-CAANestedValue $policy @('Conditions', 'InsiderRiskLevels')
+            AuthenticationFlows        = Get-CAANestedValue $policy @('Conditions', 'AuthenticationFlows')
+            ClientAppTypes             = @(Get-CAANestedValue $policy @('Conditions', 'ClientAppTypes'))
+            Locations                  = @{
+                IncludeLocations = @(Get-CAANestedValue $policy @('Conditions', 'Locations', 'IncludeLocations'))
+                ExcludeLocations = @(Get-CAANestedValue $policy @('Conditions', 'Locations', 'ExcludeLocations'))
+            }
+            Platforms                  = @{
+                IncludePlatforms = @(Get-CAANestedValue $policy @('Conditions', 'Platforms', 'IncludePlatforms'))
+                ExcludePlatforms = @(Get-CAANestedValue $policy @('Conditions', 'Platforms', 'ExcludePlatforms'))
+            }
+            Devices                    = @{
+                IncludeDevices = @(Get-CAANestedValue $policy @('Conditions', 'Devices', 'IncludeDevices'))
+                ExcludeDevices = @(Get-CAANestedValue $policy @('Conditions', 'Devices', 'ExcludeDevices'))
+                DeviceFilter   = Get-CAANestedValue $policy @('Conditions', 'Devices', 'DeviceFilter')
             }
         }
 
-        # Normalize grant controls
+        # Normalize grant controls, including authentication strengths. Microsoft
+        # Graph models authentication strength as a relationship on grantControls;
+        # it can satisfy MFA without listing `mfa` in builtInControls.
         $grantControls = @{
-            Operator                = $policy.GrantControls.Operator
-            BuiltInControls         = @($policy.GrantControls.BuiltInControls)
-            AuthenticationStrength   = $policy.GrantControls.AuthenticationStrength
+            Operator                  = Get-CAANestedValue $policy @('GrantControls', 'Operator')
+            BuiltInControls           = @(Get-CAANestedValue $policy @('GrantControls', 'BuiltInControls'))
+            CustomAuthenticationFactors = @(Get-CAANestedValue $policy @('GrantControls', 'CustomAuthenticationFactors'))
+            TermsOfUse                = @(Get-CAANestedValue $policy @('GrantControls', 'TermsOfUse'))
+            AuthenticationStrength    = Get-CAANestedValue $policy @('GrantControls', 'AuthenticationStrength')
         }
 
-        # Normalize session controls
+        # Normalize session controls, including current v1.0 controls used for
+        # CAE/resilience and app-enforced restrictions.
         $sessionControls = @{
             SignInFrequency  = @{
-                IsEnabled = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.IsEnabled } else { $false }
-                Value     = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.Value } else { $null }
-                Type      = if ($policy.SessionControls.SignInFrequency) { $policy.SessionControls.SignInFrequency.Type } else { $null }
+                IsEnabled = if (Get-CAANestedValue $policy @('SessionControls', 'SignInFrequency')) { Get-CAANestedValue $policy @('SessionControls', 'SignInFrequency', 'IsEnabled') } else { $false }
+                Value     = Get-CAANestedValue $policy @('SessionControls', 'SignInFrequency', 'Value')
+                Type      = Get-CAANestedValue $policy @('SessionControls', 'SignInFrequency', 'Type')
             }
             PersistentBrowser = @{
-                IsEnabled = if ($policy.SessionControls.PersistentBrowser) { $policy.SessionControls.PersistentBrowser.IsEnabled } else { $false }
-                Mode      = if ($policy.SessionControls.PersistentBrowser) { $policy.SessionControls.PersistentBrowser.Mode } else { $null }
+                IsEnabled = if (Get-CAANestedValue $policy @('SessionControls', 'PersistentBrowser')) { Get-CAANestedValue $policy @('SessionControls', 'PersistentBrowser', 'IsEnabled') } else { $false }
+                Mode      = Get-CAANestedValue $policy @('SessionControls', 'PersistentBrowser', 'Mode')
             }
+            ApplicationEnforcedRestrictions = Get-CAANestedValue $policy @('SessionControls', 'ApplicationEnforcedRestrictions')
+            CloudAppSecurity                = Get-CAANestedValue $policy @('SessionControls', 'CloudAppSecurity')
+            DisableResilienceDefaults       = Get-CAANestedValue $policy @('SessionControls', 'DisableResilienceDefaults')
         }
 
         $baselineObjects += @{

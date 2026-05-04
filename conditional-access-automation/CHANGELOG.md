@@ -2,6 +2,13 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- Microsoft Learn 2026-Q2 refresh: managed identity-first runbook guidance, authentication-strength-aware validation/drift checks, CAE documentation caveats, and Power Platform Conditional Access scope notes.
+- Bumped solution metadata to v2.0.1 while preserving the v2.0.0 Dataverse schema migration guidance.
+
 ## [2.0.0] - 2026-05-04 — BREAKING — Schema convention alignment (Issue #36)
 
 > The CAA Dataverse schema has been re-normalized to follow the team naming convention (single-word PascalCase SchemaNames, lowercase logical names with no underscores between words). Every existing CAA deployment must drop and recreate its three tables before upgrading to this version. See migration steps below.

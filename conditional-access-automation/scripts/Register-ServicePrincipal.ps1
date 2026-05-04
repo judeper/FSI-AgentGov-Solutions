@@ -5,7 +5,7 @@
 .DESCRIPTION
     Creates an Entra ID app registration with the Microsoft Graph API permissions
     required for Conditional Access policy management and stores the resulting
-    credentials in Azure Key Vault.
+    credentials in Azure Key Vault. Managed identity is preferred for Azure-hosted automation; client secrets are legacy dev-only fallback.
 
     The app registration receives the following application (Role) permissions:
       - Policy.Read.All — read CA policies and named locations
@@ -54,7 +54,7 @@
 
 .NOTES
     File: Register-ServicePrincipal.ps1
-    Version: 2.0.0
+    Version: 2.0.1
     Supports compliance with FINRA 4511 and SEC 17a-4 by establishing
     auditable, least-privilege service identities for CA automation.
 #>
@@ -70,6 +70,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$KeyVaultName,
 
+    # legacy: dev-only — replace with managed identity in production.
     # Secret rotation cadence. Defaults to 90 days to align with FSI password
     # rotation policies — override only when an organizational standard differs.
     [Parameter(ParameterSetName = 'Secret')]

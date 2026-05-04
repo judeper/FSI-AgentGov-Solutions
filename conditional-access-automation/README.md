@@ -1,6 +1,6 @@
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v1.2.1
+> **Status:** Completed | **Version:** v2.0.1
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 
@@ -81,7 +81,7 @@ The solution is organized in two tiers:
 ## What This Solution Does
 
 - **Deploys** pre-configured Conditional Access policy templates for AI workloads
-- **Enforces** MFA requirements based on governance zone (Zone 1/2/3)
+- **Applies** MFA or MFA-satisfying authentication-strength requirements based on governance zone (Zone 1/2/3)
 - **Monitors** policy compliance and configuration drift with daily automated scans
 - **Persists** validation results, violations, and baselines in Dataverse
 - **Reports** on policy coverage gaps across AI applications
@@ -201,6 +201,21 @@ After testing in report-only mode:
 > rely on `signInRiskLevels` / `userRiskLevels` will only function on tenants
 > licensed for Entra ID P2. Tenants on P1 only should rely on the MFA +
 > compliant-device controls and omit the risk-based templates.
+>
+> **Authentication strengths:** Microsoft Graph models authentication strengths
+> as `grantControls.authenticationStrength`, not as a `builtInControls: ["mfa"]`
+> entry. Use the built-in **Phishing-resistant MFA strength** for Zone 3 after
+> confirming passkey/FIDO2, Windows Hello for Business, or certificate-based
+> authentication readiness. Do not combine `mfa` and `authenticationStrength`
+> in the same policy; retrieve built-in/custom strength IDs from
+> `GET /policies/authenticationStrengthPolicies` before authoring tenant-specific
+> templates.
+>
+> **Continuous Access Evaluation (CAE):** CAE is on by default for Conditional
+> Access. The bundled templates configure sign-in frequency and persistent
+> browser controls only. Strict location enforcement for CAE is preview and
+> should be adopted only after tenant validation of named locations and supported
+> applications.
 
 ### Zone 1 - Personal Productivity
 
@@ -229,11 +244,15 @@ After testing in report-only mode:
   `CA-RiskBased-Zone3-Block.json` template for "block on any risk" behavior
   (requires Entra ID P2)
 
+## Power Platform Conditional Access scope notes
+
+When policies target individual applications instead of **Office 365** or **All cloud apps**, keep Power Platform host apps and **Microsoft Flow Service** requirements consistent. Microsoft Learn documents broken embedded flow connections when SharePoint, Teams, Excel, Power Automate, and Microsoft Flow Service have different MFA/device/Terms of Use requirements. If individual app targeting is required, explicitly review Microsoft Flow Service (`7df0a125-d3be-4c96-aa54-591f83ff541c`) alongside Copilot Studio, Power Apps, Power Automate, and M365 Copilot service principals.
+
 ## Scripts Reference
 
 ### Register-ServicePrincipal.ps1
 
-Creates and configures a service principal for CA policy automation.
+Creates and configures a service principal for CA policy automation when managed identity is unavailable. Managed identity is preferred for Azure-hosted automation; client secrets are legacy dev-only fallback.
 
 ```powershell
 .\scripts\Register-ServicePrincipal.ps1 `
@@ -505,7 +524,7 @@ The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve
 
 ## Version
 
-1.2.1 - April 2026
+2.0.1 - 2026-Q2 Microsoft Learn refresh
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
