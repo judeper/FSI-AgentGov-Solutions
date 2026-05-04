@@ -13,15 +13,19 @@
     Specific source ID to validate (optional - validates all if not specified).
 
 .PARAMETER TenantId
-    Microsoft Entra ID tenant ID. Defaults to the AZURE_TENANT_ID environment variable.
+    Microsoft Entra ID tenant ID for the legacy client-secret fallback. Defaults to the AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID. Defaults to the AZURE_CLIENT_ID environment variable.
+    Microsoft Entra ID application (client) ID for the legacy client-secret fallback. Defaults to the AZURE_CLIENT_ID environment variable.
 
 .PARAMETER ClientSecret
-    Microsoft Entra ID client secret as a SecureString. Falls back to the AZURE_CLIENT_SECRET
-    environment variable if not provided. Production deployments should use
-    certificate-based auth or managed identities.
+    Microsoft Entra ID client secret as a SecureString for legacy development-only fallback. Falls back to the AZURE_CLIENT_SECRET environment variable if not provided.
+
+.PARAMETER UseManagedIdentity
+    Use Azure managed identity authentication. This is the recommended production path for Azure Automation, Azure Functions, and VM-hosted scheduled jobs.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to RSV_MANAGED_IDENTITY_CLIENT_ID when set; omit for system-assigned managed identity.
 
 .PARAMETER GraphBaseUrl
     Microsoft Graph API base URL. Supports sovereign clouds:
@@ -58,9 +62,15 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
-    # Production deployments should use certificate-based auth or managed identities.
+    # legacy: dev-only - replace with managed identity in production.
     [Parameter(Mandatory = $false)]
     [SecureString]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$UseManagedIdentity,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = $env:RSV_MANAGED_IDENTITY_CLIENT_ID,
 
     # Sovereign cloud support: override for Graph API base URL.
     # NOTE: GraphBaseUrl, AuthBaseUrl, and Environment must all target the same sovereign cloud.
@@ -134,51 +144,99 @@ if ($detectedCloud) {
     }
 }
 
-# Convert SecureString or fall back to environment variable
+# Convert SecureString or fall back to environment variable for the legacy dev-only path.
 if ($null -eq $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
+    # legacy: dev-only - replace with managed identity in production.
     $ClientSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
 }
 $clientSecretPlain = if ($null -ne $ClientSecret) {
     [System.Net.NetworkCredential]::new('', $ClientSecret).Password
 } else { $null }
+$script:authMode = if ($UseManagedIdentity -or -not $clientSecretPlain) { "ManagedIdentity" } else { "ClientSecret" }
 
-function Get-AccessToken {
-    param([string]$TenantId, [string]$ClientId, [string]$ClientSecret, [string]$Scope)
+function Get-ClientCredentialToken {
+    param([string]$TenantId, [string]$ClientId, [string]$ClientSecret, [string]$Resource)
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        throw "TenantId, ClientId, and ClientSecret are required for legacy client-secret authentication. Use -UseManagedIdentity in production Azure hosts."
+    }
 
     $tokenUrl = "$AuthBaseUrl/$TenantId/oauth2/v2.0/token"
     $body = @{
         client_id     = $ClientId
         client_secret = $ClientSecret
-        scope         = $Scope
+        scope         = "$Resource/.default"
         grant_type    = "client_credentials"
     }
 
     $response = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $body -ContentType "application/x-www-form-urlencoded" -MaximumRetryCount 3 -RetryIntervalSec 5
     return @{
         Token     = $response.access_token
-        ExpiresAt = (Get-Date).AddSeconds($response.expires_in - 300)  # Refresh 5 min early
-        Scope     = $Scope
+        ExpiresAt = (Get-Date).AddSeconds([int]$response.expires_in - 300)  # Refresh 5 min early
+        Resource  = $Resource
     }
+}
+
+function Get-ManagedIdentityToken {
+    param([string]$Resource)
+
+    $encodedResource = [System.Uri]::EscapeDataString($Resource)
+    $headers = @{ Metadata = "true" }
+
+    if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
+        $tokenUrl = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=$encodedResource"
+        $headers["X-IDENTITY-HEADER"] = $env:IDENTITY_HEADER
+    } elseif ($env:MSI_ENDPOINT -and $env:MSI_SECRET) {
+        $tokenUrl = "$($env:MSI_ENDPOINT)?api-version=2017-09-01&resource=$encodedResource"
+        $headers = @{ Secret = $env:MSI_SECRET }
+    } else {
+        $tokenUrl = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$encodedResource"
+    }
+
+    if ($ManagedIdentityClientId) {
+        $encodedClientId = [System.Uri]::EscapeDataString($ManagedIdentityClientId)
+        $tokenUrl = "$tokenUrl&client_id=$encodedClientId"
+    }
+
+    try {
+        $response = Invoke-RestMethod -Uri $tokenUrl -Headers $headers -Method Get -TimeoutSec 10 -MaximumRetryCount 2 -RetryIntervalSec 2
+    } catch {
+        throw "Managed identity authentication failed for resource '$Resource'. Run in an Azure host with managed identity enabled, or use the legacy dev-only client-secret fallback. $($_.Exception.Message)"
+    }
+
+    return @{
+        Token     = $response.access_token
+        ExpiresAt = (Get-Date).AddSeconds([int]$response.expires_in - 300)
+        Resource  = $Resource
+    }
+}
+
+function Get-TokenInfo {
+    param([string]$Resource)
+
+    if ($script:authMode -eq "ManagedIdentity") {
+        return Get-ManagedIdentityToken -Resource $Resource
+    }
+
+    $secret = if ($null -ne $ClientSecret) {
+        [System.Net.NetworkCredential]::new('', $ClientSecret).Password
+    } else { $null }
+    return Get-ClientCredentialToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $secret -Resource $Resource
 }
 
 # Token state for automatic refresh
 $script:tokenCache = @{}
 
 function Get-ValidToken {
-    param([string]$Scope)
+    param([string]$Resource)
 
-    $cached = $script:tokenCache[$Scope]
+    $cached = $script:tokenCache[$Resource]
     if ($cached -and (Get-Date) -lt $cached.ExpiresAt) {
         return $cached.Token
     }
 
-    # Re-acquire token using SecureString (clientSecretPlain may already be cleared)
-    $secret = if ($null -ne $ClientSecret) {
-        [System.Net.NetworkCredential]::new('', $ClientSecret).Password
-    } else { $null }
-
-    $tokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $secret -Scope $Scope
-    $script:tokenCache[$Scope] = $tokenInfo
+    $tokenInfo = Get-TokenInfo -Resource $Resource
+    $script:tokenCache[$Resource] = $tokenInfo
     return $tokenInfo.Token
 }
 
@@ -380,27 +438,28 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Log "RAG Source Validator started. Environment: $Environment"
 
-if (-not $TenantId -or -not $ClientId -or -not $clientSecretPlain) {
-    Write-Log "FATAL: Missing credentials. Set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables (or pass -ClientSecret)." -Level "ERROR"
-    Write-Error "Missing credentials. Set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables (or pass -ClientSecret)."
+if ($script:authMode -eq "ClientSecret" -and (-not $TenantId -or -not $ClientId -or -not $clientSecretPlain)) {
+    Write-Log "FATAL: Missing credentials for legacy client-secret fallback. Use -UseManagedIdentity in production Azure hosts, or set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET for development." -Level "ERROR"
+    Write-Error "Missing credentials for legacy client-secret fallback. Use -UseManagedIdentity in production Azure hosts, or set AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET for development."
 }
 
 Write-Host "Environment: $Environment"
+Write-Host "Authentication mode: $($script:authMode)"
 Write-Host ""
 
 # Get tokens (with refresh support for long-running validations)
 Write-Host "Authenticating..." -ForegroundColor Gray
-$graphScope = "$GraphBaseUrl/.default"
-$dataverseScope = "$Environment/.default"
+$graphResource = $GraphBaseUrl
+$dataverseResource = $Environment
 try {
-    $graphTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $graphScope
-    $dataverseTokenInfo = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $clientSecretPlain -Scope $dataverseScope
+    $graphTokenInfo = Get-TokenInfo -Resource $graphResource
+    $dataverseTokenInfo = Get-TokenInfo -Resource $dataverseResource
 } catch {
     Write-Log "FATAL: Authentication failed: $($_.Exception.Message)" -Level "ERROR"
     throw
 }
-$script:tokenCache[$graphScope] = $graphTokenInfo
-$script:tokenCache[$dataverseScope] = $dataverseTokenInfo
+$script:tokenCache[$graphResource] = $graphTokenInfo
+$script:tokenCache[$dataverseResource] = $dataverseTokenInfo
 # Clear plaintext secret from memory after initial token acquisition
 $clientSecretPlain = $null
 [System.GC]::Collect()
@@ -409,7 +468,7 @@ Write-Host "  Authenticated" -ForegroundColor Green
 # Get sources
 Write-Host ""
 Write-Host "Loading knowledge sources..." -ForegroundColor Gray
-$sources = Get-KnowledgeSources -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $SourceId
+$sources = Get-KnowledgeSources -Environment $Environment -Token (Get-ValidToken -Resource $dataverseResource) -SourceId $SourceId
 Write-Host "  Found $($sources.Count) sources to validate"
 
 if ($sources.Count -eq 0) {
@@ -450,7 +509,7 @@ foreach ($source in $sources) {
         $content = $null
         switch ($source.fsi_sourcetype) {
             1 { # SharePoint Document Library
-                $content = Get-SharePointContent -Token (Get-ValidToken -Scope $graphScope) -Uri $source.fsi_sourceuri
+                $content = Get-SharePointContent -Token (Get-ValidToken -Resource $graphResource) -Uri $source.fsi_sourceuri
             }
             4 { # Dataverse Table
                 Write-Warning "Dataverse source validation not yet implemented for source '$($source.fsi_sourcename)'. Marking as 'Not Implemented'."
@@ -463,7 +522,7 @@ foreach ($source in $sources) {
                 # Skip hash comparison for unsupported types
                 $content = $null
             }
-            {$_ -in 2,3,5,6,7,8} { # Planned types: SharePoint List, SharePoint Page, Azure Blob Container, Azure Blob File, External API, Database Query
+            {$_ -in 2,3,5,6,7,8,9,10,11,12,13} { # Planned types: SharePoint List, SharePoint Page, Azure Blob, External API, Database Query, Public Website, OneDrive, Copilot Connector, Azure AI Search, Uploaded Document
                 Write-Warning "Source type $_ validation not yet implemented for source '$($source.fsi_sourcename)'. Marking as 'Not Implemented'."
                 $result.fsi_result = 7  # Skipped - Not Implemented
                 $result.fsi_currenthash = $null
@@ -509,7 +568,7 @@ foreach ($source in $sources) {
                     # Record change in the fsi_sourcechange audit trail (skip if hash unchanged since last validation)
                     if ($currentHash -ne $source.fsi_currenthash) {
                         try {
-                            New-SourceChange -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) `
+                            New-SourceChange -Environment $Environment -Token (Get-ValidToken -Resource $dataverseResource) `
                                 -SourceId $source.fsi_knowledgesourceid -SourceName $source.fsi_sourcename -ChangeType 1 `
                                 -PreviousValue $source.fsi_currenthash -NewValue $currentHash `
                                 -ChangedBy "RAG Source Validator"
@@ -565,7 +624,7 @@ foreach ($source in $sources) {
                 $baselineParam.BaselineHash = $currentHash
             }
             try {
-                Update-SourceHash -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam -Status $newStatus
+                Update-SourceHash -Environment $Environment -Token (Get-ValidToken -Resource $dataverseResource) -SourceId $source.fsi_knowledgesourceid -Hash $currentHash @baselineParam -Status $newStatus
                 $sourceUpdated = $true
             } catch {
                 Write-Warning "Failed to update source hash for '$($source.fsi_sourcename)': $($_.Exception.Message)"
@@ -610,7 +669,7 @@ foreach ($source in $sources) {
         $newStatus = $statusMap[[int]$result.fsi_result]
         if ($newStatus) {
             try {
-                Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
+                Update-SourceStatus -Environment $Environment -Token (Get-ValidToken -Resource $dataverseResource) -SourceId $source.fsi_knowledgesourceid -Status $newStatus
             } catch {
                 Write-Warning "Failed to update source status for '$($source.fsi_sourcename)': $($_.Exception.Message)"
                 Write-Log "AUDIT GAP: Source status update failed for '$($source.fsi_sourcename)' (status=$newStatus). Error: $($_.Exception.Message)" -Level "ERROR"
@@ -620,7 +679,7 @@ foreach ($source in $sources) {
 
     # Record validation result (separate try-catch to avoid skipping remaining sources)
     try {
-        New-ValidationResult -Environment $Environment -Token (Get-ValidToken -Scope $dataverseScope) -Result $result
+        New-ValidationResult -Environment $Environment -Token (Get-ValidToken -Resource $dataverseResource) -Result $result
     } catch {
         Write-Warning "Failed to record validation result for '$($source.fsi_sourcename)': $($_.Exception.Message)"
         Write-Log "AUDIT GAP: Validation result record not created for '$($source.fsi_sourcename)' (result=$($result.fsi_result)). Status was updated but no fsi_validationresult exists. Error: $($_.Exception.Message)" -Level "ERROR"
@@ -641,7 +700,7 @@ Write-Host "Skipped: $skipped"
 Write-Log "Validation complete. Passed=$passed Changed=$changed Stale=$stale Failed=$failed Skipped=$skipped"
 
 # Exit with non-zero code when any validation failures are detected.
-# Ensures CI/CD pipelines and scheduled automation can distinguish
+# Allows CI/CD pipelines and scheduled automation to distinguish
 # success from validation failure (SEC Rule 17a-4, FINRA Rule 4511(a)).
 if ($failed -gt 0 -or $changed -gt 0 -or $stale -gt 0) {
     exit 1

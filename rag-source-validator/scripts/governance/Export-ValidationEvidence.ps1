@@ -28,11 +28,16 @@
     Microsoft Entra ID tenant ID for authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID for the legacy client-secret fallback.
 
 .PARAMETER ClientSecret
-    Client secret as SecureString. Production deployments should use
-    certificate-based auth or managed identities.
+    Client secret as SecureString for legacy development-only fallback.
+
+.PARAMETER UseManagedIdentity
+    Use Azure managed identity authentication. This is the recommended production path for Azure-hosted automation.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to RSV_MANAGED_IDENTITY_CLIENT_ID when set; omit for system-assigned managed identity.
 
 .PARAMETER OutputDirectory
     Directory path for evidence files. Created if it does not exist.
@@ -42,11 +47,11 @@
     Number of days of history to include. Default: 30.
 
 .PARAMETER SourceType
-    Filter by source type: All, SharePoint, Dataverse, AzureBlob, External.
+    Filter by source type: All, SharePoint, Dataverse, AzureBlob, External, PublicWebsite, OneDrive, CopilotConnector, AzureAISearch, or CopilotStudioDocument.
     Default: All.
 
 .PARAMETER Interactive
-    Use interactive browser-based authentication instead of service principal.
+    Use interactive browser-based authentication for admin-workstation runs.
 
 .EXAMPLE
     .\Export-ValidationEvidence.ps1 `
@@ -60,15 +65,12 @@
 .EXAMPLE
     .\Export-ValidationEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "contoso.onmicrosoft.com" `
-        -ClientId "12345..." `
-        -ClientSecret (ConvertTo-SecureString "secret" -AsPlainText -Force) `
+        -UseManagedIdentity `
         -OutputDirectory "C:\compliance\evidence" `
         -DaysBack 90 `
         -SourceType SharePoint
 
-    Exports 90 days of SharePoint source validation evidence using service
-    principal authentication. Suitable for scheduled automation.
+    Exports 90 days of SharePoint source validation evidence using Azure managed identity for scheduled automation.
 
 .OUTPUTS
     PSCustomObject with properties:
@@ -108,7 +110,7 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$ClientId,
 
-    # Production deployments should use certificate-based auth or managed identities.
+    # legacy: dev-only - replace with managed identity in production.
     [Parameter(Mandatory = $false)]
     [SecureString]$ClientSecret,
 
@@ -119,7 +121,7 @@ param(
     [int]$DaysBack = 30,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('All', 'SharePoint', 'Dataverse', 'AzureBlob', 'External')]
+    [ValidateSet('All', 'SharePoint', 'Dataverse', 'AzureBlob', 'External', 'PublicWebsite', 'OneDrive', 'CopilotConnector', 'AzureAISearch', 'CopilotStudioDocument')]
     [string]$SourceType = 'All',
 
     [Parameter(Mandatory = $false)]
@@ -127,7 +129,13 @@ param(
     [string]$AuthBaseUrl = 'https://login.microsoftonline.com',
 
     [Parameter(Mandatory = $false)]
-    [switch]$Interactive
+    [switch]$Interactive,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$UseManagedIdentity,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = $env:RSV_MANAGED_IDENTITY_CLIENT_ID
 )
 
 $ErrorActionPreference = "Stop"
@@ -159,9 +167,45 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
+$dataverseResource = $DataverseUrl
 $dataverseScope = "$DataverseUrl/.default"
 
-if ($Interactive) {
+function Get-ManagedIdentityAccessToken {
+    param([string]$Resource)
+
+    $encodedResource = [System.Uri]::EscapeDataString($Resource)
+    $headers = @{ Metadata = "true" }
+
+    if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
+        $tokenUrl = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=$encodedResource"
+        $headers["X-IDENTITY-HEADER"] = $env:IDENTITY_HEADER
+    } elseif ($env:MSI_ENDPOINT -and $env:MSI_SECRET) {
+        $tokenUrl = "$($env:MSI_ENDPOINT)?api-version=2017-09-01&resource=$encodedResource"
+        $headers = @{ Secret = $env:MSI_SECRET }
+    } else {
+        $tokenUrl = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$encodedResource"
+    }
+
+    if ($ManagedIdentityClientId) {
+        $encodedClientId = [System.Uri]::EscapeDataString($ManagedIdentityClientId)
+        $tokenUrl = "$tokenUrl&client_id=$encodedClientId"
+    }
+
+    try {
+        $tokenResponse = Invoke-RestMethod -Uri $tokenUrl -Headers $headers -Method Get -TimeoutSec 10 -MaximumRetryCount 2 -RetryIntervalSec 2
+        return $tokenResponse.access_token
+    }
+    catch {
+        throw "Managed identity authentication failed for Dataverse. Run in an Azure host with managed identity enabled, use -Interactive for admin workstations, or use the legacy dev-only client-secret fallback. $($_.Exception.Message)"
+    }
+}
+
+$useManagedIdentityAuth = $UseManagedIdentity -or (-not $Interactive -and $null -eq $ClientSecret)
+
+if ($useManagedIdentityAuth) {
+    $accessToken = Get-ManagedIdentityAccessToken -Resource $dataverseResource
+}
+elseif ($Interactive) {
     try {
         if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
             throw "MSAL.PS module is required for interactive authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
@@ -184,15 +228,15 @@ if ($Interactive) {
     }
 }
 else {
-    # Service principal with client secret
+    # legacy: dev-only - replace with managed identity in production.
     if (-not $TenantId) {
-        throw "TenantId is required for service principal authentication. Use -Interactive for browser-based auth."
+        throw "TenantId is required for legacy client-secret authentication. Use -UseManagedIdentity for Azure-hosted automation or -Interactive for browser-based auth."
     }
     if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
+        throw "ClientId is required for legacy client-secret authentication. Use -UseManagedIdentity for Azure-hosted automation or -Interactive for browser-based auth."
     }
     if ($null -eq $ClientSecret) {
-        throw "ClientSecret is required for service principal authentication. Use -Interactive for browser-based auth."
+        throw "ClientSecret is required for legacy client-secret authentication. Use -UseManagedIdentity for Azure-hosted automation or -Interactive for browser-based auth."
     }
 
     $clientSecretPlain = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
@@ -211,7 +255,7 @@ else {
         $accessToken = $tokenResponse.access_token
     }
     catch {
-        Write-Error "Service principal authentication failed: $($_.Exception.Message)"
+        Write-Error "Legacy client-secret authentication failed: $($_.Exception.Message)"
         throw
     }
 }
@@ -272,11 +316,16 @@ Write-Host "Querying knowledge sources..." -ForegroundColor Cyan
 
 # Build source type OData filter
 $sourceTypeFilter = switch ($SourceType) {
-    'SharePoint' { " and (fsi_sourcetype eq 1 or fsi_sourcetype eq 2 or fsi_sourcetype eq 3)" }
-    'Dataverse'  { " and fsi_sourcetype eq 4" }
-    'AzureBlob'  { " and (fsi_sourcetype eq 5 or fsi_sourcetype eq 6)" }
-    'External'   { " and (fsi_sourcetype eq 7 or fsi_sourcetype eq 8)" }
-    default      { "" }
+    'SharePoint'             { " and (fsi_sourcetype eq 1 or fsi_sourcetype eq 2 or fsi_sourcetype eq 3)" }
+    'Dataverse'              { " and fsi_sourcetype eq 4" }
+    'AzureBlob'              { " and (fsi_sourcetype eq 5 or fsi_sourcetype eq 6)" }
+    'External'               { " and (fsi_sourcetype eq 7 or fsi_sourcetype eq 8 or fsi_sourcetype eq 9 or fsi_sourcetype eq 11 or fsi_sourcetype eq 12)" }
+    'PublicWebsite'          { " and fsi_sourcetype eq 9" }
+    'OneDrive'               { " and fsi_sourcetype eq 10" }
+    'CopilotConnector'       { " and fsi_sourcetype eq 11" }
+    'AzureAISearch'          { " and fsi_sourcetype eq 12" }
+    'CopilotStudioDocument'  { " and fsi_sourcetype eq 13" }
+    default                  { "" }
 }
 
 $sourceSelect = "fsi_knowledgesourceid,fsi_sourcename,fsi_sourcetype,fsi_sourceuri,fsi_agentid,fsi_description,fsi_currenthash,fsi_baselinehash,fsi_status,fsi_lastvalidated,fsi_validationfrequency,fsi_alertonchange,fsi_freshnessthreshold,fsi_lastmodified"
@@ -316,6 +365,11 @@ $sourceTypeLabels = @{
     6 = "Azure Blob File"
     7 = "External API"
     8 = "Database Query"
+    9 = "Public Website"
+    10 = "OneDrive File or Folder"
+    11 = "Microsoft 365 Copilot Connector External Item"
+    12 = "Azure AI Search Index"
+    13 = "Copilot Studio Uploaded Document"
 }
 
 $statusLabels = @{

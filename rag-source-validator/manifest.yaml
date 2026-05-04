@@ -1,7 +1,7 @@
 id: rag-source-validator
 name: RAG Source Validator
 description: Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
-version: 1.2.0
+version: 1.3.0
 status: live
 domain: content-data
 tier: '2'
@@ -11,7 +11,7 @@ controls:
 - '2.13'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/rag-source-validator/
 prerequisites:
-  sharepoint-admin: SharePoint Online access to the document libraries, lists, pages, blobs, or APIs used as knowledge sources.
+  sharepoint-admin: SharePoint Online, OneDrive, Copilot connector, public website, Dataverse, blob, API, database, or Azure AI Search access used as knowledge sources.
   power-platform-admin: Dataverse access to fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange for source registry and audit tracking.
 verification: Run Invoke-SourceValidation.ps1 and confirm fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange records update with the expected fsi_result and fsi_lastvalidated values.
 
