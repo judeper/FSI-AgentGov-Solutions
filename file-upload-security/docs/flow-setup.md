@@ -29,8 +29,8 @@ After import, edit the flow and update these variables:
 |----------|-------|
 | `DataverseUrl` | Your Dataverse org URL (e.g., `https://governance.crm.dynamics.com`) |
 | `TenantId` | Your Microsoft Entra ID tenant ID |
-| `ClientId` | Service principal app ID |
-| `CertificateThumbprint` | Certificate thumbprint uploaded to Automation Account |
+| `ClientId` | App registration client ID for certificate fallback or workload identity |
+| `CertificateThumbprint` | Certificate thumbprint uploaded to Automation Account when managed identity is not available |
 | `SubscriptionId` | Azure subscription containing Automation Account |
 | `ResourceGroup` | Resource group name (default: `rg-file-upload-security`) |
 | `AutomationAccount` | Automation Account name (default: `aa-file-upload-security`) |

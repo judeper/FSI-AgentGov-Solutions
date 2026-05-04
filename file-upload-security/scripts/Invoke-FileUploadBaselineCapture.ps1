@@ -76,6 +76,7 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter()]
+    # legacy: dev-only — replace with managed identity in production
     [string]$ClientSecret,  # Prefer FUS_CLIENT_SECRET env var over CLI arg to avoid exposure in process tables
 
     [Parameter()]

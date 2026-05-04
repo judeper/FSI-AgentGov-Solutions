@@ -10,7 +10,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 |-----------|-------|
 | **Control** | 1.14 — Data Minimization and Agent Scope Control |
 | **Solution Type** | Tier 2 — Automated Validation with Drift Detection |
-| **Version** | 1.1.0 |
+| **Version** | 1.1.1 |
 | **Zone Model** | Zone 1: Allowed · Zone 2: Restricted · Zone 3: Disabled |
 | **Regulatory** | FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), Interagency Guidelines Establishing Information Security Standards (12 CFR 30 App. B) |
 
@@ -123,6 +123,22 @@ Configuration values for the Power Automate flow (tenant domain, Dataverse URL, 
 > **Note:** For full environment portability across dev/test/prod, consider storing these values as Dataverse environment variables (see [SCHEMA.md](docs/schema.md) Environment Variables section). This allows per-environment configuration without modifying the flow definition.
 
 ## Platform Update Notes
+
+### Copilot Studio file input limits (Microsoft Learn 2026-Q2)
+
+Copilot Studio file uploads are configured in the agent **Settings** > **Generative AI** > **File processing capabilities** area. Microsoft Learn currently lists CSV, PDF, TXT, JPG, PNG, WebP, and nonanimated GIF as supported user-upload types. Image uploads are limited to 15 MB, with a 4 MB cap for DirectLine channel interactions; PDFs must be fewer than 40 pages; TXT and CSV files must be under 180 KB. SharePoint-channel agents don't support user file uploads, and agents in CMK-enabled environments can accept files as input but don't process them.
+
+### Dataverse extension and MIME controls
+
+Power Platform also provides environment-level file controls through Dataverse organization settings. `Organization.BlockedAttachments` controls blocked file extensions, while `Organization.BlockedMimeTypes` and `Organization.AllowedMimeTypes` control MIME type restrictions. If `allowedmimetypes` is configured, it takes precedence and `blockedmimetypes` is ignored. These settings are server-side controls for Dataverse file, image, attachment, and note storage; this solution complements them by validating whether each Copilot Studio agent has file uploads enabled for its governance zone.
+
+### Microsoft Graph attachment and file API scope
+
+If downstream agent flows or connector tools route uploaded files to Microsoft 365 services, prefer Microsoft Graph v1.0 APIs unless a beta-only capability is explicitly required. The v1.0 driveItem content API supports single-call uploads up to 250 MB. Outlook message and event attachments use a single POST below 3 MB and upload sessions for files from 3 MB to 150 MB.
+
+### Defender for Cloud Apps and Purview DLP scope
+
+Microsoft Defender for Cloud Apps file policies provide API-based continuous controls for files stored in connected cloud apps, including metadata and MIME-type filters. These policies are complementary detective controls and don't replace per-agent file-upload gating. Microsoft Purview DLP for Microsoft 365 Copilot and Copilot Chat can restrict sensitive prompt text and labeled stored files or emails from Copilot processing, but Microsoft Learn notes that DLP doesn't scan the contents of files uploaded directly into prompts.
 
 ### Microsoft Purview Sensitivity Labels (2026 Wave 1)
 

@@ -168,7 +168,16 @@ def main() -> None:
     )
     parser.add_argument("--tenant-id", default=os.environ.get("FUS_TENANT_ID"))
     parser.add_argument("--client-id", default=os.environ.get("FUS_CLIENT_ID"))
-    parser.add_argument("--client-secret", default=os.environ.get("FUS_CLIENT_SECRET"))
+    parser.add_argument(
+        "--client-secret",
+        default=os.environ.get("FUS_CLIENT_SECRET"),
+        help="Legacy dev-only fallback; use managed identity in production",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("FUS_MANAGED_IDENTITY_CLIENT_ID"),
+        help="Optional user-assigned managed identity client ID",
+    )
     parser.add_argument("--url", default=os.environ.get("FUS_DATAVERSE_URL"),
                         help="Dataverse environment URL")
     parser.add_argument("--interactive", action="store_true",
@@ -177,11 +186,12 @@ def main() -> None:
                         help="Show what would be created without making changes")
     args = parser.parse_args()
 
-    if not args.tenant_id or not args.url:
-        parser.error(
-            "tenant-id and url are required "
-            "(set FUS_TENANT_ID and FUS_DATAVERSE_URL env vars or use flags)"
-        )
+    if not args.url:
+        parser.error("url required (set FUS_DATAVERSE_URL env var or use --url)")
+    if args.interactive and (not args.tenant_id or not args.client_id):
+        parser.error("interactive auth requires tenant-id and client-id")
+    if args.client_secret and (not args.tenant_id or not args.client_id):
+        parser.error("legacy client secret auth requires tenant-id and client-id")
 
     client = FUSClient(
         tenant_id=args.tenant_id,
@@ -190,6 +200,7 @@ def main() -> None:
         client_secret=args.client_secret,
         interactive=args.interactive,
         dry_run=args.dry_run,
+        managed_identity_client_id=args.managed_identity_client_id,
     )
 
     deploy_environment_variables(client)
