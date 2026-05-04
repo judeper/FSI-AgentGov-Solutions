@@ -2,11 +2,11 @@
 
 ## Overview
 
-Evidence export packages DR test results and audit logs for regulatory examination. The `Export-DREvidence.ps1` script collects local audit log files, generates a JSON metadata file with timestamps and file inventory, and copies everything into a portable evidence directory.
+Evidence export packages DR validation results and audit logs for examiner review. The `Export-DREvidence.ps1` script collects local audit log files, queries Dataverse when authentication is supplied, writes a JSON metadata file, and creates a SHA-256 companion hash for tamper-evident packaging.
 
-Supports local audit log collection and Dataverse-backed export with RTO/RPO metric aggregation, gap analysis, and SHA-256 tamper-evident hashing.
+The export records **validation evidence** only. It does not prove that Power Platform backup, restore, or failover was executed end-to-end; pair the package with PPAC/Admin-module operation timestamps, Microsoft support records, and incident/runbook evidence.
 
-## Current Capabilities (v1.2.1)
+## Current Capabilities (v2.0.1)
 
 | Capability | Status |
 |---|---|
@@ -14,23 +14,30 @@ Supports local audit log collection and Dataverse-backed export with RTO/RPO met
 | JSON metadata generation with timestamps and file inventory | ✅ Implemented |
 | Correlation ID filtering (`-TestRunId` parameter) | ✅ Implemented |
 | SSRF-safe URL validation (commercial, GCC, GCC High, China clouds) | ✅ Implemented |
-| Dataverse query for test execution results | ✅ Implemented |
-| RTO/RPO measurement aggregation | ✅ Implemented |
-| Gap list with remediation status | ✅ Implemented |
+| Dataverse query for validation results with pagination | ✅ Implemented |
+| Probe-duration and validation-coverage aggregation | ✅ Implemented |
+| Gap list for failed or missing validation types | ✅ Implemented |
 | SHA-256 integrity hashing | ✅ Implemented |
 
 ## Usage Examples
 
 ```powershell
-# Export all evidence
-.\scripts\Export-DREvidence.ps1 -Environment "https://contoso.crm.dynamics.com"
+.\scripts\Export-DREvidence.ps1 `
+    -Environment "https://contoso.crm.dynamics.com" `
+    -AccessToken $env:DATAVERSE_ACCESS_TOKEN
 
-# Export for specific test run
-.\scripts\Export-DREvidence.ps1 -Environment "https://contoso.crm.dynamics.com" -TestRunId "abc12345"
+.\scripts\Export-DREvidence.ps1 `
+    -Environment "https://contoso.crm.dynamics.com" `
+    -TestRunId "abc12345" `
+    -AccessToken $env:DATAVERSE_ACCESS_TOKEN
 
-# Custom output directory
-.\scripts\Export-DREvidence.ps1 -Environment "https://contoso.crm.dynamics.com" -OutputDir "C:\evidence\q1-2026"
+.\scripts\Export-DREvidence.ps1 `
+    -Environment "https://contoso.crm.dynamics.com" `
+    -OutputDir "C:\evidence\q1-2026" `
+    -AccessToken $env:DATAVERSE_ACCESS_TOKEN
 ```
+
+Client-secret parameters remain available for local development only (`# legacy: dev-only — replace with managed identity in production`).
 
 ### Parameters
 
@@ -38,7 +45,9 @@ Supports local audit log collection and Dataverse-backed export with RTO/RPO met
 |---|---|---|---|
 | `-Environment` | Yes | — | Dataverse environment URL (e.g., `https://contoso.crm.dynamics.com`) |
 | `-OutputDir` | No | `./evidence` | Directory to write evidence files to |
-| `-TestRunId` | No | — | Correlation ID to filter results to a specific test run. Must match `^[0-9a-zA-Z\-]+$` |
+| `-TestRunId` | No | — | Correlation ID to filter results to a specific validation run. Must match `^[0-9a-zA-Z\-]+$` |
+| `-AccessToken` | No | `$env:DATAVERSE_ACCESS_TOKEN` | Dataverse token acquired through managed identity, workload identity federation, or another approved flow |
+| `-TenantId` / `-ClientId` / `-ClientSecret` | No | Azure environment variables | Legacy local-development fallback when `-AccessToken` is not supplied |
 
 When `-TestRunId` is provided, only audit logs matching the pattern `dr-audit-*-<TestRunId>.log` are included. When omitted, all `dr-audit-*.log` files are collected.
 
@@ -46,17 +55,14 @@ When `-TestRunId` is provided, only audit logs matching the pattern `dr-audit-*-
 
 ```
 evidence/
-├── dr-evidence-20260315-143022.json    # Metadata file
-└── audit-logs/                          # Copied audit logs
-    ├── dr-audit-AgentRestore-abc12345.log
-    └── dr-audit-FullDR-def67890.log
+├── dr-evidence-20260315-143022.json
+├── dr-evidence-20260315-143022.json.sha256
+└── audit-logs/
+    ├── dr-audit-AgentReadinessCheck-abc12345.log
+    └── dr-audit-DataverseAccessCheck-abc12345.log
 ```
 
-The output directory is created automatically if it does not exist.
-
 ## Metadata JSON Format
-
-Each export generates a timestamped JSON file with the following structure:
 
 ```json
 {
@@ -64,42 +70,32 @@ Each export generates a timestamped JSON file with the following structure:
   "Environment": "https://contoso.crm.dynamics.com",
   "TestRunId": "abc12345",
   "AuditLogFiles": [
-    "dr-audit-AgentRestore-20260315-abc12345.log",
-    "dr-audit-DataRecovery-20260315-abc12345.log"
+    "dr-audit-AgentReadinessCheck-20260315-abc12345.log",
+    "dr-audit-DataverseAccessCheck-20260315-abc12345.log"
   ],
   "TestResults": [
     {
       "Id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "TestType": "AgentRestore",
+      "TestType": "AgentReadinessCheck",
       "ExecutedOn": "2026-03-15T13:00:00Z",
-      "ActualRTO": 1.75,
-      "TargetRTO": 4.0,
-      "RTOMet": true,
-      "Status": "Pass",
-      "CorrelationId": "abc12345"
-    },
-    {
-      "Id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-      "TestType": "DataRecovery",
-      "ExecutedOn": "2026-03-15T14:00:00Z",
-      "ActualRTO": 2.5,
-      "TargetRTO": 4.0,
-      "RTOMet": true,
+      "ProbeDurationHours": 0.03,
+      "ProbeDurationTargetHours": 0.25,
+      "ProbeWithinBudget": true,
       "Status": "Pass",
       "CorrelationId": "abc12345"
     }
   ],
   "Metrics": {
-    "TotalTests": 2,
-    "Passed": 2,
+    "TotalTests": 1,
+    "Passed": 1,
     "Failed": 0,
     "PassRate": 100.0,
-    "AvgRecoveryTime": 2.13,
-    "RTOCompliant": 2,
-    "RTOComplianceRate": 100.0
+    "AvgProbeDurationHours": 0.03,
+    "ProbeWithinBudgetCount": 1,
+    "ProbeWithinBudgetRate": 100.0
   },
   "Gaps": [],
-  "Status": "Compliant"
+  "Status": "Validated"
 }
 ```
 
@@ -109,14 +105,12 @@ Each export generates a timestamped JSON file with the following structure:
 | `Environment` | string | Validated Dataverse environment URL |
 | `TestRunId` | string | Correlation ID used to filter, or `"all"` if not specified |
 | `AuditLogFiles` | string[] | List of audit log filenames included in the package |
-| `TestResults` | object[] | DR test execution results from `fsi_drtestresult` in Dataverse |
-| `Metrics` | object | RTO/RPO measurements aggregated from test runs |
-| `Gaps` | object[] | Identified gaps with remediation status |
-| `Status` | string | Overall compliance status (`Compliant`, `NonCompliant`, `Incomplete`, `NoData`, `NoCredentials`, `QueryFailed`) |
+| `TestResults` | object[] | Validation results from `fsi_drtestresult` in Dataverse |
+| `Metrics` | object | Probe-duration and validation-coverage metrics aggregated from validation runs |
+| `Gaps` | object[] | Failed checks or missing validation types |
+| `Status` | string | Overall export status (`Validated`, `ValidationFailures`, `IncompleteValidationCoverage`, `NoData`, `NoCredentials`, `QueryFailed`) |
 
 ## Planned Capabilities
-
-The following feature is not yet implemented and is planned for a future release:
 
 - **Signed attestation template** — Produce a pre-filled attestation document for reviewer sign-off
 
@@ -124,9 +118,9 @@ The following feature is not yet implemented and is planned for a future release
 
 | Regulation | Relevance |
 |---|---|
-| OCC Heightened Standards | Evidence of DR testing execution aids in demonstrating operational resilience |
-| FFIEC BCP Handbook | Documented test results support examiner review of business continuity planning |
-| SEC Rule 17a-4 | Supports record recoverability requirements by packaging recovery test artifacts |
+| OCC Heightened Standards | Evidence of DR validation execution aids in demonstrating operational resilience |
+| FFIEC BCP Handbook | Documented validation results support examiner review of business continuity testing |
+| SEC Rule 17a-4 | Supports record recoverability evidence packaging when exported to immutable storage |
 | FINRA Rule 4370 | Supports BCP documentation requirements with structured evidence packages |
 
 > **Note:** No single export satisfies any regulation in isolation. Organizations should verify that evidence packages meet their specific examination requirements.
@@ -135,7 +129,7 @@ The following feature is not yet implemented and is planned for a future release
 
 - Evidence files are JSON and can be ingested by a compliance dashboard, SIEM, or archival system
 - Audit logs use a structured format with timestamp, level, and message fields
-- The `TestRunId` correlation ID links Dataverse records to local audit log files, enabling end-to-end traceability across the DR testing pipeline
+- The `TestRunId` correlation ID links Dataverse records to local audit log files, enabling end-to-end traceability across the DR validation pipeline
 
 ## URL Validation
 

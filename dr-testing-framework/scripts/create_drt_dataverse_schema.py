@@ -2,11 +2,11 @@
 """
 Create Dataverse schema for DR Testing Framework.
 
-Creates the DRTestResult table with columns for recording disaster recovery
-test executions, RTO measurements, and validation results.
+Creates the DRTestResult table with columns for recording post-recovery
+validation executions, probe-duration metrics, and validation results.
 
 Regulatory alignment:
-  - OCC 2011-12 (Third-Party Risk Management) — operational resilience testing
+  - OCC Heightened Standards — operational resilience testing
   - FFIEC BCP (Business Continuity Planning) — DR test documentation
   - SEC 17a-4 (Records Preservation) — immutable test evidence retention
   - FINRA 4370 (Business Continuity Plans) — annual DR testing requirements
@@ -41,7 +41,7 @@ OPTIONSETS = {
         "Description": {
             "LocalizedLabels": [
                 {
-                    "Label": "Pass/Fail outcome of a disaster recovery test",
+                    "Label": "Pass/Fail outcome of a disaster recovery validation",
                     "LanguageCode": 1033,
                 }
             ]
@@ -86,8 +86,8 @@ TABLES = {
             "LocalizedLabels": [
                 {
                     "Label": (
-                        "Disaster recovery test execution records with RTO "
-                        "measurements and validation results"
+                        "Disaster recovery validation records with probe-duration "
+                        "metrics and validation results"
                     ),
                     "LanguageCode": 1033,
                 }
@@ -130,7 +130,7 @@ TABLES = {
 
 COLUMNS = {
     "fsi_drtestresult": [
-        # Test type: AgentRestore, EnvironmentFailover, DataRecovery, FullDR
+        # Validation type: AgentReadinessCheck, EnvironmentReachabilityCheck, DataverseAccessCheck, FullValidation
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_TestType",
@@ -144,8 +144,8 @@ COLUMNS = {
                 "LocalizedLabels": [
                     {
                         "Label": (
-                            "Type of DR test executed: AgentRestore, "
-                            "EnvironmentFailover, DataRecovery, FullDR"
+                            "Type of DR validation executed: AgentReadinessCheck, "
+                            "EnvironmentReachabilityCheck, DataverseAccessCheck, FullValidation"
                         ),
                         "LanguageCode": 1033,
                     }
@@ -175,20 +175,20 @@ COLUMNS = {
             "Format": "DateAndTime",
             "DateTimeBehavior": {"Value": "TimeZoneIndependent"},
         },
-        # Actual recovery time in hours
+        # v2 compatibility column: stores ProbeDurationHours, not recovery time
         {
             "@odata.type": "Microsoft.Dynamics.CRM.DecimalAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_ActualRTO",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
-                    {"Label": "Actual RTO (hours)", "LanguageCode": 1033}
+                    {"Label": "Probe Duration (hours)", "LanguageCode": 1033}
                 ]
             },
             "Description": {
                 "LocalizedLabels": [
                     {
-                        "Label": "Actual recovery time objective measured in hours",
+                        "Label": "v2.0.1: stores ProbeDurationHours, the wall-clock duration of read-only validation checks. Not regulator-grade RTO.",
                         "LanguageCode": 1033,
                     }
                 ]
@@ -197,20 +197,20 @@ COLUMNS = {
             "MinValue": 0,
             "MaxValue": 9999,
         },
-        # Target RTO in hours
+        # v2 compatibility column: stores ProbeDurationTargetHours
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_TargetRTO",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
-                    {"Label": "Target RTO (hours)", "LanguageCode": 1033}
+                    {"Label": "Probe Budget (hours)", "LanguageCode": 1033}
                 ]
             },
             "Description": {
                 "LocalizedLabels": [
                     {
-                        "Label": "Target recovery time objective in hours",
+                        "Label": "v2.0.1: stores ProbeDurationTargetHours, the validation budget in hours. Not regulator-grade RTO.",
                         "LanguageCode": 1033,
                     }
                 ]
@@ -219,20 +219,20 @@ COLUMNS = {
             "MinValue": 0,
             "MaxValue": 9999,
         },
-        # Whether actual RTO met the target
+        # v2 compatibility column: stores ProbeWithinBudget
         {
             "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
             "SchemaName": f"{PUBLISHER_PREFIX}_RTOMet",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
-                    {"Label": "RTO Met", "LanguageCode": 1033}
+                    {"Label": "Probe Within Budget", "LanguageCode": 1033}
                 ]
             },
             "Description": {
                 "LocalizedLabels": [
                     {
-                        "Label": "Whether the actual RTO met the target RTO",
+                        "Label": "Whether the validation probe completed within the configured probe budget",
                         "LanguageCode": 1033,
                     }
                 ]
@@ -401,8 +401,9 @@ def generate_schema_docs() -> str:
     )
     lines.append("")
     lines.append(
-        "This schema supports DR test evidence retention required by "
-        "OCC 2011-12, FFIEC BCP, SEC 17a-4, and FINRA 4370."
+        "This schema supports DR validation evidence retention helpful for "
+        "FFIEC BCP, SEC 17a-4, OCC Heightened Standards, and FINRA Rule 4370. "
+        "It records validation evidence, not platform backup or failover execution."
     )
     lines.append("")
 
@@ -574,7 +575,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Create Dataverse schema for DR Testing Framework "
-            "(OCC 2011-12, FFIEC BCP, SEC 17a-4, FINRA 4370)"
+            "(FFIEC BCP, SEC 17a-4, OCC Heightened Standards, FINRA Rule 4370)"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -587,6 +588,11 @@ def main() -> None:
         "--client-id",
         default=os.environ.get("DRT_CLIENT_ID"),
         help="Application (client) ID (or set DRT_CLIENT_ID env var)",
+    )
+    parser.add_argument(
+        "--access-token",
+        default=os.environ.get("DRT_ACCESS_TOKEN"),
+        help="Dataverse access token from managed identity or workload federation (or set DRT_ACCESS_TOKEN env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -623,23 +629,26 @@ def main() -> None:
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
-    if not args.tenant_id or not args.environment_url:
+    if not args.environment_url:
         parser.error(
-            "Missing required arguments. Provide --tenant-id and "
-            "--environment-url (or set DRT_TENANT_ID and "
-            "DRT_ENVIRONMENT_URL env vars)"
+            "Missing required argument. Provide --environment-url "
+            "(or set DRT_ENVIRONMENT_URL env var)"
         )
-    if not args.client_id and not args.interactive:
+    if not args.access_token and not args.tenant_id:
         parser.error(
-            "--client-id is required (or set DRT_CLIENT_ID env var) "
-            "unless --interactive is specified"
+            "--tenant-id is required unless --access-token/DRT_ACCESS_TOKEN is provided"
+        )
+    if not args.access_token and not args.client_id and not args.interactive:
+        parser.error(
+            "--client-id is required unless --interactive or --access-token is specified"
         )
 
     client_secret = os.environ.get("DRT_CLIENT_SECRET")
-    if not args.interactive:
+    if not args.access_token and not args.interactive:
         if not client_secret:
             import getpass
 
+            # legacy: dev-only — replace with managed identity in production
             client_secret = getpass.getpass("Client secret: ")
 
     try:
@@ -648,6 +657,7 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

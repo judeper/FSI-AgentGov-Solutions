@@ -2,11 +2,11 @@
 """
 Create Dataverse environment variables for DR Testing Framework.
 
-Environment variables store configurable RTO/RPO targets, notification settings,
-and Dataverse connection details for disaster recovery test automation.
+Environment variables store configurable validation probe budgets, notification
+settings, and Dataverse connection details for DR validation automation.
 
 Regulatory alignment:
-  - OCC 2011-12 (Third-Party Risk Management) — operational resilience testing
+  - OCC Heightened Standards — operational resilience testing
   - FFIEC BCP (Business Continuity Planning) — DR test documentation
   - SEC 17a-4 (Records Preservation) — immutable test evidence retention
   - FINRA 4370 (Business Continuity Plans) — annual DR testing requirements
@@ -169,8 +169,8 @@ def main() -> None:
         epilog="""
 Environment variables created:
   - fsi_DRT_DataverseUrl (String, "")
-  - fsi_DRT_TargetRTOMinutes (Decimal, 60)
-  - fsi_DRT_TargetRPOMinutes (Decimal, 15)
+  - fsi_DRT_ProbeBudgetMinutes (Decimal-as-JSON, 60)
+  - fsi_DRT_MaxMinutesSinceLastResult (Decimal-as-JSON, 1440)
   - fsi_DRT_TeamsGroupId (String, "")
   - fsi_DRT_TeamsChannelId (String, "")
   - fsi_DRT_NotificationEmail (String, "")
@@ -207,6 +207,11 @@ Examples:
         help="Service Principal application ID (or DRT_CLIENT_ID env var)",
     )
     parser.add_argument(
+        "--access-token",
+        default=os.environ.get("DRT_ACCESS_TOKEN"),
+        help="Dataverse access token from managed identity or workload federation (or DRT_ACCESS_TOKEN env var)",
+    )
+    parser.add_argument(
         "--environment-url",
         default=os.environ.get("DRT_ENVIRONMENT_URL"),
         help="Dataverse environment URL (or DRT_ENVIRONMENT_URL env var)",
@@ -224,14 +229,19 @@ Examples:
 
     args = parser.parse_args()
 
-    if not args.tenant_id or not args.environment_url:
-        parser.error("--tenant-id and --environment-url are required")
+    if not args.environment_url:
+        parser.error("--environment-url is required")
+    if not args.access_token and not args.tenant_id:
+        parser.error("--tenant-id is required unless --access-token/DRT_ACCESS_TOKEN is provided")
+    if not args.access_token and not args.client_id and not args.interactive:
+        parser.error("--client-id is required unless --interactive or --access-token is specified")
 
     client_secret = os.environ.get("DRT_CLIENT_SECRET")
-    if not args.interactive and not client_secret:
+    if not args.access_token and not args.interactive and not client_secret:
         if args.client_id:
             import getpass
 
+            # legacy: dev-only — replace with managed identity in production
             client_secret = getpass.getpass("Client secret: ")
 
     try:
@@ -240,6 +250,7 @@ Examples:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

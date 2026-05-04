@@ -1,45 +1,56 @@
 {
   "$schema": "dr-test-config",
-  "version": "1.0",
-  "description": "Sample DR test configuration for AI agent infrastructure",
+  "version": "2.0.1",
+  "description": "Sample post-recovery validation configuration for AI agent infrastructure",
   "environment": "https://contoso.crm.dynamics.com",
   "tenantId": "00000000-0000-0000-0000-000000000000",
   "clientId": "00000000-0000-0000-0000-000000000000",
+  "authentication": {
+    "preferred": "managedIdentityOrWorkloadIdentityAccessToken",
+    "accessTokenEnvironmentVariable": "DATAVERSE_ACCESS_TOKEN",
+    "clientSecret": "legacy dev-only fallback; do not use for production automation"
+  },
   "tests": [
     {
-      "testType": "AgentRestore",
+      "testType": "AgentReadinessCheck",
+      "legacyAlias": "AgentRestore",
       "agentId": "00000000-0000-0000-0000-000000000000",
-      "targetRTO": 4,
-      "targetRPO": 24,
+      "probeDurationTargetHours": 0.25,
+      "maxMinutesSinceLastResult": 1440,
       "schedule": "quarterly",
-      "description": "Restore primary customer service agent from backup"
+      "description": "Validate restored or redeployed customer service agent metadata and active state"
     },
     {
-      "testType": "EnvironmentFailover",
-      "targetRTO": 2,
-      "targetRPO": 1,
+      "testType": "EnvironmentReachabilityCheck",
+      "legacyAlias": "EnvironmentFailover",
+      "probeDurationTargetHours": 0.1,
+      "maxMinutesSinceLastResult": 1440,
       "schedule": "semi-annual",
-      "description": "Failover to backup Power Platform environment"
+      "description": "Validate target Dataverse environment reachability after the operator completes recovery"
     },
     {
-      "testType": "DataRecovery",
-      "targetRTO": 4,
-      "targetRPO": 24,
+      "testType": "DataverseAccessCheck",
+      "legacyAlias": "DataRecovery",
+      "probeDurationTargetHours": 0.25,
+      "maxMinutesSinceLastResult": 1440,
       "schedule": "quarterly",
-      "description": "Restore Dataverse data from point-in-time backup"
+      "description": "Validate DR evidence table accessibility and hash recent validation rows"
     },
     {
-      "testType": "FullDR",
+      "testType": "FullValidation",
+      "legacyAlias": "FullDR",
       "agentId": "00000000-0000-0000-0000-000000000000",
-      "targetRTO": 8,
-      "targetRPO": 24,
+      "probeDurationTargetHours": 0.75,
+      "maxMinutesSinceLastResult": 10080,
       "schedule": "annual",
-      "description": "Complete infrastructure recovery exercise"
+      "description": "Run all post-recovery validation checks and aggregate evidence coverage"
     }
   ],
   "notifications": {
     "teamsWebhookUrl": "https://contoso.webhook.office.com/webhookb2/...",
-    "emailRecipients": ["dr-team@contoso.com"]
+    "emailRecipients": [
+      "dr-team@contoso.com"
+    ]
   },
-  "notes": "Replace placeholder GUIDs with actual values. Schedule values are informational — scheduling is not yet automated."
+  "notes": "Replace placeholder GUIDs with actual values. RTO/RPO evidence is captured from PPAC/Admin-module recovery records outside this validation configuration."
 }

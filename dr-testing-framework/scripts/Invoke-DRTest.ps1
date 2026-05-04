@@ -58,6 +58,9 @@ param(
     [SecureString]$ClientSecret,
 
     [Parameter(Mandatory = $false)]
+    [string]$AccessToken = $env:DATAVERSE_ACCESS_TOKEN,
+
+    [Parameter(Mandatory = $false)]
     [ValidatePattern('^$|^[0-9a-fA-F]{1,8}$')]
     [string]$CorrelationId
 )
@@ -72,11 +75,12 @@ $TestTypeAliases = @{
     'FullDR'              = 'FullValidation'
 }
 if ($TestTypeAliases.ContainsKey($TestType)) {
-    Write-Warning "TestType '$TestType' is a v1.x alias; v2.0.0 normalises it to '$($TestTypeAliases[$TestType])'."
+    Write-Warning "TestType '$TestType' is a v1.x alias; v2.0.1 normalises it to '$($TestTypeAliases[$TestType])'."
     $TestType = $TestTypeAliases[$TestType]
 }
 
-# Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided
+# legacy: dev-only — replace with managed identity in production
+# Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided.
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
     $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
 }
@@ -102,9 +106,9 @@ if ($Environment -notmatch '^https://[\w\-]+\.(crm[\d]*\.dynamics\.com|crm\.micr
 $ErrorActionPreference = "Stop"
 
 # Fail closed on missing credentials unless the operator has opted in to a connectivity-only run.
-$HasCredentials = $TenantId -and $ClientId -and $ClientSecret
-if (-not $DryRun -and -not $HasCredentials -and -not $AllowConnectivityOnly) {
-    throw "Service-principal credentials (TenantId, ClientId, ClientSecret) are required for non-DryRun runs. Pass -AllowConnectivityOnly to opt in to a network-only check that records 'Probe' results without authenticated validation."
+$HasDataverseAuth = $AccessToken -or ($TenantId -and $ClientId -and $ClientSecret)
+if (-not $DryRun -and -not $HasDataverseAuth -and -not $AllowConnectivityOnly) {
+    throw "Dataverse authentication is required for non-DryRun runs. Provide -AccessToken (preferred for managed identity/workload identity) or legacy service-principal credentials (TenantId, ClientId, ClientSecret). Pass -AllowConnectivityOnly to opt in to a network-only check that records 'Probe' results without authenticated validation."
 }
 
 # Structured audit logging with file persistence for compliance evidence
@@ -215,30 +219,34 @@ function Get-AccessToken {
     }
 }
 
-function Test-AgentRestore {
+function Test-AgentReadiness {
     param([string]$AgentId, [bool]$DryRun)
 
     $result = @{
         ValidationChecks = @()
         Success = $true
-        RecoveryTime = 0
+        SubcheckDurationHours = 0
     }
 
     $startTime = Get-Date
 
-    # Acquire Dataverse auth token for agent restore validation
+    # Acquire Dataverse auth token for agent readiness validation
     $dvHeaders = $null
-    if (-not $DryRun -and $TenantId -and $ClientId -and $ClientSecret) {
+    if (-not $DryRun -and ($AccessToken -or ($TenantId -and $ClientId -and $ClientSecret))) {
         try {
-            $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
-            $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            if ($AccessToken) {
+                $tok = $AccessToken
+            } else {
+                $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
+                $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            }
             $dvHeaders = @{
                 "Authorization" = "Bearer $tok"
                 "OData-MaxVersion" = "4.0"
                 "OData-Version" = "4.0"
                 "Accept" = "application/json"
             }
-            Write-AuditLog "Authenticated to Dataverse for agent restore validation"
+            Write-AuditLog "Authenticated to Dataverse for agent readiness validation"
         } catch {
             Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
@@ -253,22 +261,22 @@ function Test-AgentRestore {
                 if ($botResp.value -and $botResp.value.Count -gt 0) {
                     $botName = $botResp.value[0].name
                     Write-AuditLog "Agent located: $botName ($AgentId)"
-                    $result.ValidationChecks += @{Check = "Backup Located"; Status = "PASS"; Detail = "Agent '$botName' exists in Dataverse"}
+                    $result.ValidationChecks += @{Check = "Agent Record Found"; Status = "PASS"; Detail = "Agent '$botName' exists in Dataverse"}
                 } else {
-                    throw "Agent $AgentId not found in environment. Verify the agent was restored from backup."
+                    throw "Agent $AgentId not found in environment. Verify the post-recovery target contains the agent record."
                 }
             } else {
                 # Without auth: verify Dataverse endpoint is reachable
                 $null = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -Method Head -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-                $result.ValidationChecks += @{Check = "Backup Located"; Status = "PASS"; Detail = "Dataverse reachable (agent query requires credentials)"}
+                $result.ValidationChecks += @{Check = "Agent Record Found"; Status = "PASS"; Detail = "Dataverse reachable (agent query requires credentials)"}
                 Write-AuditLog "Dataverse reachable but agent query skipped — no credentials" -Level "WARN"
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Backup Located"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Agent Record Found"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would locate agent backup" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would query agent record" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Verify agent configuration..." -ForegroundColor Gray
@@ -281,22 +289,22 @@ function Test-AgentRestore {
                 $compCount = ($compResp.value | Measure-Object).Count
                 if ($compCount -gt 0) {
                     Write-AuditLog "Agent has $compCount component(s) — configuration intact"
-                    $result.ValidationChecks += @{Check = "Configuration Restored"; Status = "PASS"; Detail = "$compCount component(s) verified"}
+                    $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "PASS"; Detail = "$compCount component(s) verified"}
                 } else {
                     throw "Agent $AgentId has no bot components — configuration may be incomplete"
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Configuration Restored"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Configuration Restored"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would restore agent configuration" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would validate agent component inventory" -ForegroundColor Yellow
     }
 
-    Write-Host "  Step 3: Verify agent responds..." -ForegroundColor Gray
+    Write-Host "  Step 3: Verify agent active state..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
@@ -306,23 +314,23 @@ function Test-AgentRestore {
                 $stateCode = $statusResp.statecode
                 if ($stateCode -eq 0) {
                     Write-AuditLog "Agent is Active (statecode=$stateCode)"
-                    $result.ValidationChecks += @{Check = "Agent Responsive"; Status = "PASS"; Detail = "Agent statecode=0 (Active)"}
+                    $result.ValidationChecks += @{Check = "Agent Active State"; Status = "PASS"; Detail = "Agent statecode=0 (Active)"}
                 } else {
                     throw "Agent is not Active (statecode=$stateCode). Expected statecode=0."
                 }
             } else {
                 $apiResp = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -Method Head -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-                $result.ValidationChecks += @{Check = "Agent Responsive"; Status = "PASS"; Detail = "Dataverse API responsive (HTTP $($apiResp.StatusCode))"}
+                $result.ValidationChecks += @{Check = "Agent Active State"; Status = "PASS"; Detail = "Dataverse API responsive (HTTP $($apiResp.StatusCode))"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Agent Responsive"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Agent Active State"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would verify agent responds" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would verify agent active state" -ForegroundColor Yellow
     }
 
-    Write-Host "  Step 4: Validate connectors..." -ForegroundColor Gray
+    Write-Host "  Step 4: Validate connection references..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
@@ -331,41 +339,41 @@ function Test-AgentRestore {
                 $crResp = Invoke-RestMethod -Uri $crUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $crCount = ($crResp.value | Measure-Object).Count
                 Write-AuditLog "Found $crCount connection reference(s) in environment"
-                $result.ValidationChecks += @{Check = "Connectors Functional"; Status = "PASS"; Detail = "$crCount connection reference(s) found"}
+                $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "PASS"; Detail = "$crCount connection reference(s) found"}
             } else {
-                $result.ValidationChecks += @{Check = "Connectors Functional"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Connectors Functional"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
         Write-Host "    [DRY RUN] Would validate connectors" -ForegroundColor Yellow
     }
 
-    Write-Host "  Step 5: Verify security policies..." -ForegroundColor Gray
+    Write-Host "  Step 5: Verify Dataverse security context..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
-                # Verify the service principal security context via WhoAmI
+                # Verify the authenticated identity security context via WhoAmI
                 $whoUri = "$Environment/api/data/v9.2/WhoAmI"
                 $whoResp = Invoke-RestMethod -Uri $whoUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $userId = $whoResp.UserId
-                Write-AuditLog "Authenticated as user $userId — security context validated"
-                $result.ValidationChecks += @{Check = "Security Applied"; Status = "PASS"; Detail = "Dataverse security context verified (UserId: $userId)"}
+                Write-AuditLog "Authenticated as user $userId — Dataverse security context validated"
+                $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "PASS"; Detail = "Dataverse security context verified (UserId: $userId)"}
             } else {
-                $result.ValidationChecks += @{Check = "Security Applied"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Security Applied"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would verify security policies" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would verify Dataverse security context" -ForegroundColor Yellow
     }
 
     $endTime = Get-Date
-    $result.RecoveryTime = ($endTime - $startTime).TotalHours
+    $result.SubcheckDurationHours = ($endTime - $startTime).TotalHours
 
     # Evaluate validation checks against success flag
     if ($result.ValidationChecks | Where-Object { $_.Status -eq 'FAIL' }) {
@@ -375,30 +383,34 @@ function Test-AgentRestore {
     return $result
 }
 
-function Test-EnvironmentFailover {
+function Test-EnvironmentReachability {
     param([bool]$DryRun)
 
     $result = @{
         ValidationChecks = @()
         Success = $true
-        RecoveryTime = 0
+        SubcheckDurationHours = 0
     }
 
     $startTime = Get-Date
 
-    # Acquire Dataverse auth token for failover validation
+    # Acquire Dataverse auth token for environment reachability validation
     $dvHeaders = $null
-    if (-not $DryRun -and $TenantId -and $ClientId -and $ClientSecret) {
+    if (-not $DryRun -and ($AccessToken -or ($TenantId -and $ClientId -and $ClientSecret))) {
         try {
-            $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
-            $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            if ($AccessToken) {
+                $tok = $AccessToken
+            } else {
+                $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
+                $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            }
             $dvHeaders = @{
                 "Authorization" = "Bearer $tok"
                 "OData-MaxVersion" = "4.0"
                 "OData-Version" = "4.0"
                 "Accept" = "application/json"
             }
-            Write-AuditLog "Authenticated to Dataverse for environment failover validation"
+            Write-AuditLog "Authenticated to Dataverse for environment reachability validation"
         } catch {
             Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
@@ -410,13 +422,13 @@ function Test-EnvironmentFailover {
             # Verify the Dataverse environment responds to HTTP requests
             $healthResp = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -Method Head -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
             Write-AuditLog "Environment health check passed (HTTP $($healthResp.StatusCode))"
-            $result.ValidationChecks += @{Check = "Failover Initiated"; Status = "PASS"; Detail = "Environment endpoint responsive (HTTP $($healthResp.StatusCode))"}
+            $result.ValidationChecks += @{Check = "Environment Endpoint Responsive"; Status = "PASS"; Detail = "Environment endpoint responsive (HTTP $($healthResp.StatusCode))"}
         } catch {
-            $result.ValidationChecks += @{Check = "Failover Initiated"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Environment Endpoint Responsive"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would initiate failover" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would check environment endpoint" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Verify Dataverse connectivity..." -ForegroundColor Gray
@@ -438,10 +450,10 @@ function Test-EnvironmentFailover {
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would verify backup environment accessible" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would verify target environment accessible" -ForegroundColor Yellow
     }
 
-    Write-Host "  Step 3: Validate data synchronization..." -ForegroundColor Gray
+    Write-Host "  Step 3: Validate organization metadata..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
@@ -450,45 +462,45 @@ function Test-EnvironmentFailover {
                 $orgResp = Invoke-RestMethod -Uri $orgUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 if ($orgResp.value -and $orgResp.value.Count -gt 0) {
                     $orgName = $orgResp.value[0].name
-                    Write-AuditLog "Data sync verified — organization: $orgName"
-                    $result.ValidationChecks += @{Check = "Data Synchronized"; Status = "PASS"; Detail = "Organization '$orgName' data accessible"}
+                    Write-AuditLog "Organization metadata verified — organization: $orgName"
+                    $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "PASS"; Detail = "Organization '$orgName' data accessible"}
                 } else {
-                    throw "No organization records returned — data may not be synchronized"
+                    throw "No organization records returned — organization metadata unavailable"
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Data Synchronized"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Data Synchronized"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would validate data synchronization" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would validate organization metadata" -ForegroundColor Yellow
     }
 
-    Write-Host "  Step 4: Test agent functionality..." -ForegroundColor Gray
+    Write-Host "  Step 4: Check agent catalog visibility..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
-                # Query bots entity to confirm agent platform is functional
+                # Query bots entity to confirm agent records are visible
                 $botUri = "$Environment/api/data/v9.2/bots?`$select=botid,name&`$top=5"
                 $botResp = Invoke-RestMethod -Uri $botUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $botCount = ($botResp.value | Measure-Object).Count
-                Write-AuditLog "Agent platform operational — $botCount bot(s) accessible"
-                $result.ValidationChecks += @{Check = "Agents Functional"; Status = "PASS"; Detail = "$botCount bot(s) accessible in environment"}
+                Write-AuditLog "Agent catalog visible — $botCount bot(s) accessible"
+                $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "PASS"; Detail = "$botCount bot(s) accessible in environment"}
             } else {
-                $result.ValidationChecks += @{Check = "Agents Functional"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Agents Functional"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would test agent functionality" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would check agent catalog visibility" -ForegroundColor Yellow
     }
 
     $endTime = Get-Date
-    $result.RecoveryTime = ($endTime - $startTime).TotalHours
+    $result.SubcheckDurationHours = ($endTime - $startTime).TotalHours
 
     # Evaluate validation checks against success flag
     if ($result.ValidationChecks | Where-Object { $_.Status -eq 'FAIL' }) {
@@ -498,24 +510,28 @@ function Test-EnvironmentFailover {
     return $result
 }
 
-function Test-DataRecovery {
+function Test-DataverseAccess {
     param([bool]$DryRun)
 
     $result = @{
         ValidationChecks = @()
         Success = $true
-        RecoveryTime = 0
-        ActualRPO = $null
+        SubcheckDurationHours = 0
+        HoursSinceLastResult = $null
     }
 
     $startTime = Get-Date
 
-    # Acquire Dataverse auth token for data recovery validation
+    # Acquire Dataverse auth token for Dataverse access validation
     $dvHeaders = $null
-    if (-not $DryRun -and $TenantId -and $ClientId -and $ClientSecret) {
+    if (-not $DryRun -and ($AccessToken -or ($TenantId -and $ClientId -and $ClientSecret))) {
         try {
-            $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
-            $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            if ($AccessToken) {
+                $tok = $AccessToken
+            } else {
+                $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
+                $tok = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+            }
             $dvHeaders = @{
                 "Authorization" = "Bearer $tok"
                 "OData-MaxVersion" = "4.0"
@@ -523,41 +539,41 @@ function Test-DataRecovery {
                 "Accept" = "application/json"
                 "Prefer" = "odata.include-annotations=*"
             }
-            Write-AuditLog "Authenticated to Dataverse for data recovery validation"
+            Write-AuditLog "Authenticated to Dataverse for Dataverse access validation"
         } catch {
             Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
     }
 
-    Write-Host "  Step 1: Identify restore point..." -ForegroundColor Gray
+    Write-Host "  Step 1: Identify previous validation record..." -ForegroundColor Gray
     if (-not $DryRun) {
         try {
             if ($dvHeaders) {
-                # Query for the most recent DR test result as restore-point anchor
+                # Query for the most recent DR test result as validation-recency anchor
                 $rpUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$select=fsi_executedon,fsi_correlationid&`$orderby=fsi_executedon desc&`$top=1"
                 $rpResp = Invoke-RestMethod -Uri $rpUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 if ($rpResp.value -and $rpResp.value.Count -gt 0) {
                     $latestDate = $rpResp.value[0].fsi_executedon
                     $latestCorr = $rpResp.value[0].fsi_correlationid
-                    Write-AuditLog "Latest restore point: $latestDate (correlation: $latestCorr)"
-                    # Compute ActualRPO: hours between latest record and now
-                    $rpoParsed = [DateTime]::Parse($latestDate).ToUniversalTime()
-                    $rpoHours = [math]::Round(((Get-Date).ToUniversalTime() - $rpoParsed).TotalHours, 2)
-                    $result.ActualRPO = $rpoHours
-                    $result.ValidationChecks += @{Check = "Restore Point Found"; Status = "PASS"; Detail = "Latest record: $latestDate (RPO: ${rpoHours}h)"}
+                    Write-AuditLog "Latest validation result: $latestDate (correlation: $latestCorr)"
+                    # Compute recency gap: hours between latest evidence row and now
+                    $lastResultParsed = [DateTime]::Parse($latestDate).ToUniversalTime()
+                    $hoursSinceLastResult = [math]::Round(((Get-Date).ToUniversalTime() - $lastResultParsed).TotalHours, 2)
+                    $result.HoursSinceLastResult = $hoursSinceLastResult
+                    $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "Latest record: $latestDate (gap: ${hoursSinceLastResult}h)"}
                 } else {
                     Write-AuditLog "No existing DR test results — first run baseline" -Level "WARN"
-                    $result.ValidationChecks += @{Check = "Restore Point Found"; Status = "PASS"; Detail = "No prior test records — first run baseline"}
+                    $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "No prior test records — first run baseline"}
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Restore Point Found"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Restore Point Found"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would identify restore point" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would identify previous validation result" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 2: Verify data availability..." -ForegroundColor Gray
@@ -569,17 +585,17 @@ function Test-DataRecovery {
                 $dataResp = Invoke-RestMethod -Uri $dataUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $dataAvailMs = [math]::Round(((Get-Date) - $startTime).TotalMilliseconds, 0)
                 Write-AuditLog "Data table accessible in ${dataAvailMs}ms"
-                $result.ValidationChecks += @{Check = "Restore Initiated"; Status = "PASS"; Detail = "DR results table accessible (${dataAvailMs}ms)"}
+                $result.ValidationChecks += @{Check = "Evidence Table Accessible"; Status = "PASS"; Detail = "DR results table accessible (${dataAvailMs}ms)"}
             } else {
                 $null = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -Method Head -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
-                $result.ValidationChecks += @{Check = "Restore Initiated"; Status = "PASS"; Detail = "Dataverse reachable (full data check requires credentials)"}
+                $result.ValidationChecks += @{Check = "Evidence Table Accessible"; Status = "PASS"; Detail = "Dataverse reachable (full data check requires credentials)"}
             }
         } catch {
-            $result.ValidationChecks += @{Check = "Restore Initiated"; Status = "FAIL"; Error = $_.Exception.Message}
+            $result.ValidationChecks += @{Check = "Evidence Table Accessible"; Status = "FAIL"; Error = $_.Exception.Message}
             $result.Success = $false
         }
     } else {
-        Write-Host "    [DRY RUN] Would initiate data restore" -ForegroundColor Yellow
+        Write-Host "    [DRY RUN] Would check evidence table access" -ForegroundColor Yellow
     }
 
     Write-Host "  Step 3: Verify data integrity..." -ForegroundColor Gray
@@ -637,7 +653,7 @@ function Test-DataRecovery {
     }
 
     $endTime = Get-Date
-    $result.RecoveryTime = ($endTime - $startTime).TotalHours
+    $result.SubcheckDurationHours = ($endTime - $startTime).TotalHours
 
     # Evaluate validation checks against success flag
     if ($result.ValidationChecks | Where-Object { $_.Status -eq 'FAIL' }) {
@@ -730,18 +746,18 @@ Write-Host ""
 # Execute appropriate validation
 Write-Host "Executing validation procedure..." -ForegroundColor White
 $testResult = switch ($TestType) {
-    "AgentReadinessCheck"          { Test-AgentRestore -AgentId $AgentId -DryRun $DryRun }
-    "EnvironmentReachabilityCheck" { Test-EnvironmentFailover -DryRun $DryRun }
-    "DataverseAccessCheck"         { Test-DataRecovery -DryRun $DryRun }
+    "AgentReadinessCheck"          { Test-AgentReadiness -AgentId $AgentId -DryRun $DryRun }
+    "EnvironmentReachabilityCheck" { Test-EnvironmentReachability -DryRun $DryRun }
+    "DataverseAccessCheck"         { Test-DataverseAccess -DryRun $DryRun }
     "FullValidation" {
-        $agentResult = Test-AgentRestore -AgentId $AgentId -DryRun $DryRun
-        $envResult   = Test-EnvironmentFailover -DryRun $DryRun
-        $dataResult  = Test-DataRecovery -DryRun $DryRun
+        $agentResult = Test-AgentReadiness -AgentId $AgentId -DryRun $DryRun
+        $envResult   = Test-EnvironmentReachability -DryRun $DryRun
+        $dataResult  = Test-DataverseAccess -DryRun $DryRun
         @{
             ValidationChecks = $agentResult.ValidationChecks + $envResult.ValidationChecks + $dataResult.ValidationChecks
             Success          = $agentResult.Success -and $envResult.Success -and $dataResult.Success
-            RecoveryTime     = $agentResult.RecoveryTime + $envResult.RecoveryTime + $dataResult.RecoveryTime
-            ActualRPO        = $dataResult.ActualRPO
+            SubcheckDurationHours = $agentResult.SubcheckDurationHours + $envResult.SubcheckDurationHours + $dataResult.SubcheckDurationHours
+            HoursSinceLastResult = $dataResult.HoursSinceLastResult
         }
     }
 }
@@ -757,12 +773,12 @@ $finalResult = @{
     ProbeDurationHours       = [math]::Round($probeDurationHours, 4)
     ProbeDurationTargetHours = $ProbeDurationTargetHours[$TestType]
     ProbeWithinBudget        = $probeWithinBudget
-    MinutesSinceLastResult   = if ($testResult.ActualRPO) { [math]::Round($testResult.ActualRPO * 60, 2) } else { $null }
+    MinutesSinceLastResult   = if ($testResult.HoursSinceLastResult) { [math]::Round($testResult.HoursSinceLastResult * 60, 2) } else { $null }
     MaxMinutesSinceLastResult = $MaxMinutesSinceLastResultPerType[$TestType]
-    LastResultWithinThreshold = if ($null -ne $testResult.ActualRPO) {
-        ($testResult.ActualRPO * 60) -le $MaxMinutesSinceLastResultPerType[$TestType]
+    LastResultWithinThreshold = if ($null -ne $testResult.HoursSinceLastResult) {
+        ($testResult.HoursSinceLastResult * 60) -le $MaxMinutesSinceLastResultPerType[$TestType]
     } else { $null }
-    RecoveryTime             = $testResult.RecoveryTime
+    SubcheckDurationHours    = $testResult.SubcheckDurationHours
     Success                  = $testResult.Success
     ValidationChecks         = $testResult.ValidationChecks
 }
@@ -794,14 +810,19 @@ Write-Host "Overall Result: $(if ($finalResult.Success) {'PASS'} else {'FAIL'})"
 
 # Save to Dataverse if not dry run and authenticated
 $script:DataverseSaveFailed = $false
-if (-not $DryRun -and $TenantId -and $ClientId -and $ClientSecret) {
+if (-not $DryRun -and $HasDataverseAuth) {
     Write-Host ""
     Write-Host "Saving results to Dataverse..." -ForegroundColor Gray
     try {
-        $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
-        Write-Verbose "Using auth endpoint: $authEndpoint"
-        $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
-        Write-Verbose "Access token acquired, saving results to Dataverse"
+        if ($AccessToken) {
+            $token = $AccessToken
+            Write-Verbose "Using externally supplied Dataverse access token"
+        } else {
+            $authEndpoint = Get-AuthEndpoint -EnvironmentUrl $Environment
+            Write-Verbose "Using auth endpoint: $authEndpoint"
+            $token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+        }
+        Write-Verbose "Access token ready, saving results to Dataverse"
         if (Save-TestResult -Environment $Environment -Token $token -Result $finalResult) {
             Write-Host "  Results saved successfully" -ForegroundColor Green
             Write-AuditLog "Results saved to Dataverse"
@@ -815,7 +836,7 @@ if (-not $DryRun -and $TenantId -and $ClientId -and $ClientSecret) {
         Write-AuditLog "Dataverse save skipped — authentication error: $($_.Exception.Message)" -Level "WARN"
     }
 } elseif (-not $DryRun) {
-    Write-Warning "Dataverse credentials not provided (TenantId/ClientId/ClientSecret). Test results were not saved to Dataverse."
+    Write-Warning "Dataverse authentication not provided (AccessToken or TenantId/ClientId/ClientSecret). Test results were not saved to Dataverse."
     Write-AuditLog "Dataverse save skipped — credentials not configured" -Level "WARN"
 }
 
