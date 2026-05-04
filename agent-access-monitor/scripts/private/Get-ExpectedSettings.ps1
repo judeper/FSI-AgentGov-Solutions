@@ -22,7 +22,7 @@
 
 .NOTES
     File: Get-ExpectedSettings.ps1
-    Version: 1.0.0
+    Version: 1.1.1
 #>
 
 [CmdletBinding()]

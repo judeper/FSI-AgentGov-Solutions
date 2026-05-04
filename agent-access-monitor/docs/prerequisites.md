@@ -22,12 +22,22 @@ Install-Module -Name Microsoft.Graph -Force -Scope CurrentUser
 
 ## Permissions
 
+### Authentication model
+
+Use the strongest available unattended identity for the execution host:
+
+1. Managed identity for Azure-hosted deployment automation (`python scripts/deploy.py --managed-identity` or `--managed-identity-client-id`).
+2. Workload identity federation for CI/CD (`python scripts/deploy.py --workload-identity --client-id <app-id>`).
+3. Interactive authentication for one-off administrator workstations.
+4. Certificate-based application authentication for PowerShell runbooks that still require MSAL.PS app credentials.
+5. Client secrets only as a legacy dev-only fallback; do not use them in production runbooks or customer-facing automation.
+
 ### Power Platform
 
-The executing user/service principal must have one of:
+The executing identity must have one of:
 - Power Platform Admin role
 - Dynamics 365 Service Admin role
-- Global Admin role
+- Entra Global Admin role
 
 ### Microsoft Graph (Optional - for ELM zone lookup)
 

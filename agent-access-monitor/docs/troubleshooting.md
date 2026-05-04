@@ -9,7 +9,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py` (full deployment is the default); check Dataverse System Administrator role |
 | Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --vars-only` to deploy variables only |
 | Connection reference errors | Connector not available in environment | Verify Power Automate Premium license; check connector availability in target environment |
-| `deploy.py` authentication failure | Expired or invalid token | Re-run `python scripts/deploy.py --interactive --client-id <app-id>` to refresh the MSAL token cache. The deployment uses MSAL directly (PublicClientApplication or ConfidentialClientApplication) — `az login` is not used. Verify tenant and environment URL. |
+| `deploy.py` authentication failure | Expired or invalid token | Prefer `python scripts/deploy.py --managed-identity` on Azure-hosted automation, or `--workload-identity --client-id <app-id>` for CI/CD. For manual runs, re-run `python scripts/deploy.py --interactive --client-id <app-id>` to refresh the MSAL token cache. The deployment does not use `az login`; verify tenant and environment URL. |
 | Schema version mismatch | Partial upgrade from earlier version | Re-run `python scripts/deploy.py` (full deployment is the default) to reconcile schema |
 
 ## Authentication Issues
@@ -60,7 +60,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Dataverse write failure (403) | Managed identity lacks Create permission | Assign Security role with Organization-level Create on `fsi_accessvalidationhistory` |
 | Azure Automation job timeout | Runbook exceeds default timeout | Increase job timeout in Automation Account; check for environment query delays |
 | Email alerts not received | Office 365 connection expired or DL invalid | Re-authorize `fsi_cr_office365_accessmonitor`; verify distribution list address |
-| Connection auth expired | Connections need periodic re-authorization | Re-authorize all connection references; consider service principal connections |
+| Connection auth expired | Connections need periodic re-authorization | Re-authorize all connection references; consider managed identity or certificate-based connections where supported |
 
 ## Related Documentation
 

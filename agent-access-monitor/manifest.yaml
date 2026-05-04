@@ -1,7 +1,7 @@
 id: agent-access-monitor
 name: Agent Access Governance Monitor
 description: Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
-version: 1.1.0
+version: 1.1.1
 status: live
 domain: access-identity
 tier: '2'

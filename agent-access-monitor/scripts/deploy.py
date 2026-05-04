@@ -22,7 +22,15 @@ Usage:
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --interactive --tables-only
 
-    # With Service Principal (for CI/CD — set AAM_CLIENT_SECRET env var)
+    # With managed identity (recommended for Azure-hosted automation)
+    python deploy.py --environment-url https://org.crm.dynamics.com \\
+        --tenant-id <tenant-id> --managed-identity
+
+    # With workload identity federation (recommended for CI/CD)
+    python deploy.py --environment-url https://org.crm.dynamics.com \\
+        --tenant-id <tenant-id> --client-id <app-id> --workload-identity
+
+    # Legacy dev-only client secret fallback (set AAM_CLIENT_SECRET env var)
     python deploy.py --environment-url https://org.crm.dynamics.com \\
         --tenant-id <tenant-id> --client-id <app-id>
 """
@@ -179,7 +187,15 @@ Examples:
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --interactive --vars-only
 
-  # With Service Principal (for CI/CD — set AAM_CLIENT_SECRET env var)
+  # With managed identity (recommended for Azure-hosted automation)
+  python deploy.py --environment-url https://org.crm.dynamics.com \\
+      --tenant-id <tenant-id> --managed-identity
+
+  # With workload identity federation (recommended for CI/CD)
+  python deploy.py --environment-url https://org.crm.dynamics.com \\
+      --tenant-id <tenant-id> --client-id <app-id> --workload-identity
+
+  # Legacy dev-only client secret fallback (set AAM_CLIENT_SECRET env var)
   python deploy.py --environment-url https://org.crm.dynamics.com \\
       --tenant-id <tenant-id> --client-id <app-id>
         """,
@@ -201,12 +217,27 @@ Examples:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("AAM_CLIENT_ID"),
-        help="Application (client) ID for Service Principal auth",
+        help="Application (client) ID for interactive, workload identity, or legacy fallback",
     )
     parser.add_argument(
         "--interactive",
         action="store_true",
         help="Use interactive browser authentication (recommended for manual runs)",
+    )
+    parser.add_argument(
+        "--managed-identity",
+        action="store_true",
+        help="Use system-assigned managed identity for unattended authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("AAM_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID (or set AAM_MANAGED_IDENTITY_CLIENT_ID env var)",
+    )
+    parser.add_argument(
+        "--workload-identity",
+        action="store_true",
+        help="Use workload identity federation for unattended authentication",
     )
 
     # Deployment options
@@ -238,14 +269,21 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate auth mode
-    if not args.interactive and not args.client_id:
+    # Validate auth mode. Managed identity is preferred for Azure-hosted automation,
+    # workload identity for CI/CD, interactive for manual admin runs, and client
+    # secrets only as a legacy dev-only fallback.
+    if not args.interactive and not (
+        args.managed_identity
+        or args.managed_identity_client_id
+        or args.workload_identity
+        or args.client_id
+    ):
         parser.error(
-            "Either --interactive or --client-id is required.\n"
-            "Use --interactive for manual runs or provide Service Principal credentials."
+            "Use --managed-identity, --managed-identity-client-id, --workload-identity, "
+            "--interactive, or legacy --client-id with AAM_CLIENT_SECRET."
         )
 
-    # Interactive auth still requires a public-client AAD app registration (--client-id)
+    # Interactive auth still requires a public-client app registration (--client-id)
     # because aam_client.py uses msal.PublicClientApplication, which mandates client_id.
     if args.interactive and not args.client_id:
         parser.error(
@@ -254,17 +292,23 @@ Examples:
             "and pass its application (client) ID via --client-id."
         )
 
+    if args.workload_identity and not args.client_id:
+        parser.error("--client-id is required with --workload-identity")
+
     # Validate mutually exclusive selective flags
     exclusive_flags = [args.tables_only, args.vars_only, args.refs_only]
     if sum(exclusive_flags) > 1:
         parser.error("Cannot use multiple selective deployment flags together")
 
-    # Get client secret if needed for SP auth
+    # Client secret remains available only as a legacy dev-only fallback.
     client_secret = os.environ.get("AAM_CLIENT_SECRET")
-    if not args.interactive and args.client_id and not client_secret:
+    if not args.interactive and not (
+        args.managed_identity or args.managed_identity_client_id or args.workload_identity
+    ) and args.client_id and not client_secret:
         import getpass
 
-        client_secret = getpass.getpass("Client secret: ")
+        # legacy: dev-only — replace with managed identity in production
+        client_secret = getpass.getpass("Client secret (legacy dev-only): ")
 
     print_banner()
 
@@ -281,6 +325,9 @@ Examples:
             client_secret=client_secret,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            managed_identity=args.managed_identity,
+            managed_identity_client_id=args.managed_identity_client_id,
+            workload_identity=args.workload_identity,
         )
 
         # Run deployment

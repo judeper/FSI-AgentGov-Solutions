@@ -69,7 +69,7 @@
 
 .NOTES
     File: Get-EnvironmentAccessSettings.ps1
-    Version: 1.0.0
+    Version: 1.1.1
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 #>
 

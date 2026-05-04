@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.1.1'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -92,6 +92,13 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 1.1.1 - 2026-05-13
+
+### Changed
+- Added managed identity and workload identity support for Python Dataverse deployment scripts.
+- Normalized broad-sharing aliases to the Managed Environment noLimit value during zone evaluation.
+- Fixed runbook drift detection token propagation for ELM zone lookup.
+
 ## 1.0.0 - 2026-02-19
 
 ### Added — Phase 4: Evidence Export & Framework Integration

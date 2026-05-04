@@ -1,8 +1,12 @@
 # Agent Access Governance Monitor - Python Dependencies
 # Python 3.10 or later required
 
-# MSAL for Entra ID authentication
+# MSAL for interactive and legacy dev-only client secret authentication
 msal>=1.30.0
+
+# Azure Identity for managed identity and workload identity federation
+azure-identity>=1.20.0
+azure-core>=1.30.0
 
 # HTTP client for Dataverse Web API
 requests>=2.32.0

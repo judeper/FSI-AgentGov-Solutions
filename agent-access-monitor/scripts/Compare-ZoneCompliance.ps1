@@ -50,7 +50,7 @@
 
 .NOTES
     File: Compare-ZoneCompliance.ps1
-    Version: 1.1.0
+    Version: 1.1.1
 #>
 
 [CmdletBinding()]
@@ -181,6 +181,51 @@ begin {
         
         return "Unknown setting or value: $SettingKey = $Value"
     }
+
+    function Convert-SettingValueForComparison {
+        param(
+            [string]$SettingKey,
+            $Value
+        )
+
+        if ($null -eq $Value) {
+            return 'null'
+        }
+
+        if ($Value -is [bool]) {
+            return $Value.ToString().ToLower()
+        }
+
+        $valueText = $Value.ToString()
+        $normalizedText = ($valueText -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
+
+        if ($SettingKey -in @('bot-limitSharingMode', 'bot-publishedBotLimitSharingMode')) {
+            $broadSharingValues = @(
+                'nolimit',
+                'all',
+                'allusers',
+                'everyone',
+                'everyoneintenant',
+                'anyoneinorganization',
+                'anyoneinyourorganization',
+                'organization',
+                'orgwide',
+                'tenantwide',
+                'entiretenant',
+                'wholeorganization'
+            )
+
+            if ($broadSharingValues -contains $normalizedText) {
+                return 'noLimit'
+            }
+
+            if ($normalizedText -eq 'excludesharingtosecuritygroups') {
+                return 'ExcludeSharingToSecurityGroups'
+            }
+        }
+
+        return $valueText
+    }
     
     #endregion
 }
@@ -232,43 +277,37 @@ process {
                     $expectedValue = $zoneConfig.expected.$settingKey
                 }
                 
-                # Compare values (handle boolean and string comparison)
+                # Compare values using canonical forms so broad-sharing aliases from
+                # Agent 365/Agent Builder (for example all, AllUsers, or OrgWide)
+                # evaluate the same as Managed Environment noLimit.
                 $isViolation = $false
+                $actualNormalized = Convert-SettingValueForComparison -SettingKey $settingKey -Value $actualValue
+                $expectedNormalized = Convert-SettingValueForComparison -SettingKey $settingKey -Value $expectedValue
                 if ($null -ne $expectedValue) {
-                    # Normalize boolean comparison
-                    $actualNormalized = $actualValue
-                    $expectedNormalized = $expectedValue
-                    
-                    if ($actualValue -is [bool]) {
-                        $actualNormalized = $actualValue.ToString().ToLower()
-                    } elseif ($actualValue -is [string]) {
-                        $actualNormalized = $actualValue.ToLower()
-                    }
-                    
-                    if ($expectedValue -is [bool]) {
-                        $expectedNormalized = $expectedValue.ToString().ToLower()
-                    } elseif ($expectedValue -is [string]) {
-                        $expectedNormalized = $expectedValue.ToLower()
-                    }
-                    
-                    $isViolation = $actualNormalized -ne $expectedNormalized
+                    $isViolation = $actualNormalized.ToString().ToLowerInvariant() -ne $expectedNormalized.ToString().ToLowerInvariant()
                 }
                 
                 if ($isViolation) {
                     $severity = Get-ViolationSeverity `
                         -Zone $zone `
                         -SettingKey $settingKey `
-                        -ActualValue $actualValue.ToString() `
+                        -ActualValue $actualNormalized.ToString() `
                         -ZoneConfig $zoneConfig
+
+                    $description = Get-SettingDescription -SettingKey $settingKey -Value $actualNormalized.ToString() -Baseline $baseline
+                    if ($actualValue.ToString() -ne $actualNormalized.ToString()) {
+                        $description = "$description (observed platform value: $actualValue)"
+                    }
                     
                     $violation = [PSCustomObject]@{
-                        Setting           = $settingProp
-                        SettingKey        = $settingKey
-                        ExpectedValue     = $expectedValue
-                        ActualValue       = $actualValue
-                        Severity          = $severity
-                        Description       = Get-SettingDescription -SettingKey $settingKey -Value $actualValue.ToString() -Baseline $baseline
-                        RegulatoryContext = Get-RegulatoryContext -Severity $severity -Baseline $baseline
+                        Setting               = $settingProp
+                        SettingKey            = $settingKey
+                        ExpectedValue         = $expectedValue
+                        ActualValue           = $actualValue
+                        NormalizedActualValue = $actualNormalized
+                        Severity              = $severity
+                        Description           = $description
+                        RegulatoryContext     = Get-RegulatoryContext -Severity $severity -Baseline $baseline
                     }
                     
                     $violations += $violation

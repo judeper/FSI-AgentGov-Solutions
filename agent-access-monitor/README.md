@@ -2,7 +2,7 @@
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
-> **Version:** v1.1.0
+> **Version:** v1.1.1
 > **Status:** Completed
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
@@ -54,6 +54,12 @@ Add-PowerAppsAccount
 | `bot-limitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
 | `bot-authoringSharingDisabled` | false | false | true |
 | `bot-publishedBotLimitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
+
+## Scope and Microsoft Learn Alignment
+
+AAM validates Managed Environment agent sharing settings documented in [Power Platform limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits). It does not enumerate individual Copilot Studio shares or Microsoft 365 Copilot package assignments. Current sharing semantics note that limits apply when users share authenticated agents, can take up to an hour to enforce, and do not immediately revoke existing access.
+
+Broad-sharing values from adjacent APIs (`all`, `AllUsers`, `OrgWide`, and tenant-wide variants) are normalized to the Managed Environment `noLimit` value during severity evaluation. Future inventory expansion should treat Microsoft Graph package and Agent Registry APIs as preview sources until production support is confirmed.
 
 ## Solution Components
 

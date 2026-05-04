@@ -60,7 +60,7 @@
     "agent-access-monitor": {
       "id": "agent-access-monitor",
       "name": "Agent Access Governance Monitor",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",

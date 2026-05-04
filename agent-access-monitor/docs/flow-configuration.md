@@ -28,10 +28,10 @@ Before creating the flow, ensure you have:
   - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with AAM schema deployed (run `python scripts/deploy.py`)
-- [ ] **Managed Identity** configured for Dataverse access:
-  - Flow's managed identity (or connection identity) has Create permission on `fsi_accessvalidationhistory` entity
-  - Security role: System Administrator, or custom role with Organization-level Create on AccessValidationHistory
-  - Required for Dataverse persistence (performed by the runbook via `-PersistResults`)
+- [ ] **Runbook identity** configured for Dataverse access:
+  - Prefer managed identity where your Power Platform/Dataverse automation supports it; otherwise use the certificate-based app identity configured for `Start-AccessValidationRunbook.ps1`.
+  - The runbook identity has Create permission on the `fsi_accessvalidationhistory` table and Create permission on `fsi_accessviolations` when persisting violations.
+  - Assign System Administrator, or a custom role with the required organization-level table privileges.
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
@@ -114,7 +114,7 @@ The flow uses **three** connection references deployed during Phase 2 (Dataverse
 
 ## Step 4: Validation History Write
 
-> **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). Dataverse persistence is performed by the runbook (`Start-AccessValidationRunbook.ps1` via `-PersistResults`), **before** alerting, to help ensure the audit trail exists even if alert delivery fails.
+> **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). Dataverse persistence is performed by the runbook (`Start-AccessValidationRunbook.ps1` via `-PersistResults`), **before** alerting, so alert delivery failures do not hide the write attempt.
 
 **Dataverse table:** `fsi_accessvalidationhistory` (OrganizationOwned, immutable)
 

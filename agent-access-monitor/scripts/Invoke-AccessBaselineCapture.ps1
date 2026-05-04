@@ -98,7 +98,7 @@
     - Environments: Array of captured environment summaries
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.1
 
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module

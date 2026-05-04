@@ -1,6 +1,19 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Expected agent access settings per governance zone",
+  "normalization": {
+    "broadSharingAliases": [
+      "all",
+      "AllUsers",
+      "Everyone",
+      "EveryoneInTenant",
+      "AnyoneInOrganization",
+      "OrgWide",
+      "organization",
+      "tenant-wide"
+    ],
+    "comparisonBehavior": "Broad-sharing aliases are evaluated as the Managed Environment noLimit value."
+  },
   "zones": {
     "Zone1": {
       "description": "Personal Productivity - Permissive access for individual development",

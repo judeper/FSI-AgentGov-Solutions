@@ -70,7 +70,7 @@
     - Violations: Array of violation records (empty if -IncludeViolations not specified)
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.1
     This is a private helper function for internal use by Export-AgentAccessEvidence.
 
     Dataverse tables queried:
