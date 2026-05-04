@@ -43,7 +43,7 @@
 
 .PARAMETER SkipPimValidation
     Skip PIM role settings validation. Returns result without PIM checks when
-    account lacks RoleManagement.Read.All permission.
+    account lacks RoleManagement.Read.Directory permission.
 
 .EXAMPLE
     Start-SessionValidationRunbook `
@@ -75,11 +75,11 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: Microsoft.Graph.Identity.SignIns, MSAL.PS
+    3. Install required modules: Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Groups, Microsoft.Graph.Identity.Governance, MSAL.PS
     4. Grant application permissions:
        - Policy.Read.All (for CA policies)
-       - Directory.Read.All (for break-glass group membership resolution)
-       - RoleManagement.Read.All (optional, for PIM validation)
+       - GroupMember.Read.All (for break-glass group membership resolution)
+       - RoleManagement.Read.Directory (optional, for PIM validation)
     5. Schedule via Schedules or trigger via webhook
 
     Performance:

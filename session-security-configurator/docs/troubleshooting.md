@@ -124,7 +124,7 @@ Get-Module MSAL.PS -ListAvailable | Select-Object Name, Version
 ### Verify Graph Permissions
 
 ```powershell
-Connect-MgGraph -Scopes "Policy.Read.All", "Directory.Read.All"
+Connect-MgGraph -Scopes "Policy.Read.All", "GroupMember.Read.All", "RoleManagement.Read.Directory"
 Get-MgContext | Select-Object Scopes
 ```
 
