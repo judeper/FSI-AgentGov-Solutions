@@ -17,7 +17,7 @@
 | SchemaName | Logical Name | Type | Required | Description | Option Set |
 |---|---|---|---|---|---|
 | fsi_SourceName | fsi_sourcename | String | Yes | Display name of the knowledge source |  |
-| fsi_SourceType | fsi_sourcetype | Picklist | Yes |  | **fsi_RSV_sourcetype**: `1` = SharePoint Document Library, `2` = SharePoint List, `3` = SharePoint Page, `4` = Dataverse Table, `5` = Azure Blob Container, `6` = Azure Blob File, `7` = External API, `8` = Database Query |
+| fsi_SourceType | fsi_sourcetype | Picklist | Yes |  | **fsi_RSV_sourcetype**: `1` = SharePoint Document Library, `2` = SharePoint List, `3` = SharePoint Page, `4` = Dataverse Table, `5` = Azure Blob Container, `6` = Azure Blob File, `7` = External API, `8` = Database Query, `9` = Public Website, `10` = OneDrive File or Folder, `11` = Microsoft 365 Copilot Connector External Item, `12` = Azure AI Search Index, `13` = Copilot Studio Uploaded Document |
 | fsi_SourceUri | fsi_sourceuri | String | Yes | Full URI of the knowledge source |  |
 | fsi_AgentId | fsi_agentid | String | Yes | Power Platform Bot ID referencing this source |  |
 | fsi_Description | fsi_description | Memo | No | Detailed description of the knowledge source |  |
@@ -78,6 +78,11 @@ Type of RAG knowledge source
 | 6 | Azure Blob File |
 | 7 | External API |
 | 8 | Database Query |
+| 9 | Public Website |
+| 10 | OneDrive File or Folder |
+| 11 | Microsoft 365 Copilot Connector External Item |
+| 12 | Azure AI Search Index |
+| 13 | Copilot Studio Uploaded Document |
 
 #### fsi_RSV_sourcestatus
 

@@ -41,6 +41,11 @@ OPTIONSETS = {
             {"Value": 6, "Label": {"LocalizedLabels": [{"Label": "Azure Blob File", "LanguageCode": 1033}]}},
             {"Value": 7, "Label": {"LocalizedLabels": [{"Label": "External API", "LanguageCode": 1033}]}},
             {"Value": 8, "Label": {"LocalizedLabels": [{"Label": "Database Query", "LanguageCode": 1033}]}},
+            {"Value": 9, "Label": {"LocalizedLabels": [{"Label": "Public Website", "LanguageCode": 1033}]}},
+            {"Value": 10, "Label": {"LocalizedLabels": [{"Label": "OneDrive File or Folder", "LanguageCode": 1033}]}},
+            {"Value": 11, "Label": {"LocalizedLabels": [{"Label": "Microsoft 365 Copilot Connector External Item", "LanguageCode": 1033}]}},
+            {"Value": 12, "Label": {"LocalizedLabels": [{"Label": "Azure AI Search Index", "LanguageCode": 1033}]}},
+            {"Value": 13, "Label": {"LocalizedLabels": [{"Label": "Copilot Studio Uploaded Document", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_RSV_sourcestatus": {

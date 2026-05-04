@@ -4,6 +4,14 @@ All notable changes to the RAG Source Validator.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Bumped solution metadata to v1.3.0 for the Microsoft Learn 2026-Q2 refresh.
+- Added managed identity-first authentication guidance and support for the primary validator and governance reporting scripts, with client-secret authentication retained as a legacy development fallback.
+- Expanded planned source-type choices to cover public websites, OneDrive files/folders, Microsoft 365 Copilot connector external items, Azure AI Search indexes, and Copilot Studio uploaded documents.
+- Documented Microsoft Graph delta/eTag/lastModifiedDateTime change-detection guidance for SharePoint and OneDrive sources, with SHA-256 hashing retained for evidence integrity.
+
 ## [1.2.0] - 2026-04-17
 
 ### Council Review — Technical Accuracy Fixes

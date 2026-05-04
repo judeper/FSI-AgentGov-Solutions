@@ -1,6 +1,6 @@
 # RAG Source Validator
 
-> **Status:** Completed (v1.1.1)
+> **Status:** Completed (v1.3.0)
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -39,8 +39,8 @@ The RAG Source Validator helps verify AI agents use trusted, verified knowledge 
                               │ Source Types
                               │
 ┌─────────────┬───────────────┬───────────────┬───────────────────┐
-│ SharePoint  │ Dataverse     │ Azure Blob    │ External          │
-│ Documents   │ Tables        │ Storage       │ APIs              │
+│ SharePoint  │ Dataverse     │ OneDrive      │ External          │
+│ Documents   │ Tables        │ Public Sites  │ Connectors/Search │
 └─────────────┴───────────────┴───────────────┴───────────────────┘
 ```
 
@@ -48,13 +48,24 @@ The RAG Source Validator helps verify AI agents use trusted, verified knowledge 
 
 | Type | Content | Hash Method | Status |
 |------|---------|-------------|--------|
-| **SharePoint Document Library** | Documents | File content hash | ✅ Implemented |
-| **SharePoint List** | Lists | Row checksum | 🔲 Planned |
-| **SharePoint Page** | Pages | Page content hash | 🔲 Planned |
-| **Dataverse** | Tables, rows | Row checksum | 🔲 Planned |
-| **Azure Blob** | Files, containers | Blob content hash | 🔲 Planned |
-| **Web API** | JSON responses | Response body hash | 🔲 Planned |
-| **Database** | Queries, tables | Query result hash | 🔲 Planned |
+| **SharePoint Document Library** | Documents exposed through Microsoft Graph driveItem URLs | File content hash | ✅ Implemented |
+| **SharePoint List** | List items and folders | Graph delta/eTag metadata + row checksum | 🔲 Planned |
+| **SharePoint Page** | Pages and news items surfaced through Microsoft Search/Graph | Page content hash + metadata checksum | 🔲 Planned |
+| **Dataverse Table** | Tables, rows, and Copilot Studio document metadata | Row checksum | 🔲 Planned |
+| **Azure Blob** | Files and containers used by custom RAG pipelines | Blob content hash | 🔲 Planned |
+| **External API** | Custom data endpoints and classic Copilot Studio custom data sources | Response body hash | 🔲 Planned |
+| **Database Query** | SQL/NoSQL query results used by custom RAG pipelines | Query result hash | 🔲 Planned |
+| **Public Website** | Copilot Studio public website knowledge sources | Crawl manifest + content hash | 🔲 Planned |
+| **OneDrive File or Folder** | Copilot Studio unstructured OneDrive file/folder knowledge | Graph delta/eTag metadata + content hash | 🔲 Planned |
+| **Microsoft 365 Copilot Connector External Item** | Graph connector / Copilot connector `externalItem` content | External item content and ACL metadata hash | 🔲 Planned |
+| **Azure AI Search Index** | Custom RAG vector, hybrid, and semantic search indexes | Index schema and vector profile checksum | 🔲 Planned |
+| **Copilot Studio Uploaded Document** | Files uploaded to Copilot Studio and stored/indexed in Dataverse | Dataverse file metadata + content hash | 🔲 Planned |
+
+### Microsoft Learn 2026-Q2 source alignment
+
+- Copilot Studio generative knowledge sources include public websites, uploaded documents, SharePoint, Dataverse, and enterprise data indexed by Microsoft 365 Copilot connectors. Unstructured data support also covers OneDrive and SharePoint files/folders, with Dataverse storing uploaded files and semantic/vector indexes.
+- Microsoft 365 Copilot connectors index external data into Microsoft Graph as `externalItem` resources with schema labels, searchable content, and ACLs; connector content can be queried through Microsoft Search and used as grounding in Copilot experiences.
+- Azure AI Search custom RAG indexes should track vector fields, vector dimensions, `vectorSearch` profiles, hybrid query settings, and semantic ranking configuration when used as a custom grounding layer.
 
 ## Prerequisites
 
@@ -90,22 +101,28 @@ Register sources directly in the `fsi_knowledgesource` Dataverse table via the m
 ### 3. Run Validation
 
 ```powershell
-.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com"
+# Recommended for Azure-hosted automation with system-assigned managed identity
+.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.com" -UseManagedIdentity
 ```
+
+For a user-assigned managed identity, set `RSV_MANAGED_IDENTITY_CLIENT_ID` or pass `-ManagedIdentityClientId`.
 
 For sovereign cloud environments (GCC High, DoD, China), specify the corresponding Graph and auth endpoints:
 
 ```powershell
 # GCC High
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.microsoftdynamics.us" `
+    -UseManagedIdentity `
     -GraphBaseUrl "https://graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
 
 # DoD
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.appsplatform.us" `
+    -UseManagedIdentity `
     -GraphBaseUrl "https://dod-graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
 
 # 21Vianet China
 .\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.cn" `
+    -UseManagedIdentity `
     -GraphBaseUrl "https://microsoftgraph.chinacloudapi.cn" -AuthBaseUrl "https://login.chinacloudapi.cn"
 ```
 
@@ -116,10 +133,12 @@ The script automatically captures baselines on first run for sources without an 
 ## Deployment
 
 1. Create the Dataverse schema manually in your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema-manual) for current status)
-2. Set environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` for service principal access (certificate-based authentication and managed identities are recommended for production but not yet supported by the script)
+2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange`, plus Microsoft Graph permissions for SharePoint or OneDrive content retrieval
 3. Register knowledge sources via the model-driven app or Dataverse API
-4. Run `Invoke-SourceValidation.ps1` to capture baselines and validate
-5. Configure scheduled execution via Task Scheduler, cron, or Azure Automation to run `Invoke-SourceValidation.ps1` on a recurring basis
+4. Run `Invoke-SourceValidation.ps1 -UseManagedIdentity` to capture baselines and validate
+5. Configure scheduled execution via Azure Automation, Azure Functions, or a VM-hosted scheduled job with managed identity enabled
+
+> **Development fallback:** Client-secret authentication remains available for local development only by setting `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` or by passing `-ClientSecret`. Do not use client secrets for production scheduled validation.
 
 ## Documentation
 
@@ -156,7 +175,9 @@ For structured data sources, validates schema hasn't changed.
 
 Validates that content is current and not stale by comparing `fsi_lastmodified` against the per-source `fsi_freshnessthreshold` (in days).
 
-> **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, or manual updates in the model-driven app).
+> **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, Microsoft Graph change notifications, Graph delta queries, or manual updates in the model-driven app).
+
+For SharePoint and OneDrive sources, current Microsoft Graph guidance favors delta queries and change notifications for efficient change tracking. Production designs should store and replay `@odata.deltaLink` values where available, and compare `eTag`, `cTag`, and `lastModifiedDateTime` metadata before downloading and hashing large content payloads. SHA-256 hashing remains useful for audit evidence and tamper-evident baselines.
 
 | Condition | Status |
 |-----------|--------|
@@ -227,6 +248,8 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3.0 | Unreleased | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; expanded planned source types; Graph delta/eTag guidance |
+| 1.2.0 | April 2026 | Sovereign-cloud parity and evidence export fixes |
 | 1.1.1 | April 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
 | 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity); sovereign cloud support |
 | 1.0.1 | March 2026 | Binary-safe SHA-256 hashing for non-text content |
@@ -238,7 +261,7 @@ For documents with references, validates all links are accessible.
 
 | Limitation | Details |
 |------------|---------|
-| **SharePoint direct URLs** | The script acquires a Graph API-scoped token only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
+| **SharePoint direct URLs** | The script acquires Microsoft Graph and Dataverse tokens only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
 | **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
 | **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC Rule 17a-4 and FINRA Rule 4511(a) contexts. |
 | **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC Rule 17a-4, FINRA Rule 4511(a), SOX Section 404), consider adding unit tests for hash computation, SSRF URI validation, sovereign cloud cross-validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
@@ -291,4 +314,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.2.0*
+*FSI Agent Governance Framework - RAG Source Validator v1.3.0*
