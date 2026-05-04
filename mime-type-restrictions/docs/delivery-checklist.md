@@ -12,10 +12,12 @@ Files located in `src/`, `docs/`, `scripts/`, and `templates/` directories:
 **Server-Side Validation:**
 - [ ] **src/ValidateMimeTypePlugin.cs** — Dataverse pre-validation plugin (C# source)
 - [ ] **docs/build-instructions.md** — Step-by-step guide to build the plugin DLL from source
+- [ ] **docs/build-and-sign.md** — dotnet build, strong-name signing, and verification guide
+- [ ] **src/ValidateMimeTypePlugin.csproj** — SDK-style .NET Framework 4.6.2 project file
 - [ ] **templates/mime-config.json** — MIME type allowlist/blocklist configuration
 
-**DLP Policy:**
-- [ ] **templates/dlp-policy-template.json** — Power Platform DLP policy template with MIME restrictions
+**Data Policy Reference:**
+- [ ] **templates/dlp-policy-template.json** — Connector-classification reference for Power Platform data policies
 
 **Sentinel Monitoring:**
 - [ ] **scripts/query-mime-blocks.kql** — KQL query for blocked upload events (30-day summary)
@@ -27,10 +29,12 @@ Files located in `src/`, `docs/`, `scripts/`, and `templates/` directories:
 **Option A: Create ZIP Archive**
 ```bash
 # From the mime-type-restrictions directory:
-zip -r MIME-Type-Restrictions-v1.0.2.zip \
+zip -r MIME-Type-Restrictions-v1.2.1.zip \
   docs/flow-configuration.md \
   docs/build-instructions.md \
+  docs/build-and-sign.md \
   src/ValidateMimeTypePlugin.cs \
+  src/ValidateMimeTypePlugin.csproj \
   templates/mime-config.json \
   templates/dlp-policy-template.json \
   scripts/query-mime-blocks.kql \
@@ -40,12 +44,14 @@ zip -r MIME-Type-Restrictions-v1.0.2.zip \
 
 **Option B: Create Structured Folder**
 ```
-MIME-Type-Restrictions-v1.0.2/
+MIME-Type-Restrictions-v1.2.1/
 ├── docs/
 │   ├── flow-configuration.md
-│   └── build-instructions.md
+│   ├── build-instructions.md
+│   └── build-and-sign.md
 ├── src/
-│   └── ValidateMimeTypePlugin.cs
+│   ├── ValidateMimeTypePlugin.cs
+│   └── ValidateMimeTypePlugin.csproj
 ├── templates/
 │   ├── mime-config.json
 │   ├── dlp-policy-template.json
@@ -57,51 +63,51 @@ MIME-Type-Restrictions-v1.0.2/
 
 ### 4. Email Template
 
-**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.0.2
+**Subject:** MIME Type Restrictions for File Uploads - Solution Delivery v1.2.1
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.0.2.
+Please find attached the MIME Type Restrictions for File Uploads solution package, version 1.2.1.
 
 This solution provides defense-in-depth validation of file uploads in Copilot Studio agents
-through server-side magic byte inspection, DLP policy enforcement, and Sentinel monitoring.
+through server-side magic byte inspection, Power Platform data policy guardrails, and Sentinel monitoring.
 
 Package Contents:
 - docs/flow-configuration.md — Complete technical documentation with:
   • Executive Summary (problem statement, solution overview, business value)
   • Technical Details (architecture, 3-layer enforcement, components)
-  • Configuration and Prerequisites (plugin registration, DLP deployment)
+  • Configuration and Prerequisites (plugin registration, data policy setup)
   • Deployment validation steps
   • Operational guidance and troubleshooting
   • Magic byte reference and regulatory alignment
 
-- 6 Solution Component Files:
-  • Dataverse pre-validation plugin (C# source)
+- Solution component files:
+  • Dataverse pre-validation plugin (C# source + project file)
   • MIME type configuration (JSON allowlist/blocklist)
-  • DLP policy template (Power Platform connector restrictions)
-  • 3 Sentinel KQL queries (monitoring, alerting, exception tracking)
+  • Data policy reference (Power Platform connector classifications)
+  • 2 Sentinel KQL queries and 1 scheduled analytics rule template (monitoring, alerting, exception tracking)
 
 Key Capabilities:
 ✓ Server-side magic byte inspection (defense against disguised executables)
 ✓ Blocked signature detection (PE, ELF, Mach-O, Java class files)
 ✓ OpenXML deep inspection for Office documents (DOCX, XLSX, PPTX)
-✓ DLP policy connector-level enforcement
+✓ Power Platform data policy connector guardrails
 ✓ Sentinel monitoring for blocked upload attempts
 ✓ High-volume attack detection (>10 attempts per user per hour)
 
 Architecture:
-• Layer 1: DLP Policy (connector-level MIME whitelist)
+• Layer 1: Power Platform data policy (connector classifications)
 • Layer 2: Dataverse Plugin (pre-validation with magic byte inspection)
 • Layer 3: Sentinel Monitoring (blocked event aggregation and alerting)
 
 Business Value:
 • Significantly reduces malware distribution risk through multi-layered validation
-• Helps prevent data exfiltration via file-based steganography
-• Enable security operations teams to detect upload abuse patterns
-• Support regulatory examinations with automated MIME restriction evidence
+• Helps reduce data exfiltration risk from file-based steganography
+• Enables security operations teams to detect upload abuse patterns
+• Supports regulatory examinations with MIME restriction evidence
 
 Regulatory Support:
 • NIST 800-53 SI-3 — Malicious Code Protection
@@ -116,7 +122,7 @@ Next Steps:
    - Message: Create
    - Stage: Pre-Validation (10)
    - Configuration: Paste MimeConfig.json content
-4. Import DLP policy template via PowerShell
+4. Configure data policy connector classifications in the Power Platform admin center or with PowerShell
 5. Deploy Sentinel queries and alert rule to Log Analytics workspace
 6. Test with allowed and blocked file types (PDF vs EXE)
 7. Schedule deployment planning session (recommended: 2-3 hours)
@@ -138,10 +144,10 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - DO NOT remove blocked signatures without security team approval
    - Add custom signatures if organization-specific threats identified
 
-4. **DLP Policy Mode:**
-   - Start with "Audit" mode to assess impact (log violations, allow uploads)
-   - Review audit logs for 2-4 weeks
-   - Switch to "Enforce" mode after validation (block disallowed uploads)
+4. **Data Policy Connector Scope:**
+   - Pilot connector classification changes in a non-production or scoped environment group
+   - Review maker and runtime impact for 2-4 weeks
+   - Broaden the policy only after validating required Copilot Studio and upload paths
 
 5. **Sentinel Workspace:**
    - Requires Dataverse audit logs flowing to Log Analytics workspace
@@ -159,12 +165,12 @@ Best regards,
 
 Before sending to customer, verify:
 
-- [ ] All 8 files are included (1 doc, 1 build guide, 1 C#, 1 config, 1 DLP template, 2 KQL queries, 1 Sentinel alert rule)
+- [ ] All 10 files are included (flow guide, build guide, build/sign guide, C# source, project file, MIME config, data policy reference, 2 KQL queries, 1 Sentinel alert rule)
 - [ ] docs/flow-configuration.md renders correctly in Markdown viewer
 - [ ] C# source compiles without errors (test build in Visual Studio)
 - [ ] MimeConfig.json is valid JSON (use JSON validator)
 - [ ] No sensitive data in files (tenant IDs, user emails should be placeholders)
-- [ ] Version numbers are consistent (v1.0.2) across all files
+- [ ] Version numbers are consistent (v1.2.1) across all files
 
 ### 6. Files NOT to Include
 
@@ -186,12 +192,12 @@ Remind customer they will need:
 **Tools:**
 - Visual Studio 2019+ (to build plugin DLL from C# source)
 - Plugin Registration Tool (to register Dataverse plugin)
-- PowerShell 7.2+ (to import DLP policy template)
-- Azure Portal access (to configure Sentinel queries)
+- PowerShell 7.2+ (to review or update data policy connector classifications)
+- Azure portal access (to configure Sentinel queries)
 
 **Permissions:**
 - Dataverse System Administrator (per-environment for plugin registration)
-- Power Platform Admin (tenant-wide for DLP policy management)
+- Power Platform Admin (tenant-wide for data policy management)
 - Security Reader (Log Analytics workspace for query execution)
 - Security Administrator (Sentinel workspace for alert rule creation)
 
@@ -208,7 +214,7 @@ Remind customer they will need:
 Offer these follow-up services:
 - Plugin build and registration assistance (2-4 hours recommended)
 - MimeConfig.json customization workshop (1 hour)
-- DLP policy testing and validation (2 hours)
+- Data policy testing and validation (2 hours)
 - Sentinel dashboard creation for upload monitoring
 - Quarterly review of blocked upload trends and policy tuning
 
@@ -238,11 +244,11 @@ Offer these follow-up services:
    - Add magic byte patterns for new allowed types (consult file format specifications)
    - Test magic byte validation with sample files before deploying
 
-4. **DLP Policy Testing:**
-   - Start in "Audit" mode for 2-4 weeks
-   - Review audit logs to identify impact on legitimate users
-   - Create exceptions for business-justified use cases
-   - Switch to "Enforce" mode only after validation complete
+4. **Data Policy Testing:**
+   - Pilot connector classification changes in a non-production or scoped environment group
+   - Review maker and runtime impact for 2-4 weeks
+   - Document exceptions for business-justified connector paths
+   - Broaden policy scope only after validation is complete
 
 5. **Sentinel Alert Tuning:**
    - Default threshold: 10 blocked uploads per user per hour
@@ -277,12 +283,12 @@ MimeConfig.json Validation:
 □ Allowed types reviewed and customized for organization
 □ Blocked signatures NOT removed (security risk)
 
-DLP Policy Deployment:
-□ dlp-policy-template.json customized with organization MIME types
-□ Policy imported via PowerShell successfully
-□ Policy mode set: "TestWithNotifications" (initial testing) or "Block" (production)
-□ Policy scope configured: All environments or specific groups
-□ Copilot Studio connector classified as "Business" (not Blocked)
+Data Policy Deployment:
+□ dlp-policy-template.json reviewed as a connector-classification reference
+□ Data policy updated in the admin center or with Microsoft.PowerApps.Administration.PowerShell
+□ Risky upload-capable connectors classified as Blocked or Non-business as required
+□ Policy scope configured: target environments or environment groups
+□ Required Copilot Studio connectors remain in compatible data groups
 
 Sentinel Queries:
 □ Log Analytics workspace connected to Dataverse audit logs
@@ -296,7 +302,7 @@ Test Execution:
 □ Test 2: Upload blocked EXE → Blocked (error message displayed)
 □ Test 3: Upload ZIP (not in allowlist) → Blocked
 □ Test 4: Upload disguised EXE (renamed to PDF) → Blocked (magic byte mismatch)
-□ Test 5: DLP policy blocks disallowed MIME → Audit log entry created
+□ Test 5: Data policy blocks or separates a risky upload connector path → policy violation observed
 □ Test 6: Sentinel query returns blocked events → Results displayed
 
 Plugin Trace Log Review:
@@ -314,6 +320,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.2
-**Release Date:** April 2026
+**Package Version:** v1.2.1
+**Release Date:** Unreleased (2026-Q2)
 **Solution:** MIME Type Restrictions for File Uploads

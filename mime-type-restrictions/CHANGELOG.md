@@ -2,6 +2,16 @@
 
 All notable changes to MIME Type Restrictions for File Uploads are documented here.
 
+## [1.2.1] — Unreleased — Microsoft Learn 2026-Q2 refresh
+
+### Changed
+
+- Aligned `manifest.yaml` control coverage with the five controls documented in v1.1.0: **1.5, 1.13, 1.25, 3.3, 3.7**.
+- Clarified that `templates/dlp-policy-template.json` is a connector-classification reference and not an importable MIME or extension enforcement policy.
+- Updated Copilot Studio file-upload caveats for current user file input and knowledge-source limits.
+- Refreshed PowerShell guidance to use current `Microsoft.PowerApps.Administration.PowerShell` DLP cmdlets and managed identity-first Microsoft Graph authentication patterns.
+- Bumped solution metadata, package examples, templates, and plugin comments to **1.2.1**.
+
 ## [1.2.0] — Unreleased — CI build, CodeQL, signed binary release (#38)
 
 ### Added

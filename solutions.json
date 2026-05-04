@@ -737,26 +737,22 @@
     "mime-type-restrictions": {
       "id": "mime-type-restrictions",
       "name": "MIME Type Restrictions for File Uploads",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "content-data",
       "tier": "2",
       "status": "live",
-      "description": "Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.",
+      "description": "Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/mime-type-restrictions/",
       "controls": [
         "1.5",
-        "1.10",
-        "1.11",
         "1.13",
-        "1.14",
         "1.25",
         "3.3",
-        "3.7",
-        "4.3"
+        "3.7"
       ],
       "dependencies": [],
       "prerequisites": {
-        "power-platform-admin": "Dataverse System Administrator access to register the plugin, import the DLP policy, and manage solution components.",
+        "power-platform-admin": "Dataverse System Administrator access to register the plugin, configure data policy connector classifications, and manage solution components.",
         "log-analytics-reader": "Access to the Microsoft Sentinel or Log Analytics workspace that hosts PowerPlatformDlpActivity_CL for query validation."
       },
       "verification": "Run scripts/query-mime-blocks.kql and scripts/query-exception-usage.kql against PowerPlatformDlpActivity_CL and confirm blocked uploads plus exception-usage events are returned.",

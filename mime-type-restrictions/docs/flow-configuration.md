@@ -1,9 +1,9 @@
 # Securing AI Agent File Uploads with MIME Type Restrictions
 ## MIME Type Restrictions for File Uploads
 
-**Version:** 1.0.2
-**Solution Type:** Server-Side Validation + DLP Policy + Monitoring
-**Platform:** Dataverse Plugin + Power Platform DLP + Microsoft Sentinel
+**Version:** 1.2.1
+**Solution Type:** Server-Side Validation + Data Policy Reference + Monitoring
+**Platform:** Dataverse Plugin + Power Platform data policies + Microsoft Sentinel
 
 ---
 
@@ -22,21 +22,21 @@ Copilot Studio agents often include file upload capabilities to enable users to 
 
 ### Solution Overview
 
-The **MIME Type Restrictions for File Uploads** solution provides defense-in-depth validation of file uploads in Copilot Studio agents through three enforcement layers: server-side Dataverse plugin validation with magic byte inspection, Power Platform DLP policy enforcement, and Microsoft Sentinel monitoring for blocked upload attempts.
+The **MIME Type Restrictions for File Uploads** solution provides defense-in-depth validation of file uploads in Copilot Studio agents through server-side Dataverse plugin validation with magic byte inspection, Power Platform data policy guardrails for upload-capable connectors, and Microsoft Sentinel monitoring for blocked upload attempts.
 
 **Key Capabilities:**
 - **Server-Side Validation:** Dataverse pre-validation plugin inspects file content (magic bytes) to verify actual file type matches declared MIME type
 - **Magic Byte Inspection:** Validates file signatures (headers) against known patterns (PDF: %PDF, PNG: 89 50 4E 47, etc.)
 - **Blocked Signature Detection:** Automatically blocks executable signatures (PE/DOS, ELF, Mach-O, Java class files)
-- **DLP Policy Enforcement:** Power Platform DLP policy restricts file upload connectors by blocking dangerous file extensions
+- **Power Platform Data Policy Guardrails:** Power Platform data policies classify or block upload-capable connectors; MIME and extension checks are performed by the Dataverse plugin
 - **OpenXML Deep Inspection:** Validates Office documents (DOCX, XLSX, PPTX) by inspecting internal ZIP structure and [Content_Types].xml
 - **Sentinel Monitoring:** KQL queries aggregate blocked upload attempts for security operations review
 
 **Business Value:**
 - Significantly reduces malware distribution risk through multi-layered validation
-- Helps prevent data exfiltration via file-based steganography
-- Support regulatory examinations with automated MIME restriction evidence
-- Enable security operations teams to detect and respond to upload abuse patterns
+- Helps reduce data exfiltration risk from file-based steganography
+- Supports regulatory examinations with MIME restriction evidence
+- Enables security operations teams to detect and respond to upload abuse patterns
 - Reduce Dataverse storage costs by blocking large executable files
 
 ---
@@ -45,7 +45,7 @@ The **MIME Type Restrictions for File Uploads** solution provides defense-in-dep
 
 ### Architecture Overview
 
-The MIME Type Restrictions solution operates across three enforcement layers with fail-secure design. If any layer detects a violation, the upload is blocked.
+The MIME Type Restrictions solution operates across two preventive layers plus a monitoring layer. The Dataverse plugin fails secure for MIME and magic-byte violations, Power Platform data policies constrain upload-capable connectors, and Sentinel surfaces evidence and alerts.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -58,13 +58,13 @@ The MIME Type Restrictions solution operates across three enforcement layers wit
         ▼                           ▼                           ▼
 ┌───────────────────┐     ┌──────────────────┐      ┌──────────────────┐
 │  Layer 1:         │     │  Layer 2:        │      │  Layer 3:        │
-│  DLP Policy       │────▶│  Dataverse       │─────▶│  Sentinel        │
-│  (Connector)      │     │  Plugin          │      │  Monitoring      │
+│  Data Policy      │────▶│  Dataverse       │─────▶│  Sentinel        │
+│  (Connectors)     │     │  Plugin          │      │  Monitoring      │
 │                   │     │  (Pre-Validation)│      │  (Detection)     │
 │  - Policy scope   │     │                  │      │                  │
-│  - Extension      │     │  1. File size    │      │  - KQL queries   │
+│  - Data groups    │     │  1. File size    │      │  - KQL queries   │
 │  - Audit/Block    │     │     guard        │      │  - Block events  │
-│    mode           │     │  2. Blocked sig  │      │  - Exception     │
+│    propagation    │     │  2. Blocked sig  │      │  - Exception     │
 │                   │     │     scan         │      │    tracking      │
 │  If PASS ──────┐  │     │  3. Allowlist    │      │  - High-volume   │
 │                │  │     │     check        │      │    alerts        │
@@ -196,63 +196,56 @@ Plugin writes detailed trace logs for troubleshooting:
 [FSI-MIME] Validation PASSED for 'document.pdf'
 ```
 
-#### 2. DLP Policy Template — dlp-policy-template.json
+#### Copilot Studio File Upload Scope — 2026-Q2
+
+Current Microsoft Learn guidance distinguishes **agent user file input** from **uploaded knowledge-source files**:
+
+- **User file input** can analyze CSV, PDF, TXT, JPG, PNG, WebP, or nonanimated GIF files. Current limits include images up to 15 MB (4 MB for DirectLine-based channels), PDFs under 40 pages, and TXT/CSV files under 180 KB. Users can't upload files when the agent is published to the SharePoint channel, and files in customer-managed-key environments can be accepted but aren't processed by the agent.
+- **Uploaded files as knowledge sources** support document formats such as Word, Excel, PowerPoint, PDF, text, HTML, CSV, XML, OpenDocument, EPUB, RTF, Apple iWork, JSON, YAML, and LaTeX. Standalone image, video, executable, and audio files aren't supported as uploaded knowledge documents; files over 512 MB and encrypted or password-protected files aren't supported.
+- The default `mime-config.json` remains intentionally narrower for Enterprise Managed environments. Add WebP, legacy Office, or other supported platform formats only after documenting business need, magic-byte behavior, downstream scanning, and zone-specific risk acceptance.
+
+#### 2. Power Platform Data Policy Reference — dlp-policy-template.json
 **File:** `templates/dlp-policy-template.json`
 
-**Purpose:** Power Platform DLP policy template that restricts file upload connectors by blocking dangerous file extensions at the connector level (Layer 1 enforcement).
+**Purpose:** Conceptual reference for the connector and environment guardrails that should accompany server-side MIME validation. The JSON is **not** a deployable Power Platform DLP export and can't be imported with DLP cmdlets.
 
-**Policy Configuration:**
+**Current Power Platform behavior:**
 
-**Scope:**
-- **Environments:** All environments or specific environment groups
-- **Connector Classification:**
-  - **Business:** Approved connectors with MIME restrictions
-  - **Non-Business:** Blocked connectors
-  - **Blocked:** Unrestricted file upload connectors
+- Data policies classify connectors into **Business**, **Non-business**, and **Blocked** data groups and can apply to a single environment, an environment group, or the tenant.
+- Data policy enforcement applies to Copilot Studio agents for all tenants; legacy agent exemptions aren't supported.
+- Copilot Studio data policies govern authoring abilities, channels, knowledge sources, individual connectors, skills, and Application Insights connections. Makers and users can see real-time errors for violations.
+- Power Platform DLP doesn't parse file contents, magic bytes, or MIME headers. MIME and extension enforcement for uploaded Dataverse annotations is performed by `ValidateMimeTypePlugin`.
+- Policy changes cascade through environments and resources. Microsoft Learn notes most changes apply within about an hour, but full enforcement can take up to 24 hours in large tenants.
 
-**MIME Restrictions:**
+**Connector classification checklist:**
 
-The policy applies connector-level MIME type filters:
+1. Identify upload-capable connectors in scope for the target zone, such as HTTP, HTTP with Microsoft Entra ID, custom connectors, FTP, Azure Blob Storage, SharePoint, OneDrive, and other binary payload paths.
+2. Keep required Copilot Studio connectors and approved internal data sources in compatible data groups.
+3. Move risky or unapproved upload-capable connectors to **Blocked** or **Non-business**, based on the zone's data movement rules.
+4. Document why each connector remains allowed and how server-side MIME validation, malware scanning, and monitoring cover residual risk.
 
-```json
-{
-  "ruleName": "Block Executable File Uploads",
-  "conditions": {
-    "fileExtensionMatches": {
-      "operator": "anyOf",
-      "extensions": [
-        "exe", "bat", "cmd", "ps1", "vbs",
-        "js", "jar", "dll", "msi", "scr", "hta"
-      ]
-    }
-  },
-  "actions": {
-    "blockAccess": true,
-    "generateAuditLog": true
-  }
-}
-```
-
-**Enforcement Behavior:**
-
-| Policy Mode | Behavior | Audit Log Entry |
-|-------------|----------|-----------------|
-| **Block** | Blocks uploads of disallowed MIME types | `ActionTaken=Block`, `OperationType=BlockedUpload` |
-| **TestWithNotifications** | Allows uploads but logs violations | `ActionTaken=Audit`, `OperationType=AllowedWithAudit` |
-
-**Customization:**
-
-Organizations should customize the template based on business requirements:
-
-1. **Add MIME types:** Include additional types if justified (e.g., `audio/mpeg` for voice recordings)
-2. **Environment exceptions:** Create separate policies for Zone 1/2 environments with broader restrictions
-3. **Connector scope:** Apply to Copilot Studio, custom connectors, and third-party connectors
-
-**Deployment:**
+**PowerShell support:**
 
 ```powershell
-# See "Step 3: Import DLP Policy Template" under Configuration Steps below for deployment commands
+Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser
+Import-Module Microsoft.PowerApps.Administration.PowerShell
+Add-PowerAppsAccount
+
+Get-AdminDlpPolicy | Format-Table DisplayName, PolicyName
+$config = Get-PowerAppDlpPolicyConnectorConfigurations -TenantId $TenantId -PolicyName $PolicyName
+# Review $config, then update with a tested DlpPolicyConnectorConfigurationsDefinition object.
+Set-PowerAppDlpPolicyConnectorConfigurations -TenantId $TenantId -PolicyName $PolicyName -UpdatedConnectorConfigurations $UpdatedConnectorConfigurations
 ```
+
+For Microsoft Graph-based automation, prefer managed identities where available:
+
+```powershell
+Connect-MgGraph -Identity
+# User-assigned managed identity:
+Connect-MgGraph -Identity -ClientId "<USER_ASSIGNED_MANAGED_IDENTITY_CLIENT_ID>"
+```
+
+Client-secret authentication is a legacy development fallback only and should be replaced with managed identity, workload identity federation, or certificate-based app-only authentication for production automation.
 
 #### 3. MIME Configuration — MimeConfig.json
 **File:** `templates/mime-config.json`
@@ -263,7 +256,7 @@ Organizations should customize the template based on business requirements:
 
 ```json
 {
-  "version": "1.0.2",
+  "version": "1.2.1",
   "enforcementMode": "Block",
   "maxFileSizeBytes": 10485760,
   "zone": 3,
@@ -440,7 +433,7 @@ PowerPlatformDlpActivity_CL
 | Role/Permission | Required For | Scope |
 |-----------------|--------------|-------|
 | **Dataverse System Administrator** | Plugin registration | Per-environment |
-| **Power Platform Admin** | DLP policy creation and management | Tenant-wide |
+| **Power Platform Admin** | Data policy creation and management | Tenant-wide |
 | **Security Reader** | Sentinel query execution | Log Analytics workspace |
 | **Security Administrator** | Sentinel alert rule creation | Sentinel workspace |
 
@@ -450,8 +443,8 @@ PowerPlatformDlpActivity_CL
 |------|---------|---------|
 | **Plugin Registration Tool** | Latest | Register Dataverse plugin |
 | **Visual Studio** | 2019+ | Build plugin DLL from C# source |
-| **PowerShell** | 7.2+ | Import DLP policy template |
-| **Azure Portal** | N/A | Configure Sentinel queries and alerts |
+| **PowerShell** | 7.2+ | Review or update data policy connector classifications |
+| **Azure portal** | N/A | Configure Sentinel queries and alerts |
 
 #### Configuration Steps
 
@@ -460,7 +453,7 @@ PowerPlatformDlpActivity_CL
 1. Open Visual Studio → Create new Class Library (.NET Framework 4.6.2)
 2. Add NuGet packages:
    - `Microsoft.CrmSdk.CoreAssemblies` (9.0.2+)
-   - `System.Text.Json` (8.0.0+) — must be ILMerged into the plugin assembly for Dataverse sandbox deployment
+   - `System.Text.Json` (8.0.5 or later in the 8.x line) — must be ILRepack-merged into the plugin assembly for Dataverse sandbox deployment
 3. Add project reference to `System.IO.Compression` assembly (required for OpenXML deep inspection)
 4. Copy `ValidateMimeTypePlugin.cs` to project
 5. Build solution → Output: `FsiAgentGovernance.Plugins.dll`
@@ -530,21 +523,22 @@ as a checklist when configuring connector classifications:
 2. In the Power Platform admin center → **Policies** → **Data policies**,
    create or edit the data policy targeting your Zone 2 / Zone 3
    environments.
-3. Move risky connectors into the **Blocked** or **Non-Business**
+3. Move risky connectors into the **Blocked** or **Non-business**
    group as required by your zone policy.
-4. (Optional) Use PowerShell to script the classification once the
-   policy exists:
+4. (Optional) Use PowerShell to review or update connector
+   configurations once the policy exists:
    ```powershell
-   Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force
+   Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser
+   Import-Module Microsoft.PowerApps.Administration.PowerShell
    Add-PowerAppsAccount
-   # See: https://learn.microsoft.com/en-us/power-platform/admin/create-dlp-policy
-   #      https://learn.microsoft.com/en-us/power-platform/admin/powerapps-powershell
    Get-AdminDlpPolicy | Format-Table DisplayName, PolicyName
-   # Use Set-DlpPolicy / Set-DlpPolicyConnectorConfigurations to update classifications.
+   $config = Get-PowerAppDlpPolicyConnectorConfigurations -TenantId $TenantId -PolicyName $PolicyName
+   # Update with a tested DlpPolicyConnectorConfigurationsDefinition object.
+   Set-PowerAppDlpPolicyConnectorConfigurations -TenantId $TenantId -PolicyName $PolicyName -UpdatedConnectorConfigurations $UpdatedConnectorConfigurations
    ```
 
 The actual server-side MIME enforcement is performed by the
-ValidateMimeType plugin registered in Step 2; this DLP layer is
+ValidateMimeType plugin registered in Step 2; this data policy layer is
 defence-in-depth for the upload connectors themselves.
 
 **Step 4: Deploy Sentinel Queries**
@@ -606,14 +600,14 @@ defence-in-depth for the upload connectors themselves.
    - Upload fails with error: "File 'fake-document.pdf' declares MIME type 'application/pdf' but its content header does not match the expected magic bytes for that type. The file may have been renamed or corrupted."
    - Plugin trace log shows: `[FSI-MIME] VIOLATION: File 'fake-document.pdf' declares MIME type 'application/pdf' but its content header does not match the expected magic bytes for that type.`
 
-**Test 5: DLP Policy Enforcement**
+**Test 5: Power Platform Data Policy Connector Guardrail**
 
-1. Ensure DLP policy is in **Block** mode
-2. Attempt to upload EXE file through Copilot Studio
+1. In a non-production environment, classify a risky upload-capable connector as **Blocked** or place it in an incompatible data group.
+2. Attempt to save or run an agent action or flow that uses that connector with Copilot Studio.
 3. **Expected Result:**
-   - Upload blocked by DLP policy before reaching plugin
-   - Audit log entry: `ActionTaken=Block`, `OperationType=BlockedUpload`
-4. Query Sentinel with `query-mime-blocks.kql` to verify logged event
+   - Maker or runtime experience shows a data policy violation for the connector.
+   - MIME and magic-byte enforcement remains the responsibility of the Dataverse plugin when files reach `annotation` records.
+4. Query Sentinel with `query-mime-blocks.kql` to verify plugin or data policy telemetry is flowing for blocked upload events where available.
 
 **Test 6: Sentinel Alert Trigger**
 
@@ -741,26 +735,26 @@ If the MIME Type Restrictions plugin causes issues in production, use one of the
 
 **Resolution:**
 1. Verify Dataverse diagnostic settings:
-   - Power Platform Admin Center → Environments → Settings → Audit and logs
+   - Power Platform admin center → Environments → Settings → Audit and logs
    - **Start Auditing:** Enabled
    - **Send to Log Analytics:** Enabled
 2. Check Log Analytics workspace connection:
-   - Azure Portal → Log Analytics workspace → Agents → Connected sources
+   - Azure portal → Log Analytics workspace → Agents → Connected sources
    - Verify Dataverse connector is active
 3. Wait 15 minutes for log ingestion
 4. Re-run query
 
-**Issue: DLP policy not enforcing MIME restrictions**
+**Issue: Data policy doesn't limit risky upload connectors**
 
-**Cause:** Policy in audit-only mode or connector not in scope
+**Cause:** Connector remains in an allowed data group, the policy targets the wrong environment, or policy propagation hasn't completed.
 
 **Resolution:**
-1. Navigate to Power Platform Admin Center → DLP Policies
-2. Select MIME restriction policy → Edit
-3. **Enforcement mode:** Change from **Audit** to **Enforce**
-4. **Connector scope:** Verify Copilot Studio connector is classified as **Business** (not Blocked)
-5. Save policy → Wait 5 minutes for propagation
-6. Test with disallowed MIME type upload
+1. Navigate to Power Platform admin center → **Policies** → **Data policies**.
+2. Select the data policy that targets the affected environment or environment group.
+3. Review the relevant Copilot Studio, HTTP, custom connector, SharePoint, OneDrive, Azure Blob Storage, and other upload-capable connectors.
+4. Move risky or unapproved connectors to **Blocked** or **Non-business** as required by the zone policy.
+5. Save the policy and allow propagation. Most changes apply within about an hour, but large tenants can take up to 24 hours.
+6. Test connector policy behavior separately from MIME validation. The Dataverse plugin remains the control that blocks disallowed MIME types and magic-byte mismatches.
 
 #### Audit and Evidence Export
 
@@ -786,16 +780,16 @@ PowerPlatformDlpActivity_CL
 
 Export to CSV via Sentinel portal → **Export** → **CSV**
 
-**DLP Policy Configuration:**
-1. Navigate to Power Platform Admin Center → DLP Policies
-2. Select MIME restriction policy → **Export policy definition** (JSON)
+**Data Policy Configuration:**
+1. Navigate to Power Platform admin center → Policies → Data policies
+2. Export or document the policy connector classifications and scope
 3. Include in evidence package
 
 **Retention:**
 
 - Plugin trace logs: Retain for 3 years (operational history)
 - Sentinel blocked events: Retain for 7 years (SEC 17a-4 requirement)
-- DLP policy definitions: Retain for 7 years (audit trail requirement)
+- Data policy definitions: Retain for 7 years (audit trail requirement)
 
 ---
 
@@ -852,7 +846,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 **Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including technology controls for data uploads and transfers.
 
 **Solution Support:**
-- DLP policy enforces MIME type restrictions across all Copilot Studio agents
+- Data policies constrain upload-capable connectors across Copilot Studio environments
 - Sentinel monitoring detects high-volume upload attempts (potential policy violation or attack)
 - Audit trail provides evidence of supervisory controls effectiveness
 
@@ -869,7 +863,7 @@ The MIME Type Restrictions solution supports compliance with the following regul
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
+**Solution Version:** 1.2.1
 **Release Date:** April 2026
 **License:** MIT License
 
@@ -877,9 +871,10 @@ The MIME Type Restrictions solution supports compliance with the following regul
 - Test `MimeConfig.json` changes in non-production environment first
 - Document MIME type additions in change tickets with business justification
 - Review magic byte patterns quarterly for accuracy
-- Coordinate DLP policy updates with business unit stakeholders (advance notice recommended)
+- Coordinate data policy updates with business unit stakeholders (advance notice recommended)
 
 **Version History:**
+- **v1.2.1 (Unreleased):** Microsoft Learn 2026-Q2 refresh for Copilot Studio file input, Power Platform data policies, PowerShell cmdlets, and manifest control coverage
 - **v1.0.2 (April 2026):** KQL field name standardization, rollback procedure, PAC CLI docs, design decision documentation, PowerShell module reference
 - **v1.0.0 (February 2026):** Initial release with Dataverse plugin, DLP template, and Sentinel queries
 
@@ -907,7 +902,7 @@ Rate limiting is intentionally handled at the Sentinel monitoring layer (Layer 3
 
 ## PowerShell Module (Optional Component)
 
-The **FsiMimeControl** PowerShell module provides additional management capabilities for MIME type restrictions beyond the core plugin and DLP policy. It is maintained in the FSI-AgentGov repository under `scripts/governance/`.
+The **FsiMimeControl** PowerShell module provides additional management capabilities for MIME type restrictions beyond the core plugin and data policy reference. It is maintained in the FSI-AgentGov repository under `scripts/governance/`.
 
 ### Functionality
 
@@ -933,7 +928,7 @@ Pre-configured MIME type templates for each governance zone are available at:
 
 ### Relationship to This Solution
 
-The FsiMimeControl module is **optional** — the core solution (plugin, DLP policy, Sentinel queries) operates independently. The module adds operational convenience for organizations managing MIME restrictions across multiple environments or zones.
+The FsiMimeControl module is **optional** — the core solution (plugin, data policy reference, Sentinel queries) operates independently. The module adds operational convenience for organizations managing MIME restrictions across multiple environments or zones.
 
 For detailed usage instructions, see the FSI-AgentGov documentation for Control 1.25.
 

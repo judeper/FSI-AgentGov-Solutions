@@ -1,5 +1,5 @@
 {
-  "_UNSUPPORTED_SCHEMA_WARNING": "WARNING — DO NOT IMPORT THIS FILE DIRECTLY. This JSON is a CONCEPTUAL reference describing the desired MIME / extension restrictions. It does NOT match the Power Platform DLP Admin API schema and will be rejected by New-DlpPolicy / Set-AdminDlpPolicy. Power Platform DLP policies operate on connectors (Business / Non-Business / Blocked classifications), not on file extensions or MIME types directly. To translate the intent below into a real DLP policy: classify connectors that allow uploads of risky file types (e.g., HTTP, custom connectors that exchange binary payloads) into the Blocked or Non-Business group through the Power Platform admin center. The actual MIME-type enforcement is performed by the ValidateMimeType plugin in src/, not by this template.",
+  "_UNSUPPORTED_SCHEMA_WARNING": "WARNING — DO NOT IMPORT THIS FILE DIRECTLY. This JSON is a CONCEPTUAL reference describing the desired MIME / extension restrictions. It does NOT match the Power Platform DLP Admin API schema and will be rejected by DLP import cmdlets/APIs. Power Platform DLP policies operate on connectors (Business / Non-business / Blocked classifications), not on file extensions or MIME types directly. To translate the intent below into a real DLP policy: classify connectors that allow uploads of risky file types (e.g., HTTP, custom connectors that exchange binary payloads) into the Blocked or Non-business group through the Power Platform admin center. The actual MIME-type enforcement is performed by the ValidateMimeType plugin in src/, not by this template.",
   "_deploymentNotes": [
     "FSI Agent Governance Framework — MIME Type Restrictions (CONCEPTUAL)",
     "Control Reference: 1.25 — MIME Type Restrictions",
@@ -134,8 +134,8 @@
   ],
   "metadata": {
     "controlReference": "1.25",
-    "templateVersion": "1.0.2",
-    "lastUpdated": "2026-02-12",
+    "templateVersion": "1.2.1",
+    "lastUpdated": "2026-05-04",
     "applicableZones": ["Zone 2 — Team Collaboration", "Zone 3 — Enterprise Managed"]
   }
 }

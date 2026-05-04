@@ -1,13 +1,13 @@
 # MIME Type Restrictions for File Uploads
 
-> **Version:** v1.1.0
+> **Version:** v1.2.1
 > **Status:** Completed
 
-Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.
+Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.
 
 ## Overview
 
-This solution provides enforcement and monitoring artifacts for restricting file upload MIME types in Copilot Studio agents. It includes a Dataverse plugin for server-side validation, a DLP policy template for policy-based enforcement, and KQL queries for Sentinel-based monitoring and exception tracking.
+This solution provides enforcement and monitoring artifacts for restricting file upload MIME types in Copilot Studio agents. It includes a Dataverse plugin for server-side validation, a connector-classification reference for Power Platform data policies, and KQL queries for Sentinel-based monitoring and exception tracking.
 
 > **Note:** The PowerShell module (`FsiMimeControl`) remains in FSI-AgentGov under `scripts/governance/`.
 
@@ -63,7 +63,7 @@ mime-type-restrictions/
 │   ├── query-mime-blocks.kql         # Sentinel query for blocked MIME type events
 │   └── query-exception-usage.kql    # Sentinel query for exception usage tracking
 └── templates/
-    ├── dlp-policy-template.json      # DLP policy template for MIME restrictions
+    ├── dlp-policy-template.json      # Connector-classification reference (not importable DLP JSON)
     ├── mime-config.json              # MIME type allowlist/blocklist configuration
     └── high-volume-blocks.json       # Sentinel alert for high-volume block patterns
 ```
@@ -78,7 +78,7 @@ mime-type-restrictions/
 ## Deployment
 
 1. Register the Dataverse plugin using the Plugin Registration Tool
-2. Import the DLP policy template into your Power Platform environment
+2. Translate the DLP reference into Power Platform data policy connector classifications; do not import the reference JSON directly
 3. Configure `templates/mime-config.json` with your organization's allowed/blocked MIME types
 4. Deploy Sentinel queries to your Log Analytics workspace
 5. Verify deployment using the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) in FSI-AgentGov
@@ -92,7 +92,7 @@ mime-type-restrictions/
 | Plugin not triggering | Plugin not registered or registration step inactive | Re-register plugin in Dataverse Plugin Registration Tool; verify step is active |
 | Allowed MIME type blocked | `MimeConfig.json` allowlist missing the type | Add the MIME type to the allowlist and redeploy configuration |
 | Sentinel queries return empty | Diagnostic logs not flowing to workspace | Verify Dataverse audit logging is enabled and connected to Sentinel |
-| DLP policy not enforcing | Policy in audit-only mode or not assigned | Switch policy to enforce mode; verify policy scope includes target environment |
+| Data policy not limiting risky upload paths | Connector remains in an allowed data group or policy hasn't propagated | Move risky upload-capable connectors to Blocked or Non-business as required; allow up to 24 hours for policy propagation |
 
 ### Logs
 
