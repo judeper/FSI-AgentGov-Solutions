@@ -229,7 +229,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag (currently `v1.4.1`), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release** (auto-derived via `gh api repos/.../releases/latest --jq .tag_name`; see Issue #39), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. No manual `LATEST_TAG` bump is required after a release; see `DEPLOYMENT-GUIDE.md` "Post-Release Operations" for the full checklist.
 
 ### To change overview / catalog content
 
