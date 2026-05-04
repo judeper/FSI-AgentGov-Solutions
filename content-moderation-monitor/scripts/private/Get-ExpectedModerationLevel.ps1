@@ -12,7 +12,7 @@
     The governance zone: Zone1, Zone2, Zone3, or Unknown.
 
 .PARAMETER ActualLevel
-    The actual content moderation level detected: Low, Medium, High, or Unknown.
+    The actual content moderation level detected: Lowest, Low, Medium, High, Highest, or Unknown.
 
 .PARAMETER BaselinePath
     Path to moderation-baseline.json file. Defaults to templates/ in the solution root.
@@ -47,7 +47,7 @@ param(
     [string]$Zone,
 
     [Parameter(Mandatory)]
-    [ValidateSet('Low', 'Medium', 'High', 'Unknown')]
+    [ValidateSet('Lowest', 'Low', 'Medium', 'High', 'Highest', 'Unknown')]
     [string]$ActualLevel,
 
     [Parameter()]
@@ -73,6 +73,17 @@ if (-not $zoneConfig) {
 
 $expectedLevel = $zoneConfig.minimumModerationLevel
 
+# Normalize current Copilot Studio labels to CMM's canonical three-level scale.
+$levelAliases = @{
+    'Lowest'  = 'Low'
+    'Low'     = 'Low'
+    'Medium'  = 'Medium'
+    'High'    = 'High'
+    'Highest' = 'High'
+    'Unknown' = 'Unknown'
+}
+$canonicalActualLevel = $levelAliases[$ActualLevel]
+
 # Define level ordering for comparison
 $levelOrder = @{
     'Low'     = 1
@@ -82,7 +93,7 @@ $levelOrder = @{
 }
 
 # Determine compliance
-$actualRank = $levelOrder[$ActualLevel]
+$actualRank = $levelOrder[$canonicalActualLevel]
 $expectedRank = $levelOrder[$expectedLevel]
 $isCompliant = $actualRank -ge $expectedRank
 
@@ -91,19 +102,19 @@ $severity = $null
 $regulatoryContext = $null
 
 if (-not $isCompliant) {
-    if ($ActualLevel -eq 'Unknown') {
+    if ($canonicalActualLevel -eq 'Unknown') {
         # Unknown actual level in a known zone - treat as worst case
         $severity = 'Warning'
         $regulatoryContext = 'Governance gap - Unable to determine content moderation level'
     } else {
         # Look up specific violation
-        $violation = $zoneConfig.violations.$ActualLevel
+        $violation = $zoneConfig.violations.$canonicalActualLevel
         if ($violation) {
             $severity = $violation.severity
             $regulatoryContext = $violation.regulatory
         } else {
             $severity = 'Warning'
-            $regulatoryContext = "Moderation level '$ActualLevel' below minimum '$expectedLevel' for $Zone"
+            $regulatoryContext = "Moderation level '$canonicalActualLevel' below minimum '$expectedLevel' for $Zone"
         }
     }
 }
@@ -112,7 +123,7 @@ if (-not $isCompliant) {
 [PSCustomObject]@{
     Zone              = $Zone
     ExpectedLevel     = $expectedLevel
-    ActualLevel       = $ActualLevel
+    ActualLevel       = $canonicalActualLevel
     IsCompliant       = $isCompliant
     Severity          = $severity
     RegulatoryContext = $regulatoryContext

@@ -3,11 +3,12 @@
     Per-environment Dataverse authentication helper.
 
 .DESCRIPTION
-    Acquires and caches OAuth tokens for Dataverse environments. Supports three
-    authentication modes:
-    1. Service principal (PSCredential with ClientId/ClientSecret)
-    2. Interactive via Az.Accounts (Get-AzAccessToken)
-    3. Existing token passthrough
+    Acquires and caches OAuth tokens for Dataverse environments. Prefer
+    managed identity or workload identity federation in Azure-hosted automation,
+    then certificate-based app authentication. This helper currently supports:
+    1. Interactive via Az.Accounts (Get-AzAccessToken)
+    2. Existing token passthrough
+    3. Client-secret service principal fallback for legacy development use
 
     Tokens are cached per DataverseUrl to avoid redundant authentication when
     scanning multiple environments in sequence.
@@ -20,7 +21,8 @@
 
 .PARAMETER Credential
     PSCredential containing ClientId (UserName) and ClientSecret (Password)
-    for service principal authentication.
+    for service principal authentication. This client-secret path is legacy
+    development fallback only; prefer managed identity in hosted automation.
 
 .PARAMETER Interactive
     Force interactive authentication via Az.Accounts.
@@ -38,7 +40,7 @@
 .EXAMPLE
     $cred = Get-Credential
     $token = & ./Connect-EnvironmentDataverse.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "abc" -Credential $cred
-    # Acquires token via service principal
+    # legacy: dev-only — replace with managed identity in production
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
@@ -90,7 +92,8 @@ if (-not $Force -and $script:TokenCache.ContainsKey($normalizedUrl)) {
 #region Service Principal Authentication
 
 if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
-    Write-Verbose "Authenticating via service principal for $normalizedUrl"
+    # legacy: dev-only — replace with managed identity in production
+    Write-Verbose "Authenticating via service principal client-secret fallback for $normalizedUrl"
 
     try {
         $clientId = $Credential.UserName

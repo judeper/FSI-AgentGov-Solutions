@@ -227,7 +227,7 @@ def main() -> None:
             "  # Dry run with interactive auth\n"
             "  python create_environment_variables.py "
             "--dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Deploy with legacy client-secret service principal (dev only)\n"
             "  python create_environment_variables.py \\\n"
             "    --tenant-id $CMM_TENANT_ID \\\n"
             "    --client-id $CMM_CLIENT_ID \\\n"
@@ -244,12 +244,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("CMM_CLIENT_ID"),
-        help="Service principal app ID (or set CMM_CLIENT_ID env var)",
+        help="Service principal app ID for legacy client-secret fallback (or set CMM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CMM_CLIENT_SECRET"),
-        help="Service principal secret (or set CMM_CLIENT_SECRET env var)",
+        help="Service principal secret; legacy dev-only fallback (or set CMM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",

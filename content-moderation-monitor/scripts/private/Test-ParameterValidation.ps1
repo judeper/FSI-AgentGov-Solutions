@@ -121,7 +121,8 @@ function Test-ModerationLevel {
 
     .DESCRIPTION
         Accepts various representations of moderation levels and normalizes
-        them to canonical values: Low, Medium, High. Returns 'Unknown' for
+        them to canonical values: Low, Medium, High. Copilot Studio labels
+        Lowest and Highest are mapped to Low and High. Returns 'Unknown' for
         unrecognized values.
 
     .PARAMETER Level
@@ -144,9 +145,11 @@ function Test-ModerationLevel {
     $normalized = $Level.Trim().ToLower()
 
     $levelMap = @{
+        'lowest'   = 'Low'
         'low'      = 'Low'
         'medium'   = 'Medium'
         'high'     = 'High'
+        'highest'  = 'High'
         'strict'   = 'High'
         'none'     = 'Low'
         'standard' = 'Medium'

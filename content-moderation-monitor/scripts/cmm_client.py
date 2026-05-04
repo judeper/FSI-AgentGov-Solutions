@@ -3,7 +3,7 @@
 
 Provides authenticated access to Microsoft Dataverse (Power Platform)
 for schema deployment and data operations. Supports both interactive
-browser and service principal authentication via MSAL.
+browser and legacy client-secret service principal authentication via MSAL.
 """
 
 import argparse
@@ -38,8 +38,8 @@ class CMMClient:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
             client_id: Application (client) ID
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
+            client_secret: Client secret value (legacy dev-only fallback; prefer managed identity or workload identity for hosted automation)
+            interactive: Use interactive browser auth instead of the legacy client-secret flow
             dry_run: If True, log API calls without executing them
         """
         self.tenant_id = tenant_id
@@ -65,10 +65,11 @@ class CMMClient:
                 token_cache=self._token_cache,
             )
         else:
-            # Confidential client for service-to-service auth
+            # legacy: dev-only — replace with managed identity in production
+            # Confidential client for client-secret service-to-service auth
             if not client_id or not client_secret:
                 raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
+                    "client_id and client_secret required for legacy non-interactive auth"
                 )
             self.app = msal.ConfidentialClientApplication(
                 client_id,
@@ -573,12 +574,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("CMM_CLIENT_ID"),
-        help="Service principal app ID (or set CMM_CLIENT_ID env var)",
+        help="Service principal app ID for legacy client-secret fallback (or set CMM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("CMM_CLIENT_SECRET"),
-        help="Service principal secret (or set CMM_CLIENT_SECRET env var)",
+        help="Service principal secret; legacy dev-only fallback (or set CMM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -588,7 +589,7 @@ def main() -> None:
     parser.add_argument(
         "--interactive",
         action="store_true",
-        help="Use interactive browser auth",
+        help="Use interactive browser auth instead of legacy client-secret auth",
     )
     parser.add_argument(
         "--test-connection",

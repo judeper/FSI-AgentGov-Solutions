@@ -515,6 +515,7 @@ function Get-BotModerationLevel {
         - ContentModerationSetting
 
         Normalizes returned values to canonical levels: Low, Medium, High.
+        Copilot Studio labels such as Lowest and Highest are mapped to Low and High.
         Returns 'Unknown' if the level cannot be determined.
 
         Note: An optional -Components parameter exists for a future botcomponent-based
@@ -540,10 +541,12 @@ function Get-BotModerationLevel {
     # Normalization map for various moderation level names
     # Note: Copilot Studio uses "Moderate" at the prompt level, not "Medium"
     $levelMap = @{
+        'lowest'   = 'Low'
         'low'      = 'Low'
         'medium'   = 'Medium'
         'moderate' = 'Medium'
         'high'     = 'High'
+        'highest'  = 'High'
         'strict'   = 'High'
         'none'     = 'Low'
         'standard' = 'Medium'

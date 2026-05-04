@@ -2,6 +2,16 @@
 
 All notable changes to the Content Moderation Monitor.
 
+## [Unreleased]
+
+### Changed
+
+- Bumped solution manifest to 1.1.1 for the Microsoft Learn 2026-Q2 technical review.
+- Corrected manifest controls to `1.27` primary and `1.8` complementary so generated catalogs match the framework mapping.
+- Added moderation-level aliases for Copilot Studio `Lowest` and `Highest` labels, normalizing them to CMM's canonical `Low` and `High` scale.
+- Clarified managed identity-first authentication guidance; client-secret service principal auth remains a legacy development fallback only.
+- Documented that CMM audits agent-default Copilot Studio moderation configuration and does not call Azure AI Content Safety runtime APIs, Microsoft Graph package-management preview endpoints, or Purview runtime audit feeds.
+
 ## [1.1.0] - 2026-04-17
 
 AI Council technical-accuracy review (Opus 4.7 + Goldeneye + GPT-5.4) plus targeted

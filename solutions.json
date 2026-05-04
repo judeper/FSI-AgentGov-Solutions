@@ -328,15 +328,15 @@
     "content-moderation-monitor": {
       "id": "content-moderation-monitor",
       "name": "Content Moderation Monitor",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "content-data",
       "tier": "2",
       "status": "live",
       "description": "Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/content-moderation-monitor/",
       "controls": [
-        "1.8",
-        "1.14"
+        "1.27",
+        "1.8"
       ],
       "dependencies": [],
       "prerequisites": {

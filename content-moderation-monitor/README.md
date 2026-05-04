@@ -10,7 +10,7 @@ The Content Moderation Monitor detects when Copilot Studio agents have insuffici
 
 It supports Control 1.27 (AI Agent Content Moderation Enforcement) by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements, and contributes complementary evidence to Control 1.8 (Runtime Protection and External Threat Detection). See [Scope and Limitations](#scope-and-limitations) below.
 
-**Version:** 1.0.3
+**Version:** 1.1.1
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
@@ -49,7 +49,7 @@ Each governance zone has a minimum required content moderation level:
 |------|-------------|-------------------|-----------|
 | Zone 1 | Personal Productivity | Medium | Baseline content protection for individual use |
 | Zone 2 | Team Collaboration | High | Shared agents require stronger content controls |
-| Zone 3 | Enterprise Managed | High | Customer-facing agents require maximum protection |
+| Zone 3 | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
 
 ### Violation Severity Matrix
 
@@ -146,10 +146,29 @@ expectations honest, please note:
   in a future Copilot Studio release, agents may report `Unknown`. When that
   happens, treat the run as **unverified**, not as compliant.
 - **Agent-default only.** This solution **does not** inspect topic-level
-  moderation overrides, custom safety messages, approval evidence, Purview
-  moderation logs, or runtime moderation decisions. Organizations relying on
-  topic-level overrides need additional manual or automated checks beyond
-  this solution.
+  moderation overrides, prompt-tool moderation overrides, custom safety
+  messages, approval evidence, Purview moderation logs, or runtime moderation
+  decisions. Organizations relying on topic-level overrides need additional
+  manual or automated checks beyond this solution.
+- **Moderation label normalization.** CMM normalizes Copilot Studio labels into
+  `Low`, `Medium`, `High`, or `Unknown`. Current Copilot Studio documentation
+  describes moderation choices ranging from **Lowest** to **Highest**; CMM maps
+  `Lowest` to `Low` and `Highest` to `High` because the Dataverse evidence
+  schema stores the three-level canonical scale.
+- **Azure AI Content Safety runtime APIs.** This solution does **not** call the
+  Azure AI Content Safety text or image analysis APIs, Prompt Shields,
+  Groundedness detection, Protected Material detection, or Task Adherence APIs.
+  Use those services separately when runtime prompt/response inspection is
+  required for Control 1.8 evidence.
+- **Microsoft Graph agent package APIs.** Microsoft 365 Copilot package
+  management APIs are currently preview and provide tenant inventory/package
+  metadata rather than the Copilot Studio agent-default moderation field. CMM
+  therefore continues to use Power Platform admin enumeration and Dataverse
+  `bot.configuration` reads for moderation discovery.
+- **Generative AI feature toggles.** Power Platform environment settings for
+  data movement, Bing/web search, Microsoft 365 services, public website
+  knowledge, ungrounded responses, and generative orchestration are adjacent
+  governance controls and are outside this solution's automated checks.
 - **Control 1.27 (primary).** This solution provides automated configuration
   evidence for Control 1.27 against the agent-default moderation field
   described above.

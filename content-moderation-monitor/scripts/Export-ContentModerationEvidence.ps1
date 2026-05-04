@@ -21,7 +21,7 @@
     CMM operates at the agent level: violation records include per-agent detail
     (fsi_agentid, fsi_agentname, fsi_expectedlevel, fsi_actuallevel) for
     content moderation governance. This script supports FSI-AgentGov Controls
-    1.8 (Runtime Protection) and 1.14 (Content Moderation Enforcement)
+    1.27 (AI Agent Content Moderation Enforcement) and 1.8 (Runtime Protection)
     evidence collection requirements for content moderation governance.
 
 .PARAMETER DataverseUrl
@@ -429,7 +429,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Content Moderation Governance Monitor"
-    solutionVersion = "1.0.3"
+    solutionVersion = "1.1.1"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
