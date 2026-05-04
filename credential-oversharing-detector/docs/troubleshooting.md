@@ -51,10 +51,10 @@
 
 ### Scan completes but reports zero connectors
 
-- Connector scope information depends on the Microsoft safe-sharing feature (April 2026 preview)
+- Connector scope information depends on the Microsoft safe-sharing feature currently listed for public preview in July 2026 and general availability in September 2026
 - Verify the feature is enabled in the target tenant
 - Check Power Platform admin center for feature availability status
-- Note: this is a preview feature and behavior may change; review current Microsoft documentation
+- Note: preview behavior may change; review current Microsoft documentation
 
 ### False positives for cross-environment credentials
 
