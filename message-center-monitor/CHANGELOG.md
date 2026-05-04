@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-05-04
+
+### Changed
+- Refreshed documentation against 2026-Q2 Microsoft Learn guidance for Graph service communications v1.0 endpoints, Message Center tags/services, and Power Automate connector naming.
+- Updated the Teams adaptive card template and examples to Adaptive Card schema 1.5 while keeping connector-compatible `Action.OpenUrl` actions.
+- Corrected shipped script metadata and comments to match the current Control 2.3-only mapping and Microsoft Entra ID branding.
+
+### Fixed
+- Replaced the legacy HTTP Premium connection reference with the current HTTP with Microsoft Entra ID connector (`shared_webcontents`) used for Microsoft Graph calls.
+- Updated stale solution version metadata in README and evidence export output.
+
 ## [2.5.0] - 2026-04-30
 
 ### Added

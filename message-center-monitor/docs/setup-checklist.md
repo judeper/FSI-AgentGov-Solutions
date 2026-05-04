@@ -14,6 +14,7 @@ End-to-end deployment checklist for the Message Center Monitor solution. This ch
 - [ ] Go to [Microsoft Entra admin center](https://entra.microsoft.com) > **Applications** > **App registrations** > **New registration**
 - [ ] Name: `Message Center Monitor`, account type: single tenant
 - [ ] After registration, open **API permissions** > **Add a permission** > **Microsoft Graph** > **Application permissions** > add `ServiceMessage.Read.All`
+- [ ] Do **not** add `ServiceHealth.Read.All` unless you extend the solution to ingest `healthOverviews` or `issues`
 - [ ] Click **Grant admin consent** (requires an administrator with permission to consent)
 - [ ] Copy the Application (client) ID and Directory (tenant) ID
 
@@ -109,7 +110,7 @@ The PowerShell governance scripts call the Dataverse Web API as the same Entra a
       --environment-url https://<org>.crm.dynamics.com
   ```
 
-This provisions: polling schedule (`fsi_PollingIntervalDays`), severity threshold (`fsi_NotifySeverities`), Teams channel ID (`fsi_TeamsChannelId`), Teams team ID (`fsi_TeamsTeamId`), and Key Vault references for the client secret.
+This provisions the six schema-backed definitions from `create_mcm_environment_variables.py`: `fsi_MCM_PollingIntervalDays`, `fsi_MCM_NotifySeverities`, `fsi_MCM_TeamsTeamId`, `fsi_MCM_TeamsChannelId`, `fsi_MCM_DataverseUrl`, and `fsi_MCM_KeyVaultSecretName`.
 
 ---
 
@@ -125,7 +126,7 @@ This provisions: polling schedule (`fsi_PollingIntervalDays`), severity threshol
       --environment-url https://<org>.crm.dynamics.com
   ```
 
-This provisions connection references for: Microsoft Dataverse, Microsoft Teams, Azure Key Vault, and HTTP with Microsoft Entra ID (Premium).
+This provisions connection references for: Microsoft Dataverse, Microsoft Teams, Azure Key Vault, and HTTP with Microsoft Entra ID (`shared_webcontents`, Premium).
 
 ---
 

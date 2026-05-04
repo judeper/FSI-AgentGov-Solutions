@@ -92,6 +92,14 @@ See [Secrets Management](docs/secrets-management.md) for detailed steps.
 
 The PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageCenterAssessmentStatus.ps1`, `Export-MessageCenterEvidence.ps1`) accept an `-AuthMode` parameter with values `ManagedIdentity` (default), `WorkloadIdentity`, `Interactive`, `DeviceCode`, or `ClientSecret`. The Python schema/setup scripts use the shared `scripts/shared/dataverse_client.py`, which accepts an MSAL token from any source (managed identity, device-code, or client secret). Pick the strongest auth method available in your environment.
 
+### Microsoft Learn validation notes (2026-Q2)
+
+- The flow and sync script use the Microsoft Graph **v1.0** service communications endpoint: `GET /admin/serviceAnnouncement/messages`.
+- `ServiceMessage.Read.All` is the only Graph application permission required for Message Center posts. Do not request `ServiceHealth.Read.All` unless you extend this solution to call `healthOverviews` or `issues`.
+- Message Center message categories are Graph enum values (`planForChange`, `stayInformed`, `preventOrFixIssue`) mapped to Dataverse choice integers in `create_mcm_dataverse_schema.py`.
+- `services[]` and `tags[]` are Microsoft-provided strings. Use configurable routing rules for service names such as Power Platform or Microsoft Copilot Studio instead of hard-coding a closed taxonomy.
+- Power Platform release plans are not ingested by this solution. Review the Microsoft Learn release plan pages and Release planner separately during release-wave readiness.
+
 ### 4. Power Platform Environment
 
 - Dataverse environment (included with most Power Platform licenses)
@@ -161,7 +169,7 @@ See [Flow Configuration](docs/flow-configuration.md) for complete flow creation 
 **Summary:**
 
 1. Trigger: Daily recurrence (e.g., 9 AM)
-2. HTTP action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
+2. HTTP with Microsoft Entra ID action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
 4. For each message: Upsert to Dataverse using `fsi_messagecenterid`
 5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
@@ -177,7 +185,7 @@ See [Teams Integration](docs/teams-integration.md) for Teams setup.
 2. Use the provided adaptive card template
 3. Configure the flow to post high-severity alerts
 
-> **Note on Office 365 Connectors Deprecation:** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native **Power Automate "Post adaptive card in chat or channel" Teams connector**, which is unaffected by this retirement. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
+> **Note on Office 365 Connectors Deprecation:** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native **Power Automate "Post card in a chat or channel" Teams connector** with an Adaptive Card payload, which is unaffected by this retirement. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
 
 ### Step 4: Verify It Works
 
@@ -288,7 +296,7 @@ This solution is designed to be modified:
 
 - Verify app registration has `ServiceMessage.Read.All` permission
 - Confirm admin consent was granted
-- Check client secret hasn't expired
+- Check the configured credential has not expired (certificate, federated credential, or legacy client secret)
 
 ### No posts appearing
 
@@ -304,7 +312,7 @@ This solution is designed to be modified:
 
 ## Version
 
-2.4.0 - April 2026
+2.5.1 - May 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

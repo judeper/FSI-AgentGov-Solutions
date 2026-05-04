@@ -24,7 +24,7 @@
 
 .PARAMETER ClientSecret
     Client secret as a SecureString. Required only when -AuthMode ClientSecret.
-    legacy: dev-only path; prefer ManagedIdentity in production.
+    legacy: dev-only — replace with managed identity in production.
 
 .PARAMETER AuthMode
     Authentication mode. ManagedIdentity (default), WorkloadIdentity, Interactive,
@@ -65,7 +65,7 @@
     PSCustomObject with summary counts and an array of message records.
 
 .NOTES
-    Version: 1.0.0
+    Version: 2.5.1
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module

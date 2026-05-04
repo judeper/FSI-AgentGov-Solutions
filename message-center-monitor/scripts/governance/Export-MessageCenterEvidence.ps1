@@ -14,8 +14,8 @@
     - JSON file containing metadata, summary, and message records
     - SHA-256 companion file for tamper-evident integrity verification
 
-    Supports Controls 2.3 (Change Management) and 2.10 (Platform Change Monitoring)
-    from the FSI Agent Governance Framework.
+    Supports Control 2.3 (Change Management and Release Planning) from the FSI Agent
+    Governance Framework.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
@@ -44,7 +44,7 @@
 
 .PARAMETER ClientSecret
     Client secret as a SecureString. Required only when -AuthMode ClientSecret.
-    legacy: dev-only path; prefer ManagedIdentity in production.
+    legacy: dev-only — replace with managed identity in production.
 
 .PARAMETER Quiet
     Suppress informational banner output.
@@ -88,7 +88,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 2.4.0
+    Version: 2.5.1
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module (4.37+ for ManagedIdentity)
@@ -303,7 +303,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Message Center Monitor"
-    solutionVersion = "2.4.0"
+    solutionVersion = "2.5.1"
     fromDate        = Format-McmODataDate $FromDate
     toDate          = Format-McmODataDate $ToDate
     exportVersion   = "1.1.0"
