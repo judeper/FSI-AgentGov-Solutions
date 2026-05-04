@@ -2,6 +2,25 @@
 
 All notable changes to the Agent 365 Lifecycle Governance solution.
 
+## [Unreleased]
+
+### Fixed
+
+- Refreshed Microsoft Agent 365 / Microsoft Entra Agent ID guidance for 2026-Q2: updated Agent Registry automation from stale `/beta/agentRegistry/agents` + `sponsor@odata.bind` patterns to current Graph beta `agentInstances` + `ownerIds` guidance.
+- Replaced hard-coded Agent 365 price and outdated Entra ID Governance P2 wording with current Microsoft Learn licensing language and validation caveats.
+- Corrected sponsor-user lifecycle workflow scope, workload identity Conditional Access caveats, and stale OBO/Frontier service-status wording.
+- Corrected Dataverse zone option-set remapping between `fsi_acv_zone` and `fsi_ALG_governancezone`.
+- Added managed identity, workload identity federation, and certificate auth modes for Python Dataverse helpers; retained client-secret auth only as a legacy dev-only fallback.
+- Bumped generated catalog metadata to v1.1.4 and corrected Tier 2 manifest metadata.
+
+## [1.1.4] - 2026-05-04
+
+### Fixed
+
+- Microsoft Learn 2026-Q2 refresh for Agent 365 lifecycle governance documentation and scripts.
+
+---
+
 ## [1.1.3] - 2026-04-16
 
 ### Fixed

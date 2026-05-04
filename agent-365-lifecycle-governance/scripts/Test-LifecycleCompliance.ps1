@@ -5,7 +5,7 @@
     Validates Agent 365 lifecycle compliance status.
 
 .DESCRIPTION
-    Checks sponsor coverage in Entra, queries Dataverse for overdue access reviews
+    Checks owner coverage in the Agent 365 registry, queries Dataverse for overdue access reviews
     and inactive agents, and exports a compliance summary. Designed for Azure
     Automation Runbook execution using System-Assigned Managed Identity.
 
@@ -53,7 +53,7 @@ try {
         }
     }
 } catch {
-    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has Directory.Read.All and Dataverse access. Error: $($_.Exception.Message)"
+    Write-Error "Authentication failed. This script requires Azure Automation with a System-Assigned Managed Identity. Ensure the identity has AgentInstance.Read.All (or AgentInstance.ReadWrite.All where updates are needed) and Dataverse access. Error: $($_.Exception.Message)"
     exit 1
 }
 
@@ -61,13 +61,13 @@ $graphHeaders = @{ Authorization = "Bearer $graphToken"; "Content-Type" = "appli
 $dvHeaders    = @{ Authorization = "Bearer $dvToken";    "Content-Type" = "application/json" }
 $queryErrors  = $false
 
-# Query Entra registry
+# Query Agent 365 registry
 # NOTE: Agent 365 reached GA on May 1, 2026 for OBO agents.
-# The /beta/agentRegistry endpoint may now have a v1.0 equivalent.
-# Test with v1.0 in your tenant before migrating.
-# Autonomous agents with full Entra identities remain in Frontier preview.
+# Microsoft Learn currently documents Agent Registry APIs under Graph beta and includes
+# May 2026 convergence notices for Agent 365-powered APIs. Validate this endpoint
+# in a non-production tenant before enabling lifecycle flows.
 try {
-    $next = "https://graph.microsoft.com/beta/agentRegistry/agents"
+    $next = "https://graph.microsoft.com/beta/agentRegistry/agentInstances"
     $registryAgents = @()
     do {
         $resp = Invoke-RestMethod -Uri $next -Headers $graphHeaders -ErrorAction Stop
@@ -75,17 +75,17 @@ try {
         $next = $resp.'@odata.nextLink'
     } while ($next)
 } catch {
-    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has Directory.Read.All. Error: $($_.Exception.Message)"
+    Write-Error "Failed to query Agent Registry. Verify Agent 365 is enabled and managed identity has AgentInstance.Read.All. Error: $($_.Exception.Message)"
     exit 1
 }
 if (-not $registryAgents) { $registryAgents = @() }
 
 $noSponsor = $registryAgents | Where-Object {
-    -not $_.sponsor -or ($_.sponsor | Measure-Object).Count -eq 0
+    -not $_.ownerIds -or ($_.ownerIds | Measure-Object).Count -eq 0
 }
-Write-Host "=== SPONSOR COVERAGE ===" -ForegroundColor Cyan
+Write-Host "=== OWNER COVERAGE ===" -ForegroundColor Cyan
 Write-Host "Total registered agents:  $($registryAgents.Count)"
-Write-Host "Agents without sponsors:  $($noSponsor.Count)" `
+Write-Host "Agent instances without owners:  $($noSponsor.Count)" `
     -ForegroundColor $(if ($noSponsor.Count -gt 0) { "Red" } else { "Green" })
 
 # Query Dataverse for overdue access reviews

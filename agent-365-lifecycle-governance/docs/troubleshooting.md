@@ -8,9 +8,9 @@ Common issues and resolutions for the Agent 365 Lifecycle Governance solution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Sponsor PATCH returns 200 but sponsor not set | Wrong body format — used UPN string instead of `@odata.bind` | Use `{"sponsor@odata.bind": "https://graph.microsoft.com/v1.0/users/{objectId}"}` |
+| Owner PATCH returns 200 but owner not set | Wrong body format — used UPN string or stale `sponsor@odata.bind` | Use `ownerIds` with sponsor user Object IDs for `agentInstance` PATCH |
 | Access review creation returns 400 | Missing `principalScopes` or `resourceScopes` | Both scopes are required — verify payload matches Flow 2 specification |
-| Flow terminates immediately without processing | Feature flag `IsAgent365LifecycleEnabled` is `"false"` | Set to `"true"` after confirming Agent 365 GA licensing |
+| Flow terminates immediately without processing | Feature flag `IsAgent365LifecycleEnabled` is `"false"` | Set to `"true"` after confirming Agent 365 licensing and validating beta Graph API behavior |
 | Sign-in log query returns 403 | `AuditLog.Read.All` permission not granted or tenant restriction | Grant permission or accept fallback to PPAC-only activity data |
 | Agent not added to security group | Group ID environment variable empty or incorrect | Verify `FSIAllAgentIdentitiesGroupId` and `FSIZone3AgentsGroupId` values |
 | Deactivation approval timeout | No response within 5 business days | Approval escalates to `EscalationApproverUPN` automatically |
@@ -46,15 +46,15 @@ When `IsAgent365LifecycleEnabled = "false"`:
 
 ## API-Specific Issues
 
-### Graph Beta Endpoints
+### Graph Beta/Preview Endpoints
 
-The `agentRegistry` endpoints are in Graph beta. Behavior may change before GA. Monitor the [Microsoft Graph changelog](https://developer.microsoft.com/en-us/graph/changelog) for breaking changes.
+The Agent 365 Agent Registry endpoints are in Graph beta, and Microsoft Learn notes May 2026 convergence toward newer Agent 365-powered APIs. Behavior may change before v1.0. Monitor the [Microsoft Graph changelog](https://developer.microsoft.com/en-us/graph/changelog) and Agent 365 documentation for breaking changes.
 
 **Common beta issues:**
 
 | Issue | Resolution |
 |-------|------------|
-| Endpoint returns 404 | Verify Agent 365 licensing is active; beta endpoints require feature enablement |
+| Endpoint returns 404 | Verify Agent 365 licensing is active and the endpoint path is `/beta/agentRegistry/agentInstances`, not stale `/beta/agentRegistry/agents` |
 | Response schema changed | Compare current response against documented schema; update flow parsing logic |
 | Throttling (429) | Implement retry with exponential backoff; reduce batch sizes |
 
@@ -84,19 +84,19 @@ The `entraReviewInstanceId` must be retrieved immediately after creating the acc
 
 ---
 
-## Sponsor Assignment Issues
+## Sponsor/Owner Assignment Issues
 
-### Sponsor Not Set After PATCH
+### Owner Not Set After PATCH
 
-**Symptoms:** API returns 200 but GET on the agent identity shows no sponsor.
+**Symptoms:** API returns 200 but GET on the agent instance shows no owner.
 
-**Root cause:** The sponsor PATCH requires `@odata.bind` format, not a plain UPN or object ID string.
+**Root cause:** Current Microsoft Graph beta uses the `ownerIds` collection on `agentInstance`; the older `sponsor@odata.bind` payload is stale.
 
 **Correct payload:**
 
 ```json
 {
-    "sponsor@odata.bind": "https://graph.microsoft.com/v1.0/users/{sponsorObjectId}"
+    "ownerIds": ["00000000-0000-0000-0000-000000000000"]
 }
 ```
 
@@ -104,24 +104,24 @@ The `entraReviewInstanceId` must be retrieved immediately after creating the acc
 
 ```json
 // WRONG - plain string
-{ "sponsor": "sponsor@example.com" }
+{ "ownerIds": "sponsor@example.com" }
 
-// WRONG - object without @odata.bind
-{ "sponsor": { "id": "00000000-0000-0000-0000-000000000000" } }
+// WRONG - stale sponsor binding
+{ "sponsor@odata.bind": "https://graph.microsoft.com/v1.0/users/{sponsorObjectId}" }
 ```
 
-### Unsponsored Agent Filter
+### Ownerless Agent Filter
 
-**Symptoms:** Flow 1 or Flow 5 returns all agents instead of only unsponsored ones.
+**Symptoms:** Flow 1 or Flow 5 returns all agents instead of only ownerless ones.
 
 **Possible causes:**
 
 | Cause | Resolution |
 |-------|------------|
-| Server-side `$filter` not supported for sponsor attribute | Use client-side filtering (retrieve all, filter in flow) |
+| Server-side `$filter` not supported for `ownerIds` | Use client-side filtering (retrieve all, filter in flow) |
 | OData query syntax error | Verify filter syntax against Graph API documentation |
 
-**Workaround:** If server-side filtering is not supported, retrieve all agent identities and use a condition action in the flow to filter for null sponsors.
+**Workaround:** If server-side filtering is not supported, retrieve all agent identities and use a condition action in the flow to filter for empty `ownerIds`.
 
 ---
 
@@ -219,4 +219,4 @@ For issues not covered here:
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.3*
+*Agent 365 Lifecycle Governance v1.1.4*

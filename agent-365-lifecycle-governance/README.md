@@ -1,6 +1,6 @@
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.3 — GA (Agent 365 GA: May 1, 2026)
+> **Status:** v1.1.4 — GA (Microsoft Agent 365 generally available for Commercial segment as of May 1, 2026)
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 
@@ -10,9 +10,9 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 As FSI organizations deploy AI agents at scale through Copilot Studio, Agent Builder, and Azure AI Foundry, the agent fleet grows faster than governance processes can keep pace. Agents are onboarded without sponsors, run indefinitely without access reviews, accumulate stale permissions, and persist after their business purpose has ended.
 
-This solution automates enforcement on top of Agent 365 and Entra ID Governance to address the core FSI examiner question: *"How do you verify that every AI agent has an accountable owner, operates under least-privilege access, is reviewed on a defined cadence, and is decommissioned when no longer needed?"*
+This solution automates lifecycle governance on top of Microsoft Agent 365, Microsoft Entra Agent ID, and Microsoft Entra ID Governance to address the core FSI examiner question: *"How do you verify that every AI agent has an accountable owner, operates under least-privilege access, is reviewed on a defined cadence, and is decommissioned when no longer needed?"*
 
-> **Important:** All Microsoft Agent 365 / Entra Agent ID API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Set to `"true"` after deployment validation — Agent 365 is now GA for OBO agents (May 2026). When disabled, flows terminate gracefully without calling external APIs.
+> **Important:** All Microsoft Agent 365 / Microsoft Entra Agent ID API calls are gated by the `IsAgent365LifecycleEnabled` feature flag. Microsoft Agent 365 is generally available for the Commercial segment, while Agent Registry API surfaces remain beta/preview and subject to change. Set the flag to `"true"` only after tenant licensing, permissions, and API validation are complete. When disabled, flows terminate gracefully without calling external APIs.
 >
 > **Boundary:** This solution complements the native Microsoft Agent 365 governance surfaces. Use the Microsoft 365 admin center (where Agent 365 surfaces appear) and the related FSI framework guidance for Agent Registry inventory, pending requests, ownerless-agent queues, and overview analytics. There is no separate live Agent 365 governance-monitor solution in this repository. Use this solution for automated sponsor enforcement, access reviews, inactivity handling, deactivation workflows, and deletion holds.
 
@@ -20,13 +20,13 @@ This solution automates enforcement on top of Agent 365 and Entra ID Governance 
 
 | Capability | Description |
 |-----------|-------------|
-| **Sponsor Enforcement** | Hourly detection and assignment of sponsors to unsponsored agents via the Microsoft Agent 365 / Entra agent registry API |
+| **Sponsor Enforcement** | Hourly detection and owner assignment for ownerless agent instances via the Microsoft Agent 365 / Microsoft Entra Agent Registry `agentInstances` API |
 | **Zone-Based Access Reviews** | Quarterly (Zone 3), semi-annual (Zone 2), or annual (Zone 1) Entra access reviews with default-deny |
 | **Inactivity Detection** | Daily scan using Entra sign-in logs and PPAC activity data with conservative handling of missing data |
 | **Deactivation Workflows** | Approval-gated agent disabling with zone-based deletion hold periods (30 or 90 days) |
 | **Sponsor Monitoring** | Weekly validation of sponsor account status with auto-reassignment on departure |
-| **Deletion Hold Enforcement** | Daily enforcement of mandatory hold periods before permanent identity deletion |
-| **Audit Trail** | All lifecycle events logged to append-only Dataverse table (requires no-delete security roles and 7-year LTR configuration for immutability) |
+| **Deletion Hold Enforcement** | Daily validation of hold periods before permanent identity deletion |
+| **Audit Trail** | All lifecycle events logged to an append-only Dataverse table when no-delete security roles and appropriate retention policies are configured |
 
 ## Architecture
 
@@ -92,12 +92,12 @@ Full schema reference: [docs/dataverse-schema.md](./docs/dataverse-schema.md)
 
 | Requirement | Details |
 |------------|---------|
-| **Agent 365** | GA licensing ($15/user/month or M365 E7) |
-| **Entra ID Governance P2** | Access reviews, lifecycle workflows |
+| **Microsoft Agent 365** | Per-user Microsoft Agent 365 licensing or Microsoft 365 E7; verify current pricing and SKU eligibility in Microsoft licensing guidance |
+| **Microsoft Entra ID Governance or Microsoft Entra Suite** | Access reviews and sponsor-user lifecycle workflows |
 | **Power Automate Premium** | HTTP connector, Power Platform Admin connector |
 | **Dataverse** | Managed Environment with system administrator role |
 | **Entra Security Groups** | `FSI-AllAgentIdentities`, `FSI-Zone3-Agents` |
-| **API Permissions** | 7 application permissions on Managed Identity |
+| **API Permissions** | Graph application permissions on managed identity or workload identity, including `AgentInstance.ReadWrite.All` |
 
 Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 
@@ -107,16 +107,17 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
 2. Create Entra security groups and lifecycle workflows ([docs/prerequisites.md](./docs/prerequisites.md))
 3. Deploy Dataverse schema:
    ```bash
-   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
-   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
-   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --client-id <app-id> --interactive
+   python scripts/create_alg_dataverse_schema.py --tenant-id <id> --environment-url <url> --auth-mode managed-identity
+   python scripts/create_alg_environment_variables.py --tenant-id <id> --environment-url <url> --auth-mode managed-identity
+   python scripts/create_alg_connection_references.py --tenant-id <id> --environment-url <url> --auth-mode managed-identity
+   # For admin-workstation setup, use --interactive --client-id <app-id> instead.
    ```
 4. Run baseline assessment:
    ```powershell
    .\scripts\Deploy-LifecycleGovernance-Baseline.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com" -DefaultSponsorUPN "governance@example.com"
    ```
 5. Build flows in Power Automate designer following [docs/flow-configuration.md](./docs/flow-configuration.md)
-6. Set `IsAgent365LifecycleEnabled` to `"true"` after deployment validation (Agent 365 is now GA for OBO agents)
+6. Set `IsAgent365LifecycleEnabled` to `"true"` after tenant licensing, Graph beta endpoint, and flow validation
 7. Validate compliance:
    ```powershell
    .\scripts\Test-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
@@ -146,14 +147,14 @@ Microsoft's [Agentic Center of Enablement](https://learn.microsoft.com/en-us/pow
 - Zone-based access review cadences (quarterly/semi-annual/annual) aligned to zone policy, firm risk assessment, and written supervisory procedures
 - Sponsor enforcement with auto-reassignment on departure
 - Configurable deletion hold periods (default 30 days, 90 days for Zone 3) before permanent identity removal
-- Immutable compliance event logging with Dataverse Long-Term Retention (firms should map evidence to FINRA 4511 / SEC 17a-4 schedules and add a compliant archive where required)
+- Append-only compliance event logging with Dataverse Long-Term Retention when no-delete roles are configured (firms should map evidence to FINRA 4511 / SEC 17a-4 schedules and add a compliant archive where required)
 - Integration with Entra ID Governance lifecycle workflows (for sponsor/user lifecycle) and conditional access
 
 FSI organizations should use the Agentic CoE for tenant-level visibility and general governance, and deploy this solution for the lifecycle controls that financial services examiners typically expect.
 
 | Limitation | Impact | Mitigation |
 |-----------|--------|------------|
-| Agent 365 GA for OBO agents (May 2026); autonomous agents with full Entra identities remain in Frontier preview | Lifecycle workflow tasks may not be available for autonomous agents | Feature flag disables gracefully; Dataverse-only tracking remains active |
+| Microsoft Agent 365 is GA for the Commercial segment, but Agent Registry and Package Management Graph APIs remain beta/preview and include May 2026 convergence notices | API shape or permissions may change before v1.0 | Feature flag disables gracefully; validate `agentInstances` and package APIs in a non-production tenant before enabling |
 | `AuditLog.Read.All` may be restricted | Inactivity detection falls back to PPAC timestamps | Flow 3 handles gracefully — sets source to "Unknown", does not trigger deactivation |
 | Daily polling scales poorly past 100 agents | Flow 2 Part C may run long | Consider Graph change notifications (webhooks) as agent count grows |
 | Agentic user deletion is automatic | Deleting agent instance also deletes mailbox and OneDrive | 90-day deletion hold for Zone 3 provides investigation window |
@@ -188,7 +189,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Version
 
-1.1.2
+1.1.4
 
 ## License
 

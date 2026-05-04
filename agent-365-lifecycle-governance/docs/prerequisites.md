@@ -6,16 +6,16 @@ Complete requirements for deploying the Agent 365 Lifecycle Governance solution.
 
 | License | Requirement | Purpose |
 |---------|------------|---------|
-| **Microsoft Agent 365** | Required | Agent identity lifecycle management, sponsor assignment |
-| **Entra ID Governance P2** | Required | Access reviews, lifecycle workflows |
+| **Microsoft Agent 365** | Required | Agent registry visibility, owner assignment, and Agent ID capabilities |
+| **Microsoft Entra ID Governance or Microsoft Entra Suite** | Required | Access reviews and sponsor-user lifecycle workflows |
 | **Power Automate Premium** | Required | HTTP connector, Power Platform Admin connector |
 | **Power Apps Premium** | Required (Admin Portal) | Canvas app for governance team |
 | **Power BI Pro** | Required (Dashboard) | Lifecycle compliance reporting |
 
 ### License Notes
 
-- **Microsoft Agent 365** is a standalone license ($15/user/month) or included in M365 E7
-- **Entra ID Governance P2** is required for access review API creation and lifecycle workflows
+- **Microsoft Agent 365** is licensed on a per-user basis; verify current pricing and included SKU eligibility in the Microsoft Agent 365 licensing FAQ. Microsoft Entra Agent ID features are available with Microsoft Agent 365 or Microsoft 365 E7, with additional Entra licensing depending on feature.
+- **Microsoft Entra ID Governance or Microsoft Entra Suite** is required for access review API creation and lifecycle workflows; Microsoft Entra ID P2, Microsoft 365 E5, or Microsoft Entra Suite may be required for specific Agent ID governance features.
 - **Power Automate Premium** is required for the HTTP with Microsoft Entra ID (preauthorized) connector
 - **Power BI Pro** is required only if deploying the optional compliance dashboard
 
@@ -27,14 +27,15 @@ Create these before deploying flows:
 
 | Group Name | Purpose |
 |-----------|---------|
-| `FSI-AllAgentIdentities` | All agent identities — scope for Lifecycle Workflows 1 and 2 |
-| `FSI-Zone3-Agents` | Zone 3 agents only — scope for Conditional Access policy |
+| `FSI-AgentSponsors` | Sponsor users — scope for Lifecycle Workflows 1 and 2 |
+| `FSI-AllAgentIdentities` | All agent identities — inventory and group-based reporting, not lifecycle workflow scope |
+| `FSI-Zone3-Agents` | Zone 3 agent identities — inventory/reporting; Conditional Access for workload identities must directly assign service principals |
 
-### API Permissions (System-Assigned Managed Identity)
+### API Permissions (Automation Identity)
 
 | Permission | Type | Scope | Purpose |
 |-----------|------|-------|---------|
-| `AgentRegistry.ReadWrite.All` | Application | Graph | Read/update agent identities and sponsors (Microsoft Agent 365 / Entra agent registry) |
+| `AgentInstance.ReadWrite.All` | Application | Graph beta | Read/update Agent 365 agent instances and `ownerIds` through `/agentRegistry/agentInstances` |
 | `AccessReview.ReadWrite.All` | Application | Graph | Required for `POST /identityGovernance/accessReviews/definitions` (access review CRUD) |
 | `LifecycleWorkflows.ReadWrite.All` | Application | Graph | Required for activating Entra ID Governance lifecycle workflows (`POST /identityGovernance/lifecycleWorkflows/workflows/{id}/activate`) — `LifecycleWorkflows-Workflow.Activate` is also acceptable for activate-only scenarios |
 | `AuditLog.Read.All` | Application | Graph | Read agent sign-in logs for inactivity detection |
@@ -45,25 +46,25 @@ Create these before deploying flows:
 
 > **Note:** `AuditLog.Read.All` may be restricted in some FSI tenants. The solution handles this gracefully — inactivity detection falls back to PPAC timestamps when sign-in log access is unavailable.
 
-> **Note:** All application permissions require admin consent. The previously documented `IdentityGovernance.ReadWrite.All` is a broader legacy scope; the more specific `AccessReview.ReadWrite.All` + `LifecycleWorkflows.ReadWrite.All` pair is preferred per Microsoft Graph guidance.
+> **Note:** All application permissions require admin consent and must be granted to the automation identity (managed identity, workload identity, or certificate-backed app registration). The previously documented `IdentityGovernance.ReadWrite.All` is a broader legacy scope; the more specific `AccessReview.ReadWrite.All` + `LifecycleWorkflows.ReadWrite.All` pair is preferred per Microsoft Graph guidance. The older `AgentRegistry.ReadWrite.All` permission is not documented for the current `agentInstances` API surface; use `AgentInstance.ReadWrite.All` for this solution's Graph beta calls.
 
 ### Entra Lifecycle Workflows
 
 > **Important — applicability:** Entra ID Governance lifecycle workflows operate against **user** principals (joiner/mover/leaver), not service principals or agent identities. The workflows below are intended to fire on **sponsor user** lifecycle events (a sponsor moving departments or leaving the company), not on the agent identity itself. Flow 5 then reads the sponsor change and updates the agent's lifecycle record. Do not attempt to scope a lifecycle workflow directly to an agent service principal.
 
-Two workflows must be created manually in the Entra Admin Center. See [Flow Configuration](./flow-configuration.md) for step-by-step configuration.
+Two workflows must be created manually in the Microsoft Entra admin center. See [Flow Configuration](./flow-configuration.md) for step-by-step configuration.
 
 **Workflow 1: Agent-Sponsor-Mover-Notification**
 
 - Template: Mover
-- Scope: Sponsor users (e.g., a security group containing all designated agent sponsors)
+- Scope: Sponsor users (for example, the `FSI-AgentSponsors` security group)
 - Trigger: Sponsor user attribute change (department/manager move)
 - Store workflow ID in `fsi_ALG_SponsorMoverWorkflowId` environment variable
 
 **Workflow 2: Agent-Sponsor-Leaver-Deactivation**
 
 - Template: Leaver
-- Scope: Sponsor users
+- Scope: Sponsor users (for example, the `FSI-AgentSponsors` security group)
 - Trigger: Sponsor user account disabled/deleted
 - Store workflow ID in `fsi_ALG_SponsorLeaverWorkflowId` environment variable
 
@@ -74,9 +75,9 @@ Two workflows must be created manually in the Entra Admin Center. See [Flow Conf
 Create `FSI-Zone3-Agent-Conditional-Access` in Entra Admin Center as a **workload identity** Conditional Access policy:
 
 - License: requires the **Workload Identities Premium** add-on license.
-- Assignments: select **Workload identities** and pick the Zone 3 service principals (group assignment is not enforced for service principals — pick them individually or maintain the list as part of onboarding).
+- Assignments: select **Workload identities** and pick the Zone 3 service principals directly (group assignment is not enforced for service principals — pick them individually or maintain the list as part of onboarding).
 - Conditions: scope by location and (optionally) service-principal risk.
-- Grant: only controls supported for service principals — typically **Block access** outside permitted locations or **Require multifactor authentication** where the service principal supports it. Device-compliance and sign-in-frequency controls are user-session controls and **do not apply** to service-principal sign-ins.
+- Grant: **Block access** is the available grant control for service-principal Conditional Access policies. Device-compliance, multifactor authentication, and sign-in-frequency controls are user-session controls and **do not apply** to service-principal sign-ins.
 
 ## Dataverse Environment
 
@@ -137,16 +138,18 @@ The lifecycle governance flows require these connectors in the Business/Non-Bloc
 
 ### Licensing
 
-- [ ] Microsoft Agent 365 licensing active in target tenant
-- [ ] Entra ID Governance P2 licensing available
+- [ ] Microsoft Agent 365 licensing active in target tenant; current pricing/SKU eligibility verified
+- [ ] Microsoft Entra ID Governance or Microsoft Entra Suite licensing available
 - [ ] Power Automate Premium licenses available
 - [ ] Power Apps Premium licenses available (if deploying admin portal)
 - [ ] Power BI Pro licenses available (if deploying dashboard)
 
 ### Entra ID
 
+- [ ] `FSI-AgentSponsors` security group created and populated with sponsor users
 - [ ] `FSI-AllAgentIdentities` security group created
-- [ ] `FSI-Zone3-Agents` security group created
+- [ ] `FSI-Zone3-Agents` security group created for inventory/reporting
+- [ ] Zone 3 service principals assigned directly to workload identity Conditional Access policy
 - [ ] All 7 API permissions granted and admin-consented
 - [ ] Lifecycle Workflow 1 created — workflow ID recorded
 - [ ] Lifecycle Workflow 2 created — workflow ID recorded

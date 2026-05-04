@@ -2,8 +2,7 @@
 """
 Shared Dataverse Web API client for FSI-AgentGov-Solutions.
 
-Uses MSAL for authentication (interactive browser or service principal).
-Includes retry logic and dry-run mode for safe deployments.
+Uses MSAL for interactive/client-secret authentication and Azure Identity for managed identity, workload identity federation, and certificate authentication. Includes retry logic and dry-run mode for safe deployments.
 """
 
 import argparse
@@ -31,6 +30,9 @@ class DataverseClient:
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        auth_mode: Optional[str] = None,
+        certificate_path: Optional[str] = None,
+        certificate_password: Optional[str] = None,
     ):
         """
         Initialize Dataverse client.
@@ -38,14 +40,22 @@ class DataverseClient:
         Args:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
-            client_id: Application (client) ID (required for all auth modes)
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
+            client_id: Application (client) ID; optional for system-assigned managed identity
+            client_secret: Client secret value (legacy dev-only fallback)
+            interactive: Use interactive browser auth instead of app-only auth
             dry_run: If True, log API calls without executing them
+            auth_mode: interactive, managed-identity, workload-identity, certificate, or client-secret
+            certificate_path: Path to PEM/PFX certificate for certificate auth
+            certificate_password: Optional certificate password
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
+        self.auth_mode = auth_mode or ("interactive" if interactive else "client-secret")
+        if interactive:
+            self.auth_mode = "interactive"
+        self.certificate_path = certificate_path
+        self.certificate_password = certificate_password
         self.environment_url = environment_url.rstrip("/")
         self.api_url = f"{self.environment_url}/api/data/{self.API_VERSION}/"
         self.interactive = interactive
@@ -67,7 +77,8 @@ class DataverseClient:
         self._session.mount("https://", adapter)
         self._session.mount("http://", adapter)
 
-        if interactive:
+        self._credential = None
+        if self.auth_mode == "interactive":
             if not client_id:
                 raise ValueError(
                     "client_id is required for interactive authentication. "
@@ -77,16 +88,54 @@ class DataverseClient:
                 client_id=client_id,
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
-        else:
+        elif self.auth_mode == "client-secret":
             if not client_id or not client_secret:
-                raise ValueError("client_id and client_secret required for non-interactive auth")
+                raise ValueError(
+                    "client_id and client_secret are required for legacy client-secret auth. "
+                    "Use --auth-mode managed-identity, workload-identity, or certificate in production."
+                )
             self._app = msal.ConfidentialClientApplication(
                 client_id=client_id,
                 client_credential=client_secret,
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
+        elif self.auth_mode == "managed-identity":
+            ManagedIdentityCredential = self._azure_identity_class("ManagedIdentityCredential")
+            self._credential = ManagedIdentityCredential(client_id=client_id) if client_id else ManagedIdentityCredential()
+            self._app = None
+        elif self.auth_mode == "workload-identity":
+            WorkloadIdentityCredential = self._azure_identity_class("WorkloadIdentityCredential")
+            self._credential = WorkloadIdentityCredential(tenant_id=tenant_id, client_id=client_id)
+            self._app = None
+        elif self.auth_mode == "certificate":
+            if not client_id or not certificate_path:
+                raise ValueError("client_id and certificate_path are required for certificate auth")
+            CertificateCredential = self._azure_identity_class("CertificateCredential")
+            self._credential = CertificateCredential(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                certificate_path=certificate_path,
+                password=certificate_password,
+            )
+            self._app = None
+        else:
+            raise ValueError(f"Unsupported auth_mode: {self.auth_mode}")
+
+    @staticmethod
+    def _azure_identity_class(class_name: str):
+        try:
+            import azure.identity as azure_identity  # type: ignore
+        except ImportError as exc:  # pragma: no cover - depends on optional runtime package
+            raise RuntimeError(
+                "azure-identity is required for managed identity, workload identity, or certificate auth. "
+                "Install the solution requirements first."
+            ) from exc
+        return getattr(azure_identity, class_name)
 
     def _get_token(self) -> str:
+        if self._credential is not None:
+            return self._credential.get_token(self._scope[0]).token
+
         accounts = self._app.get_accounts() if self.interactive else None
         result = self._app.acquire_token_silent(
             scopes=self._scope,
@@ -308,23 +357,28 @@ def main():
     parser = argparse.ArgumentParser(description="Shared Dataverse Web API client for FSI-AgentGov-Solutions", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--tenant-id", default=os.environ.get("DATAVERSE_TENANT_ID"), help="Entra ID tenant ID (or set DATAVERSE_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("DATAVERSE_CLIENT_ID"), help="Application (client) ID (or set DATAVERSE_CLIENT_ID env var)")
-    parser.add_argument("--client-secret", default=os.environ.get("DATAVERSE_CLIENT_SECRET"), help="Client secret (or set DATAVERSE_CLIENT_SECRET env var)")
+    parser.add_argument("--client-secret", default=os.environ.get("DATAVERSE_CLIENT_SECRET"), help="Legacy dev-only client secret (or set DATAVERSE_CLIENT_SECRET env var)")
     parser.add_argument("--environment-url", default=os.environ.get("DATAVERSE_ENVIRONMENT_URL"), help="Dataverse environment URL (or set DATAVERSE_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
+    parser.add_argument("--auth-mode", choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"], default=os.environ.get("DATAVERSE_AUTH_MODE"), help="Authentication mode; prefer managed-identity, workload-identity, or certificate for automation")
+    parser.add_argument("--certificate-path", default=os.environ.get("DATAVERSE_CERTIFICATE_PATH"), help="Certificate path for certificate auth")
+    parser.add_argument("--certificate-password-env", default="DATAVERSE_CERTIFICATE_PASSWORD", help="Environment variable containing certificate password")
     parser.add_argument("--test-connection", action="store_true", help="Test connection to Dataverse")
     parser.add_argument("--dry-run", action="store_true", help="Log API calls without executing them")
     args = parser.parse_args()
     if not args.tenant_id or not args.environment_url:
         parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set DATAVERSE_TENANT_ID and DATAVERSE_ENVIRONMENT_URL env vars)")
-    if not args.client_id:
-        parser.error("--client-id is required (or set DATAVERSE_CLIENT_ID env var)")
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if args.client_secret else "managed-identity"))
+    if auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        parser.error("--client-id is required for the selected auth mode (or set DATAVERSE_CLIENT_ID env var)")
     client_secret = args.client_secret
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    if auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
     try:
-        client = DataverseClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, interactive=args.interactive, dry_run=args.dry_run)
+        client = DataverseClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, interactive=args.interactive, dry_run=args.dry_run, auth_mode=auth_mode, certificate_path=args.certificate_path, certificate_password=certificate_password)
         if args.test_connection:
             print("Testing Dataverse connection...")
             org = client.test_connection()

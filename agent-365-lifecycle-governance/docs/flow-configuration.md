@@ -68,7 +68,7 @@ Detailed specifications for building the six lifecycle governance flows in Power
 | Connector | Purpose | License |
 |-----------|---------|---------|
 | **Dataverse** | Read/write lifecycle tables | Included |
-| **HTTP with Microsoft Entra ID** | Graph API calls (Agent 365 Registry, Lifecycle Workflows, Access Reviews) | Premium |
+| **HTTP with Microsoft Entra ID** | Graph API calls (Agent 365 `agentInstances`, sponsor-user Lifecycle Workflows, Access Reviews) | Premium |
 | **Microsoft Teams** | Sponsor notification cards | Included |
 | **Approvals** | Deactivation and deletion approvals | Included |
 | **Power Platform for Admins V2** | Agent activity data from PPAC | Premium |
@@ -132,7 +132,7 @@ Initialize at flow start:
 | Method | `GET` |
 | Base Resource URL | `https://graph.microsoft.com` |
 | Microsoft Entra ID Resource URI | `https://graph.microsoft.com` |
-| URI | `/beta/agentRegistry/agents` |
+| URI | `/beta/agentRegistry/agentInstances` |
 
 **Retry Policy:**
 
@@ -152,38 +152,61 @@ Initialize at flow start:
 
 **Concurrency:** Set degree of parallelism to `5` to avoid Graph API throttling.
 
-#### Step 3a: Check If Agent Has Sponsor
+#### Step 3a: Check If Agent Has Owner
 
-**Condition:** `empty(items('For_Each_Agent')?['sponsor'])` equals `true`
+**Condition:** `empty(items('For_Each_Agent')?['ownerIds'])` equals `true`
 
-#### Step 3b: If No Sponsor — Resolve Default Sponsor
+Initialize per-agent variables before the condition:
+
+- `sponsorObjectId` (String)
+- `sponsorUpn` (String)
+- `sponsorActive` (Boolean, default `false`)
+
+#### Step 3b: If No Owner — Resolve Default Sponsor
 
 **Action:** HTTP with Microsoft Entra ID
 
 | Parameter | Value |
 |-----------|-------|
 | Method | `GET` |
-| URI | `/v1.0/users/@{variables('DefaultSponsorUPN')}?$select=id,accountEnabled,displayName,mail` |
+| URI | `/v1.0/users/@{variables('DefaultSponsorUPN')}?$select=id,userPrincipalName,accountEnabled,displayName,mail` |
 
 **Post-action condition:** Verify `accountEnabled` equals `true`. If the default sponsor account is disabled, terminate with error and alert `FlowAdministrators`.
 
-#### Step 3c: Assign Sponsor via PATCH
+Set variables after a successful lookup:
+
+- `sponsorObjectId` = `body('Resolve_Default_Sponsor')?['id']`
+- `sponsorUpn` = `coalesce(body('Resolve_Default_Sponsor')?['userPrincipalName'], body('Resolve_Default_Sponsor')?['mail'])`
+- `sponsorActive` = `body('Resolve_Default_Sponsor')?['accountEnabled']`
+
+#### Step 3c: Assign Sponsor/Owner via PATCH
 
 **Action:** HTTP with Microsoft Entra ID
 
 | Parameter | Value |
 |-----------|-------|
 | Method | `PATCH` |
-| URI | `/beta/agentRegistry/agents/@{items('For_Each_Agent')?['id']}` |
+| URI | `/beta/agentRegistry/agentInstances/@{items('For_Each_Agent')?['id']}` |
 | Body | See below |
 
 ```json
 {
-  "sponsor@odata.bind": "https://graph.microsoft.com/v1.0/users/@{body('Resolve_Default_Sponsor')?['id']}"
+  "ownerIds": ["@{variables('sponsorObjectId')}"]
 }
 ```
 
-> **CRITICAL:** The sponsor binding must use `@odata.bind` with the sponsor's Object ID (GUID), not the UPN string. Using a UPN returns `400 Bad Request`.
+> **CRITICAL:** Current Microsoft Graph beta documents `ownerIds` as the updatable owner collection for `agentInstance`. Do not use the stale `sponsor@odata.bind` pattern. If the agent must retain existing owners, merge the existing `ownerIds` array with the default sponsor Object ID before PATCHing.
+
+#### Step 3c-alt: If Owner Exists — Resolve Current Owner
+
+**Action:** HTTP with Microsoft Entra ID
+
+| Parameter | Value |
+|-----------|-------|
+| Method | `GET` |
+| URI | `/v1.0/users/@{first(items('For_Each_Agent')?['ownerIds'])}?$select=id,userPrincipalName,accountEnabled,displayName,mail` |
+
+Set the same `sponsorObjectId`, `sponsorUpn`, and `sponsorActive` variables from the resolved owner response. If the owner ID does not resolve to a user, route the agent through the exception path, alert `FlowAdministrators`, and do not overwrite owner data with the default sponsor unless firm policy explicitly permits reassignment.
 
 **Headers:**
 
@@ -203,27 +226,36 @@ Initialize at flow start:
 | Filter rows | `fsi_environmentid eq '@{items('For_Each_Agent')?['environmentId']}'` |
 | Top count | `1` |
 
-**Post-action:** Set zone variables based on result.
+**Post-action:** Set source and zone variables based on result.
 
-> **Important — option set integer mapping:** `fsi_environment_policy.fsi_governancezone` is the ELM-owned ``fsi_acv_zone`` option set whose integers are `100000000` (Zone 1), `100000001` (Zone 2), `100000002` (Zone 3). The local `fsi_ALG_governancezone` option set on `fsi_agentlifecyclerecord` uses the same integer space. Subtract `100000000` to get the human "1/2/3" zone number used in the conditional logic below, and write the original integer back to Dataverse.
+> **Important — option set integer mapping:** `fsi_environment_policy.fsi_governancezone` is the ELM-owned `fsi_acv_zone` option set (`Unclassified=100000000`, `Zone 1=100000001`, `Zone 2=100000002`, `Zone 3=100000003`). The local `fsi_ALG_governancezone` option set on `fsi_agentlifecyclerecord` uses `Zone 1=100000000`, `Zone 2=100000001`, `Zone 3=100000002`. Remap ELM values before writing ALG records.
 
 ```
-// Raw option-set integer from the ELM policy table (or 100000001 = Zone 2 default if no policy)
-zoneOption = if(empty(body('Get_Zone_Policy')?['value']), 100000001, first(body('Get_Zone_Policy')?['value'])?['fsi_governancezone'])
+// Source identifiers. Current Agent 365 agentInstances do not always expose a Power Platform environment ID.
+agentInstanceId = items('For_Each_Agent')?['id']
+agentSourceId = coalesce(items('For_Each_Agent')?['sourceAgentId'], items('For_Each_Agent')?['id'])
+agentEnvironmentId = coalesce(items('For_Each_Agent')?['environmentId'], items('For_Each_Agent')?['originatingStore'], 'agent-365-registry')
+agentIdentityId = items('For_Each_Agent')?['agentIdentityId']
 
-// Human-readable zone number (1/2/3) used only for local branching
-zone = sub(zoneOption, 100000000)
+// Raw ELM option-set integer, or Zone 2 default when no policy is available.
+elmZoneOption = if(empty(body('Get_Zone_Policy')?['value']), 100000002, first(body('Get_Zone_Policy')?['value'])?['fsi_governancezone'])
+
+// ALG option-set integer for Dataverse writes.
+zoneOption = if(equals(elmZoneOption, 100000001), 100000000, if(equals(elmZoneOption, 100000003), 100000002, 100000001))
+
+// Human-readable zone number (1/2/3) used only for local branching.
+zone = add(sub(zoneOption, 100000000), 1)
 
 // Inactivity threshold (days)
-inactivityThreshold = if(equals(zone, 0), 180, if(equals(zone, 1), 90, 30))
+inactivityThreshold = if(equals(zone, 1), 180, if(equals(zone, 2), 90, 30))
 
 // Review cadence (integer for Dataverse, display text for notifications)
 // Cadence option set: Annual=100000000, Semi-Annual=100000001, Quarterly=100000002
-reviewCadence = if(equals(zone, 0), 100000000, if(equals(zone, 1), 100000001, 100000002))
-reviewCadenceLabel = if(equals(zone, 0), 'Annual', if(equals(zone, 1), 'Semi-Annual', 'Quarterly'))
+reviewCadence = if(equals(zone, 1), 100000000, if(equals(zone, 2), 100000001, 100000002))
+reviewCadenceLabel = if(equals(zone, 1), 'Annual', if(equals(zone, 2), 'Semi-Annual', 'Quarterly'))
 
 // Next review due (days from now)
-nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
+nextReviewDays = if(equals(zone, 1), 365, if(equals(zone, 2), 180, 90))
 ```
 
 #### Step 3e: Upsert Agent Lifecycle Record
@@ -233,7 +265,7 @@ nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 | Parameter | Value |
 |-----------|-------|
 | Method | `PATCH` |
-| URI | `/api/data/v9.2/fsi_agentlifecyclerecords(fsi_agentid='@{items('For_Each_Agent')?['id']}',fsi_environmentid='@{items('For_Each_Agent')?['environmentId']}')` |
+| URI | `/api/data/v9.2/fsi_agentlifecyclerecords(fsi_agentid='@{variables('agentInstanceId')}',fsi_environmentid='@{variables('agentEnvironmentId')}')` |
 | Header | `If-Match: *` (upsert) |
 
 > **Prerequisite:** The composite alternate key (`fsi_agentid` + `fsi_environmentid`) on `fsi_agentlifecyclerecord` must be deployed by `scripts/create_alg_dataverse_schema.py`. If the key is missing, this PATCH returns `404 KeyAttributesDoesNotExist`.
@@ -244,10 +276,11 @@ nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 {
   "fsi_agentname": "@{items('For_Each_Agent')?['displayName']}",
   "fsi_governancezone": @{variables('zoneOption')},
-  "fsi_lifecyclestage": @{if(empty(items('For_Each_Agent')?['sponsor']), 100000000, 100000001)},
-  "fsi_sponsorupn": "@{body('Resolve_Default_Sponsor')?['mail']}",
-  "fsi_sponsorobjectid": "@{body('Resolve_Default_Sponsor')?['id']}",
-  "fsi_sponsoractive": true,
+  "fsi_lifecyclestage": @{if(empty(items('For_Each_Agent')?['ownerIds']), 100000000, 100000001)},
+  "fsi_entraobjectid": "@{variables('agentIdentityId')}",
+  "fsi_sponsorupn": "@{variables('sponsorUpn')}",
+  "fsi_sponsorobjectid": "@{variables('sponsorObjectId')}",
+  "fsi_sponsoractive": @{variables('sponsorActive')},
   "fsi_sponsorassigneddate": "@{utcNow()}",
   "fsi_inactivitythreshold": @{variables('inactivityThreshold')},
   "fsi_accessreviewstatus": 100000000,
@@ -286,7 +319,7 @@ nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 |-----------|-------|
 | Method | `POST` |
 | URI | `/v1.0/groups/@{variables('FSIAllAgentIdentitiesGroupId')}/members/$ref` |
-| Body | `{"@odata.id": "https://graph.microsoft.com/v1.0/servicePrincipals/@{items('For_Each_Agent')?['servicePrincipalId']}"}` |
+| Body | `{"@odata.id": "https://graph.microsoft.com/v1.0/servicePrincipals/@{variables('agentIdentityId')}"}` |
 
 **Error handling:** If `400` (already a member), continue without error.
 
@@ -298,7 +331,7 @@ nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 |-----------|-------|
 | Method | `POST` |
 | URI | `/v1.0/groups/@{variables('FSIZone3AgentsGroupId')}/members/$ref` |
-| Body | `{"@odata.id": "https://graph.microsoft.com/v1.0/servicePrincipals/@{items('For_Each_Agent')?['servicePrincipalId']}"}` |
+| Body | `{"@odata.id": "https://graph.microsoft.com/v1.0/servicePrincipals/@{variables('agentIdentityId')}"}` |
 
 #### Step 3h: Log Compliance Event
 
@@ -321,7 +354,7 @@ nextReviewDays = if(equals(zone, 0), 365, if(equals(zone, 1), 180, 90))
 
 **Action:** Microsoft Teams — Post adaptive card in a chat or channel
 
-Send an Adaptive Card (v1.2) to the sponsor with:
+Send an Adaptive Card (v1.4) to the sponsor with:
 
 - Agent display name and ID
 - Governance zone assignment
@@ -333,7 +366,7 @@ Send an Adaptive Card (v1.2) to the sponsor with:
 {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.4",
   "body": [
     {
       "type": "TextBlock",
@@ -434,7 +467,7 @@ certifierUPN = if(
   "descriptionForAdmins": "Periodic access review for AI agent per governance zone policy",
   "descriptionForReviewers": "Review whether this AI agent should retain its current access permissions",
   "scope": {
-    "query": "/servicePrincipals/@{items('For_Each_Due')?['fsi_agentid']}",
+    "query": "/servicePrincipals/@{items('For_Each_Due')?['fsi_entraobjectid']}",
     "queryType": "MicrosoftGraph"
   },
   "reviewers": [
@@ -592,11 +625,13 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Method | `GET` |
-| URI | `/v1.0/auditLogs/signIns?$filter=appId eq '@{items('For_Each_Active')?['fsi_agentid']}'&$top=1&$orderby=createdDateTime desc` |
+| URI | `/v1.0/auditLogs/signIns?$filter=appId eq '@{variables('agentAppId')}'&$top=1&$orderby=createdDateTime desc` |
+
+Before this call, resolve `agentAppId` from the linked service principal when the Agent 365 registry response provides only `agentIdentityId`/object ID. Microsoft Graph sign-in logs filter `appId` by application/client ID, not agent registry instance ID.
 
 Extract: `first(body('Get_SignIn_Logs')?['value'])?['createdDateTime']`
 
-> This is the most authoritative source for agent activity.
+> This is the most authoritative source for Microsoft Entra sign-in activity when the correct app/client ID is available.
 
 #### Step 3b: Query PPAC Bots API (API 10)
 
@@ -668,7 +703,8 @@ zoneThreshold = items('For_Each_Active')?['fsi_inactivitythreshold']
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `agentId` | String | Yes | Entra agent Object ID |
+| `agentId` | String | Yes | Agent 365 agentInstance ID |
+| `entraObjectId` | String | Yes | Microsoft Entra agent identity / service principal object ID, if present |
 | `agentName` | String | Yes | Agent display name |
 | `reason` | String | Yes | Deactivation reason |
 | `requestedBy` | String | Yes | UPN of requesting flow or user |
@@ -744,7 +780,7 @@ Store the lifecycle record GUID in a variable `lifecycleRecordId`.
 | Parameter | Value |
 |-----------|-------|
 | Method | `PATCH` |
-| URI | `/v1.0/servicePrincipals/@{triggerBody()?['agentId']}` |
+| URI | `/v1.0/servicePrincipals/@{triggerBody()?['entraObjectId']}` |
 | Body | `{"accountEnabled": false}` |
 
 **Headers:**
@@ -913,7 +949,7 @@ For each candidate, verify `accountEnabled` = `true` before assignment.
 |-----------|-------|
 | Method | `POST` |
 | URI | `/v1.0/identityGovernance/lifecycleWorkflows/workflows/{workflowId}/activate` |
-| Body | Subject references for affected agent service principal |
+| Body | `subjects` collection containing the affected sponsor user's Microsoft Entra user ID |
 
 ### Step 5: Generate Weekly Summary
 
@@ -986,9 +1022,9 @@ Same pattern as Flow 1, Step 1. Terminate if disabled.
 | Parameter | Value |
 |-----------|-------|
 | Method | `DELETE` |
-| URI | `/v1.0/servicePrincipals/@{body('Get_Lifecycle_Record_For_Expired')?['fsi_agentid']}` |
+| URI | `/v1.0/servicePrincipals/@{body('Get_Lifecycle_Record_For_Expired')?['fsi_entraobjectid']}` |
 
-> **Note:** Retrieve the linked `fsi_agentlifecyclerecord` via the `fsi_AgentLifecycleRecordLookup` lookup to obtain `fsi_agentid` for the DELETE call.
+> **Note:** Retrieve the linked `fsi_agentlifecyclerecord` via the `fsi_AgentLifecycleRecordLookup` lookup to obtain `fsi_entraobjectid` for the DELETE call.
 
 **Error handling:**
 
@@ -1022,7 +1058,7 @@ Log `fsi_eventtype` = `100000012` (Agent Deleted), `fsi_complianceimpact` = `100
 
 ##### Step 3b-vi: Log Compliance Event
 
-Log `fsi_eventtype` = `100000009` (Deactivation Approved), `fsi_complianceimpact` = `100000002` (Medium), with `fsi_eventdetails` = `"Deletion hold extended by 30 days — final deletion rejected"`.
+Log `fsi_eventtype` = `100000018` (Deletion Hold Extended), `fsi_complianceimpact` = `100000002` (Medium), with `fsi_eventdetails` = `"Deletion hold extended by 30 days — final deletion rejected"`.
 
 ---
 
@@ -1044,7 +1080,7 @@ Configure retry policies on all HTTP with Microsoft Entra ID actions:
 }
 ```
 
-The `Retry-After` header from Microsoft Graph is honored automatically by the HTTP connector's exponential backoff.
+Configure retry policies to honor Microsoft Graph throttling guidance; verify connector behavior for `Retry-After` in the target environment.
 
 ### Feature Flag Disabled
 
@@ -1113,7 +1149,7 @@ All flows reference these solution-level environment variables. Schema names are
 | `fsi_ALG_InactivityThresholdZone3` | InactivityThresholdZone3 | Decimal | Days of inactivity before flagging (Zone 3 default: `30`) |
 
 > **Note:** Deletion-hold day counts (default 30, Zone 3 90) are currently hard-coded in Flow 4 Step 6b. To make them configurable, add `fsi_ALG_DeletionHoldDaysDefault` and `fsi_ALG_DeletionHoldDaysZone3` to `scripts/create_alg_environment_variables.py` before referencing them in flows.
-> **Note:** The Graph API version for the agent registry is currently hard-coded as `beta`. To make it configurable, add `fsi_ALG_AgentRegistryApiVersion` to the environment-variables script.
+> **Note:** The Graph API version for the Agent 365 agent registry is currently hard-coded as `beta`; Microsoft Learn documents Agent Registry/Package APIs as beta/preview and includes May 2026 convergence notices. To make it configurable, add `fsi_ALG_AgentRegistryApiVersion` to the environment-variables script.
 
 ---
 
@@ -1144,7 +1180,7 @@ All components should be developed inside a Dataverse solution container for man
 | Display Name | Agent 365 Lifecycle Governance |
 | Unique Name | `fsi_Agent365LifecycleGovernance` |
 | Publisher | FSI Publisher (`fsi`) |
-| Version | `1.1.3.0` |
+| Version | `1.1.4.0` |
 
 ### Components to Include
 

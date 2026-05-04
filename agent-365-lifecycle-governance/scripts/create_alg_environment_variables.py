@@ -17,7 +17,7 @@ ENV_VARIABLES = [
     {
         "schemaname": "fsi_ALG_IsAgent365LifecycleEnabled",
         "displayname": "ALG - Agent 365 Lifecycle Enabled",
-        "description": "Feature flag — gates all Entra Agent 365 API calls. Set false until GA and tenant licensing confirmed.",
+        "description": "Feature flag — gates all Microsoft Agent 365 / Microsoft Entra Agent ID API calls. Set false until tenant licensing and beta Graph API behavior are validated.",
         "type": "String",
         "defaultvalue": "false",
     },
@@ -224,10 +224,24 @@ Examples:
       --environment-url https://org.crm.dynamics.com \\
       --interactive
 
-  # Service Principal authentication
+  # Managed identity authentication (system-assigned)
   python create_alg_environment_variables.py \\
       --tenant-id <tenant-id> \\
       --environment-url https://org.crm.dynamics.com \\
+      --auth-mode managed-identity
+
+  # User-assigned managed identity
+  python create_alg_environment_variables.py \\
+      --tenant-id <tenant-id> \\
+      --environment-url https://org.crm.dynamics.com \\
+      --auth-mode managed-identity \\
+      --client-id <managed-identity-client-id>
+
+  # Legacy dev-only client-secret fallback (ALG_CLIENT_SECRET)
+  python create_alg_environment_variables.py \\
+      --tenant-id <tenant-id> \\
+      --environment-url https://org.crm.dynamics.com \\
+      --auth-mode client-secret \\
       --client-id <app-id>
 
   # Dry run to preview changes
@@ -247,7 +261,7 @@ Examples:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ALG_CLIENT_ID"),
-        help="Service Principal application ID (or ALG_CLIENT_ID env var)"
+        help="Application (client) ID for user-assigned managed identity, workload identity, certificate, interactive, or legacy client-secret auth (or ALG_CLIENT_ID env var)"
     )
     parser.add_argument(
         "--environment-url",
@@ -258,6 +272,22 @@ Examples:
         "--interactive",
         action="store_true",
         help="Use interactive browser authentication"
+    )
+    parser.add_argument(
+        "--auth-mode",
+        choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"],
+        default=os.environ.get("ALG_AUTH_MODE"),
+        help="Authentication mode. Prefer managed-identity, workload-identity, or certificate for automation; client-secret is legacy dev-only."
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("ALG_CERTIFICATE_PATH"),
+        help="Certificate path for certificate auth (or ALG_CERTIFICATE_PATH env var)"
+    )
+    parser.add_argument(
+        "--certificate-password-env",
+        default="ALG_CERTIFICATE_PASSWORD",
+        help="Environment variable containing certificate password"
     )
     parser.add_argument(
         "--dry-run",
@@ -271,12 +301,13 @@ Examples:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Handle client secret for Service Principal auth
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if os.environ.get("ALG_CLIENT_SECRET") else "managed-identity"))
     client_secret = os.environ.get("ALG_CLIENT_SECRET")
-    if not args.interactive and not client_secret:
-        if args.client_id:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    if auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
 
     try:
         # Initialize client
@@ -286,7 +317,10 @@ Examples:
             client_id=args.client_id,
             client_secret=client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=certificate_password,
         )
 
         # Create environment variables
