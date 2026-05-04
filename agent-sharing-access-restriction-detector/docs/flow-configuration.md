@@ -1,7 +1,7 @@
 # Flow Configuration Guide
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v1.0.4
+> **Version:** v2.0.1
 
 This document provides an overview of the two Power Automate cloud flows required by the ASARD solution. For detailed step-by-step build instructions, see the [README](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-sharing-access-restriction-detector/README.md) and the [ASARD Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) in FSI-AgentGov.
 
@@ -18,10 +18,10 @@ This document provides an overview of the two Power Automate cloud flows require
 - Processes agents sequentially (concurrency = 1) with configurable approval timeout (default: 7 days)
 - Queries approved security groups from `fsi_approvedsecuritygrouppolicies` per agent zone
 - Builds remediation plan (principals to remove/add) and sends approval request to governance lead
-- On approval: applies sharing corrections via BAP Admin API PATCH, runs post-remediation validation
+- On approval: applies sharing corrections via Dataverse Web API PATCH to the `bots` table (`accesscontrolpolicy` and `authorizedsecuritygroupids`), runs post-remediation validation
 - On rejection: records rejection with 7-day cooldown to prevent repeated requests
 
-**Known limitation:** The sequential approval loop with 7-day timeouts means >4 agents may exceed Power Automate's 30-day maximum runtime limit. For environments with >4 non-compliant agents, consider a batch approval or child flow pattern.
+**Known limitation:** Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop with 7-day timeouts means more than four agents can exceed this approval wait limit. Keep **Create an approval** and **Wait for an approval** steps close together, and consider a batch approval or child flow pattern for environments with more than four non-compliant agents.
 
 ### 2. Exception Review Workflow
 
@@ -61,9 +61,16 @@ Do not mix the two syntaxes within a single card. See each template's `_metadata
 | Variable | Purpose |
 |----------|---------|
 | `fsi_ASARD_AdaptiveCardTemplateUrl` | URL for adaptive card template hosting (exception review flow loads templates via HTTP GET) |
-| `fsi_ASARD_BAPAdminAPIBaseUrl` | BAP Admin API base URL — override for GCC, GCC-High, or DoD sovereign cloud deployments |
+| `fsi_ASARD_BAPAdminAPIBaseUrl` | BAP Admin API base URL for administrative calls — override for GCC, GCC-High, or DoD sovereign cloud deployments; bot sharing detection/remediation uses the Dataverse Web API `bots` table |
 | `fsi_ASARD_ApprovalTimeoutDays` | Number of days before an unanswered approval request times out (default: 7) |
 | `fsi_ASARD_GovernanceLeadEmail` | Email address for the governance lead who receives approval requests and exception notifications |
+
+## Current Microsoft Learn Sharing Guidance
+
+- Managed Environment agent sharing limits control new **Editor** and **Viewer** sharing assignments; existing access is not removed automatically when limits are configured.
+- **Editor** permissions are individual-only. **Viewer** permissions can be granted to individuals or security groups unless Managed Environment rules restrict security group sharing.
+- ASARD evaluates the Dataverse `bot.accesscontrolpolicy` values (`0` = any tenant user, `1` = Copilot readers, `2` = group membership, `3` = multi-tenant/open) and `authorizedsecuritygroupids` rather than a `sharingtype` column.
+- Power Automate adaptive card data templating is not fully supported in all hosts; use the documented string replacement or templating SDK pipeline per template and validate JSON in the Adaptive Card designer.
 
 ## Related Resources
 

@@ -1,6 +1,6 @@
 # Agent Sharing Access Restriction Detector
 
-> **Version:** v2.0.0
+> **Version:** v2.0.1
 > **Status:** Completed
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
@@ -9,7 +9,7 @@ Continuous detection and restriction of agent sharing configurations exceeding z
 
 ## Overview
 
-The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform environments for Copilot Studio agents shared with unauthorized security groups or users that violate zone-based governance policies. Where UASD detects broad sharing violations (org-wide, public links, cross-tenant), ASARD enforces granular zone-based restrictions — validating that each agent's sharing configuration aligns with approved security group policies for its environment tier.
+The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform environments for Copilot Studio agents shared with unauthorized security groups or users that violate zone-based governance policies. Where UASD detects broad sharing violations (org-wide, public links, cross-tenant), ASARD validates granular zone-based restrictions by checking that each agent's sharing configuration aligns with approved security group policies for its environment tier.
 
 ## Related Controls
 
@@ -22,7 +22,7 @@ The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform en
 
 | Solution | Scope | How They Differ |
 |----------|-------|-----------------|
-| [Unrestricted Agent Sharing Detector (UASD)](../unrestricted-agent-sharing-detector/README.md) | Org-wide sharing, public links, cross-tenant access | UASD detects broad unrestricted sharing; ASARD enforces granular zone-based group policies |
+| [Unrestricted Agent Sharing Detector (UASD)](../unrestricted-agent-sharing-detector/README.md) | Org-wide sharing, public links, cross-tenant access | UASD detects broad unrestricted sharing; ASARD validates granular zone-based group policies |
 
 ## Components
 
@@ -58,15 +58,18 @@ agent-sharing-access-restriction-detector/
 
 ## Platform Update Notes
 
-### Native Agent Sharing Rules (GA May 2025)
+### Managed Environment Agent Sharing Limits (2026-Q2)
 
-Microsoft introduced native admin controls in the Power Platform admin center to [block and limit sharing for Copilot Studio agents](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules-preview). These controls allow administrators to:
+Microsoft Learn documents [agent sharing limits](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) as Managed Environment controls in the Power Platform admin center. Administrators can configure whether makers can grant **Editor** or **Viewer** assignments, restrict viewer sharing to individuals only, and set a maximum viewer count per agent. Microsoft Learn also notes that **Editor** permissions can only be granted to individual users; security groups are supported for **Viewer** assignments only.
 
-- Allow or block makers from sharing agents with individuals or security groups
-- Set numerical limits on viewer sharing per agent
-- Apply rules at the managed environment level or via environment groups
+Operational caveats from Microsoft Learn:
 
-**Relationship to ASARD:** The native sharing rules provide **preventive controls** — they block sharing at the platform level. ASARD provides **zone-specific detective controls** — it validates that each agent's sharing configuration aligns with approved security group policies for its governance zone, manages time-bound exceptions with approval workflows, and generates compliance evidence. FSI organizations should deploy the native sharing rules as the primary enforcement layer and use ASARD for granular zone-based compliance auditing and exception management.
+- Sharing limits are applied when users attempt new sharing changes; they do not remove users or groups that already had access before the rules were configured.
+- Enforcement can take up to one hour after settings are saved.
+- Sharing limits apply to agents that require authentication.
+- Dataverse for Teams environments have a publish-to-Team exception; limits apply when sharing outside the team bound to the environment.
+
+**Relationship to ASARD:** Managed Environment sharing limits provide the preventive control layer. ASARD provides zone-specific detective controls, validates `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` against approved group policy, manages time-bound exceptions with approval workflows, and generates evidence for review. FSI organizations should configure Managed Environment sharing limits as the primary preventive layer and use ASARD for granular zone-based compliance auditing and exception management.
 
 ### M365 Copilot Agent Store (April 2026)
 
@@ -74,7 +77,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 
 - **Agent Store deployments** are managed via the M365 Admin Center (`Agents > All agents`), not through Power Platform environment sharing settings
 - Agents deployed through the Agent Store may be accessible to users who would not have access through environment-level sharing policies
-- Zone-based sharing restrictions enforced by ASARD should be complemented by Agent Store admin policies to prevent policy bypass
+- Zone-based sharing restrictions validated by ASARD should be complemented by Agent Store admin policies to reduce policy bypass risk
 
 > **Note:** ASARD currently validates sharing configurations within Power Platform environments. Agent Store deployment governance is not yet covered by this solution. Organizations should coordinate environment-level sharing policies with M365 Admin Center agent deployment controls.
 
@@ -89,7 +92,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 
 ## Prerequisites
 
-- Microsoft Entra ID app registration with BAP Admin API and Microsoft Graph permissions
+- Microsoft Entra workload identity or app registration with Power Platform admin API, Dataverse Web API, and Microsoft Graph permissions
 - Power Platform Admin (or Entra Global Admin)
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
@@ -123,13 +126,13 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 | Control | Description | Implementation Evidence |
 |---------|-------------|------------------------|
-| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | Remediation approval workflow — Zone-based approved security group enforcement via `fsi_approvedsecuritygrouppolicies` table; BAP Admin API PATCH to replace non-compliant sharing principals (see [flow configuration](docs/flow-configuration.md)) |
+| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | Remediation approval workflow — Zone-based approved security group validation via `fsi_approvedsecuritygrouppolicies`; Dataverse bot-table PATCH updates `accesscontrolpolicy` and `authorizedsecuritygroupids` for approved remediation (see [flow configuration](docs/flow-configuration.md)) |
 | [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | Remediation approval workflow — Governance lead approval required before remediation; zone classification determines allowed security groups; Exception review workflow — Time-bound exceptions with audit trail preservation (see [flow configuration](docs/flow-configuration.md)) |
 
 ## Known Limitations
 
-- **30-day runtime limit**: The sequential approval loop (concurrency=1) with 7-day timeouts means >4 agents will exceed Power Automate's 30-day maximum runtime limit, silently dropping later agents. For environments with >4 non-compliant agents, consider batch approval or a child flow pattern.
-- **Sovereign cloud deployment**: The BAP Admin API base URL is configurable via the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. Override for GCC, GCC-High, or DoD deployments.
+- **28-day approval wait limit**: Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop (concurrency=1) with 7-day timeouts means more than four agents can exceed this limit. For environments with more than four non-compliant agents, consider batch approval or a child flow pattern.
+- **Sovereign cloud deployment**: The BAP Admin API base URL is configurable via the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable for administrative calls. Detection and approved remediation use the Dataverse Web API `bots` table in each environment; validate both endpoint families for GCC, GCC-High, or DoD deployments.
 - **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to prevent repeated approval requests to the same approver. Override by manually resetting `fsi_remediationstatus` in Dataverse.
 - **Adaptive card templates (remediation)**: `adaptive-card-asard-remediation-approval.json` and `adaptive-card-asard-remediation-result.json` are reference templates for external integrations (e.g., custom Power Apps, third-party dashboards). The remediation approval workflow uses inline Markdown for approval and notification messages — these templates are not loaded by the workflow at runtime.
 - **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Ensure the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).

@@ -1,7 +1,7 @@
 # Prerequisites
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v1.0.4
+> **Version:** v2.0.1
 
 ## Required Licenses
 
@@ -15,19 +15,22 @@
 
 | Role | Purpose |
 |------|---------|
-| Power Platform Admin (or Entra Global Admin) | BAP Admin API access for agent enumeration and sharing remediation |
+| Power Platform Admin (or Entra Global Admin) | Power Platform admin cmdlet access for environment enumeration and Managed Environment sharing-limit configuration |
 | Dataverse System Administrator | Creating and managing ASARD Dataverse tables |
 | Teams administrator (or delegated permissions) | Posting adaptive card notifications to Teams channels |
 
-## Entra ID App Registration
+## Microsoft Entra Workload Identity
 
-An Entra ID app registration is required for the detection and remediation scripts:
+Use managed identity or workload identity federation for production automation where available. Certificate-based service principals are the recommended fallback for unattended administrative workstations. Client secrets are a legacy development-only fallback and should not be used for production deployments.
+
+A Microsoft Entra app registration or managed identity is required for the detection and remediation scripts:
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| BAP Admin API — `Environment.Read.All` | Application | Enumerate Power Platform environments and agents |
-| Microsoft Graph — `Group.Read.All` | Application | Resolve security group memberships for zone-based policy evaluation |
-| Microsoft Graph — `User.Read.All` | Application | Resolve individual user sharing principals |
+| Power Platform admin APIs | Application / service principal registration | Enumerate Power Platform environments and Managed Environment sharing settings |
+| Dataverse Web API | Application user or managed identity with table privileges | Read and update Copilot Studio `bot` rows (`accesscontrolpolicy`, `authorizedsecuritygroupids`) and ASARD evidence tables |
+| Microsoft Graph — `Group.Read.All` or `GroupMember.Read.All` | Application | Resolve security group metadata or memberships when validating approved group policies |
+| Microsoft Graph — `User.Read.All` | Application | Resolve individual user sharing principals when workflows include user-level review |
 
 ## Dataverse Tables
 
@@ -58,15 +61,15 @@ Key columns on `fsi_agentsharingcompliance`:
 | Microsoft Dataverse | Read/write compliance records and approved security group policies |
 | Approvals | Governance-gated remediation approval requests |
 | Microsoft Teams | Adaptive card notifications for alerts, approvals, and exception lifecycle |
-| HTTP (Premium) | BAP Admin API calls for agent sharing remediation; adaptive card template loading |
+| HTTP (Premium) | Power Platform admin API calls for Managed Environment settings; adaptive card template loading |
 
 ## Network Requirements
 
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
-| `api.bap.microsoft.com` | HTTPS 443 | BAP Admin API — agent enumeration and sharing management |
+| `api.bap.microsoft.com` | HTTPS 443 | Power Platform admin APIs and Managed Environment sharing-limit configuration |
 | `graph.microsoft.com` | HTTPS 443 | Microsoft Graph — security group and user resolution |
-| `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API — compliance record management |
+| `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API — Copilot Studio `bots` table and compliance record management |
 | Adaptive card template URL | HTTPS 443 | Configurable URL for template hosting (exception review flow) |
 
 > **Sovereign clouds:** Override the BAP Admin API endpoint using the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. See the [flow configuration guide](flow-configuration.md) for details.
@@ -83,5 +86,5 @@ The supporting scripts in the companion FSI-AgentGov repository require:
 Install with:
 
 ```bash
-pip install msal requests azure-identity
+pip install -r scripts/requirements.txt
 ```
