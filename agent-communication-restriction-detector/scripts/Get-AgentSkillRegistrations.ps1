@@ -15,12 +15,13 @@
 
 .NOTES
     File: Get-AgentSkillRegistrations.ps1
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
 
-#Requires -Version 7.0
+#Requires -Version 5.1
+#Requires -PSEdition Desktop
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Get-AgentSkillRegistrations {
@@ -275,12 +276,20 @@ function Get-AgentSkillRegistrations {
                                 $skillEntry.ManifestUrl = $Matches[1]
                             }
 
-                            # Look for target bot/agent ID references
+                            # Look for target bot/agent ID references. Current Copilot
+                            # Studio connected-agent schema often stores the called agent
+                            # by schema name rather than GUID.
                             if ($contentStr -match '"targetBotId"\s*:\s*"([^"]+)"') {
                                 $skillEntry.TargetAgentId = $Matches[1]
                             } elseif ($contentStr -match '"skillBotId"\s*:\s*"([^"]+)"') {
                                 $skillEntry.TargetAgentId = $Matches[1]
                             } elseif ($contentStr -match '"botId"\s*:\s*"([^"]+)"' -and $Matches[1] -ne $Bot.botid) {
+                                $skillEntry.TargetAgentId = $Matches[1]
+                            } elseif ($contentStr -match '"botSchemaName"\s*:\s*"([^"]+)"') {
+                                $skillEntry.TargetAgentId = $Matches[1]
+                            } elseif ($contentStr -match '"connectedAgentSchemaName"\s*:\s*"([^"]+)"') {
+                                $skillEntry.TargetAgentId = $Matches[1]
+                            } elseif ($contentStr -match '"agentSchemaName"\s*:\s*"([^"]+)"') {
                                 $skillEntry.TargetAgentId = $Matches[1]
                             }
 

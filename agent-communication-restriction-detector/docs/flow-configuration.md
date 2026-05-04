@@ -16,9 +16,9 @@ This guide covers two flows:
 Before creating the flows, confirm you have:
 
 - [ ] **Azure Automation Account** with:
-  - `Start-CommRestrictionValidationRunbook.ps1` imported as a PowerShell 7.2 runbook
+  - `Start-CommRestrictionValidationRunbook.ps1` imported as a Windows PowerShell 5.1 runbook
   - Certificate uploaded (Certificates blade)
-  - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
+  - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell, Az.Accounts
   - Application permissions granted as required by Power Platform admin APIs
 - [ ] **Dataverse environment** with ACRD schema deployed:
   - 5 tables: `fsi_CommScanRun`, `fsi_AgentCommViolation`, `fsi_ApprovedCommRoute`, `fsi_CommException`, `fsi_AgentSkillRegistration`
@@ -439,4 +439,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Agent Communication Restriction Detector -- Flow Setup Guide v1.1.0*
+*Agent Communication Restriction Detector -- Flow Setup Guide v1.1.1*

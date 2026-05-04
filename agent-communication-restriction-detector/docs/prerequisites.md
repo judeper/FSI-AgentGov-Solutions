@@ -6,7 +6,7 @@ Requirements for deploying the Agent Communication Restriction Detector (ACRD) s
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.0+ | Core runtime |
+| Windows PowerShell | 5.1 | Required for Microsoft.PowerApps.Administration.PowerShell environment enumeration |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
 | MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
@@ -28,6 +28,7 @@ pip install -r scripts/requirements.txt
 ## Installation
 
 ```powershell
+# Run these commands in Windows PowerShell 5.1 (powershell.exe), not pwsh.
 # Install Power Platform Admin module
 Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force -Scope CurrentUser
 
@@ -95,7 +96,7 @@ To query bot, botcomponent, and skill registration records, the executing identi
 For non-interactive automation:
 
 1. Register an app in Entra ID (see above)
-2. Create a client secret or certificate
+2. Create a certificate (recommended for automation) or a client secret for dev-only fallback
 3. Add the app as an application user in each Dataverse environment
 4. Grant appropriate security roles
 
@@ -104,9 +105,9 @@ For non-interactive automation:
 For scheduled daily scans via Power Automate:
 
 1. Create an Azure Automation account (or reuse an existing governance account)
-2. Import the `Start-CommRestrictionValidationRunbook.ps1` as a PowerShell 7.2 runbook
+2. Import the `Start-CommRestrictionValidationRunbook.ps1` as a Windows PowerShell 5.1 runbook
 3. Upload the authentication certificate to the Certificates blade
-4. Install required modules: `MSAL.PS`, `Microsoft.PowerApps.Administration.PowerShell`, `Az.Accounts` (the runbook uses MSAL.PS for cert-based Dataverse auth, the admin module for environment enumeration, and Az.Accounts is required transitively by `ACRDClient.psm1` if any helper is dot-sourced)
+4. Install required modules in the Automation account: `MSAL.PS`, `Microsoft.PowerApps.Administration.PowerShell`, `Az.Accounts` (Microsoft Learn currently documents the Power Platform admin module for Windows PowerShell 5.x; the runbook uses MSAL.PS for certificate-based Dataverse auth, the admin module for environment enumeration, and Az.Accounts for Dataverse helper auth)
 5. Configure runbook parameters (tenant ID, client ID, certificate thumbprint, Dataverse URL)
 
 ## Network Requirements

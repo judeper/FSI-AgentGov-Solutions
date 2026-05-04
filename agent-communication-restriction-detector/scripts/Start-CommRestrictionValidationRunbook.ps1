@@ -1,4 +1,5 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
+#Requires -PSEdition Desktop
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -91,7 +92,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 
