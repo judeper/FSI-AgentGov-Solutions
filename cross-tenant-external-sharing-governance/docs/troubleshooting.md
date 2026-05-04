@@ -18,12 +18,12 @@
 
 **Symptom:** Flow run completes immediately without processing, showing "Feature flag disabled" in run history.
 
-**Cause:** The `IsCrossTenantGovernanceEnabled` environment variable is set to `"false"`. This is intentional during initial deployment to allow schema and permission validation before activating governance flows.
+**Cause:** The `fsi_CTSG_IsCrossTenantGovernanceEnabled` environment variable is set to `"false"`. This is intentional during initial deployment to allow schema and permission validation before activating governance flows.
 
 **Resolution:**
 1. Verify all prerequisites are met (see [Prerequisites](prerequisites.md))
 2. Confirm Managed Identity permissions are propagated
-3. Set `IsCrossTenantGovernanceEnabled` to `"true"` in the Power Platform environment variables
+3. Set `fsi_CTSG_IsCrossTenantGovernanceEnabled` to `"true"` in the Power Platform environment variables
 4. Trigger a test run of each flow to validate end-to-end processing
 
 ### Guest User Domain Resolution Failed (Unresolved)

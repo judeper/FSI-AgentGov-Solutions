@@ -9,7 +9,7 @@
     Scans all three governance layers (Power Platform Tenant Isolation, Entra CTA,
     Guest Users) to establish baseline state. Run this script and populate
     fsi_approvedexternaltenant for all identified tenants BEFORE setting
-    IsCrossTenantGovernanceEnabled to "true". Activating flows against an empty
+    fsi_CTSG_IsCrossTenantGovernanceEnabled to "true". Activating flows against an empty
     registry generates false positives for every existing cross-tenant relationship.
 
     Authentication: System-Assigned Managed Identity (MI-CrossTenantReadOnly) only.
@@ -81,7 +81,7 @@ $baselineTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ
 # =============================================================================
 Write-Host "`n--- Layer 1: Power Platform Tenant Isolation ---" -ForegroundColor Yellow
 Write-Warning "DELIVERY-CHECKLIST: Confirm API endpoint and response schema before activating Flow 1."
-Write-Warning "Expected property: tenantIsolationEnabled. Confirm against actual API response."
+Write-Warning "Validate tenant isolation with Get-PowerAppTenantIsolationPolicy first; confirm any automated response shape against the delivery checklist."
 
 $layer1Result = @{
     IsolationEnabled = $null
@@ -164,7 +164,7 @@ try {
 } catch {
     $layer1Result.Errors += "CrossTenantPolicies API failed: $($_.Exception.Message)"
     Write-Warning "API 2 failed: $($_.Exception.Message)"
-    Write-Warning "Validate: https://api.powerplatform.com/governance/crossTenantPolicies"
+    Write-Warning "Validate tenant isolation policy with Get-PowerAppTenantIsolationPolicy and PPAC; confirm any automation endpoint before use"
     [void]$deliveryChecklistItems.Add("Layer1-CrossTenantPoliciesAPI: Validate endpoint accessibility for Managed Identity")
 }
 
@@ -472,13 +472,13 @@ if ($allDiscoveredTenants.Count -gt 0) {
 # Delivery Checklist Items (always include baseline items)
 # =============================================================================
 $standardChecklistItems = @(
-    "Confirm Power Platform tenantSettings API property name for isolation flag"
-    "Confirm crossTenantPolicies API response schema (value array structure)"
+    "Confirm Get-PowerAppTenantIsolationPolicy output property name for isolation state"
+    "Confirm tenant isolation allow-list/rules response schema"
     "Confirm Graph API partner CTA endpoint response schema"
     "Verify Managed Identity has Policy.Read.All and User.Read.All Graph permissions"
     "Verify Managed Identity has Power Platform governance reader permissions"
     "Populate fsi_approvedexternaltenant with all discovered tenants BEFORE enabling flows"
-    "Set IsCrossTenantGovernanceEnabled environment variable to 'true' only after baseline review"
+    "Set fsi_CTSG_IsCrossTenantGovernanceEnabled environment variable to 'true' only after baseline review"
     "Confirm OptionSet integer values match deployed solution XML for all status/severity fields"
 )
 
@@ -549,5 +549,5 @@ Write-Warning "NEXT STEPS:"
 Write-Warning "  1. Review baseline JSON: $OutputPath"
 Write-Warning "  2. Register all discovered tenants in fsi_approvedexternaltenant"
 Write-Warning "  3. Confirm API schemas in DELIVERY-CHECKLIST.md"
-Write-Warning "  4. Set IsCrossTenantGovernanceEnabled to 'true' ONLY after completing steps 1-3"
+Write-Warning "  4. Set fsi_CTSG_IsCrossTenantGovernanceEnabled to 'true' ONLY after completing steps 1-3"
 Write-Host "`n  Baseline audit: COMPLETE" -ForegroundColor Green

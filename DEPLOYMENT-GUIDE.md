@@ -96,7 +96,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Compliance Dashboard](./compliance-dashboard/) | 3 | v1.0.3 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.0 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
-| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.2 | enterprise |
+| [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.3 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.2 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |

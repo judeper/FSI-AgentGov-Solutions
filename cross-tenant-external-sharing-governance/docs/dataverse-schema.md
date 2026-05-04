@@ -43,9 +43,9 @@
 
 | SchemaName | Logical Name | Type | Required | Description | Option Set |
 |---|---|---|---|---|---|
-| fsi_AgentId | fsi_agentid | String(100) | Yes | Power Platform Bot ID |  |
-| fsi_AgentName | fsi_agentname | String(500) | Yes | Display name from agent registry |  |
-| fsi_EnvironmentId | fsi_environmentid | String(100) | Yes | Power Platform environment ID |  |
+| fsi_AgentId | fsi_agentid | String(100) | No | Power Platform Bot ID (Layer 3 only; null for tenant-level findings) |  |
+| fsi_AgentName | fsi_agentname | String(500) | No | Display name from agent registry (Layer 3 only) |  |
+| fsi_EnvironmentId | fsi_environmentid | String(100) | No | Power Platform environment ID (Layer 3 only) |  |
 | fsi_ExternalTenantTenantId | fsi_externaltenanttenantid | String(100) | Yes | Tenant ID — populated even if not in registry |  |
 | fsi_ExternalTenantName | fsi_externaltenantname | String(500) | No | Resolved via API |  |
 | fsi_ExternalUserUpn | fsi_externaluserupn | String(500) | No | Layer 3 findings only |  |
@@ -245,6 +245,10 @@
 | Remediation Approved | 14 |
 | Remediation Rejected | 15 |
 | API Schema Validation Failed | 16 |
+| Feature Flag Skip | 17 |
+| Flow Error | 18 |
+| Duplicate Remediation Skipped | 19 |
+| Critical Finding Manual Remediation Required | 20 |
 
 ### `fsi_ctsg_complianceimpact`
 
@@ -261,7 +265,6 @@
 | Key Name | Table | Columns |
 |---|---|---|
 | fsi_TenantIdUniqueKey | fsi_approvedexternaltenant | `fsi_tenantid` |
-| fsi_FindingDeduplicationKey | fsi_externalsharefinding | `fsi_agentid`, `fsi_externaltenanttenantid`, `fsi_findingtype` |
 
 ## Post-Deployment Steps
 

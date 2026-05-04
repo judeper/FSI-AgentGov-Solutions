@@ -1,7 +1,7 @@
 id: cross-tenant-external-sharing-governance
 name: Cross-Tenant External Sharing Governance
 description: Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments.
-version: 1.0.2
+version: 1.0.3
 status: live
 domain: access-identity
 tier: '2'
@@ -10,7 +10,7 @@ controls:
 - '1.18'
 - '2.1'
 - '2.8'
-- '3.1'
+- '1.7'
 - '1.11'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/cross-tenant-external-sharing-governance/
 prerequisites:

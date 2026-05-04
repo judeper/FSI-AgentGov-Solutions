@@ -4,6 +4,16 @@ All notable changes to the Cross-Tenant External Sharing Governance solution.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Refreshed Microsoft Learn-aligned guidance for Power Platform tenant isolation, replacing stale preview governance-path flow/checklist references with PPAC and `Get-PowerAppTenantIsolationPolicy` / `Set-PowerAppTenantIsolationPolicy` validation guidance.
+- Updated Entra CTA flow guidance to evaluate Microsoft Graph v1.0 default and partner configuration shape using `usersAndGroups.accessType`, `applications.accessType`, `inboundTrust`, `automaticUserConsentSettings`, and tenant restrictions fields.
+- Corrected solution version and control metadata drift (`1.7` instead of stale `3.1`), regenerated Dataverse schema documentation, and aligned Adaptive Card/event-type references with the schema script.
+- Corrected Flow 6 Dataverse logical name references from `fsi_externaltenantid` to `fsi_externaltenanttenantid`.
+- Marked client-secret authentication paths as legacy development fallback guidance and kept managed identity / interactive authentication as the recommended path.
+
 ## [1.0.2] - 2026-04-17
 
 ### Fixed (AI Council technical-accuracy review)

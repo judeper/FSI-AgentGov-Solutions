@@ -1,5 +1,5 @@
 {
-  "_comment": "Adaptive Card v1.2 templates for Cross-Tenant External Sharing Governance Teams notifications. All cards use Action.Submit for compatibility with Power Automate approval flows.",
+  "_comment": "Adaptive Card v1.3 templates for Cross-Tenant External Sharing Governance Teams notifications. All cards use Action.Submit for compatibility with Power Automate approval flows.",
 
   "dailyScanSummary": {
     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",

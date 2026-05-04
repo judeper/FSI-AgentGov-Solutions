@@ -38,6 +38,11 @@ Used by: Flow 4, Flow 5 only
 
 > **IAM Note:** `Policy.ReadWrite.CrossTenantAccess` is a highly privileged Graph permission that may require Entra Global Admin approval in FSI tenants. If approval is delayed, Flows 4 and 5 can operate in manual-instruction-only mode.
 
+## Required PowerShell Modules
+
+- `Microsoft.PowerApps.Administration.PowerShell` for `Get-PowerAppTenantIsolationPolicy` and `Set-PowerAppTenantIsolationPolicy` tenant isolation validation.
+- `Microsoft.Graph` modules are optional when administrators prefer SDK cmdlets over direct Microsoft Graph HTTP calls for B2B invitation and CTA review tasks.
+
 ## Required Entra Roles
 
 The human operators (not the Managed Identities) require the following Entra roles for the deployment and operation activities described in this solution:
@@ -114,4 +119,5 @@ If any call returns `403 Forbidden`, verify that the app role assignments have p
 
 - Access to `https://graph.microsoft.com`
 - Access to `https://api.powerplatform.com`
+- Access to `https://api.bap.microsoft.com` if your validated tenant-isolation automation uses the Business Application Platform API behind the PowerApps Administration cmdlets
 - Access to Dataverse environment URL
