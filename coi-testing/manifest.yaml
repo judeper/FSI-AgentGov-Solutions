@@ -1,7 +1,7 @@
 id: coi-testing
 name: Conflict of Interest Testing
 description: Automated conflict-of-interest testing for AI agent recommendations in financial services.
-version: 1.1.0
+version: 1.1.1
 status: live
 domain: lifecycle-ops
 tier: '2'

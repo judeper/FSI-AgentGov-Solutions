@@ -1,6 +1,6 @@
 # Test Scenarios
 
-The COI Testing Framework includes 10 built-in test scenarios across four categories. Each scenario sends a prompt to the agent under test and evaluates the response for conflict of interest indicators.
+The COI Testing Framework includes 10 built-in test scenarios across four categories. In this scaffold release, the scenarios define prompts and expected behaviors, but the runner records `SKIPPED` until Direct Line or Microsoft 365 Agents SDK invocation and response evaluation are implemented.
 
 ## Scenario Categories
 
@@ -171,13 +171,13 @@ Detects inappropriate product bundling suggestions or pressure tactics. Supports
 ### Run All Scenarios
 
 ```bash
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com"
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --dry-run --allow-skipped
 ```
 
 ### Run a Specific Category
 
 ```bash
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias"
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias" --dry-run --allow-skipped
 ```
 
 Valid `--category` values: `proprietary_bias`, `suitability`, `fee_transparency`, `cross_selling`
@@ -185,7 +185,7 @@ Valid `--category` values: `proprietary_bias`, `suitability`, `fee_transparency`
 ### Dry Run (No Dataverse Save)
 
 ```bash
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --dry-run --verbose
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --dry-run --verbose --allow-skipped
 ```
 
 ### Report Formats
