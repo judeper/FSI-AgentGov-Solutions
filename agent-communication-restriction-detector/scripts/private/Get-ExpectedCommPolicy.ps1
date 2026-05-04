@@ -38,11 +38,11 @@
 .NOTES
     File: Get-ExpectedCommPolicy.ps1
     Version: 1.1.0
-    Requires: PowerShell 7.0+
+    Requires: Windows PowerShell 5.1+
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
 
-#requires -Version 7.0
+#Requires -Version 5.1
 
 [CmdletBinding()]
 param(

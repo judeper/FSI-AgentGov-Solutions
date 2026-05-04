@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 # MSAL.PS is used for Dataverse authentication but is deprecated.
 # Microsoft recommends migrating to the Azure.Identity module.
 # See: https://github.com/AzureAD/MSAL.PS/issues/100
@@ -122,7 +122,7 @@
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Requires:
-    - PowerShell 7.0 or later
+    - Windows PowerShell 5.1 or later
     - MSAL.PS module for Dataverse authentication
     - ACRD Dataverse schema deployed (fsi_commscanrun,
       fsi_agentcommviolations, fsi_approvedcommroutes, fsi_commexceptions tables)

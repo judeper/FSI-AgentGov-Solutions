@@ -7,7 +7,7 @@ Detects unauthorized agent-to-agent communication patterns, zone boundary violat
 | Property | Value |
 |----------|-------|
 | Status | Released |
-| Version | 1.1.0 |
+| Version | 1.1.1 |
 | Primary Control | [2.17 -- Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) |
 | Regulatory Context | FINRA 3110, GLBA 501(b), SOX 404 |
 
@@ -42,7 +42,7 @@ Each governance zone defines which agent-to-agent communication patterns are per
 
 | Feature | Description |
 |---------|-------------|
-| **Per-Agent Skill Scanning** | Scans each Copilot Studio agent's registered skills and invocation targets individually |
+| **Per-Agent Skill Scanning** | Scans each Copilot Studio agent's registered skills and connected-agent schema references individually |
 | **Zone-to-Zone Route Validation** | Validates agent communication routes against zone-specific governance policies |
 | **Cross-Environment Detection** | Detects agent-to-agent communication that crosses Power Platform environment boundaries |
 | **Maker/Checker Enforcement** | Validates that skill registrations follow maker/checker separation requirements |
@@ -105,7 +105,7 @@ python scripts/deploy.py --interactive --dry-run \
     -DataverseUrl "https://org.crm.dynamics.com" `
     -Interactive
 
-# 4. Run compliance scan (dry-run first)
+# 4. Run compliance scan (dry-run first; use Windows PowerShell 5.1 for the Power Platform admin module)
 . .\scripts\Test-CommRestrictionCompliance.ps1
 Test-CommRestrictionCompliance -ExcludeSandbox -WhatIf
 

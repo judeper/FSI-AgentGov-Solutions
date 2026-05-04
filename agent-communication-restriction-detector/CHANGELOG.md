@@ -2,6 +2,13 @@
 
 All notable changes to the Agent Communication Restriction Detector are documented in this file.
 
+## [1.1.1] - 2026-05-04
+
+### Fixed
+- Aligned scan and runbook PowerShell requirements with Microsoft Learn guidance that `Microsoft.PowerApps.Administration.PowerShell` uses Windows PowerShell 5.x rather than PowerShell 7.x.
+- Added connected-agent schema-name extraction for current Copilot Studio `InvokeConnectedAgentTaskAction` and `ConnectedAgentDefinition` YAML patterns.
+- Updated flow prerequisites to include `Az.Accounts` and to document Windows PowerShell 5.1 runbook deployment for the Power Platform admin module.
+
 ## [1.1.0] - 2026-04-17
 
 ### Breaking

@@ -15,12 +15,12 @@
 
 .NOTES
     Module: ACRDClient.psm1
-    Version: 1.1.0
-    Requires: PowerShell 7.0+, Az.Accounts >= 2.0.0
+    Version: 1.1.1
+    Requires: Windows PowerShell 5.1+, Az.Accounts >= 2.0.0
     Author: FSI Agent Governance Team
 #>
 
-#requires -Version 7.0
+#Requires -Version 5.1
 #requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.0.0' }
 
 #region Module Variables

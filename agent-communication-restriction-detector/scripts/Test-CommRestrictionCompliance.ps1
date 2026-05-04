@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-CommRestrictionCompliance.ps1
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -30,7 +30,8 @@
     Part of FSI Agent Governance Framework
 #>
 
-#Requires -Version 7.0
+#Requires -Version 5.1
+#Requires -PSEdition Desktop
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Test-CommRestrictionCompliance {
