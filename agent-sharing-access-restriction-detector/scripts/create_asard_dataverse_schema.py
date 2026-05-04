@@ -779,6 +779,7 @@ Examples:
             "--client-id is required (or set ASARD_CLIENT_ID env var) unless --interactive is specified"
         )
 
+    # legacy: dev-only — replace with managed identity in production.
     client_secret = os.environ.get("ASARD_CLIENT_SECRET")
     if not args.interactive:
         if not client_secret:

@@ -2,6 +2,14 @@
 
 All notable changes to the Agent Sharing Access Restriction Detector are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- Critical: `Invoke-SharingComplianceScan.ps1` now evaluates Copilot Studio agent sharing from the Dataverse `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` columns instead of the non-current `sharingtype` field and unsupported `Get-AdminPowerAppRoleAssignment -ResourceType/-ResourceId` parameters.
+- High: Bot query failures now surface as `SCAN_COVERAGE_GAP` findings instead of being silently skipped and reported as clean scans.
+- Medium: Documentation refreshed for 2026-Q2 Microsoft Learn guidance covering Managed Environment agent sharing limits, Editor/Viewer role behavior, the 28-day approval wait caveat, and managed-identity-first authentication language.
+
 ## [2.0.0] — 2026-04-30
 
 ### BREAKING

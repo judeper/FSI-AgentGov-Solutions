@@ -173,7 +173,8 @@ Examples:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Handle client secret for Service Principal auth
+    # legacy: dev-only — replace with managed identity in production.
+    # Handle client secret for service principal auth when no stronger credential is available.
     client_secret = os.environ.get("ASARD_CLIENT_SECRET")
     if not args.interactive and not client_secret:
         if args.client_id:

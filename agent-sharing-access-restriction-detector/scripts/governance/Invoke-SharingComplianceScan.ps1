@@ -8,11 +8,11 @@
     sharing configuration against zone-specific governance policies.
 
     For each agent, the script:
-    1. Authenticates to Power Platform Admin API via service principal
+    1. Authenticates to Power Platform admin cmdlets via service principal
     2. Enumerates environments (with optional sandbox/trial exclusion)
     3. Determines governance zone per environment naming convention or Dataverse lookup
-    4. Queries agents via BAP Admin API (/api/data/v9.2/bots)
-    5. Extracts sharing configuration (sharingtype: 0=SpecificUsers, 1=OrgWide, 2=Public)
+    4. Queries Copilot Studio agents via the Dataverse Web API (/api/data/v9.2/bots)
+    5. Extracts sharing configuration from accesscontrolpolicy and authorizedsecuritygroupids
     6. Loads approved security groups for the zone
     7. Compares actual sharing against zone policy:
        - Zone 1: Any group/org-wide/public sharing = NonCompliant
@@ -22,7 +22,7 @@
     8. Optionally persists results to Dataverse fsi_agentsharingcompliances table
     9. Outputs results in the specified format
 
-    Where UASD detects broad unrestricted sharing, ASARD enforces granular zone-based
+    Where UASD detects broad unrestricted sharing, ASARD validates granular zone-based
     group policies per Controls 1.18 and 2.8.
 
 .PARAMETER TenantId
@@ -33,7 +33,9 @@
 
 .PARAMETER ClientSecret
     Service principal client secret as SecureString. If not provided, attempts to
-    read from $env:AZURE_CLIENT_SECRET.
+    read from $env:AZURE_CLIENT_SECRET. This is a legacy development fallback;
+    prefer managed identity, workload identity federation, or certificate-based
+    service principal authentication for production automation.
 
 .PARAMETER EnvironmentFilter
     Optional list of environment display names or IDs to limit the scan scope.
@@ -77,7 +79,7 @@
 
 .NOTES
     File: Invoke-SharingComplianceScan.ps1
-    Version: 1.0.4
+    Version: 2.0.1
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -129,7 +131,7 @@ function Invoke-SharingComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Sharing Access Restriction Detector v1.0.4"
+    Write-Verbose "Agent Sharing Access Restriction Detector v2.0.1"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -146,7 +148,7 @@ function Invoke-SharingComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Agent Sharing Access Restriction Detector v1.0.4" -ForegroundColor Cyan
+    Write-Host "Agent Sharing Access Restriction Detector v2.0.1" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -158,7 +160,8 @@ function Invoke-SharingComplianceScan {
         throw "ClientId is required. Set -ClientId or `$env:AZURE_CLIENT_ID."
     }
 
-    # Resolve client secret
+    # legacy: dev-only — replace with managed identity in production.
+    # Resolve client secret for environments that do not yet support stronger unattended credentials.
     $plainSecret = $null
     if ($ClientSecret) {
         $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR(
@@ -172,7 +175,7 @@ function Invoke-SharingComplianceScan {
         throw "ClientSecret is required. Set -ClientSecret or `$env:AZURE_CLIENT_SECRET."
     }
 
-    # Acquire token for Dataverse scope
+    # Acquire token for the Power Platform admin scope.
     $tokenBody = @{
         grant_type    = 'client_credentials'
         client_id     = $ClientId
@@ -224,13 +227,13 @@ function Invoke-SharingComplianceScan {
     #region Authenticate PowerApps Admin Module
 
     # The Microsoft.PowerApps.Administration.PowerShell module is used for
-    # environment enumeration AND for sharing-principal lookup
-    # (Get-AdminPowerAppRoleAssignment is the only API that returns Entra group
-    # object IDs for Copilot Studio agent shares; the Dataverse
-    # botcomponentroleassociations table only stores Dataverse security role
-    # GUIDs, not Entra group IDs). The module's cmdlets require a separate
-    # session login via Add-PowerAppsAccount — the OAuth token above is for
-    # raw REST calls and does not authenticate the cmdlet session.
+    # environment enumeration. Bot sharing posture is read from the Dataverse
+    # bot table because Microsoft Learn documents Get-AdminPowerAppRoleAssignment
+    # for Power Apps only; the module does not publish bot-specific sharing
+    # cmdlets such as Set-AdminBotPermissions or Get-AdminBotShare. The module's
+    # cmdlets require a separate session login via Add-PowerAppsAccount — the
+    # OAuth token above is for raw REST calls and does not authenticate the
+    # cmdlet session.
     try {
         $secureSecret = ConvertTo-SecureString $plainSecret -AsPlainText -Force
         Add-PowerAppsAccount -TenantID $TenantId -ApplicationId $ClientId -ClientSecret $secureSecret -Endpoint prod -ErrorAction Stop | Out-Null
@@ -368,7 +371,7 @@ function Invoke-SharingComplianceScan {
             [string[]]$ApprovedGroupIds
         )
 
-        # sharingtype: 0=SpecificUsers, 1=OrgWide, 2=Public
+        # Internal ASARD mapping: 0=SpecificUsers/GroupMembership, 1=OrgWide, 2=Public/Unknown.
         if ($SharingType -eq 2) {
             return 'PublicSharing'
         }
@@ -425,6 +428,83 @@ function Invoke-SharingComplianceScan {
         }
     }
 
+    function ConvertTo-AuthorizedSecurityGroupIds {
+        param([object]$AuthorizedSecurityGroupIds)
+
+        if ($null -eq $AuthorizedSecurityGroupIds) { return @() }
+
+        $rawIds = if ($AuthorizedSecurityGroupIds -is [System.Array]) {
+            $AuthorizedSecurityGroupIds
+        }
+        else {
+            $rawText = ([string]$AuthorizedSecurityGroupIds).Trim()
+            if ($rawText.StartsWith('[')) {
+                try {
+                    @($rawText | ConvertFrom-Json -ErrorAction Stop)
+                }
+                catch {
+                    $rawText -split '[,;]'
+                }
+            }
+            else {
+                $rawText -split '[,;]'
+            }
+        }
+
+        return @(
+            $rawIds |
+                ForEach-Object { ([string]$_).Trim().Trim('"', '[', ']') } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        )
+    }
+
+    function Get-AgentSharingClassification {
+        param([object]$AccessControlPolicy)
+
+        [int]$policyCode = -1
+        if ($null -ne $AccessControlPolicy) {
+            [void][int]::TryParse([string]$AccessControlPolicy, [ref]$policyCode)
+        }
+
+        switch ($policyCode) {
+            0 {
+                return [PSCustomObject]@{
+                    SharingType       = 1
+                    SharingLabel      = 'OrgWide'
+                    IsGroupMembership = $false
+                }
+            }
+            1 {
+                return [PSCustomObject]@{
+                    SharingType       = 0
+                    SharingLabel      = 'SpecificUsers'
+                    IsGroupMembership = $false
+                }
+            }
+            2 {
+                return [PSCustomObject]@{
+                    SharingType       = 0
+                    SharingLabel      = 'GroupMembership'
+                    IsGroupMembership = $true
+                }
+            }
+            3 {
+                return [PSCustomObject]@{
+                    SharingType       = 2
+                    SharingLabel      = 'Public'
+                    IsGroupMembership = $false
+                }
+            }
+            default {
+                return [PSCustomObject]@{
+                    SharingType       = 2
+                    SharingLabel      = 'Unknown'
+                    IsGroupMembership = $false
+                }
+            }
+        }
+    }
+
     #endregion
 
     #region Scan Agents Across Environments
@@ -475,15 +555,35 @@ function Invoke-SharingComplianceScan {
                 $envDataverseToken = $envTokenResponse.access_token
             }
             catch {
-                Write-Warning "Could not acquire token for $envOrgUrl - skipping environment: $_"
+                $errMsg = $_.Exception.Message
+                Write-Warning "Could not acquire token for $envOrgUrl - skipping environment: $errMsg"
+                Write-Warning "  Recording SCAN_COVERAGE_GAP so missing telemetry is not reported as compliant."
+                $violations.Add([PSCustomObject]@{
+                    RunId             = $runId
+                    EnvironmentId     = $envId
+                    EnvironmentName   = $envName
+                    AgentId           = "SCAN_COVERAGE_GAP-$envId"
+                    AgentName         = 'Scan coverage gap'
+                    Zone              = $zone
+                    SharingType       = -1
+                    SharingLabel      = 'Unknown'
+                    SharedGroupIds    = '[]'
+                    ViolationType     = 'SCAN_COVERAGE_GAP'
+                    Severity          = 'High'
+                    RegulatoryContext = 'Coverage gap — scanner could not query Copilot Studio bots in this environment.'
+                    DetectedAt        = $scanStartTime
+                    Details           = "TokenAcquisitionFailed: $errMsg"
+                })
                 continue
             }
         }
 
-        # Query bots in this environment
+        # Query bots in this environment. Per Microsoft Learn, the Copilot Studio
+        # bot table exposes accesscontrolpolicy and authorizedsecuritygroupids for
+        # sharing posture; the older sharingtype assumption is not current.
         try {
             $botApiUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/bots"
-            $selectCols = 'botid,name,statecode,sharingtype,createdon'
+            $selectCols = 'botid,name,statecode,accesscontrolpolicy,authorizedsecuritygroupids,createdon'
             $botHeaders = @{
                 'Authorization'    = "Bearer $envDataverseToken"
                 'Accept'           = 'application/json'
@@ -503,7 +603,25 @@ function Invoke-SharingComplianceScan {
             }
         }
         catch {
-            Write-Warning "  Could not query bots in $envName`: $($_.Exception.Message)"
+            $errMsg = $_.Exception.Message
+            Write-Warning "  Could not query bots in $envName`: $errMsg"
+            Write-Warning "  Recording SCAN_COVERAGE_GAP so missing telemetry is not reported as compliant."
+            $violations.Add([PSCustomObject]@{
+                RunId             = $runId
+                EnvironmentId     = $envId
+                EnvironmentName   = $envName
+                AgentId           = "SCAN_COVERAGE_GAP-$envId"
+                AgentName         = 'Scan coverage gap'
+                Zone              = $zone
+                SharingType       = -1
+                SharingLabel      = 'Unknown'
+                SharedGroupIds    = '[]'
+                ViolationType     = 'SCAN_COVERAGE_GAP'
+                Severity          = 'High'
+                RegulatoryContext = 'Coverage gap — scanner could not query Copilot Studio bots in this environment.'
+                DetectedAt        = $scanStartTime
+                Details           = "ScanFailed: $errMsg"
+            })
             continue
         }
 
@@ -513,26 +631,15 @@ function Invoke-SharingComplianceScan {
         foreach ($bot in $bots) {
             $agentId   = if ($bot.botid) { $bot.botid } else { 'unknown' }
             $agentName = if ($bot.name) { $bot.name } else { 'Unknown Agent' }
-            $sharingType = $bot.sharingtype
 
-            # Enumerate sharing principals via Get-AdminPowerAppRoleAssignment.
-            # This cmdlet is the only supported source that returns Entra group
-            # object IDs (PrincipalType = 'Group', PrincipalObjectId = group
-            # objectId) for Copilot Studio agents. The Dataverse
-            # `botcomponentroleassociations` table only contains Dataverse
-            # security role GUIDs, which can never match `fsi_securitygroupid`
-            # (declared as an Entra object ID in the schema).
-            $sharedGroupIds = @()
-            try {
-                $shareAssignments = Get-AdminPowerAppRoleAssignment -EnvironmentName $envId -ResourceType "Bot" -ResourceId $agentId -ErrorAction Stop
-                $sharedGroupIds = @(
-                    $shareAssignments |
-                        Where-Object { $_.PrincipalType -eq 'Group' -and $_.PrincipalObjectId } |
-                        ForEach-Object { $_.PrincipalObjectId }
-                )
+            $sharingClassification = Get-AgentSharingClassification -AccessControlPolicy $bot.accesscontrolpolicy
+            $sharingType  = [int]$sharingClassification.SharingType
+            $sharingLabel = [string]$sharingClassification.SharingLabel
+            $sharedGroupIds = if ($sharingClassification.IsGroupMembership) {
+                ConvertTo-AuthorizedSecurityGroupIds -AuthorizedSecurityGroupIds $bot.authorizedsecuritygroupids
             }
-            catch {
-                Write-Verbose "  Could not enumerate sharing for $agentName : $($_.Exception.Message)"
+            else {
+                @()
             }
 
             $violationType = Get-SharingViolationType `
@@ -551,6 +658,8 @@ function Invoke-SharingComplianceScan {
                         AgentName       = $agentName
                         Zone            = $zone
                         SharingType     = $sharingType
+                        SharingLabel    = $sharingLabel
+                        SharedGroupIds  = (ConvertTo-Json -InputObject @($sharedGroupIds) -Compress)
                         Status          = 'Compliant'
                         ViolationType   = 'None'
                         Severity        = 'Informational'
@@ -562,24 +671,21 @@ function Invoke-SharingComplianceScan {
 
             $severity = Get-ViolationSeverity -Policy $policy -ViolationType $violationType
 
-            $sharingTypeMap = @{ 0 = 'SpecificUsers'; 1 = 'OrgWide'; 2 = 'Public' }
-            $sharingLabel = $sharingTypeMap[$sharingType] ?? 'Unknown'
-
             $violations.Add([PSCustomObject]@{
-                RunId           = $runId
-                EnvironmentId   = $envId
-                EnvironmentName = $envName
-                AgentId         = $agentId
-                AgentName       = $agentName
-                Zone            = $zone
-                SharingType     = $sharingType
-                SharingLabel    = $sharingLabel
-                SharedGroupIds  = ($sharedGroupIds | ConvertTo-Json -Compress)
-                ViolationType   = $violationType
-                Severity        = $severity
+                RunId             = $runId
+                EnvironmentId     = $envId
+                EnvironmentName   = $envName
+                AgentId           = $agentId
+                AgentName         = $agentName
+                Zone              = $zone
+                SharingType       = $sharingType
+                SharingLabel      = $sharingLabel
+                SharedGroupIds    = (ConvertTo-Json -InputObject @($sharedGroupIds) -Compress)
+                ViolationType     = $violationType
+                Severity          = $severity
                 RegulatoryContext = $policy.RegulatoryContext
-                DetectedAt      = $scanStartTime
-                Details         = "Agent '$agentName' has sharing '$sharingLabel' which violates $zone policy. $($policy.RegulatoryContext)"
+                DetectedAt        = $scanStartTime
+                Details           = "Agent '$agentName' has sharing '$sharingLabel' which violates $zone policy. $($policy.RegulatoryContext)"
             })
         }
     }
