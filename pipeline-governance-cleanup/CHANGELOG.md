@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Bumped solution manifest version to 1.2.1 for the 2026-Q2 Microsoft Learn refresh.
+- Refreshed Power Platform Pipelines guidance for custom host prerequisites, pipeline table references, trigger configuration, PAC CLI authentication, and solution checker integration.
+
+### Fixed
+- Corrected custom host Managed Environment guidance: target environments must be Managed Environments, while the custom host should be a dedicated Dataverse environment and does not have to be managed.
+- Corrected Deployment Pipeline Default role guidance for custom hosts and documented the Deployment Pipeline Makers team option.
+- Corrected Dataverse pipeline trigger settings to use the current Microsoft Dataverse Common / Power Platform Pipelines trigger metadata.
+
+---
+
 ## [1.2.0] - 2026-04-17
 
 ### Council Review — Technical Accuracy Fixes

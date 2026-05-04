@@ -1,7 +1,7 @@
 id: pipeline-governance-cleanup
 name: Pipeline Governance Cleanup
 description: Discover and clean up personal Power Platform pipelines before central ALM governance.
-version: 1.2.0
+version: 1.2.1
 status: live
 domain: lifecycle-ops
 tier: '2'

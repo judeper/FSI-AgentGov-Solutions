@@ -108,7 +108,7 @@ See: https://learn.microsoft.com/en-us/power-platform/alm/set-a-default-pipeline
 **Can users still CREATE personal pipelines after you Force Link environments?**
 **YES.** Any user with admin rights on an environment with Dataverse can install Power Platform Pipelines and create their own host. However, pipelines in that personal host cannot deploy to or from environments you've Force Linked to your designated host.
 
-**Full prevention** requires Force Link PLUS restricting the **"Deployment pipeline default"** role in your custom host (controls who can create personal pipelines when your host is set as the default).
+Reducing personal pipeline creation requires Force Link PLUS restricting the **Deployment Pipeline Default** role or **Deployment Pipeline Makers** team membership in your custom host (controls who can create lightweight pipelines when your host is set as the default).
 
 See: https://learn.microsoft.com/en-us/power-platform/alm/custom-host-pipelines
 
@@ -154,13 +154,13 @@ Do not delete the old host environment until your retention period expires (typi
 
 ### 8. Managed Environment Licensing Implications
 
-Starting February 2026, Microsoft requires all pipeline target environments to be Managed Environments.
+Starting February 2026, Microsoft will start enabling Managed Environments for pipeline target environments that are not already enabled.
 
 **What this means:**
 
 - Pipeline targets (environments that receive deployments) must be Managed Environments
-- This is a **prerequisite** you must address manually
-- Microsoft does not automatically convert environments or provision licenses
+- Review target environments now and either enable Managed Environments manually or configure automatic conversion in **Deployments** > **Settings** for each pipelines host
+- Microsoft does not provision additional licenses automatically; review licensing impact before targets are converted
 
 **Licensing considerations:**
 
