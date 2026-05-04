@@ -1,3 +1,23 @@
+// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents
+        | project timestamp = TimeGenerated,
+                  name = tostring(Name),
+                  customDimensions = todynamic(Properties),
+                  session_Id = tostring(column_ifexists("SessionId", "")),
+                  itemId = tostring(column_ifexists("_ItemId", ""))),
+        (customEvents
+        | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))),
+                  name = tostring(column_ifexists("name", "")),
+                  customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))),
+                  session_Id = tostring(column_ifexists("session_Id", "")),
+                  itemId = tostring(column_ifexists("itemId", "")))
+    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, "|", session_Id, "|", format_datetime(timestamp, "o"), "|", tostring(customDimensions)))
+    | summarize arg_max(timestamp, *) by EventKey
+    | project timestamp, name, customDimensions, session_Id
+);
+
 // flow-failure-correlation.kql
 // Purpose: Correlate Power Automate flow failures with agent conversations
 //
@@ -27,7 +47,7 @@
 // | 2026-02-04T14:15:55Z | agent-001 | sess-ghi-789  | UpdateCRMFlow         | Timeout           | "Flow execution timed out"        | corr-rst-123     |
 //
 // Notes:
-//   - Power Automate errors appear in customEvents with name containing "MicrosoftFlow" or "ActionFailed"
+//   - Power Automate errors appear in AppEvents or legacy customEvents with name containing "MicrosoftFlow" or "ActionFailed"
 //   - CorrelationId enables cross-system tracing between agent conversation and flow execution
 //   - Use ErrorCode to categorize failure types for root cause analysis
 //   - For direct Log Analytics execution, replace {TimeRange:7d} with literal: let TimeRange = 7d;
@@ -35,7 +55,7 @@
 let TimeRange = {TimeRange:7d};
 
 // Power Automate flow failure events
-let FlowFailures = customEvents
+let FlowFailures = AgentEvents
 | where timestamp > ago(TimeRange)
 | where name contains "MicrosoftFlow" or name contains "ActionFailed" or name contains "FlowRun"
 | where customDimensions has "error" or customDimensions has "Error" or customDimensions has "failed"
@@ -68,7 +88,7 @@ let FlowFailures = customEvents
 );
 
 // Join with conversation context for richer correlation
-let ConversationContext = customEvents
+let ConversationContext = AgentEvents
 | where timestamp > ago(TimeRange)
 | where name == "BotMessageSend" or name == "BotMessageReceived"
 | extend ContextAgentId = tostring(customDimensions["recipientId"])

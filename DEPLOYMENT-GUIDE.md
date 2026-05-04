@@ -64,7 +64,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 
 | Solution | Role | Version |
 |----------|------|---------|
-| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.0 |
+| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.1 |
 | [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.1 |
 
 ### Layer 2: Tier 2 Governance Solutions

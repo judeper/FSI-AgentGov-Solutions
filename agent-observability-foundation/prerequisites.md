@@ -8,7 +8,7 @@ This document lists all requirements for deploying the Agent Observability Found
 |----------|---------------|--------------|-------|
 | Azure Subscription | Owner OR Contributor + User Access Admin | Pay-As-You-Go or EA | For resource creation and RBAC assignment |
 | Resource Group | Contributor | (included in subscription) | Target for all telemetry resources |
-| Application Insights | Contributor | Azure Monitor (included) | 730-day retention may incur additional cost |
+| Application Insights | Contributor | Azure Monitor (included) | Workspace-based resource; 730-day retention may incur additional cost |
 | Log Analytics Workspace | Log Analytics Contributor | Azure Monitor (included) | PerGB2018 pricing tier; 730-day retention |
 | Storage Account (StorageV2) | Storage Account Contributor | Standard | For Diagnostic Settings export to Azure Blob Storage |
 | RBAC Assignments | User Access Admin | (included in subscription) | For Monitoring Reader / Storage Blob Data Reader roles |
@@ -27,21 +27,22 @@ This document lists all requirements for deploying the Agent Observability Found
 
 | Requirement | Purpose |
 |-------------|---------|
-| DefaultAzureCredential-compatible authentication | Script authentication (interactive, Service Principal, or Managed Identity) |
-| Service Principal (optional) | For CI/CD automation and non-interactive deployments |
-| Entra ID Application Administrator (if creating SP) | Required to create Service Principal for automation |
+| Managed identity or workload identity | Recommended for hosted automation and CI/CD deployments |
+| DefaultAzureCredential-compatible authentication | Script authentication discovery for managed identity, workload identity, interactive, or legacy development credentials |
+| Service principal secret (optional, legacy dev-only) | Development fallback only; prefer managed identity or workload identity for production automation |
+| Entra ID Application Administrator (if creating legacy service principal fallback) | Required only for legacy dev-only service principal fallback |
 
 ### Authentication Methods
 
-The provisioning scripts use `DefaultAzureCredential` from the Azure Identity library, which attempts authentication in the following order:
+The provisioning scripts use `DefaultAzureCredential` from the Azure Identity library. Configure credentials in this order of preference:
 
-1. **Environment variables** - Service Principal credentials (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`)
-2. **Managed Identity** - Azure VM or container managed identity
-3. **Azure CLI** - Interactive login via `az login`
-4. **Azure PowerShell** - Interactive login via `Connect-AzAccount`
-5. **Interactive browser** - Browser-based login prompt
+1. **System-assigned managed identity** for Azure-hosted runners or automation accounts
+2. **User-assigned managed identity** for cross-resource automation
+3. **Workload identity federation** for GitHub Actions or other CI/CD platforms
+4. **Azure CLI / Azure PowerShell interactive login** for administrator workstation validation
+5. **Service principal secret** only as a legacy development fallback (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`)
 
-For lab deployments, `az login` is the simplest method. For production CI/CD, configure a Service Principal with environment variables.
+For lab deployments, `az login` is the simplest method. For production CI/CD, prefer managed identity or workload identity federation instead of client secrets.
 
 ## Software Requirements
 
@@ -82,7 +83,7 @@ Complete these steps before running the provisioning scripts:
 - [ ] **Azure subscription ID** - Note your subscription ID (visible in Azure Portal > Subscriptions)
 - [ ] **Resource group** - Create resource group OR verify permissions to create one
 - [ ] **Location selection** - Choose Azure region (e.g., `eastus`, `westus2`) near your Copilot Studio deployment
-- [ ] **Entra ID authentication** - Run `az login` OR configure Service Principal environment variables
+- [ ] **Entra ID authentication** - Configure managed identity/workload identity for hosted automation, or run `az login` for workstation validation
 - [ ] **Python environment** - Verify Python 3.9+: `python --version`
 - [ ] **Install dependencies** - Run: `pip install -r scripts/requirements.txt`
 - [ ] **Configuration file** - Copy and edit: `cp config/config.example.yml config/config.yml`
@@ -102,14 +103,14 @@ After deployment, assign these roles for operational access:
 
 To capture telemetry from Copilot Studio agents, configure the Application Insights connector:
 
-1. Navigate to Copilot Studio > Your Agent > Settings > Diagnostics
-2. Enable Application Insights integration
-3. Enter the Application Insights connection string (output by `provision.py`)
-4. Optionally enable "Log sensitive Activity properties" (see [docs/pii-sanitization-guide.md](docs/pii-sanitization-guide.md) for PII implications)
+1. Navigate to Copilot Studio > Your Agent > **Settings** > **Advanced**
+2. In the **Application Insights** section, enter the Application Insights connection string (output by `provision.py` or retrieved from Azure Monitor)
+3. Enable **Log activities** to capture incoming and outgoing messages and events
+4. Optionally enable **Log sensitive Activity properties** (see [docs/pii-sanitization-guide.md](docs/pii-sanitization-guide.md) for PII implications)
 
-> **Important:** Enabling "Log sensitive Activity properties" captures conversation text in `customDimensions.text`. Review PII handling requirements before enabling.
+> **Important:** Enabling "Log sensitive Activity properties" captures conversation text in `Properties.text` or legacy `customDimensions.text`. Review PII handling requirements before enabling.
 
 ---
 
-*Prerequisites version: 1.2.0*
-*Last updated: February 2026*
+*Prerequisites version: 1.2.1*
+*Last updated: 2026-Q2*

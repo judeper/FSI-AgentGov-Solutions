@@ -22,8 +22,8 @@ Usage:
 Verification Checks:
     1. Application Insights exists and is workspace-based
     2. Retention is >= 730 days (SEC 17a-4 compliance)
-    3. customEvents table has data in lookback window
-    4. CopilotInteraction events detected (Copilot Studio connected)
+    3. AppEvents/customEvents telemetry has data in lookback window
+    4. Copilot Studio event names are detected (for example BotMessageSend)
 
 Exit Codes:
     0 - All checks passed
@@ -203,7 +203,7 @@ def query_telemetry_data(
     verbose: bool = False,
 ) -> tuple[bool, bool, list[dict]]:
     """
-    Query customEvents table for telemetry data.
+    Query Copilot Studio telemetry across current and legacy Application Insights tables.
 
     Args:
         workspace_id: Log Analytics workspace resource ID
@@ -221,11 +221,26 @@ def query_telemetry_data(
 
     logs_client = LogsQueryClient(credential)
 
-    # KQL query to summarize custom events
+    # Normalize current workspace-based AppEvents and legacy customEvents into one query shape.
     query = f"""
-    customEvents
+    let AgentEvents = materialize(
+        union isfuzzy=true
+            (AppEvents
+            | project timestamp = TimeGenerated,
+                      name = tostring(Name),
+                      customDimensions = todynamic(Properties),
+                      session_Id = tostring(column_ifexists("SessionId", "")),
+                      sourceTable = "AppEvents"),
+            (customEvents
+            | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))),
+                      name = tostring(column_ifexists("name", "")),
+                      customDimensions = todynamic(column_ifexists("customDimensions", dynamic({{}}))),
+                      session_Id = tostring(column_ifexists("session_Id", "")),
+                      sourceTable = "customEvents")
+    );
+    AgentEvents
     | where timestamp > ago({hours}h)
-    | summarize EventCount=count(), DistinctSessions=dcount(session_Id) by name
+    | summarize EventCount=count(), DistinctSessions=dcount(session_Id), SourceTables=make_set(sourceTable) by name
     | order by EventCount desc
     """
 
@@ -280,13 +295,16 @@ def query_telemetry_data(
                 event_name = row[0]
                 event_count = row[1]
                 distinct_sessions = row[2]
+                source_tables = row[3] if len(row) > 3 else []
                 events.append({
                     "name": event_name,
                     "count": event_count,
                     "sessions": distinct_sessions,
+                    "source_tables": source_tables,
                 })
-                # Check for Copilot Studio events
-                if event_name and "copilot" in event_name.lower():
+                # Check for Copilot Studio events documented by Microsoft Learn.
+                event_name_lower = event_name.lower() if event_name else ""
+                if event_name in {"BotMessageSend", "BotMessageReceived", "GenerativeAnswers", "CopilotInteraction"} or "copilot" in event_name_lower:
                     has_copilot_events = True
 
     has_data = len(events) > 0
@@ -302,17 +320,18 @@ def print_telemetry_summary(events: list[dict], hours: int) -> None:
         hours: Lookback window
     """
     if not events:
-        print(f"  customEvents (last {hours}h): No data")
+        print(f"  AppEvents/customEvents (last {hours}h): No data")
         return
 
-    print(f"  customEvents (last {hours}h):")
+    print(f"  AppEvents/customEvents (last {hours}h):")
     print()
-    print(f"    {'Event Name':<40} {'Count':>10} {'Sessions':>10}")
-    print(f"    {'-'*40} {'-'*10} {'-'*10}")
+    print(f"    {'Event Name':<40} {'Count':>10} {'Sessions':>10} {'Tables':<24}")
+    print(f"    {'-'*40} {'-'*10} {'-'*10} {'-'*24}")
 
     for event in events[:10]:  # Show top 10
         name = event["name"][:40] if event["name"] else "(unnamed)"
-        print(f"    {name:<40} {event['count']:>10} {event['sessions']:>10}")
+        tables = ",".join(event.get("source_tables") or [])[:24]
+        print(f"    {name:<40} {event['count']:>10} {event['sessions']:>10} {tables:<24}")
 
     if len(events) > 10:
         print(f"    ... and {len(events) - 10} more event types")
@@ -332,7 +351,7 @@ def print_verification_summary(
     Args:
         ai_exists: Application Insights exists and is workspace-based
         retention_ok: Retention meets SEC 17a-4 requirements
-        has_data: customEvents table has data
+        has_data: AppEvents/customEvents telemetry has data
         has_copilot: Copilot Studio events detected
 
     Returns:
@@ -347,7 +366,7 @@ def print_verification_summary(
     checks = [
         ("Application Insights (workspace-based)", ai_exists, True),
         ("Retention >= 730 days (SEC 17a-4)", retention_ok, True),
-        ("customEvents has data", has_data, False),
+        ("AppEvents/customEvents has data", has_data, False),
         ("Copilot Studio events detected", has_copilot, False),
     ]
 
@@ -512,7 +531,8 @@ Examples:
         print("Run one of the following to authenticate:")
         print("  - az login (Azure CLI)")
         print("  - Connect-AzAccount (PowerShell)")
-        print("  - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET")
+        print("  - Use managed identity or workload identity for hosted automation")
+        print("  - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (legacy dev-only fallback)")
         sys.exit(1)
     except AzureError as e:
         print(f"ERROR: Azure SDK error - {e.message}")

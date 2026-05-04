@@ -4,7 +4,7 @@ Decision framework for handling personally identifiable information (PII) in Cop
 
 ## Overview
 
-Copilot Studio agents emit telemetry to Application Insights via the customEvents table. This telemetry may contain PII in the `customDimensions` field, particularly when "Log sensitive Activity properties" is enabled in the agent configuration. FSI organizations must handle this data appropriately to meet GLBA 501(b) customer data protection requirements and state privacy laws.
+Copilot Studio agents emit telemetry to Application Insights. Workspace-based resources expose current `AppEvents` rows with custom data in `Properties`; legacy query surfaces expose `customEvents` with `customDimensions`. This telemetry may contain PII in those property bags, particularly when "Log sensitive Activity properties" is enabled in the agent configuration. FSI organizations must handle this data appropriately to meet GLBA 501(b) customer data protection requirements and state privacy laws.
 
 This guide provides a decision framework and field-level recommendations for sanitizing PII in Copilot Studio telemetry.
 
@@ -43,14 +43,14 @@ Step 1: Does field contain customer-identifiable data?
 
 ## Field-Level Recommendations
 
-The following table documents known Copilot Studio telemetry fields in the customDimensions payload and recommended handling:
+The following table documents known Copilot Studio telemetry fields in the `Properties` / `customDimensions` payload and recommended handling:
 
 | Field | Contains PII? | Recommendation | Rationale |
 |-------|---------------|----------------|-----------|
-| `customDimensions.text` | **YES** | Drop or hash | Customer prompts may contain names, account numbers, SSNs, and other sensitive data |
-| `customDimensions.speak` | **YES** | Drop or hash | Speech output may echo PII from conversation context |
-| `customDimensions.fromName` | **YES** | Hash (one-way) | User display name; not needed for analytics but useful for correlation |
-| `customDimensions.recipientName` | **YES** | Hash (one-way) | Agent or user identity; agent ID is sufficient for most analytics |
+| `Properties.text` / `customDimensions.text` | **YES** | Drop or hash | Customer prompts may contain names, account numbers, SSNs, and other sensitive data |
+| `Properties.speak` / `customDimensions.speak` | **YES** | Drop or hash | Speech output may echo PII from conversation context |
+| `Properties.fromName` / `customDimensions.fromName` | **YES** | Hash (one-way) | User display name; not needed for analytics but useful for correlation |
+| `Properties.recipientName` / `customDimensions.recipientName` | **YES** | Hash (one-way) | Agent or user identity; agent ID is sufficient for most analytics |
 | `customDimensions.channelId` | **NO** | Retain | Channel type (msteams, webchat, directline) is not PII |
 | `customDimensions.locale` | **NO** | Retain | Language preference (en-US, es-MX) is not PII |
 | `customDimensions.designMode` | **NO** | Retain | Boolean flag indicating test vs production mode |
@@ -107,7 +107,7 @@ The following table documents known Copilot Studio telemetry fields in the custo
 **Approach A: KQL Transform (Log Analytics Workspace Transformation)**
 
 ```kusto
-// Example transformation rule (configure at workspace level)
+// Example transformation rule (configure through a Data Collection Rule or table transformation where supported)
 source
 | extend customDimensions = dynamic_to_json(
     bag_merge(
@@ -190,18 +190,28 @@ To verify PII handling configuration:
 
 2. **Query Application Insights for PII:**
    ```kusto
-   customEvents
-   | where name == "CopilotInteraction"
-   | project timestamp, customDimensions
+   let AgentEvents = materialize(
+       union isfuzzy=true
+           (AppEvents | project timestamp = TimeGenerated, name = tostring(Name), properties = todynamic(Properties)),
+           (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), name = tostring(column_ifexists("name", "")), properties = todynamic(column_ifexists("customDimensions", dynamic({}))))
+   );
+   AgentEvents
+   | where name in ("CopilotInteraction", "BotMessageReceived", "BotMessageSend")
+   | project timestamp, properties
    | take 10
    ```
-   - Review `customDimensions` payload
+   - Review the `Properties` / `customDimensions` payload
    - Confirm `text` and `speak` fields are absent or hashed
 
 3. **Audit existing telemetry:**
    ```kusto
-   customEvents
-   | where isnotempty(customDimensions.text)
+   let AgentEvents = materialize(
+       union isfuzzy=true
+           (AppEvents | project timestamp = TimeGenerated, properties = todynamic(Properties)),
+           (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), properties = todynamic(column_ifexists("customDimensions", dynamic({}))))
+   );
+   AgentEvents
+   | where isnotempty(properties.text)
    | summarize count() by bin(timestamp, 1d)
    ```
    - If count > 0, sensitive logging may have been enabled historically
@@ -219,5 +229,5 @@ To verify PII handling configuration:
 
 ---
 
-*PII Sanitization Guide version: 1.2.0*
-*Last updated: February 2026*
+*PII Sanitization Guide version: 1.2.1*
+*Last updated: 2026-Q2*

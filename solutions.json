@@ -134,7 +134,7 @@
     "agent-observability-foundation": {
       "id": "agent-observability-foundation",
       "name": "Agent Observability Foundation",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "live",
@@ -152,7 +152,7 @@
         "power-platform-admin": "Power Platform admin tenant role for Copilot Studio telemetry source configuration.",
         "m365-admin": "Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation."
       },
-      "verification": "Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors.",
+      "verification": "Confirm Copilot Studio telemetry arrives in Application Insights AppEvents or legacy customEvents within 24h and workbooks/alerts render without errors.",
       "zones": [
         "personal",
         "team",

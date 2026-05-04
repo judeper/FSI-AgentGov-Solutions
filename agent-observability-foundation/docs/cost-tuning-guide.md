@@ -36,7 +36,7 @@ Sampling reduces telemetry volume by capturing only a percentage of events. This
 **Key Limitation:** Adaptive sampling is NOT available for Copilot Studio telemetry. Copilot Studio sends telemetry server-side using internal instrumentation, not the client SDK. Therefore:
 
 - SDK-level adaptive sampling does not apply
-- Ingestion sampling at the workspace level is the primary cost control
+- Ingestion sampling at the Application Insights resource/workspace level is the primary cost control
 - Fixed sampling rates are used (not adaptive based on volume)
 
 ### Recommended Sampling Rates
@@ -145,7 +145,7 @@ For high-volume tables with infrequent queries, consider Basic Logs:
 - High-volume system events
 
 **When NOT to Use:**
-- Primary agent interaction telemetry (customEvents)
+- Primary agent interaction telemetry (`AppEvents` / legacy `customEvents`)
 - Any data needed for real-time monitoring or alerting
 
 ### Archive Tier for Azure Blob Storage (StorageV2)
@@ -191,10 +191,15 @@ union withsource=Table *
 | take 10
 ```
 
-### customEvents Volume Trend
+### AppEvents/customEvents Volume Trend
 
 ```kusto
-customEvents
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents | project timestamp = TimeGenerated, name = tostring(Name)),
+        (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), name = tostring(column_ifexists("name", "")))
+);
+AgentEvents
 | where timestamp > ago(30d)
 | summarize EventCount = count() by bin(timestamp, 1d)
 | render timechart
@@ -217,18 +222,16 @@ customEvents
 
 > **Important:** Adaptive sampling is NOT available for Copilot Studio telemetry.
 
-Adaptive sampling (which automatically adjusts sampling rate based on volume) is only available for:
-- ASP.NET / ASP.NET Core applications
-- Azure Functions
+Adaptive sampling (which automatically adjusts sampling rate based on volume) applies to supported SDK-instrumented workloads, not the managed Copilot Studio telemetry stream configured by this solution.
 
 Copilot Studio sends telemetry server-side through Microsoft's internal instrumentation. This means:
 - You cannot configure adaptive sampling at the agent level
-- Ingestion sampling at the workspace level is your primary cost control
+- Ingestion sampling at the Application Insights resource/workspace level is your primary cost control
 - Fixed sampling rates apply uniformly to all events
 
 If you need volume-based sampling, implement custom logic via Logic Apps or Azure Functions to pre-process events before ingestion.
 
 ---
 
-*Cost Tuning Guide version: 1.2.0*
-*Last updated: February 2026*
+*Cost Tuning Guide version: 1.2.1*
+*Last updated: 2026-Q2*

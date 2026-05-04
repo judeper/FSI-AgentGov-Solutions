@@ -187,7 +187,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 │    • vw_dim_agent() → Agent dimension                            │
 │    • vw_dim_regulation_control() → Regulation mapping            │
 │                                                                   │
-│  Data Source: customEvents table (CopilotInteraction)            │
+│  Data Source: normalized AppEvents / legacy customEvents KQL     │
 └────────────────────┬────────────────────────────────────────────┘
                      │
                      │ Diagnostic Settings
