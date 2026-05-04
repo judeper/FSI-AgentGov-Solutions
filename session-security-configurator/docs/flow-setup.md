@@ -23,8 +23,8 @@ Before creating the flow, ensure you have:
 - [ ] **Azure Automation Account** with:
   - Start-SessionValidationRunbook.ps1 imported as a PowerShell 7.2 runbook
   - Certificate uploaded (Certificates blade)
-  - Modules installed: Microsoft.Graph.Identity.SignIns, MSAL.PS
-  - Application permissions granted: Policy.Read.All, Directory.Read.All
+  - Modules installed: Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Groups, Microsoft.Graph.Identity.Governance, MSAL.PS
+  - Application permissions granted: Policy.Read.All, GroupMember.Read.All, RoleManagement.Read.Directory
 - [ ] **Dataverse environment** with SSC schema deployed (run `python scripts/deploy.py`)
 - [ ] **Managed Identity** configured for Dataverse access:
   - Flow's managed identity (or connection identity) has Create permission on `fsi_validationhistory` entity
@@ -340,7 +340,7 @@ The flow routes alerts based on validation status and drift detection:
    - Find `Validation History` > Grant **Create** at Organization level
 4. Test by manually triggering the flow and checking Write_Validation_History action result
 
-**Note:** Alerting continues even when Dataverse writes fail. The Check_Alert_Required action is configured to run after Write_Validation_History regardless of success or failure. However, if writes fail persistently, drift detection will not function correctly (Get-DriftStatus queries fsi_validationhistories for baseline comparison). Fix Dataverse access promptly.
+**Note:** Alerting continues even when Dataverse writes fail. The Check_Alert_Required action is configured to run after Write_Validation_History regardless of success or failure. However, if writes fail persistently, validation history evidence is incomplete and drift investigations lose context. Get-DriftStatus compares current runs with the active baseline in `fsi_sessionbaselines`; fix Dataverse access promptly.
 
 ### Certificate Authentication Failures
 
@@ -363,7 +363,8 @@ The flow routes alerts based on validation status and drift detection:
    ```
 4. Verify app registration has correct permissions:
    - Policy.Read.All (Microsoft Graph)
-   - Directory.Read.All (Microsoft Graph)
+   - GroupMember.Read.All (Microsoft Graph)
+   - RoleManagement.Read.Directory (Microsoft Graph, when PIM validation is enabled)
    - Permissions granted admin consent
 
 ## Related Documentation
@@ -375,7 +376,7 @@ The flow routes alerts based on validation status and drift detection:
 
 ---
 
-**Version:** 1.0.1
-**Last Updated:** 2026-02-07
+**Version:** 1.1.1
+**Last Updated:** 2026-05-04
 **Solution:** Session Security Configurator
 **Phase:** 3 - Automation and Alerting

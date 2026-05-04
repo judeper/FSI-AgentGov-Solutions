@@ -48,6 +48,8 @@
     Default scopes:
     - Policy.ReadWrite.ConditionalAccess: CA policy CRUD operations
     - Policy.Read.All: Read all CA policies, auth contexts, auth strength
+    - GroupMember.Read.All: Read break-glass exclusion group memberships
+    - RoleManagement.Read.Directory: Read PIM role definitions and schedules
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]

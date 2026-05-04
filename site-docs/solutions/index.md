@@ -67,7 +67,7 @@ Solutions for validating agent runtime configuration, session controls, and conn
 | [Agent Communication Restriction Detector](agent-communication-restriction-detector/index.md) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration. | v1.1.0 | live | team, enterprise | 2.17 |
 | [Credential Oversharing Detector](credential-oversharing-detector/index.md) | Scans Copilot Studio agent credentials against zone policy to detect overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment sharing, and stale credentials. | v2.0.0 | live | personal, team, enterprise | 1.14, 1.4, 1.18 |
 | [Generative AI Config Auditor](generative-ai-config-auditor/index.md) | Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies. | v1.1.0 | live | team, enterprise | 2.24 |
-| [Session Security Configurator](session-security-configurator/index.md) | Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements. | v1.1.0 | live | team, enterprise | 1.23, 1.11 |
+| [Session Security Configurator](session-security-configurator/index.md) | Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements. | v1.1.1 | live | team, enterprise | 1.23, 1.11 |
 
 ## Lifecycle & Operations
 

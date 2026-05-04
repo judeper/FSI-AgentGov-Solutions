@@ -1,7 +1,7 @@
 id: session-security-configurator
 name: Session Security Configurator
 description: Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements.
-version: 1.1.0
+version: 1.1.1
 status: live
 domain: agent-config
 tier: '2'

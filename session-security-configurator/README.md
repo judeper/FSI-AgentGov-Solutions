@@ -1,6 +1,6 @@
 # Session Security Configurator
 
-> **Status:** v1.0.1 — Complete
+> **Status:** v1.1.1 — Complete
 
 Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements.
 
@@ -20,7 +20,7 @@ Automated session security baseline management for Microsoft 365 AI agent admini
 |------|---------|
 | Security Administrator | Deploy authentication contexts, CA policies |
 | Privileged Role Administrator | Configure PIM settings |
-| Power Platform Administrator | Deploy Dataverse schema |
+| Power Platform Admin | Deploy Dataverse schema |
 | System Administrator (Dataverse) | Create tables, security roles |
 
 ### PowerShell Modules

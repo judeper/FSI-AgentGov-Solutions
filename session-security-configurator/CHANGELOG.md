@@ -2,6 +2,14 @@
 
 All notable changes to the Session Security Configurator solution are documented here.
 
+## [1.1.1] - 2026-05-04
+
+### Fixed (Microsoft Learn refresh — 2026-Q2)
+
+- Resolved authentication strength validation by looking up Microsoft Graph authentication strength policies by ID when Conditional Access policy payloads omit nested display names.
+- Updated runbook and flow setup guidance to use current least-privilege Microsoft Graph permissions (`GroupMember.Read.All` and `RoleManagement.Read.Directory`) instead of broad directory read guidance.
+- Corrected flow troubleshooting guidance to reference active baselines in `fsi_sessionbaselines` for drift comparison and aligned visible documentation status with this patch release.
+
 ## [1.1.0] - 2026-04-22
 
 ### Fixed (AI Council technical-accuracy review — Opus 4.7 + Goldeneye + GPT-5.4)

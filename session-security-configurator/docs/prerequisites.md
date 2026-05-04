@@ -16,7 +16,7 @@ This document outlines all requirements for deploying and operating the Session 
 |------|---------|
 | Entra ID Security Administrator | Deploy authentication contexts, configure CA policies |
 | Entra ID Privileged Role Administrator | Configure PIM settings for AI admin roles |
-| Power Platform Administrator | Deploy Dataverse schema, bind connection references |
+| Power Platform Admin | Deploy Dataverse schema, bind connection references |
 | System Administrator (Dataverse) | Create tables, configure security roles |
 | Automation Operator (optional) | Execute Azure Automation runbooks |
 
@@ -116,7 +116,7 @@ Before deployment, verify:
 - [ ] Power Platform license assigned
 - [ ] Security Administrator role assigned
 - [ ] Privileged Role Administrator role assigned (for PIM)
-- [ ] Power Platform Administrator role assigned
+- [ ] Power Platform Admin role assigned
 - [ ] PowerShell modules installed
 - [ ] Python 3.10+ installed
 - [ ] Network access to required endpoints

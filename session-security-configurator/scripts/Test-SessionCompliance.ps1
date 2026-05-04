@@ -62,7 +62,7 @@
     Certificate thumbprint for service principal authentication.
 
 .PARAMETER SkipPimValidation
-    Skip PIM role settings validation. Use when account lacks RoleManagement.Read.All permission.
+    Skip PIM role settings validation. Use when account lacks RoleManagement.Read.Directory permission.
     Results will show PIM validator as "Skipped" instead of Passed/Failed.
 
 .PARAMETER IncludeConflictAudit
@@ -116,9 +116,9 @@
     Requires:
     - Microsoft.Graph.Identity.SignIns module v2.35.1 or later
     - PowerShell 7.0 or later
-    - Conditional Access Administrator or Global Administrator role
-    - For PIM validation: RoleManagement.Read.All permission
-    - For service principal: Application with Policy.Read.All and (optionally) RoleManagement.Read.All
+    - Conditional Access Administrator or Entra Global Admin role
+    - For PIM validation: RoleManagement.Read.Directory permission
+    - For service principal: Application with Policy.Read.All and (optionally) RoleManagement.Read.Directory
 
     Regulatory context:
     This orchestrator supports compliance validation for:
@@ -289,6 +289,49 @@ $results = @{
     Validators = @{}
     OverallStatus = "Unknown"
     Reason = ""
+}
+
+$script:authStrengthDisplayNameCache = @{}
+
+function Get-PolicyAuthenticationStrengthDisplayName {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Policy
+    )
+
+    $grantControls = $Policy.GrantControls
+    if (-not $grantControls -or $grantControls.PSObject.Properties.Name -notcontains 'AuthenticationStrength') {
+        return $null
+    }
+
+    $authenticationStrength = $grantControls.AuthenticationStrength
+    if (-not $authenticationStrength) {
+        return $null
+    }
+
+    if ($authenticationStrength.PSObject.Properties.Name -contains 'DisplayName' -and $authenticationStrength.DisplayName) {
+        return $authenticationStrength.DisplayName
+    }
+
+    if ($authenticationStrength.PSObject.Properties.Name -notcontains 'Id' -or -not $authenticationStrength.Id) {
+        return $null
+    }
+
+    $authStrengthId = [string]$authenticationStrength.Id
+    if ($script:authStrengthDisplayNameCache.ContainsKey($authStrengthId)) {
+        return $script:authStrengthDisplayNameCache[$authStrengthId]
+    }
+
+    try {
+        $strengthPolicy = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $authStrengthId -ErrorAction Stop
+        $script:authStrengthDisplayNameCache[$authStrengthId] = $strengthPolicy.DisplayName
+        return $strengthPolicy.DisplayName
+    }
+    catch {
+        Write-Verbose "Unable to resolve auth-strength policy $authStrengthId : $($_.Exception.Message)"
+        return $null
+    }
 }
 
 Write-Host "Validation Target: $Zone ($($baseline.zoneName))" -ForegroundColor Cyan
@@ -481,10 +524,12 @@ try {
         "Zone2" {
             # Zone 2: Passwordless MFA
             if ($baseline.authenticationStrength) {
-                # Compare by display name since baseline stores names (e.g. "Passwordless MFA"), not GUIDs
+                # Compare by display name since baseline stores names (e.g. "Passwordless MFA"), not GUIDs.
+                # Get-MgIdentityConditionalAccessPolicy usually returns only the nested authenticationStrength ID,
+                # so resolve the policy resource before comparing.
                 $policiesToCheck = if ($zonePolicies) { $zonePolicies } else { $sscPolicies }
                 $sscPoliciesWithAuth = $policiesToCheck | Where-Object {
-                    $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
+                    (Get-PolicyAuthenticationStrengthDisplayName -Policy $_) -ieq $baseline.authenticationStrength
                 }
 
                 if ($sscPoliciesWithAuth) {
@@ -506,10 +551,12 @@ try {
         "Zone3" {
             # Zone 3: Phishing-resistant MFA
             if ($baseline.authenticationStrength) {
-                # Compare by display name since baseline stores names (e.g. "Phishing-resistant MFA"), not GUIDs
+                # Compare by display name since baseline stores names (e.g. "Phishing-resistant MFA"), not GUIDs.
+                # Get-MgIdentityConditionalAccessPolicy usually returns only the nested authenticationStrength ID,
+                # so resolve the policy resource before comparing.
                 $policiesToCheck = if ($zonePolicies) { $zonePolicies } else { $sscPolicies }
                 $sscPoliciesWithAuth = $policiesToCheck | Where-Object {
-                    $_.GrantControls.AuthenticationStrength.DisplayName -ieq $baseline.authenticationStrength
+                    (Get-PolicyAuthenticationStrengthDisplayName -Policy $_) -ieq $baseline.authenticationStrength
                 }
 
                 if ($sscPoliciesWithAuth) {
@@ -569,7 +616,7 @@ Write-Host "══════════════════════�
 Write-Host ""
 
 if ($SkipPimValidation) {
-    Write-Host "PIM validation: SKIPPED (requires RoleManagement.Read.All permission)" -ForegroundColor Yellow
+    Write-Host "PIM validation: SKIPPED (requires RoleManagement.Read.Directory permission)" -ForegroundColor Yellow
     $results.Validators.PimRoleSettings = @{
         Status = "Skipped"
         Confidence = "N/A"
