@@ -5,7 +5,7 @@
 .DESCRIPTION
     Acquires and caches OAuth tokens for Dataverse environments. Supports three
     authentication modes:
-    1. Service principal (PSCredential with ClientId/ClientSecret)
+    1. Service principal (PSCredential with ClientId/ClientSecret; legacy dev-only)
     2. Interactive via Az.Accounts (Get-AzAccessToken)
     3. Existing token passthrough
 
@@ -20,7 +20,7 @@
 
 .PARAMETER Credential
     PSCredential containing ClientId (UserName) and ClientSecret (Password)
-    for service principal authentication.
+    for legacy dev-only service principal authentication.
 
 .PARAMETER Interactive
     Force interactive authentication via Az.Accounts.
@@ -38,10 +38,10 @@
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
     Version: 0.1.0
-    Requires: PowerShell 7.0+
+    Requires: Windows PowerShell 5.1+
 #>
 
-#requires -Version 7.0
+#requires -Version 5.1
 
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
@@ -68,6 +68,26 @@ if (-not $script:TokenCache) {
 
 $normalizedUrl = $DataverseUrl.TrimEnd('/')
 
+function ConvertTo-ACAPlainTextToken {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Token
+    )
+
+    if ($Token -is [System.Security.SecureString]) {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Token)
+        try {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+
+    return [string]$Token
+}
+
 #region Cache Check
 
 if (-not $Force -and $script:TokenCache.ContainsKey($normalizedUrl)) {
@@ -87,6 +107,7 @@ if (-not $Force -and $script:TokenCache.ContainsKey($normalizedUrl)) {
 
 #region Service Principal Authentication
 
+# legacy: dev-only — replace with managed identity in production
 if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
     Write-Verbose "Authenticating via service principal for $normalizedUrl"
 
@@ -121,7 +142,7 @@ if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
         $errorMessage += "`n"
         $errorMessage += "`n  Remediation:"
         $errorMessage += "`n  1. Verify the app registration exists in the target tenant"
-        $errorMessage += "`n  2. Confirm the client secret has not expired"
+        $errorMessage += "`n  2. Confirm the client secret has not expired (legacy dev-only; use certificate or managed identity for production automation)"
         $errorMessage += "`n  3. Check that the app has Dataverse permissions in the target environment"
         $errorMessage += "`n  4. Verify the app is registered as an application user in Dataverse"
         throw $errorMessage
@@ -161,6 +182,7 @@ try {
     Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
 
     $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+    $accessToken = ConvertTo-ACAPlainTextToken -Token $tokenResult.Token
 
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime
@@ -169,12 +191,12 @@ try {
     }
 
     $script:TokenCache[$normalizedUrl] = @{
-        Token     = $tokenResult.Token
+        Token     = $accessToken
         ExpiresOn = $expiresOn
     }
 
     Write-Verbose "Interactive token acquired for $normalizedUrl (expires: $expiresOn)"
-    return $tokenResult.Token
+    return $accessToken
 } catch {
     if ($_.Exception.Message -match 'No Azure context found') {
         throw $_

@@ -82,7 +82,7 @@
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
 #>
 
-#Requires -Version 7.0
+#Requires -Version 5.1
 #Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 function Test-UserDefinedActionMessages {
@@ -637,7 +637,7 @@ function Test-UserDefinedActionMessages {
             $output = [PSCustomObject]@{
                 RunId              = $runId
                 Timestamp          = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-                Control            = '1.23'
+                Control            = '2.12'
                 CheckType          = 'UserDefinedActionMessages'
                 TotalAgents        = $totalAgents
                 Compliant          = $compliantCount
@@ -655,7 +655,7 @@ function Test-UserDefinedActionMessages {
             Write-Host ""
             Write-Host "==========================================" -ForegroundColor Cyan
             Write-Host "  User-Defined Action Messages Validation" -ForegroundColor Cyan
-            Write-Host "  Control 1.23 - Step-Up Authentication" -ForegroundColor Gray
+            Write-Host "  Control 2.12 - Human-in-the-Loop Checkpoints" -ForegroundColor Gray
             Write-Host "==========================================" -ForegroundColor Cyan
             Write-Host ""
             Write-Host "  Total Agents:  $totalAgents" -ForegroundColor Cyan

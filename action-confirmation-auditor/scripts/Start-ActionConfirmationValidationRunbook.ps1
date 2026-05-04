@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 5.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -175,13 +175,13 @@ try {
     $dvIncludeSandbox = Get-ACAEnvironmentVariable -Name "IncludeSandbox" -DefaultValue "false"
     if ($dvIncludeSandbox -eq "true" -and -not $IncludeSandbox) {
         Write-Verbose "Dataverse override: IncludeSandbox=true"
-        $IncludeSandbox = [switch]::new($true)
+        $IncludeSandbox = $true
     }
 
     $dvIncludeDrafts = Get-ACAEnvironmentVariable -Name "IncludeDrafts" -DefaultValue "false"
     if ($dvIncludeDrafts -eq "true" -and -not $IncludeDrafts) {
         Write-Verbose "Dataverse override: IncludeDrafts=true"
-        $IncludeDrafts = [switch]::new($true)
+        $IncludeDrafts = $true
     }
 
     Write-Verbose "Dataverse parameters loaded"
@@ -494,7 +494,7 @@ try {
     $output = [PSCustomObject]@{
         RunType                       = "ActionConfirmationValidation"
         RunId                         = $runId
-        Timestamp                     = (Get-Date -AsUTC -Format "o")
+        Timestamp                     = (Get-Date).ToUniversalTime().ToString("o")
         TotalAgents                   = $totalAgents
         TotalEnvironments             = $uniqueEnvs
         TotalActions                  = $totalActions
@@ -533,13 +533,13 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "ActionConfirmationValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
+        Timestamp         = (Get-Date).ToUniversalTime().ToString("o")
         TotalAgents       = 0
         TotalEnvironments = 0
         TotalActions      = 0
         OverallStatus     = "Error"
         Reason            = $_.Exception.Message
-        Control           = "1.23"
+        Control           = "2.12"
         ZoneSummary       = [PSCustomObject]@{}
         Violations        = @()
         Drift             = [PSCustomObject]@{

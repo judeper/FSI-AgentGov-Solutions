@@ -13,7 +13,7 @@ This guide provides step-by-step instructions for manually building the Action C
 - Power Platform Admin role in target environment
 - Access to Dataverse and Teams
 - Connection references configured (see deployment guide)
-- Azure Automation account with `Start-ActionConfirmationValidationRunbook` imported
+- Azure Automation account with `Start-ActionConfirmationValidationRunbook` imported as a Windows PowerShell 5.1 runbook
 
 ---
 

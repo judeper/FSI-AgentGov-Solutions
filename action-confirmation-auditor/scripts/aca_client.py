@@ -38,7 +38,7 @@ class ACAClient:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
             client_id: Application (client) ID
-            client_secret: Client secret value (required for SP auth)
+            client_secret: Legacy dev-only client secret value (required for SP auth)
             interactive: Use interactive browser auth instead of SP
             dry_run: If True, log API calls without executing them
         """
@@ -65,10 +65,11 @@ class ACAClient:
                 token_cache=self._token_cache,
             )
         else:
+            # legacy: dev-only — replace with managed identity in production
             # Confidential client for service-to-service auth
             if not client_id or not client_secret:
                 raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
+                    "client_id and legacy dev-only client_secret required for non-interactive auth"
                 )
             self.app = msal.ConfidentialClientApplication(
                 client_id,
@@ -578,7 +579,7 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACA_CLIENT_SECRET"),
-        help="Service principal secret (or set ACA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ACA_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",

@@ -19,11 +19,11 @@
 .NOTES
     Module: ACAClient.psm1
     Version: 1.1.0
-    Requires: PowerShell 7.0+
+    Requires: Windows PowerShell 5.1+
     Author: FSI Agent Governance Team
 #>
 
-#requires -Version 7.0
+#requires -Version 5.1
 
 #region Module Variables
 
@@ -91,6 +91,30 @@ $script:IntToViolationStatus = @{
 #endregion
 
 #region Request Helper
+
+function ConvertTo-ACAPlainTextToken {
+    <#
+    .SYNOPSIS
+        Converts Az.Accounts token output to a bearer token string across Windows PowerShell and PowerShell 7.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Token
+    )
+
+    if ($Token -is [System.Security.SecureString]) {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Token)
+        try {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+
+    return [string]$Token
+}
 
 function Invoke-DataverseRequest {
     <#
@@ -160,7 +184,7 @@ function Connect-ACADataverse {
         try {
             $token = Get-AzAccessToken -ResourceUrl "$script:DataverseUrl" -ErrorAction Stop
             if ($token.Token -is [System.Security.SecureString]) {
-                $script:AccessToken = $token.Token | ConvertFrom-SecureString -AsPlainText
+                $script:AccessToken = ConvertTo-ACAPlainTextToken -Token $token.Token
             } else {
                 $script:AccessToken = $token.Token
             }

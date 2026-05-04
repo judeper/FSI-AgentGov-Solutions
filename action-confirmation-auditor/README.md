@@ -1,6 +1,6 @@
 # Action Confirmation Auditor
 
-> **Version:** v1.1.0
+> **Version:** v1.1.1
 > **Status:** Completed
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
@@ -56,7 +56,7 @@ When a required confirmation is missing, severity is classified as:
 
 - **Per-Action Validation** -- Inspects each action node in agent topics for confirmation steps
 - **User-Defined Action Messages** -- Validates that agents have user-defined action messages configured per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional)
-- **Zone Compliance** -- Enforces zone-specific confirmation requirements using ELM zone classification
+- **Zone Compliance** -- Applies zone-specific confirmation requirements using ELM zone classification
 - **Exception Management** -- Approval workflow for legitimate confirmation bypasses
 - **Multiple Output Formats** -- Console and JSON evidence export
 - **Dry-Run Mode** -- Preview scan results without writing to Dataverse
@@ -119,9 +119,8 @@ See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
 ```bash
 python scripts/create_dataverse_schema.py \
   --environment-url https://yourorg.crm.dynamics.com \
-  --client-id <app-id> \
-  --client-secret <secret> \
-  --tenant-id <tenant-id>
+  --tenant-id <tenant-id> \
+  --interactive
 ```
 
 ### 2. Run Compliance Scan (Dry-Run)
