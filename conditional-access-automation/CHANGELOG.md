@@ -2,6 +2,43 @@
 
 All notable changes to the Conditional Access Automation solution are documented here.
 
+## [2.0.0] - 2026-05-04 — BREAKING — Schema convention alignment (Issue #36)
+
+> The CAA Dataverse schema has been re-normalized to follow the team naming convention (single-word PascalCase SchemaNames, lowercase logical names with no underscores between words). Every existing CAA deployment must drop and recreate its three tables before upgrading to this version. See migration steps below.
+
+### BREAKING
+
+- **All CAA Dataverse columns renamed.** SchemaNames previously declared as `fsi_<Word>_<Word>` (e.g. `fsi_Policy_Id`, `fsi_Validation_Time`, `fsi_Is_Active`) are now single-word PascalCase (`fsi_PolicyId`, `fsi_ValidationTime`, `fsi_IsActive`). Microsoft Dataverse generates the LogicalName by lowercasing the SchemaName _and preserving any underscores it contains_ — the prior schema therefore deployed with logical names like `fsi_policy_id`, in violation of the convention documented in `CLAUDE.md` / `AGENTS.md`. Customers running v1.x against a real Dataverse environment must migrate (steps below). Read-only consumers and OData query callers will see a 400/404 against the old logical names after upgrade.
+- **`fsi_capolicybaseline`, `fsi_capolicyvalidationhistory`, `fsi_capolicyviolation`** keep their entity logical names (entity table SchemaNames had no internal underscores, so they were already correct). Only column names changed.
+
+### Migration
+
+To upgrade an existing deployment from v1.2.x to v2.0.0:
+
+1. **Export historical data** from the three CAA tables if you need to retain it. Power Automate or Dataverse Web API can dump rows to JSON / blob storage prior to schema rebuild.
+2. **Drop the three CAA tables** (or the affected columns individually) via Dataverse admin UI / Web API.
+3. **Re-run** `python scripts/create_caa_dataverse_schema.py --tenant-id ... --environment-url ...` from this version of the repo. The script will recreate the columns with the new SchemaNames.
+4. **Optional:** replay exported historical data against the new column names. Field-level mapping is mechanical: `fsi_is_active` → `fsi_isactive`, `fsi_validation_time` → `fsi_validationtime`, `fsi_tenant_id` → `fsi_tenantid`, etc. The full mapping is in the v2.0.0 PR description and in the auto-generated `docs/dataverse-schema.md`.
+5. **Re-deploy** the three CAA flows / scripts that POST/PATCH against these tables — they reference the new column names automatically once you pull this version of the repo.
+
+### Changed
+
+- `scripts/create_caa_dataverse_schema.py` — every column SchemaName updated to single-word PascalCase. PrimaryNameAttribute references on `fsi_CAPolicyBaseline` and `fsi_CAPolicyViolation` are now `fsi_policydisplayname`; on `fsi_CAPolicyValidationHistory` it is `fsi_runid`.
+- `scripts/private/CAAClient.psm1` — every OData `$filter` / `$orderby` / `$select` and every JSON request body field renamed to the new logical names.
+- `scripts/private/Get-CAAValidationResults.ps1` — same.
+- `scripts/Export-CAAComplianceEvidence.ps1` — same.
+- `docs/dataverse-schema.md` — auto-regenerated from the updated schema script.
+- `docs/schema.md` — manual schema reference doc updated to match.
+- `docs/compliance-monitoring.md` — example queries updated.
+
+### Notes
+
+- The `.ralph-config.json` fact previously asserting that underscored SchemaNames were "correct and intentional" has been corrected; the underscored layout was actually a convention violation that the OData lint script ([`scripts/lint-odata-columns.py`](../scripts/lint-odata-columns.py)) was designed to catch.
+- This change closes [Issue #36](https://github.com/judeper/FSI-AgentGov-Solutions/issues/36) and unblocks the soft-gate on `.github/workflows/odata-lint.yml`, which now runs in `--strict` mode.
+- `cross-solution-integration` v2.0.1 ships in lockstep to update its CAA-history reader to the new column names.
+
+---
+
 ## [1.2.2] - 2026-04-22
 
 ### Fixed

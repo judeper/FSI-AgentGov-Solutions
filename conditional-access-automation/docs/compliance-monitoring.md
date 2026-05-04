@@ -262,8 +262,8 @@ and `baselines` follow the Dataverse table definitions in
 [`docs/dataverse-schema.md`](dataverse-schema.md):
 
 - `validations` mirrors `fsi_capolicyvalidationhistories`
-- `violations` mirrors `fsi_capolicyviolations` (filtered to `fsi_is_active eq true`)
-- `baselines` mirrors `fsi_capolicybaselines` (filtered to `fsi_is_active eq true`)
+- `violations` mirrors `fsi_capolicyviolations` (filtered to `fsi_isactive eq true`)
+- `baselines` mirrors `fsi_capolicybaselines` (filtered to `fsi_isactive eq true`)
 
 Sign-in event data, MFA completion statistics, and Conditional Access audit
 logs are sourced from Microsoft Graph reporting endpoints (e.g.,

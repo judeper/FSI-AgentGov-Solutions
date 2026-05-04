@@ -6,11 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — Repo health sweep (docs)
+## [Unreleased] - 2026-Q2 — Repo health sweep
 
 ### Added
 - **`RELEASING.md`** (new) — maintainer-facing release procedure, schema evolution policy, and the Issue #37 schema 1.5.0 unblock steps. Documents the four-stage process: (1) product-team review of the 35 inferred zone backfills, (2) sentinel-comment removal, (3) coordinated PRs with `judeper/fsi-agentgov` to make `zones` required, (4) issue closure. Includes rollback procedure.
 - **`DEPLOYMENT-GUIDE.md`** — Related Documentation section now links to `RELEASING.md`.
+
+### Changed — BREAKING (per-solution)
+- **`conditional-access-automation` v1.2.2 → v2.0.0** — CAA Dataverse schema renamed from underscored snake_case SchemaNames to single-word PascalCase (Issue #36). Customers must drop and recreate the three CAA tables before upgrading. See `conditional-access-automation/CHANGELOG.md` for migration steps. The OData lint workflow (`.github/workflows/odata-lint.yml`) is now `--strict` and the soft-gate is removed.
+- **`cross-solution-integration` v2.0.0 → v2.0.1** — adapts CAA history-table reader to the renamed columns. Now requires CAA v2.0.0+.
+
+### Removed
+- The `# legacy: dev-only` exception in `conditional-access-automation/.ralph-config.json` claiming that underscored SchemaNames were "correct and intentional" has been removed; that statement was incorrect.
 
 ---
 

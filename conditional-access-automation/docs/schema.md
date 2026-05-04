@@ -20,19 +20,19 @@ Stores point-in-time snapshots of Conditional Access policy configurations. Used
 
 | Column | Schema Name | Type | Required | Description |
 |--------|------------|------|----------|-------------|
-| Policy Display Name | `fsi_policy_display_name` | String (256) | Yes | Primary name — CA policy display name |
-| Policy ID | `fsi_policy_id` | String (100) | Yes | Entra ID object ID of the CA policy |
-| Policy State | `fsi_policy_state` | String (50) | Yes | Policy state at capture time (enabled, disabled, enabledForReportingButNotEnforced) |
+| Policy Display Name | `fsi_policydisplayname` | String (256) | Yes | Primary name — CA policy display name |
+| Policy ID | `fsi_policyid` | String (100) | Yes | Entra ID object ID of the CA policy |
+| Policy State | `fsi_policystate` | String (50) | Yes | Policy state at capture time (enabled, disabled, enabledForReportingButNotEnforced) |
 | Zone | `fsi_zone` | Picklist (`fsi_acv_zone`) | Yes | Governance zone classification |
-| Conditions JSON | `fsi_conditions_json` | Memo | Yes | Full conditions block (users, applications, locations, platforms, risk levels) |
-| Grant Controls JSON | `fsi_grant_controls_json` | Memo | Yes | Grant control requirements (MFA, compliant device, etc.) |
-| Session Controls JSON | `fsi_session_controls_json` | Memo | No | Session control settings (sign-in frequency, persistent browser, etc.) |
-| Break Glass Exclusions | `fsi_break_glass_exclusions` | Memo | No | Emergency access account exclusions |
-| Baseline Hash | `fsi_baseline_hash` | String (64) | Yes | SHA-256 hash of the serialized policy for fast drift comparison |
-| Is Active | `fsi_is_active` | Boolean | Yes | Whether this baseline is the current active snapshot (default: No) |
-| Captured At | `fsi_captured_at` | DateTime | Yes | UTC timestamp when the baseline was captured |
-| Captured By | `fsi_captured_by` | String (256) | Yes | Identity that captured the baseline (UPN or service principal) |
-| Tenant ID | `fsi_tenant_id` | String (50) | Yes | Entra ID tenant GUID |
+| Conditions JSON | `fsi_conditionsjson` | Memo | Yes | Full conditions block (users, applications, locations, platforms, risk levels) |
+| Grant Controls JSON | `fsi_grantcontrolsjson` | Memo | Yes | Grant control requirements (MFA, compliant device, etc.) |
+| Session Controls JSON | `fsi_sessioncontrolsjson` | Memo | No | Session control settings (sign-in frequency, persistent browser, etc.) |
+| Break Glass Exclusions | `fsi_breakglassexclusions` | Memo | No | Emergency access account exclusions |
+| Baseline Hash | `fsi_baselinehash` | String (64) | Yes | SHA-256 hash of the serialized policy for fast drift comparison |
+| Is Active | `fsi_isactive` | Boolean | Yes | Whether this baseline is the current active snapshot (default: No) |
+| Captured At | `fsi_capturedat` | DateTime | Yes | UTC timestamp when the baseline was captured |
+| Captured By | `fsi_capturedby` | String (256) | Yes | Identity that captured the baseline (UPN or service principal) |
+| Tenant ID | `fsi_tenantid` | String (50) | Yes | Entra ID tenant GUID |
 
 ---
 
@@ -42,17 +42,17 @@ Immutable audit trail of compliance scan results. Organization-owned to prevent 
 
 | Column | Schema Name | Type | Required | Description |
 |--------|------------|------|----------|-------------|
-| Run ID | `fsi_run_id` | String (50) | Yes | Primary name — unique identifier for each validation run |
-| Validation Time | `fsi_validation_time` | DateTime | Yes | UTC timestamp when the scan executed |
-| Total Policies | `fsi_total_policies` | Integer | Yes | Number of CA policies evaluated |
-| Passed Count | `fsi_passed_count` | Integer | Yes | Policies that met all requirements |
-| Warning Count | `fsi_warning_count` | Integer | Yes | Policies with non-critical findings |
-| Failed Count | `fsi_failed_count` | Integer | Yes | Policies that failed validation checks |
-| Drift Count | `fsi_drift_count` | Integer | Yes | Policies that drifted from baseline |
-| Overall Severity | `fsi_overall_severity` | Picklist (`fsi_acv_severity`) | Yes | Worst severity across all evaluated policies |
-| Results JSON | `fsi_results_json` | Memo | Yes | Full scan results array with per-policy detail |
-| Validated By | `fsi_validated_by` | String (256) | Yes | Identity that executed the scan |
-| Tenant ID | `fsi_tenant_id` | String (50) | Yes | Entra ID tenant GUID |
+| Run ID | `fsi_runid` | String (50) | Yes | Primary name — unique identifier for each validation run |
+| Validation Time | `fsi_validationtime` | DateTime | Yes | UTC timestamp when the scan executed |
+| Total Policies | `fsi_totalpolicies` | Integer | Yes | Number of CA policies evaluated |
+| Passed Count | `fsi_passedcount` | Integer | Yes | Policies that met all requirements |
+| Warning Count | `fsi_warningcount` | Integer | Yes | Policies with non-critical findings |
+| Failed Count | `fsi_failedcount` | Integer | Yes | Policies that failed validation checks |
+| Drift Count | `fsi_driftcount` | Integer | Yes | Policies that drifted from baseline |
+| Overall Severity | `fsi_overallseverity` | Picklist (`fsi_acv_severity`) | Yes | Worst severity across all evaluated policies |
+| Results JSON | `fsi_resultsjson` | Memo | Yes | Full scan results array with per-policy detail |
+| Validated By | `fsi_validatedby` | String (256) | Yes | Identity that executed the scan |
+| Tenant ID | `fsi_tenantid` | String (50) | Yes | Entra ID tenant GUID |
 
 ---
 
@@ -62,20 +62,20 @@ Individual policy-level violation records created when a CA policy fails validat
 
 | Column | Schema Name | Type | Required | Description |
 |--------|------------|------|----------|-------------|
-| Policy Display Name | `fsi_policy_display_name` | String (256) | Yes | Primary name — CA policy that triggered the violation |
-| Run ID | `fsi_run_id` | String (50) | Yes | Validation run that detected the violation |
-| Policy ID | `fsi_policy_id` | String (100) | Yes | Entra ID object ID of the violating policy |
-| Violation Type | `fsi_violation_type` | String (100) | Yes | Category (e.g., state_drift, condition_change, grant_mismatch, policy_removed) |
+| Policy Display Name | `fsi_policydisplayname` | String (256) | Yes | Primary name — CA policy that triggered the violation |
+| Run ID | `fsi_runid` | String (50) | Yes | Validation run that detected the violation |
+| Policy ID | `fsi_policyid` | String (100) | Yes | Entra ID object ID of the violating policy |
+| Violation Type | `fsi_violationtype` | String (100) | Yes | Category (e.g., state_drift, condition_change, grant_mismatch, policy_removed) |
 | Zone | `fsi_zone` | Picklist (`fsi_acv_zone`) | Yes | Governance zone of the affected policy |
 | Severity | `fsi_severity` | Picklist (`fsi_acv_severity`) | Yes | Severity level of the violation |
-| Expected Value | `fsi_expected_value` | Memo | No | Baseline value that was expected |
-| Actual Value | `fsi_actual_value` | Memo | No | Current value that differs from baseline |
+| Expected Value | `fsi_expectedvalue` | Memo | No | Baseline value that was expected |
+| Actual Value | `fsi_actualvalue` | Memo | No | Current value that differs from baseline |
 | Description | `fsi_description` | Memo | No | Human-readable explanation of the violation |
-| Is Resolved | `fsi_is_resolved` | Boolean | Yes | Whether the violation has been addressed (default: No) |
-| Resolved At | `fsi_resolved_at` | DateTime | No | UTC timestamp when the violation was resolved |
-| Resolved By | `fsi_resolved_by` | String (256) | No | Identity that resolved the violation |
-| Detected At | `fsi_detected_at` | DateTime | Yes | UTC timestamp when the violation was detected |
-| Tenant ID | `fsi_tenant_id` | String (50) | Yes | Entra ID tenant GUID |
+| Is Resolved | `fsi_isresolved` | Boolean | Yes | Whether the violation has been addressed (default: No) |
+| Resolved At | `fsi_resolvedat` | DateTime | No | UTC timestamp when the violation was resolved |
+| Resolved By | `fsi_resolvedby` | String (256) | No | Identity that resolved the violation |
+| Detected At | `fsi_detectedat` | DateTime | Yes | UTC timestamp when the violation was detected |
+| Tenant ID | `fsi_tenantid` | String (50) | Yes | Entra ID tenant GUID |
 
 ---
 
@@ -104,7 +104,7 @@ Two global option sets are reused across all three tables:
 
 > Dataverse global option sets always use values ≥ 100,000,000. The integer
 > values shown above are what `$select` / `$filter` queries return on the bare
-> `fsi_overall_severity` and `fsi_zone` columns; the human label is on the
+> `fsi_overallseverity` and `fsi_zone` columns; the human label is on the
 > `…@OData.Community.Display.V1.FormattedValue` annotation when the request
 > sets `Prefer: odata.include-annotations="OData.Community.Display.V1.FormattedValue"`.
 
@@ -155,42 +155,42 @@ Three connection references enable Power Automate flows to interact with platfor
 ┌──────────────────────────────────────────┐
 │     fsi_CAPolicyValidationHistory        │
 │                                          │
-│  fsi_run_id (PK)                         │
-│  fsi_results_json → per-policy detail    │
-│  fsi_overall_severity                    │
+│  fsi_runid (PK)                         │
+│  fsi_resultsjson → per-policy detail    │
+│  fsi_overallseverity                    │
 │                                          │
 │  Ownership: OrganizationOwned (immutable)│
 └────────────────┬─────────────────────────┘
-                 │ fsi_run_id
+                 │ fsi_runid
                  ▼
 ┌──────────────────────────────────────────┐
 │        fsi_CAPolicyViolation             │
 │                                          │
-│  fsi_policy_display_name (PK)            │
-│  fsi_run_id → links to validation run    │
-│  fsi_policy_id → links to baseline       │
-│  fsi_violation_type (drift category)     │
-│  fsi_expected_value / fsi_actual_value   │
+│  fsi_policydisplayname (PK)            │
+│  fsi_runid → links to validation run    │
+│  fsi_policyid → links to baseline       │
+│  fsi_violationtype (drift category)     │
+│  fsi_expectedvalue / fsi_actualvalue   │
 │                                          │
 │  Ownership: UserOwned                    │
 └────────────────┬─────────────────────────┘
-                 │ fsi_policy_id
+                 │ fsi_policyid
                  ▼
 ┌──────────────────────────────────────────┐
 │        fsi_CAPolicyBaseline              │
 │                                          │
-│  fsi_policy_display_name (PK)            │
-│  fsi_policy_id (unique per active snap)  │
-│  fsi_conditions_json                     │
-│  fsi_grant_controls_json                 │
-│  fsi_baseline_hash (SHA-256 for drift)   │
-│  fsi_is_active                           │
+│  fsi_policydisplayname (PK)            │
+│  fsi_policyid (unique per active snap)  │
+│  fsi_conditionsjson                     │
+│  fsi_grantcontrolsjson                 │
+│  fsi_baselinehash (SHA-256 for drift)   │
+│  fsi_isactive                           │
 │                                          │
 │  Ownership: UserOwned                    │
 └──────────────────────────────────────────┘
 ```
 
-The `fsi_run_id` column on `fsi_CAPolicyViolation` logically references the validation run that detected the violation. The `fsi_policy_id` column references the Entra ID policy, which can be correlated with a `fsi_CAPolicyBaseline` record by matching on `fsi_policy_id + fsi_is_active = true`.
+The `fsi_runid` column on `fsi_CAPolicyViolation` logically references the validation run that detected the violation. The `fsi_policyid` column references the Entra ID policy, which can be correlated with a `fsi_CAPolicyBaseline` record by matching on `fsi_policyid + fsi_isactive = true`.
 
 ---
 

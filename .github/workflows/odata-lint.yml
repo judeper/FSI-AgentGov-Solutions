@@ -22,6 +22,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: python scripts/lint-odata-columns.py
-        # Soft-gate while baseline violations (5 known) are resolved by
-        # solution owners. Flip to `--strict` once baseline is clean.
+      - run: python scripts/lint-odata-columns.py --strict
+        # Strict mode enabled in v2.0.0 (Issue #36) — CAA schema renamed
+        # from underscored snake_case to single-word PascalCase per the
+        # team convention. Baseline is now clean.

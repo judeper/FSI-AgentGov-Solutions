@@ -6,6 +6,20 @@ All notable changes to this solution will be documented in this file.
 
 All notable changes to this solution will be documented in this file.
 
+## [2.0.1] — 2026-05-04 — CAA schema follow-up (Issue #36)
+
+### Changed
+
+- Updated CAA history-table column references in `IntegrationConfig.psm1` and `Export-UnifiedComplianceEvidence.ps1` to match the renamed CAA logical names shipped in `conditional-access-automation` v2.0.0 (`fsi_validationtime`, `fsi_runid`, `fsi_overallseverity`, `fsi_totalpolicies`, `fsi_passedcount`, `fsi_warningcount`, `fsi_failedcount`, `fsi_driftcount`).
+- `docs/evidence-export.md` and `docs/schema-contract.md` updated to match.
+
+### Notes
+
+- Requires `conditional-access-automation` v2.0.0+. Earlier CAA versions still using underscored logical names are no longer supported by this integration.
+- The historical "CAA history columns use underscores" caveat in the v2.0.0 entry below is **no longer accurate** for v2.0.1+; CAA now follows the same single-word convention as every other history table.
+
+---
+
 ## [2.0.0] — 2026-04-16 — BREAKING
 
 > Output of an AI Council technical-accuracy review (Opus 4.7 + Goldeneye). Every PowerShell script and integration doc had drifted from the actual Dataverse schemas of the six sibling solutions it integrates. The integration was effectively non-functional out of the box for ACV / SSC / AAM / CMM / FUS / CAA in v1.x.

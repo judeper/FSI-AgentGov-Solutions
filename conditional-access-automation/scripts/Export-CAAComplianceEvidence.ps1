@@ -129,7 +129,7 @@ $severityPriority = @{
     'Passed'      = 1
 }
 
-# Picklist integer-to-label mapping for fsi_overall_severity (fsi_acv_severity option set)
+# Picklist integer-to-label mapping for fsi_overallseverity (fsi_acv_severity option set)
 $severityLabels = @{ 100000000='Passed'; 100000001='Warning'; 100000002='GracePeriod'; 100000003='Failed'; 100000004='Error' }
 
 # --- Banner ---
@@ -257,16 +257,16 @@ if ($IncludeBaselines) {
 }
 
 # --- Compute summary ---
-# fsi_overall_severity is a picklist (integer) — resolve to label for comparison
-$passedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -eq 'Passed' }).Count
-$failedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -in @('Failed', 'Error') }).Count
-$warningCount = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overall_severity] -in @('Warning', 'GracePeriod') }).Count
+# fsi_overallseverity is a picklist (integer) — resolve to label for comparison
+$passedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overallseverity] -eq 'Passed' }).Count
+$failedCount  = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overallseverity] -in @('Failed', 'Error') }).Count
+$warningCount = @($validations | Where-Object { $severityLabels[[int]$_.fsi_overallseverity] -in @('Warning', 'GracePeriod') }).Count
 
 # Determine overall status (worst severity across all validation records)
 $overallStatus = 'Passed'
 $highestPriority = 0
 foreach ($v in $validations) {
-    $status = $severityLabels[[int]$v.fsi_overall_severity]
+    $status = $severityLabels[[int]$v.fsi_overallseverity]
     if ($status -and $severityPriority.ContainsKey($status)) {
         $priority = $severityPriority[$status]
         if ($priority -gt $highestPriority) {
@@ -297,7 +297,7 @@ foreach ($v in $validations) {
         $zoneBreakdown[$zone] = @{ passed = 0; failed = 0; warning = 0; total = 0 }
     }
     $zoneBreakdown[$zone].total++
-    switch ($severityLabels[[int]$v.fsi_overall_severity]) {
+    switch ($severityLabels[[int]$v.fsi_overallseverity]) {
         'Passed'      { $zoneBreakdown[$zone].passed++ }
         { $_ -in @('Failed', 'Error') } { $zoneBreakdown[$zone].failed++ }
         { $_ -in @('Warning', 'GracePeriod') } { $zoneBreakdown[$zone].warning++ }

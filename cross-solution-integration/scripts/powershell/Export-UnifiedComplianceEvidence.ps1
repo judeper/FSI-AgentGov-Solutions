@@ -160,8 +160,8 @@ $SolutionEvidence = @{
     CAA = @{
         Validations = @{
             EntitySet = 'fsi_capolicyvalidationhistories'
-            DateField = 'fsi_validation_time'
-            Fields    = @('fsi_run_id', 'fsi_validation_time', 'fsi_overall_severity', 'fsi_zone', 'fsi_total_policies', 'fsi_passed_count', 'fsi_warning_count', 'fsi_failed_count', 'fsi_drift_count')
+            DateField = 'fsi_validationtime'
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_overallseverity', 'fsi_zone', 'fsi_totalpolicies', 'fsi_passedcount', 'fsi_warningcount', 'fsi_failedcount', 'fsi_driftcount')
         }
     }
 }
