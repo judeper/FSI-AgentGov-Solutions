@@ -2,8 +2,10 @@
 """ARAClient - Dataverse Web API client for Agent Registry Automation.
 
 Provides authenticated access to Microsoft Dataverse (Power Platform)
-for schema deployment and data operations. Supports both interactive
-browser and service principal authentication via MSAL.
+for schema deployment and data operations. Authentication is
+passwordless-first: DefaultAzureCredential supports managed identity,
+workload identity federation, and developer credentials; MSAL is used for
+interactive, certificate, and legacy client-secret fallback modes.
 """
 
 import argparse
@@ -17,6 +19,11 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+try:
+    from azure.identity import DefaultAzureCredential
+except ImportError:  # pragma: no cover - exercised only when dependency missing
+    DefaultAzureCredential = None
+
 
 class ARAClient:
     """Dataverse Web API client with MSAL authentication and retry logic."""
@@ -29,27 +36,38 @@ class ARAClient:
         environment_url: str,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
+        client_certificate_path: Optional[str] = None,
+        client_certificate_thumbprint: Optional[str] = None,
+        managed_identity_client_id: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
     ):
         """Initialize ARA client.
 
         Args:
-            tenant_id: Entra ID tenant ID
-            environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
-            client_id: Application (client) ID
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
+            tenant_id: Microsoft Entra ID tenant ID
+            environment_url: Dataverse environment URL (for example, https://org.crm.dynamics.com)
+            client_id: Application (client) ID for certificate or legacy secret auth
+            client_secret: Legacy client secret value for dev-only fallback auth
+            client_certificate_path: PEM certificate/private key path for app-only auth
+            client_certificate_thumbprint: Certificate thumbprint for MSAL certificate auth
+            managed_identity_client_id: User-assigned managed identity client ID
+            interactive: Use interactive browser auth instead of app-only auth
             dry_run: If True, log API calls without executing them
         """
         self.tenant_id = tenant_id
         self.environment_url = environment_url.rstrip("/")
         self.client_id = client_id
         self.client_secret = client_secret
+        self.client_certificate_path = client_certificate_path
+        self.client_certificate_thumbprint = client_certificate_thumbprint
+        self.managed_identity_client_id = managed_identity_client_id
         self.interactive = interactive
         self.dry_run = dry_run
         self.base_url = f"{self.environment_url}/api/data/{self.API_VERSION}"
         self._token_cache = msal.SerializableTokenCache()
+        self.credential = None
+        self.app = None
 
         # Dataverse requires the environment URL as the scope
         authority = f"https://login.microsoftonline.com/{tenant_id}"
@@ -64,17 +82,42 @@ class ARAClient:
                 authority=authority,
                 token_cache=self._token_cache,
             )
-        else:
-            # Confidential client for service-to-service auth
-            if not client_id or not client_secret:
+        elif client_certificate_path:
+            if not client_id or not client_certificate_thumbprint:
                 raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
+                    "client_id and client_certificate_thumbprint are required "
+                    "for certificate authentication"
                 )
+            with open(client_certificate_path, encoding="utf-8") as certificate_file:
+                private_key = certificate_file.read()
+            self.app = msal.ConfidentialClientApplication(
+                client_id,
+                client_credential={
+                    "private_key": private_key,
+                    "thumbprint": client_certificate_thumbprint,
+                },
+                authority=authority,
+                token_cache=self._token_cache,
+            )
+        elif client_secret:
+            # legacy: dev-only — replace with managed identity in production
+            if not client_id:
+                raise ValueError("client_id is required for legacy client-secret auth")
             self.app = msal.ConfidentialClientApplication(
                 client_id,
                 client_credential=client_secret,
                 authority=authority,
                 token_cache=self._token_cache,
+            )
+        else:
+            if DefaultAzureCredential is None:
+                raise ImportError(
+                    "azure-identity is required for managed identity or workload "
+                    "identity federation authentication"
+                )
+            self.credential = DefaultAzureCredential(
+                managed_identity_client_id=managed_identity_client_id,
+                exclude_interactive_browser_credential=True,
             )
 
         # Setup retry strategy for transient failures
@@ -102,6 +145,10 @@ class ARAClient:
         Raises:
             RuntimeError: If token acquisition fails
         """
+        if self.credential is not None:
+            token = self.credential.get_token(*self.scopes)
+            return token.token
+
         accounts = self.app.get_accounts() if self.interactive else None
         result = self.app.acquire_token_silent(
             scopes=self.scopes,
@@ -130,7 +177,7 @@ class ARAClient:
             "Content-Type": "application/json",
             "OData-MaxVersion": "4.0",
             "OData-Version": "4.0",
-            "Prefer": "odata.include-annotations=*",
+            "Prefer": "odata.maxpagesize=5000, odata.include-annotations=*",
         }
 
     # =========================================================================
@@ -196,13 +243,28 @@ class ARAClient:
         if top:
             params["$top"] = str(top)
 
-        resp = self.session.get(
-            f"{self.base_url}/{entity_set}",
-            headers=self._get_headers(),
-            params=params,
-        )
-        resp.raise_for_status()
-        return resp.json()
+        headers = self._get_headers()
+        next_url = f"{self.base_url}/{entity_set}"
+        all_records: list[dict[str, Any]] = []
+        last_response: dict[str, Any] = {"value": all_records}
+
+        while next_url:
+            resp = self.session.get(
+                next_url,
+                headers=headers,
+                params=params if next_url == f"{self.base_url}/{entity_set}" else None,
+            )
+            resp.raise_for_status()
+            page = resp.json()
+            if "value" not in page:
+                return page
+            all_records.extend(page.get("value", []))
+            last_response = page
+            next_url = page.get("@odata.nextLink")
+            params = None
+
+        last_response["value"] = all_records
+        return last_response
 
     def create_record(self, entity_set: str, data: dict) -> Optional[str]:
         """Create a record in Dataverse.
@@ -578,7 +640,22 @@ def main() -> None:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ARA_CLIENT_SECRET"),
-        help="Service principal secret (or set ARA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ARA_CLIENT_SECRET env var)",
+    )
+    parser.add_argument(
+        "--client-certificate-path",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_PATH"),
+        help="PEM certificate/private key path for certificate authentication",
+    )
+    parser.add_argument(
+        "--client-certificate-thumbprint",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_THUMBPRINT"),
+        help="Certificate thumbprint for certificate authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("ARA_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID",
     )
     parser.add_argument(
         "--environment-url",
@@ -616,6 +693,9 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            client_certificate_path=args.client_certificate_path,
+            client_certificate_thumbprint=args.client_certificate_thumbprint,
+            managed_identity_client_id=args.managed_identity_client_id,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

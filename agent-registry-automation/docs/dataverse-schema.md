@@ -27,7 +27,7 @@
 | `fsi_ownerupn` | `fsi_OwnerUpn` | String(200) | Yes | Agent owner user principal name |
 | `fsi_ownerdisplayname` | `fsi_OwnerDisplayName` | String(500) | No | Owner display name |
 | `fsi_isorphaned` | `fsi_IsOrphaned` | Boolean | Yes | Whether the agent has no active owner |
-| `fsi_entraregistrystatus` | `fsi_EntraRegistryStatus` | String(200) | No | Microsoft Entra Agent Registry sync status |
+| `fsi_entraregistrystatus` | `fsi_EntraRegistryStatus` | String(200) | No | Microsoft Entra Agent ID sync status |
 | `fsi_lastscannedat` | `fsi_LastScannedAt` | DateTime | No | When the agent was last discovered by scan |
 | `fsi_registeredat` | `fsi_RegisteredAt` | DateTime | No | When the agent was registered |
 | `fsi_approvedby` | `fsi_ApprovedBy` | String(200) | No | Approver UPN |

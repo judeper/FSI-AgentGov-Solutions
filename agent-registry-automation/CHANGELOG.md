@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2026-05-04
+
+### Changed
+
+- Refreshed authentication guidance to be managed-identity/workload-identity-first, with certificate authentication as the workstation fallback and client secrets documented only as a legacy development fallback.
+- Added Dataverse and Power Platform API paging support to the Python client and baseline discovery script.
+- Updated Flow 1 build guidance to use schema-correct zone values and required create fields while preserving approval workflow state on rediscovery.
+- Updated Flow 3 guidance for Microsoft Entra Agent ID preview terminology, feature-flagged endpoint confirmation, `fsi_entraregistrystatus`, and the modeled `EntraSynced` event value.
+- Added current Power Platform, PAC CLI, and Microsoft Graph tooling validation guidance for the 2026-Q2 Microsoft Learn refresh.
+
+---
+
 ## [2.0.0] - 2026-04-30
 
 ### BREAKING

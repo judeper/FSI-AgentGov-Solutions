@@ -177,21 +177,25 @@ def main() -> None:
             "  python deploy.py --interactive\n\n"
             "  # Dry run (preview all changes)\n"
             "  python deploy.py --dry-run --interactive\n\n"
-            "  # Deploy only tables with service principal\n"
+            "  # Deploy only tables with certificate auth\n"
             "  python deploy.py --tables-only \\\n"
             "    --tenant-id $ARA_TENANT_ID \\\n"
             "    --client-id $ARA_CLIENT_ID \\\n"
-            "    --client-secret $ARA_CLIENT_SECRET \\\n"
+            "    --client-certificate-path $ARA_CLIENT_CERTIFICATE_PATH \\\n"
+            "    --client-certificate-thumbprint $ARA_CLIENT_CERTIFICATE_THUMBPRINT \\\n"
             "    --environment-url $ARA_ENVIRONMENT_URL\n\n"
             "  # Deploy only environment variables\n"
             "  python deploy.py --vars-only --interactive\n\n"
             "  # Deploy only connection references\n"
             "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  ARA_TENANT_ID        Microsoft Entra ID tenant ID\n"
-            "  ARA_CLIENT_ID        Service principal app ID\n"
-            "  ARA_CLIENT_SECRET    Service principal secret\n"
-            "  ARA_ENVIRONMENT_URL  Dataverse environment URL\n"
+            "  ARA_TENANT_ID                       Microsoft Entra ID tenant ID\n"
+            "  ARA_CLIENT_ID                       App ID for certificate or legacy secret auth\n"
+            "  ARA_CLIENT_CERTIFICATE_PATH         PEM certificate/private key path\n"
+            "  ARA_CLIENT_CERTIFICATE_THUMBPRINT   Certificate thumbprint\n"
+            "  ARA_MANAGED_IDENTITY_CLIENT_ID      Optional user-assigned managed identity client ID\n"
+            "  ARA_CLIENT_SECRET                   Legacy dev-only fallback secret\n"
+            "  ARA_ENVIRONMENT_URL                 Dataverse environment URL\n"
         ),
     )
 
@@ -204,12 +208,27 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ARA_CLIENT_ID"),
-        help="Service principal app ID (or set ARA_CLIENT_ID env var)",
+        help="App ID for certificate or legacy secret auth (or set ARA_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ARA_CLIENT_SECRET"),
-        help="[DEPRECATED: use ARA_CLIENT_SECRET env var instead] Service principal secret",
+        help="[LEGACY DEV-ONLY: prefer managed identity, workload identity federation, or certificate auth] Service principal secret",
+    )
+    parser.add_argument(
+        "--client-certificate-path",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_PATH"),
+        help="PEM certificate/private key path for certificate authentication",
+    )
+    parser.add_argument(
+        "--client-certificate-thumbprint",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_THUMBPRINT"),
+        help="Certificate thumbprint for certificate authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("ARA_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID",
     )
     parser.add_argument(
         "--environment-url",
@@ -265,10 +284,12 @@ def main() -> None:
     if not args.environment_url:
         print("ERROR: --environment-url or ARA_ENVIRONMENT_URL required")
         sys.exit(1)
-    if not args.interactive and (not args.client_id or not args.client_secret):
+    if args.client_certificate_path and (
+        not args.client_id or not args.client_certificate_thumbprint
+    ):
         print(
-            "ERROR: --client-id and --client-secret required "
-            "(or use --interactive)"
+            "ERROR: --client-id and --client-certificate-thumbprint are "
+            "required with --client-certificate-path"
         )
         sys.exit(1)
 
@@ -278,6 +299,9 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            client_certificate_path=args.client_certificate_path,
+            client_certificate_thumbprint=args.client_certificate_thumbprint,
+            managed_identity_client_id=args.managed_identity_client_id,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

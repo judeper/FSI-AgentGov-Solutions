@@ -1,5 +1,5 @@
 #Requires -Version 7.0
-#Requires -Modules Az.Accounts
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '5.3.4' }
 
 <#
 .SYNOPSIS
@@ -199,6 +199,37 @@ function Invoke-ApiRequest {
     }
 }
 
+function Get-PagedApiValues {
+    <#
+    .SYNOPSIS
+        Retrieves all pages from an API response that returns value plus a nextLink.
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Uri,
+
+        [Parameter(Mandatory)]
+        [string]$Token
+    )
+
+    $items = [System.Collections.Generic.List[object]]::new()
+    $nextUri = $Uri
+
+    while ($nextUri) {
+        $response = Invoke-ApiRequest -Uri $nextUri -Token $Token -Method GET
+        if ($response.value) {
+            $items.AddRange(@($response.value))
+        }
+
+        $nextUri = $response.'@odata.nextLink'
+        if (-not $nextUri -and $response.nextLink) {
+            $nextUri = $response.nextLink
+        }
+    }
+
+    return $items
+}
+
 function Get-PowerPlatformEnvironments {
     <#
     .SYNOPSIS
@@ -215,8 +246,7 @@ function Get-PowerPlatformEnvironments {
     $uri = "$($ApiBaseUrl.TrimEnd('/'))/appmanagement/environments?api-version=2022-03-01-preview"
     Write-AuditLog "Querying Power Platform environments..."
 
-    $response = Invoke-ApiRequest -Uri $uri -Token $Token -Method GET
-    $environments = @($response.value)
+    $environments = Get-PagedApiValues -Uri $uri -Token $Token
 
     Write-AuditLog "Found $($environments.Count) environment(s)"
     return $environments
@@ -241,8 +271,7 @@ function Get-EnvironmentBots {
     $uri = "$($ApiBaseUrl.TrimEnd('/'))/appmanagement/environments/$EnvironmentId/bots?api-version=2022-03-01-preview"
 
     try {
-        $response = Invoke-ApiRequest -Uri $uri -Token $Token -Method GET
-        return @($response.value)
+        return @(Get-PagedApiValues -Uri $uri -Token $Token)
     }
     catch {
         $statusCode = $null

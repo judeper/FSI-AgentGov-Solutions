@@ -279,7 +279,7 @@ INVENTORY_COLUMNS = [
                  description="Whether the agent has no active owner"),
     _string_col("fsi_EntraRegistryStatus", "Entra Registry Status", 200,
                 required=False,
-                description="Microsoft Entra Agent Registry sync status"),
+                description="Microsoft Entra Agent ID sync status"),
     _datetime_col("fsi_LastScannedAt", "Last Scanned At", required=False,
                   description="When the agent was last discovered by scan"),
     _datetime_col("fsi_RegisteredAt", "Registered At", required=False,
@@ -737,11 +737,12 @@ def main() -> None:
             "Examples:\n"
             "  # Dry run with interactive auth\n"
             "  python create_dataverse_schema.py --dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "  # Deploy with certificate auth\n"
             "  python create_dataverse_schema.py \\\n"
             "    --tenant-id $ARA_TENANT_ID \\\n"
             "    --client-id $ARA_CLIENT_ID \\\n"
-            "    --client-secret $ARA_CLIENT_SECRET \\\n"
+            "    --client-certificate-path $ARA_CLIENT_CERTIFICATE_PATH \\\n"
+            "    --client-certificate-thumbprint $ARA_CLIENT_CERTIFICATE_THUMBPRINT \\\n"
             "    --environment-url $ARA_ENVIRONMENT_URL\n"
         ),
     )
@@ -754,12 +755,27 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ARA_CLIENT_ID"),
-        help="Service principal app ID (or set ARA_CLIENT_ID env var)",
+        help="App ID for certificate or legacy secret auth (or set ARA_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ARA_CLIENT_SECRET"),
-        help="Service principal secret (or set ARA_CLIENT_SECRET env var)",
+        help="Legacy dev-only service principal secret (or set ARA_CLIENT_SECRET env var)",
+    )
+    parser.add_argument(
+        "--client-certificate-path",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_PATH"),
+        help="PEM certificate/private key path for certificate authentication",
+    )
+    parser.add_argument(
+        "--client-certificate-thumbprint",
+        default=os.environ.get("ARA_CLIENT_CERTIFICATE_THUMBPRINT"),
+        help="Certificate thumbprint for certificate authentication",
+    )
+    parser.add_argument(
+        "--managed-identity-client-id",
+        default=os.environ.get("ARA_MANAGED_IDENTITY_CLIENT_ID"),
+        help="User-assigned managed identity client ID",
     )
     parser.add_argument(
         "--environment-url",
@@ -805,6 +821,9 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            client_certificate_path=args.client_certificate_path,
+            client_certificate_thumbprint=args.client_certificate_thumbprint,
+            managed_identity_client_id=args.managed_identity_client_id,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )
