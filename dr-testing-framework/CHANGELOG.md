@@ -4,6 +4,16 @@ All notable changes to the DR Readiness Validation Framework.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Bumped manifest metadata to v2.0.1 for the 2026-Q2 Microsoft Learn refresh.
+- Aligned README, evidence export docs, templates, and generated Dataverse schema wording with current Power Platform backup/restore, Application Insights telemetry, and Microsoft Entra resilience guidance.
+- Added access-token authentication paths for managed identity and workload identity callers; client-secret prompts and environment variables are marked legacy dev-only.
+- Replaced stale RTO/RPO aggregation examples with probe-duration and validation-coverage semantics used by `Invoke-DRTest.ps1` and `Export-DREvidence.ps1`.
+- Renamed the evidence metric `ProbeBudgetComplianceRate` to `ProbeWithinBudgetRate` to avoid over-claiming compliance from a timing probe.
+
 ## [2.0.0] - 2026-04-16 — BREAKING
 
 ### BREAKING CHANGES

@@ -1,17 +1,17 @@
 # DR Readiness Validation Framework (DR-Testing-Framework)
 
-> **Version:** 2.0.0 | **Controls:** 2.4, 2.1, 1.9
+> **Version:** 2.0.1 | **Controls:** 2.4, 2.1, 1.9
 
 Scheduled validation that the post-recovery state of an AI agent environment in Microsoft Power Platform is observable, reachable, and correctly configured — packaging structured evidence for FFIEC BCP, FINRA Rule 4370, OCC Heightened Standards, and SEC Rule 17a-4(f) supervisory review.
 
 ## What this framework actually does (and does not do)
 
-This framework is **post-recovery validation and evidence packaging**, not recovery execution. Power Platform environments and Copilot Studio agents are tenant-bound metadata managed by Microsoft — a customer script cannot back them up, restore them point-in-time, or fail traffic to a paired region. Those operations are performed by Microsoft via the Power Platform admin center (PPAC) restore APIs and ALM solution re-deployment. Read the table below carefully before classifying outputs as recovery-test evidence.
+This framework is **post-recovery validation and evidence packaging**, not recovery execution. Power Platform environments and Copilot Studio agents are tenant-bound metadata managed by Microsoft — a customer script cannot back them up, restore them point-in-time, or fail traffic to another region. Those operations are performed through the Power Platform admin center (PPAC), the current Power Apps admin module cmdlets, Microsoft-led DR processes where applicable, and ALM solution re-deployment. Read the table below carefully before classifying outputs as recovery-test evidence.
 
 | Capability | This framework | What you still need |
 |------------|----------------|----------------------|
 | Verify a previously restored agent is reachable, has its components, and is in `Active` state | ✅ Yes (`AgentReadinessCheck`) | A separately performed restore via PPAC or solution re-import |
-| Verify a target Dataverse environment is reachable and authenticates a known service principal | ✅ Yes (`EnvironmentReachabilityCheck`) | Microsoft-side restore of the environment to a paired region (PPAC) |
+| Verify a target Dataverse environment is reachable and authenticates a known identity | ✅ Yes (`EnvironmentReachabilityCheck`) | A separately completed PPAC/Admin-module restore, copy, or Microsoft-led DR event; document whether the operation was same-region restore, copy to another environment, or Microsoft-managed failover |
 | Verify the DR-evidence Dataverse table is queryable, paginate it, and hash a snapshot for integrity | ✅ Yes (`DataverseAccessCheck`) | Backup-timestamp comparison for true RPO (Microsoft does not expose backup timestamps to customer queries) |
 | Initiate a Power Platform environment restore | ❌ No | PPAC UI / Power Platform admin REST API (out of scope) |
 | Fail traffic to a backup region | ❌ No | This is platform-level and customer-invisible |
@@ -27,7 +27,7 @@ The script writes an audit log on every run and appends a row to `fsi_drtestresu
 | **Scheduled or on-demand checks** | Run `Invoke-DRTest.ps1` from Azure Automation, GitHub Actions, or ad hoc |
 | **Probe-time tracking** | Records wall-clock time of each check and labels it as `ProbeDurationHours` (NOT recovery time) |
 | **Last-test-recency tracking** | `MinutesSinceLastResult` reports gap since the last DR-evidence row was written (NOT RPO) |
-| **Honest target presentation** | Each scenario lists its RTO target and a clear note that the script does not measure actual RTO |
+| **Honest target presentation** | Each scenario lists a validation probe budget and a clear note that the script does not measure actual RTO |
 | **Validation checks** | Confirms agent component count, statecode, connection references, WhoAmI security context |
 | **Pagination-safe queries** | All Dataverse reads follow `@odata.nextLink` and use `$count=true` for true counts |
 | **Fail-closed auth** | Missing credentials are an error, not a silent PASS (use `-AllowConnectivityOnly` to opt in) |
@@ -61,41 +61,43 @@ The script writes an audit log on every run and appends a row to `fsi_drtestresu
 
 ## Test Scenarios
 
-### 1. Agent Restore
+The v2 scenario names describe **validation checks**. Legacy v1 names are still accepted by the CLI for one minor release and are normalized automatically.
 
-Restore a Copilot Studio agent from backup/export.
+### 1. AgentReadinessCheck (legacy alias: AgentRestore)
 
-| Metric | Target | Validation |
-|--------|--------|------------|
-| **RTO** | 4 hours | Agent operational |
-| **RPO** | 24 hours | Configuration current |
+Validates that a restored, copied, or redeployed Copilot Studio agent is present in Dataverse, has component records, and is active.
 
-### 2. Environment Failover
+| Metric | Target | Validation evidence |
+|--------|--------|---------------------|
+| **ProbeDurationHours** | 0.25 hours | Read-only API checks complete within the validation budget |
+| **Operator RTO/RPO evidence** | Captured outside this script | PPAC/Admin-module restore timestamps, solution import logs, or incident timeline |
 
-Switch agent workload to backup environment.
+### 2. EnvironmentReachabilityCheck (legacy alias: EnvironmentFailover)
 
-| Metric | Target | Validation |
-|--------|--------|------------|
-| **RTO** | 2 hours | Environment accessible |
-| **RPO** | 1 hour | Data synchronized |
+Validates that the target Dataverse environment endpoint responds and that authenticated `WhoAmI` succeeds after the operator completes the recovery step.
 
-### 3. Data Recovery
+| Metric | Target | Validation evidence |
+|--------|--------|---------------------|
+| **ProbeDurationHours** | 0.10 hours | Dataverse endpoint and organization metadata are reachable |
+| **Operator RTO/RPO evidence** | Captured outside this script | PPAC restore/copy operation details and service health incident notes |
 
-Restore Dataverse data from backup.
+### 3. DataverseAccessCheck (legacy alias: DataRecovery)
 
-| Metric | Target | Validation |
-|--------|--------|------------|
-| **RTO** | 4 hours | Data accessible |
-| **RPO** | 24 hours | Data complete |
+Validates that the `fsi_drtestresult` table is queryable, recent rows can be hashed, and server-side counts are available.
 
-### 4. Full DR
+| Metric | Target | Validation evidence |
+|--------|--------|---------------------|
+| **MinutesSinceLastResult** | 1440 minutes | Gap since the last validation row, not the Dataverse backup timestamp |
+| **Operator RPO evidence** | Captured outside this script | Backup/restore timestamp evidence from PPAC or Microsoft support records |
 
-Complete infrastructure recovery.
+### 4. FullValidation (legacy alias: FullDR)
 
-| Metric | Target | Validation |
-|--------|--------|------------|
-| **RTO** | 8 hours | Full functionality |
-| **RPO** | 24 hours | All systems current |
+Runs all three validation checks and aggregates their results into one evidence row.
+
+| Metric | Target | Validation evidence |
+|--------|--------|---------------------|
+| **ProbeDurationHours** | 0.75 hours | Combined validation budget for all read-only checks |
+| **Coverage** | All validation types run | Evidence export reports missing validation types as `IncompleteValidationCoverage` |
 
 ## Prerequisites
 
@@ -114,7 +116,7 @@ Complete infrastructure recovery.
 | Role | Required For |
 |------|--------------|
 | **Power Platform Admin** (Microsoft Entra ID) | Performing any environment restore from PPAC (out of scope of this script — listed for the operator) |
-| **Service Principal application user** in the target Dataverse environment with access to `bot`, `botcomponent`, `connectionreference`, `WhoAmI`, and the `fsi_drtestresult` table | Required for `Invoke-DRTest.ps1` to read agent state and write evidence rows |
+| **Application user** (managed identity, workload identity, or service principal) in the target Dataverse environment with access to `bot`, `botcomponent`, `connectionreference`, `WhoAmI`, and the `fsi_drtestresult` table | Required for `Invoke-DRTest.ps1` to read agent state and write evidence rows |
 
 ### Dependencies
 
@@ -127,20 +129,26 @@ Complete infrastructure recovery.
 ### 1. Deploy Dataverse Schema
 
 ```powershell
-# Deploy schema using Python script
-python scripts/create_drt_dataverse_schema.py --interactive
+# Prefer an access token acquired through managed identity or workload identity
+python scripts/create_drt_dataverse_schema.py `
+    --environment-url https://your-org.crm.dynamics.com `
+    --access-token $env:DRT_ACCESS_TOKEN
 
-# Or deploy with dry-run first
-python scripts/create_drt_dataverse_schema.py --dry-run --interactive
+# Or preview with dry-run first
+python scripts/create_drt_dataverse_schema.py `
+    --environment-url https://your-org.crm.dynamics.com `
+    --access-token $env:DRT_ACCESS_TOKEN `
+    --dry-run
 ```
 
 ### 2. Run DR Test
 
 ```powershell
 .\scripts\Invoke-DRTest.ps1 `
-    -TestType "AgentRestore" `
+    -TestType "AgentReadinessCheck" `
     -AgentId "guid" `
-    -Environment "https://your-org.crm.dynamics.com"
+    -Environment "https://your-org.crm.dynamics.com" `
+    -AccessToken $env:DATAVERSE_ACCESS_TOKEN
 ```
 
 ### 3. Review Results
@@ -153,30 +161,32 @@ Check test results in Dataverse.
 
 ## Deployment
 
-> **Planned** — A deployable Power Platform solution package (solution.xml, customizations.xml) for automated Dataverse schema deployment is planned to reduce deployment errors and support ALM pipelines. Until then, create the table manually as described below.
-
-Alternatively, use the automated schema script:
+No exported Power Platform runtime artifacts ship with this solution. Deploy the Dataverse table with the schema script or create it manually from the generated schema reference.
 
 ```powershell
-python scripts/create_drt_dataverse_schema.py --interactive
+python scripts/create_drt_dataverse_schema.py `
+    --environment-url https://your-org.crm.dynamics.com `
+    --access-token $env:DRT_ACCESS_TOKEN
 
-# Generate schema documentation
 python scripts/create_drt_dataverse_schema.py --output-docs
 ```
 
+Client-secret authentication remains available for local development only and is marked in scripts as legacy dev-only. For production automation, acquire a Dataverse token using managed identity, user-assigned managed identity, workload identity federation, or another approved credential flow and pass it with `--access-token` / `-AccessToken`.
+
 ### Dataverse Schema: `fsi_drtestresult`
 
-The `Save-TestResult` function writes to a custom Dataverse table with **logical name** `fsi_drtestresult` (singular). Dataverse will auto-generate the entity set name `fsi_drtestresults` used by the API. Create this table manually with the following columns:
+The `Save-TestResult` function writes to a custom Dataverse table with **logical name** `fsi_drtestresult` (singular). Dataverse will auto-generate the entity set name `fsi_drtestresults` used by the API. Create this table manually with the following columns or run the schema script above:
 
 > **Verification:** Confirm the entity set name by calling `GET {env}/api/data/v9.2/EntityDefinitions(LogicalName='fsi_drtestresult')?$select=EntitySetName`.
 
 | Column (Logical Name) | Type | Description |
 |------------------------|------|-------------|
-| `fsi_testtype` | Single Line of Text (100) | Test type: AgentRestore, EnvironmentFailover, DataRecovery, FullDR |
-| `fsi_executedon` | Date and Time | UTC timestamp of test execution |
-| `fsi_actualrto` | Decimal Number | Actual recovery time in hours |
-| `fsi_targetrto` | Whole Number | Target RTO in hours |
-| `fsi_rtomet` | Yes/No (Boolean) | Whether actual RTO met the target |
+| `fsi_name` | Single Line of Text (100) | Required primary name for the validation row |
+| `fsi_testtype` | Single Line of Text (100) | Validation type: AgentReadinessCheck, EnvironmentReachabilityCheck, DataverseAccessCheck, FullValidation |
+| `fsi_executedon` | Date and Time (`TimeZoneIndependent`) | UTC timestamp of validation execution |
+| `fsi_actualrto` | Decimal Number | Compatibility column that stores `ProbeDurationHours`; it is not actual RTO |
+| `fsi_targetrto` | Whole Number | Compatibility column that stores `ProbeDurationTargetHours`; it is not target RTO |
+| `fsi_rtomet` | Yes/No (Boolean) | Compatibility column that stores `ProbeWithinBudget` |
 | `fsi_status` | Choice (Option Set) | 1 = Pass, 2 = Fail |
 | `fsi_validationchecks` | Multiple Lines of Text | JSON array of validation check results |
 | `fsi_correlationid` | Single Line of Text (8) | Short correlation ID linking the Dataverse record to its audit log file |
@@ -187,78 +197,125 @@ The `Save-TestResult` function writes to a custom Dataverse table with **logical
 |----------|-------------|
 | [Prerequisites](docs/prerequisites.md) | Licensing, roles, dependencies, network requirements |
 | [Dataverse Schema](docs/dataverse-schema.md) | Table and column definitions for fsi_drtestresult |
-| [Evidence Export](docs/evidence-export.md) | Evidence packaging for compliance reporting |
+| [Evidence Export](docs/evidence-export.md) | Evidence packaging for supervisory reporting |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and resolution steps |
 
 ## Test Execution Workflow
 
 ```
-1. Schedule Test
-   └─→ Define scenario, target, schedule
+1. Plan Recovery Exercise
+   └─→ Define scope, owner, target environment, and expected evidence
 
-2. Pre-Test Baseline
-   └─→ Capture current state, configuration hash
+2. Execute Recovery Outside This Framework
+   └─→ Use PPAC/Admin-module restore, environment copy, solution import, or Microsoft-led DR process
 
-3. Execute Recovery
-   └─→ Perform recovery procedure, measure time
+3. Run Post-Recovery Validation
+   └─→ Execute Invoke-DRTest.ps1 against the recovered target
 
-4. Validate Functionality
-   └─→ Run validation checks, verify responses
+4. Persist Validation Evidence
+   └─→ Write fsi_drtestresult rows and local audit logs
 
-5. Document Results
-   └─→ Record metrics, gaps, observations
+5. Package Evidence
+   └─→ Export JSON, SHA-256 companion hash, and audit logs
 
-6. Generate Evidence
-   └─→ Export compliance artifacts
+6. Attach Operator Evidence
+   └─→ Store PPAC/Admin-module timestamps, support ticket IDs, and incident timeline separately
 ```
 
 ## Validation Checks
 
-### Agent Functionality
+### Agent readiness
 
 | Check | Method | Pass Criteria |
 |-------|--------|---------------|
-| Agent responds | Send test prompt | Response received |
-| Correct identity | Check agent metadata | Matches backup |
-| Topics functional | Test key topics | Expected responses |
+| Agent present | Query `bots` by `botid` | Matching agent record found |
+| Component inventory | Query `botcomponents` by parent bot | One or more component records found |
+| Agent active state | Read `statecode` from `bots` | `statecode = 0` |
 
-### Connector Availability
-
-| Check | Method | Pass Criteria |
-|-------|--------|---------------|
-| Connections valid | List connections | All active |
-| Data accessible | Test query | Results returned |
-| Auth working | Verify tokens | No auth errors |
-
-### Security Policies
+### Environment reachability
 
 | Check | Method | Pass Criteria |
 |-------|--------|---------------|
-| DLP applied | Check policy status | Policies active |
-| RBAC intact | Verify permissions | Roles correct |
-| Audit logging | Check audit trail | Events captured |
+| Environment endpoint | HTTP request to Dataverse service root | Endpoint responds within timeout |
+| Authenticated context | Dataverse `WhoAmI` | Organization/user context returned |
+| Organization metadata | Query `organizations` | Organization record returned |
+
+### Dataverse access and evidence integrity
+
+| Check | Method | Pass Criteria |
+|-------|--------|---------------|
+| Evidence table access | Query `fsi_drtestresults` | Table is queryable |
+| Snapshot hash | SHA-256 over recent evidence rows | Hash generated for evidence package |
+| Record count | `$count=true&$top=0` | Server-side count returned |
 
 ## Metrics
 
-### RTO Measurement
+### Validation probe duration
 
 ```
-Actual RTO = Recovery Complete Time - Incident Start Time
-RTO Met = Actual RTO <= Target RTO
+ProbeDurationHours = Validation Complete Time - Validation Start Time
+ProbeWithinBudget = ProbeDurationHours <= ProbeDurationTargetHours
 ```
 
-### RPO Measurement
+These values measure the script's read-only validation checks. They do not represent incident-to-recovery RTO.
+
+### Last validation recency
 
 ```
-Actual RPO = Incident Start Time - Last Backup Time
-RPO Met = Actual RPO <= Target RPO
+MinutesSinceLastResult = Current Time - Most Recent fsi_drtestresult ExecutedOn
+LastResultWithinThreshold = MinutesSinceLastResult <= MaxMinutesSinceLastResult
 ```
 
-### Success Rate
+These values measure evidence cadence. They do not represent Dataverse backup recency or regulator-grade RPO.
+
+### Success rate
 
 ```
-DR Success Rate = (Passed Tests / Total Tests) × 100
+Validation Success Rate = (Passed Validations / Total Validations) × 100
 ```
+
+## Power Platform backup, restore, and regional notes (Microsoft Learn 2026-Q2)
+
+- Power Platform and Dataverse system backups are Microsoft-managed for environments with a database. Production environments with Dynamics 365 applications have up to 28 days of system backup retention; production environments without Dynamics 365 applications and nonproduction environments default to seven days unless eligible Managed Environment retention is extended.
+- Manual backups are operator-initiated, may take 10-15 minutes before they are available for restore, do not count against storage capacity, and require at least 1 GB of available capacity to restore.
+- Manual backups are restored in the same region where the environment was backed up. Do not treat Azure region pairs as customer-controlled failover for Power Platform environments.
+- Use the current Power Apps admin module cmdlet `Backup-PowerAppEnvironment` for operator-initiated environment backups. `Copy-PowerAppEnvironment` copies source to target, but copied custom connectors receive new identifiers and flows may need connector rebinding.
+- Azure region pairs can inform architecture decisions, but Azure paired regions do not automatically provide high availability or disaster recovery for customer workloads. Many newer regions rely on availability zones or service-specific geo-redundancy patterns.
+
+## Application Insights telemetry review
+
+Copilot Studio can send bot telemetry to Application Insights `customEvents`, and Dataverse platform telemetry appears in `requests`, `dependencies`, and `exceptions`. Use these queries as reviewer starting points when correlating DR validation runs with platform health:
+
+```kusto
+let window = 2h;
+customEvents
+| where timestamp > ago(window)
+| extend designMode = tostring(customDimensions['designMode'])
+| where designMode == 'False'
+| summarize Events = count(), Users = dcount(user_Id) by bin(timestamp, 15m)
+| render timechart
+```
+
+```kusto
+let window = 2h;
+requests
+| where timestamp > ago(window)
+| where url has '/api/data/v9.2/'
+| summarize Count = count(), P95DurationMs = percentile(duration, 95), Failures = countif(success == false) by bin(timestamp, 15m)
+| render timechart
+```
+
+```kusto
+let window = 2h;
+dependencies
+| where timestamp > ago(window)
+| where type startswith 'SDK' or type == 'Plugin'
+| summarize Count = count(), P95DurationMs = percentile(duration, 95), Failures = countif(success == false) by type, bin(timestamp, 15m)
+```
+
+## Microsoft Entra resilience notes
+
+Maintain Microsoft Entra emergency access accounts separately from normal administrator accounts. Microsoft Learn recommends two or more cloud-only emergency accounts, strong authentication that does not share the same dependencies as normal admin accounts, monitored sign-in/audit logs, and regular validation drills. Store emergency-access drill evidence with DR validation packages when identity resilience is in scope.
 
 ## Gap Management
 
@@ -279,14 +336,16 @@ Identified → Documented → Assigned → Remediated → Verified → Closed
 
 ## Evidence Export
 
-The framework generates compliance evidence:
+The framework generates validation evidence:
 
-- Test execution log
-- Validation results
-- RTO/RPO measurements
-- Gap list with status
-- Screenshot evidence (optional)
-- Signed attestation template
+- Validation execution log
+- Per-check validation results
+- Probe-duration and validation-cadence metrics
+- Gap list with missing validation types or failed checks
+- SHA-256 companion hash for the exported JSON package
+- Optional downstream attestation or immutable-storage proof
+
+RTO/RPO evidence must come from the operator's PPAC/Admin-module restore timestamps, Microsoft support records, incident timeline, or approved runbook evidence. Store those artifacts beside the exported JSON package.
 
 ## Scheduling
 
@@ -294,10 +353,10 @@ The framework generates compliance evidence:
 
 | Test Type | Frequency | Rationale |
 |-----------|-----------|-----------|
-| Agent Restore | Quarterly | Verify backup integrity |
-| Environment Failover | Semi-annual | Major procedure |
-| Data Recovery | Quarterly | Data protection validation |
-| Full DR | Annual | Comprehensive assessment |
+| AgentReadinessCheck | Quarterly | Validate restored or redeployed agent metadata and active state |
+| EnvironmentReachabilityCheck | Semi-annual | Validate target environment reachability after recovery procedures |
+| DataverseAccessCheck | Quarterly | Validate evidence table accessibility and row hashing |
+| FullValidation | Annual | Validate complete post-recovery evidence coverage |
 
 ## Regulatory Alignment
 
@@ -305,7 +364,7 @@ The framework generates compliance evidence:
 
 > Large banks must maintain effective operational resilience.
 
-**Coverage:** Regular DR testing validates recovery capabilities.
+**Coverage:** Regular post-recovery validation supports operational-resilience evidence when paired with operator recovery records.
 
 ### FFIEC BCP (Business Continuity Planning Booklet)
 
@@ -323,7 +382,7 @@ The framework generates compliance evidence:
 
 > Members must create and maintain business continuity plans.
 
-**Coverage:** Documented testing with evidence collection.
+**Coverage:** Documented validation with evidence collection supports BCP documentation.
 
 ## Related Controls
 
@@ -337,6 +396,7 @@ The framework generates compliance evidence:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.1 | April 2026 | Microsoft Learn 2026-Q2 refresh: aligned Power Platform backup/restore notes, evidence export semantics, generated schema wording, Application Insights telemetry examples, and managed-identity-first authentication guidance |
 | 2.0.0 | April 2026 | **BREAKING.** Renamed test scenarios to validation checks; relabeled `ActualRTO`→`ProbeDurationHours` and `ActualRPO`→`MinutesSinceLastResult` to stop misrepresenting the measurements; added `-AllowConnectivityOnly` for fail-closed auth; pagination via `@odata.nextLink`; switched record-count to `$count=true&$top=0`; bumped to PowerShell 7.1; dropped Azure Backup / Backup Operator from prereqs; corrected Decimal env-var type code; fixed `fsi_executedon` to `TimeZoneIndependent`; dropped Control 2.13 from Related Controls (catalog mismatch); aligned ELM dependency floor to v1.2.0 |
 | 1.2.1 | April 2026 | Save-TestResult fix: include required `fsi_name` primary attribute for Dataverse writes |
 | 1.2.0 | April 2026 | Environment variables, connection references, real Dataverse implementations in Invoke-DRTest and Export-DREvidence |
@@ -351,10 +411,10 @@ The framework generates compliance evidence:
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Authentication failure | Expired token, insufficient permissions, or wrong auth endpoint for sovereign clouds | Re-authenticate; verify service principal has Power Platform Administrator and Backup Operator roles. For sovereign tenants, the script auto-selects the correct Entra ID endpoint (China: `login.chinacloudapi.cn`, GCC High: `login.microsoftonline.us`). |
-| RTO target exceeded | Recovery steps slower than expected | Review environment size; pre-stage backups closer to target region |
+| Authentication failure | Expired access token, insufficient permissions, legacy client secret issue, or wrong auth endpoint for sovereign clouds | Prefer a fresh managed-identity/workload-identity `-AccessToken`; for local development, verify service-principal credentials and Dataverse application-user access. For sovereign tenants, the script auto-selects the correct Entra ID endpoint (China: `login.chinacloudapi.cn`, GCC High: `login.microsoftonline.us`). |
+| Probe budget exceeded | Validation checks took longer than the configured probe budget | Review API latency, Dataverse throttling, and Application Insights telemetry; do not treat this as actual RTO evidence by itself |
 | Validation checks fail | Agent or connectors not restored correctly post-restore | Verify the post-restore agent state in Power Platform admin center; re-run the individual scenario with `-Verbose` |
-| Dataverse save error | Missing schema or insufficient Dataverse capacity | Run `python scripts/create_drt_dataverse_schema.py --interactive` to create / verify the table; check storage quota in PPAC |
+| Dataverse save error | Missing schema or insufficient Dataverse capacity | Run `python scripts/create_drt_dataverse_schema.py --output-docs` and deploy the schema with `--access-token`; check storage quota in PPAC |
 
 ### Logs
 
@@ -364,9 +424,9 @@ Review script output for `[ERROR]` and `[WARN]` audit log entries. Enable verbos
 
 | Code | Meaning |
 |------|---------|
-| **0** | Test passed, results saved (or DryRun / no credentials) |
-| **1** | Test failed (RTO exceeded or validation check failed) |
-| **2** | Test passed but Dataverse persistence failed (auth error or save error) |
+| **0** | Validation passed and results saved (or DryRun / explicitly requested `-AllowConnectivityOnly` probe) |
+| **1** | Validation failed |
+| **2** | Validation passed but Dataverse persistence failed, or evidence export found no data/incomplete coverage |
 
 ## Support
 
@@ -374,4 +434,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v2.0.0*
+*FSI Agent Governance Framework - DR Testing Framework v2.0.1*

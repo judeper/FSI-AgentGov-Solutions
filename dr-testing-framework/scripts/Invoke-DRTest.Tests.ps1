@@ -202,14 +202,14 @@ Describe 'Save-TestResult retry logic' {
 
     BeforeEach {
         $script:mockResult = @{
-            TestType = 'AgentRestore'
+            TestType = 'AgentReadinessCheck'
             ExecutedOn = '2026-01-01T00:00:00Z'
-            ActualRTO = 0.5
-            TargetRTO = 4
-            RTOMet = $true
-            ActualRPO = $null
-            TargetRPO = 24
-            RPOMet = $null
+            ProbeDurationHours = 0.5
+            ProbeDurationTargetHours = 4
+            ProbeWithinBudget = $true
+            MinutesSinceLastResult = $null
+            MaxMinutesSinceLastResult = 1440
+            LastResultWithinThreshold = $null
             Success = $true
             ValidationChecks = @(@{Check = 'Test'; Status = 'PASS'})
         }
@@ -275,13 +275,13 @@ Describe 'Save-TestResult retry logic' {
     }
 }
 
-Describe 'FullDR test type aggregation' {
+Describe 'FullValidation test type aggregation' {
     BeforeAll {
         $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
         $scriptContent = Get-Content -Path $scriptPath -Raw
 
         # Extract all three sub-test functions
-        foreach ($funcName in @('Test-AgentRestore', 'Test-EnvironmentFailover', 'Test-DataRecovery')) {
+        foreach ($funcName in @('Test-AgentReadiness', 'Test-EnvironmentReachability', 'Test-DataverseAccess')) {
             $block = [regex]::Match($scriptContent, "(?s)(function $funcName\s*\{.+?\n\})")
             if (-not $block.Success) { throw "Could not extract $funcName function" }
             Invoke-Expression $block.Value
@@ -295,9 +295,9 @@ Describe 'FullDR test type aggregation' {
         Mock Write-AuditLog {} -ErrorAction SilentlyContinue
         Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
-        $envResult = Test-EnvironmentFailover -DryRun $false
-        $dataResult = Test-DataRecovery -DryRun $false
+        $agentResult = Test-AgentReadiness -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentReachability -DryRun $false
+        $dataResult = Test-DataverseAccess -DryRun $false
 
         $combined = @{
             ValidationChecks = $agentResult.ValidationChecks + $envResult.ValidationChecks + $dataResult.ValidationChecks
@@ -316,9 +316,9 @@ Describe 'FullDR test type aggregation' {
         Mock Write-AuditLog {} -ErrorAction SilentlyContinue
         Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
-        $envResult = Test-EnvironmentFailover -DryRun $false
-        $dataResult = Test-DataRecovery -DryRun $false
+        $agentResult = Test-AgentReadiness -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentReachability -DryRun $false
+        $dataResult = Test-DataverseAccess -DryRun $false
 
         $combined = $agentResult.Success -and $envResult.Success -and $dataResult.Success
         $combined | Should -BeTrue
@@ -331,9 +331,9 @@ Describe 'FullDR test type aggregation' {
         Mock Write-AuditLog {} -ErrorAction SilentlyContinue
         Mock Invoke-WebRequest { [PSCustomObject]@{StatusCode = 200} }
 
-        $agentResult = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
-        $envResult = Test-EnvironmentFailover -DryRun $false
-        $dataResult = Test-DataRecovery -DryRun $false
+        $agentResult = Test-AgentReadiness -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $false
+        $envResult = Test-EnvironmentReachability -DryRun $false
+        $dataResult = Test-DataverseAccess -DryRun $false
 
         # Simulate one sub-test failing
         $envResult.Success = $false
@@ -347,31 +347,31 @@ Describe 'DryRun mode' {
     BeforeAll {
         $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
         $scriptContent = Get-Content -Path $scriptPath -Raw
-        foreach ($funcName in @('Test-AgentRestore', 'Test-EnvironmentFailover', 'Test-DataRecovery')) {
+        foreach ($funcName in @('Test-AgentReadiness', 'Test-EnvironmentReachability', 'Test-DataverseAccess')) {
             $block = [regex]::Match($scriptContent, "(?s)(function $funcName\s*\{.+?\n\})")
             if (-not $block.Success) { throw "Could not extract $funcName function" }
             Invoke-Expression $block.Value
         }
     }
 
-    It 'Test-AgentRestore DryRun returns empty ValidationChecks' {
+    It 'Test-AgentReadiness DryRun returns empty ValidationChecks' {
         Mock Write-Host {}
         Mock Write-Warning {}
-        $result = Test-AgentRestore -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
+        $result = Test-AgentReadiness -AgentId '00000000-0000-0000-0000-000000000001' -DryRun $true
         $result.ValidationChecks.Count | Should -Be 0
     }
 
-    It 'Test-EnvironmentFailover DryRun returns empty ValidationChecks' {
+    It 'Test-EnvironmentReachability DryRun returns empty ValidationChecks' {
         Mock Write-Host {}
         Mock Write-Warning {}
-        $result = Test-EnvironmentFailover -DryRun $true
+        $result = Test-EnvironmentReachability -DryRun $true
         $result.ValidationChecks.Count | Should -Be 0
     }
 
-    It 'Test-DataRecovery DryRun returns empty ValidationChecks' {
+    It 'Test-DataverseAccess DryRun returns empty ValidationChecks' {
         Mock Write-Host {}
         Mock Write-Warning {}
-        $result = Test-DataRecovery -DryRun $true
+        $result = Test-DataverseAccess -DryRun $true
         $result.ValidationChecks.Count | Should -Be 0
     }
 }
@@ -434,8 +434,8 @@ Describe 'ClientId parameter validation' {
 
     It 'Uses same GUID pattern as TenantId' {
         # Extract ValidatePattern values for both parameters
-        $tenantPattern = [regex]::Match($scriptContent, "(?s)ValidatePattern\('([^']+)'\)\]\s*\[string\]\\\$TenantId").Groups[1].Value
-        $clientPattern = [regex]::Match($scriptContent, "(?s)ValidatePattern\('([^']+)'\)\]\s*\[string\]\\\$ClientId").Groups[1].Value
+        $tenantPattern = [regex]::Match($scriptContent, '(?s)ValidatePattern\(''([^'']+)''\)\]\s*\[string\]\$TenantId').Groups[1].Value
+        $clientPattern = [regex]::Match($scriptContent, '(?s)ValidatePattern\(''([^'']+)''\)\]\s*\[string\]\$ClientId').Groups[1].Value
         $tenantPattern | Should -Not -BeNullOrEmpty
         $clientPattern | Should -Be $tenantPattern
     }

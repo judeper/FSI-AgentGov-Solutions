@@ -24,10 +24,11 @@ class DataverseClient:
 
     def __init__(
         self,
-        tenant_id: str,
+        tenant_id: Optional[str],
         environment_url: str,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
+        access_token: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
         auth_mode: Optional[str] = None,
@@ -38,19 +39,24 @@ class DataverseClient:
         Initialize Dataverse client.
 
         Args:
-            tenant_id: Entra ID tenant ID
+            tenant_id: Entra ID tenant ID (optional when access_token is supplied)
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
             client_id: Application (client) ID; optional for system-assigned managed identity
             client_secret: Client secret value (legacy dev-only fallback)
+            access_token: Externally-acquired Dataverse bearer token (e.g. from a parent
+                process that already obtained one via managed identity or workload federation).
+                Takes precedence over all other auth modes when provided.
             interactive: Use interactive browser auth instead of app-only auth
             dry_run: If True, log API calls without executing them
             auth_mode: interactive, managed-identity, workload-identity, certificate, or client-secret
+                (ignored when access_token is supplied)
             certificate_path: Path to PEM/PFX certificate for certificate auth
             certificate_password: Optional certificate password
         """
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
+        self.access_token = access_token
         self.auth_mode = auth_mode or ("interactive" if interactive else "client-secret")
         if interactive:
             self.auth_mode = "interactive"
@@ -78,7 +84,11 @@ class DataverseClient:
         self._session.mount("http://", adapter)
 
         self._credential = None
-        if self.auth_mode == "interactive":
+        self._app = None
+        if self.access_token:
+            # Externally acquired token; no MSAL or azure-identity client needed
+            pass
+        elif self.auth_mode == "interactive":
             if not client_id:
                 raise ValueError(
                     "client_id is required for interactive authentication. "
@@ -133,6 +143,8 @@ class DataverseClient:
         return getattr(azure_identity, class_name)
 
     def _get_token(self) -> str:
+        if self.access_token:
+            return self.access_token
         if self._credential is not None:
             return self._credential.get_token(self._scope[0]).token
 
@@ -358,6 +370,7 @@ def main():
     parser.add_argument("--tenant-id", default=os.environ.get("DATAVERSE_TENANT_ID"), help="Entra ID tenant ID (or set DATAVERSE_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("DATAVERSE_CLIENT_ID"), help="Application (client) ID (or set DATAVERSE_CLIENT_ID env var)")
     parser.add_argument("--client-secret", default=os.environ.get("DATAVERSE_CLIENT_SECRET"), help="Legacy dev-only client secret (or set DATAVERSE_CLIENT_SECRET env var)")
+    parser.add_argument("--access-token", default=os.environ.get("DATAVERSE_ACCESS_TOKEN"), help="Externally-acquired Dataverse bearer token (managed identity / workload federation); takes precedence over other auth modes")
     parser.add_argument("--environment-url", default=os.environ.get("DATAVERSE_ENVIRONMENT_URL"), help="Dataverse environment URL (or set DATAVERSE_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
     parser.add_argument("--auth-mode", choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"], default=os.environ.get("DATAVERSE_AUTH_MODE"), help="Authentication mode; prefer managed-identity, workload-identity, or certificate for automation")
@@ -366,19 +379,21 @@ def main():
     parser.add_argument("--test-connection", action="store_true", help="Test connection to Dataverse")
     parser.add_argument("--dry-run", action="store_true", help="Log API calls without executing them")
     args = parser.parse_args()
-    if not args.tenant_id or not args.environment_url:
-        parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set DATAVERSE_TENANT_ID and DATAVERSE_ENVIRONMENT_URL env vars)")
+    if not args.environment_url:
+        parser.error("Missing required argument. Provide --environment-url (or set DATAVERSE_ENVIRONMENT_URL env var)")
+    if not args.access_token and not args.tenant_id:
+        parser.error("--tenant-id is required unless --access-token is provided (or set DATAVERSE_TENANT_ID)")
     auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if args.client_secret else "managed-identity"))
-    if auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
         parser.error("--client-id is required for the selected auth mode (or set DATAVERSE_CLIENT_ID env var)")
     client_secret = args.client_secret
     # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
-    if auth_mode == "client-secret" and not client_secret:
+    if not args.access_token and auth_mode == "client-secret" and not client_secret:
         import getpass
         client_secret = getpass.getpass("Client secret: ")
     certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
     try:
-        client = DataverseClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, interactive=args.interactive, dry_run=args.dry_run, auth_mode=auth_mode, certificate_path=args.certificate_path, certificate_password=certificate_password)
+        client = DataverseClient(tenant_id=args.tenant_id, environment_url=args.environment_url, client_id=args.client_id, client_secret=client_secret, access_token=args.access_token, interactive=args.interactive, dry_run=args.dry_run, auth_mode=auth_mode, certificate_path=args.certificate_path, certificate_password=certificate_password)
         if args.test_connection:
             print("Testing Dataverse connection...")
             org = client.test_connection()

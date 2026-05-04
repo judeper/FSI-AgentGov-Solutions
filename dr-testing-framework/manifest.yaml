@@ -1,7 +1,7 @@
 id: dr-testing-framework
 name: DR Testing Framework
 description: Post-recovery validation and evidence packaging for Power Platform DR testing.
-version: 2.0.0
+version: 2.0.1
 status: live
 domain: lifecycle-ops
 tier: '2'

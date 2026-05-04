@@ -8,10 +8,11 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Token acquisition fails | Incorrect `TenantId` or `ClientId`, or expired client secret | Verify credentials in your configuration; regenerate the client secret in Entra ID |
-| 401 Unauthorized from Dataverse | Token audience does not match the target Dataverse organization | Verify the `-Environment` parameter matches the Dataverse environment URL (e.g., `https://contoso.crm.dynamics.com`) |
-| Sovereign cloud auth failure | Script auto-selects auth endpoint based on Dataverse URL (`.dynamics.cn` → `login.chinacloudapi.cn`, `.microsoftdynamics.us` / `.appsplatform.us` → `login.microsoftonline.us`) | Verify the Dataverse URL uses the correct sovereign domain; the script selects the matching authority automatically |
-| `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 — the `-AsPlainText` parameter requires PowerShell 7.0+ | Install PowerShell 7+ and run scripts with `pwsh` (not `powershell`) |
+| Token acquisition fails | Managed identity is not assigned, workload identity federation is misconfigured, `TenantId`/`ClientId` is incorrect, or a legacy client secret expired | Prefer a fresh `-AccessToken` from managed identity or workload identity. For local development only, verify the legacy service-principal values and rotate the secret. |
+| 401 Unauthorized from Dataverse | Token audience does not match the target Dataverse organization | Acquire the token for the exact Dataverse URL used in `-Environment` (for example, `https://contoso.crm.dynamics.com`) |
+| 403 Forbidden from Dataverse | Executing identity is not configured as a Dataverse application user or lacks table privileges | Add the identity as an application user and assign a security role with read access to agent metadata and write access to `fsi_drtestresult` |
+| Sovereign cloud auth failure | Script auto-selects auth endpoint based on Dataverse URL (`.dynamics.cn` → `login.chinacloudapi.cn`, `.microsoftdynamics.us` / `.appsplatform.us` → `login.microsoftonline.us`) | Verify the Dataverse URL uses the correct sovereign domain; the script selects the matching authority automatically for legacy credential flow |
+| `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 | Install PowerShell 7.1+ and run scripts with `pwsh` (not `powershell`) |
 
 ---
 
@@ -19,9 +20,9 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Exit code 2 (persistence failed) | Authentication error or Dataverse save operation failed | Verify the `fsi_drtestresult` table exists in the target environment; confirm the app registration has a System Administrator security role |
+| Exit code 2 (persistence failed) | Authentication error or Dataverse save operation failed | Verify the `fsi_drtestresult` table exists in the target environment; confirm the executing identity has write access |
 | 403 Forbidden on PATCH | Executing identity lacks the required security role | Add the executing identity as an application user with write access to the `fsi_drtestresult` table |
-| Schema mismatch | Table columns do not match the expected schema definition | Re-run `create_drt_dataverse_schema.py` to reconcile the schema, or manually verify column logical names against `docs/dataverse-schema.md` |
+| Schema mismatch | Table columns do not match the expected schema definition | Re-run `create_drt_dataverse_schema.py --output-docs` and verify column logical names against `docs/dataverse-schema.md` |
 
 ---
 
@@ -29,10 +30,11 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| "AgentId required" error | `AgentRestore` and `FullDR` test types require an agent identifier | Provide the `-AgentId` parameter with a valid GUID |
+| "AgentId required" error | `AgentReadinessCheck` and `FullValidation` require an agent identifier | Provide the `-AgentId` parameter with a valid GUID |
 | Invalid Environment URL | SSRF validation rejects the URL format | Use the format `https://<org>.crm.dynamics.com` (or the equivalent sovereign cloud domain) |
-| RTO target exceeded | Recovery steps completed slower than the configured target | Review environment size and complexity; consider pre-staging backups to reduce recovery time |
-| Validation checks fail | Agent or connectors not restored correctly after recovery | Verify backup integrity and completeness; re-run the test with `-Verbose` to identify the failing step |
+| Probe budget exceeded | Read-only validation checks completed slower than the configured probe budget | Review Dataverse throttling, network latency, and Application Insights `requests` / `dependencies` telemetry. Do not treat this as actual RTO evidence by itself. |
+| Validation checks fail | Agent, connectors, or Dataverse evidence table are not reachable after the operator's recovery procedure | Verify the post-restore agent state in PPAC/Copilot Studio; re-run the individual scenario with `-Verbose` |
+| No prior result for recency check | First run or evidence table was recently created | Treat the run as baseline evidence and schedule the next validation run |
 
 ---
 
@@ -49,9 +51,9 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 | Code | Meaning |
 |------|---------|
-| 0 | Test passed, results saved (or DryRun mode / no credentials provided) |
-| 1 | Test failed (RTO exceeded or validation check failed) |
-| 2 | Test passed but Dataverse persistence failed |
+| 0 | Validation passed and results saved, or DryRun / explicit `-AllowConnectivityOnly` probe completed |
+| 1 | Validation failed |
+| 2 | Validation passed but Dataverse persistence failed, or evidence export found no data / incomplete validation coverage |
 
 ---
 
@@ -71,4 +73,4 @@ Common issues and resolutions for the DR Testing Framework solution.
 
 ---
 
-*DR Testing Framework — Troubleshooting Guide v2.0.0*
+*DR Testing Framework — Troubleshooting Guide v2.0.1*

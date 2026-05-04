@@ -1,15 +1,15 @@
 <#
 .SYNOPSIS
-    Exports DR test evidence for compliance reporting.
+    Exports DR test evidence for supervisory reporting.
 
 .DESCRIPTION
     Collects and packages DR test results, audit logs, and validation data
-    into compliance evidence artifacts. Supports export to JSON files for
+    into validation evidence artifacts. Supports export to JSON files for
     regulatory review (OCC, FFIEC, SEC 17a-4, FINRA 4370).
 
     When Dataverse credentials are provided (TenantId/ClientId/ClientSecret),
     queries fsi_drtestresults for test execution records and computes
-    compliance metrics. Generates a SHA-256 hash companion file for
+    validation metrics. Generates a SHA-256 hash companion file for
     tamper-evident evidence packaging.
 
 .PARAMETER Environment
@@ -46,12 +46,16 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
-    [SecureString]$ClientSecret
+    [SecureString]$ClientSecret,
+
+    [Parameter(Mandatory = $false)]
+    [string]$AccessToken = $env:DATAVERSE_ACCESS_TOKEN
 )
 
-#Requires -Version 7.0
+#Requires -Version 7.1
 
-# Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided
+# legacy: dev-only — replace with managed identity in production
+# Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided.
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
     $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
 }
@@ -129,11 +133,16 @@ $metrics = @{}
 $gaps = @()
 $evidenceStatus = "NoCredentials"
 
-if ($TenantId -and $ClientId -and $ClientSecret) {
+$HasDataverseAuth = $AccessToken -or ($TenantId -and $ClientId -and $ClientSecret)
+if ($HasDataverseAuth) {
     try {
         Write-Host "  Authenticating to Dataverse..." -ForegroundColor Gray
-        $authEndpoint = Get-EvidenceAuthEndpoint -EnvironmentUrl $Environment
-        $token = Get-EvidenceAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+        if ($AccessToken) {
+            $token = $AccessToken
+        } else {
+            $authEndpoint = Get-EvidenceAuthEndpoint -EnvironmentUrl $Environment
+            $token = Get-EvidenceAccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -AuthEndpoint $authEndpoint
+        }
         $dvHeaders = @{
             "Authorization" = "Bearer $token"
             "OData-MaxVersion" = "4.0"
@@ -199,7 +208,7 @@ if ($TenantId -and $ClientId -and $ClientSecret) {
                 PassRate                = if ($totalTests -gt 0) { [math]::Round(($passedTests / $totalTests) * 100, 1) } else { 0 }
                 AvgProbeDurationHours   = $avgProbeDuration
                 ProbeWithinBudgetCount  = $probeWithinBudget
-                ProbeBudgetComplianceRate = if ($totalTests -gt 0) { [math]::Round(($probeWithinBudget / $totalTests) * 100, 1) } else { 0 }
+                ProbeWithinBudgetRate = if ($totalTests -gt 0) { [math]::Round(($probeWithinBudget / $totalTests) * 100, 1) } else { 0 }
             }
 
             # Identify gaps: failed tests and test types never run
@@ -248,7 +257,7 @@ if ($TenantId -and $ClientId -and $ClientSecret) {
         Write-Warning "Dataverse query failed: $($_.Exception.Message)"
     }
 } else {
-    Write-Warning "Dataverse credentials not provided. Evidence export includes audit logs only."
+    Write-Warning "Dataverse authentication not provided. Evidence export includes audit logs only. Prefer -AccessToken for managed identity or workload identity automation."
 }
 
 # Populate evidence package with queried data
