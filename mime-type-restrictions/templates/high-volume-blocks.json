@@ -4,7 +4,7 @@
   "metadata": {
     "controlReference": "1.25",
     "framework": "FSI Agent Governance",
-    "version": "1.0.2",
+    "version": "1.2.1",
     "description": "Microsoft Sentinel scheduled analytics rule that detects high-volume blocked file upload attempts (>10 per user per hour). Supports compliance with FINRA 4511 and SEC 17a-4 by surfacing persistent attempts to upload unauthorized file types through Power Platform environments."
   },
   "parameters": {
@@ -36,7 +36,7 @@
       "tags": {
         "controlReference": "1.25",
         "framework": "FSI Agent Governance",
-        "version": "1.0.2"
+        "version": "1.2.1"
       },
       "properties": {
         "displayName": "FSI-MIME: High-Volume Blocked Upload Attempts",

@@ -8,7 +8,7 @@
 // Enterprise Managed (Zone 3) environments.
 //
 // Control: 1.25 — MIME Type Restrictions
-// Version: 1.0.2
+// Version: 1.2.1
 // ---------------------------------------------------------------------------
 
 using System;

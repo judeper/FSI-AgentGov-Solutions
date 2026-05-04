@@ -17,11 +17,11 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 | <span id="control-1-7"></span>1.7 | Comprehensive Audit Logging and Compliance | [Agent Observability Foundation](../solutions/agent-observability-foundation/index.md), [Agent Registry Automation](../solutions/agent-registry-automation/index.md), [Audit Compliance Manager](../solutions/audit-compliance-manager/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Cross-Tenant External Sharing Governance](../solutions/cross-tenant-external-sharing-governance/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md), [Environment Lifecycle Management](../solutions/environment-lifecycle-management/index.md), [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [RAG Source Validator](../solutions/rag-source-validator/index.md) |
 | <span id="control-1-8"></span>1.8 | Runtime Protection and External Threat Detection | [Content Moderation Monitor](../solutions/content-moderation-monitor/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Deny Event Correlation Report](../solutions/deny-event-correlation-report/index.md), [File Upload Security](../solutions/file-upload-security/index.md) |
 | <span id="control-1-9"></span>1.9 | Data Retention and Deletion Policies | [DR Testing Framework](../solutions/dr-testing-framework/index.md) |
-| <span id="control-1-10"></span>1.10 | Communication Compliance Monitoring | [Action Confirmation Auditor](../solutions/action-confirmation-auditor/index.md), [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [HITL Workflow Governance](../solutions/hitl-workflow-governance/index.md), [MIME Type Restrictions for File Uploads](../solutions/mime-type-restrictions/index.md) |
-| <span id="control-1-11"></span>1.11 | Conditional Access and Phishing-Resistant MFA | [Agent 365 Lifecycle Governance](../solutions/agent-365-lifecycle-governance/index.md), [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Cross-Tenant External Sharing Governance](../solutions/cross-tenant-external-sharing-governance/index.md), [MIME Type Restrictions for File Uploads](../solutions/mime-type-restrictions/index.md), [Session Security Configurator](../solutions/session-security-configurator/index.md) |
+| <span id="control-1-10"></span>1.10 | Communication Compliance Monitoring | [Action Confirmation Auditor](../solutions/action-confirmation-auditor/index.md), [FINRA Supervision Workflow](../solutions/finra-supervision-workflow/index.md), [HITL Workflow Governance](../solutions/hitl-workflow-governance/index.md) |
+| <span id="control-1-11"></span>1.11 | Conditional Access and Phishing-Resistant MFA | [Agent 365 Lifecycle Governance](../solutions/agent-365-lifecycle-governance/index.md), [Conditional Access Automation](../solutions/conditional-access-automation/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [Cross-Tenant External Sharing Governance](../solutions/cross-tenant-external-sharing-governance/index.md), [Session Security Configurator](../solutions/session-security-configurator/index.md) |
 | <span id="control-1-12"></span>1.12 | Insider Risk Detection and Response | _No solution yet_ |
 | <span id="control-1-13"></span>1.13 | Sensitive Information Types (SITs) and Pattern Recognition | [MIME Type Restrictions for File Uploads](../solutions/mime-type-restrictions/index.md) |
-| <span id="control-1-14"></span>1.14 | Data Minimization and Agent Scope Control | [Credential Oversharing Detector](../solutions/credential-oversharing-detector/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [File Upload Security](../solutions/file-upload-security/index.md), [MIME Type Restrictions for File Uploads](../solutions/mime-type-restrictions/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md) |
+| <span id="control-1-14"></span>1.14 | Data Minimization and Agent Scope Control | [Credential Oversharing Detector](../solutions/credential-oversharing-detector/index.md), [Cross-Solution Integration](../solutions/cross-solution-integration/index.md), [File Upload Security](../solutions/file-upload-security/index.md), [Scope Drift Monitor](../solutions/scope-drift-monitor/index.md) |
 | <span id="control-1-15"></span>1.15 | Encryption: Data in Transit and at Rest | _No solution yet_ |
 | <span id="control-1-16"></span>1.16 | Information Rights Management (IRM) for Documents | _No solution yet_ |
 | <span id="control-1-17"></span>1.17 | Endpoint Data Loss Prevention (Endpoint DLP) | _No solution yet_ |
@@ -94,7 +94,7 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 |---------|-------------|-----------|
 | <span id="control-4-1"></span>4.1 | SharePoint Information Access Governance (IAG) / Restricted Content Discovery | _No solution yet_ |
 | <span id="control-4-2"></span>4.2 | Site Access Reviews and Certification | _No solution yet_ |
-| <span id="control-4-3"></span>4.3 | Site and Document Retention Management | [Agent Knowledge Source Scanner](../solutions/agent-knowledge-source-scanner/index.md), [MIME Type Restrictions for File Uploads](../solutions/mime-type-restrictions/index.md) |
+| <span id="control-4-3"></span>4.3 | Site and Document Retention Management | [Agent Knowledge Source Scanner](../solutions/agent-knowledge-source-scanner/index.md) |
 | <span id="control-4-4"></span>4.4 | Guest and External User Access Controls | _No solution yet_ |
 | <span id="control-4-5"></span>4.5 | SharePoint Security and Compliance Monitoring | _No solution yet_ |
 | <span id="control-4-6"></span>4.6 | Grounding Scope Governance | _No solution yet_ |
@@ -106,7 +106,7 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 
 - **Controls with implementations:** 39 of 78
 - **Live solution folders:** 35
-- **Controls per solution (avg):** 3.2
+- **Controls per solution (avg):** 3.1
 
 !!! info "Framework Reference"
     Full control specifications are available in the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/controls/).
