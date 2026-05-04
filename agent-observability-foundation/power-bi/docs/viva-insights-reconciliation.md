@@ -31,10 +31,15 @@ Run the following KQL query (or use agent-usage-analytics.kql with matching date
 
 ```kql
 // Application Insights agent count — ALL agent types
-customEvents
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents | project timestamp = TimeGenerated, name = tostring(Name), customDimensions = todynamic(Properties), session_Id = tostring(column_ifexists("SessionId", ""))),
+        (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), name = tostring(column_ifexists("name", "")), customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))), session_Id = tostring(column_ifexists("session_Id", "")))
+);
+AgentEvents
 | where timestamp between (datetime(YYYY-MM-DD) .. datetime(YYYY-MM-DD))
 | where name in ("BotMessageReceived", "BotMessageSend")
-| where tostring(customDimensions['DesignMode']) == "False"
+| where coalesce(tostring(customDimensions['DesignMode']), tostring(customDimensions['designMode'])) == "False"
 | extend AgentId = tostring(customDimensions["recipientId"])
 | summarize
     TotalAgents = dcount(AgentId),
@@ -49,10 +54,15 @@ Classify agents in Application Insights by type:
 
 ```kql
 // Agent breakdown by type
-customEvents
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents | project timestamp = TimeGenerated, name = tostring(Name), customDimensions = todynamic(Properties), session_Id = tostring(column_ifexists("SessionId", ""))),
+        (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), name = tostring(column_ifexists("name", "")), customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))), session_Id = tostring(column_ifexists("session_Id", "")))
+);
+AgentEvents
 | where timestamp between (datetime(YYYY-MM-DD) .. datetime(YYYY-MM-DD))
 | where name in ("BotMessageReceived", "BotMessageSend")
-| where tostring(customDimensions['DesignMode']) == "False"
+| where coalesce(tostring(customDimensions['DesignMode']), tostring(customDimensions['designMode'])) == "False"
 | extend
     AgentId = tostring(customDimensions["recipientId"]),
     AgentType = case(

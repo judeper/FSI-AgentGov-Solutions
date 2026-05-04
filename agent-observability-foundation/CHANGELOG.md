@@ -2,6 +2,16 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.2.1] — 2026-Q2 Microsoft Learn refresh
+
+### Fixed
+
+- Bumped solution metadata to v1.2.1 for the Microsoft Learn 2026-Q2 refresh.
+- Added normalized `AppEvents` / legacy `customEvents` KQL compatibility across query library files, Azure Workbooks, scheduled-query alerts, and `verify_telemetry.py`.
+- Updated workbook ARM templates to `Microsoft.Insights/workbooks@2023-06-01`.
+- Documented the currently supported preview status of `Microsoft.Insights/diagnosticSettings@2021-05-01-preview` in the diagnostic settings template metadata.
+- Refreshed Copilot Studio telemetry setup, PII/property-bag guidance, retention notes, and managed-identity-first authentication guidance against Microsoft Learn 2026-Q2 documentation.
+
 ## [1.2.0] — 2026-04-17
 
 ### Breaking

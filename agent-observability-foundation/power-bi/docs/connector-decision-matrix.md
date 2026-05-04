@@ -37,7 +37,7 @@ graph TD
     I -->|<100 agents| J[90-day window with vw_session_fact]
     I -->|>100 agents| K[30-day window with vw_session_fact]
 
-    E --> L[Use vw_session_fact or raw customEvents]
+    E --> L[Use vw_session_fact or normalized AppEvents/customEvents]
     G --> I
     H --> L
 ```
@@ -209,13 +209,18 @@ vw_session_fact(datetime(2026-01-01), datetime(2026-03-31))
 vw_event_fact(datetime(2026-02-01), datetime(2026-02-07))
 ```
 
-**Option C: Raw customEvents table**
+**Option C: Normalized Application Insights event view**
 
 ```kql
-customEvents
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents | project timestamp = TimeGenerated, name = tostring(Name), customDimensions = todynamic(Properties), session_Id = tostring(column_ifexists("SessionId", ""))),
+        (customEvents | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))), name = tostring(column_ifexists("name", "")), customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))), session_Id = tostring(column_ifexists("session_Id", "")))
+);
+AgentEvents
 | where timestamp > ago(7d)
 | where name in ("BotMessageReceived", "BotMessageSend")
-| where tostring(customDimensions['DesignMode']) == "False"
+| where coalesce(tostring(customDimensions['DesignMode']), tostring(customDimensions['designMode'])) == "False"
 ```
 
 **6. Select DirectQuery Mode**

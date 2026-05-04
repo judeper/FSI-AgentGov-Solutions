@@ -218,7 +218,8 @@ def preflight_check(
         print("    Run one of the following to authenticate:")
         print("      - az login (Azure CLI)")
         print("      - Connect-AzAccount (PowerShell)")
-        print("      - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (Service Principal)")
+        print("      - Use managed identity or workload identity for hosted automation")
+        print("      - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (legacy dev-only fallback)")
         return False
     except HttpResponseError as e:
         print(f"    Subscription access failed ✗")
@@ -447,10 +448,10 @@ def create_application_insights(
     )
 
     print(f"  Application Insights {ai_name}: created ✓")
-    print("    - Instrumentation Key: <not logged> (retrieve from Azure Portal or `az monitor app-insights component show`)")
+    print("    - Connection String: <not logged> (retrieve from Azure Portal for Copilot Studio configuration)")
 
     if verbose:
-        print("    - Connection String: <not logged> (retrieve from Azure Portal)")
+        print("    - Authenticated ingestion: consider Microsoft Entra authentication where supported by tenant policy")
         print(f"    - Resource ID: {component.id}")
 
     return component.id
@@ -736,8 +737,8 @@ def print_summary(
     print()
     print("    1. Configure WORM policy (manual - see docs/worm-configuration.md)")
     print("    2. Set up cost alerts in Azure Monitor (50%, 75%, 90% thresholds)")
-    print("    3. Configure ingestion sampling at workspace level via portal")
-    #     Note: Sampling is configured at workspace level, not SDK-configurable
+    print("    3. Configure ingestion sampling at the Application Insights resource/workspace level via portal")
+    #     Note: Sampling is configured at the resource/workspace level, not SDK-configurable
     #     for Copilot Studio telemetry
     print("    4. Review PII handling (see docs/pii-sanitization-guide.md)")
     print()

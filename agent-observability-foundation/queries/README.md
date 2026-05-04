@@ -1,12 +1,12 @@
 # KQL Query Library
 
-**Version:** 1.1.0
+**Version:** 1.2.1
 **Part of:** Agent Observability Foundation Solution
 **Purpose:** Reusable KQL queries for Copilot Studio governance monitoring
 
 ## Overview
 
-This query library provides production-ready KQL queries for extracting governance-relevant metrics from Copilot Studio Application Insights telemetry. The queries serve as the data extraction layer for:
+This query library provides production-ready KQL queries for extracting governance-relevant metrics from Copilot Studio Application Insights telemetry. Queries normalize current workspace-based `AppEvents` / `Properties` and legacy `customEvents` / `customDimensions` shapes before applying solution logic. The queries serve as the data extraction layer for:
 
 - **Phase 3:** Azure Monitor Workbooks (interactive dashboards)
 - **Phase 4:** Power BI dashboards (executive reporting)
@@ -44,6 +44,12 @@ queries/
 ```
 
 **Why function-based?** A single query often supports multiple regulations. For example, `agent-usage-analytics.kql` provides evidence for both FINRA 3110 (supervision metrics) and SOX 404 (operational monitoring). Organizing by function avoids query duplication.
+
+## Application Insights Table Compatibility
+
+Microsoft Learn continues to show Copilot Studio examples with `customEvents`, while workspace-based Application Insights exposes current tables such as `AppEvents` with custom properties in `Properties`. Each solution query now starts by materializing an `AgentEvents` view that unions `AppEvents` and legacy `customEvents`, deduplicates rows by item ID or event fingerprint, and projects a common `timestamp`, `name`, `customDimensions`, and `session_Id` shape.
+
+Use the normalized `AgentEvents` variable in new queries instead of querying `customEvents` directly.
 
 ## Query Header Format
 
@@ -212,9 +218,9 @@ Audit trail queries include a `CompletenessPercent` field indicating what percen
 
 | Query | Description | Primary Control |
 |-------|-------------|-----------------|
-| `agent-decision-audit-trail.kql` | Complete decision chain for FINRA 3110 | 1.7 (Audit Logging), 2.12 (FINRA 3110) |
+| `agent-decision-audit-trail.kql` | Complete decision chain for FINRA 3110 | 1.7 (Audit Logging), 2.12 (FINRA 3110 adjacency) |
 | `completeness-assessment.kql` | Telemetry gap detection for audit readiness | 1.7 (Supporting) |
-| `rai-content-filtering-detection.kql` | RAI/XPIA/Jailbreak event detection | 1.6 (DSPM for AI) |
+| `rai-content-filtering-detection.kql` | RAI/XPIA/Jailbreak event detection | Informational adjacency (DSPM delivered by Microsoft Purview) |
 | `generative-answers-telemetry.kql` | Generative AI response quality metrics | 2.9 (Performance) |
 | `flow-failure-correlation.kql` | Power Automate failure correlation | 3.4 (Incident Reporting) |
 
@@ -238,5 +244,5 @@ Audit trail queries include a `CompletenessPercent` field indicating what percen
 
 ---
 
-*Query Library Version: 1.2.0*
-*Last Updated: 2026-02-05*
+*Query Library Version: 1.2.1*
+*Last Updated: 2026-Q2*

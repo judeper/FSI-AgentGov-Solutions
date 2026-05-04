@@ -1,7 +1,7 @@
 id: agent-observability-foundation
 name: Agent Observability Foundation
 description: FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
-version: 1.2.0
+version: 1.2.1
 status: live
 domain: monitoring-analytics
 tier: '1'
@@ -15,7 +15,7 @@ prerequisites:
   log-analytics-reader: Reader access to the Log Analytics workspace and Application Insights for queries and validation.
   power-platform-admin: Power Platform admin tenant role for Copilot Studio telemetry source configuration.
   m365-admin: Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation.
-verification: Confirm Application Insights customEvents and Log Analytics rows arrive within 24h and workbooks/alerts render without errors.
+verification: Confirm Copilot Studio telemetry arrives in Application Insights AppEvents or legacy customEvents within 24h and workbooks/alerts render without errors.
 
 # zones/dataClassification backfilled by scripts/_backfill-zones.py
 # INFERRED from domain/tier/controls — product team must review.

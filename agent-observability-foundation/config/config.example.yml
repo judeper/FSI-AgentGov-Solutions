@@ -154,10 +154,10 @@ rbac:
 #   See docs/worm-configuration.md for manual WORM setup steps.
 #
 # Cost Management:
-#   - Configure ingestion sampling at Application Insights workspace level
+#   - Configure ingestion sampling at the Application Insights resource/workspace level
 #   - Set cost alerts in Azure Monitor (recommended: 50%, 75%, 90% thresholds)
 #   - See docs/cost-tuning-guide.md for production optimization
 #
 # PII Handling:
-#   - customDimensions.text and customDimensions.speak contain conversation data
+#   - Properties/customDimensions text and speak fields can contain conversation data
 #   - See docs/pii-sanitization-guide.md for redaction decision framework

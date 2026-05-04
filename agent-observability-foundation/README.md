@@ -1,9 +1,9 @@
 # Agent Observability Foundation
 
-> **Version:** v1.2.0
+> **Version:** v1.2.1
 > **Status:** Completed
 
-FSI-compliant telemetryinfrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
+FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
 
 ## Architecture Overview
 
@@ -16,11 +16,11 @@ All Azure resources are provisioned via Python scripts using the Azure SDK for P
 ## What This Solution Does
 
 ### Telemetry Infrastructure
-- **Deploys Application Insights** with 730-day retention for Copilot Studio telemetry capture (customEvents with CopilotInteraction schema)
+- **Deploys workspace-based Application Insights** with 730-day retention for Copilot Studio telemetry capture using connection-string configuration and normalized `AppEvents`/`customEvents` query support
 - **Creates Log Analytics workspace** with 2-year interactive query capability using PerGB2018 pricing tier
 - **Configures Azure Blob Storage (StorageV2) export** via Diagnostic Settings for SEC 17a-4 long-term retention (7+ years with WORM). StorageV2 is provisioned with hierarchical namespace disabled (required for Diagnostic Settings export).
 - **Establishes RBAC separation** between operational monitoring (Monitoring Reader) and compliance audit paths (Storage Blob Data Reader)
-- **Provides PII sanitization guidance** for conversation data in customDimensions fields (text, speak, fromName, recipientName)
+- **Provides PII sanitization guidance** for conversation data in current `Properties` fields and legacy `customDimensions` fields (`text`, `speak`, `fromName`, `recipientName`)
 - **Includes cost management configuration** with sampling defaults and cost alert thresholds
 
 ### Azure Monitor Workbooks
@@ -49,7 +49,7 @@ Before deploying this solution, ensure you have:
 
 1. **Azure subscription** with Owner or Contributor + User Access Admin permissions
 2. **Resource group** for telemetry resources (or permissions to create one)
-3. **Entra ID authentication** configured (interactive login, Service Principal, or Managed Identity)
+3. **Entra ID authentication** configured (managed identity/workload identity for hosted automation or interactive login for admin workstations)
 4. **Python 3.9+** installed with pip
 5. **Azure SDK packages** installed via `pip install -r scripts/requirements.txt`
 
@@ -237,28 +237,28 @@ agent-observability-foundation/
 | Diagnostic settings export shows no data | StorageV2 (with immutability policies) hierarchical namespace enabled | Create StorageV2 account WITHOUT hierarchical namespace (limitation of diagnostic settings) |
 | Queries return "no data" after 90 days | Workspace was created with default 90-day retention (the foundation provisioning was modified or skipped) | `provision.py` sets `retention_in_days=730` on the Log Analytics workspace; when `total_retention_in_days` is left unset it defaults to match `retention_in_days`, so 730 interactive days is the expected behavior. If a manual override shortened retention, run `provision.py` again or set `retentionInDays=730` and `totalRetentionInDays=730` directly. |
 | WORM policy locked production data permanently | WORM applied via automation script | Never automate WORM - use manual `worm-configuration.md` steps with explicit confirmation |
-| Adaptive sampling not reducing costs | Python SDK does not support adaptive sampling | Configure ingestion sampling at workspace level, not SDK level; see `cost-tuning-guide.md` |
-| PII found in customDimensions during audit | Sensitive properties logging enabled in Copilot Studio | Disable sensitive logging or implement sanitization per `pii-sanitization-guide.md` |
-| Authentication failed | DefaultAzureCredential cannot find valid credential | Run `az login` for interactive auth or configure Service Principal environment variables |
+| Adaptive sampling not reducing costs | Copilot Studio emits telemetry through managed service instrumentation rather than this Python deployment script | Configure ingestion sampling at the Application Insights resource/workspace level, not SDK level; see `cost-tuning-guide.md` |
+| PII found in telemetry property bags during audit | Sensitive properties logging enabled in Copilot Studio | Disable sensitive logging or implement sanitization per `pii-sanitization-guide.md` |
+| Authentication failed | DefaultAzureCredential cannot find valid credential | Use managed identity/workload identity for hosted automation, or run `az login` for administrator workstation validation. Service principal secrets are legacy dev-only fallback. |
 | Resource creation fails with 403 | Insufficient RBAC permissions | Verify Owner or Contributor + User Access Admin on subscription/resource group |
 
 ## Related Controls
 
 This solution supports the following FSI-AgentGov framework controls:
 
-- [Control 1.7: Comprehensive Audit Logging and Compliance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) - Primary evidence via Application Insights customEvents
+- [Control 1.7: Comprehensive Audit Logging and Compliance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) - Primary evidence via Application Insights `AppEvents` / legacy `customEvents`
 - [Control 3.2: Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) - Session metrics and interaction analytics
 - [Control 2.9: Agent Performance Monitoring and Optimization](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring-and-optimization.md) - Latency telemetry foundation
 - [Control 2.8: Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md) - Operational vs compliance access paths
 
 ## Version
 
-**v1.1.1** - 2026-04-15
+**v1.2.1** - 2026-Q2 Microsoft Learn refresh
 
-**What's New in v1.1.1:**
-- Removed instrumentation key logging from `verify_telemetry.py` and now log the resource ID instead
-- Updated architecture guidance to use Azure Blob Storage (StorageV2, HNS disabled) terminology consistently
-- Corrected the Azure CLI minimum version to 2.60+ for alert deployment
+**What's New in v1.2.1:**
+- Added normalized `AppEvents` / legacy `customEvents` KQL compatibility across queries, workbooks, alerts, and telemetry verification
+- Updated workbook templates to the current `Microsoft.Insights/workbooks@2023-06-01` ARM resource type
+- Refreshed Copilot Studio telemetry setup, managed-identity-first authentication guidance, and retention notes against Microsoft Learn 2026-Q2 guidance
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 

@@ -47,10 +47,28 @@
 // ============================================================
 
 let vw_event_fact = (startDate: datetime, endDate: datetime) {
-    customEvents
+    let AgentEvents = materialize(
+        union isfuzzy=true
+            (AppEvents
+            | project timestamp = TimeGenerated,
+                      name = tostring(Name),
+                      customDimensions = todynamic(Properties),
+                      session_Id = tostring(column_ifexists("SessionId", "")),
+                      itemId = tostring(column_ifexists("_ItemId", ""))),
+            (customEvents
+            | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))),
+                      name = tostring(column_ifexists("name", "")),
+                      customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))),
+                      session_Id = tostring(column_ifexists("session_Id", "")),
+                      itemId = tostring(column_ifexists("itemId", "")))
+        | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, "|", session_Id, "|", format_datetime(timestamp, "o"), "|", tostring(customDimensions)))
+        | summarize arg_max(timestamp, *) by EventKey
+        | project timestamp, name, customDimensions, session_Id
+    );
+    AgentEvents
     | where timestamp between (startDate .. endDate)
     | where name in ("BotMessageReceived", "BotMessageSend")
-    | where tostring(customDimensions['DesignMode']) == "False"
+    | where coalesce(tostring(customDimensions['DesignMode']), tostring(customDimensions['designMode'])) == "False"
     | extend
         EventTimestamp = timestamp,
         EventDateKey = toint(format_datetime(timestamp, "yyyyMMdd")),

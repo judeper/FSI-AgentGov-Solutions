@@ -1,3 +1,23 @@
+// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.
+let AgentEvents = materialize(
+    union isfuzzy=true
+        (AppEvents
+        | project timestamp = TimeGenerated,
+                  name = tostring(Name),
+                  customDimensions = todynamic(Properties),
+                  session_Id = tostring(column_ifexists("SessionId", "")),
+                  itemId = tostring(column_ifexists("_ItemId", ""))),
+        (customEvents
+        | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))),
+                  name = tostring(column_ifexists("name", "")),
+                  customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))),
+                  session_Id = tostring(column_ifexists("session_Id", "")),
+                  itemId = tostring(column_ifexists("itemId", "")))
+    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, "|", session_Id, "|", format_datetime(timestamp, "o"), "|", tostring(customDimensions)))
+    | summarize arg_max(timestamp, *) by EventKey
+    | project timestamp, name, customDimensions, session_Id
+);
+
 // agent-decision-audit-trail.kql
 // Purpose: Extract complete decision chain for FINRA 3110 supervision requirements
 //
@@ -42,7 +62,7 @@
 let TimeRange = {TimeRange:7d};
 let AgentIdFilter = "{AgentId:all}";
 
-customEvents
+AgentEvents
 | where timestamp > ago(TimeRange)
 | where name == "BotMessageSend"
 | extend AgentId = tostring(customDimensions["recipientId"])

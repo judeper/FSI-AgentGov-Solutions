@@ -3,8 +3,8 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "description": "ALRT-01: High Failure Rate alert rule with dynamic thresholds and zone-specific sensitivity. Monitors agent error rates and triggers when they exceed learned baselines.",
-    "version": "0.1.0",
-    "lastUpdated": "February 2026",
+    "version": "0.1.1",
+    "lastUpdated": "2026-Q2",
     "controlReference": "3.4 - Incident Reporting and Root Cause Analysis"
   },
   "parameters": {
@@ -73,7 +73,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 1 - Personal Productivity';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 1 - Personal Productivity';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",
@@ -118,7 +118,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 2 - Team Collaboration';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 2 - Team Collaboration';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",
@@ -163,7 +163,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 3 - Enterprise Managed';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 3 - Enterprise Managed';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend hasError = isnotempty(tostring(customDimensions['errorCodeText']))\n| summarize TotalCount = count(), ErrorCount = countif(hasError)\n| extend ErrorRate = iff(TotalCount == 0, 0.0, todouble(ErrorCount) / TotalCount * 100)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "ErrorRate",
               "criterionType": "DynamicThresholdCriterion",

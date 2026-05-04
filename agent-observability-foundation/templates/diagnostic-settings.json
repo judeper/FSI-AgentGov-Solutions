@@ -3,8 +3,9 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "description": "ARM template for configuring Diagnostic Settings to export Application Insights logs to StorageV2 storage (hierarchical namespace disabled) for long-term SEC 17a-4 retention.",
-    "version": "0.1.0",
-    "lastUpdated": "February 2026"
+    "version": "0.1.1",
+    "lastUpdated": "2026-Q2",
+    "apiVersionNote": "Microsoft Learn diagnostic-settings ARM/Bicep samples currently use Microsoft.Insights/diagnosticSettings@2021-05-01-preview; retain this supported preview API until a stable replacement is published."
   },
   "parameters": {
     "appInsightsName": {

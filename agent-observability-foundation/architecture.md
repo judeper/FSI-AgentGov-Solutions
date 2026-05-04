@@ -13,7 +13,7 @@ graph LR
     end
 
     subgraph "Azure Monitor"
-        B[Application Insights<br/>customEvents]
+        B[Application Insights<br/>AppEvents / customEvents]
         C[Log Analytics<br/>Workspace]
     end
 
@@ -33,7 +33,7 @@ graph LR
         J[Power BI Reports &amp; Dashboards<br/>Phase 4]
     end
 
-    A -->|CopilotInteraction<br/>customEvents| B
+    A -->|Copilot Studio telemetry<br/>connection string| B
     B -->|Workspace Binding| C
     B -->|Diagnostic Settings<br/>Export| D
     D -->|WORM Policy| E
@@ -61,14 +61,14 @@ graph LR
 **Type:** Workspace-based Application Insights
 **Kind:** web
 **Retention:** 730 days
-**Data Captured:** CopilotInteraction customEvents with session metrics, message counts, completion status
+**Data Captured:** Copilot Studio activity and custom telemetry events with session metrics, message counts, completion status
 
-Application Insights captures telemetry from Copilot Studio agents via the built-in Application Insights connector. Events flow to the customEvents table with schema fields including:
+Application Insights captures telemetry from Copilot Studio agents via the built-in Application Insights connection-string configuration. In workspace-based resources, events are available through current tables such as `AppEvents` with event properties in `Properties`; legacy query surfaces can expose the same data as `customEvents` with `customDimensions`. The solution KQL normalizes both shapes with fields including:
 
 - `name`: Event type (e.g., "CopilotInteraction", "CopilotMessage")
-- `customDimensions`: JSON payload with conversation context
+- `Properties` / `customDimensions`: JSON payload with conversation context
 - `timestamp`: Event occurrence time (UTC)
-- `session_Id`: Conversation session identifier
+- `SessionId` / `session_Id`: Conversation session identifier
 
 **Framework Control Reference:** Primary evidence for Control 1.7 (Comprehensive Audit Logging) - captures the complete interaction audit trail required for FINRA 4511 and SEC 17a-3/4 compliance.
 
@@ -79,11 +79,11 @@ Application Insights captures telemetry from Copilot Studio agents via the built
 **Total Retention:** 730 days
 **Query Capability:** Real-time KQL queries across all ingested data
 
-The Log Analytics workspace serves as the unified query surface for telemetry data. Application Insights binds to this workspace, enabling cross-resource correlation and centralized monitoring.
+The Log Analytics workspace serves as the unified query surface for telemetry data. Workspace-based Application Insights binds to this workspace, enabling cross-resource correlation and centralized monitoring.
 
 **Configuration Notes:**
-- Set BOTH `retentionInDays=730` AND `totalRetentionInDays=730` for full 2-year interactive access
-- Archive retention beyond 730 days requires Azure Blob Storage export (configured via Diagnostic Settings)
+- Set workspace `retentionInDays=730` for the 2-year interactive access target; use table-level retention/archive settings for table-specific policies.
+- Table-level retention/archive settings can be configured for specific Log Analytics tables; immutable long-term regulatory archive still requires Azure Blob Storage export with WORM policy.
 
 **Framework Control Reference:** Supports Control 3.2 (Usage Analytics and Activity Monitoring) by providing real-time query capability for session metrics, message volumes, and interaction patterns.
 
@@ -106,13 +106,13 @@ The storage account receives telemetry exports via Azure Monitor Diagnostic Sett
 
 **Export Categories (Python / default):**
 - `AppTraces`: Application trace logs
-- `AppEvents`: Custom events including CopilotInteraction
+- `AppEvents`: Custom events including Copilot Studio activity and custom telemetry events
 
 The ARM template (`templates/diagnostic-settings.json`) additionally exports `AppRequests` and `AppExceptions` for environments that need full request-level and error telemetry. The Python provisioning path (`scripts/provision.py`) defaults to the two categories above but can be extended via the `log_categories` config key.
 
 **Retention Policy:** Configured at storage account level (separate from Log Analytics retention)
 
-Diagnostic Settings establish the export pipeline from Application Insights to Azure Blob Storage. This enables retention periods beyond the 730-day Log Analytics maximum.
+Diagnostic Settings establish the export pipeline from Application Insights to Azure Blob Storage. This supports immutable retention periods beyond the interactive Log Analytics tier when paired with storage lifecycle management and WORM policy.
 
 ### RBAC Separation
 
@@ -196,11 +196,11 @@ Phase 4 will deliver executive reporting via Power BI:
 | Regulation | Requirement | How This Architecture Supports |
 |------------|-------------|-------------------------------|
 | **SEC 17a-4** | 2-year accessibility (b)(4), 6-year retention (a), immutable storage (f) | 730-day Log Analytics + Azure Blob Storage export with WORM policy capability |
-| **FINRA 4511** | Books and records retention, audit trail | Application Insights customEvents with full interaction capture |
+| **FINRA 4511** | Books and records retention, audit trail | Application Insights `AppEvents` / legacy `customEvents` with interaction telemetry capture |
 | **SOX 302/404** | Internal controls documentation, evidence preservation | Immutable ProvisioningLog, quarterly evidence export |
 | **SR 11-7** | Model risk management, ongoing monitoring | Telemetry foundation for performance monitoring and model validation |
 
 ---
 
-*Architecture version: 1.2.0*
-*Last updated: February 2026*
+*Architecture version: 1.2.1*
+*Last updated: 2026-Q2*

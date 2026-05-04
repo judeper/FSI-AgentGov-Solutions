@@ -3,8 +3,8 @@
   "contentVersion": "1.0.0.0",
   "metadata": {
     "description": "ALRT-02: Latency Regression alert rule with dynamic thresholds and zone-specific sensitivity. Monitors agent P95 latency and triggers when response times regress beyond learned baselines.",
-    "version": "0.1.0",
-    "lastUpdated": "February 2026",
+    "version": "0.1.1",
+    "lastUpdated": "2026-Q2",
     "controlReference": "2.9 - Agent Performance Monitoring and Optimization"
   },
   "parameters": {
@@ -73,7 +73,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 1 - Personal Productivity';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 1 - Personal Productivity';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "P95Latency",
               "criterionType": "DynamicThresholdCriterion",
@@ -118,7 +118,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 2 - Team Collaboration';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 2 - Team Collaboration';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "P95Latency",
               "criterionType": "DynamicThresholdCriterion",
@@ -163,7 +163,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "let ZoneFilter = 'Zone 3 - Enterprise Managed';\ncustomEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
+              "query": "// Normalize current workspace-based AppEvents and legacy customEvents into one query shape.\nlet AgentEvents = materialize(\n    union isfuzzy=true\n        (AppEvents\n        | project timestamp = TimeGenerated,\n                  name = tostring(Name),\n                  customDimensions = todynamic(Properties),\n                  session_Id = tostring(column_ifexists(\"SessionId\", \"\")),\n                  itemId = tostring(column_ifexists(\"_ItemId\", \"\"))),\n        (customEvents\n        | project timestamp = todatetime(column_ifexists(\"timestamp\", datetime(null))),\n                  name = tostring(column_ifexists(\"name\", \"\")),\n                  customDimensions = todynamic(column_ifexists(\"customDimensions\", dynamic({}))),\n                  session_Id = tostring(column_ifexists(\"session_Id\", \"\")),\n                  itemId = tostring(column_ifexists(\"itemId\", \"\")))\n    | extend EventKey = iff(isnotempty(itemId), itemId, strcat(name, \"|\", session_Id, \"|\", format_datetime(timestamp, \"o\"), \"|\", tostring(customDimensions)))\n    | summarize arg_max(timestamp, *) by EventKey\n    | project timestamp, name, customDimensions, session_Id\n);\n\nlet ZoneFilter = 'Zone 3 - Enterprise Managed';\nAgentEvents\n| where name == 'BotMessageSend'\n| where tostring(customDimensions['Zone']) == ZoneFilter\n| extend DurationMs = todouble(customDimensions['duration'])\n| where isnotnull(DurationMs)\n| summarize P95Latency = percentile(DurationMs, 95)",
               "timeAggregation": "Average",
               "metricMeasureColumn": "P95Latency",
               "criterionType": "DynamicThresholdCriterion",
