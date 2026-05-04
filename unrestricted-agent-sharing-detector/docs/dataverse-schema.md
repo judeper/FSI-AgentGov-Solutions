@@ -24,7 +24,7 @@
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
 | fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |
 | fsi_ViolationType | fsi_violationtype | Picklist | Yes | Type of sharing violation detected | **fsi_UASD_violationtype**: `100000000` = ORG_WIDE_SHARING, `100000001` = PUBLIC_INTERNET_LINK, `100000002` = UNAPPROVED_GROUP, `100000003` = EXCESSIVE_INDIVIDUAL, `100000004` = CROSS_TENANT_ACCESS, `100000005` = POLICY_VIOLATION |
-| fsi_ViolationStatus| fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive, `100000004` = Remediation Failed |
+| fsi_ViolationStatus | fsi_violationstatus | Picklist | Yes | Current status of the violation | **fsi_UASD_violationstatus**: `100000000` = Open, `100000001` = Remediated, `100000002` = Exception Approved, `100000003` = False Positive, `100000004` = Remediation Failed |
 | fsi_Severity | fsi_severity | Picklist | Yes | Severity level of the violation | **fsi_UASD_severity**: `100000000` = Critical, `100000001` = High, `100000002` = Medium, `100000003` = Low |
 | fsi_Description | fsi_description | Memo | No | Detailed description of the violation |  |
 | fsi_PrincipalDetails | fsi_principaldetails | Memo | No | Details of principals involved in the violation |  |
@@ -49,12 +49,12 @@
 | fsi_BusinessJustification | fsi_businessjustification | Memo | Yes | Business justification for the exception |  |
 | fsi_RequestedBy | fsi_requestedby | String | No | UPN of the person who requested the exception |  |
 | fsi_RequestedAt | fsi_requestedat | DateTime | No | When the exception was requested |  |
+| fsi_RequestedDuration | fsi_requestedduration | Decimal | Yes | Requested exception duration in days |  |
 | fsi_ApprovedBySecurity | fsi_approvedbysecurity | String | No | UPN of security approver |  |
 | fsi_ApprovedByDataOwner | fsi_approvedbydataowner | String | No | UPN of data owner approver |  |
 | fsi_ApprovedByCompliance | fsi_approvedbycompliance | String | No | UPN of compliance approver |  |
 | fsi_ApprovedAt | fsi_approvedat | DateTime | No | When the exception was approved |  |
 | fsi_ExpiresAt | fsi_expiresat | DateTime | No | When the exception expires |  |
-| fsi_RequestedDuration | fsi_requestedduration | Decimal | Yes | Requested exception duration in days |  |
 | fsi_RelatedViolationId | fsi_relatedviolationid | Lookup | No | Optional link to the violation record this exception addresses |  |
 
 ### fsi_AgentSharingSetting (`fsi_agentsharingsetting`)
@@ -71,7 +71,7 @@
 | fsi_PublicLinkEnabled | fsi_publiclinkenabled | Boolean | No | Whether a public internet link is enabled for this agent | `1` = Yes, `0` = No |
 | fsi_CrossTenantEnabled | fsi_crosstenantenabled | Boolean | No | Whether cross-tenant access is enabled for this agent | `1` = Yes, `0` = No |
 | fsi_LastScannedAt | fsi_lastscannedat | DateTime | No | When this agent was last scanned |  |
-| fsi_BreakGlassExclude | fsi_breakglassexclude | Boolean | No | Whether this agent is excluded from scanning via break-glass (column-level auditing enabled) | `1` = Yes, `0` = No |
+| fsi_BreakGlassExclude | fsi_breakglassexclude | Boolean | No | Whether this agent is excluded from scanning via break-glass | `1` = Yes, `0` = No |
 
 ### fsi_ApprovedSecurityGroup (`fsi_approvedsecuritygroup`)
 
@@ -107,7 +107,7 @@
 
 #### fsi_acv_zone
 
-Governance zone classification (shared across ACV solutions)
+Governance zone classification
 
 | Value | Label |
 |---|---|
@@ -143,6 +143,7 @@ Current status of a sharing violation
 | 100000001 | Remediated |
 | 100000002 | Exception Approved |
 | 100000003 | False Positive |
+| 100000004 | Remediation Failed |
 
 #### fsi_UASD_severity
 

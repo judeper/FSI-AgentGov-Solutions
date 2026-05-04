@@ -1,7 +1,7 @@
 # Unrestricted Agent Sharing Detector
 
-> **Version:** v1.0.2
-> **Status:** Completed
+> **Version:** v2.0.1
+> **Status:** Live
 
 Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
 
@@ -52,7 +52,17 @@ Power Automate flows and Canvas apps are built manually using the instructions i
 - Power Platform environment with Dataverse
 - Power Automate Premium license (for cloud flows)
 - Power Platform Admin or Entra Global Admin permissions
+- Dataverse System Administrator role for schema deployment and agent-sharing remediation
+- Microsoft Entra ID authentication configured for agents whose chat access must be scoped to users or groups
 - The Python setup scripts (`scripts/create_uasd_*.py`) depend on a shared `DataverseClient` module located at `../scripts/shared/dataverse_client.py` (relative to the repository root containing this solution). Ensure the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions) repository structure is intact, or install the `dataverse_client` module on `PYTHONPATH`.
+
+## Microsoft Learn Alignment (2026-Q2)
+
+- Copilot Studio chat sharing currently supports individual users, security groups, or **Everyone in the organization**. Scoped chat sharing requires Microsoft Entra ID authentication and **Require users to sign in**.
+- The detector uses the Dataverse `bot` table as the implementation source of truth: `accesscontrolpolicy` (`0` = Any, `1` = Copilot readers, `2` = Group membership, `3` = Any multi-tenant), `authorizedsecuritygroupids`, `authenticationmode`, and `authenticationtrigger`.
+- Automated remediation follows an audit-then-act pattern: capture the prior sharing configuration in evidence, require approved security groups, patch both `accesscontrolpolicy` and `authorizedsecuritygroupids`, and leave a rollback trail.
+- For scheduled runbooks, use Azure Automation managed identity or workload identity first. Client-secret setup paths in Python scripts are retained only as legacy development fallbacks.
+- Copilot Studio agent identities are Microsoft-managed Entra Agent IDs or legacy app registrations. Do not modify or reuse those credentials for this solution's automation.
 
 ## Platform Update Notes
 
@@ -65,17 +75,17 @@ Microsoft introduced native admin controls in the Power Platform admin center to
 - Set numerical limits on how many viewers an agent can be shared with
 - Apply rules at the managed environment level or via environment groups
 
-**Relationship to UASD:** The native sharing rules provide **preventive controls** — they block sharing at the platform level before it occurs. UASD provides **detective and corrective controls** — it audits existing sharing configurations, detects violations that predate native rule deployment, manages time-bound exceptions, and generates compliance evidence for regulatory examinations. FSI organizations should deploy the native sharing rules as the primary enforcement layer and use UASD for ongoing audit, evidence collection, and exception management.
+**Relationship to UASD:** The native sharing rules provide **preventive controls** — they block sharing at the platform level before it occurs. UASD provides **detective and corrective controls** — it audits existing sharing configurations, detects violations that predate native rule deployment, manages time-bound exceptions, and generates compliance evidence for regulatory examinations. FSI organizations should deploy the native sharing rules as the primary preventive layer and use UASD for ongoing audit, evidence collection, and exception management.
 
-### M365 Copilot Agent Store (April 2026)
+### Microsoft 365 Copilot Agent Store and Package Management API (2026-Q2)
 
-Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments may bypass environment-level sharing controls, creating additional governance considerations:
+Microsoft has launched the Microsoft 365 Copilot Agent Store and the [Agent and app Package Management API preview](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/api/admin-settings/package/overview), enabling tenant-wide inventory and management of Microsoft 365 apps and agents. Agent Store deployments may operate outside Power Platform environment sharing settings, creating additional governance considerations:
 
 - **Prebuilt agents** deployed from the Agent Store are available to assigned users without going through environment-level sharing configuration
-- **Admin controls** in the M365 Admin Center (`Agents > All agents`) allow admins to assign, block, or restrict agent access — these controls operate independently of Power Platform environment sharing settings
+- **Admin controls** in the Microsoft 365 admin center (`Agents > All agents`) allow admins to assign, block, or restrict agent access — these controls operate independently of Power Platform environment sharing settings
 - Organizations should verify that Agent Store deployment policies align with zone-based sharing restrictions monitored and remediated by this solution
 
-> **Note:** UASD currently detects sharing violations within Power Platform environments. Agent Store deployment visibility is not yet covered. Organizations should review Agent Store admin controls alongside environment-level sharing governance.
+> **Note:** UASD currently detects sharing violations within Power Platform environments. Agent Store and Package Management API inventory is a recommended future extension, especially for agents outside Copilot Studio environments.
 
 ## Deployment
 

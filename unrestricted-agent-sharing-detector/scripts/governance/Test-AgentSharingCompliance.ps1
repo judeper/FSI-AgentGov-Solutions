@@ -8,17 +8,19 @@
     1. Enumerates Power Platform environments
     2. Queries each environment's Dataverse for Copilot Studio agents (bot table)
     3. Evaluates each agent's sharing configuration against zone-based policy
-    4. Detects: public sharing, org-wide access, policy violations
+    4. Detects unauthenticated public access, org-wide access, cross-tenant
+       access, unapproved groups, and policy violations
     5. Reports violations with severity classification and regulatory context
-    6. Optionally remediates by restricting sharing to compliant levels
+    6. Optionally remediates by restricting sharing to approved security groups
+       with rollback evidence captured before changes are applied
 
     This is the primary validation script for the Unrestricted Agent Sharing
     Detector (UASD) solution. It validates per-agent sharing posture against
     zone-based governance policies defined by Controls 1.1 and 3.8.
 
-    Note: External sharing (cross-tenant) detection requires role assignment
-    data not available from the Dataverse bot table; use Invoke-SharingAudit.ps1
-    for cross-tenant detection.
+    Note: Excessive individual share counts require agent sharing APIs that
+    expose per-principal assignments. The Dataverse bot table covers
+    accesscontrolpolicy, authenticationmode, and authorizedsecuritygroupids.
 
     Zone-based severity:
     - Zone 3: Critical for any unrestricted/org-wide/external sharing
@@ -65,9 +67,10 @@
     fsi_sharingviolations in Dataverse for evidence and dashboard reporting.
 
 .PARAMETER AutoRemediate
-    When specified, restricts sharing for agents with violations to
-    zone-compliant levels. Applies remediation via Power Apps Admin cmdlets.
-    Use -WhatIf to preview remediation actions before applying.
+    When specified, restricts sharing for agents with violations to approved
+    security groups by patching the Dataverse bot table. The script captures
+    the previous accesscontrolpolicy and authorizedsecuritygroupids in evidence
+    before changes are applied. Use -WhatIf to preview remediation actions.
 
 .PARAMETER Top
     Limit total agents processed (safety cap for large tenants).
@@ -101,7 +104,7 @@
 
 .NOTES
     File: Test-AgentSharingCompliance.ps1
-    Version: 2.0.0
+    Version: 2.0.1
     Solution: Unrestricted Agent Sharing Detector (UASD)
     Controls: 1.1 (Agent Access Governance), 3.8 (Copilot Hub)
     Regulations: FINRA Rule 4511(a), SEC Rule 17a-4, SOX Section 302/404, GLBA Section 501(b)
@@ -174,24 +177,56 @@ function Test-AgentSharingCompliance {
     $runId = [guid]::NewGuid().ToString()
     $scanStartTime = Get-Date -Format 'o'
 
-    # --- Auth precheck (fail-closed) ---
-    if (-not $DataverseToken) {
-        try {
-            Write-Verbose "No DataverseToken supplied — attempting Get-AzAccessToken (Power Platform resource)"
-            $tokenResult = Get-AzAccessToken -ResourceUrl 'https://service.powerapps.com/' -ErrorAction Stop
-            $DataverseToken = if ($tokenResult.Token -is [System.Security.SecureString]) {
-                $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
-            } else { $tokenResult.Token }
-        } catch {
-            throw "DataverseToken not provided and Get-AzAccessToken failed: $($_.Exception.Message). Run Connect-AzAccount or pass -DataverseToken explicitly. Scan aborted to avoid silent fail-open."
+    # --- Auth helpers (managed identity / Az context first, explicit token fallback) ---
+    $script:UasdTokenCache = @{}
+
+    function Convert-UasdAccessTokenToPlainText {
+        param([Parameter(Mandatory)]$Token)
+        if ($Token -is [System.Security.SecureString]) {
+            return ($Token | ConvertFrom-SecureString -AsPlainText)
         }
+        return [string]$Token
     }
-    if ([string]::IsNullOrWhiteSpace($DataverseToken)) {
-        throw "DataverseToken is empty. Scan aborted to avoid silent fail-open."
+
+    function Get-UasdAccessToken {
+        <#
+        .SYNOPSIS
+            Gets an access token for a Dataverse resource URL.
+        .DESCRIPTION
+            Uses the explicitly supplied -DataverseToken when present. Otherwise,
+            uses Get-AzAccessToken so Azure Automation managed identities,
+            user-assigned managed identities, workload identities, and interactive
+            Az sessions can all acquire resource-scoped Dataverse tokens.
+        #>
+        param(
+            [Parameter(Mandatory)]
+            [string]$ResourceUrl
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($DataverseToken)) {
+            return $DataverseToken
+        }
+
+        $normalizedResourceUrl = $ResourceUrl.TrimEnd('/')
+        if ($script:UasdTokenCache.ContainsKey($normalizedResourceUrl)) {
+            return $script:UasdTokenCache[$normalizedResourceUrl]
+        }
+
+        try {
+            $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedResourceUrl -ErrorAction Stop
+            $token = Convert-UasdAccessTokenToPlainText -Token $tokenResult.Token
+            if ([string]::IsNullOrWhiteSpace($token)) {
+                throw "Get-AzAccessToken returned an empty token"
+            }
+            $script:UasdTokenCache[$normalizedResourceUrl] = $token
+            return $token
+        } catch {
+            throw "Failed to acquire Dataverse token for '$normalizedResourceUrl': $($_.Exception.Message). In Azure Automation, enable a managed identity and grant it the required Dataverse security role; for admin workstations, run Connect-AzAccount or pass -DataverseToken explicitly."
+        }
     }
 
     Write-Verbose "========================================="
-    Write-Verbose "Unrestricted Agent Sharing Detector v2.0.0"
+    Write-Verbose "Unrestricted Agent Sharing Detector v2.0.1"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -211,11 +246,7 @@ function Test-AgentSharingCompliance {
     #region Sharing Scope Classification Helpers
     # COUPLING NOTE: Get-SharingScopeType and Get-ViolationTypeCode are tightly coupled.
     # Get-SharingScopeType returns violation type strings that Get-ViolationTypeCode maps to
-    # Dataverse option set integers. The flow defines six violation types (100000000–100000005)
-    # but only four are detected here (UnrestrictedSharing, OrgWideAccess, ExternalSharing,
-    # SharingPolicyViolation). UNAPPROVED_GROUP (100000002) and EXCESSIVE_INDIVIDUAL (100000003)
-    # are flow-only remediation categories not produced by this script.
-    # When adding a new violation type, update BOTH functions in parallel.
+    # Dataverse option set integers. When adding a new violation type, update BOTH functions.
 
     function Get-SharingScopeType {
         <#
@@ -223,7 +254,7 @@ function Test-AgentSharingCompliance {
             Classifies a bot sharing configuration into a violation type.
         .OUTPUTS
             String: UnrestrictedSharing, OrgWideAccess, ExternalSharing,
-                    SharingPolicyViolation, or Compliant
+                    UnapprovedGroup, SharingPolicyViolation, or Compliant
         #>
         param(
             [Parameter(Mandatory)]
@@ -233,28 +264,49 @@ function Test-AgentSharingCompliance {
             [PSCustomObject]$Policy
         )
 
-        $sharingScope     = $Agent.SharingScope
-        $isPublic         = $Agent.IsPublic
-        $allowExternal    = $Agent.AllowExternalUsers
-        $sharingStatus    = if ($Agent.SharingStatus) { $Agent.SharingStatus.ToLower() } else { '' }
+        $sharingScope       = $Agent.SharingScope
+        $accessPolicy       = $Agent.AccessControlPolicy
+        $authenticationMode = $Agent.AuthenticationMode
+        $sharingStatus      = if ($Agent.SharingStatus) { $Agent.SharingStatus.ToLower() } else { '' }
 
-        # Public sharing — accessible to anyone with the link
-        if ($isPublic -eq $true -or $sharingStatus -match 'public') {
+        # Copilot Studio authenticationmode=1 (None) means anyone with the link can chat.
+        if ($authenticationMode -eq 1 -or $sharingStatus -match 'unauthenticated|public') {
             return 'UnrestrictedSharing'
         }
 
-        # External sharing — accessible to users outside the tenant
-        if ($allowExternal -eq $true -or $sharingStatus -match 'external') {
+        # accesscontrolpolicy=3 is Any (multi-tenant), which permits cross-tenant access.
+        if ($accessPolicy -eq 3 -or $sharingStatus -match 'external|multitenant|multi-tenant') {
             return 'ExternalSharing'
         }
 
-        # Org-wide access — visible to all users in the tenant
-        if ($sharingStatus -match 'orgwide|org-wide|everyone|allusers' -or
-            $sharingScope -match 'orgwide|organization') {
+        # accesscontrolpolicy=0 is Any, meaning all users in the tenant can interact with the bot.
+        if ($accessPolicy -eq 0 -or $sharingStatus -match 'orgwide|org-wide|everyone|allusers' -or
+            $sharingScope -match 'orgwide|organization|anyuser') {
             return 'OrgWideAccess'
         }
 
-        # Check against zone permitted scopes
+        # accesscontrolpolicy=2 is Group membership; validate against the approved registry when available.
+        if ($accessPolicy -eq 2) {
+            $authorizedGroupIds = @($Agent.AuthorizedSecurityGroupIds | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            $approvedGroupIds = @($Agent.ApprovedSecurityGroupIds | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+            if ($approvedGroupIds.Count -eq 0 -and -not $Policy.AdvisoryOnly) {
+                return 'SharingPolicyViolation'
+            }
+
+            if ($authorizedGroupIds.Count -eq 0 -and -not $Policy.AdvisoryOnly) {
+                return 'SharingPolicyViolation'
+            }
+
+            if ($approvedGroupIds.Count -gt 0) {
+                $unapprovedGroups = @($authorizedGroupIds | Where-Object { $_.ToLowerInvariant() -notin $approvedGroupIds })
+                if ($unapprovedGroups.Count -gt 0 -and -not $Policy.AdvisoryOnly) {
+                    return 'UnapprovedGroup'
+                }
+            }
+        }
+
+        # Check against zone permitted scopes.
         if ($sharingScope -and
             $Policy.PermittedScopes -notcontains $sharingScope -and
             -not $Policy.AdvisoryOnly) {
@@ -283,6 +335,7 @@ function Test-AgentSharingCompliance {
             'UnrestrictedSharing'    { return $Policy.UnrestrictedSharingSeverity }
             'OrgWideAccess'          { return $Policy.OrgWideAccessSeverity }
             'ExternalSharing'        { return $Policy.ExternalSharingSeverity }
+            'UnapprovedGroup'        { return $Policy.UnapprovedGroupSeverity }
             'SharingPolicyViolation' { return $Policy.SharingPolicyViolationSeverity }
             default                  { return 'Informational' }
         }
@@ -298,8 +351,9 @@ function Test-AgentSharingCompliance {
         param([string]$ViolationType)
 
         switch ($ViolationType) {
-            'UnrestrictedSharing'    { return 100000001 }
             'OrgWideAccess'          { return 100000000 }
+            'UnrestrictedSharing'    { return 100000001 }
+            'UnapprovedGroup'        { return 100000002 }
             'ExternalSharing'        { return 100000004 }
             'SharingPolicyViolation' { return 100000005 }
             default {
@@ -345,6 +399,47 @@ function Test-AgentSharingCompliance {
         }
     }
 
+    function Get-ApprovedSecurityGroupIds {
+        <#
+        .SYNOPSIS
+            Retrieves active approved security groups for a UASD zone.
+        .OUTPUTS
+            Lowercase Entra group IDs approved for the zone.
+        #>
+        param(
+            [string]$DataverseUrl,
+            [string]$AccessToken,
+            [int]$ZoneCode
+        )
+
+        if ([string]::IsNullOrWhiteSpace($DataverseUrl) -or [string]::IsNullOrWhiteSpace($AccessToken)) {
+            return @()
+        }
+
+        $headers = @{
+            'Authorization'    = "Bearer $AccessToken"
+            'Accept'           = 'application/json'
+            'OData-MaxVersion' = '4.0'
+            'OData-Version'    = '4.0'
+        }
+        $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
+        $filter = "fsi_isactive eq true and fsi_zoneclassification eq $ZoneCode"
+        $url = "$apiBase/fsi_approvedsecuritygroups?`$select=fsi_entraidgroupid&`$filter=$filter"
+        $approved = [System.Collections.Generic.List[string]]::new()
+
+        while ($url) {
+            $response = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -ErrorAction Stop
+            foreach ($record in $response.value) {
+                if (-not [string]::IsNullOrWhiteSpace($record.fsi_entraidgroupid)) {
+                    $approved.Add($record.fsi_entraidgroupid.Trim().ToLowerInvariant())
+                }
+            }
+            $url = $response.'@odata.nextLink'
+        }
+
+        return $approved.ToArray()
+    }
+
     #endregion
 
     #region Zone Classification Helper
@@ -364,9 +459,11 @@ function Test-AgentSharingCompliance {
         )
 
         # Try shared zone classification script if available.
-        # $scriptRoot = .../unrestricted-agent-sharing-detector/scripts/governance
-        # repo root  = .../unrestricted-agent-sharing-detector/../..  (two parents up)
-        $sharedZoneScript = Join-Path (Split-Path (Split-Path $scriptRoot -Parent) -Parent) 'scripts\shared\Get-ZoneClassification.ps1'
+        # $scriptRoot = ...\unrestricted-agent-sharing-detector\scripts\governance
+        # repo root  = parent of the solution directory.
+        $solutionRoot = Split-Path (Split-Path $scriptRoot -Parent) -Parent
+        $repoRoot = Split-Path $solutionRoot -Parent
+        $sharedZoneScript = Join-Path $repoRoot 'scripts\shared\Get-ZoneClassification.ps1'
 
         if (Test-Path $sharedZoneScript) {
             try {
@@ -411,7 +508,7 @@ function Test-AgentSharingCompliance {
     #region Enumerate Environments
 
     Write-Host ""
-    Write-Host "Unrestricted Agent Sharing Detector v1.0.2" -ForegroundColor Cyan
+    Write-Host "Unrestricted Agent Sharing Detector v2.0.1" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/4] Enumerating Power Platform environments..." -ForegroundColor Cyan
@@ -467,16 +564,37 @@ function Test-AgentSharingCompliance {
         Write-Verbose "Scanning environment: $envName ($envId)"
 
         # Determine zone classification
+        $zoneLookupToken = $null
+        if ($DataverseUrl) {
+            try {
+                $zoneLookupToken = Get-UasdAccessToken -ResourceUrl $DataverseUrl
+            } catch {
+                Write-Verbose "Could not acquire token for zone lookup Dataverse URL: $($_.Exception.Message)"
+            }
+        }
+
         $zone = Get-EnvironmentZone `
             -EnvironmentId $envId `
             -EnvironmentDisplayName $envName `
             -DataverseUrl $DataverseUrl `
-            -AccessToken $DataverseToken
+            -AccessToken $zoneLookupToken
 
         Write-Verbose "  Zone: $zone"
 
-        # Get zone policy
+        # Get zone policy and approved security groups for the zone.
         $policy = & $policyScript -Zone $zone
+        $approvedGroupIds = @()
+        if ($DataverseUrl -and $zoneLookupToken) {
+            try {
+                $approvedGroupIds = @(Get-ApprovedSecurityGroupIds `
+                    -DataverseUrl $DataverseUrl `
+                    -AccessToken $zoneLookupToken `
+                    -ZoneCode (Get-ZoneCode -Zone $zone))
+                Write-Verbose "  Approved groups for $($zone): $($approvedGroupIds.Count)"
+            } catch {
+                Write-Warning "  Could not load approved security groups for $($zone): $($_.Exception.Message)"
+            }
+        }
 
         # Query Copilot Studio bots in this environment via Dataverse
         if (-not $envOrgUrl) {
@@ -487,13 +605,16 @@ function Test-AgentSharingCompliance {
         try {
             $botApiUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/bots"
             # Per Microsoft Learn (https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/bot)
-            # the bot table exposes 'accesscontrolpolicy' (Picklist) and 'authorizedsecuritygroupids' (String) for sharing posture.
-            # accesscontrolpolicy values: 0=Any (open), 1=Copilot readers, 2=Group membership, 3=Any (multi-tenant).
+            # the bot table exposes accesscontrolpolicy (0=Any, 1=Copilot readers,
+            # 2=Group membership, 3=Any multi-tenant), authorizedsecuritygroupids,
+            # authenticationmode (1=None), and authenticationtrigger.
+            $envAccessToken = Get-UasdAccessToken -ResourceUrl $envOrgUrl
             $selectCols = 'botid,name,statecode,statuscode,publishedby,' +
-                          'accesscontrolpolicy,authorizedsecuritygroupids,createdon'
+                          'accesscontrolpolicy,authorizedsecuritygroupids,' +
+                          'authenticationmode,authenticationtrigger,createdon'
 
             $headers = @{
-                'Authorization' = "Bearer $DataverseToken"
+                'Authorization' = "Bearer $envAccessToken"
                 'Accept'        = 'application/json'
                 'OData-MaxVersion' = '4.0'
                 'OData-Version'    = '4.0'
@@ -523,8 +644,8 @@ function Test-AgentSharingCompliance {
                 RunId              = $runId
                 EnvironmentId      = $envId
                 EnvironmentName    = $envName
-                AgentId            = $null
-                AgentName          = $null
+                AgentId            = $envId
+                AgentName          = 'SCAN_COVERAGE_GAP'
                 SharingScope       = 'Unknown'
                 Zone               = $zone
                 ViolationType      = 'SCAN_COVERAGE_GAP'  # Local sentinel; not in fsi_UASD_violationtype
@@ -554,29 +675,50 @@ function Test-AgentSharingCompliance {
             $agentName = $bot.name
 
             # Build agent sharing object from bot properties.
-            # accesscontrolpolicy: 0=Any (open to anyone in tenant), 1=Copilot readers (specific licensed users),
-            # 2=Group membership (restricted to authorizedsecuritygroupids), 3=Any (multi-tenant / cross-tenant open).
+            # accesscontrolpolicy: 0=Any (all users in tenant), 1=Copilot readers
+            # (specific licensed users), 2=Group membership (authorizedsecuritygroupids),
+            # 3=Any (multi-tenant / cross-tenant). authenticationmode=1 means no
+            # user authentication, so anyone with the link can chat.
             $accessPolicyMap = @{
                 0 = 'AnyUser'
                 1 = 'CopilotReaders'
                 2 = 'GroupMembership'
                 3 = 'AnyMultiTenant'
             }
-            $accessPolicy = $bot.accesscontrolpolicy
-            $sharingScope = if ($null -ne $accessPolicy -and $accessPolicyMap.ContainsKey([int]$accessPolicy)) {
-                $accessPolicyMap[[int]$accessPolicy]
+            $accessPolicy = if ($null -ne $bot.accesscontrolpolicy) { [int]$bot.accesscontrolpolicy } else { $null }
+            $authenticationMode = if ($null -ne $bot.authenticationmode) { [int]$bot.authenticationmode } else { $null }
+            $authenticationTrigger = if ($null -ne $bot.authenticationtrigger) { [int]$bot.authenticationtrigger } else { $null }
+            $sharingScope = if ($null -ne $accessPolicy -and $accessPolicyMap.ContainsKey($accessPolicy)) {
+                $accessPolicyMap[$accessPolicy]
             } else { 'Unknown' }
-            $isPublic       = ($accessPolicy -eq 0 -or $accessPolicy -eq 3)
-            $isOrgWide      = ($accessPolicy -eq 0)
-            $isCrossTenant  = ($accessPolicy -eq 3)
+            $authorizedGroupIds = @()
+            if (-not [string]::IsNullOrWhiteSpace($bot.authorizedsecuritygroupids)) {
+                $authorizedGroupIds = @($bot.authorizedsecuritygroupids -split ',' |
+                    ForEach-Object { $_.Trim().ToLowerInvariant() } |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            }
+            $isPublic      = ($authenticationMode -eq 1)
+            $isCrossTenant = ($accessPolicy -eq 3)
+            $previousSharingConfig = [ordered]@{
+                accesscontrolpolicy       = $accessPolicy
+                authorizedsecuritygroupids = $bot.authorizedsecuritygroupids
+                authenticationmode        = $authenticationMode
+                authenticationtrigger     = $authenticationTrigger
+            }
 
             $agentObj = [PSCustomObject]@{
-                AgentId          = $agentId
-                AgentName        = $agentName
-                SharingScope     = $sharingScope
-                IsPublic         = $isPublic
-                AllowExternalUsers = $isCrossTenant  # accesscontrolpolicy=3 (Any/multi-tenant) implies cross-tenant access
-                SharingStatus    = $sharingScope
+                AgentId                   = $agentId
+                AgentName                 = $agentName
+                SharingScope              = $sharingScope
+                AccessControlPolicy       = $accessPolicy
+                AuthenticationMode        = $authenticationMode
+                AuthenticationTrigger     = $authenticationTrigger
+                AuthorizedSecurityGroupIds = $authorizedGroupIds
+                ApprovedSecurityGroupIds  = $approvedGroupIds
+                PreviousSharingConfig     = $previousSharingConfig
+                IsPublic                  = $isPublic
+                AllowExternalUsers        = $isCrossTenant
+                SharingStatus             = $sharingScope
             }
 
             # Classify sharing type
@@ -615,7 +757,13 @@ function Test-AgentSharingCompliance {
                 DetectedAt         = $scanStartTime
                 RemediatedAt       = $null
                 RemediationAction  = $null
-                Details            = "Agent '$agentName' has sharing configuration '$sharingScope' which violates $zone policy. $($policy.RegulatoryContext)"
+                AccessControlPolicy       = $accessPolicy
+                AuthenticationMode        = $authenticationMode
+                AuthenticationTrigger     = $authenticationTrigger
+                AuthorizedSecurityGroupIds = $authorizedGroupIds
+                ApprovedSecurityGroupIds  = $approvedGroupIds
+                PreviousSharingConfig     = $previousSharingConfig
+                Details            = "Agent '$agentName' has sharing configuration '$sharingScope' (accesscontrolpolicy=$accessPolicy, authenticationmode=$authenticationMode) which violates $zone policy. $($policy.RegulatoryContext)"
             }
 
             $violations.Add($violation)
@@ -633,33 +781,48 @@ function Test-AgentSharingCompliance {
 
     if ($AutoRemediate -and $violations.Count -gt 0) {
         foreach ($violation in $violations) {
+            if ([string]::IsNullOrWhiteSpace($violation.AgentId) -or $violation.ViolationType -eq 'SCAN_COVERAGE_GAP') {
+                Write-Verbose "Skipping remediation for non-agent violation '$($violation.ViolationType)' in '$($violation.EnvironmentName)'"
+                continue
+            }
+
             $targetAction = "Restrict sharing for agent '$($violation.AgentName)' in '$($violation.EnvironmentName)' (current: $($violation.SharingScope))"
 
             if ($PSCmdlet.ShouldProcess($targetAction, 'RestrictSharing')) {
                 try {
-                    # Set sharing back to Group membership (accesscontrolpolicy=2) to remove unrestricted access
+                    # Set sharing to Group membership (accesscontrolpolicy=2) using approved groups.
                     $envOrgUrl = ($environments | Where-Object { $_.EnvironmentName -eq $violation.EnvironmentId } |
                         Select-Object -First 1).Internal.properties.linkedEnvironmentMetadata.instanceApiUrl
+                    $approvedGroupsForAgent = @($violation.ApprovedSecurityGroupIds | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
-                    if ($envOrgUrl -and $DataverseToken) {
+                    if ($approvedGroupsForAgent.Count -eq 0) {
+                        $violation.RemediationAction = "Skipped: no approved security groups configured for $($violation.Zone). Previous sharing config retained in evidencejson."
+                        Write-Warning "    Skipping remediation for $($violation.AgentName) — no approved groups configured for $($violation.Zone)"
+                        continue
+                    }
+
+                    if ($envOrgUrl) {
+                        $remediationToken = Get-UasdAccessToken -ResourceUrl $envOrgUrl
                         $patchUrl = "$($envOrgUrl.TrimEnd('/'))/api/data/v9.2/bots($($violation.AgentId))"
-                        # Restrict via accesscontrolpolicy=2 (Group membership). The customer must seed
-                        # authorizedsecuritygroupids with approved Entra group IDs (comma-separated, max ~20)
-                        # before remediation; otherwise the bot becomes inaccessible.
-                        $patchBody = @{ accesscontrolpolicy = 2 } | ConvertTo-Json
+                        $approvedGroupCsv = ($approvedGroupsForAgent | Select-Object -First 20) -join ','
+                        $patchBody = @{
+                            accesscontrolpolicy       = 2
+                            authorizedsecuritygroupids = $approvedGroupCsv
+                        } | ConvertTo-Json
                         $headers = @{
-                            'Authorization'    = "Bearer $DataverseToken"
+                            'Authorization'    = "Bearer $remediationToken"
                             'Content-Type'     = 'application/json'
                             'OData-MaxVersion' = '4.0'
                             'OData-Version'    = '4.0'
+                            'If-Match'         = '*'
                         }
                         Invoke-RestMethod -Uri $patchUrl -Headers $headers -Method Patch -Body $patchBody -ErrorAction Stop
 
                         $violation.RemediatedAt      = Get-Date -Format 'o'
-                        $violation.RemediationAction = "Sharing restricted to Group membership (accesscontrolpolicy=2). Seed authorizedsecuritygroupids with approved Entra group IDs."
+                        $violation.RemediationAction = "Sharing restricted to Group membership (accesscontrolpolicy=2) with approved groups: $approvedGroupCsv. Previous sharing config retained in evidencejson for rollback."
                         Write-Host "    Remediated: $($violation.AgentName) ($($violation.EnvironmentName))" -ForegroundColor Green
                     } else {
-                        Write-Warning "    Cannot remediate $($violation.AgentName) — missing Dataverse URL or token"
+                        Write-Warning "    Cannot remediate $($violation.AgentName) — missing environment Dataverse URL"
                     }
                 } catch {
                     Write-Warning "    Remediation failed for $($violation.AgentName)`: $($_.Exception.Message)"
@@ -678,7 +841,13 @@ function Test-AgentSharingCompliance {
 
     Write-Host "[4/4] Persisting results..." -ForegroundColor Cyan
 
-    if ($PersistResults -and $DataverseUrl -and $DataverseToken) {
+    if ($PersistResults -and $DataverseUrl) {
+        try {
+            $persistToken = Get-UasdAccessToken -ResourceUrl $DataverseUrl
+        } catch {
+            throw "PersistResults requested but no Dataverse token could be acquired for '$DataverseUrl': $($_.Exception.Message)"
+        }
+
         foreach ($violation in $violations) {
             if ($PSCmdlet.ShouldProcess("fsi_sharingviolations", "CreateViolationRecord")) {
                 try {
@@ -687,7 +856,7 @@ function Test-AgentSharingCompliance {
                     $dedupFilter = "fsi_agentid eq '$($violation.AgentId)' and fsi_violationtype eq $violationTypeCode and fsi_violationstatus eq 100000000"
                     $dedupUrl = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2/fsi_sharingviolations?`$filter=$dedupFilter&`$top=1&`$select=fsi_sharingviolationid"
                     $dedupHeaders = @{
-                        'Authorization'    = "Bearer $DataverseToken"
+                        'Authorization'    = "Bearer $persistToken"
                         'OData-MaxVersion' = '4.0'
                         'OData-Version'    = '4.0'
                     }
@@ -706,7 +875,7 @@ function Test-AgentSharingCompliance {
                         'fsi_environmentid'      = $violation.EnvironmentId
                         'fsi_environmentname'    = $violation.EnvironmentName
                         'fsi_violationtype'      = Get-ViolationTypeCode -ViolationType $violation.ViolationType
-                        'fsi_violationstatus'    = 100000000  # Open
+                        'fsi_violationstatus'    = if ($violation.RemediatedAt) { 100000001 } else { 100000000 }
                         'fsi_severity'           = Get-SeverityCode -Severity $violation.Severity
                         'fsi_detectedat'         = $violation.DetectedAt
                         'fsi_description'        = $violation.Details
@@ -715,13 +884,15 @@ function Test-AgentSharingCompliance {
                     }
 
                     if ($violation.RemediatedAt) {
-                        $record['fsi_remediatedat']        = $violation.RemediatedAt
+                        $record['fsi_remediatedat'] = $violation.RemediatedAt
+                    }
+                    if ($violation.RemediationAction) {
                         $record['fsi_remediationresult'] = $violation.RemediationAction
                     }
 
                     $recordJson = $record | ConvertTo-Json -Compress
                     $headers = @{
-                        'Authorization'    = "Bearer $DataverseToken"
+                        'Authorization'    = "Bearer $persistToken"
                         'Content-Type'     = 'application/json'
                         'OData-MaxVersion' = '4.0'
                         'OData-Version'    = '4.0'
@@ -736,7 +907,7 @@ function Test-AgentSharingCompliance {
         }
         Write-Host "  Persisted $($violations.Count) violation record(s) to fsi_sharingviolations"
     } elseif ($PersistResults) {
-        Write-Warning "  PersistResults requires -DataverseUrl and -DataverseToken"
+        Write-Warning "  PersistResults requires -DataverseUrl"
     } else {
         Write-Host "  Persistence skipped (-PersistResults not specified)" -ForegroundColor DarkGray
     }

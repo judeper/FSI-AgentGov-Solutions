@@ -112,7 +112,7 @@ All other solutions operate independently and can be deployed in any order based
 | [RAG Source Validator](./rag-source-validator/) | 2 | v1.2.0 | personal, team, enterprise |
 | [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.0 | personal, team, enterprise |
 | [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.1.0 | team, enterprise |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.0 | team, enterprise |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |
 
 <!-- END:DEPLOY_LAYERS -->
 

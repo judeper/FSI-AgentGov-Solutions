@@ -1119,11 +1119,13 @@ def main() -> None:
     if not args.client_id and not args.interactive:
         parser.error("--client-id is required (or set UASD_CLIENT_ID env var) unless --interactive is specified")
 
+    # legacy: dev-only — replace with managed identity in production
+    # Handle client secret for service principal fallback auth
     client_secret = os.environ.get("UASD_CLIENT_SECRET")
     if not args.interactive:
         if not client_secret:
             import getpass
-            client_secret = getpass.getpass("Client secret: ")
+            client_secret = getpass.getpass("Client secret (legacy dev-only fallback): ")
 
     try:
         client = DataverseClient(

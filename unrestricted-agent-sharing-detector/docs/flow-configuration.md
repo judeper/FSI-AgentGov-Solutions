@@ -14,8 +14,14 @@ This guide provides step-by-step instructions for manually building the Unrestri
 **Prerequisites:**
 - Power Automate premium license
 - Power Platform Admin role in target environment
+- Dataverse System Administrator role for bot table remediation
+- Microsoft Entra ID authentication configured for agents where chat access must be scoped to users or groups
 - Access to Dataverse and Teams
 - Connection references configured (see main deployment guide)
+
+**Microsoft Learn alignment:** Copilot Studio sharing for chat supports individuals, security groups, or **Everyone in the organization**. Agent-level sharing controls require compatible authentication settings; with **No authentication**, anyone with the link can chat and organization-scoped sharing cannot control specific users.
+
+**Preventive layer:** Configure Managed Environment agent sharing limits (`bot-limitSharingMode`, `bot-maxLimitUserSharing`, `bot-authoringSharingDisabled`) in the Power Platform admin center. These limits restrict future sharing attempts but do not retroactively remove existing access, so UASD remains the detective and remediation layer.
 
 ---
 
@@ -46,23 +52,27 @@ This guide provides step-by-step instructions for manually building the Unrestri
 4. **For Each Environment**
    - Loop through environments retrieved in step 3
 
-5. **Call Power Platform API** (for each environment)
-   - Endpoint: `https://<env-url>/api/data/v9.2/`
+5. **Call Dataverse bot table API** (for each environment)
+   - Endpoint: `https://<env-url>/api/data/v9.2/bots`
    - Method: GET
-   - Query agents from Copilot Studio table
-   - Parse sharing configuration
+   - Query string: `$select=botid,name,statecode,statuscode,publishedby,accesscontrolpolicy,authorizedsecuritygroupids,authenticationmode,authenticationtrigger,createdon&$filter=statecode eq 0`
+   - Parse the current sharing configuration from the Copilot Studio `bot` table:
+     - `accesscontrolpolicy`: `0` = Any (all users in tenant), `1` = Copilot readers, `2` = Group membership, `3` = Any (multi-tenant)
+     - `authorizedsecuritygroupids`: comma-delimited list of up to 20 Microsoft Entra group IDs used when `accesscontrolpolicy = 2`
+     - `authenticationmode`: `1` = None, which means anyone with the link can chat with the agent
+     - `authenticationtrigger`: `1` = Always, which supports required sign-in patterns
    - **Pagination:** After the initial GET, check the response for an `@odata.nextLink` property. If present, issue another GET to that URL. Repeat in a Do Until loop until `@odata.nextLink` is absent, collecting all agent records across pages.
 
 6. **Evaluate Violation Rules**
    For each agent, check:
-   - **ORG_WIDE_SHARING:** `sharingScope = "organization"`
-   - **PUBLIC_INTERNET_LINK:** `publicLinkEnabled = true`
-   - **UNAPPROVED_GROUP:** Security groups not in approved registry
-   - **EXCESSIVE_INDIVIDUAL:** Individual share count exceeds threshold
-   - **CROSS_TENANT_ACCESS:** Allowed tenants include non-home tenant
-   - **POLICY_VIOLATION:** Agent sharing scope exceeds zone-permitted level
+   - **PUBLIC_INTERNET_LINK:** `authenticationmode = 1` (No authentication), because anyone with the link can chat
+   - **CROSS_TENANT_ACCESS:** `accesscontrolpolicy = 3` (Any multi-tenant)
+   - **ORG_WIDE_SHARING:** `accesscontrolpolicy = 0` (Any / all users in tenant)
+   - **UNAPPROVED_GROUP:** `accesscontrolpolicy = 2` and one or more `authorizedsecuritygroupids` are absent from `fsi_ApprovedSecurityGroup` where `fsi_isactive = true`
+   - **EXCESSIVE_INDIVIDUAL:** Individual share count exceeds threshold when using a future per-principal sharing API; the Dataverse bot table does not expose per-user counts
+   - **POLICY_VIOLATION:** Agent sharing scope exceeds zone-permitted level, or approved group registry is missing for a zone that requires group-based sharing
 
-   > **Guard:** Before evaluating `CROSS_TENANT_ACCESS`, check that the `homeTenantId` variable (from `fsi_UASD_HomeTenantId`) is not empty. If it is empty, skip the cross-tenant rule for this agent and log a warning to `fsi_remediationresult`: `"Skipped CROSS_TENANT_ACCESS check: fsi_UASD_HomeTenantId not configured"`. This prevents false positives when the environment variable has not been set.
+   > **Guard:** If `fsi_UASD_HomeTenantId` is empty, still flag `accesscontrolpolicy = 3` as cross-tenant exposure, but log that home-tenant comparison was not available. This prevents silent false negatives when the environment variable has not been set.
 
 7. **Deduplicate Before Creating Violation Records**
    - Before creating a new `fsi_SharingViolation` record, query for existing Open violations matching the same `fsi_agentid` and `fsi_violationtype`:
@@ -180,7 +190,7 @@ This guide provides step-by-step instructions for manually building the Unrestri
    **Case 100000001: PUBLIC_INTERNET_LINK**
    - **Condition:** If `equals(variables('autoRemediatePublicLink'), 'false')`, skip remediation actions — update `fsi_remediationresult` to `"Skipped: autoRemediatePublicLink is disabled"` and go to step 9
    - Disable public internet link
-   - Require Entra ID authentication
+   - Require Microsoft Entra ID authentication
 
    **Case 100000002: UNAPPROVED_GROUP**
    - Remove unapproved security groups
@@ -200,11 +210,20 @@ This guide provides step-by-step instructions for manually building the Unrestri
    - Restrict sharing to zone-permitted scopes
    - Add approved security groups for zone
 
-8. **Call Agent Sharing API**
-   - Endpoint: Copilot Studio agent management
+8. **Patch the Dataverse bot table**
+   - Endpoint: `https://<env-url>/api/data/v9.2/bots(<botid>)`
    - Method: PATCH
-   - Payload: Updated sharing configuration
+   - Headers: include `If-Match: *` to avoid accidental upsert behavior
+   - Pre-change evidence: write the prior `accesscontrolpolicy`, `authorizedsecuritygroupids`, `authenticationmode`, and `authenticationtrigger` values into `fsi_evidencejson` before applying changes
+   - Payload for approved-group remediation:
+     ```json
+     {
+       "accesscontrolpolicy": 2,
+       "authorizedsecuritygroupids": "<comma-delimited-approved-entra-group-ids>"
+     }
+     ```
    - **Skip if `equals(variables('isDryRun'), 'true')`**
+   - **Guard — no approved groups:** If there are no approved groups for the zone, skip the PATCH, keep the violation Open, and set `fsi_remediationresult` to `"Skipped: no approved security groups configured for zone <zone>"`.
    - **Error handling:** Configure Run-After on this action for "has failed" and "has timed out". If the API call fails, set `fsi_remediationresult` to the error message (e.g., `"API PATCH failed: <status code> — <error body>"`), set `fsi_violationstatus` to **100000004 (Remediation Failed)**, and skip to step 10 (Send Remediation Alert) with failure details. Do NOT proceed to step 9 to mark the record as remediated. (Value `100000002` is reserved for **Exception Approved** — do not reuse it for failures.)
 
 9. **Update Violation Record**
@@ -517,7 +536,7 @@ Before deploying flows, create connection references in Power Automate:
 
 | Connection Reference | API | Type |
 |----------------------|-----|------|
-| `fsi_cr_dataverse_sharingdetector` | Dataverse | Service Principal or User |
+| `fsi_cr_dataverse_sharingdetector` | Dataverse | Service principal for unattended flows or least-privileged admin user |
 | `fsi_cr_teams_sharingdetector` | Microsoft Teams | Current User |
 | `fsi_cr_approvals_sharingdetector` | Approvals | Current User |
 | `fsi_cr_powerplatformadmin_sharingdetector` | Power Platform for Admins | Current User |

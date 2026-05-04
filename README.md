@@ -76,7 +76,7 @@ This repository currently includes **35 live solution implementations**.
 | [Scope Drift Monitor](./scope-drift-monitor/) | Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements. | v1.2.0 | live | personal, team, enterprise | 1.14, 1.4, 1.5 |
 | [Segregation of Duties Detector](./segregation-detector/) | Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines and helps address SOX Section 404 IT General Controls. | v1.1.0 | live | team, enterprise | 2.8, 2.1, 2.3 |
 | [Session Security Configurator](./session-security-configurator/) | Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements. | v1.1.1 | live | team, enterprise | 1.23, 1.11 |
-| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.0 | live | team, enterprise | 1.1, 3.8 |
+| [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.1 | live | team, enterprise | 1.1, 3.8 |
 
 <!-- END:SOLUTIONS -->
 
