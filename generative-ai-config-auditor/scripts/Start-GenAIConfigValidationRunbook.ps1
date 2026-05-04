@@ -225,7 +225,7 @@ function Get-GenAIConfigDriftDirection {
         if ($direction -eq 'Decreased') { $hasStrengthened = $true }
     }
 
-    # Check Model Knowledge toggle drift (Yes/No comparison; Yes-after-No is Weakened)
+    # Check Allow ungrounded responses / AI general knowledge drift (Yes/No comparison; Yes-after-No is Weakened)
     if ($null -ne $Baseline.ModelKnowledgeEnabled -and $null -ne $Current.ModelKnowledgeEnabled -and
         $Baseline.ModelKnowledgeEnabled -ne $Current.ModelKnowledgeEnabled) {
         $direction = if ($Current.ModelKnowledgeEnabled -eq 'Yes') { 'Weakened' } else { 'Strengthened' }
@@ -238,7 +238,7 @@ function Get-GenAIConfigDriftDirection {
         if ($direction -eq 'Weakened') { $hasWeakened = $true } else { $hasStrengthened = $true }
     }
 
-    # Check Semantic Search toggle drift
+    # Check Work IQ / semantic search drift
     if ($null -ne $Baseline.SemanticSearchEnabled -and $null -ne $Current.SemanticSearchEnabled -and
         $Baseline.SemanticSearchEnabled -ne $Current.SemanticSearchEnabled) {
         $direction = if ($Current.SemanticSearchEnabled -eq 'Yes') { 'Weakened' } else { 'Strengthened' }

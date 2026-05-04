@@ -1,19 +1,19 @@
 # Generative AI Config Auditor
 
-Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Model Knowledge toggle, Semantic Search toggle) for Copilot Studio agents against zone-specific governance policies.
+Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.
 
 ## Status
 
 | Property | Value |
 |----------|-------|
 | Status | In Development |
-| Version | 1.1.0 |
+| Version | 1.1.1 |
 | Primary Control | [2.24 -- Agent Feature Enablement Governance](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-governance/) |
 | Regulatory Context | FINRA Rule 3110, GLBA Section 501(b), SOX Section 404 |
 
 ## Overview
 
-The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Model Knowledge (AI general knowledge) usage, and unapproved Semantic Search enablement across Power Platform environments.
+The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Allow ungrounded responses (AI general knowledge) usage, and unapproved Work IQ (semantic search) enablement across Power Platform environments.
 
 Unlike the Content Moderation Monitor which validates moderation levels, GAC audits the generative AI feature configuration itself -- which AI capabilities are enabled, how they are configured, and whether connections to Azure OpenAI are on the approved whitelist.
 
@@ -27,8 +27,8 @@ Each governance zone defines which generative AI features are permitted and unde
 | Generative Orchestration | Allowed | Allowed with approval | Restricted (classic unless exception) |
 | Generative Answers Nodes | Allowed | Allowed | Explicit allowlist per topic |
 | AOAI Connection Whitelist | Advisory (warning) | Enforced (high) | Enforced (critical) |
-| Model Knowledge | Allowed | Requires approval | Disabled (only approved knowledge sources) |
-| Semantic Search | Allowed | Allowed with logging | Requires explicit approval |
+| Allow ungrounded responses (AI general knowledge) | Allowed | Requires approval | Disabled (only approved knowledge sources) |
+| Work IQ (semantic search) | Allowed | Allowed with logging | Requires explicit approval |
 
 ### Violation Severity Matrix
 
@@ -37,8 +37,8 @@ Each governance zone defines which generative AI features are permitted and unde
 | Unapproved AOAI Connection | Warning | High | Critical |
 | Generative Orchestration (unauthorized) | Warning | Medium | Critical |
 | Generative Answers (unauthorized) | Warning | Medium | High |
-| Model Knowledge (unauthorized) | Warning | Medium | Critical |
-| Semantic Search (unauthorized) | Warning | Medium | High |
+| Allow ungrounded responses (unauthorized) | Warning | Medium | Critical |
+| Work IQ / semantic search (unauthorized) | Warning | Medium | High |
 | Unknown Configuration | Warning | Medium | High |
 
 ## Features
@@ -146,9 +146,9 @@ The following placeholder values in solution files must be replaced with your or
 
 ### Admin Path Change (April 2026)
 
-Copilot Studio generative AI feature governance controls have moved from **Environment > Settings > Features** to the centralized **Copilot > Settings** area in both the Power Platform Admin Center and the Microsoft 365 Admin Center. This change is part of the [Copilot Control System](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-control-system/management-controls) consolidation.
+Power Platform admin center now exposes a centralized **Copilot > Settings** area for Power Platform Copilot and agent settings. Copilot Studio also retains environment-level **Generative AI features** controls and the tenant-level **Publish Copilots with AI features** setting, while Microsoft 365 admin center controls govern agents and AI actions surfaced in Microsoft 365 Copilot.
 
-**Impact on this solution:** Scripts that reference admin center navigation paths for manual verification should use the new `Copilot > Settings` location. Automated validation via the Bots API and PowerShell cmdlets is unaffected.
+**Impact on this solution:** Manual verification should distinguish Power Platform admin center `Copilot > Settings`, environment **Generative AI features**, and Microsoft 365 admin center agent/action controls. Automated validation via Dataverse bot records and Power Platform cmdlets is unaffected.
 
 ### Voice Feature Enablement (April 2026)
 

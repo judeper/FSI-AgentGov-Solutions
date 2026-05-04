@@ -2,6 +2,15 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [1.1.1] - 2026-05-04
+
+### Fixed
+
+- Refreshed Copilot Studio generative AI terminology to match Microsoft Learn labels for **Allow ungrounded responses** (AI general knowledge) and **Work IQ** (semantic search), while preserving existing Dataverse logical column names.
+- Extended `Get-AgentGenAISettings.ps1` to detect nested `aiSettings` / `generativeMode`-style JSON and current feature aliases for Allow ungrounded responses and Work IQ.
+- Corrected deployment documentation to require PowerShell 7.4 runbooks, matching the solution scripts' `#Requires -Version 7.4` declarations.
+- Clarified Power Platform admin center Copilot settings guidance and separated it from Microsoft 365 admin center agent/action governance controls.
+
 ## [1.1.0] - 2026-04-17
 
 ### Fixed

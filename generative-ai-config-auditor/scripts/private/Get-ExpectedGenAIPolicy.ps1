@@ -9,15 +9,15 @@
 
     Zone policies:
     - Zone1: AOAI allowed, generative orchestration allowed, gen answers allowed,
-      AOAI whitelist advisory (Warning severity), model knowledge allowed,
-      semantic search allowed
+      AOAI whitelist advisory (Warning severity), Allow ungrounded responses allowed,
+      Work IQ (semantic search) allowed
     - Zone2: AOAI approved connections only, gen orch allowed with approval,
-      gen answers allowed, AOAI whitelist enforced (High severity), model
-      knowledge requires approval, semantic search allowed with logging
+      gen answers allowed, AOAI whitelist enforced (High severity), Allow ungrounded
+      responses requires approval, Work IQ (semantic search) allowed with logging
     - Zone3: AOAI explicit allowlist only, gen orch restricted (classic unless
       exception), gen answers explicit allowlist per topic, AOAI whitelist
-      enforced (Critical severity), model knowledge disabled, semantic search
-      requires approval
+      enforced (Critical severity), Allow ungrounded responses disabled, Work IQ
+      (semantic search) requires approval
 
 .PARAMETER Zone
     The governance zone: Zone1, Zone2, Zone3, or Unknown.

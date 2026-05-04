@@ -10,8 +10,8 @@
 
     Checks include: AOAI enabled vs policy, orchestration mode vs policy,
     generative answers node usage vs policy, AOAI connection whitelist
-    validation when a Dataverse URL is provided, Model Knowledge toggle
-    vs policy, and Semantic Search toggle vs policy.
+    validation when a Dataverse URL is provided, Allow ungrounded responses
+    (AI general knowledge) vs policy, and Work IQ (semantic search) vs policy.
 
 .NOTES
     File: Compare-GenAIConfigCompliance.ps1
@@ -262,21 +262,21 @@ function Compare-GenAIConfigCompliance {
                 }
             }
 
-            # Rule 5: Model Knowledge toggle vs policy
+            # Rule 5: Allow ungrounded responses (AI general knowledge) vs policy
             if ($agent.ModelKnowledgeEnabled -eq 'Yes' -and $policy.ModelKnowledgePolicy -in @('Disabled', 'RequiresApproval')) {
                 $violations += [PSCustomObject]@{
                     ViolationType    = 'UnauthorizedModelKnowledge'
-                    Description      = "Model Knowledge (AI general knowledge) is enabled but policy is '$($policy.ModelKnowledgePolicy)' in $agentZone"
+                    Description      = "Allow ungrounded responses (AI general knowledge) is enabled but policy is '$($policy.ModelKnowledgePolicy)' in $agentZone"
                     Severity         = $policy.ModelKnowledgeViolationSeverity
                     RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI knowledge sources; $($policy.RegulatoryContext)"
                 }
             }
 
-            # Rule 6: Semantic Search toggle vs policy
+            # Rule 6: Work IQ (semantic search) vs policy
             if ($agent.SemanticSearchEnabled -eq 'Yes' -and $policy.SemanticSearchPolicy -eq 'RequiresApproval') {
                 $violations += [PSCustomObject]@{
                     ViolationType    = 'UnauthorizedSemanticSearch'
-                    Description      = "Semantic Search (Dataverse vector search) is enabled but requires explicit approval in $agentZone"
+                    Description      = "Work IQ (semantic search) is enabled but requires explicit approval in $agentZone"
                     Severity         = $policy.SemanticSearchViolationSeverity
                     RegulatoryContext = "SOX Section 404 - internal control over data search capabilities; $($policy.RegulatoryContext)"
                 }

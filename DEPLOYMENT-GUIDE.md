@@ -101,7 +101,7 @@ All other solutions operate independently and can be deployed in any order based
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.0 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 3 | v1.2.0 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.0.1 | enterprise |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.0 | team, enterprise |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.1.0 | personal, team, enterprise |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.0 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.0 | team, enterprise |
@@ -229,7 +229,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 
 After publishing a new tagged release (`vX.Y.Z`), the published-artifact health probe automatically targets the new tag — no manual workflow edit is required.
 
-### Health probe ([`.github/workflows/health-check.yml`](.github/workflows/health-check.yml))
+### Health probe ([`.github/workflows/health-check.yml`](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/.github/workflows/health-check.yml))
 
 - Runs every 30 minutes on cron and on demand via `gh workflow run health-check.yml`.
 - Probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release**, resolved dynamically via `gh api repos/${{ github.repository }}/releases/latest --jq .tag_name`.

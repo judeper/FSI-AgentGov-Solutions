@@ -277,6 +277,139 @@ function Get-AgentGenAISettings {
             'OData-Version'    = '4.0'
         }
 
+        function Get-FirstJsonPropertyValue {
+            param(
+                [AllowNull()]$InputObject,
+                [Parameter(Mandatory)]
+                [string[]]$PropertyNames,
+                [int]$Depth = 0,
+                [int]$MaxDepth = 8
+            )
+
+            if ($null -eq $InputObject -or $Depth -gt $MaxDepth) {
+                return $null
+            }
+
+            if ($InputObject -is [string] -or $InputObject -is [ValueType]) {
+                return $null
+            }
+
+            if ($InputObject -is [System.Collections.IDictionary]) {
+                foreach ($name in $PropertyNames) {
+                    foreach ($key in $InputObject.Keys) {
+                        if ([string]::Equals([string]$key, $name, [System.StringComparison]::OrdinalIgnoreCase)) {
+                            return $InputObject[$key]
+                        }
+                    }
+                }
+
+                foreach ($key in $InputObject.Keys) {
+                    $found = Get-FirstJsonPropertyValue -InputObject $InputObject[$key] -PropertyNames $PropertyNames -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                    if ($null -ne $found) { return $found }
+                }
+
+                return $null
+            }
+
+            $properties = @($InputObject.PSObject.Properties)
+            foreach ($name in $PropertyNames) {
+                $match = $properties | Where-Object { [string]::Equals($_.Name, $name, [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+                if ($match) { return $match.Value }
+            }
+
+            foreach ($property in $properties) {
+                $value = $property.Value
+                if ($null -eq $value -or $value -is [string] -or $value -is [ValueType]) {
+                    continue
+                }
+
+                if ($value -is [System.Collections.IEnumerable]) {
+                    foreach ($item in @($value)) {
+                        $found = Get-FirstJsonPropertyValue -InputObject $item -PropertyNames $PropertyNames -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                        if ($null -ne $found) { return $found }
+                    }
+                } else {
+                    $found = Get-FirstJsonPropertyValue -InputObject $value -PropertyNames $PropertyNames -Depth ($Depth + 1) -MaxDepth $MaxDepth
+                    if ($null -ne $found) { return $found }
+                }
+            }
+
+            return $null
+        }
+
+        function Convert-ToYesNoFlag {
+            param([AllowNull()]$Value)
+
+            if ($null -eq $Value) { return $null }
+
+            if ($Value -is [bool]) {
+                return $(if ($Value) { 'Yes' } else { 'No' })
+            }
+
+            if ($Value -is [int]) {
+                return $(if ($Value -ne 0) { 'Yes' } else { 'No' })
+            }
+
+            if ($Value -is [string]) {
+                switch -Regex ($Value.Trim().ToLowerInvariant()) {
+                    '^(true|yes|enabled|on|1)$' { return 'Yes' }
+                    '^(false|no|disabled|off|0)$' { return 'No' }
+                    default { return $null }
+                }
+            }
+
+            foreach ($propertyName in @('enabled', 'isEnabled', 'value')) {
+                $property = $Value.PSObject.Properties[$propertyName]
+                if ($property) {
+                    $converted = Convert-ToYesNoFlag -Value $property.Value
+                    if ($converted) { return $converted }
+                }
+            }
+
+            return $null
+        }
+
+        function Convert-ToOrchestrationMode {
+            param([AllowNull()]$Value)
+
+            if ($null -eq $Value) { return $null }
+
+            if ($Value -is [bool]) {
+                return $(if ($Value) { 'Generative' } else { 'Classic' })
+            }
+
+            if ($Value -is [string]) {
+                $normalized = $Value.Trim()
+                $modeMap = @{
+                    'classic'    = 'Classic'
+                    'generative' = 'Generative'
+                    'custom'     = 'Custom'
+                    'unified'    = 'Generative'
+                    'on'         = 'Generative'
+                    'off'        = 'Classic'
+                    'enabled'    = 'Generative'
+                    'disabled'   = 'Classic'
+                    'true'       = 'Generative'
+                    'false'      = 'Classic'
+                }
+                $lower = $normalized.ToLowerInvariant()
+                if ($modeMap.ContainsKey($lower)) {
+                    return $modeMap[$lower]
+                }
+                if ($normalized) { return $normalized }
+            }
+
+            foreach ($propertyName in @('mode', 'value', 'enabled', 'isEnabled')) {
+                $property = $Value.PSObject.Properties[$propertyName]
+                if ($property) {
+                    $converted = Convert-ToOrchestrationMode -Value $property.Value
+                    if ($converted) { return $converted }
+                }
+            }
+
+            return $null
+        }
+
         #region Query bot_botsetting for AOAI toggle and orchestration mode (optional extension table)
         # NOTE: This block reads fsi_* columns that customers may have added as extension columns
         # on the platform `bot_botsettings` table. If those columns are not present, Dataverse
@@ -309,12 +442,12 @@ function Get-AgentGenAISettings {
                     $config.AoaiConnectionId = $setting.fsi_aoaiconnectionid
                 }
 
-                # Parse Model Knowledge enabled flag
+                # Parse Allow ungrounded responses / AI general knowledge flag
                 if ($null -ne $setting.fsi_modelknowledgeenabled) {
                     $config.ModelKnowledgeEnabled = if ($setting.fsi_modelknowledgeenabled) { 'Yes' } else { 'No' }
                 }
 
-                # Parse Semantic Search enabled flag
+                # Parse Work IQ / semantic search flag
                 if ($null -ne $setting.fsi_semanticsearchenabled) {
                     $config.SemanticSearchEnabled = if ($setting.fsi_semanticsearchenabled) { 'Yes' } else { 'No' }
                 }
@@ -329,62 +462,50 @@ function Get-AgentGenAISettings {
 
         #region Try extracting from bot.configuration JSON (fallback)
 
-        if ($config.AzureOpenAIEnabled -eq 'Unable to Determine' -and $Bot.configuration) {
+        if ($Bot.configuration) {
             try {
                 $botConfig = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
 
-                foreach ($key in @('AzureOpenAIEnabled', 'azureOpenAIEnabled', 'UseAzureOpenAI', 'useAzureOpenAI')) {
-                    if ($botConfig.PSObject.Properties.Name -contains $key) {
-                        $rawValue = $botConfig.$key
-                        if ($rawValue -is [bool]) {
-                            $config.AzureOpenAIEnabled = if ($rawValue) { 'Yes' } else { 'No' }
-                        } elseif ($rawValue -is [string]) {
-                            $config.AzureOpenAIEnabled = if ($rawValue -eq 'true') { 'Yes' } else { 'No' }
-                        }
-                        break
-                    }
+                if ($config.AzureOpenAIEnabled -eq 'Unable to Determine') {
+                    $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'AzureOpenAIEnabled', 'azureOpenAIEnabled', 'UseAzureOpenAI', 'useAzureOpenAI',
+                        'AzureOpenAI', 'azureOpenAI', 'IsAzureOpenAIEnabled', 'isAzureOpenAIEnabled'
+                    )
+                    $yesNo = Convert-ToYesNoFlag -Value $rawValue
+                    if ($yesNo) { $config.AzureOpenAIEnabled = $yesNo }
                 }
 
-                foreach ($key in @('OrchestrationMode', 'orchestrationMode', 'Orchestration')) {
-                    if ($botConfig.PSObject.Properties.Name -contains $key) {
-                        $rawValue = $botConfig.$key
-                        if ($rawValue -is [string]) {
-                            $config.OrchestrationMode = $rawValue
-                        } elseif ($rawValue -is [PSCustomObject] -and $rawValue.PSObject.Properties.Name -contains 'mode') {
-                            $config.OrchestrationMode = $rawValue.mode
-                        }
-                        break
-                    }
+                if ($config.OrchestrationMode -eq 'Unable to Determine') {
+                    $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'OrchestrationMode', 'orchestrationMode', 'Orchestration', 'orchestration',
+                        'GenerativeMode', 'generativeMode', 'GenerativeOrchestration', 'generativeOrchestration',
+                        'UseGenerativeOrchestration', 'useGenerativeOrchestration'
+                    )
+                    $mode = Convert-ToOrchestrationMode -Value $rawValue
+                    if ($mode) { $config.OrchestrationMode = $mode }
                 }
 
-                # Fallback: Model Knowledge toggle
                 if ($config.ModelKnowledgeEnabled -eq 'Unable to Determine') {
-                    foreach ($key in @('ModelKnowledge', 'modelKnowledge', 'UseModelKnowledge', 'useModelKnowledge', 'AllowAIKnowledge', 'allowAIKnowledge')) {
-                        if ($botConfig.PSObject.Properties.Name -contains $key) {
-                            $rawValue = $botConfig.$key
-                            if ($rawValue -is [bool]) {
-                                $config.ModelKnowledgeEnabled = if ($rawValue) { 'Yes' } else { 'No' }
-                            } elseif ($rawValue -is [string]) {
-                                $config.ModelKnowledgeEnabled = if ($rawValue -eq 'true') { 'Yes' } else { 'No' }
-                            }
-                            break
-                        }
-                    }
+                    $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'AllowUngroundedResponses', 'allowUngroundedResponses', 'AllowUngroundedResponse', 'allowUngroundedResponse',
+                        'AllowGeneralKnowledge', 'allowGeneralKnowledge', 'AIGeneralKnowledge', 'aiGeneralKnowledge',
+                        'ModelKnowledge', 'modelKnowledge', 'UseModelKnowledge', 'useModelKnowledge',
+                        'AllowAIKnowledge', 'allowAIKnowledge'
+                    )
+                    $yesNo = Convert-ToYesNoFlag -Value $rawValue
+                    if ($yesNo) { $config.ModelKnowledgeEnabled = $yesNo }
                 }
 
-                # Fallback: Semantic Search toggle
                 if ($config.SemanticSearchEnabled -eq 'Unable to Determine') {
-                    foreach ($key in @('SemanticSearch', 'semanticSearch', 'UseSemanticSearch', 'useSemanticSearch', 'DataverseSearch', 'dataverseSearch')) {
-                        if ($botConfig.PSObject.Properties.Name -contains $key) {
-                            $rawValue = $botConfig.$key
-                            if ($rawValue -is [bool]) {
-                                $config.SemanticSearchEnabled = if ($rawValue) { 'Yes' } else { 'No' }
-                            } elseif ($rawValue -is [string]) {
-                                $config.SemanticSearchEnabled = if ($rawValue -eq 'true') { 'Yes' } else { 'No' }
-                            }
-                            break
-                        }
-                    }
+                    $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'WorkIQ', 'workIQ', 'WorkIq', 'workIq', 'UseWorkIQ', 'useWorkIQ',
+                        'TurnOnWorkIQ', 'turnOnWorkIQ', 'EnableWorkIQ', 'enableWorkIQ',
+                        'SemanticSearch', 'semanticSearch', 'UseSemanticSearch', 'useSemanticSearch',
+                        'SemanticIndex', 'semanticIndex', 'UseSemanticIndex', 'useSemanticIndex',
+                        'DataverseSearch', 'dataverseSearch'
+                    )
+                    $yesNo = Convert-ToYesNoFlag -Value $rawValue
+                    if ($yesNo) { $config.SemanticSearchEnabled = $yesNo }
                 }
             } catch {
                 Write-Verbose "Failed to parse bot configuration JSON for $($Bot.name): $($_.Exception.Message)"
