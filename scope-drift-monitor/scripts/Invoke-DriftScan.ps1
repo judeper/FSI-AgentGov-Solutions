@@ -25,7 +25,10 @@
     Microsoft Entra ID application client ID. Defaults to AZURE_CLIENT_ID environment variable.
 
 .PARAMETER ClientSecret
-    Microsoft Entra ID application client secret. Defaults to AZURE_CLIENT_SECRET environment variable.
+    Legacy dev-only Microsoft Entra ID application client secret. Defaults to AZURE_CLIENT_SECRET environment variable. Production automation should use managed identity.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to AZURE_MANAGED_IDENTITY_CLIENT_ID. If omitted, system-assigned managed identity is used when available.
 
 .EXAMPLE
     .\Invoke-DriftScan.ps1 -Environment "https://contoso.crm.dynamics.com"
@@ -65,7 +68,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("https://manage.office.com", "https://manage.office365.us", "https://manage.office.eaglex.ic.gov", "https://manage.protection.outlook.com")]
-    [string]$ManagementApiEndpoint = "https://manage.office.com"
+    [string]$ManagementApiEndpoint = "https://manage.office.com",
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = $env:AZURE_MANAGED_IDENTITY_CLIENT_ID
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,21 +105,88 @@ $ViolationType = @{
 
 #region Helper Functions
 
-function Get-AccessToken {
+function Convert-ScopeToResource {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$TenantId,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ClientId,
-
-        [Parameter(Mandatory = $true)]
-        [securestring]$ClientSecret,
-
         [Parameter(Mandatory = $true)]
         [string]$Scope
     )
 
+    if ($Scope.EndsWith("/.default", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $Scope.Substring(0, $Scope.Length - "/.default".Length)
+    }
+
+    return $Scope
+}
+
+function Get-ManagedIdentityAccessToken {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Resource,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ClientId
+    )
+
+    $encodedResource = [System.Uri]::EscapeDataString($Resource)
+    $encodedClientId = if ($ClientId) { [System.Uri]::EscapeDataString($ClientId) } else { $null }
+
+    try {
+        if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
+            $uri = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=$encodedResource"
+            if ($encodedClientId) { $uri = "$uri&client_id=$encodedClientId" }
+            $headers = @{ "X-IDENTITY-HEADER" = $env:IDENTITY_HEADER }
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -TimeoutSec 10
+            return $response.access_token
+        }
+
+        if ($env:MSI_ENDPOINT -and $env:MSI_SECRET) {
+            $uri = "$($env:MSI_ENDPOINT)?api-version=2017-09-01&resource=$encodedResource"
+            if ($encodedClientId) { $uri = "$uri&clientid=$encodedClientId" }
+            $headers = @{ Secret = $env:MSI_SECRET }
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -TimeoutSec 10
+            return $response.access_token
+        }
+
+        $imdsUri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$encodedResource"
+        if ($encodedClientId) { $imdsUri = "$imdsUri&client_id=$encodedClientId" }
+        $imdsHeaders = @{ Metadata = "true" }
+        $response = Invoke-RestMethod -Uri $imdsUri -Headers $imdsHeaders -Method Get -TimeoutSec 2
+        return $response.access_token
+    }
+    catch {
+        return $null
+    }
+}
+
+function Get-AccessToken {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory = $false)]
+        [securestring]$ClientSecret,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Scope,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ManagedIdentityClientId
+    )
+
+    $resource = Convert-ScopeToResource -Scope $Scope
+    $managedIdentityToken = Get-ManagedIdentityAccessToken -Resource $resource -ClientId $ManagedIdentityClientId
+    if ($managedIdentityToken) {
+        return $managedIdentityToken
+    }
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        throw "Managed identity authentication was unavailable and client-secret fallback parameters were incomplete. For production, run from an Azure host with a system-assigned or user-assigned managed identity."
+    }
+
+    # legacy: dev-only — replace with managed identity in production
     $loginEndpoint = switch -Wildcard ($Scope) {
         "*office365.us*"           { "https://login.microsoftonline.us" }
         "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
@@ -135,6 +208,120 @@ function Get-AccessToken {
     catch {
         throw "Failed to acquire access token for scope '$Scope': $($_.Exception.Message)"
     }
+}
+
+function Get-CopilotEventData {
+    <#
+    .SYNOPSIS
+        Returns the Copilot interaction payload from current and legacy audit shapes.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        $Event
+    )
+
+    if ($Event.CopilotEventData) {
+        if ($Event.CopilotEventData -is [string]) { return ($Event.CopilotEventData | ConvertFrom-Json) }
+        return $Event.CopilotEventData
+    }
+    if ($Event.EventData) {
+        if ($Event.EventData -is [string]) { return ($Event.EventData | ConvertFrom-Json) }
+        return $Event.EventData
+    }
+
+    if ($Event.AuditData) {
+        try {
+            $auditData = if ($Event.AuditData -is [string]) { $Event.AuditData | ConvertFrom-Json } else { $Event.AuditData }
+            if ($auditData.CopilotEventData) { return $auditData.CopilotEventData }
+            if ($auditData.EventData) { return $auditData.EventData }
+        }
+        catch {
+            Write-Warning "Could not parse AuditData JSON for audit record '$($Event.Id)': $($_.Exception.Message)"
+        }
+    }
+
+    return [pscustomobject]@{}
+}
+
+function Get-CopilotAgentId {
+    <#
+    .SYNOPSIS
+        Extracts agent identity from current Copilot, Copilot Studio, and legacy audit fields.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        $Event
+    )
+
+    $eventData = Get-CopilotEventData -Event $Event
+    $auditData = $null
+    if ($Event.AuditData) {
+        try {
+            $auditData = if ($Event.AuditData -is [string]) { $Event.AuditData | ConvertFrom-Json } else { $Event.AuditData }
+        }
+        catch {
+            $auditData = $null
+        }
+    }
+
+    $candidates = @(
+        $Event.AgentId,
+        $Event.BotId,
+        $Event.AppIdentity,
+        $auditData.AgentId,
+        $auditData.BotId,
+        $auditData.AppIdentity,
+        $eventData.AgentId,
+        $eventData.BotId,
+        $eventData.AppIdentity
+    )
+
+    foreach ($candidate in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace([string]$candidate)) {
+            return [string]$candidate
+        }
+    }
+
+    return $null
+}
+
+function Test-AgentIdMatch {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$EventAgentId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ExpectedAgentId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($EventAgentId) -or [string]::IsNullOrWhiteSpace($ExpectedAgentId)) {
+        return $false
+    }
+
+    if ($EventAgentId.Equals($ExpectedAgentId, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    return ($EventAgentId.IndexOf($ExpectedAgentId, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+            $ExpectedAgentId.IndexOf($EventAgentId, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+}
+
+function Get-ResourceUri {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Resource
+    )
+
+    foreach ($propertyName in @('SiteUrl', 'Url', 'URL', 'Id', 'ID')) {
+        if ($Resource.PSObject.Properties.Name -contains $propertyName) {
+            $value = $Resource.$propertyName
+            if (-not [string]::IsNullOrWhiteSpace([string]$value)) {
+                return [string]$value
+            }
+        }
+    }
+
+    return $null
 }
 
 function Get-ActiveScopes {
@@ -285,7 +472,7 @@ function Compare-ScopeVsActual {
     )
 
     $violations = @()
-    $eventData = $Event.EventData
+    $eventData = Get-CopilotEventData -Event $Event
 
     # If no scope found, all access is a violation
     if (-not $Scope) {
@@ -324,8 +511,8 @@ function Compare-ScopeVsActual {
 
     # Check connectors from AISystemPlugin
     if ($eventData.AISystemPlugin) {
-        foreach ($plugin in $eventData.AISystemPlugin) {
-            if ($plugin.Name -and $plugin.Enabled -eq $true) {
+        foreach ($plugin in @($eventData.AISystemPlugin)) {
+            if ($plugin.Name) {
                 $connectorName = $plugin.Name
                 if ($connectorName -notin $allowedConnectors) {
                     $violations += @{
@@ -343,7 +530,7 @@ function Compare-ScopeVsActual {
     $accessedSites = @()
 
     if ($eventData.Contexts) {
-        foreach ($context in $eventData.Contexts) {
+        foreach ($context in @($eventData.Contexts)) {
             if ($context.Id -match "(https://[^/]+\.sharepoint\.com/(?:sites|teams)/[^/]+)") {
                 $siteUrl = $Matches[1]
                 if ($siteUrl -notin $accessedSites) {
@@ -354,7 +541,7 @@ function Compare-ScopeVsActual {
     }
 
     if ($eventData.AccessedResources) {
-        foreach ($resource in $eventData.AccessedResources) {
+        foreach ($resource in @($eventData.AccessedResources)) {
             if ($resource.SiteUrl -and $resource.SiteUrl -notin $accessedSites) {
                 $accessedSites += $resource.SiteUrl
             }
@@ -374,7 +561,7 @@ function Compare-ScopeVsActual {
 
     # Check Dataverse tables and external APIs from AccessedResources
     if ($eventData.AccessedResources) {
-        foreach ($resource in $eventData.AccessedResources) {
+        foreach ($resource in @($eventData.AccessedResources)) {
             # Connectors from AccessedResources
             if ($resource.Type -eq "Connector") {
                 $connectorName = $resource.Name
@@ -401,14 +588,15 @@ function Compare-ScopeVsActual {
             }
 
             # External APIs
+            $resourceUri = Get-ResourceUri -Resource $resource
             if ($resource.Type -eq "ExternalAPI" -or
-                ($resource.Url -match "^https?://" -and $resource.Url -notmatch "(sharepoint|microsoft|office)\.com")) {
-                if ($resource.Url -notin $allowedApis) {
+                ($resourceUri -match "^https?://" -and $resourceUri -notmatch "(sharepoint|microsoft|office)\.com")) {
+                if ($resourceUri -and $resourceUri -notin $allowedApis) {
                     $violations += @{
                         Type        = "Unauthorized External API"
-                        Resource    = $resource.Url
+                        Resource    = $resourceUri
                         Severity    = 10002  # High
-                        Details     = "External API '$($resource.Url)' not in allowed list"
+                        Details     = "External API '$resourceUri' not in allowed list"
                     }
                 }
             }
@@ -441,6 +629,32 @@ function Get-ViolationTypeCode {
         "Unauthorized External API"    { return $ViolationType.ExternalAPI }
         default                        { return 0 }
     }
+}
+
+function Get-MatchingScope {
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Scopes,
+
+        [Parameter(Mandatory = $false)]
+        [string]$EventAgentId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$EventEnvironmentId
+    )
+
+    foreach ($scope in @($Scopes)) {
+        $scopeEnvironmentId = if ($scope.fsi_environmentid) { [string]$scope.fsi_environmentid } else { "" }
+        $environmentMatches = [string]::IsNullOrWhiteSpace($EventEnvironmentId) -or
+            [string]::IsNullOrWhiteSpace($scopeEnvironmentId) -or
+            $scopeEnvironmentId.Equals($EventEnvironmentId, [System.StringComparison]::OrdinalIgnoreCase)
+
+        if ($environmentMatches -and (Test-AgentIdMatch -EventAgentId $EventAgentId -ExpectedAgentId $scope.fsi_agentid)) {
+            return $scope
+        }
+    }
+
+    return $null
 }
 
 function New-ViolationRecord {
@@ -543,9 +757,9 @@ Write-Host "Agent Filter: $(if ($AgentId) { $AgentId } else { 'All active agents
 Write-Host "Lookback: $Minutes minutes"
 Write-Host ""
 
-# Validate credentials
-if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
-    Write-Error "Missing credentials. Set environment variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET"
+# Validate legacy client-secret fallback inputs when a secret is supplied.
+if ($ClientSecret -and (-not $TenantId -or -not $ClientId)) {
+    Write-Error "Client-secret fallback requires TenantId and ClientId. Production automation should use managed identity."
     exit 1
 }
 
@@ -553,7 +767,7 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
 Write-Host "Authenticating..." -ForegroundColor Gray
 
 try {
-    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default"
+    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default" -ManagedIdentityClientId $ManagedIdentityClientId
     Write-Host "  Office 365 Management API: authenticated" -ForegroundColor Green
 }
 catch {
@@ -562,7 +776,7 @@ catch {
 }
 
 try {
-    $dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+    $dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -ManagedIdentityClientId $ManagedIdentityClientId
     Write-Host "  Dataverse: authenticated" -ForegroundColor Green
 }
 catch {
@@ -609,45 +823,25 @@ $violationResults = @()
 $agentsScanned = @{}
 
 foreach ($event in $events) {
-    # Try to identify agent from event
-    $eventAgentId = $null
+    $eventData = Get-CopilotEventData -Event $event
+    $eventAgentId = Get-CopilotAgentId -Event $event
 
-    # Check EventData for agent identification
-    if ($event.EventData.AgentId) {
-        $eventAgentId = $event.EventData.AgentId
-    }
-    elseif ($event.EventData.Contexts -and $event.EventData.Contexts[0].Id) {
-        # Use first context as agent identifier if explicit ID not present
-        $eventAgentId = $event.EventData.Contexts[0].Id
+    # Skip if we're filtering for a specific agent and this isn't it.
+    if ($AgentId -and -not (Test-AgentIdMatch -EventAgentId $eventAgentId -ExpectedAgentId $AgentId)) {
+        continue
     }
 
-    # Skip if we're filtering for a specific agent and this isn't it
-    if ($AgentId -and $eventAgentId -ne $AgentId) {
+    # Skip events with no identifiable agent — avoids false "No Baseline" violations.
+    if (-not $eventAgentId) {
         continue
     }
 
     # Track scanned agents
-    if ($eventAgentId) {
-        $agentsScanned[$eventAgentId] = $true
-    }
+    $agentsScanned[$eventAgentId] = $true
 
-    # Get scope for this agent; null EnvironmentId acts as wildcard (matches any scope for this agent)
-    $eventEnvId = if ($event.EventData.EnvironmentId) { $event.EventData.EnvironmentId } else { $null }
-    $scope = $null
-    if ($eventAgentId) {
-        if ($eventEnvId) {
-            $scope = $scopeLookup["$eventAgentId|$eventEnvId"]
-        }
-        if (-not $scope) {
-            # Wildcard: match first scope for this agent (consistent with flow's or(equals(EnvironmentId, null), ...) logic)
-            $scope = $scopeLookup.GetEnumerator() | Where-Object { $_.Key.StartsWith("$eventAgentId|") } | Select-Object -First 1 -ExpandProperty Value
-        }
-    }
-
-    # Skip events with no identifiable agent — avoids false "No Baseline" violations
-    if (-not $eventAgentId) {
-        continue
-    }
+    # Get scope for this agent; blank EnvironmentId acts as wildcard.
+    $eventEnvId = if ($event.EnvironmentId) { $event.EnvironmentId } elseif ($eventData.EnvironmentId) { $eventData.EnvironmentId } else { $null }
+    $scope = Get-MatchingScope -Scopes $scopes -EventAgentId $eventAgentId -EventEnvironmentId $eventEnvId
 
     # Compare scope vs actual access
     $violations = Compare-ScopeVsActual -Event $event -Scope $scope

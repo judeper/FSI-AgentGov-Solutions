@@ -18,7 +18,7 @@
     Email address for test notifications. Can also be set via SDM_NOTIFICATION_EMAIL.
 
 .PARAMETER FromEmail
-    Sender email address (must have Send.Mail permission in Graph).
+    Sender email address (must have Mail.Send permission in Microsoft Graph).
     Can also be set via SDM_FROM_EMAIL environment variable.
 
 .EXAMPLE
@@ -34,7 +34,7 @@
     Tests email delivery only via Microsoft Graph.
 
 .NOTES
-    Teams incoming webhooks are retiring March 31, 2026.
+    Teams incoming webhooks retired March 31, 2026.
     Use Power Automate workflows for production deployments.
     Email delivery uses Send-MgUserMail (Microsoft Graph). Requires
     Microsoft.Graph.Users.Actions module and Mail.Send permission.
@@ -296,8 +296,8 @@ Write-Host "  Alert Delivery Test Utility" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Deprecation warning for Teams webhooks
-Write-Warning "Teams incoming webhooks retire March 31, 2026. Use Power Automate for production alerts."
+# Retirement warning for Teams webhooks
+Write-Warning "Teams incoming webhooks retired March 31, 2026. Use Power Automate for production alerts."
 Write-Host ""
 
 Write-Host "Channel: $Channel"

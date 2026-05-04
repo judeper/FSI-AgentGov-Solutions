@@ -1,6 +1,6 @@
 # Scope Drift Monitor
 
-> **Status:** Completed (v1.1.2)
+> **Status:** Completed (v1.2.1)
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 
@@ -38,9 +38,9 @@ The Scope Drift Monitor tracks what data sources, connectors, and content each A
                               │ Data Sources
                               │
 ┌─────────────────────────────────────────────────────────────────┐
-│ Unified Audit Log (CopilotInteraction events, RecordType 261) │
+│ Purview Audit / O365 Mgmt API (CopilotInteraction, RecordType 261) │
 │ ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄ │
-│ Future: CloudAppEvents · SharePoint Audit · Dataverse Audit   │
+│ Current payload: CopilotEventData.AccessedResources + AgentId metadata │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -96,8 +96,8 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_TeamsGroupId` | Teams team ID for alerts |
 | `fsi_SDM_TeamsChannelId` | Teams channel ID for alerts |
 | `fsi_SDM_SecurityTeamEmail` | Security team email for approvals |
-| `fsi_SDM_ClientId` | Microsoft Entra ID application client ID (used by scripts; flows use connection references) |
-| `fsi_SDM_ClientSecret` | Microsoft Entra ID application client secret — uses **Secret** type (Azure Key Vault-backed); used by scripts only, flows use connection references |
+| `fsi_SDM_ClientId` | Legacy dev-only Microsoft Entra ID application client ID for local script fallback; flows use connection references |
+| `fsi_SDM_ClientSecret` | Legacy dev-only Microsoft Entra ID application secret for local script fallback — use managed identity for Azure-hosted production automation |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on fsi_agentscope (default: 10002) |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.office.eaglex.ic.gov` for GCC IC, `https://manage.protection.outlook.com` for DoD) |
@@ -164,12 +164,12 @@ Connect each connection reference to an appropriate connection:
 
 | Source | Data Captured | Status |
 |--------|---------------|--------|
-| **Unified Audit Log** | CopilotInteraction events (RecordType 261) with connector, site, table, and API details | **Active** |
+| **Microsoft Purview Audit / Office 365 Management API** | CopilotInteraction events (RecordType 261) with `CopilotEventData.AccessedResources`, `AISystemPlugin`, and agent identity metadata | **Active** |
 | **CloudAppEvents** | Defender detections including shadow IT | *Future roadmap* |
 | **SharePoint Audit** | Site/library access events | *Future roadmap* |
 | **Dataverse Audit** | Table read/write operations | *Future roadmap* |
 
-> **Note:** The SDM-DriftDetector flow currently queries only the Office 365 Management API (`Audit.General` content type filtered to RecordType 261 — CopilotInteraction). CloudAppEvents, SharePoint Audit, and Dataverse Audit are planned for future releases.
+> **Note:** The SDM-DriftDetector flow currently queries only the Office 365 Management API (`Audit.General` content type filtered to RecordType 261 — CopilotInteraction). Microsoft Graph `/security/auditLog/queries` is available in v1.0 for Purview Audit Search, but this solution remains on the Office 365 Management API pending a future collector migration and national-cloud validation. CloudAppEvents, SharePoint Audit, Dataverse Audit, Microsoft Entra sign-in logs, and Application Insights correlations are supplemental signals planned for future releases.
 
 ### Detection Frequency
 
@@ -237,7 +237,7 @@ If Denied: Remediate Access → Close Violation
 
 Microsoft is introducing [sensitivity label visibility in Copilot Studio](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/power-platform-governance-administration/view-sensitivity-labels-copilot-studio) (GA June 2026). This feature enables Purview autolabeling at the Dataverse column level, with labels surfaced in Copilot Studio knowledge source selection and agent response citations.
 
-**Relationship to this solution:** Purview sensitivity labels provide **classification and visibility** — they label data and surface those labels to makers and users. The Scope Drift Monitor provides **enforcement and audit** — it detects when agents access resources beyond their declared operational scope and triggers remediation workflows. As Purview labels become available, organizations can use label metadata to enrich scope baselines (e.g., auto-flag agents accessing columns labeled "Highly Confidential" that are outside declared scope). The two capabilities are complementary.
+**Relationship to this solution:** Purview sensitivity labels provide **classification and visibility** — they label data and surface those labels to makers and users. The Scope Drift Monitor provides **detection and audit workflow support** — it detects when agents access resources beyond their declared operational scope and triggers remediation workflows. As Purview labels become available, organizations can use label metadata to enrich scope baselines (e.g., auto-flag agents accessing columns labeled "Highly Confidential" that are outside declared scope). The two capabilities are complementary.
 
 - **Detection telemetry not persisted:** The `Compose_Detection_Summary` action builds operational telemetry (events processed, violations created, source availability) each cycle but does not persist it to Dataverse. Detection metrics are only available through Power Automate's 28-day run history. Organizations with FSI audit retention requirements should export flow run data to a long-term store (see [Flow Configuration > Known Limitations](docs/flow-configuration.md)).
 - **Scope item records not auto-provisioned:** The `New-AgentBaseline.ps1` script populates aggregate `fsi_agentscope` JSON arrays (allowed connectors, sites, tables, APIs) but does not create individual `fsi_scopeitem` rows. The `Check_Expired_Scope_Items` scope in SDM-DriftDetector queries `fsi_scopeitem` for expired entries, so expiration-based detection requires manual Dataverse record creation or a custom provisioning script.
@@ -246,6 +246,7 @@ Microsoft is introducing [sensitivity label visibility in Copilot Studio](https:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.1 | May 2026 | Microsoft Learn 2026-Q2 refresh: Copilot audit schema parsing, managed identity-first scripts, and updated Purview/Graph guidance |
 | 1.1.2 | April 2026 | Fixed Write-Output pipeline contamination, prohibited language, PnP 3.x compatibility |
 | 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
@@ -257,4 +258,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework - Scope Drift Monitor v1.2.0*
+*FSI Agent Governance Framework - Scope Drift Monitor v1.2.1*

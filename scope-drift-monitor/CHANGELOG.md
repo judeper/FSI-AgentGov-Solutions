@@ -4,6 +4,17 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- Updated `Invoke-DriftScan.ps1` and `New-AgentBaseline.ps1` to parse the current Copilot audit payload shape (`CopilotEventData`, `AccessedResources`, `AISystemPlugin`, and agent identity variants) while retaining compatibility with legacy `EventData` records.
+- Added managed identity-first token acquisition for Office 365 Management API and Dataverse calls; client-secret authentication is retained only as a legacy development fallback.
+- Refreshed prerequisites and flow documentation for Microsoft Purview Power Platform activity logging, Copilot Studio audit-event behavior, and Microsoft Graph Audit Search API v1.0 status.
+- Updated Microsoft Entra branding outside historical changelog entries.
+
+---
+
 ## [1.2.0] - 2026-04-16
 
 ### Fixed
@@ -127,4 +138,4 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-*Scope Drift Monitor v1.1.2 - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.2.1 - FSI Agent Governance Framework*

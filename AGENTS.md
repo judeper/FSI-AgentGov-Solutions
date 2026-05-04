@@ -47,7 +47,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | mime-type-restrictions | v1.2.1 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
 | pipeline-governance-cleanup | v1.2.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.2.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
-| scope-drift-monitor | v1.2.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
+| scope-drift-monitor | v1.2.1 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | segregation-detector | v1.1.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | session-security-configurator | v1.1.1 | 1.23, 1.11 | Session security validation per governance zone with drift detection |
 | unrestricted-agent-sharing-detector | v2.0.0 | 1.1, 3.8 | Continuous detection of overly permissive agent sharing |

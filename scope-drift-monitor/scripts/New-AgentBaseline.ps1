@@ -34,7 +34,10 @@
     Microsoft Entra ID application client ID. Defaults to AZURE_CLIENT_ID environment variable.
 
 .PARAMETER ClientSecret
-    Microsoft Entra ID application client secret. Defaults to AZURE_CLIENT_SECRET environment variable.
+    Legacy dev-only Microsoft Entra ID application client secret. Defaults to AZURE_CLIENT_SECRET environment variable. Production automation should use managed identity.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to AZURE_MANAGED_IDENTITY_CLIENT_ID. If omitted, system-assigned managed identity is used when available.
 
 .EXAMPLE
     .\New-AgentBaseline.ps1 -AgentId "12345678-..." -Environment "https://contoso.crm.dynamics.com" -EnvironmentId "env-guid" -OwnerId "user-guid"
@@ -85,6 +88,9 @@ param(
     [int]$Zone = 10002,
 
     [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = $env:AZURE_MANAGED_IDENTITY_CLIENT_ID,
+
+    [Parameter(Mandatory = $false)]
     [switch]$SkipDuplicateCheck
 )
 
@@ -97,21 +103,88 @@ if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
 
 #region Helper Functions
 
-function Get-AccessToken {
+function Convert-ScopeToResource {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$TenantId,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ClientId,
-
-        [Parameter(Mandatory = $true)]
-        [securestring]$ClientSecret,
-
         [Parameter(Mandatory = $true)]
         [string]$Scope
     )
 
+    if ($Scope.EndsWith("/.default", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $Scope.Substring(0, $Scope.Length - "/.default".Length)
+    }
+
+    return $Scope
+}
+
+function Get-ManagedIdentityAccessToken {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Resource,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ClientId
+    )
+
+    $encodedResource = [System.Uri]::EscapeDataString($Resource)
+    $encodedClientId = if ($ClientId) { [System.Uri]::EscapeDataString($ClientId) } else { $null }
+
+    try {
+        if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
+            $uri = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=$encodedResource"
+            if ($encodedClientId) { $uri = "$uri&client_id=$encodedClientId" }
+            $headers = @{ "X-IDENTITY-HEADER" = $env:IDENTITY_HEADER }
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -TimeoutSec 10
+            return $response.access_token
+        }
+
+        if ($env:MSI_ENDPOINT -and $env:MSI_SECRET) {
+            $uri = "$($env:MSI_ENDPOINT)?api-version=2017-09-01&resource=$encodedResource"
+            if ($encodedClientId) { $uri = "$uri&clientid=$encodedClientId" }
+            $headers = @{ Secret = $env:MSI_SECRET }
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -TimeoutSec 10
+            return $response.access_token
+        }
+
+        $imdsUri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$encodedResource"
+        if ($encodedClientId) { $imdsUri = "$imdsUri&client_id=$encodedClientId" }
+        $imdsHeaders = @{ Metadata = "true" }
+        $response = Invoke-RestMethod -Uri $imdsUri -Headers $imdsHeaders -Method Get -TimeoutSec 2
+        return $response.access_token
+    }
+    catch {
+        return $null
+    }
+}
+
+function Get-AccessToken {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory = $false)]
+        [securestring]$ClientSecret,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Scope,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ManagedIdentityClientId
+    )
+
+    $resource = Convert-ScopeToResource -Scope $Scope
+    $managedIdentityToken = Get-ManagedIdentityAccessToken -Resource $resource -ClientId $ManagedIdentityClientId
+    if ($managedIdentityToken) {
+        return $managedIdentityToken
+    }
+
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+        throw "Managed identity authentication was unavailable and client-secret fallback parameters were incomplete. For production, run from an Azure host with a system-assigned or user-assigned managed identity."
+    }
+
+    # legacy: dev-only — replace with managed identity in production
     $loginEndpoint = switch -Wildcard ($Scope) {
         "*office365.us*"           { "https://login.microsoftonline.us" }
         "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
@@ -133,6 +206,120 @@ function Get-AccessToken {
     catch {
         throw "Failed to acquire access token for scope '$Scope': $($_.Exception.Message)"
     }
+}
+
+function Get-CopilotEventData {
+    <#
+    .SYNOPSIS
+        Returns the Copilot interaction payload from current and legacy audit shapes.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        $Event
+    )
+
+    if ($Event.CopilotEventData) {
+        if ($Event.CopilotEventData -is [string]) { return ($Event.CopilotEventData | ConvertFrom-Json) }
+        return $Event.CopilotEventData
+    }
+    if ($Event.EventData) {
+        if ($Event.EventData -is [string]) { return ($Event.EventData | ConvertFrom-Json) }
+        return $Event.EventData
+    }
+
+    if ($Event.AuditData) {
+        try {
+            $auditData = if ($Event.AuditData -is [string]) { $Event.AuditData | ConvertFrom-Json } else { $Event.AuditData }
+            if ($auditData.CopilotEventData) { return $auditData.CopilotEventData }
+            if ($auditData.EventData) { return $auditData.EventData }
+        }
+        catch {
+            Write-Warning "Could not parse AuditData JSON for audit record '$($Event.Id)': $($_.Exception.Message)"
+        }
+    }
+
+    return [pscustomobject]@{}
+}
+
+function Get-CopilotAgentId {
+    <#
+    .SYNOPSIS
+        Extracts agent identity from current Copilot, Copilot Studio, and legacy audit fields.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        $Event
+    )
+
+    $eventData = Get-CopilotEventData -Event $Event
+    $auditData = $null
+    if ($Event.AuditData) {
+        try {
+            $auditData = if ($Event.AuditData -is [string]) { $Event.AuditData | ConvertFrom-Json } else { $Event.AuditData }
+        }
+        catch {
+            $auditData = $null
+        }
+    }
+
+    $candidates = @(
+        $Event.AgentId,
+        $Event.BotId,
+        $Event.AppIdentity,
+        $auditData.AgentId,
+        $auditData.BotId,
+        $auditData.AppIdentity,
+        $eventData.AgentId,
+        $eventData.BotId,
+        $eventData.AppIdentity
+    )
+
+    foreach ($candidate in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace([string]$candidate)) {
+            return [string]$candidate
+        }
+    }
+
+    return $null
+}
+
+function Test-AgentIdMatch {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$EventAgentId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ExpectedAgentId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($EventAgentId) -or [string]::IsNullOrWhiteSpace($ExpectedAgentId)) {
+        return $false
+    }
+
+    if ($EventAgentId.Equals($ExpectedAgentId, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    return ($EventAgentId.IndexOf($ExpectedAgentId, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+            $ExpectedAgentId.IndexOf($EventAgentId, [System.StringComparison]::OrdinalIgnoreCase) -ge 0)
+}
+
+function Get-ResourceUri {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Resource
+    )
+
+    foreach ($propertyName in @('SiteUrl', 'Url', 'URL', 'Id', 'ID')) {
+        if ($Resource.PSObject.Properties.Name -contains $propertyName) {
+            $value = $Resource.$propertyName
+            if (-not [string]::IsNullOrWhiteSpace([string]$value)) {
+                return [string]$value
+            }
+        }
+    }
+
+    return $null
 }
 
 function Get-CopilotAuditEvents {
@@ -231,7 +418,7 @@ function Get-CopilotAuditEvents {
                     # and optionally filter by agent ID if event contains it
                     $copilotEvents = $blobEvents | Where-Object {
                         $_.RecordType -eq 261 -and
-                        $_.EventData.AgentId -eq $AgentId
+                        (Test-AgentIdMatch -EventAgentId (Get-CopilotAgentId -Event $_) -ExpectedAgentId $AgentId)
                     }
 
                     $events += $copilotEvents
@@ -274,12 +461,12 @@ function Get-AccessedResources {
     }
 
     foreach ($event in $Events) {
-        $eventData = $event.EventData
+        $eventData = Get-CopilotEventData -Event $event
 
         # Extract connectors from AISystemPlugin array
         if ($eventData.AISystemPlugin) {
-            foreach ($plugin in $eventData.AISystemPlugin) {
-                if ($plugin.Name -and $plugin.Enabled -eq $true) {
+            foreach ($plugin in @($eventData.AISystemPlugin)) {
+                if ($plugin.Name) {
                     $connectorName = $plugin.Name
                     if ($connectorName -notin $resources.Connectors) {
                         $resources.Connectors += $connectorName
@@ -290,7 +477,7 @@ function Get-AccessedResources {
 
         # Extract SharePoint sites from Contexts array
         if ($eventData.Contexts) {
-            foreach ($context in $eventData.Contexts) {
+            foreach ($context in @($eventData.Contexts)) {
                 if ($context.Id -match "sharepoint\.com") {
                     # Extract site URL from full document path
                     if ($context.Id -match "(https://[^/]+\.sharepoint\.com/(?:sites|teams)/[^/]+)") {
@@ -305,7 +492,7 @@ function Get-AccessedResources {
 
         # Extract from AccessedResources array
         if ($eventData.AccessedResources) {
-            foreach ($resource in $eventData.AccessedResources) {
+            foreach ($resource in @($eventData.AccessedResources)) {
                 # SharePoint sites
                 if ($resource.SiteUrl -and $resource.SiteUrl -notin $resources.Sites) {
                     $resources.Sites += $resource.SiteUrl
@@ -319,11 +506,11 @@ function Get-AccessedResources {
                 }
 
                 # Identify external APIs from resource URL patterns
+                $resourceUri = Get-ResourceUri -Resource $resource
                 if ($resource.Type -eq "ExternalAPI" -or
-                    ($resource.Url -match "^https?://" -and $resource.Url -notmatch "(sharepoint|microsoft|office)\.com")) {
-                    $apiUrl = $resource.Url
-                    if ($apiUrl -notin $resources.APIs) {
-                        $resources.APIs += $apiUrl
+                    ($resourceUri -match "^https?://" -and $resourceUri -notmatch "(sharepoint|microsoft|office)\.com")) {
+                    if ($resourceUri -and $resourceUri -notin $resources.APIs) {
+                        $resources.APIs += $resourceUri
                     }
                 }
             }
@@ -425,9 +612,9 @@ Write-Host "Environment: $Environment"
 Write-Host "Analysis Period: $Days days"
 Write-Host ""
 
-# Validate credentials
-if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
-    Write-Error "Missing credentials. Set environment variables: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET"
+# Validate legacy client-secret fallback inputs when a secret is supplied.
+if ($ClientSecret -and (-not $TenantId -or -not $ClientId)) {
+    Write-Error "Client-secret fallback requires TenantId and ClientId. Production automation should use managed identity."
     exit 1
 }
 
@@ -435,7 +622,7 @@ if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
 Write-Host "Authenticating..." -ForegroundColor Gray
 
 try {
-    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default"
+    $managementToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$ManagementApiEndpoint/.default" -ManagedIdentityClientId $ManagedIdentityClientId
     Write-Host "  Office 365 Management API: authenticated" -ForegroundColor Green
 }
 catch {
@@ -444,7 +631,7 @@ catch {
 }
 
 try {
-    $dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+    $dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default" -ManagedIdentityClientId $ManagedIdentityClientId
     Write-Host "  Dataverse: authenticated" -ForegroundColor Green
 }
 catch {
