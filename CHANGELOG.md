@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`conditional-access-automation` v1.2.2 → v2.0.0** — CAA Dataverse schema renamed from underscored snake_case SchemaNames to single-word PascalCase (Issue #36). Customers must drop and recreate the three CAA tables before upgrading. See `conditional-access-automation/CHANGELOG.md` for migration steps. The OData lint workflow (`.github/workflows/odata-lint.yml`) is now `--strict` and the soft-gate is removed.
 - **`cross-solution-integration` v2.0.0 → v2.0.1** — adapts CAA history-table reader to the renamed columns. Now requires CAA v2.0.0+.
 
+### Changed — CI / release ops
+- **`.github/workflows/health-check.yml`** — `LATEST_TAG` is now auto-derived via `gh api repos/.../releases/latest --jq .tag_name` (Issue #39). The previous hardcoded `LATEST_TAG: v1.4.1` env value has been replaced by a "Resolve latest release tag" step. Maintainers no longer need to bump the workflow manually after each release. Fails loudly if no release exists.
+- **`DEPLOYMENT-GUIDE.md`** — added "Post-Release Operations" section documenting the auto-derive mechanism + recommended post-release checklist.
+- Doc references in `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` updated to reflect the auto-derive behavior.
+
 ### Removed
 - The `# legacy: dev-only` exception in `conditional-access-automation/.ralph-config.json` claiming that underscored SchemaNames were "correct and intentional" has been removed; that statement was incorrect.
 

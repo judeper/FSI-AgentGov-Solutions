@@ -17,10 +17,29 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve latest release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Auto-derive LATEST_TAG from the GitHub Releases API so the
+          # health probe always targets the most recently published release
+          # without requiring a manual workflow edit after every tag.
+          # Issue #39: replaces the previous hardcoded `LATEST_TAG: v1.4.x`.
+          tag=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name 2>/dev/null || echo "")
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            echo "::error::No published release found for ${{ github.repository }}. The health probe requires at least one release; tag the first release before this workflow can run."
+            exit 1
+          fi
+          echo "Resolved LATEST_TAG=$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Probe published surfaces
         id: probe
         env:
-          LATEST_TAG: v1.4.1
+          LATEST_TAG: ${{ steps.tag.outputs.tag }}
         shell: bash
         run: |
           set -u
