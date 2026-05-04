@@ -82,6 +82,7 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 #### Microsoft Purview Unified Audit Log
 
 - **CopilotInteraction events** - Logged automatically when users interact with Copilot/Copilot Studio
+- **Production extractor:** `Search-UnifiedAuditLog`; Microsoft Graph audit search is currently beta at `/security/auditLog/queries` and should be treated as a migration path until v1.0 readiness.
 - **Key deny indicators:**
   - `AccessedResources[].Status = "failure"`
   - `AccessedResources[].PolicyDetails` (present when blocked)
@@ -94,29 +95,30 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 - **DlpRuleMatch events** - Logged when DLP policies match
 - **Copilot location:** "Microsoft 365 Copilot and Copilot Chat"
 - **Key fields:** PolicyDetails, SensitiveInfoTypeData, ExceptionInfo (for overrides)
+- **Schema caveat:** Office 365 Management Activity API DLP records can identify `DlpAgent` in common audit fields. Use the normalized CSV `UserId`, `PolicyNames`, and `Actions` columns for correlation rather than assuming every common field maps to the end user.
 
 #### Application Insights
 
 - **ContentFiltered events** - Logged by Copilot Studio when RAI blocks response
 - **Per-agent configuration required** - No tenant-wide telemetry
-- **Key fields:** FilterReason, FilterCategory, FilterSeverity
+- **Key fields:** FilterReason, FilterCategory, FilterSeverity. Application Insights Logs can expose the classic `customEvents` shape; workspace-based Azure Monitor Logs use `AppEvents` with `Properties`.
 
 #### Defender CloudAppEvents (Optional - Advanced)
 
 - **Prompt injection detection** - UPIA (User Prompt Injection Attack) and XPIA (Cross-domain Prompt Injection Attack) events
 - **Jailbreak detection** - Attempts to bypass model guardrails
-- **Requires:** Defender for Cloud Apps license, enabled Copilot protection
+- **Requires:** Defender for Cloud Apps license, Microsoft 365 activities connected to Defender XDR, and advanced hunting access
 - **Key query:**
 
 ```kql
 CloudAppEvents
-| where ActionType in ("CopilotInteraction", "CopilotMessageCreated")
+| where ActionType == "CopilotInteraction"
 | where RawEventData has "PromptInjection" or RawEventData has "Jailbreak"
 | extend ThreatCategory = tostring(parse_json(RawEventData).ThreatCategory)
-| project Timestamp, AccountDisplayName, Application, ThreatCategory
+| project Timestamp, AccountId, AccountDisplayName, Application, ThreatCategory
 ```
 
-> **Note:** CloudAppEvents integration is separate from the core deny event extraction and requires additional licensing (Defender for Cloud Apps). Organizations without Defender may skip this data source.
+> **Note:** CloudAppEvents integration is separate from the core deny event extraction and requires additional licensing (Defender for Cloud Apps). The Defender for Cloud Apps alert REST API is separate and can be added if alert lifecycle state is required. Organizations without Defender may skip this data source.
 
 ### 2. Extraction Layer
 
@@ -166,7 +168,7 @@ left as a customer-built option using the upload connector of choice)
 Azure Automation Account
 ├── Runbook: Invoke-DailyDenyReport
 ├── Schedule: Daily at 6:00 AM UTC
-├── Credentials: Azure Key Vault reference
+├── Identity: Managed identity; optional Key Vault configuration
 └── Variables: App Insights App ID, Storage Account
 ```
 
@@ -204,10 +206,10 @@ Power Automate Flow
 
 | Component | Authentication Method | Deprecation Status |
 |-----------|----------------------|-------------------|
-| Exchange Online | Service principal or credential-based | Active |
-| Application Insights | ~~API key~~ **Entra ID (OAuth 2.0)** | x-api-key deprecated March 31, 2026 |
-| Defender CloudAppEvents | Entra ID (Defender APIs) | Active |
-| Azure Storage | Managed identity or SAS token | Active |
+| Exchange Online | Managed identity (Azure Automation) or certificate-based app-only; interactive only for admin workstations | Active |
+| Application Insights | Managed identity or Entra ID (OAuth 2.0); ~~API key~~ removed | x-api-key no longer functional after March 31, 2026 |
+| Defender CloudAppEvents | Microsoft Graph (managed identity/certificate where available; delegated interactive for testing) | Active |
+| Azure Storage | Managed identity preferred; SAS token only for constrained legacy jobs | Active |
 | Power BI | Microsoft Entra ID | Active |
 
 ### Data Classification

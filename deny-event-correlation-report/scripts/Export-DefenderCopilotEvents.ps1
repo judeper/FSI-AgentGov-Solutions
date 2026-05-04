@@ -3,14 +3,16 @@
     Exports Defender CloudAppEvents for Copilot prompt injection and jailbreak detections.
 
 .DESCRIPTION
-    Queries Microsoft Defender for Cloud Apps (via Advanced Hunting) for Copilot-related
+    Queries Microsoft Defender XDR Advanced Hunting CloudAppEvents for Copilot-related
     threat detections including:
     - XPIA (Cross-domain Prompt Injection Attack) events
     - UPIA (User Prompt Injection Attack) events
     - Jailbreak attempt detections
 
     These detections are NOT available in the CopilotInteraction audit schema (Purview);
-    they are exclusively logged to Defender CloudAppEvents.
+    they are logged to Defender CloudAppEvents when Defender for Cloud Apps is connected
+    to Microsoft Defender XDR. The Defender for Cloud Apps alert REST API is a separate
+    optional source for alert lifecycle metadata and is not used by this extractor.
 
 .PARAMETER StartDate
     Start of the time window for query. Defaults to yesterday.
@@ -157,8 +159,9 @@ CloudAppEvents
                 if ($_.Exception.Response -and $_.Exception.Response.Headers) {
                     try {
                         $retryValues = $_.Exception.Response.Headers.GetValues('Retry-After')
-                        if ($retryValues -and [int]::TryParse($retryValues[0], [ref]$null)) {
-                            $retryAfter = [int]$retryValues[0]
+                        $parsedRetryAfter = 0
+                        if ($retryValues -and [int]::TryParse([string]$retryValues[0], [ref]$parsedRetryAfter) -and $parsedRetryAfter -gt 0 -and $parsedRetryAfter -le 300) {
+                            $retryAfter = $parsedRetryAfter
                         }
                     } catch { }
                 }

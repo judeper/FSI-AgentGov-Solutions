@@ -3,7 +3,7 @@
     Exports RAI (Responsible AI) telemetry from Azure Application Insights.
 
 .DESCRIPTION
-    Queries Application Insights for Copilot Studio ContentFiltered events,
+    Queries Application Insights for Copilot Studio ContentFiltered events (classic `customEvents` schema on the Application Insights Logs API),
     which indicate when Azure AI Content Safety blocked agent responses.
 
     Uses Microsoft Entra ID authentication for secure access.

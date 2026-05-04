@@ -13,7 +13,7 @@
 | Cause | Solution |
 |-------|----------|
 | **Audit logging not enabled** | Verify audit is on: `Get-AdminAuditLogConfig \| FL UnifiedAuditLogIngestionEnabled` |
-| **Permission issue** | Confirm service account has "View-Only Audit Logs" role |
+| **Permission issue** | Confirm the managed identity, certificate-backed app, or delegated admin has the tenant role assignments required for audit search |
 | **Date range too narrow** | Expand date range; note audit data has ~24hr latency |
 | **No Copilot activity** | Verify users are actively using Copilot in tenant |
 | **Wrong RecordType** | Confirm using `RecordType = "CopilotInteraction"` |
@@ -54,16 +54,16 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 | Cause | Solution |
 |-------|----------|
-| **Invalid API key** | Regenerate API key in Azure Portal (deprecated) |
+| **Legacy API key dependency** | Migrate the runbook to managed identity or certificate-backed Entra ID authentication |
 | **Wrong App ID** | Verify Application ID (not Instrumentation Key) |
-| **Key expired** | Migrate to Entra ID authentication (recommended) |
-| **Insufficient permissions** | Ensure API key has "Read telemetry" permission |
+| **Expired legacy credential** | Replace the secret path with managed identity or certificate-backed Entra ID authentication |
+| **Insufficient permissions** | Assign Monitoring Reader on the Application Insights resource to the managed identity or service principal |
 | **Resource not found** | Verify App Insights resource exists and ID is correct |
 
 **Diagnostic Steps (API Key - Deprecated):**
 
 ```powershell
-# Test API connectivity (deprecated method - migrate to Entra ID)
+# Historical only: API key connectivity test (no longer functional after March 31, 2026)
 $headers = @{ "x-api-key" = "your-key" }
 $uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
 Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
@@ -72,8 +72,10 @@ Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
 **Diagnostic Steps (Entra ID - Recommended):**
 
 ```powershell
-# Test API connectivity with Entra ID authentication
-Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
+# Test API connectivity with managed identity / Entra ID authentication
+Connect-AzAccount -Identity  # Azure Automation managed identity
+# Or, on non-Azure schedulers:
+# Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
 $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
 # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
 $token = if ($tokenResult.Token -is [System.Security.SecureString]) {
@@ -99,17 +101,19 @@ Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
 | **Agent not configured** | Verify App Insights connection string in Copilot Studio agent settings |
 | **Agent not published** | Publish agent after adding App Insights |
 | **No filtering occurred** | RAI filters only log when content is blocked |
-| **Wrong query** | Verify query filters for `name == "MicrosoftCopilotStudio"` |
+| **Wrong query** | Verify query filters for `EventName == "MicrosoftCopilotStudio"` after normalizing `customEvents` / `AppEvents` |
 | **Telemetry delay** | Allow 5-10 minutes for telemetry to appear |
 
 **Verification Query:**
 
 ```kql
-// Check if any Copilot Studio events exist
-customEvents
-| where timestamp > ago(7d)
-| where name == "MicrosoftCopilotStudio"
-| summarize count() by name
+// Check if any Copilot Studio events exist in either App Insights shape
+union isfuzzy=true
+    (customEvents | project EventTime = timestamp, EventName = name),
+    (AppEvents | project EventTime = TimeGenerated, EventName = Name)
+| where EventTime > ago(7d)
+| where EventName == "MicrosoftCopilotStudio"
+| summarize count() by EventName
 ```
 
 ### 4. Blob Upload Fails
@@ -172,19 +176,26 @@ Get-AzStorageContainer -Context $context
 |-------|----------|
 | **Module not installed** | `Install-Module ExchangeOnlineManagement` |
 | **Module outdated** | `Update-Module ExchangeOnlineManagement` |
-| **MFA required** | Use certificate-based auth for automation |
-| **Conditional Access** | Exclude service account from CA policies |
+| **MFA required** | Use managed identity in Azure Automation or certificate-based app-only auth for non-Azure schedulers |
+| **Conditional Access** | Prefer workload identity controls for managed identities/apps instead of long-lived user service accounts |
 | **Network timeout** | Check firewall rules for Exchange Online endpoints |
 
-**Certificate-Based Authentication Setup:**
+**Managed Identity / Certificate-Based Authentication Setup:**
 
 ```powershell
-# For automation, configure certificate auth
+# Preferred in Azure Automation
+Connect-ExchangeOnline -ManagedIdentity -Organization "example.onmicrosoft.com"
+
+# Fallback for non-Azure schedulers: certificate auth
 Connect-ExchangeOnline `
     -CertificateThumbprint "your-cert-thumbprint" `
     -AppId "your-app-id" `
     -Organization "example.onmicrosoft.com"
 ```
+
+### 7. Microsoft Graph Audit Search Preview
+
+The Graph audit search endpoint (`/security/auditLog/queries`) is currently beta. If experimenting with it outside this production extractor, use `Microsoft.Graph.Beta.Security`, grant `AuditLogsQuery.*` permissions, and avoid depending on beta response shapes for regulated evidence until Microsoft publishes a v1.0 endpoint.
 
 ## Performance Issues
 

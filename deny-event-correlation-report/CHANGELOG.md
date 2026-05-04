@@ -2,6 +2,16 @@
 
 All notable changes to the Deny Event Correlation Report are documented here.
 
+## [Unreleased] — v2.0.3
+
+### Fixed
+
+- **Invoke-DailyDenyReport.ps1**: Added managed identity and certificate-based Exchange Online authentication pass-through to the Purview Audit and DLP extractors so Azure Automation runbooks can use unattended auth end-to-end.
+- **Export-CopilotDenyEvents.ps1 / Export-DlpCopilotEvents.ps1**: Reworded Microsoft Graph audit guidance to clarify that `Search-UnifiedAuditLog` remains the production extractor while Graph `/security/auditLog/queries` is a beta migration path that should be tracked for v1.0 readiness.
+- **docs/prerequisites.md / docs/architecture.md / docs/troubleshooting.md**: Refreshed authentication guidance to managed identity-first, certificate-based Exchange Online fallback, and legacy dev-only client secret caveats.
+- **kql-queries/content-filtered-events.kql**: Added a reusable source normalization block that supports both classic Application Insights `customEvents` and workspace-based `AppEvents` schemas.
+- **docs/architecture.md / Export-DefenderCopilotEvents.ps1**: Aligned Defender guidance with the public `CloudAppEvents` schema and fixed Retry-After parsing in the Graph advanced hunting retry path.
+
 ## [2.0.2] — 2026
 
 ### Fixed

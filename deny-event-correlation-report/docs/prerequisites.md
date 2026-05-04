@@ -35,14 +35,14 @@
 | **View-Only Audit Logs** | Tenant | Search and export only |
 | **Security Reader** | Tenant | Read-only access |
 
-**Recommendation:** Create dedicated service account with "View-Only Audit Logs" role for automated extraction.
+**Recommendation:** Use an Azure Automation managed identity for scheduled extraction. Use a dedicated user only for manual troubleshooting, and validate the exact Purview/Exchange RBAC role set in your tenant before production use.
 
 ### Application Insights
 
 | Permission | Scope | Required |
 |------------|-------|----------|
 | **Reader** | App Insights resource | Query telemetry |
-| **Monitoring Reader** | App Insights resource | Entra ID authentication (recommended) |
+| **Monitoring Reader** | App Insights resource | Managed identity / Entra ID authentication (recommended) |
 | ~~**API Key (Read)**~~ | ~~App Insights resource~~ | ~~REST API access~~ (deprecated March 31, 2026) |
 
 > ⚠️ **Deprecation Warning:** API key authentication (`x-api-key`) is deprecated and will be removed **March 31, 2026**. See [Authentication Migration](#authentication-migration) for Entra ID setup.
@@ -57,6 +57,8 @@
 
 ```powershell
 Install-Module Microsoft.Graph.Security -Force
+# Managed identity or certificate auth is recommended for automation where supported.
+# Interactive delegated auth is acceptable for one-off validation.
 Connect-MgGraph -Scopes "ThreatHunting.Read.All"
 ```
 
@@ -65,7 +67,7 @@ Connect-MgGraph -Scopes "ThreatHunting.Read.All"
 | Role | Scope | Capabilities |
 |------|-------|--------------|
 | **Automation Contributor** | Automation Account | Manage runbooks, schedules |
-| **Key Vault Secrets User** | Key Vault | Read secrets for credentials |
+| **Key Vault Secrets User** | Key Vault | Read non-secret configuration or approved certificate metadata |
 | **Storage Blob Data Contributor** | Storage Account | Upload exports |
 
 ### Power BI
@@ -75,91 +77,79 @@ Connect-MgGraph -Scopes "ThreatHunting.Read.All"
 | **Member** or **Contributor** | Workspace | View and interact with reports |
 | **Admin** | Workspace | Configure data source credentials |
 
-## Service Account Setup
+## Automation Identity Setup
 
-### 1. Create Dedicated Service Account
+### Recommended: Azure Automation Managed Identity
+
+Use a system-assigned or user-assigned managed identity for scheduled runbooks. This avoids stored passwords and aligns with current Exchange Online PowerShell and Azure Monitor authentication guidance.
+
+1. Enable the managed identity on the Azure Automation account.
+2. Grant the identity the required Exchange Online application permission and role assignments for unattended Exchange Online PowerShell:
+   - Office 365 Exchange Online API permission: `Exchange.ManageAsApp`
+   - Exchange role assignment appropriate for audit search in your tenant (for example, View-Only Audit Logs / audit-reader duties)
+   - Validate with `Search-UnifiedAuditLog` before enabling the schedule.
+3. Grant Azure RBAC on supporting resources:
+   - **Monitoring Reader** on the Application Insights component
+   - **Storage Blob Data Contributor** on the target storage account when uploads are enabled
+   - **Key Vault Secrets User** only when the runbook reads non-secret configuration from Key Vault
+4. Connect from the runbook with managed identity:
 
 ```powershell
-# Microsoft Graph PowerShell (recommended — MSOnline module is deprecated)
-# NOTE: Use a managed identity or certificate-based authentication in production.
-# Avoid PasswordNeverExpires; use conditional access policies and key rotation instead.
-$PasswordProfile = @{
-    Password                      = "<strong-temporary-password>"
-    ForceChangePasswordNextSignIn = $true
-}
-New-MgUser `
-    -UserPrincipalName "svc-deny-report@example.com" `
-    -DisplayName "Deny Report Service Account" `
-    -UsageLocation "US" `
-    -PasswordProfile $PasswordProfile `
-    -AccountEnabled:$true `
-    -MailNickname "svc-deny-report"
+Connect-AzAccount -Identity
+Connect-ExchangeOnline -ManagedIdentity -Organization "example.onmicrosoft.com"
 
-# Assign minimum required license (E5 Compliance)
-Set-MgUserLicense -UserId "svc-deny-report@example.com" `
-    -AddLicenses @(@{SkuId = "<E5-Compliance-SkuId>"}) `
-    -RemoveLicenses @()
+.\scripts\Invoke-DailyDenyReport.ps1 `
+    -ExchangeManagedIdentity `
+    -ExchangeOrganization "example.onmicrosoft.com" `
+    -AppInsightsAppId "<application-insights-app-id>" `
+    -StorageAccountName "stgovernance"
 ```
 
-### 2. Assign Purview Roles
+### Fallback: Certificate-Based App-Only Exchange Online Auth
+
+Use certificate-based app-only authentication when the scheduler cannot use Azure managed identity. Store the certificate private key in the platform certificate store or a managed HSM/Key Vault flow approved by your security team; do not store certificate passwords in source control.
 
 ```powershell
-# Connect to Security & Compliance PowerShell
-Connect-IPPSSession  # Requires ExchangeOnlineManagement v3.0+
+Connect-ExchangeOnline `
+    -AppId "<app-client-id>" `
+    -CertificateThumbprint "<certificate-thumbprint>" `
+    -Organization "example.onmicrosoft.com"
 
-# Add to View-Only Audit Logs role group
-Add-RoleGroupMember -Identity "View-Only Audit Logs" `
-    -Member "svc-deny-report@example.com"
+.\scripts\Invoke-DailyDenyReport.ps1 `
+    -ExchangeAppId "<app-client-id>" `
+    -ExchangeCertificateThumbprint "<certificate-thumbprint>" `
+    -ExchangeOrganization "example.onmicrosoft.com"
 ```
 
-### 3. Configure Application Insights Access
+### Microsoft Graph Audit Search Preview
 
-#### Option A: Entra ID Authentication (Recommended)
+The production extractors currently use `Search-UnifiedAuditLog`. Microsoft Graph exposes Microsoft Purview audit search in beta at `GET/POST /security/auditLog/queries` with `AuditLogsQuery.*` permissions (for example, `AuditLogsQuery.Read.All` or service-specific permissions). Because Microsoft Graph beta APIs are subject to change and are not supported for production use, treat this as a preview migration path until the endpoint is available in v1.0 and validated for your tenant.
 
-Starting **March 31, 2026**, API key authentication will no longer work. Configure Entra ID authentication now:
+### Application Insights Access
 
-1. Create or use an existing service principal (App Registration)
-2. Assign **Monitoring Reader** role on the Application Insights resource:
-   ```bash
-   az role assignment create \
-       --assignee "your-service-principal-id" \
-       --role "Monitoring Reader" \
-       --scope "/subscriptions/{sub}/resourceGroups/{rg}/providers/microsoft.insights/components/{appinsights}"
-   ```
-3. Store the service principal credentials in Azure Key Vault
-4. Use `Connect-AzAccount` with service principal in automation
+1. Assign **Monitoring Reader** to the managed identity or certificate-backed service principal on the Application Insights resource.
+2. Authenticate with `Connect-AzAccount -Identity` in Azure Automation or with a certificate-backed service principal on non-Azure schedulers.
+3. `Export-RaiTelemetry.ps1` obtains an Entra ID token with `Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"`.
 
-#### Option B: API Key (Historical Reference - Removed March 31, 2026)
+### Azure Key Vault Usage
 
-> **Removed:** As of March 31, 2026 the `x-api-key` authentication path no
-> longer functions on the Application Insights REST API. New deployments must
-> use Entra ID authentication (Option A above). The steps below are retained
-> only for context when migrating older runbooks.
-
-1. Navigate to Azure Portal > Application Insights resource
-2. Go to **Configure** > **API Access**
-3. Click **Create API key**
-4. Name: "Deny Report Service"
-5. Permissions: **Read telemetry**
-6. Copy the API key (store securely)
-
-### 4. Configure Azure Key Vault (Recommended)
+Use Key Vault for non-secret configuration values (for example, `AppInsightsAppId`) or certificate lifecycle integration. Do not store user passwords for scheduled extraction.
 
 ```powershell
-# Create Key Vault
-az keyvault create `
-    --name "kv-deny-report" `
-    --resource-group "rg-governance" `
-    --location "eastus"
-
-# Store credentials
 az keyvault secret set `
     --vault-name "kv-deny-report" `
-    --name "ExoServiceAccount" `
-    --value "svc-deny-report@example.com"
+    --name "AppInsightsAppId" `
+    --value "<application-insights-app-id>"
+```
 
-# NOTE: AppInsightsApiKey no longer needed after Entra ID migration.
-# Store service principal credentials instead — see Authentication Migration section below.
+### Legacy Development-Only Client Secret Fallback
+
+Client secrets are not recommended for production runbooks. If a developer workstation temporarily uses a service principal secret for local testing, mark the code path clearly and replace it before deployment:
+
+```powershell
+# legacy: dev-only — replace with managed identity in production
+$credential = Get-Credential -Message "Service principal client secret for local testing only"
+Connect-AzAccount -ServicePrincipal -TenantId "<tenant-id>" -Credential $credential
 ```
 
 ## Network Requirements
@@ -207,21 +197,23 @@ InstrumentationKey=xxx;IngestionEndpoint=https://xxx.in.applicationinsights.azur
 After configuration, send a test message to the agent and verify telemetry appears:
 
 ```kql
-customEvents
-| where timestamp > ago(1h)
-| where name == "MicrosoftCopilotStudio"
+union isfuzzy=true
+    (customEvents | project EventTime = timestamp, EventName = name, Dimensions = todynamic(customDimensions)),
+    (AppEvents | project EventTime = TimeGenerated, EventName = Name, Dimensions = todynamic(Properties))
+| where EventTime > ago(1h)
+| where EventName == "MicrosoftCopilotStudio"
 | take 10
 ```
 
 ## Pre-Deployment Checklist
 
 - [ ] Microsoft 365 E5/E5 Compliance license assigned
-- [ ] Service account created with View-Only Audit Logs role
+- [ ] Managed identity enabled, or certificate-based Exchange Online app-only auth configured
 - [ ] Application Insights resource created
-- [ ] ~~Application Insights API key generated and stored~~ **OR** Entra ID service principal configured (recommended)
+- [ ] Monitoring Reader assigned to the managed identity or certificate-backed service principal
 - [ ] Copilot Studio agents configured with App Insights (Zone 2/3)
 - [ ] Azure Blob Storage account created (optional)
-- [ ] Azure Key Vault configured with credentials (optional)
+- [ ] Azure Key Vault configured for non-secret settings or certificate metadata (optional)
 - [ ] Power BI workspace created with appropriate access
 - [ ] Network connectivity verified from execution environment
 
@@ -229,61 +221,24 @@ customEvents
 
 ## Authentication Migration
 
-> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments.
+> **Note:** API key authentication is no longer the recommended path. Use managed identity or certificate-backed Entra ID authentication for new deployments.
 
 ### Timeline
 
 | Date | Event |
 |------|-------|
-| **Now** | Begin migration to Entra ID authentication |
-| **March 31, 2026** | x-api-key authentication **permanently disabled** |
-| **After March 31, 2026** | All scripts using API keys will fail |
+| **Now** | Use managed identity-first authentication for Azure Automation runbooks |
+| **March 31, 2026** | x-api-key authentication permanently disabled |
+| **After March 31, 2026** | Runbooks that still depend on API keys fail until migrated |
 
 ### Migration Steps
 
-1. **Create Service Principal**
-   ```bash
-   az ad sp create-for-rbac --name "DenyReportService" --skip-assignment
-   ```
-   Save the output (appId, password, tenant).
-
-2. **Assign Monitoring Reader Role**
-   ```bash
-   az role assignment create \
-       --assignee "{appId}" \
-       --role "Monitoring Reader" \
-       --scope "/subscriptions/{sub}/resourceGroups/{rg}/providers/microsoft.insights/components/{appinsights-name}"
-   ```
-
-3. **Store Credentials in Key Vault**
-   ```bash
-   az keyvault secret set --vault-name "kv-deny-report" --name "ServicePrincipalId" --value "{appId}"
-   az keyvault secret set --vault-name "kv-deny-report" --name "ServicePrincipalSecret" --value "{password}"
-   az keyvault secret set --vault-name "kv-deny-report" --name "TenantId" --value "{tenant}"
-   ```
-
-4. **Update Scripts**
-
-   Replace API key authentication with Entra ID:
-   ```powershell
-   # Old (deprecated)
-   $headers = @{ "x-api-key" = $ApiKey }
-
-   # New (Entra ID)
-   Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
-   $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
-   # Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
-   $tokenString = if ($tokenResult.Token -is [System.Security.SecureString]) {
-       $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
-   } else {
-       $tokenResult.Token
-   }
-   $headers = @{ "Authorization" = "Bearer $tokenString" }
-   ```
-
-5. **Test Before Deadline**
-
-   Run test queries with new authentication to verify access before March 31, 2026.
+1. **Enable managed identity** on the Azure Automation account, or configure certificate-based app-only auth for non-Azure schedulers.
+2. **Assign Monitoring Reader** on the Application Insights component.
+3. **Assign Exchange Online unattended auth** permissions and role assignments for Purview Audit extraction.
+4. **Update runbook invocation** to pass `-ExchangeManagedIdentity -ExchangeOrganization "example.onmicrosoft.com"` or the certificate-based parameters.
+5. **Remove API key and client secret dependencies** from Key Vault. Retain only non-secret configuration such as the Application Insights App ID.
+6. **Test before scheduling** with a one-day window and `-SkipDefenderEvents` until Microsoft Graph authentication is configured.
 
 ### Reference
 

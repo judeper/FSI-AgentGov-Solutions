@@ -471,7 +471,7 @@
     "deny-event-correlation-report": {
       "id": "deny-event-correlation-report",
       "name": "Deny Event Correlation Report",
-      "version": "2.0.2",
+      "version": "2.0.3",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",

@@ -69,7 +69,7 @@ deny-event-correlation-report/
 - Power BI Pro or Premium
 - Azure subscription (for storage and automation)
 - Required permissions:
-  - Purview Audit Reader
+  - Purview Audit Reader / View-Only Audit Logs
   - Monitoring Reader (on Application Insights resource)
   - ThreatHunting.Read.All (optional, for Defender CloudAppEvents)
   - Storage Blob Data Contributor (optional, for blob upload)
@@ -85,7 +85,7 @@ Install-Module Az.KeyVault -Force
 # Optional — only required when extracting Defender CloudAppEvents:
 # Install-Module Microsoft.Graph.Security -Force
 
-# Connect to Exchange Online
+# Development: interactive Exchange Online connection
 Connect-ExchangeOnline
 
 # Run individual extractions
@@ -97,6 +97,9 @@ Connect-ExchangeOnline
 # Use -SkipDefenderEvents the first time you run end-to-end if Graph auth
 # isn't configured yet:
 .\scripts\Invoke-DailyDenyReport.ps1 -OutputDirectory ".\reports" -SkipDefenderEvents
+
+# Azure Automation: use managed identity for Exchange Online
+# .\scripts\Invoke-DailyDenyReport.ps1 -ExchangeManagedIdentity -ExchangeOrganization "example.onmicrosoft.com" -SkipDefenderEvents
 ```
 
 ### 3. Application Insights RAI Telemetry
@@ -104,11 +107,11 @@ Connect-ExchangeOnline
 For RAI telemetry, you need:
 
 1. Application Insights resource in Azure
-2. Entra ID authentication with Monitoring Reader role on the Application Insights resource
+2. Managed identity or Entra ID authentication with Monitoring Reader role on the Application Insights resource
 3. Copilot Studio agents configured with App Insights connection string
 
 ```powershell
-# Authenticate with Entra ID
+# Authenticate with managed identity in Azure Automation, or Entra ID interactively on a workstation
 Connect-AzAccount
 
 # Export RAI telemetry
@@ -125,9 +128,9 @@ For daily automated extraction, deploy to Azure Automation:
 2. Import required modules (ExchangeOnlineManagement, Az.*)
 3. Create Runbook with `Invoke-DailyDenyReport.ps1`
 4. Configure schedule (daily at 6 AM recommended)
-5. Configure Azure Key Vault for credentials
+5. Enable managed identity; use Azure Key Vault only for non-secret configuration or certificate metadata
 
-See [docs/architecture.md](docs/architecture.md) for detailed deployment instructions.
+See [docs/architecture.md](docs/architecture.md) for detailed deployment instructions, including managed identity and certificate-based Exchange Online options.
 
 > **Note:** No Power BI template (`.pbit`) is included. Build a report in Power BI Desktop by connecting to your CSV exports or Log Analytics workspace using the queries in `kql-queries/correlation-analysis.kql`.
 
@@ -160,4 +163,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*Deny Event Correlation Report v2.0.2 - 2026*
+*Deny Event Correlation Report v2.0.3 - 2026*
