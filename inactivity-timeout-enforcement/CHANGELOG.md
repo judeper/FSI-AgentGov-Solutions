@@ -2,6 +2,16 @@
 
 All notable changes to Inactivity Timeout Enforcement are documented here.
 
+## [Unreleased]
+
+### Changed
+- Refreshed Microsoft Learn 2026-Q2 platform guidance for Power Platform inactivity/session timeout boundaries, Microsoft 365 idle timeout, Conditional Access session controls, and Continuous Access Evaluation.
+- Updated authentication guidance and setup scripts to prefer managed identity, workload identity federation, certificate, or externally acquired tokens before legacy client-secret development fallback.
+
+### Fixed
+- Corrected stale v1.0.5 version references in solution documentation and evidence metadata.
+- Corrected flow documentation to use the deployed `fsi_acv_zone` global option set and Dataverse option-set integer values in validation and remediation examples.
+
 ## [1.1.0] — 2026-04-17
 
 ### Fixed

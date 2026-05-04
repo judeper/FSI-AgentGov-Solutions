@@ -1,6 +1,6 @@
 # ITE Solution — Delivery Checklist
 
-> **Version:** v1.0.5 | **Solution:** Inactivity Timeout Enforcement (ITE)
+> **Version:** v1.1.1 | **Solution:** Inactivity Timeout Enforcement (ITE)
 
 ## Pre-Deployment Verification
 
@@ -41,14 +41,14 @@
 
 - [ ] Populate `fsi_environmentpolicies` table with zone-based timeout requirements
 - [ ] Recommended zone policy:
-  - Zone 1 (Personal): optional, ≤120 min if enabled
-  - Zone 2 (Team): required, ≤120 min
-  - Zone 3 (Enterprise): required, ≤60 min
+  - Zone 1 / Personal (`100000001`): optional, ≤120 min if enabled
+  - Zone 2 / Team (`100000002`): required, ≤120 min
+  - Zone 3 / Enterprise (`100000003`): required, ≤60 min
 
 ### 7. Permissions
 
-- [ ] Managed Service Identity configured with Power Platform Admin role
-- [ ] MSI service principal added in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
+- [ ] Managed identity configured with Power Platform Admin role
+- [ ] Managed identity service principal added in Microsoft 365 admin center → Roles → Power Platform Admin → Members
 - [ ] Dataverse System Administrator role assigned
 
 ### 8. PowerShell Governance Scripts
@@ -74,5 +74,5 @@
 
 ---
 
-**Package Version:** v1.0.5
+**Package Version:** v1.1.1
 **Solution:** Inactivity Timeout Enforcement (ITE)

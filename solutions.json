@@ -685,7 +685,7 @@
     "inactivity-timeout-enforcement": {
       "id": "inactivity-timeout-enforcement",
       "name": "Inactivity Timeout Enforcement",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",

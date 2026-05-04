@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.0.5
+**Version:** 1.1.1
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -119,9 +119,9 @@ The flow implements three-state compliance classification:
 
 | Compliance Status | Code | Detection Criteria | Result |
 |-------------------|------|-------------------|--------|
-| **Compliant** | 0 | Timeout enabled AND duration ≤ required maximum for zone | Pass |
-| **Non-Compliant** | 1 | Timeout disabled OR duration > required maximum for zone | Fail |
-| **Unknown** | 2 | Missing policy for environment OR BAP API error OR timeout enabled but duration null (indeterminate) | Unknown |
+| **Compliant** | 100000000 | Timeout enabled AND duration ≤ required maximum for zone | Pass |
+| **Non-Compliant** | 100000001 | Timeout disabled OR duration > required maximum for zone | Fail |
+| **Unknown** | 100000002 | Missing policy for environment OR BAP API error OR timeout enabled but duration null (indeterminate) | Unknown |
 
 **Zone-Based Policy Enforcement:**
 
@@ -149,7 +149,7 @@ Environments are classified into governance zones with tailored maximum timeout 
 
 3. **Environment Enumeration:**
    - Call BAP Admin API: `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments`
-   - Use Managed Service Identity (MSI) authentication
+   - Use managed identity authentication
    - Retrieve all environments in tenant
 
 4. **Per-Environment Evaluation (Parallel):**
@@ -190,6 +190,23 @@ Environments are classified into governance zones with tailored maximum timeout 
 6. **Error Handling:**
    - Outer scope catch for unexpected flow failures
    - Send CRITICAL email notification with flow run ID for investigation
+
+
+### Microsoft Learn 2026-Q2 Platform Alignment
+
+Microsoft Learn distinguishes several session-control layers that are complementary but not interchangeable:
+
+| Control layer | Current Microsoft guidance | ITE treatment |
+|---------------|----------------------------|---------------|
+| **Power Platform session timeout** | Server-side maximum session length for customer engagement apps. Defaults include a 1,440-minute maximum session length and a 60-minute minimum session length. | Adjacent absolute timeout. Use PPAC **Privacy + Security** settings for maximum session length; this solution focuses on inactivity timeout evidence. |
+| **Power Platform inactivity timeout** | Client-side sign-out decision after inactivity. Default behavior doesn't enforce inactivity timeout, and Microsoft Learn lists exclusions such as Power Apps canvas apps. | Primary scanned setting through BAP governance configuration (`inactivityTimeoutEnabled` / `inactivityTimeoutDuration`). |
+| **Microsoft 365 idle session timeout** | Tenant-wide idle timeout for supported Microsoft 365 web apps; it doesn't affect Microsoft 365 desktop or mobile apps and can be paired with app-enforced restrictions for unmanaged devices. | Complementary evidence source; not scanned by this solution. |
+| **Conditional Access sign-in frequency** | Absolute reauthentication frequency, with `frequencyInterval` values such as `timeBased` and `everyTime` in Microsoft Graph. It isn't an idle timer. | Complementary Conditional Access posture; not a substitute for Power Platform inactivity timeout. |
+| **Conditional Access session controls** | Microsoft Graph v1.0 exposes `signInFrequency`, `persistentBrowser`, `cloudAppSecurity`, `applicationEnforcedRestrictions`, and `disableResilienceDefaults` under `/identity/conditionalAccess/policies`. | Future companion scanner candidate; no current ITE writes or reads from Conditional Access policy objects. |
+| **Continuous Access Evaluation (CAE)** | Reacts to critical events and policy changes to shorten enforcement latency for supported workloads; it doesn't define inactivity duration. | Documented as complementary only. |
+| **Copilot Studio agent conversation lifecycle** | Agent/channel inactivity handling uses Copilot Studio topics and channel-specific lifecycle behavior, such as the user-inactive trigger for Teams deployments. | Out of scope for the environment-level scanner; document agent reset topics separately where required. |
+
+If you extend ITE to Conditional Access evidence, use Microsoft Graph v1.0 `GET /identity/conditionalAccess/policies` and Microsoft.Graph.Identity.SignIns cmdlets such as `Get-MgIdentityConditionalAccessPolicy`. Avoid the non-current `/policies/conditionalAccess` path.
 
 **Configuration Parameters:**
 
@@ -239,13 +256,13 @@ Legal-Dev           |      | Unknown        | False    | 0       | 0       | No 
 
 Master registry of environment-to-zone mappings with required timeout policies.
 
-> **Implementation status (v1.1.0):** The Power Automate flow described in this document reads `fsi_environmentpolicies` to resolve the per-environment policy. The PowerShell scanner shipped in `scripts/governance/Get-ExpectedTimeoutPolicy.ps1` does **not** read Dataverse — it derives the zone from environment-name heuristics (`Default-` → Personal, `*-Sandbox*` → Team, all others → Enterprise) and applies the same hardcoded zone limits (Personal=120, Team=120, Enterprise=60). When zone classification needs to be data-driven, populate `fsi_environmentpolicies` and use the flow rather than the standalone scanner. A future release will reconcile the two paths.
+> **Implementation status (v1.1.1):** The Power Automate flow described in this document reads `fsi_environmentpolicies` to resolve the per-environment policy. The PowerShell scanner shipped in `scripts/governance/Get-ExpectedTimeoutPolicy.ps1` does **not** read Dataverse — it derives the zone from environment-name heuristics (`Default-` → Personal, `*-Sandbox*` → Team, all others → Enterprise) and applies the same hardcoded zone limits (Personal=120, Team=120, Enterprise=60). When zone classification needs to be data-driven, populate `fsi_environmentpolicies` and use the flow rather than the standalone scanner. A future release will reconcile the two paths.
 
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_environmentid` | String(100) | Canonical Power Platform environment name (primary key for policy lookup) |
 | `fsi_environmentdisplayname` | String(200) | Human-readable environment display name |
-| `fsi_zone` | Choice (`fsi_ITE_zone` global option set) | Governance zone: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise. Use the integer values directly in OData filters (`$filter=fsi_zone eq 100000002`). |
+| `fsi_zone` | Choice (`fsi_acv_zone` global option set) | Governance zone: `100000001`=Zone 1 / Personal, `100000002`=Zone 2 / Team, `100000003`=Zone 3 / Enterprise. Use the integer values directly in OData filters (`$filter=fsi_zone eq 100000002`). |
 | `fsi_requiredmaxduration` | Number | Required maximum inactivity timeout duration in minutes (e.g., 60, 90, 120) |
 
 **Example Records:**
@@ -254,9 +271,9 @@ Master registry of environment-to-zone mappings with required timeout policies.
 │ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
 │                                  │ name                   │ zone │ duration            │
 ├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
-│ Default-aaaaaaaa-bbbb-cccc-dddd  │ Finance-Prod           │ 3    │ 60                  │
-│ Development-bbbbbbbb-cccc-dddd   │ Legal-Dev              │ 1    │ 120                 │
-│ Sandbox-cccccccc-dddd-eeee       │ HR-Team-Sandbox        │ 2    │ 120                 │
+│ Default-aaaaaaaa-bbbb-cccc-dddd  │ Finance-Prod           │ 100000003 │ 60                  │
+│ Development-bbbbbbbb-cccc-dddd   │ Legal-Dev              │ 100000001 │ 120                 │
+│ Sandbox-cccccccc-dddd-eeee       │ HR-Team-Sandbox        │ 100000002 │ 120                 │
 └──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
 ```
 
@@ -270,7 +287,7 @@ Immutable audit trail of inactivity timeout compliance evaluations.
 | `fsi_compliancename` | String(200) **(required)** | Auto-generated by the runbook as `ITE-{EnvironmentName}-{RunId}` (truncated to 200 chars). Required by the schema. |
 | `fsi_environmentid` | String(100) | Canonical environment name |
 | `fsi_environmentname` | String(200) | Environment display name |
-| `fsi_zone` | Choice (`fsi_ITE_zone`) | Governance zone from policy: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise |
+| `fsi_zone` | Choice (`fsi_acv_zone`) | Governance zone from policy: `100000001`=Zone 1 / Personal, `100000002`=Zone 2 / Team, `100000003`=Zone 3 / Enterprise |
 | `fsi_inactivitytimeoutenabled` | Boolean | Whether inactivity timeout is enabled |
 | `fsi_timeoutduration` | String(50) | Raw ISO 8601 duration returned by the BAP API (e.g., `PT2H`, `PT60M`). Empty when timeout is disabled. |
 | `fsi_timeoutdurationminutes` | Whole Number | Parsed duration in minutes (`-1` when not parseable, `0` when disabled). Use this for numeric comparisons in flows. |
@@ -338,24 +355,24 @@ The solution requires the following connection references:
 | `fsi_cr_dataverse_inactivitytimeout` | Dataverse | Read/write compliance records and policies |
 | `fsi_cr_office365_inactivitytimeout` | Office 365 Outlook | Send email alerts for compliance issues |
 
-**Managed Service Identity (MSI):**
+**Managed identity:**
 
-The flow uses Managed Service Identity for BAP Admin API authentication. Ensure:
-- MSI is enabled for the Power Platform environment
-- MSI service principal is added as a **member** of the Power Platform Admin role in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
+The flow uses managed identity for BAP Admin API authentication. Ensure:
+- Managed identity is enabled for the Power Platform environment
+- managed identity service principal is added as a **member** of the Power Platform Admin role in Microsoft 365 Admin Center → Roles → Power Platform Admin → Members
 
 #### Configuration Steps
 
 > **Important:** Complete Step 1 (MSI setup) before importing the flow. The flow uses MSI for BAP Admin API authentication — skipping this step causes 401 Unauthorized errors on first run.
 
-**Step 1: Configure Managed Service Identity**
+**Step 1: Configure managed identity**
 
-1. Enable MSI for the Power Platform environment:
+1. Enable managed identity for the Power Platform environment:
    - Navigate to Azure Portal → Managed Identities → Create
    - Assign identity to Power Platform environment
 2. Grant Power Platform Admin role to MSI:
    - Navigate to **Microsoft 365 Admin Center → Roles → Power Platform Admin → Members**
-   - Add the MSI service principal as a member
+   - Add the managed identity service principal as a member
 3. Verify the role assignment is active before proceeding to Step 2
 
 **Step 2: Create Dataverse Tables**
@@ -367,7 +384,7 @@ Execute the following in Dataverse (via Power Apps maker portal → Tables → N
    - Plural Name: Environment Policies
    - Primary Column: `fsi_environmentid` (Text, 100 characters)
    - Add columns per Data Model section
-   - Create choice field `fsi_zone` from global option set `fsi_ITE_zone`: `100000001`=Personal, `100000002`=Team, `100000003`=Enterprise
+   - Create choice field `fsi_zone` from global option set `fsi_acv_zone`: `100000001`=Zone 1 / Personal, `100000002`=Zone 2 / Team, `100000003`=Zone 3 / Enterprise
 
 2. **Create `fsi_inactivitytimeoutcompliances` table:**
    - Display Name: Inactivity Timeout Compliances
@@ -419,10 +436,10 @@ Example Policy Records:
 │ fsi_environmentid                │ fsi_environmentdisplay │ fsi_ │ fsi_requiredmax     │
 │ (Power Platform Env Name)        │ name                   │ zone │ duration (minutes)  │
 ├──────────────────────────────────┼────────────────────────┼──────┼─────────────────────┤
-│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 3    │ 60                  │
-│ Sandbox-87654321-bcde-2345-bcde  │ Finance UAT            │ 2    │ 120                 │
-│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 1    │ 120                 │
-│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 3    │ 60                  │
+│ Default-12345678-abcd-1234-abcd  │ Finance Production     │ 100000003 │ 60                  │
+│ Sandbox-87654321-bcde-2345-bcde  │ Finance UAT            │ 100000002 │ 120                 │
+│ Development-abcdefgh-cdef-3456   │ Developer - John Doe   │ 100000001 │ 120                 │
+│ Default-aaaaaaaa-bbbb-cccc-dddd  │ HR Production          │ 100000003 │ 60                  │
 └──────────────────────────────────┴────────────────────────┴──────┴─────────────────────┘
 ```
 
@@ -449,7 +466,7 @@ Example Policy Records:
 1. Create test policy in `fsi_environmentpolicies` table:
    - Environment ID: `Test-Environment-12345`
    - Display Name: `Test Environment`
-   - Zone: `2` (Team)
+   - Zone: `100000002` (Zone 2 / Team)
    - Required Max Duration: `120` minutes
 2. Verify flow resolves policy during next run
 3. Check compliance record has correct zone and required max values
@@ -459,14 +476,14 @@ Example Policy Records:
 1. Identify test environment with timeout > 120 minutes (or disabled)
 2. Add policy for test environment to `fsi_environmentpolicies` table (required max: 120)
 3. Run flow manually
-4. Verify compliance record status = **Non-Compliant** (1)
+4. Verify compliance record status = **Non-Compliant** (`100000001`)
 5. Verify email notification sent with environment details
 
 **Test 4: Error Handling (Missing Policy)**
 
 1. Remove policy for a known environment from `fsi_environmentpolicies` table
 2. Run flow manually
-3. Verify compliance record status = **Unknown** (2)
+3. Verify compliance record status = **Unknown** (`100000002`)
 4. Check `fsi_inactivitytimeouterrorlogs` table for `MissingPolicy` error entry
 5. Verify email notification includes Unknown environment in issues table
 
@@ -508,7 +525,7 @@ For **Unknown** environments (missing policy):
 2. Add policy record to `fsi_environmentpolicies` table:
    - Environment ID: Canonical environment name (from PPAC)
    - Display Name: Environment display name
-   - Zone: 1/2/3 (Personal/Team/Enterprise)
+   - Zone: `100000001`/`100000002`/`100000003` (Zone 1 / Personal, Zone 2 / Team, Zone 3 / Enterprise)
    - Required Max Duration: 120/120/60 minutes per zone
 3. Verify next scan evaluates environment and removes **Unknown** status
 
@@ -524,11 +541,11 @@ For **Unknown** environments (API error):
 
 **Issue: Flow fails with "Unauthorized" error**
 
-**Cause:** Managed Service Identity lacks Power Platform Admin role
+**Cause:** Managed identity lacks Power Platform Admin role
 
 **Resolution:**
 1. Navigate to Microsoft 365 Admin Center → Roles → Power Platform Admin
-2. Add MSI service principal as member
+2. Add managed identity service principal as member
 3. Wait 15 minutes for role propagation
 4. Re-run flow to verify success
 
@@ -551,7 +568,7 @@ For **Unknown** environments (API error):
 **Resolution:**
 1. Query `fsi_environmentpolicies` table for affected environment
 2. Verify `fsi_environmentid` matches canonical environment name (not display name)
-3. Correct zone classification if incorrect (1=Personal, 2=Team, 3=Enterprise)
+3. Correct zone classification if incorrect (`100000001`=Zone 1 / Personal, `100000002`=Zone 2 / Team, `100000003`=Zone 3 / Enterprise)
 4. Update policy record and re-run flow to verify correct zone
 
 **Issue: ISO 8601 duration parsing error**
@@ -620,7 +637,7 @@ Whichever approach is chosen, ensure deleted records have already been exported 
 
 ## Appendix: Compliance Status Reference
 
-### Compliant (Code: 0)
+### Compliant (Code: 100000000)
 
 **Description:** Environment has inactivity timeout enabled with duration at or below required maximum for its zone.
 
@@ -639,7 +656,7 @@ Status: Compliant
 Notes: Compliant: 55m within 60m maximum
 ```
 
-### Non-Compliant (Code: 1)
+### Non-Compliant (Code: 100000001)
 
 **Description:** Environment has inactivity timeout disabled OR timeout duration exceeds required maximum for its zone.
 
@@ -673,7 +690,7 @@ Notes: Duration 240m exceeds maximum 60m
 - **If disabled:** Enable inactivity timeout in Power Platform Admin Center
 - **If exceeds max:** Reduce timeout duration to required maximum or lower
 
-### Unknown (Code: 2)
+### Unknown (Code: 100000002)
 
 **Description:** Unable to evaluate compliance due to missing policy or BAP API error.
 
@@ -784,7 +801,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 **ITE Support:**
 - Continuous monitoring helps verify inactivity timeout controls remain effective
-- Non-compliant environment detection prevents unauthorized access through unattended workstations
+- Non-compliant environment detection helps reduce unattended-workstation access risk
 - Email alerting enables timely supervisory review and remediation
 
 ### NIST 800-53 AC-11 — Session Lock
@@ -801,8 +818,8 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 **Requirement:** Information systems must automatically terminate user sessions after a defined condition or trigger.
 
 **ITE Support:**
-- Validates inactivity timeout termination is enabled across all environments
-- Supports verification that termination occurs within regulatory timeframes (≤ 120 minutes)
+- Validates inactivity timeout termination is enabled across scoped environments
+- Supports verification that configured termination thresholds align to internal timeframes (≤ 120 minutes)
 - Provides evidence of automated session termination enforcement
 
 ---
@@ -819,7 +836,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.5
+**Solution Version:** 1.1.1
 **Release Date:** April 2026
 **License:** MIT License
 
@@ -830,6 +847,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Coordinate timeout policy updates with user communication (advance notice recommended)
 
 **Version History:**
+- **v1.1.1 (Unreleased):** Microsoft Learn 2026-Q2 platform alignment, managed-identity-first setup guidance, and Dataverse option-set documentation corrections
 - **v1.0.2 (March 2026):** Fix false-compliant classification when timeout enabled but duration null (indeterminate → Unknown); add pagination to all Dataverse ListRecords operations; update Map_Compliance_Status_Value to handle Unknown; document known limitations (API version, Condition_Has_Issues run-after, List_Environments pagination)
 - **v1.0.1 (February 2026):** Fix null `inactivityTimeoutEnabled` false-compliant bug; remove unused ConcurrencyLimit variable; HTML-escape environment names in emails; align Zone 2 timeout to ≤120min; version bump
 - **v1.0.0 (February 2026):** Initial release with zone-based policy enforcement, daily compliance detection, and guarded email alerting

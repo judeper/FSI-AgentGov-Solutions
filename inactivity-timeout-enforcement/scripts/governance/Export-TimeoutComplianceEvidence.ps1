@@ -44,7 +44,13 @@
     Use interactive browser-based authentication instead of service principal.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for service principal authentication.
+    Application/client ID for user-assigned managed identity or legacy client-secret fallback.
+
+.PARAMETER UseManagedIdentity
+    Prefer Azure managed identity for Dataverse token acquisition. This is the recommended automation mode.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to $env:AZURE_CLIENT_ID when present.
 
 .OUTPUTS
     PSCustomObject with properties:
@@ -86,7 +92,7 @@
     Exports all zones with interactive auth for ad-hoc examination preparation.
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302/404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -124,7 +130,13 @@ param(
     [switch]$Interactive,
 
     [Parameter()]
-    [string]$ClientId
+    [string]$ClientId,
+
+    [Parameter()]
+    [switch]$UseManagedIdentity,
+
+    [Parameter()]
+    [string]$ManagedIdentityClientId = $env:AZURE_CLIENT_ID
 )
 
 $ErrorActionPreference = 'Stop'
@@ -146,6 +158,43 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 }
 
 #endregion
+
+
+function ConvertTo-PlainAccessToken {
+    param([Parameter(Mandatory = $true)]$Token)
+
+    if ($Token -is [securestring]) {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Token)
+        try { return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+        finally {
+            if ($bstr -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        }
+    }
+
+    return [string]$Token
+}
+
+function Get-IteManagedIdentityToken {
+    param(
+        [Parameter(Mandatory = $true)] [string]$ResourceUrl,
+        [Parameter()] [string]$TenantId,
+        [Parameter()] [string]$ManagedIdentityClientId
+    )
+
+    if (-not (Get-Command Connect-AzAccount -ErrorAction SilentlyContinue) -or -not (Get-Command Get-AzAccessToken -ErrorAction SilentlyContinue)) {
+        throw "Az.Accounts is required for managed identity authentication. Install Az.Accounts or use -Interactive for workstation runs."
+    }
+
+    $connectParams = @{ Identity = $true; ErrorAction = 'Stop' }
+    if ($ManagedIdentityClientId) { $connectParams.AccountId = $ManagedIdentityClientId }
+    if ($TenantId) { $connectParams.Tenant = $TenantId }
+    Connect-AzAccount @connectParams | Out-Null
+
+    $tokenParams = @{ ResourceUrl = $ResourceUrl; ErrorAction = 'Stop' }
+    if ($TenantId) { $tokenParams.TenantId = $TenantId }
+    $tokenResult = Get-AzAccessToken @tokenParams
+    return ConvertTo-PlainAccessToken -Token $tokenResult.Token
+}
 
 #region Authentication
 
@@ -179,37 +228,52 @@ if ($Interactive) {
     }
 }
 else {
-    # Service principal authentication via environment variables
-    if (-not $ClientId -and -not $env:AZURE_CLIENT_ID) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
-    }
-    $resolvedClientId = if ($ClientId) { $ClientId } else { $env:AZURE_CLIENT_ID }
-    $resolvedTenantId = if ($TenantId) { $TenantId } else { $env:AZURE_TENANT_ID }
+    $useManagedIdentityAuth = $UseManagedIdentity -or (-not $env:AZURE_CLIENT_SECRET)
 
-    if (-not $env:AZURE_CLIENT_SECRET) {
-        throw "AZURE_CLIENT_SECRET environment variable is required for service principal authentication."
+    if ($useManagedIdentityAuth) {
+        try {
+            $accessToken = Get-IteManagedIdentityToken `
+                -ResourceUrl $($DataverseUrl.TrimEnd('/')) `
+                -TenantId $TenantId `
+                -ManagedIdentityClientId $ManagedIdentityClientId
+        }
+        catch {
+            throw "Managed identity authentication failed: $($_.Exception.Message)"
+        }
     }
+    else {
+        # legacy: dev-only — replace with managed identity in production
+        if (-not $ClientId -and -not $env:AZURE_CLIENT_ID) {
+            throw "ClientId is required for legacy client-secret authentication. Use -Interactive or -UseManagedIdentity where possible."
+        }
+        $resolvedClientId = if ($ClientId) { $ClientId } else { $env:AZURE_CLIENT_ID }
+        $resolvedTenantId = if ($TenantId) { $TenantId } else { $env:AZURE_TENANT_ID }
 
-    $tokenBody = @{
-        grant_type    = 'client_credentials'
-        client_id     = $resolvedClientId
-        client_secret = $env:AZURE_CLIENT_SECRET
-        scope         = $dataverseScope
-    }
+        if (-not $env:AZURE_CLIENT_SECRET) {
+            throw "AZURE_CLIENT_SECRET is a legacy dev-only fallback. Prefer -UseManagedIdentity for automation."
+        }
 
-    try {
-        $tokenResponse = Invoke-RestMethod `
-            -Uri "https://login.microsoftonline.com/$resolvedTenantId/oauth2/v2.0/token" `
-            -Method Post `
-            -ContentType 'application/x-www-form-urlencoded' `
-            -Body $tokenBody `
-            -ErrorAction Stop
+        $tokenBody = @{
+            grant_type    = 'client_credentials'
+            client_id     = $resolvedClientId
+            client_secret = $env:AZURE_CLIENT_SECRET
+            scope         = $dataverseScope
+        }
 
-        $accessToken = $tokenResponse.access_token
-    }
-    catch {
-        Write-Error "Service principal authentication failed: $($_.Exception.Message)"
-        throw
+        try {
+            $tokenResponse = Invoke-RestMethod `
+                -Uri "https://login.microsoftonline.com/$resolvedTenantId/oauth2/v2.0/token" `
+                -Method Post `
+                -ContentType 'application/x-www-form-urlencoded' `
+                -Body $tokenBody `
+                -ErrorAction Stop
+
+            $accessToken = $tokenResponse.access_token
+        }
+        catch {
+            Write-Error "Legacy client-secret authentication failed: $($_.Exception.Message)"
+            throw
+        }
     }
 }
 
@@ -323,7 +387,7 @@ elseif ($totalRecords -eq 0) {
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Inactivity Timeout Enforcement'
-    solutionVersion = '1.0.5'
+    solutionVersion = '1.1.1'
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
     zoneFilter      = $Zone

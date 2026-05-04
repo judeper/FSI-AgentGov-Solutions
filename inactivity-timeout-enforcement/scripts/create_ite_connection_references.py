@@ -111,11 +111,11 @@ Examples:
       --environment-url https://org.crm.dynamics.com \\
       --interactive
 
-  # Service Principal authentication
+  # Managed identity authentication (automation)
   python create_ite_connection_references.py \\
       --tenant-id <tenant-id> \\
       --environment-url https://org.crm.dynamics.com \\
-      --client-id <app-id>
+      --auth-mode managed-identity
 
   # Dry run to preview changes
   python create_ite_connection_references.py \\
@@ -134,7 +134,7 @@ Examples:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ITE_CLIENT_ID"),
-        help="Service Principal application ID (or ITE_CLIENT_ID env var)"
+        help="Application/client ID for user-assigned managed identity, workload identity, certificate, or legacy client-secret auth (or ITE_CLIENT_ID env var)"
     )
     parser.add_argument(
         "--environment-url",
@@ -151,19 +151,47 @@ Examples:
         action="store_true",
         help="Preview changes without creating resources"
     )
+    parser.add_argument(
+        "--auth-mode",
+        choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"],
+        default=os.environ.get("ITE_AUTH_MODE"),
+        help="Authentication mode; prefer managed-identity, workload-identity, or certificate for automation"
+    )
+    parser.add_argument(
+        "--access-token",
+        default=os.environ.get("ITE_ACCESS_TOKEN"),
+        help="Externally acquired Dataverse bearer token; takes precedence over other auth modes"
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("ITE_CERTIFICATE_PATH"),
+        help="PEM/PFX certificate path for certificate authentication"
+    )
+    parser.add_argument(
+        "--certificate-password-env",
+        default="ITE_CERTIFICATE_PASSWORD",
+        help="Environment variable containing the certificate password"
+    )
 
     args = parser.parse_args()
 
-    # Validate required arguments
-    if not args.tenant_id or not args.environment_url:
-        parser.error("--tenant-id and --environment-url are required")
+    # Validate required arguments and choose managed-identity-first auth.
+    if not args.environment_url:
+        parser.error("--environment-url is required")
+    if not args.access_token and not args.tenant_id:
+        parser.error("--tenant-id is required unless --access-token is provided")
 
-    # Handle client secret for Service Principal auth
     client_secret = os.environ.get("ITE_CLIENT_SECRET")
-    if not args.interactive and not client_secret:
-        if args.client_id:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if client_secret else "managed-identity"))
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        parser.error("--client-id is required for the selected auth mode")
+
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    if not args.access_token and auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
 
     try:
         # Initialize client
@@ -172,8 +200,12 @@ Examples:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=certificate_password,
         )
 
         # Create connection references

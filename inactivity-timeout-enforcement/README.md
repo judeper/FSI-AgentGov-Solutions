@@ -1,6 +1,6 @@
 # Inactivity Timeout Enforcement
 
-> **Version:** v1.0.5
+> **Version:** v1.1.1
 > **Status:** Completed
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
@@ -63,9 +63,16 @@ inactivity-timeout-enforcement/
 3. Activate cloud flows
 4. Verify deployment using the [Delivery Checklist](docs/delivery-checklist.md) and the control implementation playbooks for [Control 2.22](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) in FSI-AgentGov
 
+## Microsoft Learn 2026-Q2 scope notes
+
+- This solution monitors Power Platform environment **Privacy + Security** inactivity timeout settings surfaced through the Business Application Platform (BAP) admin API and Dataverse evidence tables.
+- Power Platform **session timeout** is a server-side maximum session length; **inactivity timeout** is a client-side sign-out decision after inactivity. Microsoft Learn notes that Power Apps canvas apps are excluded from the customer engagement app inactivity timeout setting.
+- Microsoft Entra Conditional Access sign-in frequency, persistent browser, app-enforced restrictions, Defender for Cloud Apps session controls, and Continuous Access Evaluation (CAE) are complementary identity/session controls. They are not substitutes for the Power Platform environment inactivity timeout setting scanned here.
+- Copilot Studio agent inactivity handling should be implemented with agent/topic lifecycle patterns such as the Teams channel inactivity trigger; those agent conversation resets are outside this environment-level scanner.
+
 ## Known Limitations
 
-- **Single-page environment enumeration:** The `List_Environments` action retrieves the first page of results from the BAP Admin API without following `nextLink` pagination. Tenants with environments exceeding the default API page size (~500) should extend the flow with a Do Until loop to accumulate all pages before processing.
+- **Single-page flow environment enumeration:** The documented cloud-flow `List_Environments` action retrieves the first page of results from the BAP Admin API without following `nextLink` pagination. Tenants with environments exceeding the default API page size (~500) should extend the flow with a Do Until loop to accumulate all pages before processing. The standalone PowerShell scanner follows BAP pagination.
 
 ## License
 

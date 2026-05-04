@@ -675,9 +675,13 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--tenant-id", default=os.environ.get("ITE_TENANT_ID"), help="Entra ID tenant ID (or set ITE_TENANT_ID env var)")
-    parser.add_argument("--client-id", default=os.environ.get("ITE_CLIENT_ID"), help="Application (client) ID (or set ITE_CLIENT_ID env var)")
+    parser.add_argument("--client-id", default=os.environ.get("ITE_CLIENT_ID"), help="Application/client ID for user-assigned managed identity, workload identity, certificate, or legacy client-secret auth (or set ITE_CLIENT_ID env var)")
     parser.add_argument("--environment-url", default=os.environ.get("ITE_ENVIRONMENT_URL"), help="Dataverse environment URL (or set ITE_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true", help="Use interactive browser authentication")
+    parser.add_argument("--auth-mode", choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"], default=os.environ.get("ITE_AUTH_MODE"), help="Authentication mode; prefer managed-identity, workload-identity, or certificate for automation")
+    parser.add_argument("--access-token", default=os.environ.get("ITE_ACCESS_TOKEN"), help="Externally acquired Dataverse bearer token; takes precedence over other auth modes")
+    parser.add_argument("--certificate-path", default=os.environ.get("ITE_CERTIFICATE_PATH"), help="PEM/PFX certificate path for certificate authentication")
+    parser.add_argument("--certificate-password-env", default="ITE_CERTIFICATE_PASSWORD", help="Environment variable containing the certificate password")
     parser.add_argument("--dry-run", action="store_true", help="Preview schema operations without API calls")
     parser.add_argument("--output-docs", action="store_true", help="Generate docs/dataverse-schema.md and exit (no credentials required)")
     args = parser.parse_args()
@@ -695,16 +699,22 @@ def main() -> None:
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
-    if not args.tenant_id or not args.environment_url:
-        parser.error("Missing required arguments. Provide --tenant-id and --environment-url (or set ITE_TENANT_ID and ITE_ENVIRONMENT_URL env vars)")
-    if not args.client_id and not args.interactive:
-        parser.error("--client-id is required (or set ITE_CLIENT_ID env var) unless --interactive is specified")
+    if not args.environment_url:
+        parser.error("Missing required argument. Provide --environment-url (or set ITE_ENVIRONMENT_URL env var)")
+    if not args.access_token and not args.tenant_id:
+        parser.error("--tenant-id is required unless --access-token is provided (or set ITE_TENANT_ID)")
 
     client_secret = os.environ.get("ITE_CLIENT_SECRET")
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if client_secret else "managed-identity"))
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        parser.error("--client-id is required for the selected auth mode (or set ITE_CLIENT_ID env var)")
+
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    if not args.access_token and auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
 
     try:
         client = DataverseClient(
@@ -712,8 +722,12 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=certificate_password,
         )
 
         if args.dry_run:

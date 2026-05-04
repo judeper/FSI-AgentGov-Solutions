@@ -25,11 +25,29 @@
     Output format for the compliance report: Table (default), JSON, or Object.
 
 .PARAMETER ExcludeSandbox
-    Exclude sandbox environments from the scan. Default: $true.
+    Exclude sandbox environments from the scan. Default: $false; sandboxes are included unless this switch is specified.
 
 .PARAMETER IncludeCompliant
     Include compliant environments in the detailed output (default: violations only
     in table output).
+
+.PARAMETER TenantId
+    Microsoft Entra ID tenant GUID. Defaults to $env:AZURE_TENANT_ID.
+
+.PARAMETER ClientId
+    Application/client ID for user-assigned managed identity or legacy client-secret fallback. Defaults to $env:AZURE_CLIENT_ID.
+
+.PARAMETER ClientSecret
+    Legacy dev-only client secret. Prefer managed identity for automation.
+
+.PARAMETER UseManagedIdentity
+    Prefer Azure managed identity for token acquisition.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to $env:AZURE_CLIENT_ID when present.
+
+.PARAMETER BapApiBaseUrl
+    Base URL for the Business Application Platform Admin API.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL. Required when -PersistResults is specified.
@@ -70,7 +88,7 @@
     Scan with Dataverse persistence, returning structured objects for pipeline use.
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302/404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -87,6 +105,24 @@ param(
 
     [Parameter()]
     [switch]$IncludeCompliant,
+
+    [Parameter()]
+    [string]$TenantId = $env:AZURE_TENANT_ID,
+
+    [Parameter()]
+    [string]$ClientId = $env:AZURE_CLIENT_ID,
+
+    [Parameter()]
+    [SecureString]$ClientSecret,
+
+    [Parameter()]
+    [switch]$UseManagedIdentity,
+
+    [Parameter()]
+    [string]$ManagedIdentityClientId = $env:AZURE_CLIENT_ID,
+
+    [Parameter()]
+    [string]$BapApiBaseUrl = 'https://api.bap.microsoft.com',
 
     [Parameter()]
     [string]$DataverseUrl,
@@ -120,8 +156,17 @@ Write-Host "╚═════════════════════�
 Write-Host ""
 
 $scanParams = @{
-    ExcludeSandbox = $ExcludeSandbox
-    OutputFormat   = 'Object'
+    ExcludeSandbox          = $ExcludeSandbox
+    OutputFormat            = 'Object'
+    TenantId                = $TenantId
+    ClientId                = $ClientId
+    BapApiBaseUrl           = $BapApiBaseUrl
+    UseManagedIdentity      = $UseManagedIdentity
+    ManagedIdentityClientId = $ManagedIdentityClientId
+}
+
+if ($ClientSecret) {
+    $scanParams.ClientSecret = $ClientSecret
 }
 
 if ($PersistResults -and $DataverseUrl) {

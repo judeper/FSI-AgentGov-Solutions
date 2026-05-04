@@ -1,5 +1,4 @@
 #Requires -Version 7.0
-#Requires -Modules Microsoft.PowerApps.Administration.PowerShell
 
 <#
 .SYNOPSIS
@@ -12,7 +11,7 @@
     zone-specific policies.
 
     For each environment the script:
-    1. Authenticates to Power Platform Admin API via service principal credentials
+    1. Authenticates to Power Platform Admin API via managed identity by default, with legacy client-secret fallback for development
     2. Enumerates environments (with optional sandbox exclusion and name filtering)
     3. Classifies each environment into a governance zone via ELM lookup or naming convention
     4. Retrieves privacy/governance settings from BAP Admin API
@@ -32,11 +31,16 @@
     Microsoft Entra ID tenant GUID. Defaults to $env:AZURE_TENANT_ID.
 
 .PARAMETER ClientId
-    Service principal application (client) ID. Defaults to $env:AZURE_CLIENT_ID.
+    Application/client ID for user-assigned managed identity or legacy client-secret fallback. Defaults to $env:AZURE_CLIENT_ID.
 
 .PARAMETER ClientSecret
-    Service principal client secret as SecureString. If not provided, attempts
-    to read from $env:AZURE_CLIENT_SECRET.
+    Legacy dev-only service principal client secret as SecureString. If not provided, the script attempts managed identity authentication before reading $env:AZURE_CLIENT_SECRET.
+
+.PARAMETER UseManagedIdentity
+    Prefer Azure managed identity for BAP and Dataverse token acquisition. This is the recommended automation mode.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. Defaults to $env:AZURE_CLIENT_ID when present.
 
 .PARAMETER BapApiBaseUrl
     Base URL for the Business Application Platform Admin API.
@@ -47,7 +51,7 @@
     When omitted, all accessible environments are scanned.
 
 .PARAMETER ExcludeSandbox
-    Exclude sandbox environments from scan. Default: $true.
+    Exclude sandbox environments from scan. Default: $false; sandboxes are included unless this switch is specified.
 
 .PARAMETER DataverseUrl
     Dataverse organization URL for persisting results. When provided, compliance
@@ -81,7 +85,7 @@
     Full scan with Dataverse persistence, returning PSCustomObjects for pipeline use.
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.1.1
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302, SOX Section 404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -97,6 +101,8 @@ param(
     [Parameter()] [string]$TenantId,
     [Parameter()] [string]$ClientId,
     [Parameter()] [SecureString]$ClientSecret,
+    [Parameter()] [switch]$UseManagedIdentity,
+    [Parameter()] [string]$ManagedIdentityClientId = $env:AZURE_CLIENT_ID,
     [Parameter()] [string]$BapApiBaseUrl = 'https://api.bap.microsoft.com',
     [Parameter()] [string[]]$EnvironmentFilter,
     [Parameter()] [switch]$ExcludeSandbox,
@@ -115,6 +121,12 @@ function Invoke-TimeoutComplianceScan {
 
         [Parameter()]
         [SecureString]$ClientSecret,
+
+        [Parameter()]
+        [switch]$UseManagedIdentity,
+
+        [Parameter()]
+        [string]$ManagedIdentityClientId = $env:AZURE_CLIENT_ID,
 
         [Parameter()]
         [string]$BapApiBaseUrl = 'https://api.bap.microsoft.com',
@@ -139,7 +151,7 @@ function Invoke-TimeoutComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Inactivity Timeout Enforcement v1.1.0"
+    Write-Verbose "Inactivity Timeout Enforcement v1.1.1"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -203,10 +215,66 @@ function Invoke-TimeoutComplianceScan {
 
     #endregion
 
+
+    #region Authentication Helpers
+
+    function ConvertTo-PlainAccessToken {
+        param([Parameter(Mandatory = $true)]$Token)
+
+        if ($Token -is [securestring]) {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Token)
+            try {
+                return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            }
+            finally {
+                if ($bstr -ne [IntPtr]::Zero) {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                }
+            }
+        }
+
+        return [string]$Token
+    }
+
+    function Get-IteManagedIdentityToken {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$ResourceUrl,
+
+            [Parameter()]
+            [string]$TenantId,
+
+            [Parameter()]
+            [string]$ManagedIdentityClientId
+        )
+
+        if (-not (Get-Command Connect-AzAccount -ErrorAction SilentlyContinue) -or -not (Get-Command Get-AzAccessToken -ErrorAction SilentlyContinue)) {
+            throw "Az.Accounts is required for managed identity authentication. Install Az.Accounts or use the legacy client-secret fallback only for development."
+        }
+
+        $connectParams = @{ Identity = $true; ErrorAction = 'Stop' }
+        if ($ManagedIdentityClientId) {
+            $connectParams.AccountId = $ManagedIdentityClientId
+        }
+        if ($TenantId) {
+            $connectParams.Tenant = $TenantId
+        }
+        Connect-AzAccount @connectParams | Out-Null
+
+        $tokenParams = @{ ResourceUrl = $ResourceUrl; ErrorAction = 'Stop' }
+        if ($TenantId) {
+            $tokenParams.TenantId = $TenantId
+        }
+        $tokenResult = Get-AzAccessToken @tokenParams
+        return ConvertTo-PlainAccessToken -Token $tokenResult.Token
+    }
+
+    #endregion
+
     #region Authentication
 
     Write-Host ""
-    Write-Host "Inactivity Timeout Enforcement v1.1.0" -ForegroundColor Cyan
+    Write-Host "Inactivity Timeout Enforcement v1.1.1" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -214,68 +282,110 @@ function Invoke-TimeoutComplianceScan {
     if (-not $TenantId) {
         throw "TenantId is required. Set -TenantId or `$env:AZURE_TENANT_ID."
     }
-    if (-not $ClientId) {
-        throw "ClientId is required. Set -ClientId or `$env:AZURE_CLIENT_ID."
-    }
 
-    # Resolve client secret
-    $plainSecret = $null
-    if ($ClientSecret) {
-        $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR(
-            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
-        )
-    }
-    elseif ($env:AZURE_CLIENT_SECRET) {
-        $plainSecret = $env:AZURE_CLIENT_SECRET
+    $useManagedIdentityAuth = $UseManagedIdentity -or (-not $ClientSecret -and -not $env:AZURE_CLIENT_SECRET)
+
+    if ($useManagedIdentityAuth) {
+        try {
+            $bapToken = Get-IteManagedIdentityToken `
+                -ResourceUrl 'https://service.powerapps.com/' `
+                -TenantId $TenantId `
+                -ManagedIdentityClientId $ManagedIdentityClientId
+            Write-Host "  BAP API managed identity authentication successful." -ForegroundColor Green
+        }
+        catch {
+            throw "BAP API managed identity authentication failed: $($_.Exception.Message)"
+        }
     }
     else {
-        throw "ClientSecret is required. Set -ClientSecret or `$env:AZURE_CLIENT_SECRET."
-    }
+        # legacy: dev-only — replace with managed identity in production
+        if (-not $ClientId) {
+            throw "ClientId is required for legacy client-secret authentication. Prefer -UseManagedIdentity for automation."
+        }
 
-    # Acquire token for BAP Admin API
-    $tokenBody = @{
-        grant_type    = 'client_credentials'
-        client_id     = $ClientId
-        client_secret = $plainSecret
-        scope         = 'https://service.powerapps.com/.default'
-    }
-    try {
-        $tokenResponse = Invoke-RestMethod `
-            -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
-            -Method Post `
-            -ContentType 'application/x-www-form-urlencoded' `
-            -Body $tokenBody `
-            -ErrorAction Stop
+        $plainSecret = $null
+        if ($ClientSecret) {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+            try {
+                $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            }
+            finally {
+                if ($bstr -ne [IntPtr]::Zero) {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                }
+            }
+        }
+        elseif ($env:AZURE_CLIENT_SECRET) {
+            $plainSecret = $env:AZURE_CLIENT_SECRET
+        }
+        else {
+            throw "ClientSecret is a legacy dev-only fallback. Set -UseManagedIdentity or provide `$env:AZURE_CLIENT_SECRET for development only."
+        }
 
-        $bapToken = $tokenResponse.access_token
-        Write-Host "  BAP API authentication successful." -ForegroundColor Green
-    }
-    catch {
-        throw "BAP API authentication failed: $($_.Exception.Message)"
-    }
-
-    # If DataverseUrl provided, acquire a Dataverse token
-    $dataverseToken = $null
-    if ($DataverseUrl) {
-        $dvTokenBody = @{
+        $tokenBody = @{
             grant_type    = 'client_credentials'
             client_id     = $ClientId
             client_secret = $plainSecret
-            scope         = "$($DataverseUrl.TrimEnd('/'))/.default"
+            scope         = 'https://service.powerapps.com/.default'
         }
         try {
-            $dvTokenResponse = Invoke-RestMethod `
+            $tokenResponse = Invoke-RestMethod `
                 -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
                 -Method Post `
                 -ContentType 'application/x-www-form-urlencoded' `
-                -Body $dvTokenBody `
+                -Body $tokenBody `
                 -ErrorAction Stop
-            $dataverseToken = $dvTokenResponse.access_token
-            Write-Host "  Dataverse authentication successful." -ForegroundColor Green
+
+            $bapToken = $tokenResponse.access_token
+            Write-Host "  BAP API legacy client-secret authentication successful." -ForegroundColor Yellow
         }
         catch {
-            Write-Warning "Dataverse authentication failed. Results will not be persisted: $($_.Exception.Message)"
-            $DataverseUrl = $null
+            throw "BAP API legacy client-secret authentication failed: $($_.Exception.Message)"
+        }
+    }
+
+    $bapHeaders = @{
+        'Authorization' = "Bearer $bapToken"
+        'Accept'        = 'application/json'
+    }
+
+    $dataverseToken = $null
+    if ($DataverseUrl) {
+        if ($useManagedIdentityAuth) {
+            try {
+                $dataverseToken = Get-IteManagedIdentityToken `
+                    -ResourceUrl $($DataverseUrl.TrimEnd('/')) `
+                    -TenantId $TenantId `
+                    -ManagedIdentityClientId $ManagedIdentityClientId
+                Write-Host "  Dataverse managed identity authentication successful." -ForegroundColor Green
+            }
+            catch {
+                Write-Warning "Dataverse managed identity authentication failed. Results will not be persisted: $($_.Exception.Message)"
+                $DataverseUrl = $null
+            }
+        }
+        else {
+            # legacy: dev-only — replace with managed identity in production
+            $dvTokenBody = @{
+                grant_type    = 'client_credentials'
+                client_id     = $ClientId
+                client_secret = $plainSecret
+                scope         = "$($DataverseUrl.TrimEnd('/'))/.default"
+            }
+            try {
+                $dvTokenResponse = Invoke-RestMethod `
+                    -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+                    -Method Post `
+                    -ContentType 'application/x-www-form-urlencoded' `
+                    -Body $dvTokenBody `
+                    -ErrorAction Stop
+                $dataverseToken = $dvTokenResponse.access_token
+                Write-Host "  Dataverse legacy client-secret authentication successful." -ForegroundColor Yellow
+            }
+            catch {
+                Write-Warning "Dataverse legacy client-secret authentication failed. Results will not be persisted: $($_.Exception.Message)"
+                $DataverseUrl = $null
+            }
         }
     }
 
@@ -286,10 +396,34 @@ function Invoke-TimeoutComplianceScan {
     Write-Host "[2/5] Enumerating Power Platform environments..." -ForegroundColor Cyan
 
     try {
-        $allEnvironments = Get-AdminPowerAppEnvironment -ErrorAction Stop
+        $allEnvironments = [System.Collections.Generic.List[PSCustomObject]]::new()
+        $nextUrl = "$($BapApiBaseUrl.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2016-11-01"
+
+        while ($nextUrl) {
+            $envResponse = Invoke-RestMethod `
+                -Uri $nextUrl `
+                -Headers $bapHeaders `
+                -Method Get `
+                -ErrorAction Stop
+
+            foreach ($item in @($envResponse.value)) {
+                $props = $item.properties
+                $envId = if ($item.name) { $item.name } elseif ($item.environmentName) { $item.environmentName } elseif ($props.environmentName) { $props.environmentName } else { $item.id }
+                $displayName = if ($props.displayName) { $props.displayName } elseif ($item.displayName) { $item.displayName } else { $envId }
+                $environmentType = if ($props.environmentSku) { $props.environmentSku } elseif ($props.environmentType) { $props.environmentType } elseif ($item.environmentType) { $item.environmentType } else { '' }
+
+                [void]$allEnvironments.Add([PSCustomObject]@{
+                    EnvironmentName = $envId
+                    DisplayName     = $displayName
+                    EnvironmentType = $environmentType
+                })
+            }
+
+            $nextUrl = if ($envResponse.'@odata.nextLink') { $envResponse.'@odata.nextLink' } elseif ($envResponse.nextLink) { $envResponse.nextLink } else { $null }
+        }
     }
     catch {
-        throw "Failed to enumerate environments. Verify Microsoft.PowerApps.Administration.PowerShell is installed and authenticated: $($_.Exception.Message)"
+        throw "Failed to enumerate environments from BAP Admin API. Verify managed identity or legacy credential has Power Platform Admin permissions: $($_.Exception.Message)"
     }
 
     $environments = $allEnvironments | Where-Object {
@@ -301,7 +435,7 @@ function Invoke-TimeoutComplianceScan {
                              ($env.DisplayName -in $EnvironmentFilter)
             if (-not $matchesFilter) { $include = $false }
         }
-        if ($ExcludeSandbox -and $env.EnvironmentType -eq 'Sandbox') {
+        if ($ExcludeSandbox -and $env.EnvironmentType -match 'Sandbox') {
             $include = $false
         }
 
@@ -349,12 +483,8 @@ function Invoke-TimeoutComplianceScan {
 
     Write-Host "[3/5] Scanning inactivity timeout configurations..." -ForegroundColor Cyan
 
-    $results     = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $errorLogs   = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $bapHeaders  = @{
-        'Authorization' = "Bearer $bapToken"
-        'Accept'        = 'application/json'
-    }
+    $results   = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $errorLogs = [System.Collections.Generic.List[PSCustomObject]]::new()
 
     foreach ($environment in $environments) {
         $envId   = $environment.EnvironmentName
@@ -653,10 +783,10 @@ function Invoke-TimeoutComplianceScan {
 }
 
 # When invoked directly (not dot-sourced), forward the script-level args to
-# the function so admins can run `.\Invoke-TimeoutComplianceScan.ps1 -DataverseUrl ...`.
+# the function so admins can run `.\Invoke-TimeoutComplianceScan.ps1` with
+# environment-based managed identity defaults or explicit parameters.
 # Dot-sourcing (e.g., from Test-TimeoutCompliance.ps1) bypasses this block
-# because $PSBoundParameters is empty and the function is registered for
-# explicit invocation.
-if ($MyInvocation.InvocationName -ne '.' -and $PSBoundParameters.Count -gt 0) {
+# and only registers the function for explicit invocation.
+if ($MyInvocation.InvocationName -ne '.') {
     Invoke-TimeoutComplianceScan @PSBoundParameters
 }
