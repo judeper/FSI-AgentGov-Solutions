@@ -1,6 +1,6 @@
 #Requires -Version 7.1
-#Requires -Modules @{ ModuleName = "MSAL.PS"; ModuleVersion = "4.37.0" }
 #Requires -Modules @{ ModuleName = "Microsoft.Graph.Identity.SignIns"; ModuleVersion = "2.0.0" }
+#Requires -Modules @{ ModuleName = "Az.Accounts"; ModuleVersion = "3.0.0" }
 
 <#
 .SYNOPSIS
@@ -13,8 +13,8 @@
     against Dataverse-stored baselines.
 
     Key differences from the interactive scripts:
-    - Uses certificate-based authentication (no interactive prompts)
-    - Connects to Microsoft Graph via Connect-MgGraph -CertificateThumbprint
+    - Uses managed identity first for unattended authentication
+    - Falls back to certificate-based app-only authentication when requested
     - Reads operational parameters from Dataverse environment variables
     - Persists validation history and violations to Dataverse via CAAClient
     - Outputs JSON to pipeline (captured by Get-AzAutomationJobOutput)
@@ -28,11 +28,10 @@
     Entra ID tenant GUID.
 
 .PARAMETER ClientId
-    App registration client ID for certificate-based Graph auth.
+    App registration client ID for certificate-based Graph auth, or user-assigned managed identity client ID when -UseManagedIdentity is specified.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for unattended authentication. Certificate must be
-    uploaded to the Azure Automation account.
+    Certificate thumbprint for certificate-based unattended authentication. Certificate must be uploaded to the Azure Automation account. Certificate auth is a fallback when managed identity is unavailable.
 
 .PARAMETER ConfigPath
     Path to the tenant configuration JSON file within the Automation account.
@@ -51,12 +50,11 @@
 .EXAMPLE
     Start-CAAValidationRunbook `
         -TenantId "00000000-0000-0000-0000-000000000000" `
-        -ClientId "12345-app-id" `
-        -CertificateThumbprint "ABCDEF123456" `
+        -UseManagedIdentity `
         -ConfigPath "./config.json" `
         -DataverseUrl "https://governance.crm.dynamics.com"
 
-    Runs full validation using certificate authentication and outputs JSON.
+    Runs full validation using the Azure Automation system-assigned managed identity and outputs JSON.
 
 .EXAMPLE
     Start-CAAValidationRunbook `
@@ -94,29 +92,30 @@
 
     Azure Automation setup:
     1. Import this script as a runbook
-    2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: MSAL.PS, Microsoft.Graph.Identity.SignIns,
-       Microsoft.Graph.Authentication
+    2. Enable a system-assigned managed identity on the Automation Account (or pass -ClientId for a user-assigned identity)
+    3. Install required modules: Microsoft.Graph.Identity.SignIns,
+       Microsoft.Graph.Authentication, Az.Accounts
     4. Grant application permissions: Policy.Read.All, Application.Read.All
     5. Upload tenant config JSON as Automation Account asset
     6. Schedule via Schedules or trigger via webhook
 
-    This runbook connects to Graph with certificate-based auth to avoid the
-    interactive auth limitations of Connect-CAAGraphSession. It dot-sources
-    the private helper functions directly rather than calling the interactive
-    scripts that would attempt delegated auth.
+    This runbook connects to Microsoft Graph and Dataverse with managed identity when available. Certificate-based app-only authentication remains available for tenants that have not enabled Azure managed identities yet.
 #>
 
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'ManagedIdentity')]
 param(
     [Parameter(Mandatory)]
     [string]$TenantId,
 
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory, ParameterSetName = 'Certificate')]
+    [Parameter(ParameterSetName = 'ManagedIdentity')]
     [string]$ClientId,
 
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory, ParameterSetName = 'Certificate')]
     [string]$CertificateThumbprint,
+
+    [Parameter(Mandatory, ParameterSetName = 'ManagedIdentity')]
+    [switch]$UseManagedIdentity,
 
     [Parameter(Mandatory)]
     [string]$ConfigPath,
@@ -134,6 +133,43 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Test-CAAAuthStrengthSatisfiesMfa {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $false)] [object]$AuthenticationStrength)
+
+    if ($null -eq $AuthenticationStrength) { return $false }
+
+    $requirements = $null
+    if ($AuthenticationStrength -is [hashtable]) {
+        $requirements = $AuthenticationStrength['requirementsSatisfied']
+        if (-not $requirements) { $requirements = $AuthenticationStrength['RequirementsSatisfied'] }
+    }
+    else {
+        $requirements = ($AuthenticationStrength.PSObject.Properties['RequirementsSatisfied']).Value
+        if (-not $requirements) { $requirements = ($AuthenticationStrength.PSObject.Properties['requirementsSatisfied']).Value }
+        if (-not $requirements -and $AuthenticationStrength.AdditionalProperties) {
+            $requirements = $AuthenticationStrength.AdditionalProperties['requirementsSatisfied']
+        }
+    }
+
+    if ($requirements -eq 'mfa') { return $true }
+
+    $displayName = $null
+    if ($AuthenticationStrength -is [hashtable]) {
+        $displayName = $AuthenticationStrength['displayName']
+        if (-not $displayName) { $displayName = $AuthenticationStrength['DisplayName'] }
+    }
+    else {
+        $displayName = ($AuthenticationStrength.PSObject.Properties['DisplayName']).Value
+        if (-not $displayName) { $displayName = ($AuthenticationStrength.PSObject.Properties['displayName']).Value }
+        if (-not $displayName -and $AuthenticationStrength.AdditionalProperties) {
+            $displayName = $AuthenticationStrength.AdditionalProperties['displayName']
+        }
+    }
+
+    return ($displayName -match '(?i)mfa|multifactor|phishing-resistant|passwordless')
+}
+
 try {
     $runId = [guid]::NewGuid().ToString()
     $scriptRoot = $PSScriptRoot
@@ -143,29 +179,51 @@ try {
 
     #region Authenticate
 
-    # Acquire Dataverse token via MSAL certificate auth
-    Import-Module MSAL.PS -ErrorAction Stop
+    if ($PSCmdlet.ParameterSetName -eq 'ManagedIdentity') {
+        $azIdentityParams = @{}
+        $graphIdentityParams = @{ Identity = $true; ErrorAction = 'Stop' }
+        if ($ClientId) {
+            $azIdentityParams['AccountId'] = $ClientId
+            $graphIdentityParams['ClientId'] = $ClientId
+            Write-Verbose "Using user-assigned managed identity: $ClientId"
+        }
+        else {
+            Write-Verbose "Using system-assigned managed identity"
+        }
 
-    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
-    Write-Verbose "Certificate found: $($cert.Subject)"
+        Connect-AzAccount -Identity -TenantId $TenantId @azIdentityParams -ErrorAction Stop | Out-Null
+        $tokenResponse = Get-AzAccessToken -ResourceUrl $DataverseUrl -AsSecureString -ErrorAction Stop
+        $dataverseToken = [System.Net.NetworkCredential]::new('', $tokenResponse.Token).Password
+        Write-Verbose "Dataverse token acquired via managed identity"
 
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-    $tokenResult = Get-MsalToken `
-        -ClientId $ClientId `
-        -ClientCertificate $cert `
-        -TenantId $TenantId `
-        -Scopes $dataverseScope `
-        -ErrorAction Stop
-    $dataverseToken = $tokenResult.AccessToken
-    Write-Verbose "Dataverse token acquired"
+        Connect-MgGraph @graphIdentityParams | Out-Null
+        Write-Verbose "Microsoft Graph session established (managed identity)"
+    }
+    else {
+        # Certificate auth remains available for tenants that have not enabled
+        # managed identities yet.
+        Import-Module MSAL.PS -ErrorAction Stop
 
-    # Connect to Microsoft Graph with certificate (app-only, non-interactive)
-    Connect-MgGraph `
-        -TenantId $TenantId `
-        -ClientId $ClientId `
-        -CertificateThumbprint $CertificateThumbprint `
-        -ErrorAction Stop | Out-Null
-    Write-Verbose "Microsoft Graph session established (certificate auth)"
+        $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
+        Write-Verbose "Certificate found: $($cert.Subject)"
+
+        $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+        $tokenResult = Get-MsalToken `
+            -ClientId $ClientId `
+            -ClientCertificate $cert `
+            -TenantId $TenantId `
+            -Scopes $dataverseScope `
+            -ErrorAction Stop
+        $dataverseToken = $tokenResult.AccessToken
+        Write-Verbose "Dataverse token acquired via certificate auth"
+
+        Connect-MgGraph `
+            -TenantId $TenantId `
+            -ClientId $ClientId `
+            -CertificateThumbprint $CertificateThumbprint `
+            -ErrorAction Stop | Out-Null
+        Write-Verbose "Microsoft Graph session established (certificate auth)"
+    }
 
     #endregion
 
@@ -403,16 +461,20 @@ try {
         if ($policy.GrantControls.BuiltInControls -contains "block") { continue }
         $checksPerformed++
 
-        if ($policy.GrantControls.BuiltInControls -contains "mfa") {
+        $authStrength = $policy.GrantControls.AuthenticationStrength
+        $hasMfaStrength = Test-CAAAuthStrengthSatisfiesMfa -AuthenticationStrength $authStrength
+        if (($policy.GrantControls.BuiltInControls -contains "mfa") -or $hasMfaStrength) {
             $checksPassed++
         } else {
             $checksFailed++
             $gaps.Add(@{
-                type           = "NoMFARequirement"
-                policy         = $policy.DisplayName
-                policyId       = $policy.Id
-                zone           = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
-                recommendation = "Add MFA to grant controls"
+                type                   = "NoMFARequirement"
+                policy                 = $policy.DisplayName
+                policyId               = $policy.Id
+                zone                   = if ($policy.DisplayName -match 'Zone(\d)') { "Zone$($Matches[1])" } else { "Common" }
+                grantControls          = $policy.GrantControls.BuiltInControls
+                authenticationStrength = $authStrength
+                recommendation         = "Add MFA or an MFA-satisfying authentication strength to grant controls"
             })
         }
     }
@@ -623,6 +685,7 @@ try {
 
     if ($dataverseAvailable) {
         # Write validation history
+        $validatedBy = if ($ClientId) { "$ClientId (runbook)" } else { "managed-identity (runbook)" }
         try {
             Write-CAAValidationHistory -Record @{
                 RunId          = $runId
@@ -633,7 +696,7 @@ try {
                 DriftCount     = $driftCount
                 ScanScope      = $Scope
                 ComplianceRate = $complianceRate
-                ValidatedBy    = "$ClientId (runbook)"
+                ValidatedBy    = $validatedBy
                 TenantId       = $TenantId
             }
             Write-Verbose "Validation history persisted to Dataverse"

@@ -127,6 +127,16 @@ Get-MgUserMemberOf -UserId $user.Id | Where-Object { $_.Id -eq "<zone-3-group-id
 
 ---
 
+### Authentication strength policy not counted as MFA
+
+**Symptom:** A phishing-resistant or passwordless authentication-strength policy is reported as missing MFA.
+
+**Cause:** Older validation logic only inspected `grantControls.builtInControls` and ignored `grantControls.authenticationStrength`.
+
+**Resolution:** Use v2.0.1 or later. The validation and drift scripts now treat MFA-satisfying authentication strengths as valid MFA requirements and compare authentication-strength drift.
+
+---
+
 ### MFA Prompt Loops
 
 **Symptom:** User repeatedly prompted for MFA, never able to complete sign-in.
@@ -152,6 +162,16 @@ Get-MgIdentityConditionalAccessPolicy | Where-Object {
 - Add user to exclusion temporarily
 - Investigate with sign-in logs
 - Remove from exclusion after fix
+
+---
+
+### Embedded Power Automate connections break after CA changes
+
+**Symptom:** Embedded flows in SharePoint, Teams, Excel, or model-driven apps show token or MFA errors after a CA policy change.
+
+**Cause:** Host apps and Microsoft Flow Service can have inconsistent Conditional Access requirements when policies target individual applications.
+
+**Resolution:** Target **Office 365** or **All cloud apps** where appropriate, or explicitly align requirements for host apps and Microsoft Flow Service (`7df0a125-d3be-4c96-aa54-591f83ff541c`). Ask affected users to sign out and sign back in after policy repair.
 
 ---
 
@@ -249,10 +269,17 @@ Error: Token has expired. Please re-authenticate.
 Disconnect-MgGraph
 Connect-MgGraph -TenantId "<tenant-id>" -Scopes "Policy.ReadWrite.ConditionalAccess"
 
-# Or use client credentials for automation
-$secureSecret = ConvertTo-SecureString "<secret>" -AsPlainText -Force
-$credential = New-Object PSCredential("<client-id>", $secureSecret)
-Connect-MgGraph -TenantId "<tenant-id>" -ClientSecretCredential $credential
+# Preferred for Azure Automation: managed identity
+Connect-MgGraph -Identity
+
+# Certificate fallback when managed identity is unavailable
+Connect-MgGraph -TenantId "<tenant-id>" -ClientId "<client-id>" `
+    -CertificateThumbprint "<thumbprint>"
+
+# legacy: dev-only — replace with managed identity in production
+# $secureSecret = ConvertTo-SecureString "<secret>" -AsPlainText -Force
+# $credential = New-Object PSCredential("<client-id>", $secureSecret)
+# Connect-MgGraph -TenantId "<tenant-id>" -ClientSecretCredential $credential
 ```
 
 ---

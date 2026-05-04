@@ -58,6 +58,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `-DataverseUrl` | String | *(required)* | Dataverse environment URL (e.g., `https://org.crm.dynamics.com`) |
+| `-TenantId` | String | *(required unless active Graph/Az context exposes tenant)* | Microsoft Entra tenant GUID used to acquire Dataverse tokens |
 | `-OutputPath` | String | *(required)* | Directory for evidence JSON and SHA-256 files |
 | `-FromDate` | DateTime | 30 days ago | Start date for the evidence collection window |
 | `-ToDate` | DateTime | Current time | End date for the evidence collection window |
@@ -73,6 +74,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<tenant-guid>" `
     -OutputPath "./evidence"
 ```
 
@@ -81,6 +83,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<tenant-guid>" `
     -OutputPath "./evidence" `
     -FromDate "2026-01-01" -ToDate "2026-01-31"
 ```
@@ -90,6 +93,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<tenant-guid>" `
     -OutputPath "./evidence" `
     -RunId "abc123-def456"
 ```
@@ -99,6 +103,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<tenant-guid>" `
     -OutputPath "./evidence" `
     -IncludeBaselines:$false -IncludeViolations:$false
 ```
@@ -108,6 +113,7 @@ companion `.sha256` hash. There is no per-table file split (`CAPolicies*.json`,
 ```powershell
 .\scripts\Export-CAAComplianceEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<tenant-guid>" `
     -OutputPath "./evidence" -WhatIf
 ```
 
@@ -128,7 +134,7 @@ Each evidence package contains the following top-level sections:
 | `toDate` | ISO 8601 | End of the evidence window |
 | `runId` | String | Specific run ID filter, or `null` for all runs |
 | `exportVersion` | String | Evidence schema version (currently `"1.0.0"`) |
-| `solutionVersion` | String | CAA solution version (currently `"1.2.1"`) |
+| `solutionVersion` | String | CAA solution version (currently `"2.0.1"`) |
 | `recordCount` | Integer | Number of validation records |
 | `violationCount` | Integer | Number of violation records |
 | `baselineCount` | Integer | Number of baseline records |
@@ -168,7 +174,7 @@ Array of active baseline records from `fsi_CAPolicyBaseline` (included when `-In
     "toDate": "2026-02-10T15:30:00.0000000Z",
     "runId": null,
     "exportVersion": "1.0.0",
-    "solutionVersion": "1.2.1",
+    "solutionVersion": "2.0.1",
     "recordCount": 30,
     "violationCount": 2,
     "baselineCount": 8
@@ -275,4 +281,4 @@ See the [cross-solution integration guide](https://github.com/judeper/FSI-AgentG
 
 ---
 
-*Version: 1.2.2 | Last Updated: February 2026*
+*Version: 2.0.1 | Last Updated: 2026-Q2*

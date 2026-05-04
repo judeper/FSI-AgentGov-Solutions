@@ -44,7 +44,7 @@ The script verifies:
 2. **Policy State** - Policies are enabled (not report-only or disabled)
 3. **Target Coverage** - All zones and applications covered
 4. **Exclusion Integrity** - Break-glass accounts properly excluded
-5. **Grant Controls** - MFA and device requirements correct
+5. **Grant Controls** - MFA, MFA-satisfying authentication strengths, and device requirements correct
 6. **Session Controls** - Timeout values match zone requirements
 
 ### Sample Output
@@ -153,18 +153,19 @@ Create a scheduled task or Azure Automation runbook:
 # Azure Automation Runbook
 param(
     [Parameter(Mandatory)] [string]$TenantId,
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$CertificateThumbprint,
     [Parameter(Mandatory)] [string]$BaselineFilePath,
-    [Parameter(Mandatory)] [string]$TeamsWebhook
+    [string]$UserAssignedManagedIdentityClientId
 )
 
-# App-only certificate auth — Connect-MgGraph -Identity is NOT supported by
-# the Conditional Access Graph endpoints when the runbook needs delegated
-# scope semantics. Use a registered app + cert.
+# Managed identity first. Use -ClientId only for user-assigned managed identity;
+# omit it for the Automation Account system-assigned identity.
 . .\private\Connect-GraphSession.ps1
-Connect-CAAGraphSession -TenantId $TenantId -ClientId $ClientId `
-    -CertificateThumbprint $CertificateThumbprint
+if ($UserAssignedManagedIdentityClientId) {
+    Connect-CAAGraphSession -TenantId $TenantId -UseManagedIdentity `
+        -ClientId $UserAssignedManagedIdentityClientId
+} else {
+    Connect-CAAGraphSession -TenantId $TenantId -UseManagedIdentity
+}
 
 # Watch-PolicyDrift writes its findings to the OutputPath JSON file and
 # returns drift records for the caller. -BaselinePath expects a FILE PATH,
@@ -173,13 +174,18 @@ $drift = .\Watch-PolicyDrift.ps1 -TenantId $TenantId `
     -BaselinePath $BaselineFilePath `
     -OutputPath   "./drift-report.json"
 
-# Alert if drift detected
+# Alert if drift detected. Route through the solution's Power Automate Teams
+# connector flow; this solution does not use incoming Teams webhooks.
 if ($drift -and $drift.Count -gt 0) {
-    Send-TeamsAlert -Webhook $TeamsWebhook -Drift $drift
+    # Invoke the alert flow or Teams connector action here.
 }
 ```
 
 ---
+
+## Continuous Access Evaluation notes
+
+CAE is automatically active for supported workloads under Conditional Access. The solution validates session controls that are visible on the Conditional Access policy (`signInFrequency`, `persistentBrowser`, and resilience-related settings) but does not enable preview strict location enforcement by default. Validate supported applications and named locations before adopting strict CAE location policies.
 
 ## Evidence Export
 
@@ -225,7 +231,7 @@ the CAA evidence export.
   "exportInfo": {
     "timestamp": "2026-04-01T00:00:00Z",
     "exportedBy": "Export-CAAComplianceEvidence.ps1",
-    "version": "1.2.2"
+    "version": "2.0.1"
   },
   "tenantId": "<tenant-id>",
   "summary": {

@@ -100,6 +100,30 @@ function Compare-CAAPolicyBaseline {
     }
     #endregion
 
+    #region Helper: Normalize nested objects for coarse-grained comparisons
+    function Convert-ToComparableJson {
+        param([object]$Value)
+        if ($null -eq $Value) { return '' }
+        return ($Value | ConvertTo-Json -Depth 20 -Compress)
+    }
+
+    function Get-AuthenticationStrengthIdentifier {
+        param([object]$GrantControls)
+        $strength = Get-PolicyProp $GrantControls 'AuthenticationStrength'
+        if (-not $strength) { $strength = Get-PolicyProp $GrantControls 'authenticationStrength' }
+        if (-not $strength) { return '' }
+
+        $id = Get-PolicyProp $strength 'Id'
+        if (-not $id) { $id = Get-PolicyProp $strength 'id' }
+        $displayName = Get-PolicyProp $strength 'DisplayName'
+        if (-not $displayName) { $displayName = Get-PolicyProp $strength 'displayName' }
+        $requirements = Get-PolicyProp $strength 'RequirementsSatisfied'
+        if (-not $requirements) { $requirements = Get-PolicyProp $strength 'requirementsSatisfied' }
+
+        return (@($id, $displayName, $requirements) | Where-Object { $_ }) -join '|'
+    }
+    #endregion
+
     #region Helper: Compare arrays (order-independent)
     function Compare-Arrays {
         param([object[]]$Expected, [object[]]$Actual)
@@ -326,6 +350,74 @@ function Compare-CAAPolicyBaseline {
                     Description = "Sign-in risk levels changed"
                 })
             }
+
+            # User risk levels
+            $prevUserRisk = Get-PolicyProp $prevConditions 'UserRiskLevels'
+            if (-not $prevUserRisk) { $prevUserRisk = Get-PolicyProp $prevConditions 'userRiskLevels' }
+            $curUserRisk = Get-PolicyProp $curConditions 'UserRiskLevels'
+            if (-not $curUserRisk) { $curUserRisk = Get-PolicyProp $curConditions 'userRiskLevels' }
+
+            if (-not (Compare-Arrays -Expected @($prevUserRisk) -Actual @($curUserRisk))) {
+                $policyDriftFound = $true
+                $removedUserRisks = @($prevUserRisk) | Where-Object { $_ -and $_ -notin @($curUserRisk) }
+                $baseSev = if ($removedUserRisks.Count -gt 0) { 4 } else { 2 }
+                $severity = Get-EscalatedSeverity -BaseSeverity $baseSev -Zone $zone
+                $results.Add(@{
+                    PolicyName  = $policyName
+                    DriftType   = 'ConditionChanged'
+                    Dimension   = 'ConditionChanges'
+                    Expected    = ($prevUserRisk -join ', ')
+                    Actual      = ($curUserRisk -join ', ')
+                    Severity    = $severity
+                    Zone        = $zone
+                    Description = "User risk levels changed"
+                })
+            }
+
+            # Named locations
+            foreach ($locationField in @('IncludeLocations', 'ExcludeLocations')) {
+                $prevLocations = Get-PolicyProp (Get-PolicyProp (Get-PolicyProp $prevConditions 'Locations') $locationField) 'Value'
+                if (-not $prevLocations) { $prevLocations = Get-PolicyProp (Get-PolicyProp (Get-PolicyProp $prevConditions 'locations') ($locationField.Substring(0,1).ToLower() + $locationField.Substring(1))) 'Value' }
+                if (-not $prevLocations) { $prevLocations = Get-PolicyProp (Get-PolicyProp $prevConditions 'Locations') $locationField }
+                if (-not $prevLocations) { $prevLocations = Get-PolicyProp (Get-PolicyProp $prevConditions 'locations') ($locationField.Substring(0,1).ToLower() + $locationField.Substring(1)) }
+                $curLocations = Get-PolicyProp (Get-PolicyProp $curConditions 'Locations') $locationField
+                if (-not $curLocations) { $curLocations = Get-PolicyProp (Get-PolicyProp $curConditions 'locations') ($locationField.Substring(0,1).ToLower() + $locationField.Substring(1)) }
+
+                if (-not (Compare-Arrays -Expected @($prevLocations) -Actual @($curLocations))) {
+                    $policyDriftFound = $true
+                    $severity = Get-EscalatedSeverity -BaseSeverity 2 -Zone $zone
+                    $results.Add(@{
+                        PolicyName  = $policyName
+                        DriftType   = 'ConditionChanged'
+                        Dimension   = 'ConditionChanges'
+                        Expected    = ($prevLocations -join ', ')
+                        Actual      = ($curLocations -join ', ')
+                        Severity    = $severity
+                        Zone        = $zone
+                        Description = "Location condition $locationField changed"
+                    })
+                }
+            }
+
+            # Device filter / device conditions
+            $prevDevices = Get-PolicyProp $prevConditions 'Devices'
+            if (-not $prevDevices) { $prevDevices = Get-PolicyProp $prevConditions 'devices' }
+            $curDevices = Get-PolicyProp $curConditions 'Devices'
+            if (-not $curDevices) { $curDevices = Get-PolicyProp $curConditions 'devices' }
+            if ((Convert-ToComparableJson $prevDevices) -ne (Convert-ToComparableJson $curDevices)) {
+                $policyDriftFound = $true
+                $severity = Get-EscalatedSeverity -BaseSeverity 2 -Zone $zone
+                $results.Add(@{
+                    PolicyName  = $policyName
+                    DriftType   = 'ConditionChanged'
+                    Dimension   = 'ConditionChanges'
+                    Expected    = Convert-ToComparableJson $prevDevices
+                    Actual      = Convert-ToComparableJson $curDevices
+                    Severity    = $severity
+                    Zone        = $zone
+                    Description = "Device condition changed"
+                })
+            }
         }
 
         # ----- Dimension 3: Grant control changes -----
@@ -378,6 +470,25 @@ function Compare-CAAPolicyBaseline {
                     Severity    = $severity
                     Zone        = $zone
                     Description = "Built-in grant controls changed"
+                })
+            }
+
+            # Authentication strength relationship
+            $prevStrength = Get-AuthenticationStrengthIdentifier -GrantControls $prevGrant
+            $curStrength = Get-AuthenticationStrengthIdentifier -GrantControls $curGrant
+            if ($prevStrength -ne $curStrength) {
+                $policyDriftFound = $true
+                $baseSev = if ($prevStrength -and -not $curStrength) { 4 } else { 2 }
+                $severity = Get-EscalatedSeverity -BaseSeverity $baseSev -Zone $zone
+                $results.Add(@{
+                    PolicyName  = $policyName
+                    DriftType   = 'GrantControlChanged'
+                    Dimension   = 'GrantControlChanges'
+                    Expected    = if ($prevStrength) { $prevStrength } else { '(none)' }
+                    Actual      = if ($curStrength) { $curStrength } else { '(none)' }
+                    Severity    = $severity
+                    Zone        = $zone
+                    Description = "Authentication strength requirement changed"
                 })
             }
         }

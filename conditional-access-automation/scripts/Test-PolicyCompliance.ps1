@@ -65,7 +65,7 @@
 
 .NOTES
     File: Test-PolicyCompliance.ps1
-    Version: 2.0.0
+    Version: 2.0.1
     Supports compliance with FINRA 4511/3110, SEC 17a-3/4, and OCC 2011-12
     through automated policy coverage verification and gap detection.
 #>
@@ -106,6 +106,43 @@ $ErrorActionPreference = "Stop"
 . $PSScriptRoot/private/Compare-PolicyBaseline.ps1
 
 $timestamp = Get-Date -Format "yyyy-MM-dd"
+
+function Test-CAAAuthStrengthSatisfiesMfa {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $false)] [object]$AuthenticationStrength)
+
+    if ($null -eq $AuthenticationStrength) { return $false }
+
+    $requirements = $null
+    if ($AuthenticationStrength -is [hashtable]) {
+        $requirements = $AuthenticationStrength['requirementsSatisfied']
+        if (-not $requirements) { $requirements = $AuthenticationStrength['RequirementsSatisfied'] }
+    }
+    else {
+        $requirements = ($AuthenticationStrength.PSObject.Properties['RequirementsSatisfied']).Value
+        if (-not $requirements) { $requirements = ($AuthenticationStrength.PSObject.Properties['requirementsSatisfied']).Value }
+        if (-not $requirements -and $AuthenticationStrength.AdditionalProperties) {
+            $requirements = $AuthenticationStrength.AdditionalProperties['requirementsSatisfied']
+        }
+    }
+
+    if ($requirements -eq 'mfa') { return $true }
+
+    $displayName = $null
+    if ($AuthenticationStrength -is [hashtable]) {
+        $displayName = $AuthenticationStrength['displayName']
+        if (-not $displayName) { $displayName = $AuthenticationStrength['DisplayName'] }
+    }
+    else {
+        $displayName = ($AuthenticationStrength.PSObject.Properties['DisplayName']).Value
+        if (-not $displayName) { $displayName = ($AuthenticationStrength.PSObject.Properties['displayName']).Value }
+        if (-not $displayName -and $AuthenticationStrength.AdditionalProperties) {
+            $displayName = $AuthenticationStrength.AdditionalProperties['displayName']
+        }
+    }
+
+    return ($displayName -match '(?i)mfa|multifactor|phishing-resistant|passwordless')
+}
 
 Write-Host ("=" * 60) -ForegroundColor Cyan
 Write-Host "Conditional Access Policy Compliance Check" -ForegroundColor Cyan
@@ -337,11 +374,14 @@ foreach ($policy in $fsiPolicies) {
 
     $complianceResults.checksPerformed++
 
-    $hasMFA = $policy.GrantControls.BuiltInControls -contains "mfa"
+    $authStrength = $policy.GrantControls.AuthenticationStrength
+    $hasMfaStrength = Test-CAAAuthStrengthSatisfiesMfa -AuthenticationStrength $authStrength
+    $hasMFA = ($policy.GrantControls.BuiltInControls -contains "mfa") -or $hasMfaStrength
 
     if ($hasMFA) {
         $complianceResults.checksPassed++
-        Write-Verbose "  [PASS] $($policy.DisplayName) - MFA required"
+        $mfaSource = if ($hasMfaStrength -and -not ($policy.GrantControls.BuiltInControls -contains "mfa")) { "authentication strength" } else { "built-in MFA" }
+        Write-Verbose "  [PASS] $($policy.DisplayName) - MFA required via $mfaSource"
     }
     else {
         $complianceResults.checksFailed++
@@ -350,7 +390,8 @@ foreach ($policy in $fsiPolicies) {
             type = "NoMFARequirement"
             policy = $policy.DisplayName
             grantControls = $policy.GrantControls.BuiltInControls
-            recommendation = "Add MFA to grant controls"
+            authenticationStrength = $authStrength
+            recommendation = "Add MFA or an MFA-satisfying authentication strength to grant controls"
         }
     }
 }

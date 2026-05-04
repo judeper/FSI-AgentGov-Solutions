@@ -76,9 +76,18 @@ Get-MgUserMemberOf -UserId $userId | Where-Object {
 
 ---
 
+## Authentication for automation
+
+Use this priority order for unattended automation:
+
+1. **System-assigned managed identity** on Azure Automation or Azure-hosted workers.
+2. **User-assigned managed identity** when a shared identity is required across workers.
+3. **Certificate credential** on an app registration when managed identity is unavailable.
+4. **Client secret** only as a legacy dev-only fallback — replace with managed identity or certificate before production.
+
 ## Azure Key Vault
 
-Required for secure credential storage in automated deployments.
+Optional for certificate thumbprints and legacy dev-only client-secret fallback storage. Managed identity deployments do not need a client secret in Key Vault.
 
 ### Key Vault Setup
 
@@ -102,8 +111,9 @@ az keyvault set-policy \
 
 | Secret Name | Content |
 |-------------|---------|
-| `CAA-SP-ClientId` | Service principal application ID |
-| `CAA-SP-ClientSecret` | Service principal client secret |
+| `CAA-SP-ClientId` | Service principal application ID (certificate fallback) or user-assigned managed identity client ID |
+| `CAA-SP-CertThumbprint` | Certificate thumbprint for certificate fallback |
+| `CAA-SP-ClientSecret` | Legacy dev-only fallback client secret; do not use for production automation |
 | `CAA-TenantId` | Entra ID tenant ID |
 
 ---
@@ -228,7 +238,8 @@ Identify the application IDs for AI workloads in your tenant:
 | Microsoft 365 Copilot | `fb8d773d-7ef8-4ec0-a117-179f88add510` | M365 embedded Copilot |
 | Copilot Studio | `38e55b99-bd9c-4dff-b510-8d8ee0bff7d6` | Copilot Studio service principal |
 | Power Platform Admin | `8578e004-a5c6-46e7-913e-12f58912df43` | Power Platform admin operations |
-| Power Platform | `475226c6-020e-4fb2-8571-c63252b0c2f4` | Power Apps/Automate runtime |
+| Power Platform | `475226c6-020e-4fb2-8571-c63252b0c2f4` | Power Apps/Automate runtime; verify the enterprise app in your tenant |
+| Microsoft Flow Service | `7df0a125-d3be-4c96-aa54-591f83ff541c` | Required review target for Power Automate embedded-flow token exchange when using individual app targeting |
 
 ### Find Application IDs
 
@@ -250,6 +261,7 @@ Get-MgServicePrincipal -Filter "startswith(displayName, 'Copilot')" |
 - [ ] Entra ID P1 or P2 active
 - [ ] Licenses assigned to target users
 - [ ] Risk-based licensing (P2) if using Zone 1 templates
+- [ ] Passkey/FIDO2, Windows Hello for Business, or certificate-based auth readiness if adopting phishing-resistant authentication strengths
 
 ### Roles
 - [ ] Conditional Access Administrator assigned

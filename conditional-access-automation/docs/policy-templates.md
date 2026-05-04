@@ -18,6 +18,10 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
 
 ---
 
+## Authentication strengths and passkeys
+
+The default templates use `builtInControls: ["mfa"]` for broad compatibility. For Zone 3 or high-risk operations, consider a tenant-specific variant that uses `grantControls.authenticationStrength` with the built-in **Phishing-resistant MFA strength** or an approved custom strength. Microsoft Learn documents that authentication strengths can require FIDO2/passkeys, Windows Hello for Business, or certificate-based authentication. Do not combine `mfa` and `authenticationStrength` in the same policy. Retrieve current strength IDs from Microsoft Graph before authoring templates.
+
 ## Template Specifications
 
 ### CA-CopilotStudio-Zone1
@@ -330,7 +334,7 @@ Detailed specifications for Conditional Access policy templates targeting AI wor
 **Key Settings:**
 - Blocks Exchange ActiveSync and legacy clients
 - Critical security baseline
-- Prevents bypass of MFA policies
+- Helps reduce MFA bypass risk by blocking legacy client types
 
 ---
 
@@ -400,7 +404,13 @@ Get-MgGroup -Filter "displayName eq 'Zone-3-AI-Users'" |
 ```powershell
 Get-MgServicePrincipal -Filter "startswith(displayName, 'Copilot')" |
     Select-Object DisplayName, AppId, Id
+
+# Power Automate embedded-flow compatibility check
+Get-MgServicePrincipal -Filter "appId eq '7df0a125-d3be-4c96-aa54-591f83ff541c'" |
+    Select-Object DisplayName, AppId, Id
 ```
+
+When targeting individual cloud apps, review Microsoft Flow Service (`7df0a125-d3be-4c96-aa54-591f83ff541c`) with Power Apps, Power Automate, Teams, SharePoint, Excel, and Copilot Studio host apps so Conditional Access requirements remain consistent for embedded flow token exchange.
 
 ---
 
