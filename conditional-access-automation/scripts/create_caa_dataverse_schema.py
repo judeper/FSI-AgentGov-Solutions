@@ -176,7 +176,7 @@ TABLES = {
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-                "SchemaName": f"{PUBLISHER_PREFIX}_Policy_Display_Name",
+                "SchemaName": f"{PUBLISHER_PREFIX}_PolicyDisplayName",
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "DisplayName": {
                     "LocalizedLabels": [
@@ -195,7 +195,7 @@ TABLES = {
                 "FormatName": {"Value": "Text"},
             }
         ],
-        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_policy_display_name",
+        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_policydisplayname",
     },
     "fsi_CAPolicyValidationHistory": {
         "SchemaName": "fsi_CAPolicyValidationHistory",
@@ -231,7 +231,7 @@ TABLES = {
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-                "SchemaName": f"{PUBLISHER_PREFIX}_Run_Id",
+                "SchemaName": f"{PUBLISHER_PREFIX}_RunId",
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "DisplayName": {
                     "LocalizedLabels": [
@@ -253,7 +253,7 @@ TABLES = {
                 "FormatName": {"Value": "Text"},
             }
         ],
-        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_run_id",
+        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_runid",
     },
     "fsi_CAPolicyViolation": {
         "SchemaName": "fsi_CAPolicyViolation",
@@ -286,7 +286,7 @@ TABLES = {
         "Attributes": [
             {
                 "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-                "SchemaName": f"{PUBLISHER_PREFIX}_Policy_Display_Name",
+                "SchemaName": f"{PUBLISHER_PREFIX}_PolicyDisplayName",
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "DisplayName": {
                     "LocalizedLabels": [
@@ -308,7 +308,7 @@ TABLES = {
                 "FormatName": {"Value": "Text"},
             }
         ],
-        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_policy_display_name",
+        "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_policydisplayname",
     },
 }
 
@@ -323,7 +323,7 @@ COLUMNS = {
     "fsi_capolicybaseline": [
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Policy_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_PolicyId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -343,7 +343,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Policy_State",
+            "SchemaName": f"{PUBLISHER_PREFIX}_PolicyState",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -383,7 +383,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Conditions_Json",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ConditionsJson",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -406,7 +406,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Grant_Controls_Json",
+            "SchemaName": f"{PUBLISHER_PREFIX}_GrantControlsJson",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -429,7 +429,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Session_Controls_Json",
+            "SchemaName": f"{PUBLISHER_PREFIX}_SessionControlsJson",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -452,7 +452,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Break_Glass_Exclusions",
+            "SchemaName": f"{PUBLISHER_PREFIX}_BreakGlassExclusions",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -472,7 +472,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Baseline_Hash",
+            "SchemaName": f"{PUBLISHER_PREFIX}_BaselineHash",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -495,7 +495,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Is_Active",
+            "SchemaName": f"{PUBLISHER_PREFIX}_IsActive",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -535,7 +535,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Captured_At",
+            "SchemaName": f"{PUBLISHER_PREFIX}_CapturedAt",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -555,7 +555,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Captured_By",
+            "SchemaName": f"{PUBLISHER_PREFIX}_CapturedBy",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -578,7 +578,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Tenant_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TenantId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -603,7 +603,7 @@ COLUMNS = {
     "fsi_capolicyvalidationhistory": [
         {
             "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Validation_Time",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ValidationTime",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -623,7 +623,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Total_Policies",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TotalPolicies",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -644,7 +644,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Passed_Count",
+            "SchemaName": f"{PUBLISHER_PREFIX}_PassedCount",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -665,7 +665,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Warning_Count",
+            "SchemaName": f"{PUBLISHER_PREFIX}_WarningCount",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -686,7 +686,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Failed_Count",
+            "SchemaName": f"{PUBLISHER_PREFIX}_FailedCount",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -707,7 +707,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Drift_Count",
+            "SchemaName": f"{PUBLISHER_PREFIX}_DriftCount",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -728,7 +728,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Overall_Severity",
+            "SchemaName": f"{PUBLISHER_PREFIX}_OverallSeverity",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -749,7 +749,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Results_Json",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ResultsJson",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -772,7 +772,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Validated_By",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ValidatedBy",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -792,7 +792,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Tenant_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TenantId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -817,7 +817,7 @@ COLUMNS = {
     "fsi_capolicyviolation": [
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Run_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_RunId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -839,7 +839,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Policy_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_PolicyId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -861,7 +861,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Violation_Type",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ViolationType",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -920,7 +920,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Expected_Value",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ExpectedValue",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -940,7 +940,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Actual_Value",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ActualValue",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -984,7 +984,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Is_Resolved",
+            "SchemaName": f"{PUBLISHER_PREFIX}_IsResolved",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -1023,7 +1023,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Resolved_At",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ResolvedAt",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -1045,7 +1045,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Resolved_By",
+            "SchemaName": f"{PUBLISHER_PREFIX}_ResolvedBy",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -1067,7 +1067,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Detected_At",
+            "SchemaName": f"{PUBLISHER_PREFIX}_DetectedAt",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -1089,7 +1089,7 @@ COLUMNS = {
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-            "SchemaName": f"{PUBLISHER_PREFIX}_Tenant_Id",
+            "SchemaName": f"{PUBLISHER_PREFIX}_TenantId",
             "RequiredLevel": {"Value": "ApplicationRequired"},
             "DisplayName": {
                 "LocalizedLabels": [
@@ -1110,7 +1110,7 @@ COLUMNS = {
     ],
 }
 
-# No formal Dataverse relationships — logical links via fsi_run_id / fsi_policy_id
+# No formal Dataverse relationships — logical links via fsi_runid / fsi_policyid
 RELATIONSHIPS: list = []
 
 
@@ -1419,7 +1419,7 @@ def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
                 client.create_relationship(rel_metadata)
             created += 1
     if not RELATIONSHIPS:
-        print("  No formal relationships (logical links via fsi_run_id / fsi_policy_id)")
+        print("  No formal relationships (logical links via fsi_runid / fsi_policyid)")
     return {"created": created, "skipped": skipped}
 
 

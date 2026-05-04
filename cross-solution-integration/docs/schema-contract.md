@@ -93,7 +93,7 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 | AAM | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` | String status — see mapping in `STATUS_MAPPING.md` |
 | CMM | `fsi_overallstatus` (string) **and** `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` | Status derived from rate |
 | FUS | `fsi_compliancerate` (% int) | `fsi_validationtime` (also `fsi_runtimestamp`) | `fsi_runid` | Status derived from rate |
-| CAA | `fsi_overall_severity` (choice) | `fsi_validation_time` | `fsi_run_id` | **Underscores in field names — exception to rest of catalog** |
+| CAA | `fsi_overallseverity` (choice) | `fsi_validationtime` | `fsi_runid` | **Underscores in field names — exception to rest of catalog** |
 
 ### Validation-Type Filter
 

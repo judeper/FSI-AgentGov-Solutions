@@ -109,7 +109,7 @@ This approach is consistent with the per-solution evidence export pattern used b
 | AAM | **`fsi_accessvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` |
 | CMM | **`fsi_moderationvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` + `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` |
 | FUS | `fsi_fileuploadvalidationhistories` | `fsi_compliancerate` (% int) | `fsi_validationtime` (also `fsi_runtimestamp`) | `fsi_runid` |
-| CAA | `fsi_capolicyvalidationhistories` | `fsi_overall_severity` (choice, 100000000-based) | `fsi_validation_time` | `fsi_run_id` |
+| CAA | `fsi_capolicyvalidationhistories` | `fsi_overallseverity` (choice, 100000000-based) | `fsi_validationtime` | `fsi_runid` |
 
 > ⚠️ `fsi_scannedon` / `fsi_detectedon` columns referenced in v1.x docs **do not exist** on history tables. Use the per-solution timestamp column shown above.
 

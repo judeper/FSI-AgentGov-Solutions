@@ -437,14 +437,14 @@ function Get-CAAActiveBaseline {
 
     Assert-CAAConnection
 
-    $filter = "fsi_is_active eq true"
+    $filter = "fsi_isactive eq true"
     if ($EnvironmentId) {
         $escapedId = $EnvironmentId.Replace("'", "''")
-        $filter += " and fsi_tenant_id eq '$escapedId'"
+        $filter += " and fsi_tenantid eq '$escapedId'"
     }
 
     $url = "$($script:CAADataverseUrl)/api/data/v9.2/fsi_capolicybaselines?" +
-        "`$filter=$filter&`$orderby=fsi_captured_at desc"
+        "`$filter=$filter&`$orderby=fsi_capturedat desc"
 
     Write-Verbose "Querying active baselines: $url"
     $results = Get-CAAAllPages -Uri $url
@@ -503,17 +503,17 @@ function Write-CAAValidationHistory {
     Assert-CAAConnection
 
     $body = @{
-        fsi_run_id           = $Record['RunId']
-        fsi_validation_time  = if ($Record['ValidationTime']) { $Record['ValidationTime'] } else { (Get-Date).ToUniversalTime().ToString('o') }
-        fsi_total_policies   = [int]($Record['TotalPolicies'])
-        fsi_passed_count     = [int](if ($Record.ContainsKey('PassedCount')) { $Record['PassedCount'] } else { $Record['CompliantCount'] })
-        fsi_warning_count    = [int]($Record['WarningCount'])
-        fsi_failed_count     = [int](if ($Record.ContainsKey('FailedCount')) { $Record['FailedCount'] } else { $Record['ViolationCount'] })
-        fsi_drift_count      = [int]($Record['DriftCount'])
-        fsi_overall_severity = ConvertTo-CAASeverityValue -Severity ($Record['OverallSeverity'] ?? $Record['OverallStatus'] ?? 'Passed')
-        fsi_results_json     = if ($Record['ResultsJson']) { $Record['ResultsJson'] } else { '[]' }
-        fsi_validated_by     = $Record['ValidatedBy']
-        fsi_tenant_id        = $Record['TenantId']
+        fsi_runid           = $Record['RunId']
+        fsi_validationtime  = if ($Record['ValidationTime']) { $Record['ValidationTime'] } else { (Get-Date).ToUniversalTime().ToString('o') }
+        fsi_totalpolicies   = [int]($Record['TotalPolicies'])
+        fsi_passedcount     = [int](if ($Record.ContainsKey('PassedCount')) { $Record['PassedCount'] } else { $Record['CompliantCount'] })
+        fsi_warningcount    = [int]($Record['WarningCount'])
+        fsi_failedcount     = [int](if ($Record.ContainsKey('FailedCount')) { $Record['FailedCount'] } else { $Record['ViolationCount'] })
+        fsi_driftcount      = [int]($Record['DriftCount'])
+        fsi_overallseverity = ConvertTo-CAASeverityValue -Severity ($Record['OverallSeverity'] ?? $Record['OverallStatus'] ?? 'Passed')
+        fsi_resultsjson     = if ($Record['ResultsJson']) { $Record['ResultsJson'] } else { '[]' }
+        fsi_validatedby     = $Record['ValidatedBy']
+        fsi_tenantid        = $Record['TenantId']
     }
 
     # Strip null entries — Dataverse rejects explicit nulls for required columns
@@ -589,18 +589,18 @@ function Write-CAAViolation {
     }
 
     $body = @{
-        fsi_policy_display_name = $Violation['PolicyName']
-        fsi_policy_id           = $Violation['PolicyId']
-        fsi_run_id              = $Violation['RunId']
-        fsi_violation_type      = $Violation['ViolationType']
+        fsi_policydisplayname = $Violation['PolicyName']
+        fsi_policyid           = $Violation['PolicyId']
+        fsi_runid              = $Violation['RunId']
+        fsi_violationtype      = $Violation['ViolationType']
         fsi_zone                = ConvertTo-CAAZoneValue -Zone ($Violation['Zone'] ?? 0)
         fsi_severity            = ConvertTo-CAASeverityValue -Severity ($Violation['Severity'] ?? 'Failed')
-        fsi_expected_value      = $Violation['Expected']
-        fsi_actual_value        = $Violation['Actual']
+        fsi_expectedvalue      = $Violation['Expected']
+        fsi_actualvalue        = $Violation['Actual']
         fsi_description         = $description
-        fsi_is_resolved         = $false
-        fsi_detected_at         = if ($Violation['DetectedAt']) { $Violation['DetectedAt'] } else { (Get-Date).ToUniversalTime().ToString('o') }
-        fsi_tenant_id           = $Violation['TenantId']
+        fsi_isresolved         = $false
+        fsi_detectedat         = if ($Violation['DetectedAt']) { $Violation['DetectedAt'] } else { (Get-Date).ToUniversalTime().ToString('o') }
+        fsi_tenantid           = $Violation['TenantId']
     }
 
     # Strip null entries
@@ -675,7 +675,7 @@ function Save-CAABaseline {
     if ($policyId) {
         $escapedId = $policyId.Replace("'", "''")
         $activeUrl = "$($script:CAADataverseUrl)/api/data/v9.2/fsi_capolicybaselines?" +
-            "`$filter=fsi_is_active eq true and fsi_policy_id eq '$escapedId'" +
+            "`$filter=fsi_isactive eq true and fsi_policyid eq '$escapedId'" +
             "&`$select=fsi_capolicybaselineid"
 
         Write-Verbose "Checking for existing active baselines (PolicyId: $policyId)..."
@@ -684,7 +684,7 @@ function Save-CAABaseline {
         if ($activeBaselines -and $activeBaselines.value) {
             foreach ($existing in $activeBaselines.value) {
                 $patchUrl  = "$($script:CAADataverseUrl)/api/data/v9.2/fsi_capolicybaselines($($existing.fsi_capolicybaselineid))"
-                $patchBody = @{ fsi_is_active = $false } | ConvertTo-Json -Compress
+                $patchBody = @{ fsi_isactive = $false } | ConvertTo-Json -Compress
                 Write-Verbose "Deactivating baseline: $($existing.fsi_capolicybaselineid)"
                 Invoke-CAARestMethod -Uri $patchUrl -Method Patch -Body $patchBody | Out-Null
             }
@@ -694,19 +694,19 @@ function Save-CAABaseline {
 
     # Step 2: Create new active baseline
     $body = @{
-        fsi_policy_display_name  = $Baseline['PolicyName']
-        fsi_policy_id            = $policyId
-        fsi_policy_state         = $Baseline['PolicyState']
+        fsi_policydisplayname  = $Baseline['PolicyName']
+        fsi_policyid            = $policyId
+        fsi_policystate         = $Baseline['PolicyState']
         fsi_zone                 = ConvertTo-CAAZoneValue -Zone ($Baseline['Zone'] ?? 0)
-        fsi_conditions_json      = $Baseline['ConditionsJson']
-        fsi_grant_controls_json  = $Baseline['GrantControlsJson']
-        fsi_session_controls_json = $Baseline['SessionControlsJson']
-        fsi_break_glass_exclusions = $Baseline['BreakGlassExclusions']
-        fsi_baseline_hash        = $Baseline['BaselineHash']
-        fsi_is_active            = $true
-        fsi_captured_at          = if ($Baseline['CapturedAt']) { $Baseline['CapturedAt'] } else { (Get-Date).ToUniversalTime().ToString('o') }
-        fsi_captured_by          = $Baseline['CapturedBy']
-        fsi_tenant_id            = $Baseline['TenantId']
+        fsi_conditionsjson      = $Baseline['ConditionsJson']
+        fsi_grantcontrolsjson  = $Baseline['GrantControlsJson']
+        fsi_sessioncontrolsjson = $Baseline['SessionControlsJson']
+        fsi_breakglassexclusions = $Baseline['BreakGlassExclusions']
+        fsi_baselinehash        = $Baseline['BaselineHash']
+        fsi_isactive            = $true
+        fsi_capturedat          = if ($Baseline['CapturedAt']) { $Baseline['CapturedAt'] } else { (Get-Date).ToUniversalTime().ToString('o') }
+        fsi_capturedby          = $Baseline['CapturedBy']
+        fsi_tenantid            = $Baseline['TenantId']
     }
 
     # Strip null entries
@@ -740,7 +740,7 @@ function Get-CAALastValidation {
 
     .DESCRIPTION
         Queries the fsi_capolicyvalidationhistories table ordered by
-        fsi_validation_time descending. Used by drift detection to compare
+        fsi_validationtime descending. Used by drift detection to compare
         current scan results against previous runs.
 
     .PARAMETER EnvironmentId
@@ -781,11 +781,11 @@ function Get-CAALastValidation {
     $filter = ''
     if ($EnvironmentId) {
         $escapedId = $EnvironmentId.Replace("'", "''")
-        $filter = "`$filter=fsi_tenant_id eq '$escapedId'&"
+        $filter = "`$filter=fsi_tenantid eq '$escapedId'&"
     }
 
     $url = "$($script:CAADataverseUrl)/api/data/v9.2/fsi_capolicyvalidationhistories?" +
-        "${filter}`$orderby=fsi_validation_time desc&`$top=$Count"
+        "${filter}`$orderby=fsi_validationtime desc&`$top=$Count"
 
     Write-Verbose "Querying last $Count validation record(s): $url"
     $response = Invoke-CAARestMethod -Uri $url -Method Get

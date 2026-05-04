@@ -65,7 +65,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 | Solution | Role | Version |
 |----------|------|---------|
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.0 |
-| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.0 |
+| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.1 |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -75,7 +75,7 @@ These solutions operate independently but can be wired into the Compliance Dashb
 |----------|---------|----------|
 | [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.0 | 3.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.3 | 1.7 |
-| [Conditional Access Automation](./conditional-access-automation/) | v1.2.2 | 1.11, 1.23, 1.18 |
+| [Conditional Access Automation](./conditional-access-automation/) | v2.0.0 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.0 | 1.8, 1.14 |
 | [File Upload Security](./file-upload-security/) | v1.1.0 | 1.14, 1.8, 1.4 |
 | [Session Security Configurator](./session-security-configurator/) | v1.1.0 | 1.23, 1.11 |

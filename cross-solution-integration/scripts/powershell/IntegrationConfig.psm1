@@ -276,12 +276,12 @@ function Get-SolutionTableConfig {
         }
         'CAA' = @{
             EntitySet       = 'fsi_capolicyvalidationhistories'
-            StatusField     = 'fsi_overall_severity'
+            StatusField     = 'fsi_overallseverity'
             StatusType      = 'Choice'          # Global option set fsi_acv_severity (100000000-based)
-            TimestampField  = 'fsi_validation_time'
-            RunIdField      = 'fsi_run_id'
+            TimestampField  = 'fsi_validationtime'
+            RunIdField      = 'fsi_runid'
             ZoneField       = 'fsi_zone'
-            FilterLatest    = "`$orderby=fsi_validation_time desc&`$top=1"
+            FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName    = 'Conditional Access Automation'
             SolutionVersion = 'v1.2.1'
         }
