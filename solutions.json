@@ -933,7 +933,7 @@
     "unrestricted-agent-sharing-detector": {
       "id": "unrestricted-agent-sharing-detector",
       "name": "Unrestricted Agent Sharing Detector",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",

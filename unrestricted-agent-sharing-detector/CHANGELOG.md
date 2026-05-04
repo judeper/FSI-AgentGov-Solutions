@@ -2,9 +2,21 @@
 
 All notable changes to the Unrestricted Agent Sharing Detector are documented here.
 
-# Changelog
 
-All notable changes to the Unrestricted Agent Sharing Detector are documented here.
+## [Unreleased]
+
+- No unreleased changes.
+
+## [2.0.1] — 2026-05-04
+
+### Fixed
+- Updated detector logic and flow guidance to align with current Microsoft Learn Copilot Studio sharing semantics: `accesscontrolpolicy`, `authorizedsecuritygroupids`, `authenticationmode`, and `authenticationtrigger` on the Dataverse `bot` table.
+- Corrected auto-remediation to patch both `accesscontrolpolicy=2` and approved `authorizedsecuritygroupids`, skip remediation when no approved groups exist, and retain previous sharing configuration in `fsi_evidencejson` for rollback.
+- Regenerated Dataverse schema docs so `fsi_UASD_violationstatus` consistently lists `100000004` = `Remediation Failed`.
+
+### Changed
+- Bumped solution manifest to v2.0.1 for the Microsoft Learn 2026-Q2 refresh.
+- Marked client-secret setup paths as legacy development fallbacks and documented managed-identity-first automation for unattended scans.
 
 ## [2.0.0] — 2026-04-17
 

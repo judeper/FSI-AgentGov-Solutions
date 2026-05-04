@@ -7,7 +7,7 @@
     sharing policy for each governance zone, including permitted sharing scopes,
     violation severities by sharing type, and regulatory context.
 
-    Zone policies (hardcoded for v1.0):
+    Zone policies (hardcoded for v2.0.1):
     - Zone1: Advisory only — Low severity for all sharing violations
     - Zone2: Public and external sharing prohibited — High severity; org-wide access medium
     - Zone3: ALL unrestricted sharing prohibited — Critical severity for any overly permissive config
@@ -20,7 +20,7 @@
 
 .NOTES
     File: Get-ExpectedSharingPolicy.ps1
-    Version: 2.0.0
+    Version: 2.0.1
     Solution: Unrestricted Agent Sharing Detector (UASD)
     Controls: 1.1, 3.8
     Regulations: FINRA Rule 4511(a), SEC Rule 17a-4, SOX Section 302/404, GLBA Section 501(b)
@@ -43,29 +43,31 @@ $zonePolicies = @{
     'Zone1' = [PSCustomObject]@{
         Zone                            = 'Zone1'
         # Sharing scopes that are permitted in this zone
-        PermittedScopes                 = @('SpecificUsers', 'SpecificGroups', 'OrgWide', 'Public')
-        # Advisory only — violations are logged but not enforcement-level
+        PermittedScopes                 = @('AnyUser', 'CopilotReaders', 'GroupMembership', 'AnyMultiTenant')
+        # Advisory only — violations are logged but not remediation-level
         AdvisoryOnly                    = $true
         # Severity by violation type
         UnrestrictedSharingSeverity     = 'Low'
         OrgWideAccessSeverity           = 'Low'
         ExternalSharingSeverity         = 'Low'
+        UnapprovedGroupSeverity         = 'Low'
         SharingPolicyViolationSeverity  = 'Low'
         # Auto-remediation — Zone 1 does not auto-remediate by default
         AutoRemediateByDefault          = $false
         # Regulatory context
-        RegulatoryContext               = 'Zone 1 (Personal Productivity) — Advisory monitoring only; no sharing restrictions enforced'
+        RegulatoryContext               = 'Zone 1 (Personal Productivity) — Advisory monitoring only; no sharing restrictions applied by default'
     }
 
     'Zone2' = [PSCustomObject]@{
         Zone                            = 'Zone2'
-        # Only specific-user and specific-group sharing is permitted
-        PermittedScopes                 = @('SpecificUsers', 'SpecificGroups')
+        # Only scoped Copilot readers and approved group membership are permitted
+        PermittedScopes                 = @('CopilotReaders', 'GroupMembership')
         AdvisoryOnly                    = $false
         # Severity by violation type
         UnrestrictedSharingSeverity     = 'High'
         OrgWideAccessSeverity           = 'Medium'
         ExternalSharingSeverity         = 'High'
+        UnapprovedGroupSeverity         = 'High'
         SharingPolicyViolationSeverity  = 'High'
         # Auto-remediation recommended for High/Critical violations
         AutoRemediateByDefault          = $false
@@ -75,31 +77,33 @@ $zonePolicies = @{
 
     'Zone3' = [PSCustomObject]@{
         Zone                            = 'Zone3'
-        # Only specific-user sharing permitted; groups require approval
-        PermittedScopes                 = @('SpecificUsers')
+        # Only scoped Copilot readers and approved group membership are permitted
+        PermittedScopes                 = @('CopilotReaders', 'GroupMembership')
         AdvisoryOnly                    = $false
         # All unrestricted sharing is Critical in Zone 3
         UnrestrictedSharingSeverity     = 'Critical'
         OrgWideAccessSeverity           = 'Critical'
         ExternalSharingSeverity         = 'Critical'
+        UnapprovedGroupSeverity         = 'Critical'
         SharingPolicyViolationSeverity  = 'Critical'
         # Auto-remediation strongly recommended in Zone 3
         AutoRemediateByDefault          = $true
         # Regulatory context
-        RegulatoryContext               = 'Zone 3 (Enterprise/Regulated) — ALL unrestricted sharing prohibited; only specific-user sharing permitted per FINRA Rule 4511(a) and SEC Rule 17a-4'
+        RegulatoryContext               = 'Zone 3 (Enterprise/Regulated) — ALL unrestricted sharing prohibited; only scoped readers or approved group membership permitted per FINRA Rule 4511(a) and SEC Rule 17a-4'
     }
 
     'Unknown' = [PSCustomObject]@{
         Zone                            = 'Unknown'
-        PermittedScopes                 = @('SpecificUsers', 'SpecificGroups')
+        PermittedScopes                 = @('CopilotReaders', 'GroupMembership')
         AdvisoryOnly                    = $true
         # Treat unclassified zones as warning-level
         UnrestrictedSharingSeverity     = 'Medium'
         OrgWideAccessSeverity           = 'Medium'
         ExternalSharingSeverity         = 'Medium'
+        UnapprovedGroupSeverity         = 'Medium'
         SharingPolicyViolationSeverity  = 'Medium'
         AutoRemediateByDefault          = $false
-        RegulatoryContext               = 'Unclassified environment — Zone classification required before policy enforcement can begin'
+        RegulatoryContext               = 'Unclassified environment — Zone classification required before policy remediation should begin'
     }
 }
 

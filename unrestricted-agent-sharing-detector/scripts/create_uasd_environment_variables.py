@@ -217,7 +217,7 @@ Examples:
       --environment-url https://org.crm.dynamics.com \\
       --interactive
 
-  # Service Principal authentication
+  # Legacy dev-only service principal secret authentication
   python create_uasd_environment_variables.py \\
       --tenant-id <tenant-id> \\
       --environment-url https://org.crm.dynamics.com \\
@@ -264,12 +264,13 @@ Examples:
     if not args.tenant_id or not args.environment_url:
         parser.error("--tenant-id and --environment-url are required")
 
-    # Handle client secret for Service Principal auth
+    # legacy: dev-only — replace with managed identity in production
+    # Handle client secret for service principal fallback auth
     client_secret = os.environ.get("UASD_CLIENT_SECRET")
     if not args.interactive and not client_secret:
         if args.client_id:
             import getpass
-            client_secret = getpass.getpass("Client secret: ")
+            client_secret = getpass.getpass("Client secret (legacy dev-only fallback): ")
 
     try:
         # Initialize client

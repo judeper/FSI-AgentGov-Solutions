@@ -1,7 +1,7 @@
 # Securing Copilot Studio AI Agent Access
 ## Unrestricted Agent Sharing Detector (UASD)
 
-**Version:** 1.0.2
+**Version:** 2.0.1
 **Solution Type:** Automated Detection, Remediation, and Exception Management
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -130,7 +130,7 @@ The flow implements six violation detection rules:
 | Violation Type | Remediation Action |
 |----------------|-------------------|
 | **ORG_WIDE_SHARING** | Replace organization-wide access with approved security groups |
-| **PUBLIC_INTERNET_LINK** | Disable public link, enable Entra ID authentication |
+| **PUBLIC_INTERNET_LINK** | Disable public link, enable Microsoft Entra ID authentication |
 | **UNAPPROVED_GROUP** | Remove unapproved groups, add approved groups for environment tier |
 | **EXCESSIVE_INDIVIDUAL** | Remove individual shares, add approved security groups |
 | **CROSS_TENANT_ACCESS** | Disable cross-tenant access, restrict to home tenant only |
@@ -365,7 +365,7 @@ Registry of security groups authorized for agent sharing.
 | Column Name | Type | Description |
 |-------------|------|-------------|
 | `fsi_approvedsecuritygroupid` | GUID | Primary key |
-| `fsi_entraidgroupid` | String(50) | Entra ID security group GUID |
+| `fsi_entraidgroupid` | String(50) | Microsoft Entra ID security group GUID |
 | `fsi_displayname` | String(200) | Security group display name |
 | `fsi_description` | Memo | Purpose and scope of group |
 | `fsi_zoneclassification` | Choice | Zone 1 (Personal), Zone 2 (Team), Zone 3 (Enterprise) |
@@ -398,7 +398,7 @@ END REMOVED SECTION -->
 #### Prerequisites
 
 **Microsoft 365 Licensing:**
-- Microsoft 365 E5 or E5 Compliance (for Entra ID P2 and advanced governance features)
+- Microsoft 365 E5 or E5 Compliance (for Microsoft Entra ID P2 and advanced governance features)
 - Power Automate Premium (for cloud flows, Dataverse, and approvals)
 - Power Apps per-user or per-app plan (for Exception Manager app)
 
@@ -408,7 +408,7 @@ END REMOVED SECTION -->
 |------|--------------|-----------------|
 | **Power Platform Admin** | Flow deployment, environment access | Admin or Global Admin |
 | **Dataverse Admin** | Table creation, security roles | System Administrator |
-| **Application Developer** | App registration (if using service principal) | Application Administrator (Entra ID) |
+| **Application Developer** | App registration (if using service principal) | Application Administrator (Microsoft Entra ID) |
 | **Security Reader** | Agent enumeration | Security Reader (minimum) or Power Platform Admin |
 
 **Service Connections:**
@@ -479,7 +479,7 @@ Then bind each connection reference in Power Automate:
 1. Open each flow in edit mode
 2. Navigate to Data → Connection References
 3. Create connections:
-   - Dataverse (`fsi_cr_dataverse_sharingdetector`): Use Entra ID authentication
+   - Dataverse (`fsi_cr_dataverse_sharingdetector`): Use Microsoft Entra ID authentication
    - Teams (`fsi_cr_teams_sharingdetector`): Use current user authentication
    - Approvals (`fsi_cr_approvals_sharingdetector`): Use current user authentication
 4. Map connections to connection references
@@ -574,7 +574,7 @@ Example Records:
 **Exception Management:**
 - Review pending exceptions within 2 business days
 - Require data owner confirmation for Confidential/Restricted classifications
-- Deny exceptions without adequate business justification (minimum 50 characters enforced by app)
+- Deny exceptions without adequate business justification (minimum 50 characters validated by app)
 
 **Remediation Oversight:**
 - Review Remediation flow run history weekly for failures
@@ -589,7 +589,7 @@ Example Records:
 
 **Resolution:**
 1. Verify flow connection uses account with Power Platform Admin or Global Admin role
-2. Check service health in M365 Admin Center for Power Platform API outages
+2. Check service health in Microsoft 365 admin center for Power Platform API outages
 3. Review flow run history for specific API error codes
 4. If using service principal, verify API permissions: `AppManagement.ReadWrite.All`
 
@@ -630,14 +630,14 @@ Example Records:
 3. Update environment variables with correct values
 4. Re-run Detector flow to test
 
-**Issue: `Invoke-SharingAudit.ps1` may produce false negatives for Copilot Studio agents**
+**Issue: deprecated `Invoke-SharingAudit.ps1` path used for Copilot Studio agents**
 
-**Cause:** The script uses `Get-AdminPowerAppRoleAssignment`, which is designed for Canvas/Model-driven apps and may not return Copilot Studio chatbot-specific sharing data.
+**Cause:** The script depends on non-published chatbot cmdlets and older role-assignment assumptions. Current Microsoft Learn references `Get-AdminPowerAppRoleAssignment` for Power Apps, while Copilot Studio agent posture is represented on the Dataverse `bot` table.
 
 **Resolution:**
-1. Be aware that sharing violations for Copilot Studio chatbots may not be detected by the audit script
-2. For more reliable chatbot sharing detection, use the Dataverse bot table API (`api/data/v9.2/bots`) with the `accesscontrolpolicy` and `authorizedsecuritygroupids` fields (see `Test-AgentSharingCompliance.ps1`)
-3. Cross-reference audit results with the Flow 1 Detector scan, which queries the Copilot Studio agent management API directly
+1. Use `Test-AgentSharingCompliance.ps1` or Flow 1 for Copilot Studio agent detection.
+2. Query `api/data/v9.2/bots` with `accesscontrolpolicy`, `authorizedsecuritygroupids`, `authenticationmode`, and `authenticationtrigger`.
+3. Retain `Invoke-SharingAudit.ps1` only as a deprecated compatibility stub.
 
 #### Audit and Evidence Export
 
@@ -681,34 +681,23 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 | Violation Type | Detection Flow (Flow 1) | `Invoke-SharingAudit.ps1` | `Test-AgentSharingCompliance.ps1` |
 |----------------|:-----------------------:|:-------------------------:|:---------------------------------:|
-| **PUBLIC_INTERNET_LINK** | ✅ | ✅ | ✅ |
-| **ORG_WIDE_SHARING** | ✅ | ✅ | ✅ |
-| **UNAPPROVED_GROUP** | ✅ | ✅ | ❌ ¹ |
-| **EXCESSIVE_INDIVIDUAL** | ✅ | ✅ | ❌ ² |
-| **CROSS_TENANT_ACCESS** | ✅ | ✅ | ❌ ³ |
-| **POLICY_VIOLATION** | ✅ | ❌ | ✅ |
+| **PUBLIC_INTERNET_LINK** | ✅ | Deprecated | ✅ |
+| **ORG_WIDE_SHARING** | ✅ | Deprecated | ✅ |
+| **UNAPPROVED_GROUP** | ✅ | Deprecated | ✅ ¹ |
+| **EXCESSIVE_INDIVIDUAL** | ✅ ² | Deprecated | ❌ ² |
+| **CROSS_TENANT_ACCESS** | ✅ | Deprecated | ✅ |
+| **POLICY_VIOLATION** | ✅ | Deprecated | ✅ |
 
 **Notes:**
 
-1. The Dataverse bot table `accesscontrolpolicy` field cannot distinguish individual from security-group
-   sharing within the "Group membership" mode (value `2`); the `authorizedsecuritygroupids` field lists
-   the assigned Entra group IDs but not per-user shares. `Test-AgentSharingCompliance.ps1`
-   therefore cannot detect unapproved group access.
-2. The bot table does not expose per-agent share-count data, so excessive individual shares
-   cannot be detected from Dataverse alone.
-3. `AllowExternalUsers` is derived from the bot table's `sharingScope`, which only yields
-   `SpecificUsers`, `OrgWide`, or `Public`. Cross-tenant detection requires role assignment
-   data available via `Get-AdminPowerAppRoleAssignment` (used by `Invoke-SharingAudit.ps1`)
-   or the Power Platform admin APIs (used by the Detection Flow).
+1. `Test-AgentSharingCompliance.ps1` detects unapproved group access when `fsi_ApprovedSecurityGroup` is populated for the relevant zone. If the approved registry is unavailable, group-member agents in non-advisory zones are treated as policy violations so they receive review.
+2. The Dataverse bot table does not expose per-agent individual share counts. Detecting **EXCESSIVE_INDIVIDUAL** requires a per-principal sharing API or Power Platform admin surface that returns individual viewers.
 
 **Recommendations:**
 
-- For **comprehensive detection**, use the Detection Flow (Flow 1), which runs as a scheduled
-  cloud flow and covers all six violation types.
-- `Invoke-SharingAudit.ps1` is suitable for ad-hoc audits covering 5 of 6 types (all except
-  POLICY_VIOLATION). Provide `-ApprovedGroupsPath` to enable UNAPPROVED_GROUP detection.
-- `Test-AgentSharingCompliance.ps1` is lightweight and uses only Dataverse bot table queries;
-  it covers 3 of 6 types and is best for quick compliance checks.
+- For scheduled operations, use the Detection Flow or Azure Automation runbook with managed identity and Dataverse bot-table queries.
+- Keep `Invoke-SharingAudit.ps1` disabled except for historical compatibility; it is not the recommended Copilot Studio sharing signal.
+- Use `Test-AgentSharingCompliance.ps1` for quick Dataverse-backed checks and for remediation that writes both `accesscontrolpolicy` and `authorizedsecuritygroupids`.
 
 ---
 
@@ -720,7 +709,7 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 **Risk:** All employees (including contractors, third-party users, and terminated users with active accounts) can access the agent, leading to unauthorized data exposure and compliance violations.
 
-**Detection:** `sharingScope = "organization"` in agent sharing configuration.
+**Detection:** `accesscontrolpolicy = 0` (`Any`) on the Dataverse `bot` table.
 
 **Remediation:** Replace organization-wide access with approved security groups for the environment's zone classification.
 
@@ -728,28 +717,30 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 ```json
 {
   "agent_id": "12345678-abcd-1234-abcd-123456789012",
-  "sharing_scope": "organization",
-  "security_groups": [],
+  "accesscontrolpolicy": 0,
+  "authorizedsecuritygroupids": "",
+  "sharing_scope": "AnyUser",
   "violation_type": "ORG_WIDE_SHARING"
 }
 ```
 
 ### PUBLIC_INTERNET_LINK (Code: 100000001)
 
-**Description:** Agent is accessible via public internet link without Entra ID authentication.
+**Description:** Agent is accessible via public internet link without Microsoft Entra ID authentication.
 
 **Risk:** Unauthenticated users (including external attackers and bots) can interact with the agent, exposing data and creating resource abuse opportunities.
 
-**Detection:** `publicLinkEnabled = true` in agent sharing configuration.
+**Detection:** `authenticationmode = 1` (`None`) on the Dataverse `bot` table, indicating users with the link can chat without Microsoft Entra ID sign-in.
 
-**Remediation:** Disable public link, enable Entra ID authentication requirement.
+**Remediation:** Configure the agent to require Microsoft Entra ID sign-in and restrict chat access to approved users or groups.
 
 **Example Violation:**
 ```json
 {
   "agent_id": "12345678-abcd-1234-abcd-123456789012",
-  "public_link_enabled": true,
-  "public_link_url": "https://copilotstudio.microsoft.com/agents/xyz",
+  "authenticationmode": 1,
+  "authenticationtrigger": null,
+  "accesscontrolpolicy": 0,
   "violation_type": "PUBLIC_INTERNET_LINK"
 }
 ```
@@ -760,11 +751,11 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 **Risk:** Unvetted user populations gain access, potentially including users with insufficient training, conflicting duties, or inappropriate access levels.
 
-**Detection:** Security group GUIDs in agent sharing configuration not present in `fsi_ApprovedSecurityGroup` table with `fsi_isactive = true`.
+**Detection:** `accesscontrolpolicy = 2` and one or more comma-delimited group GUIDs in `authorizedsecuritygroupids` are not present in the `fsi_ApprovedSecurityGroup` table with `fsi_isactive = true`.
 
-**Remediation:** Remove unapproved groups, add approved groups for environment's zone classification.
+**Remediation:** Replace unapproved groups with approved groups for the environment's zone classification.
 
-> **Note:** When using `Invoke-SharingAudit.ps1` without `-ApprovedGroupsPath`, all group-based sharing is flagged as UNAPPROVED_GROUP. The script writes to local files only and does not modify Dataverse. However, if these results are later imported into Dataverse via the Detection Flow, all flagged groups will appear as violations requiring remediation. Ensure an approved groups CSV is provided in production scans to avoid false positives in downstream systems.
+> **Note:** Populate `fsi_ApprovedSecurityGroup` before enabling remediation. If no approved groups exist for a non-advisory zone, remediation is skipped and the violation remains Open for manual review.
 
 **Example Violation:**
 ```json
@@ -811,22 +802,20 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 ### CROSS_TENANT_ACCESS (Code: 100000004)
 
-**Description:** Agent is accessible from external Entra ID tenants.
+**Description:** Agent is accessible from external Microsoft Entra ID tenants.
 
 **Risk:** External organizations (partners, vendors, competitors) can access the agent, creating data leakage and intellectual property risks.
 
-**Detection:** Agent sharing configuration includes tenant IDs other than `fsi_UASD_HomeTenantId`.
+**Detection:** `accesscontrolpolicy = 3` (`Any (multi-tenant)`) on the Dataverse `bot` table; compare tenant metadata to `fsi_UASD_HomeTenantId` where available.
 
-**Remediation:** Disable cross-tenant access, restrict to home tenant only.
+**Remediation:** Replace multi-tenant access with approved home-tenant security groups.
 
 **Example Violation:**
 ```json
 {
   "agent_id": "12345678-abcd-1234-abcd-123456789012",
-  "allowed_tenants": [
-    "12345678-1234-1234-1234-123456789012",  // Home tenant
-    "87654321-4321-4321-4321-210987654321"   // External tenant (violation)
-  ],
+  "accesscontrolpolicy": 3,
+  "sharing_scope": "AnyMultiTenant",
   "violation_type": "CROSS_TENANT_ACCESS"
 }
 ```
@@ -837,17 +826,17 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 **Risk:** Sharing scope exceeds zone-permitted level, undermining environment-tier governance controls.
 
-**Detection:** `sharingScope` exceeds zone-permitted level per `Get-ExpectedSharingPolicy` zone classification.
+**Detection:** Bot-table sharing fields (`accesscontrolpolicy`, `authorizedsecuritygroupids`, `authenticationmode`) exceed the zone-permitted scopes returned by `Get-ExpectedSharingPolicy`.
 
-**Remediation:** Restrict sharing to zone-permitted scopes, add approved security groups.
+**Remediation:** Restrict sharing to zone-permitted scopes and add approved security groups.
 
 **Example Violation:**
 ```json
 {
   "agent_id": "12345678-abcd-1234-abcd-123456789012",
   "environment_zone": "Zone3",
-  "current_sharing_scope": "ORG_WIDE_SHARING",
-  "permitted_sharing_scope": "NONE",
+  "current_sharing_scope": "AnyUser",
+  "permitted_sharing_scope": "GroupMembership",
   "violation_type": "POLICY_VIOLATION"
 }
 ```
@@ -856,8 +845,8 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.2
-**Release Date:** February 2026
+**Solution Version:** 2.0.1
+**Release Date:** 2026-Q2
 **License:** MIT License
 
 **Change Management:**
@@ -867,6 +856,7 @@ the data sources they access. Only the Detection Flow (Flow 1) covers all six vi
 - Coordinate exception expiration renewals with business owners 2 weeks in advance
 
 **Version History:**
+- **v2.0.1 (2026-Q2):** Microsoft Learn refresh; bot-table sharing semantics, safe remediation rollback evidence, and managed-identity guidance
 - **v1.0.2 (February 2026):** Added Flow 4 exception expiration monitor; resolved Known Limitation #1
 - **v1.0.1 (February 2026):** Replaced exported flow JSON with step-by-step documentation; fixed setup scripts
 - **v1.0.0 (February 2026):** Initial release with 6 violation types, automated remediation, and exception management

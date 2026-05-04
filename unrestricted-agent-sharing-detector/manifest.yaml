@@ -1,7 +1,7 @@
 id: unrestricted-agent-sharing-detector
 name: Unrestricted Agent Sharing Detector
 description: Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
-version: 2.0.0
+version: 2.0.1
 status: live
 domain: access-identity
 tier: '2'
