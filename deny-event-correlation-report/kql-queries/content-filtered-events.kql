@@ -4,32 +4,47 @@
 // ============================================================================
 //
 // Purpose: Query Copilot Studio ContentFiltered events from RAI telemetry
-// Data Source: Application Insights customEvents table
+// Data Sources:
+//   - Application Insights classic Logs: customEvents / timestamp / name / customDimensions
+//   - Workspace-based Azure Monitor Logs: AppEvents / TimeGenerated / Name / Properties
 //
 // Prerequisites:
 //   - Azure Application Insights resource
 //   - Copilot Studio agents configured with App Insights connection string
+//
+// SOURCE NORMALIZATION:
+//   Microsoft Learn currently documents `customEvents` for Copilot Studio's
+//   Application Insights Logs experience and `AppEvents` for workspace-based
+//   Azure Monitor Logs. Include the source block below before each query, then
+//   use the normalized column names: EventTime, EventName, Dimensions.
 // ============================================================================
+
+let ContentFilteredEvents =
+    union isfuzzy=true
+        (customEvents
+         | project EventTime = timestamp, EventName = name, Dimensions = todynamic(customDimensions)),
+        (AppEvents
+         | project EventTime = TimeGenerated, EventName = Name, Dimensions = todynamic(Properties))
+    | where EventName == "MicrosoftCopilotStudio"
+    | extend eventType = tostring(Dimensions["EventType"])
+    | where eventType == "ContentFiltered"
+    | extend
+        agentId = tostring(Dimensions["BotId"]),
+        agentName = tostring(Dimensions["BotName"]),
+        sessionId = tostring(Dimensions["ConversationId"]),
+        turnId = tostring(Dimensions["TurnId"]),
+        filterReason = tostring(Dimensions["FilterReason"]),
+        filterCategory = tostring(Dimensions["FilterCategory"]),
+        filterSeverity = tostring(Dimensions["FilterSeverity"]),
+        userId = tostring(Dimensions["UserId"]);
 
 // -----------------------------------------------------------------------------
 // Query 1: All ContentFiltered Events (Last 24 Hours)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(24h)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend
-    agentId = tostring(customDimensions["BotId"]),
-    agentName = tostring(customDimensions["BotName"]),
-    sessionId = tostring(customDimensions["ConversationId"]),
-    turnId = tostring(customDimensions["TurnId"]),
-    filterReason = tostring(customDimensions["FilterReason"]),
-    filterCategory = tostring(customDimensions["FilterCategory"]),
-    filterSeverity = tostring(customDimensions["FilterSeverity"]),
-    userId = tostring(customDimensions["UserId"])
+ContentFilteredEvents
+| where EventTime > ago(24h)
 | project
-    timestamp,
+    timestamp = EventTime,
     agentId,
     agentName,
     sessionId,
@@ -43,40 +58,24 @@ customEvents
 // -----------------------------------------------------------------------------
 // Query 2: Summary by Filter Category (Last 7 Days)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(7d)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend
-    filterCategory = tostring(customDimensions["FilterCategory"]),
-    filterSeverity = tostring(customDimensions["FilterSeverity"]),
-    agentId = tostring(customDimensions["BotId"])
+ContentFilteredEvents
+| where EventTime > ago(7d)
 | summarize
     FilterCount = count(),
     HighSeverityCount = countif(filterSeverity == "High"),
     UniqueAgents = dcount(agentId),
-    UniqueSessions = dcount(tostring(customDimensions["ConversationId"]))
+    UniqueSessions = dcount(sessionId)
     by filterCategory
 | order by FilterCount desc
 
 // -----------------------------------------------------------------------------
 // Query 3: High Severity Events (Last 24 Hours) - For Alerting
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(24h)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend filterSeverity = tostring(customDimensions["FilterSeverity"])
+ContentFilteredEvents
+| where EventTime > ago(24h)
 | where filterSeverity == "High"
-| extend
-    agentId = tostring(customDimensions["BotId"]),
-    agentName = tostring(customDimensions["BotName"]),
-    filterReason = tostring(customDimensions["FilterReason"]),
-    filterCategory = tostring(customDimensions["FilterCategory"])
 | project
-    timestamp,
+    timestamp = EventTime,
     agentId,
     agentName,
     filterReason,
@@ -86,69 +85,48 @@ customEvents
 // -----------------------------------------------------------------------------
 // Query 4: Filter Events by Agent (Last 7 Days)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(7d)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend
-    agentId = tostring(customDimensions["BotId"]),
-    agentName = tostring(customDimensions["BotName"]),
-    filterCategory = tostring(customDimensions["FilterCategory"]),
-    filterSeverity = tostring(customDimensions["FilterSeverity"])
+ContentFilteredEvents
+| where EventTime > ago(7d)
 | summarize
     TotalFilters = count(),
     HighSeverity = countif(filterSeverity == "High"),
     MediumSeverity = countif(filterSeverity == "Medium"),
     LowSeverity = countif(filterSeverity == "Low"),
-    UniqueSessions = dcount(tostring(customDimensions["ConversationId"]))
+    UniqueSessions = dcount(sessionId)
     by agentId, agentName
 | order by TotalFilters desc
 
 // -----------------------------------------------------------------------------
 // Query 5: Hourly Trend (Last 24 Hours)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(24h)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| summarize FilterCount = count() by bin(timestamp, 1h)
-| order by timestamp desc
+ContentFilteredEvents
+| where EventTime > ago(24h)
+| summarize FilterCount = count() by bin(EventTime, 1h)
+| order by EventTime desc
 | render timechart
 
 // -----------------------------------------------------------------------------
 // Query 6: Filter Category Distribution Over Time (Last 30 Days)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(30d)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend filterCategory = tostring(customDimensions["FilterCategory"])
-| summarize FilterCount = count() by filterCategory, bin(timestamp, 1d)
-| order by timestamp desc
+ContentFilteredEvents
+| where EventTime > ago(30d)
+| summarize FilterCount = count() by filterCategory, bin(EventTime, 1d)
+| order by EventTime desc
 | render areachart
 
 // -----------------------------------------------------------------------------
 // Query 7: Session Analysis - Repeat Filters
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(7d)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend
-    sessionId = tostring(customDimensions["ConversationId"]),
-    agentId = tostring(customDimensions["BotId"])
+ContentFilteredEvents
+| where EventTime > ago(7d)
 | extend severityRank = case(
-    tostring(customDimensions["FilterSeverity"]) == "High", 3,
-    tostring(customDimensions["FilterSeverity"]) == "Medium", 2,
-    tostring(customDimensions["FilterSeverity"]) == "Low", 1,
+    filterSeverity == "High", 3,
+    filterSeverity == "Medium", 2,
+    filterSeverity == "Low", 1,
     0)
 | summarize
     FilterCount = count(),
-    FilterCategories = make_set(tostring(customDimensions["FilterCategory"])),
+    FilterCategories = make_set(filterCategory),
     MaxSeverityRank = max(severityRank)
     by sessionId, agentId
 | extend MaxSeverity = case(
@@ -163,36 +141,20 @@ customEvents
 // -----------------------------------------------------------------------------
 // Query 8: 15-Minute Alert Query (Zone 3 SLA)
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(15m)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend filterSeverity = tostring(customDimensions["FilterSeverity"])
+ContentFilteredEvents
+| where EventTime > ago(15m)
 | where filterSeverity == "High"
 | summarize AlertCount = count()
 | where AlertCount > 0
 
 // -----------------------------------------------------------------------------
 // Query 9: Export for Correlation (Last 24 Hours)
-// Use this query for PowerShell extraction via REST API
+// Use this query for PowerShell extraction via REST API or Log Analytics export
 // -----------------------------------------------------------------------------
-customEvents
-| where timestamp > ago(24h)
-| where name == "MicrosoftCopilotStudio"
-| extend eventType = tostring(customDimensions["EventType"])
-| where eventType == "ContentFiltered"
-| extend
-    agentId = tostring(customDimensions["BotId"]),
-    agentName = tostring(customDimensions["BotName"]),
-    sessionId = tostring(customDimensions["ConversationId"]),
-    turnId = tostring(customDimensions["TurnId"]),
-    filterReason = tostring(customDimensions["FilterReason"]),
-    filterCategory = tostring(customDimensions["FilterCategory"]),
-    filterSeverity = tostring(customDimensions["FilterSeverity"]),
-    userId = tostring(customDimensions["UserId"])
+ContentFilteredEvents
+| where EventTime > ago(24h)
 | project
-    timestamp,
+    timestamp = EventTime,
     agentId,
     agentName,
     sessionId,

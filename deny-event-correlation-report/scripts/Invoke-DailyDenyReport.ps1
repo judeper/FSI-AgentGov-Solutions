@@ -16,8 +16,20 @@
 .PARAMETER AppInsightsAppId
     Application Insights Application ID for RAI telemetry.
 
+.PARAMETER ExchangeOrganization
+    Tenant primary domain (for example, example.onmicrosoft.com) used by Exchange Online unattended authentication.
+
+.PARAMETER ExchangeManagedIdentity
+    Use the Azure managed identity assigned to the runbook host for Exchange Online connections in the Purview Audit and DLP extractors.
+
+.PARAMETER ExchangeAppId
+    Entra application (client) ID for certificate-based app-only Exchange Online authentication when managed identity is not available.
+
+.PARAMETER ExchangeCertificateThumbprint
+    Certificate thumbprint for certificate-based app-only Exchange Online authentication.
+
 .PARAMETER KeyVaultName
-    Optional Azure Key Vault name containing credentials.
+    Optional Azure Key Vault name containing non-secret configuration such as AppInsightsAppId.
 
 .PARAMETER StorageAccountName
     Optional Azure Storage account for blob upload.
@@ -39,13 +51,17 @@
     Runs all extractions, saves locally, skips upload.
 
 .EXAMPLE
-    .\Invoke-DailyDenyReport.ps1 -KeyVaultName "kv-governance" -StorageAccountName "stgovernance"
-    Runs all extractions using Key Vault credentials and uploads to blob.
+    .\Invoke-DailyDenyReport.ps1 -ExchangeManagedIdentity -ExchangeOrganization "example.onmicrosoft.com" -KeyVaultName "kv-governance" -StorageAccountName "stgovernance"
+    Runs all extractions from Azure Automation using managed identity for Exchange Online and uploads to blob.
+
+.EXAMPLE
+    .\Invoke-DailyDenyReport.ps1 -ExchangeAppId $appId -ExchangeCertificateThumbprint $thumbprint -ExchangeOrganization "example.onmicrosoft.com"
+    Runs Purview Audit and DLP extractors with certificate-based app-only Exchange Online authentication.
 
 .NOTES
     Author: FSI Agent Governance Framework
     Version: 1.1
-    Requires: ExchangeOnlineManagement module (Az.Storage and Az.KeyVault required only for upload/KeyVault features)
+    Requires: ExchangeOnlineManagement module 3.0+ (Az.Storage and Az.KeyVault required only for upload/KeyVault features)
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -65,10 +81,13 @@
 
   Prerequisites:
   - Install Az.Accounts module: Install-Module Az.Accounts -Force
-  - Authenticate before running: Connect-AzAccount
+  - Authenticate before running: Connect-AzAccount (or Connect-AzAccount -Identity in Azure Automation)
   - Grant Monitoring Reader role on Application Insights resource
+  - For Purview Audit / DLP extractors, prefer -ExchangeManagedIdentity with
+    -ExchangeOrganization. Use -ExchangeAppId / -ExchangeCertificateThumbprint
+    only when managed identity is not available.
 
-  Last verified: March 1, 2026
+  Last verified: 2026-Q2 Microsoft Learn refresh
 
 ================================================================================
 #>
@@ -104,6 +123,18 @@ param(
 
     [Parameter()]
     [string]$AppInsightsAppId,
+
+    [Parameter()]
+    [string]$ExchangeOrganization,
+
+    [Parameter()]
+    [switch]$ExchangeManagedIdentity,
+
+    [Parameter()]
+    [string]$ExchangeAppId,
+
+    [Parameter()]
+    [string]$ExchangeCertificateThumbprint,
 
     [Parameter()]
     [string]$KeyVaultName,
@@ -191,11 +222,11 @@ function Invoke-WithRetry {
 function Get-KeyVaultSecrets {
     <#
     .SYNOPSIS
-        Retrieves credentials from Azure Key Vault.
+        Retrieves non-secret configuration from Azure Key Vault.
     #>
     param([string]$VaultName)
 
-    Write-Host "Retrieving credentials from Key Vault: $VaultName" -ForegroundColor Gray
+    Write-Host "Retrieving configuration from Key Vault: $VaultName" -ForegroundColor Gray
 
     # Runtime check: Az.KeyVault is only required when -KeyVaultName is provided
     if (-not (Get-Module -ListAvailable -Name Az.KeyVault)) {
@@ -286,7 +317,7 @@ try {
         Write-Host "Created output directory: $OutputDirectory" -ForegroundColor Gray
     }
 
-    # Get credentials from Key Vault if specified
+    # Get non-secret configuration from Key Vault if specified
     if ($KeyVaultName) {
         $kvSecrets = Get-KeyVaultSecrets -VaultName $KeyVaultName
 
@@ -294,6 +325,30 @@ try {
             $AppInsightsAppId = $kvSecrets.AppInsightsAppId
         }
         # NOTE: ApiKey no longer retrieved from KeyVault — Entra ID auth path does not need it
+    }
+
+
+    # Build Exchange Online auth pass-through for child audit extractors.
+    # Managed identity is preferred for Azure Automation. Certificate-based
+    # app-only auth is the fallback for non-Azure unattended hosts.
+    $exchangeAuthArgs = @{}
+    if ($ExchangeManagedIdentity -and ($ExchangeAppId -or $ExchangeCertificateThumbprint)) {
+        throw "Use either -ExchangeManagedIdentity or certificate-based Exchange auth parameters, not both."
+    }
+    if ($ExchangeManagedIdentity) {
+        if (-not $ExchangeOrganization) {
+            throw "ExchangeOrganization is required when -ExchangeManagedIdentity is specified."
+        }
+        $exchangeAuthArgs.ManagedIdentity = $true
+        $exchangeAuthArgs.Organization = $ExchangeOrganization
+    }
+    elseif ($ExchangeAppId -or $ExchangeCertificateThumbprint -or $ExchangeOrganization) {
+        if (-not ($ExchangeAppId -and $ExchangeCertificateThumbprint -and $ExchangeOrganization)) {
+            throw "ExchangeAppId, ExchangeCertificateThumbprint, and ExchangeOrganization are all required for certificate-based Exchange auth."
+        }
+        $exchangeAuthArgs.AppId = $ExchangeAppId
+        $exchangeAuthArgs.CertificateThumbprint = $ExchangeCertificateThumbprint
+        $exchangeAuthArgs.Organization = $ExchangeOrganization
     }
 
     # Track results
@@ -314,7 +369,7 @@ try {
 
         if (Test-Path $copilotScript) {
             Invoke-WithRetry -ScriptBlock {
-                & $copilotScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $copilotDenyPath
+                & $copilotScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $copilotDenyPath @exchangeAuthArgs
             }
 
             # Script completed without error — mark success even if zero events (no CSV created)
@@ -343,7 +398,7 @@ try {
 
         if (Test-Path $dlpScript) {
             Invoke-WithRetry -ScriptBlock {
-                & $dlpScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $dlpEventsPath
+                & $dlpScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $dlpEventsPath @exchangeAuthArgs
             }
 
             # Script completed without error — mark success even if zero events (no CSV created)

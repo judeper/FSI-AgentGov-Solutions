@@ -5,11 +5,11 @@
 //
 // Purpose: Query Defender CloudAppEvents for Copilot prompt injection (XPIA),
 //          jailbreak, and other prompt-shield threat detections.
-// Data Source: CloudAppEvents table in Microsoft Defender Advanced Hunting
+// Data Source: CloudAppEvents table in Microsoft Defender XDR Advanced Hunting
 //
 // Prerequisites:
 //   - Microsoft Defender for Cloud Apps license
-//   - Advanced Hunting access in Microsoft 365 Defender portal
+//   - Advanced Hunting access in the Microsoft Defender portal
 //
 // SCHEMA NOTES (verify against your tenant before relying on results):
 //   - Public ActionType for Copilot prompt activity is `CopilotInteraction`.

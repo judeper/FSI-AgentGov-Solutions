@@ -34,10 +34,12 @@
     Version: 1.0
     Requires: ExchangeOnlineManagement module 3.0+, Purview Audit Reader role
 
-    DEPRECATION NOTICE: Microsoft has announced that `Search-UnifiedAuditLog` will be
-    retired in favor of the Microsoft Graph `auditLogQueries` API. Track the
-    Microsoft 365 roadmap and plan migration. As of 2026-Q2, the cmdlet remains
-    supported but new tenants are encouraged to use the Graph API path.
+    MICROSOFT GRAPH MIGRATION NOTE: `Search-UnifiedAuditLog` remains the
+    documented production extractor for this script as of 2026-Q2. Microsoft
+    Graph audit log search is available in beta at `/security/auditLog/queries`
+    with `AuditLogsQuery.*` permissions; beta Graph APIs are subject to change
+    and are not supported for production use. Track v1.0 readiness before
+    replacing this extractor.
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
