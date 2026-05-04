@@ -1,16 +1,25 @@
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.1.0
+> **Status:** Completed | **Version:** v1.1.1
 
-Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources.
+Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources.
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Overview
 
-When a Copilot Studio agent uses a SharePoint document library as a knowledge source, it retrieves and returns **exact document content** to users — not site-level summaries. If individual files within that library are overshared (accessible to users outside the agent's intended audience), the agent becomes a direct data exposure path.
+When a Copilot Studio agent uses SharePoint content as a knowledge source, it can cite **exact file content** after user permission checks — not just site-level summaries. If individual files or folders in the underlying SharePoint library are overshared (accessible to users outside the agent's intended audience), the agent becomes a direct data exposure path.
 
-This solution scans item-level permissions within agent-connected SharePoint libraries and produces a risk-scored report that identifies specific files and folders with overshared access. It complements site-level sharing analysis by examining the actual items an agent can surface.
+This solution scans item-level permissions within SharePoint libraries that back agent knowledge sources and produces a risk-scored report that identifies specific files and folders with overshared access. It complements site-level sharing analysis by examining the actual items an agent can surface.
+
+### Current SharePoint Knowledge Source Coverage
+
+| Knowledge source pattern | Scanner coverage | Notes |
+|--------------------------|------------------|-------|
+| SharePoint connector / full SharePoint integration | Scan libraries containing the referenced site, folder, or file content | Use exported or curated library lists for the agent's SharePoint scope |
+| SharePoint files and folders added as unstructured data | Scan the containing library and selected folder subtree where known | Copilot Studio currently supports selecting SharePoint files and folders in this path; uploaded-file sources are separate |
+| Uploaded files stored in Dataverse | Out of scope | These files don't use SharePoint item permissions after upload |
+| OneDrive files and folders | Out of scope by default | Apply the same permission-review pattern separately if OneDrive sources are approved |
 
 ### Why Item-Level Scanning Matters for Agent Knowledge Sources
 
@@ -57,7 +66,7 @@ Risk scoring is stricter than general SharePoint oversharing analysis because ag
        ▼               ▼                  ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────────┐
 │ CSV/JSON     │ │ SharePoint   │ │ Configuration                │
-│ Library List │ │ PnP API      │ │ (sensitivity tiers, scope)   │
+│ Library List │ │ PnP/CSOM     │ │ (sensitivity tiers, scope)   │
 └──────────────┘ └──────────────┘ └──────────────────────────────┘
                        │
                        ▼
@@ -65,6 +74,17 @@ Risk scoring is stricter than general SharePoint oversharing analysis because ag
               │  CSV Risk Report │
               └──────────────────┘
 ```
+
+### Microsoft Graph and SharePoint API Alignment
+
+The current implementation uses PnP.PowerShell over SharePoint client APIs because it exposes SharePoint role assignments and list item fields in a compact PowerShell workflow. Current Microsoft Graph v1.0 APIs are still important for validation and future enhancement:
+
+| API area | Current status | Scanner implication |
+|----------|----------------|---------------------|
+| `/drives/{drive-id}/items/{item-id}/permissions` | v1.0 lists effective sharing permissions on a file or folder | Future Graph mode can use `link.scope`, `roles`, and `grantedToIdentitiesV2` to expand specific-people links more precisely |
+| `/sites/{site-id}/permissions` | v1.0 lists site permissions and requires high privilege (`Sites.FullControl.All`) | Useful for site-level app permission review, but not a replacement for item-level file/folder permission scans |
+| SharePoint REST / CSOM | Still supported; Microsoft recommends Graph over CSOM/REST when Graph covers the scenario | PnP remains the implementation path for this release; large-scale scans should consider Graph batching or delta traversal in a future version |
+| Graph JSON batching | Supports up to 20 requests per batch; individual requests can still be throttled | Future Graph mode should retry throttled subrequests using each response's `retry-after` value |
 
 ### Scan Sequence
 
@@ -106,38 +126,40 @@ Risk scoring is stricter than general SharePoint oversharing analysis because ag
 
 | Requirement | Minimum Version | Notes |
 |-------------|----------------|-------|
-| **PowerShell** | 7.0 (7.4+ for PnP 3.x) | |
-| **PnP.PowerShell** | 2.5.0 | 3.x supported with `-ClientId` |
+| **PowerShell** | 7.2+ (7.4+ for PnP 3.x) | Matches script `#Requires -Version 7.2` |
+| **PnP.PowerShell** | 3.x recommended; 2.5.0+ legacy fallback | 3.x supports tenant-specific app registrations, managed identity, certificate auth, and transitive group expansion |
 
 ## Quick Start
 
 ### 1. Install Prerequisites
 
 ```powershell
-# PnP.PowerShell 2.x (uses built-in multi-tenant app)
-Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
-
-# OR PnP.PowerShell 3.x (requires tenant-specific app registration)
+# Recommended: PnP.PowerShell 3.x
 Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentUser
-# See docs/prerequisites.md for Register-PnPEntraIDApp setup
+
+# Legacy fallback: PnP.PowerShell 2.5.0+ for admin workstation scans
+Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentUser
+# See docs/prerequisites.md for managed identity, certificate, and interactive setup
 ```
 
 ### 2. Scan a Single Library
 
 ```powershell
-# PnP.PowerShell 2.x (no -ClientId needed)
-.\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
-    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
-    -LibraryName "Documents" `
-    -AgentName "HR-Agent" `
-    -AgentUserGroupId "00000000-0000-0000-0000-000000000001"
-
-# PnP.PowerShell 3.x (requires -ClientId)
+# Recommended for Azure Automation / Azure Functions: managed identity
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
     -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
     -LibraryName "Documents" `
     -AgentName "HR-Agent" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
+    -AuthenticationMode ManagedIdentity
+
+# Admin workstation fallback: interactive PnP.PowerShell 3.x app registration
+.\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
+    -SiteUrl "https://example.sharepoint.com/sites/AgentKB" `
+    -LibraryName "Documents" `
+    -AgentName "HR-Agent" `
+    -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
+    -AuthenticationMode Interactive `
     -ClientId "your-client-id-here"
 ```
 
@@ -148,6 +170,7 @@ Install-Module -Name PnP.PowerShell -MinimumVersion 3.0.0 -Force -Scope CurrentU
 .\scripts\Get-KnowledgeSourceItemPermissions.ps1 `
     -LibraryList "./output/agent-knowledge-sources.csv" `
     -AgentUserGroupId "00000000-0000-0000-0000-000000000001" `
+    -AuthenticationMode ManagedIdentity `
     -OutputPath "./output/item-risk-report.csv"
 ```
 
@@ -242,11 +265,11 @@ This solution supports compliance with these regulations by providing auditable 
 
 | Limitation | Description | Workaround |
 |------------|-------------|------------|
-| **PnP interactive auth only** | v1.0.x uses `-Interactive` authentication; service principal auth for unattended scanning is planned | Run interactively or use PnP PowerShell's certificate-based auth manually |
-| **PnP.PowerShell 3.x requires `-ClientId`** | The PnP multi-tenant app was removed in September 2024; PnP 3.x requires a tenant-specific Entra app registration | Register an app with `Register-PnPEntraIDApp` and pass `-ClientId` (see [Prerequisites](docs/prerequisites.md)) |
+| **Specific-people link detail** | PnP role assignments surface these as `FlexibleLink` without recipient details | Review the SharePoint Manage Access panel or adopt Microsoft Graph `driveItem` permissions for `grantedToIdentitiesV2` correlation |
+| **PnP.PowerShell 3.x interactive auth requires a client ID** | The PnP multi-tenant app was removed in September 2024; interactive auth needs a tenant-specific Entra app registration or supported environment variable | Register an app with `Register-PnPEntraIDAppForInteractiveLogin` and pass `-ClientId` (see [Prerequisites](docs/prerequisites.md)) |
 | **No agent definition auto-resolution** | Agent user scope must be provided manually; automated resolution from Copilot Studio agent definition is not yet implemented | Provide `-AgentUserGroupId` or `-AgentUserGroupMembers` parameter |
-| **Sensitivity label field availability** | `_SensitivityLabel` field requires Microsoft Information Protection labels to be published; falls back to `_ComplianceTag` | Verify sensitivity labels are enabled in your tenant |
-| **Large library performance** | Scanning libraries with 10,000+ items may take significant time | Adjust `maxItemsPerLibrary` in config or use `-MaxItemsPerLibrary` parameter |
+| **Sensitivity label field availability** | `_SensitivityLabel` field requires Microsoft Purview sensitivity labels to be published; falls back to `_ComplianceTag` | Verify sensitivity labels are enabled in your tenant; encrypted or password-protected files can have Copilot Studio indexing limitations depending on source type |
+| **Large library performance** | Scanning libraries with 10,000+ items may take significant time | Adjust `maxItemsPerLibrary`, split scans by library/folder, and consider a future Graph batching or delta traversal path |
 
 ## License
 
@@ -254,4 +277,4 @@ This solution supports compliance with these regulations by providing auditable 
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.1.0*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.1.1*

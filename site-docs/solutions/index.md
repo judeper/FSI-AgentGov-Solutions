@@ -15,8 +15,8 @@ Solutions for controlling who can access, share, and publish AI agents.
 | [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.1 | live | team, enterprise | 3.8 |
 | [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.1 | live | team, enterprise | 1.18, 2.8 |
 | [Conditional Access Automation](conditional-access-automation/index.md) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v2.0.1 | live | team, enterprise | 1.11, 1.23, 1.18 |
-| [Cross-Tenant External Sharing Governance](cross-tenant-external-sharing-governance/index.md) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.0.2 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 3.1, 1.11 |
-| [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.0 | live | team, enterprise | 2.22, 1.23, 3.7, 3.8 |
+| [Cross-Tenant External Sharing Governance](cross-tenant-external-sharing-governance/index.md) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.0.3 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 |
+| [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.1 | live | team, enterprise | 2.22, 1.23, 3.7, 3.8 |
 | [Unrestricted Agent Sharing Detector](unrestricted-agent-sharing-detector/index.md) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.0 | live | team, enterprise | 1.1, 3.8 |
 
 ## Content & Data Protection
@@ -25,7 +25,7 @@ Solutions for securing agent content, file handling, and knowledge sources.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries connected to Copilot Studio agents as knowledge sources. | v1.1.0 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
+| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources. | v1.1.1 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
 | [Content Moderation Monitor](content-moderation-monitor/index.md) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.0 | live | personal, team, enterprise | 1.8, 1.14 |
 | [File Upload Security](file-upload-security/index.md) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.0 | live | personal, team, enterprise | 1.14, 1.8, 1.4 |
 | [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Dataverse plugin, DLP policy template, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.2.0 | live | personal, team, enterprise | 1.5, 1.10, 1.11, 1.13, 1.14, 1.25, 3.3, 3.7, 4.3 |

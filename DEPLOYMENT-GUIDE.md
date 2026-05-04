@@ -89,7 +89,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.1 | team, enterprise |
-| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.0 | personal, team, enterprise |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
