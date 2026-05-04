@@ -526,16 +526,15 @@
     "environment-lifecycle-management": {
       "id": "environment-lifecycle-management",
       "name": "Environment Lifecycle Management",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "lifecycle-ops",
-      "tier": "3",
+      "tier": "2",
       "status": "live",
       "description": "Automated Power Platform environment provisioning with zone-based governance.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/environment-lifecycle-management/",
       "controls": [
         "2.1",
         "2.2",
-        "2.3",
         "2.8",
         "1.7"
       ],

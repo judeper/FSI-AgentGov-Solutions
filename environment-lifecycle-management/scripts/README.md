@@ -76,18 +76,18 @@ pip install -r requirements.txt
 
 ### Authentication
 
-Scripts use MSAL Confidential Client (app-only) authentication. You need:
+Production automation should use managed identity, workload identity federation, or certificate-backed app authentication where supported. The current CLI scripts also retain MSAL confidential-client support for legacy dev/test runs. If you use that fallback, you need:
 
 | Parameter | Source |
 |-----------|--------|
 | `--tenant-id` | Entra ID > Overview > Tenant ID |
 | `--client-id` | App registration > Application (client) ID |
-| `--client-secret` | From Azure Key Vault or during registration |
+| `--client-secret` | Legacy dev-only fallback from Azure Key Vault or during registration |
 | `--environment-url` | Dataverse environment URL (e.g., https://org.crm.dynamics.com) |
 
 ### Environment Variables (Optional)
 
-Set environment variables to avoid passing credentials on command line:
+Set environment variables to avoid passing legacy dev/test credentials on the command line:
 
 ```bash
 export ELM_TENANT_ID="your-tenant-id"

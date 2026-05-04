@@ -2,7 +2,10 @@
 """
 Dataverse Web API client for Environment Lifecycle Management.
 
-Uses MSAL Confidential Client for app-only authentication.
+Supports interactive authentication and a legacy MSAL confidential-client fallback
+for app-only authentication. Prefer managed identity, workload identity
+federation, or certificate-backed authentication for production automation
+where supported.
 """
 
 import argparse
@@ -39,7 +42,7 @@ class ELMClient:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
             client_id: Application (client) ID (required for SP auth)
-            client_secret: Client secret value (required for SP auth)
+            client_secret: Client secret value for legacy dev-only SP auth fallback
             interactive: Use interactive browser auth instead of SP
         """
         self.tenant_id = tenant_id
@@ -65,6 +68,7 @@ class ELMClient:
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
         else:
+            # legacy: dev-only — replace with managed identity in production
             # Confidential client for service-to-service auth
             if not client_id or not client_secret:
                 raise ValueError("client_id and client_secret required for non-interactive auth")
@@ -718,7 +722,11 @@ def main():
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret — prefer ELM_CLIENT_SECRET env var to avoid exposure in process listings",
+        help=(
+            "Client secret (legacy dev-only fallback; prefer managed identity/"
+            "certificate auth in production). Prefer ELM_CLIENT_SECRET env var "
+            "to avoid exposure in process listings"
+        ),
     )
     parser.add_argument(
         "--environment-url",
@@ -749,6 +757,7 @@ def main():
     if not args.client_id:
         parser.error("--client-id is required (or set ELM_CLIENT_ID env var)")
 
+    # legacy: dev-only — replace with managed identity in production
     # For non-interactive mode, need client secret
     client_secret = args.client_secret
     if client_secret and not os.environ.get("ELM_CLIENT_SECRET"):

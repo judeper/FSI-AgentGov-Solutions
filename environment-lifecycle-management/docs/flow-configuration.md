@@ -45,8 +45,8 @@ Detailed specifications for the three provisioning flows.
 |-----------|---------|---------|
 | **Dataverse** | Read/write tables | Included |
 | **Power Platform for Admins V2** | Create environment | Premium |
-| **HTTP with Microsoft Entra ID** | BAP API, Graph API | Premium |
-| **Azure Key Vault** | Retrieve SP credentials | Premium |
+| **HTTP with Microsoft Entra ID** | Power Platform API, Graph API | Premium |
+| **Azure Key Vault** | Retrieve SP credentials/certificates | Premium |
 | **Office 365 Outlook** | Send notifications | Included |
 | **Microsoft Teams** | Post notifications | Included |
 
@@ -59,10 +59,10 @@ following **application** permissions on the Microsoft Graph API
 
 | Permission | Used by |
 |------------|---------|
-| `Group.Read.All` | Step 13 (Bind Security Group) — verifies the requested AAD security group exists before the BAP bind call |
+| `Group.Read.All` | Step 13 (Bind Security Group) — verifies the requested Microsoft Entra security group exists before binding the environment |
 | `Application.Read.All` *(optional)* | If you want to validate the SP context for diagnostics |
 
-The BAP and Dataverse calls themselves do **not** use Microsoft Graph;
+The Power Platform API and Dataverse calls themselves do **not** use Microsoft Graph;
 they use the Power Platform admin APIs and Dataverse Web API
 respectively, and rely on the SP being granted Power Platform admin /
 Dataverse `System Administrator` as covered in
@@ -173,7 +173,7 @@ if(equals(triggerBody()?['fsi_zone'], 100000003), 120,
 | Parameter | Value |
 |-----------|-------|
 | Vault name | `<your-vault-name>` |
-| Secret name | `ELM-ServicePrincipal-Secret` |
+| Secret name | `ELM-ServicePrincipal-Secret` (legacy dev-only fallback; prefer managed identity or certificate-backed auth where supported) |
 
 **Security Configuration:**
 
@@ -193,7 +193,7 @@ if(equals(triggerBody()?['fsi_zone'], 100000003), 120,
 |-----------|-------|
 | Table | EnvironmentRequest |
 | Row ID | `triggerBody()?['fsi_environmentrequestid']` |
-| State | `6` (Provisioning) |
+| State | `100000006` (Provisioning) |
 | Provisioning Started | `utcNow()` |
 
 ### Step 3: Log Provisioning Started
@@ -205,9 +205,9 @@ if(equals(triggerBody()?['fsi_zone'], 100000003), 120,
 | Table | ProvisioningLog |
 | Environment Request | `triggerBody()?['fsi_environmentrequestid']` |
 | Sequence | `1` |
-| Action | `6` (ProvisioningStarted) |
+| Action | `100000006` (ProvisioningStarted) |
 | Actor | `<Service-Principal-AppId>` |
-| Actor Type | `2` (ServicePrincipal) |
+| Actor Type | `100000002` (ServicePrincipal) |
 | Timestamp | `utcNow()` |
 | Success | `true` |
 | Correlation ID | `workflow()?['run']?['name']` |
@@ -260,28 +260,28 @@ Wrap in error-handling scope:
 | Parameter | Value |
 |-----------|-------|
 | Sequence | `2` |
-| Action | `7` (EnvironmentCreated) |
+| Action | `100000007` (EnvironmentCreated) |
 | Action Details | Include environmentId, environmentUrl |
 
 ### Step 7: Enable Managed Environment
 
-**Action:** HTTP with Microsoft Entra ID (preauthorized)
+**Action:** Run a preauthorized PowerShell automation step (Azure Automation runbook, deployment pipeline task, or equivalent) using the current Managed Environments cmdlet pattern from Microsoft Learn.
 
-| Parameter | Value |
-|-----------|-------|
-| Method | `POST` |
-| Base Resource URL | `https://api.bap.microsoft.com` |
-| Microsoft Entra ID Resource URI | `https://api.bap.microsoft.com` |
-| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{outputs('Create_Environment')?['body']?['name']}/enableGovernanceConfiguration?api-version=2021-04-01` |
-| Body | `{"protectionLevel": "Standard"}` |
-
-**Headers:**
-
-```json
-{
-  "Content-Type": "application/json"
+```powershell
+$GovernanceConfiguration = [pscustomobject] @{
+    protectionLevel = "Standard"
+    settings = [pscustomobject]@{
+        extendedSettings = @{}
+    }
 }
+
+$EnvironmentName = "<environment-id from Create Environment action>"
+Set-AdminPowerAppEnvironmentGovernanceConfiguration `
+    -EnvironmentName $EnvironmentName `
+    -UpdatedGovernanceConfiguration $GovernanceConfiguration
 ```
+
+Dataverse is required for Managed Environments. The identity running this step must be a Power Platform Admin or Dynamics 365 Administrator in Microsoft Entra ID, or an approved automation identity with equivalent delegated operational authority.
 
 **Retry Policy:**
 
@@ -297,7 +297,7 @@ Wrap in error-handling scope:
 
 ### Step 8: Log Managed Enabled
 
-Log action `8` (ManagedEnabled) to ProvisioningLog.
+Log action `100000008` (ManagedEnabled) to ProvisioningLog.
 
 ### Step 9: Resolve Environment Group ID
 
@@ -306,7 +306,9 @@ Log action `8` (ManagedEnabled) to ProvisioningLog.
 | Parameter | Value |
 |-----------|-------|
 | Method | `GET` |
-| URI | `/providers/Microsoft.BusinessAppPlatform/environmentGroups?api-version=2021-04-01` |
+| Base Resource URL | `https://api.powerplatform.com` |
+| Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
+| URI | `/environmentmanagement/environmentGroups?api-version=2022-03-01-preview` |
 
 **Retry Policy:**
 
@@ -324,16 +326,16 @@ Log action `8` (ManagedEnabled) to ProvisioningLog.
 
 The Power Automate `filter` workflow function takes a 2-argument signature
 (`filter(<from>, <where>)`) — the previous 3-argument form was invalid. Use
-`equals()` with `item()?['properties']?['displayName']` inside the `where`:
+`equals()` with `item()?['displayName']` inside the `where`:
 
 ```
 @{
   first(
     filter(
       body('Get_Environment_Groups')?['value'],
-      equals(item()?['properties']?['displayName'], variables('environmentGroupName'))
+      equals(item()?['displayName'], variables('environmentGroupName'))
     )
-  )?['name']
+  )?['id']
 }
 ```
 
@@ -346,18 +348,10 @@ Set the result of this expression into the `resolvedGroupId` variable.
 | Parameter | Value |
 |-----------|-------|
 | Method | `POST` |
-| URI | `/providers/Microsoft.BusinessAppPlatform/environmentGroups/@{variables('resolvedGroupId')}/addEnvironments?api-version=2021-04-01` |
-| Body | See below |
-
-```json
-{
-  "environments": [
-    {
-      "id": "@{outputs('Create_Environment')?['body']?['name']}"
-    }
-  ]
-}
-```
+| Base Resource URL | `https://api.powerplatform.com` |
+| Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
+| URI | `/environmentmanagement/environmentGroups/@{variables('resolvedGroupId')}/addEnvironment/@{outputs('Create_Environment')?['body']?['name']}?api-version=2022-03-01-preview` |
+| Body | Empty |
 
 **Retry Policy:**
 
@@ -373,7 +367,7 @@ Set the result of this expression into the `resolvedGroupId` variable.
 
 ### Step 11: Log Group Assigned
 
-Log action `9` (GroupAssigned) to ProvisioningLog.
+Log action `100000009` (GroupAssigned) to ProvisioningLog.
 
 ### Step 12: Call Baseline Configuration (Child Flow)
 
@@ -430,7 +424,7 @@ If true, execute the security group binding inline:
 
 **Step 13c: Log Security Group Bound**
 
-Log action `10` (SecurityGroupBound) to ProvisioningLog.
+Log action `100000010` (SecurityGroupBound) to ProvisioningLog.
 
 ### Step 14: Update Request Complete
 
@@ -438,14 +432,14 @@ Log action `10` (SecurityGroupBound) to ProvisioningLog.
 
 | Parameter | Value |
 |-----------|-------|
-| State | `7` (Completed) |
+| State | `100000007` (Completed) |
 | Environment ID | `outputs('Create_Environment')?['body']?['name']` |
 | Environment URL | `outputs('Create_Environment')?['body']?['properties']?['linkedEnvironmentMetadata']?['instanceUrl']` |
 | Provisioning Completed | `utcNow()` |
 
 ### Step 15: Log Provisioning Completed
 
-Log action `13` (ProvisioningCompleted) to ProvisioningLog.
+Log action `100000013` (ProvisioningCompleted) to ProvisioningLog.
 
 ### Step 16: Resolve Requester Email
 
@@ -585,7 +579,7 @@ Wrap the main flow in error-handling scopes:
 
 ### Step 4: Log Security Group Bound
 
-Log action `10` (SecurityGroupBound) to ProvisioningLog.
+Log action `100000010` (SecurityGroupBound) to ProvisioningLog.
 
 ---
 
@@ -626,7 +620,7 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 {
   "isauditenabled": true,
   "isuseraccessauditenabled": true,
-  "auditretentionperiodv2": @{if(equals(triggerBody()?['zone'], 3), 2557, if(equals(triggerBody()?['zone'], 2), 365, 180))}
+  "auditretentionperiodv2": @{if(equals(triggerBody()?['zone'], 100000003), 2557, if(equals(triggerBody()?['zone'], 100000002), 365, 180))}
 }
 ```
 
@@ -643,31 +637,15 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 ```json
 {
   "sessiontimeoutenabled": true,
-  "sessiontimeoutinmins": @{if(equals(triggerBody()?['zone'], 3), 120, if(equals(triggerBody()?['zone'], 2), 480, 1440))}
+  "sessiontimeoutinmins": @{if(equals(triggerBody()?['zone'], 100000003), 120, if(equals(triggerBody()?['zone'], 100000002), 480, 1440))}
 }
 ```
 
 ### Step 4: Configure Sharing Limits (Optional)
 
-**Action:** HTTP with Microsoft Entra ID (preauthorized)
+Prefer Environment Group rules for sharing limits so settings remain centrally managed. If a published Environment Group rule controls sharing, skip this per-environment step because group rules lock the corresponding environment-level settings.
 
-| Parameter | Value |
-|-----------|-------|
-| Method | `PATCH` |
-| Base Resource URL | `https://api.bap.microsoft.com` |
-| URI | `/providers/Microsoft.BusinessAppPlatform/environments/@{triggerBody()?['environmentId']}/governanceConfiguration?api-version=2021-04-01` |
-| Body | See below |
-
-```json
-{
-  "settings": {
-    "extendedSettings": {
-      "limitSharingToSecurityGroups": "@{if(equals(triggerBody()?['zone'], 1), 'false', 'true')}",
-      "excludeEnvironmentFromAnalysis": "false"
-    }
-  }
-}
-```
+If no group rule applies, run a preauthorized PowerShell automation step using `Set-AdminPowerAppEnvironmentGovernanceConfiguration` or `pac admin set-governance-config` to update the managed environment settings. Preserve existing governance configuration values and only change the sharing settings required for the zone.
 
 **Retry Policy:**
 
@@ -683,7 +661,7 @@ Extract: `@first(body('Get_Organization')?['value'])?['organizationid']`
 
 ### Step 5: Log Baseline Applied
 
-Log action `11` (BaselineConfigApplied) to ProvisioningLog.
+Log action `100000011` (BaselineConfigApplied) to ProvisioningLog.
 
 ### Return Value
 
@@ -713,7 +691,7 @@ Routes environment requests through manager and compliance approvals, transition
 |-----------|-------|
 | Table | EnvironmentRequest |
 | Row ID | `triggerBody()?['fsi_environmentrequestid']` |
-| State | `3` (PendingApproval) |
+| State | `100000003` (PendingApproval) |
 
 ### Step 2: Start Manager Approval
 
@@ -735,7 +713,7 @@ Routes environment requests through manager and compliance approvals, transition
 
 **If No (Rejected):**
 
-1. Update EnvironmentRequest state to `5` (Rejected)
+1. Update EnvironmentRequest state to `100000005` (Rejected)
 2. Set `fsi_approvalcomments` from rejection response
 3. Notify requester of rejection
 4. Terminate flow
@@ -767,7 +745,7 @@ Routes environment requests through manager and compliance approvals, transition
 
 | Parameter | Value |
 |-----------|-------|
-| State | `4` (Approved) |
+| State | `100000004` (Approved) |
 | Approver | Responding approver's systemuserid |
 | Approved On | `utcNow()` |
 | Approval Comments | Concatenated approval responses |
@@ -851,7 +829,7 @@ Limits concurrent provisioning to 5 environments to prevent API throttling.
 ### Manual Test
 
 1. Create test EnvironmentRequest record
-2. Set state to Approved (4)
+2. Set state to Approved (`100000004`)
 3. Monitor flow execution
 4. Verify ProvisioningLog entries
 5. Check environment configuration

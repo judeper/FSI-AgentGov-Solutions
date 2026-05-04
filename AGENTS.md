@@ -34,8 +34,8 @@ This file provides guidance for autonomous AI agents working on this repository.
 | cross-solution-integration | v2.0.1 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.0.2 |  1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.2 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
-| dr-testing-framework | v2.0.1 | 2.4, 2.1, 1.9 | Post-recovery validation and evidence packaging for Power Platform DR testing |
-| environment-lifecycle-management | v1.2.0 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| dr-testing-framework | v2.0.0 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
+| environment-lifecycle-management | v1.2.1 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.1.0 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.0.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.1.1 | 2.24 | GenAI feature enablement governance per zone |
@@ -45,7 +45,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | message-center-monitor | v2.5.0 | 2.3 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
 | mime-type-restrictions | v1.2.0 | 1.5, 1.13, 1.25, 3.3, 3.7 | Zone-based MIME type configuration with server-side validation |
-| pipeline-governance-cleanup | v1.2.1 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
+| pipeline-governance-cleanup | v1.2.0 | 2.3, 2.1 | Personal pipeline discovery and ALM governance enforcement |
 | rag-source-validator | v1.2.0 | 2.16, 1.7, 2.13 | Integrity validation for RAG knowledge sources |
 | scope-drift-monitor | v1.2.0 | 1.14, 1.4, 1.5 | Detect agent data access beyond declared scope |
 | segregation-detector | v1.1.0 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |

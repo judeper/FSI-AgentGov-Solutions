@@ -25,7 +25,7 @@ Power Automate Flow
     v
 Service Principal ──────────────────────────────────────────┐
     |                                                        |
-    |── api.bap.microsoft.com (Power Platform Admin API)     |
+    |── api.powerplatform.com (Power Platform API)           |
     |── *.crm.dynamics.com (Dataverse Web API)               |
     └── graph.microsoft.com (Microsoft Graph)                |
                                                              |
@@ -109,6 +109,7 @@ ELM Service Principal Registration
       3. Service principal > New service principal
       4. Enter Application ID: 12345678-1234-1234-1234-123456789012
       5. Click Create
+      6. Grant admin consent for Microsoft Graph Group.Read.All
 ```
 
 ---
@@ -133,7 +134,11 @@ If not using the script, follow these steps:
    - **Application (client) ID**: `________-____-____-____-____________`
    - **Directory (tenant) ID**: `________-____-____-____-____________`
 
-### Step 2: Create Client Secret
+### Step 2: Grant Microsoft Graph Permission
+
+The provisioning flow validates Microsoft Entra security groups before binding them to environments. Grant the app registration the Microsoft Graph **application** permission `Group.Read.All`, then grant tenant-wide admin consent.
+
+### Step 3: Create Client Secret (legacy dev-only fallback)
 
 1. In the app registration, go to **Certificates & secrets**
 2. Click **New client secret**
@@ -141,14 +146,14 @@ If not using the script, follow these steps:
 | Setting | Value |
 |---------|-------|
 | Description | ELM Provisioning Secret |
-| Expires | 6 months |
+| Expires | 90 days |
 
 3. Click **Add**
 4. **Immediately copy the secret value** - it won't display again
 
-> **Production Recommendation:** Use certificates instead of secrets for better security. See [Certificate Configuration](#certificate-configuration-production) below.
+> **Production Recommendation:** Prefer managed identity, workload identity federation, or certificate-backed authentication where the hosting surface or connector supports it. Client secrets are retained here only as a legacy development fallback; store them in Key Vault, restrict access, and rotate them at least quarterly. See [Certificate Configuration](#certificate-configuration-production) below.
 
-### Step 3: Store Secret in Azure Key Vault
+### Step 4: Store Secret in Azure Key Vault
 
 1. Open [Azure Portal](https://portal.azure.com)
 2. Navigate to your Key Vault
@@ -158,12 +163,12 @@ If not using the script, follow these steps:
 |---------|-------|
 | Upload options | Manual |
 | Name | ELM-ServicePrincipal-Secret |
-| Value | (paste client secret) |
+| Value | (paste client secret; legacy dev-only fallback) |
 | Content type | text/plain |
 
 4. Click **Create**
 
-### Step 4: Grant Key Vault Access to Power Automate
+### Step 5: Grant Key Vault Access to Power Automate
 
 1. In Key Vault, go to **Access policies** (or **Access control (IAM)** for RBAC)
 2. Add access policy:
@@ -175,7 +180,7 @@ If not using the script, follow these steps:
 
 > **Note:** The exact principal depends on how you configure the Power Automate Key Vault connection. You may need to grant access to a user-assigned managed identity or the flow creator's identity.
 
-### Step 5: Register as Power Platform Management Application
+### Step 6: Register as Power Platform Management Application
 
 1. Open [Power Platform admin center](https://admin.powerplatform.microsoft.com)
 2. Navigate to: Settings > Admin settings > Power Platform settings
@@ -205,7 +210,7 @@ This follows the principle of least privilege.
 
 ## Certificate Configuration (Production)
 
-For production deployments, use certificates instead of secrets:
+For production deployments, use managed identity or workload identity federation where supported. If the automation path requires an app credential, use certificates instead of client secrets:
 
 ### Generate Certificate
 
@@ -254,7 +259,7 @@ Export-PfxCertificate -Cert $cert -FilePath "ELM-SP.pfx" -Password $pwd
 |-------|-------|
 | Tenant ID | (your tenant ID) |
 | Client ID | (application ID) |
-| Client Secret | (from Key Vault - see below) |
+| Client Secret | (legacy dev-only fallback from Key Vault; prefer certificate-backed authentication where supported) |
 
 ### Retrieve Secret from Key Vault in Flow
 
@@ -316,8 +321,8 @@ Action: Send Teams/email notification
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| 401 Unauthorized | Expired secret | Rotate credential, update Key Vault |
-| 403 Forbidden | Not registered as Management App | Complete Step 5 in PPAC |
+| 401 Unauthorized | Expired credential | Rotate credential, update Key Vault |
+| 403 Forbidden | Not registered as Management App | Complete Step 6 in PPAC |
 | Environment creation fails | Insufficient permissions | Verify Management App registration |
 | Key Vault access denied | Missing access policy | Grant Get permission to correct principal |
 
@@ -325,7 +330,7 @@ Action: Send Teams/email notification
 
 1. **Entra ID:** App registrations > Search for app name
 2. **PPAC:** Settings > Service principal > Verify "Enabled" status
-3. **Key Vault:** Secrets > Verify secret exists and is not expired
+3. **Key Vault:** Secrets/Certificates > Verify credential exists and is not expired
 
 ### Test Script
 

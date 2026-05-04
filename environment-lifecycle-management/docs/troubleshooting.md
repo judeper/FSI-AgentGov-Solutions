@@ -23,15 +23,15 @@ Common issues, error recovery procedures, and rollback guidance.
 - Error: "The client credentials are invalid"
 
 **Causes:**
-1. Client secret expired
-2. Secret not correctly stored in Key Vault
+1. Legacy client secret or certificate expired
+2. Credential not correctly stored in Key Vault
 3. Wrong tenant/client ID
 
 **Resolution:**
 
-1. Check secret expiry in Entra ID:
+1. Check credential expiry in Microsoft Entra ID:
    - App registrations > Your app > Certificates & secrets
-   - Verify secret hasn't expired
+   - Verify the credential has not expired
 
 2. Rotate if expired:
    ```bash
@@ -101,11 +101,11 @@ Common issues, error recovery procedures, and rollback guidance.
 2. If environment exists but flow timed out:
    - Manually update EnvironmentRequest:
      - Set `fsi_environmentid` to environment GUID
-     - Set `fsi_state` to Provisioning (6)
+     - Set `fsi_state` to Provisioning (`100000006`)
    - Re-trigger remaining steps manually or wait for next flow run
 
 3. If environment doesn't exist:
-   - Set `fsi_state` back to Approved (4)
+   - Set `fsi_state` back to Approved (`100000004`)
    - Flow will re-trigger and retry
 
 ### Environment Creation Failed
@@ -127,7 +127,7 @@ Common issues, error recovery procedures, and rollback guidance.
 
 1. Review error in ProvisioningLog `fsi_errormessage`
 2. Address root cause
-3. Set `fsi_state` back to Approved (4) to retry
+3. Set `fsi_state` back to Approved (`100000004`) to retry
 
 ### Managed Environment Enable Failed
 
@@ -148,9 +148,16 @@ Common issues, error recovery procedures, and rollback guidance.
 
 2. Or via PowerShell:
    ```powershell
+   $GovernanceConfiguration = [pscustomobject] @{
+       protectionLevel = "Standard"
+       settings = [pscustomobject]@{
+           extendedSettings = @{}
+       }
+   }
+
    Set-AdminPowerAppEnvironmentGovernanceConfiguration `
-     -EnvironmentName <env-id> `
-     -EnableGovernanceConfiguration $true
+       -EnvironmentName <env-id> `
+       -UpdatedGovernanceConfiguration $GovernanceConfiguration
    ```
 
 3. Log manual action in ProvisioningLog
@@ -264,8 +271,8 @@ Common issues, error recovery procedures, and rollback guidance.
    - All connections should show green checkmark
 
 3. Verify trigger condition:
-   - Filter: `fsi_state eq 4`
-   - Manually verify request has state = 4 (Approved)
+   - Filter: `fsi_state eq 100000004`
+   - Manually verify request has state = `100000004` (Approved)
 
 4. Test trigger:
    - Update a test request to state = Approved
@@ -357,7 +364,7 @@ Correct naming format: `DEPT-Purpose-TYPE`
    ```
 
 3. **Update request:**
-   - Set `fsi_state` = Failed (8)
+   - Set `fsi_state` = Failed (`100000008`)
    - Clear `fsi_environmentid`
    - Clear `fsi_environmenturl`
 

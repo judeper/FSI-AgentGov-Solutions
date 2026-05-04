@@ -332,7 +332,7 @@ Examples:
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ELM_CLIENT_SECRET"),
-        help="Client secret for Service Principal auth",
+        help="Client secret for legacy dev-only Service Principal auth fallback",
     )
     parser.add_argument(
         "--interactive",
@@ -374,6 +374,7 @@ Examples:
     if args.tables_only and args.roles_only:
         parser.error("Cannot use both --tables-only and --roles-only")
 
+    # legacy: dev-only — replace with managed identity in production
     # Get client secret if needed for SP auth
     client_secret = args.client_secret
     if not args.interactive and args.client_id and not client_secret:

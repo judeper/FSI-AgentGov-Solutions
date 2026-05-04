@@ -2,6 +2,16 @@
 
 All notable changes to the Environment Lifecycle Management solution.
 
+## [Unreleased]
+
+### Fixed
+
+- Refreshed Power Platform environment lifecycle guidance against Microsoft Learn 2026-Q2 references, including Managed Environments, Environment Groups, default environment routing, and DLP policy caveats.
+- Corrected ELM manifest metadata to Tier 2 and controls `2.1`, `2.2`, `2.8`, and `1.7`; bumped manifest version to `1.2.1`.
+- Replaced legacy `1..N` Dataverse choice values in flow/checklist/troubleshooting docs with canonical `100000000+` values.
+- Updated Environment Groups automation examples to the current Power Platform API `environmentmanagement` endpoints and refreshed Managed Environment PowerShell syntax.
+- Clarified managed-identity-first authentication guidance and marked client-secret paths as legacy development fallbacks.
+
 ## [1.2.0] - 2026-04-17 — BREAKING
 
 > **BREAKING CHANGE:** Schema, option-set values, and the cross-solution

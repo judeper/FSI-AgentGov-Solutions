@@ -32,7 +32,7 @@ Automated Power Platform environment provisioning with zone-based governance cla
     - Service Principal has System Administrator security role assigned via `pac admin create-service-principal`
     - Service Principal sign-ins are restricted via Named Locations to trusted networks
     - Service Principal authentication is monitored via Entra ID Sign-in Logs
-    - Service Principal credentials are rotated quarterly and stored in Azure Key Vault
+    - Service Principal credentials use managed identity or certificate-based authentication where supported; any client secret is a legacy development fallback stored in Azure Key Vault and rotated at least quarterly
     - Service Principal does NOT have Entra Global Admin or Power Platform Administrator directory roles (use least-privilege API permissions instead)
 
     See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for security configuration guidance.
@@ -53,7 +53,7 @@ Required for Service Principal credential storage:
 
 1. Create or identify existing Key Vault
 2. Grant Power Automate identity "Get" secret permission
-3. Store Service Principal client secret as `ELM-ServicePrincipal-Secret`
+3. Prefer a managed identity or certificate-backed credential where the connector supports it; if a legacy client secret is required for lab/dev, store it as `ELM-ServicePrincipal-Secret` and rotate it at least quarterly
 
 See [docs/service-principal-setup.md](./docs/service-principal-setup.md) for complete setup.
 
@@ -305,7 +305,7 @@ Microsoft's [Agentic Center of Enablement](https://learn.microsoft.com/en-us/pow
 
 **Relationship to this solution:** The Agentic CoE monitors tenant-level governance health. ELM governs the **environment request and provisioning lifecycle** — intake, zone classification, approval routing, automated provisioning via Service Principal, security group binding, and baseline hardening. These are complementary, not overlapping:
 
-- ELM enforces zone-based governance **at provisioning time** (before environments exist)
+- ELM applies zone-based governance **at provisioning time** (before environments exist)
 - The Agentic CoE monitors **existing environments** for governance drift
 - ELM maintains immutable provisioning audit trails for FINRA 4511 / SEC 17a-4
 - ELM integrates with Copilot Studio intake agents for self-service provisioning with guardrails
@@ -381,7 +381,7 @@ Checks:
 | **SEC Rules 17a-3(a)(17) and 17a-4(f)** | Records of advisory accounts; record preservation on non-rewriteable, non-erasable media | Quarterly evidence exports include SHA-256 hashes and a chained `previousManifestHash` for tamper-evidence; **does not** itself constitute WORM-compliant storage. The exported files must be written to an SEC 17a-4(f)-validated WORM target. |
 | **SOX 404** | IT general controls | Segregation of duties via field-security profiles, mandatory approver routing, and immutable provisioning logs. |
 | **GLBA 501(b) Safeguards Rule** | Customer information protection | Security-group binding and zone-based DLP application; full safeguards program is broader than this solution. |
-| **FFIEC IT Examination Handbook (Information Security)** | Change and access controls for IT systems | Enforces a documented request → approval → provisioning → evidence pipeline; the regulator expects this to be one part of a wider SDLC and access-management program. |
+| **FFIEC IT Examination Handbook (Information Security)** | Change and access controls for IT systems | Provides a documented request → approval → provisioning → evidence pipeline; the regulator expects this to be one part of a wider SDLC and access-management program. |
 
 ## Documentation
 
@@ -438,7 +438,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
-1.2.0 - April 2026 (BREAKING — see CHANGELOG)
+1.2.1 - Microsoft Learn 2026-Q2 refresh (see CHANGELOG)
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
