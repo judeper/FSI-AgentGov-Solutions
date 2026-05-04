@@ -11,10 +11,11 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import sys
 from datetime import datetime, timezone
-import logging
+from typing import Dict, List, Optional
 
 
 def _now_iso() -> str:
@@ -25,15 +26,36 @@ def _now_iso() -> str:
 def _log(msg: str) -> None:
     """Emit progress/banner output to stderr so stdout stays clean for --report json/html."""
     print(msg, file=sys.stderr)
-from typing import Dict, List, Optional
+
 
 try:
-    from msal import ConfidentialClientApplication
     import requests
+    from azure.core.exceptions import ClientAuthenticationError
+    from azure.identity import (
+        AzureCliCredential,
+        CertificateCredential,
+        ChainedTokenCredential,
+        ClientSecretCredential,
+        CredentialUnavailableError,
+        DeviceCodeCredential,
+        ManagedIdentityCredential,
+        WorkloadIdentityCredential,
+    )
 except ImportError:
     print("Error: Required packages not installed.")
-    print("Run: pip install msal requests")
+    print("Run: pip install -r scripts/requirements.txt")
     sys.exit(1)
+
+
+AUTH_MODES = (
+    "auto",
+    "managed-identity",
+    "workload-identity",
+    "certificate",
+    "azure-cli",
+    "device-code",
+    "client-secret",
+)
 
 
 # Test scenario definitions
@@ -216,33 +238,140 @@ TEST_SCENARIOS = {
 class COITestRunner:
     """Executes COI tests against AI agents."""
 
-    def __init__(self, environment: str, tenant_id: str, client_id: str, client_secret: str):
+    def __init__(
+        self,
+        environment: str,
+        tenant_id: str = "",
+        client_id: str = "",
+        client_secret: str = "",
+        auth_mode: str = "auto",
+        managed_identity_client_id: str = "",
+        certificate_path: str = "",
+        certificate_password: str = "",
+        federated_token_file: str = "",
+    ):
         if not environment or not environment.startswith("https://"):
             raise ValueError("Environment must be a valid HTTPS URL (e.g., https://org.crm.dynamics.com)")
-        self.environment = environment
-        self.tenant_id = tenant_id
-        self.client_id = client_id
-        self.client_secret = client_secret
+        if auth_mode not in AUTH_MODES:
+            raise ValueError(f"Unsupported auth mode '{auth_mode}'. Use one of: {', '.join(AUTH_MODES)}")
+        self.environment = environment.rstrip("/")
+        self.tenant_id = tenant_id or ""
+        self.client_id = client_id or ""
+        self.client_secret = client_secret or ""
+        self.auth_mode = auth_mode
+        self.managed_identity_client_id = managed_identity_client_id or ""
+        self.certificate_path = certificate_path or ""
+        self.certificate_password = certificate_password or None
+        self.federated_token_file = federated_token_file or ""
         self.dataverse_token = None
         self.results = []
 
-    def authenticate(self):
-        """Acquire access tokens."""
-        if not all([self.tenant_id, self.client_id, self.client_secret]):
-            raise ValueError(
-                "Authentication credentials are required. Set AZURE_TENANT_ID, "
-                "AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET environment variables "
-                "or pass them as parameters."
+    def _require_values(self, auth_mode: str, values: Dict[str, str]) -> None:
+        """Raise a clear error when an explicit auth mode is missing required settings."""
+        missing = [name for name, value in values.items() if not value]
+        if missing:
+            raise ValueError(f"{auth_mode} authentication requires: {', '.join(missing)}")
+
+    def _build_credential(self):
+        """Build a managed-identity-first credential chain for Dataverse."""
+        if self.auth_mode == "managed-identity":
+            return ManagedIdentityCredential(client_id=self.managed_identity_client_id or None)
+
+        if self.auth_mode == "workload-identity":
+            self._require_values(
+                self.auth_mode,
+                {
+                    "AZURE_TENANT_ID": self.tenant_id,
+                    "AZURE_CLIENT_ID": self.client_id,
+                    "AZURE_FEDERATED_TOKEN_FILE": self.federated_token_file,
+                },
             )
-        app = ConfidentialClientApplication(
-            self.client_id,
-            authority=f"https://login.microsoftonline.com/{self.tenant_id}",
-            client_credential=self.client_secret
-        )
-        result = app.acquire_token_for_client(scopes=[f"{self.environment}/.default"])
-        if "access_token" not in result:
-            raise Exception(f"Authentication failed: {result.get('error_description')}")
-        self.dataverse_token = result["access_token"]
+            return WorkloadIdentityCredential(
+                tenant_id=self.tenant_id,
+                client_id=self.client_id,
+                token_file_path=self.federated_token_file,
+            )
+
+        if self.auth_mode == "certificate":
+            self._require_values(
+                self.auth_mode,
+                {
+                    "AZURE_TENANT_ID": self.tenant_id,
+                    "AZURE_CLIENT_ID": self.client_id,
+                    "AZURE_CLIENT_CERTIFICATE_PATH": self.certificate_path,
+                },
+            )
+            return CertificateCredential(
+                tenant_id=self.tenant_id,
+                client_id=self.client_id,
+                certificate_path=self.certificate_path,
+                password=self.certificate_password,
+            )
+
+        if self.auth_mode == "azure-cli":
+            return AzureCliCredential()
+
+        if self.auth_mode == "device-code":
+            self._require_values(self.auth_mode, {"AZURE_TENANT_ID": self.tenant_id, "AZURE_CLIENT_ID": self.client_id})
+            return DeviceCodeCredential(tenant_id=self.tenant_id, client_id=self.client_id)
+
+        if self.auth_mode == "client-secret":
+            self._require_values(
+                self.auth_mode,
+                {
+                    "AZURE_TENANT_ID": self.tenant_id,
+                    "AZURE_CLIENT_ID": self.client_id,
+                    "AZURE_CLIENT_SECRET": self.client_secret,
+                },
+            )
+            # legacy: dev-only — replace with managed identity in production
+            return ClientSecretCredential(
+                tenant_id=self.tenant_id,
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+            )
+
+        credentials = [ManagedIdentityCredential(client_id=self.managed_identity_client_id or None)]
+        if all([self.tenant_id, self.client_id, self.federated_token_file]):
+            credentials.append(
+                WorkloadIdentityCredential(
+                    tenant_id=self.tenant_id,
+                    client_id=self.client_id,
+                    token_file_path=self.federated_token_file,
+                )
+            )
+        if all([self.tenant_id, self.client_id, self.certificate_path]):
+            credentials.append(
+                CertificateCredential(
+                    tenant_id=self.tenant_id,
+                    client_id=self.client_id,
+                    certificate_path=self.certificate_path,
+                    password=self.certificate_password,
+                )
+            )
+        credentials.append(AzureCliCredential())
+        if all([self.tenant_id, self.client_id, self.client_secret]):
+            # legacy: dev-only — replace with managed identity in production
+            credentials.append(
+                ClientSecretCredential(
+                    tenant_id=self.tenant_id,
+                    client_id=self.client_id,
+                    client_secret=self.client_secret,
+                )
+            )
+        return ChainedTokenCredential(*credentials)
+
+    def authenticate(self):
+        """Acquire a Dataverse access token."""
+        credential = self._build_credential()
+        try:
+            token = credential.get_token(f"{self.environment}/.default")
+        except (ClientAuthenticationError, CredentialUnavailableError) as exc:
+            raise RuntimeError(
+                "Authentication failed. Prefer managed identity, workload identity federation, "
+                "or certificate auth; use --auth-mode client-secret only as a legacy development fallback."
+            ) from exc
+        self.dataverse_token = token.token
 
     def get_scenarios(self, category: Optional[str] = None) -> List[Dict]:
         """Get test scenarios, optionally filtered by category."""
@@ -266,8 +395,9 @@ class COITestRunner:
         }
 
         try:
-            # TODO: Implement actual agent interaction via Direct Line API
-            # See: https://learn.microsoft.com/en-us/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts
+            # TODO: Implement actual agent interaction via Direct Line API or the Microsoft 365 Agents SDK.
+            # Future Direct Line support must handle token refresh and OAuthCard sign-in activities.
+            # See: https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts
             if verbose:
                 _log(f"    Input: {json.dumps(scenario['input'], indent=2)}")
 
@@ -411,6 +541,12 @@ def main() -> None:
     parser.add_argument("--report", choices=["text", "json", "html"], default="text")
     parser.add_argument("--dry-run", action="store_true", help="Run without saving results")
     parser.add_argument(
+        "--auth-mode",
+        choices=AUTH_MODES,
+        default=os.environ.get("COI_AUTH_MODE", "auto"),
+        help="Dataverse authentication mode. Default: auto (managed identity, workload identity, certificate, Azure CLI, then legacy client secret).",
+    )
+    parser.add_argument(
         "--allow-skipped",
         action="store_true",
         help="Exit 0 even when every scenario is SKIPPED. Use only when the scaffold is intentionally being smoke-tested before agent connectivity is implemented."
@@ -422,14 +558,28 @@ def main() -> None:
     _log("  COI Testing Framework")
     _log("========================================")
 
-    tenant_id = os.environ.get("AZURE_TENANT_ID")
-    client_id = os.environ.get("AZURE_CLIENT_ID")
-    client_secret = os.environ.get("AZURE_CLIENT_SECRET")
+    tenant_id = os.environ.get("AZURE_TENANT_ID", "")
+    client_id = os.environ.get("AZURE_CLIENT_ID", "")
+    client_secret = os.environ.get("AZURE_CLIENT_SECRET", "")
+    managed_identity_client_id = os.environ.get("AZURE_MANAGED_IDENTITY_CLIENT_ID", "")
+    certificate_path = os.environ.get("AZURE_CLIENT_CERTIFICATE_PATH", "")
+    certificate_password = os.environ.get("AZURE_CLIENT_CERTIFICATE_PASSWORD", "")
+    federated_token_file = os.environ.get("AZURE_FEDERATED_TOKEN_FILE", "")
 
-    runner = COITestRunner(args.environment, tenant_id, client_id, client_secret)
+    runner = COITestRunner(
+        args.environment,
+        tenant_id=tenant_id,
+        client_id=client_id,
+        client_secret=client_secret,
+        auth_mode=args.auth_mode,
+        managed_identity_client_id=managed_identity_client_id,
+        certificate_path=certificate_path,
+        certificate_password=certificate_password,
+        federated_token_file=federated_token_file,
+    )
 
-    if all([tenant_id, client_id, client_secret]) and not args.dry_run:
-        _log("\nAuthenticating...")
+    if not args.dry_run:
+        _log(f"\nAuthenticating with mode: {args.auth_mode}...")
         runner.authenticate()
         _log("  Authenticated successfully")
     else:

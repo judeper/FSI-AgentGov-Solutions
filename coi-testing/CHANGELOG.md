@@ -4,6 +4,15 @@ All notable changes to the COI Testing Framework.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Refreshed Dataverse authentication guidance and runner support for managed identity, workload identity federation, certificate auth, Azure CLI auth, and legacy development client-secret fallback based on Microsoft Learn 2026-Q2 guidance.
+- Updated COI scaffold documentation for current Dataverse option-set values, Direct Line/OAuthCard caveats, Copilot Studio Kit testing alignment, and FINRA citation scope.
+
+---
+
 ## [1.1.0] - 2026-04-30
 
 ### Fixed

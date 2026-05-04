@@ -114,8 +114,8 @@ Detects inappropriate product bundling suggestions.
 
 | Role | Required For |
 |------|--------------|
-| **Microsoft Entra ID app registration with Dataverse access** | Persisting results to `fsi_coitestresults` |
-| **System Administrator (or custom role with table write)** | Dataverse table access |
+| **Managed identity or Microsoft Entra app registered as a Dataverse application user** | Persisting results to `fsi_coitestresults` |
+| **System Administrator (or custom role with table write)** | Dataverse table setup and least-privilege role assignment |
 
 ## Quick Start
 
@@ -123,26 +123,32 @@ Detects inappropriate product bundling suggestions.
 
 Create the `fsi_coitestresults` Dataverse table using the column definitions in [docs/dataverse-schema.md](docs/dataverse-schema.md). There is no pre-built solution zip to import.
 
-### 2. Set Microsoft Entra ID Credentials
+### 2. Configure Dataverse Authentication
+
+Use managed identity for production scheduled execution whenever possible. Assign the identity as a Dataverse application user with Create and Read access to `fsi_coitestresults`. For user-assigned managed identity, set:
 
 ```bash
-$env:AZURE_TENANT_ID = "<tenant-id>"
-$env:AZURE_CLIENT_ID = "<app-id>"
-$env:AZURE_CLIENT_SECRET = "<secret>"
+$env:AZURE_MANAGED_IDENTITY_CLIENT_ID = "<managed-identity-client-id>"
 ```
 
+The runner also supports workload identity federation, certificate auth, Azure CLI auth for administrator workstations, and `--auth-mode client-secret` only as a legacy development fallback. See [docs/prerequisites.md](docs/prerequisites.md) for the full auth matrix.
+
 > The `direct_line_secret` / `agent_id` values described in earlier drafts are
-> not consumed by the current runner. They will become required once the agent
-> invocation layer is implemented.
+> not consumed by the current runner. Future agent invocation must handle Direct
+> Line token generation/refresh and OAuthCard sign-in flows when the agent
+> requires user authentication.
 
 ### 3. Run Tests
 
 ```bash
-# Run all COI scenarios (will report SKIPPED until Direct Line integration ships)
+# Smoke-test all COI scenarios without Dataverse persistence (will report SKIPPED until Direct Line integration ships)
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --dry-run --allow-skipped
+
+# Persist skipped scaffold results after Dataverse authentication is configured
 python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --allow-skipped
 
-# Run specific category
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias" --allow-skipped
+# Run a specific category
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --category "proprietary_bias" --dry-run --allow-skipped
 ```
 
 The runner exits non-zero when:
@@ -172,13 +178,13 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ```bash
 # Test with verbose output (progress on stderr; report on stdout)
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --verbose --allow-skipped
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --verbose --dry-run --allow-skipped
 
 # Generate JSON report (clean stdout, suitable for piping)
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report json --allow-skipped > results.json
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report json --dry-run --allow-skipped > results.json
 
 # Generate HTML report
-python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report html --allow-skipped > results.html
+python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --report html --dry-run --allow-skipped > results.html
 ```
 
 ### Scheduled Testing (Planned)
@@ -230,11 +236,27 @@ COI test results are intended to feed into the [Compliance Dashboard](../complia
 
 **Coverage:** The bias scenarios are designed to help support fair dealing reviews once the agent-interaction layer ships.
 
+### FINRA Rule 2210 - Communications with the Public
+
+> Retail communications must be fair, balanced, and not misleading.
+
+**Coverage:** The fee transparency scenarios are designed to help reviewers detect missing fee context in recommendation-style responses once the agent-interaction layer ships.
+
+### FINRA Rule 3110 - Supervision
+
+> Members must establish and maintain supervisory systems and written supervisory procedures.
+
+**Coverage:** Dataverse result records can provide review evidence for supervisory procedures after live agent invocation and workflow integration are implemented.
+
 ### SEC Regulation Best Interest
 
 > Broker-dealers must act in the best interest of retail customers.
 
 **Coverage:** Collectively the scenario library is intended to help support Reg BI review programs. This solution does not by itself satisfy Reg BI.
+
+### Citation Scope Note
+
+FINRA Rule 2241 applies to research analysts and equity research reports. It is not mapped to the current 10 recommendation scenarios unless the library is extended to test research-report or analyst-content generation. Canadian mappings should use current CIRO terminology rather than legacy self-regulatory organization names.
 
 ## Related Controls
 
@@ -250,4 +272,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - COI Testing v1.1.0*
+*FSI Agent Governance Framework - COI Testing v1.1.1*

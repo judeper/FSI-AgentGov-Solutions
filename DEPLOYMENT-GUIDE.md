@@ -92,7 +92,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.0 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 3 | v2.0.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.0 | team, enterprise |
-| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.0 | team, enterprise |
+| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
 | [Compliance Dashboard](./compliance-dashboard/) | 3 | v1.0.3 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.0 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
