@@ -1,7 +1,7 @@
 id: hitl-workflow-governance
 name: HITL Workflow Governance
-description: Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the advancedapprovals connector.
-version: 1.1.0
+description: Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the shared_advancedapprovals connector.
+version: 1.1.1
 status: live
 domain: compliance-audit
 tier: '2'

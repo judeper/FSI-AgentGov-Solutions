@@ -91,6 +91,7 @@ if (-not $Force -and $script:TokenCache.ContainsKey($normalizedUrl)) {
 #region Service Principal Authentication
 
 if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
+    # legacy: dev-only — replace with managed identity in production
     Write-Verbose "Authenticating via service principal for $normalizedUrl"
 
     try {

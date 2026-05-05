@@ -395,7 +395,7 @@ function Test-HitlCheckpointConfiguration {
 
                 # Check for advancedapprovals connector references
                 $hasRfi = $contentStr -match '(?i)request\s+for\s+information|RequestForInformation'
-                $hasApproval = $contentStr -match '(?i)run\s+a?\s*multistage\s+approval|RunMultistageApproval|MultistageApproval'
+                $hasApproval = $contentStr -match '(?i)run\s+a?\s*multistage\s+approval|RunMultistageApproval|StartAndWaitForAnApprovalProcess|MultistageApproval'
                 $hasConnector = $contentStr -match '(?i)advancedapprovals'
 
                 if ($hasRfi -or $hasApproval -or $hasConnector) {

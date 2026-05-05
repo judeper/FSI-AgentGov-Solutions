@@ -927,18 +927,17 @@ function Get-BotHitlSettings {
 
         # HITL connector action identifiers
         $hitlConnectorIds = @(
+            'shared_advancedapprovals',
             'shared_teams',
             'shared_approvals',
             'shared_office365',
             'shared_microsoftcopilotforstudio'
         )
         $hitlActionNames = @(
-            'RequestForInformation',
-            'RunMultistageApproval',
-            'Request for Information',
-            'Run a Multistage Approval',
             'requestforinformation',
-            'runmultistageapproval'
+            'runmultistageapproval',
+            'runamultistageapproval',
+            'startandwaitforanapprovalprocess'
         )
 
         $hitlSettings = @()
@@ -1005,9 +1004,8 @@ function Get-BotHitlSettings {
                     $checkpointType = $null
 
                     # Match by action name
-                    $normalizedActionName = $actionName.Trim().ToLower() -replace '\s+', ''
-                    if ($normalizedActionName -in @('requestforinformation', 'runmultistageapproval',
-                        'request for information', 'run a multistage approval')) {
+                    $normalizedActionName = $actionName.Trim().ToLower() -replace '[\s_-]+', ''
+                    if ($normalizedActionName -in $hitlActionNames) {
                         $isHitlCheckpoint = $true
                         $checkpointType = if ($normalizedActionName -match 'approval') {
                             'MultistageApproval'
@@ -1019,9 +1017,14 @@ function Get-BotHitlSettings {
                     # Match by connector ID
                     if (-not $isHitlCheckpoint -and $connectorId) {
                         $normalizedConnector = $connectorId.Trim().ToLower()
-                        if ($normalizedConnector -in $hitlConnectorIds -and
-                            $actionName -in $hitlActionNames) {
+                        $connectorMatchesHitl = ($normalizedConnector -in $hitlConnectorIds) -or ($normalizedConnector -match 'advancedapprovals')
+                        if ($connectorMatchesHitl -and $normalizedActionName -in $hitlActionNames) {
                             $isHitlCheckpoint = $true
+                            $checkpointType = if ($normalizedActionName -match 'approval') {
+                                'MultistageApproval'
+                            } else {
+                                'RequestForInformation'
+                            }
                         }
                     }
 

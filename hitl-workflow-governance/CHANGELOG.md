@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- Added optional exception-request audit columns (`fsi_RequestedBy`, `fsi_RequestedAt`, `fsi_ApprovalStatus`, `fsi_ApprovalNotes`) so the Power Automate approval flow can track pending, approved, rejected, and timed-out exception requests without relying on non-existent Dataverse fields.
+- Added Python `DefaultAzureCredential` support for managed identity, workload identity federation, and local Azure developer credentials when no legacy client secret is provided.
+
+### Changed
+
+- Bumped solution metadata to v1.1.1 for the 2026-Q2 Microsoft Learn refresh.
+- Updated Adaptive Card template version to 1.5 for current Teams host compatibility guidance.
+- Updated production authentication guidance to prefer managed identity, workload identity federation, or certificate-based auth and to label client secrets as legacy development fallback.
+
+### Fixed
+
+- Aligned scanner detection with the current Human in the Loop connector (`shared_advancedapprovals`) and multistage approval operation ID `StartAndWaitForAnApprovalProcess`.
+- Corrected flow instructions for `Start-HitlValidationRunbook.ps1` parameters, required Dataverse columns, deployed connection references, and Power Automate Approvals outputs.
+- Regenerated Dataverse schema documentation to include v1.1.0 checkpoint option-set additions and the new exception approval audit columns.
+- Updated evidence export metadata from v1.0.1 to v1.1.1.
+
 ## [1.1.0] - 2026-04-16
 
 ### Fixed

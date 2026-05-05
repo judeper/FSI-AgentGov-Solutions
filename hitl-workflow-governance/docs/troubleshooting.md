@@ -11,8 +11,8 @@ Common issues and resolution procedures for the HITL Workflow Governance solutio
 **Cause:** Agent flows may not use the `advancedapprovals` connector (Human in the Loop). The scan inspects `botcomponent` records for references to the **Request for Information** or **Run a Multistage Approval** actions. If agents use alternative approval patterns (e.g., direct Power Automate approval actions outside the HITL connector), the scan will not detect them.
 
 **Resolution:**
-1. Verify at least one agent in the scanned environments uses the Human in the Loop connector
-2. Open Copilot Studio > Select an agent > Topics > Verify a topic contains a "Request for Information" or "Run a Multistage Approval" action node
+1. Verify at least one agent in the scanned environments uses the Human in the Loop connector (`shared_advancedapprovals`)
+2. Open Copilot Studio > Select an agent > Topics > Verify a topic contains a "Request for Information" (`RequestForInformation`) or "Run a Multistage Approval" (`StartAndWaitForAnApprovalProcess`) action node
 3. If agents use alternative approval flows, consider extending the scan to cover those patterns
 4. Run the scan with `-Verbose` to see which bot components are inspected:
    ```powershell
@@ -129,7 +129,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 
 **Symptom:** Multistage approval actions detected but checkpoint metadata is incomplete.
 
-**Cause:** The **Run a Multistage Approval** action (preview) may not expose all configuration metadata through the `botcomponent` API. Some stage details may only be visible in the Copilot Studio designer.
+**Cause:** The **Run a Multistage Approval** action (`StartAndWaitForAnApprovalProcess`) is preview and may not expose all configuration metadata through the `botcomponent` API. Microsoft Learn also lists preview limitations including no attachments, no ALM/import sharing support, no duplicate approver across stages, and Copilot Credits for AI approval stages. Some stage details may only be visible in the Copilot Studio designer.
 
 **Resolution:**
 1. For Zone 3 agents, manually verify multistage approval configurations in Copilot Studio
@@ -139,6 +139,19 @@ Error: Access denied to table fsi_HitlCheckpointResult
 ---
 
 ## Evidence Export Issues
+
+### Purview Audit Logs Do Not Show Approval Payloads
+
+**Symptom:** Microsoft Purview audit search shows Copilot Studio authoring, publish, or interaction events but not the full HITL approval decision details.
+
+**Cause:** Copilot Studio audit logging captures events such as bot/component create, update, delete, publish, and interaction events. Full approval decision payloads and reviewer comments must be captured in Dataverse, Approvals records, or another approved evidence store.
+
+**Resolution:**
+1. Use Purview audit logs as supporting evidence that agent components changed or interactions occurred.
+2. Use `fsi_HitlCheckpointResult`, `fsi_HitlCheckpointException`, and exported evidence manifests as the decision-level evidence source.
+3. Verify the retention configuration for Dataverse and exported evidence meets your FINRA Rule 4511(a) and SEC Rule 17a-4 obligations.
+
+---
 
 ### Evidence Export Hash Mismatch
 

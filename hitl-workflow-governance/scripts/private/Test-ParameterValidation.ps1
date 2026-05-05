@@ -132,6 +132,8 @@ function Test-CheckpointType {
         - RequestForInformation
         - MultistageApproval
         - CustomHitl
+        - AdvancedApprovalsGeneric
+        - NotApplicable
 
     .PARAMETER CheckpointType
         The checkpoint type string to validate.
@@ -157,7 +159,9 @@ function Test-CheckpointType {
         'rfi'                    = 'RequestForInformation'
         'informationrequest'     = 'RequestForInformation'
         'multistageapproval'     = 'MultistageApproval'
+        'runmultistageapproval'  = 'MultistageApproval'
         'runamultistageapproval' = 'MultistageApproval'
+        'startandwaitforanapprovalprocess' = 'MultistageApproval'
         'approval'               = 'MultistageApproval'
         'approvalflow'           = 'MultistageApproval'
         'manualreview'           = 'CustomHitl'
@@ -165,6 +169,10 @@ function Test-CheckpointType {
         'humanreview'            = 'CustomHitl'
         'customhitl'             = 'CustomHitl'
         'custom'                 = 'CustomHitl'
+        'advancedapprovalsgeneric' = 'AdvancedApprovalsGeneric'
+        'advancedapprovals'      = 'AdvancedApprovalsGeneric'
+        'notapplicable'          = 'NotApplicable'
+        'na'                     = 'NotApplicable'
     }
 
     if ($typeMap.ContainsKey($normalized)) {

@@ -278,7 +278,7 @@ function Get-AgentHitlSettings {
                     # Pattern: "Request for information" action
                     $rfiMatches = [regex]::Matches(
                         $contentStr,
-                        '(?i)"(?:actionName|name)"\s*:\s*"[^"]*(?:request\s+for\s+information|RequestForInformation)[^"]*"'
+                        '(?i)"(?:actionName|name|operationId)"\s*:\s*"[^"]*(?:request\s+for\s+information|RequestForInformation)[^"]*"'
                     )
 
                     # Pattern: connector reference to advancedapprovals
@@ -290,7 +290,7 @@ function Get-AgentHitlSettings {
                     # Pattern: "Run a multistage approval" action
                     $approvalMatches = [regex]::Matches(
                         $contentStr,
-                        '(?i)"(?:actionName|name)"\s*:\s*"[^"]*(?:run\s+a?\s*multistage\s+approval|RunMultistageApproval|MultistageApproval)[^"]*"'
+                        '(?i)"(?:actionName|name|operationId)"\s*:\s*"[^"]*(?:run\s+a?\s*multistage\s+approval|RunMultistageApproval|StartAndWaitForAnApprovalProcess|MultistageApproval)[^"]*"'
                     )
 
                     # Process RFI checkpoints

@@ -93,17 +93,17 @@ All other solutions operate independently and can be deployed in any order based
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
-| [Compliance Dashboard](./compliance-dashboard/) | 3 | v1.0.3 | enterprise |
+| [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.4 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.3 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.0.1 | enterprise |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.0 | personal, team, enterprise |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.1 | team, enterprise |
 | [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |
@@ -192,6 +192,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | — | ✅ | ✅ | confidential |
 | [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
+| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
 | [Conditional Access Automation](./conditional-access-automation/) | — | ✅ | ✅ | confidential |
 | [Conflict of Interest Testing](./coi-testing/) | — | ✅ | ✅ | confidential |
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
@@ -216,12 +217,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Segregation of Duties Detector](./segregation-detector/) | — | ✅ | ✅ | confidential |
 | [Session Security Configurator](./session-security-configurator/) | — | ✅ | ✅ | internal |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | — | ✅ | ✅ | confidential |
-
-### Tier 3 (Enterprise)
-
-| Solution | Personal | Team | Enterprise | Data class |
-|----------|----------|------|------------|------------|
-| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
 
 <!-- END:ZONE_ROADMAP -->
 

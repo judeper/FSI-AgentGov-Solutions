@@ -37,7 +37,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | finra-supervision-workflow | v1.1.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.1.1 | 2.24 | GenAI feature enablement governance per zone |
 | hallucination-tracker | v1.2.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
-| hitl-workflow-governance | v1.1.0 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
+| hitl-workflow-governance | v1.1.1 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
 | inactivity-timeout-enforcement | v1.1.1 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |
 | message-center-monitor | v2.5.1 | 2.3 | M365 Message Center monitoring for platform changes |
 | model-risk-management-automation | v1.0.2 | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation |
