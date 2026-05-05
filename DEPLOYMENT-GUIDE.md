@@ -100,7 +100,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.0.1 | enterprise |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.1.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.0 | personal, team, enterprise |

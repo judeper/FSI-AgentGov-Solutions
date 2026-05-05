@@ -6,8 +6,11 @@ Deploys Dataverse table shells and seeds default configuration.
 Column creation and security roles require manual setup (see docs/).
 
 Usage:
+    python deploy.py --environment-url https://org.crm.dynamics.com --tenant-id <id>
+    python deploy.py --environment-url https://org.crm.dynamics.com --tenant-id <id> --managed-identity-client-id <id>
     python deploy.py --environment-url https://org.crm.dynamics.com --tenant-id <id> --interactive
-    python deploy.py --environment-url https://org.crm.dynamics.com --client-id <id> --client-secret <secret>
+    # legacy: dev-only — replace with managed identity in production
+    python deploy.py --environment-url https://org.crm.dynamics.com --tenant-id <id> --client-id <id> --client-secret <secret>
 """
 
 import argparse
@@ -20,7 +23,6 @@ from datetime import datetime, timezone
 
 try:
     import requests
-    import msal  # noqa: F401 — validate msal is installed (used by auth.py)
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
@@ -64,7 +66,7 @@ TABLES = {
     "fsi_supervisionlog": {
         "display_name": "Supervision Log",
         "plural_name": "Supervision Logs",
-        "description": "Immutable audit trail for supervision actions",
+        "description": "Append-only audit trail for supervision actions",
         "ownership": "OrganizationOwned",
         "primary_column": "fsi_lognumber",
         "columns": [
@@ -348,9 +350,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy FINRA Supervision Workflow solution")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
     parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID")
-    parser.add_argument("--client-id", help="Service principal client ID")
-    parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
-    parser.add_argument("--interactive", action="store_true", help="Use interactive authentication")
+    parser.add_argument("--managed-identity-client-id", help="User-assigned managed identity client ID")
+    parser.add_argument("--client-id", help="Legacy service principal client ID (dev-only fallback)")
+    parser.add_argument("--client-secret", help="Legacy service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
+    parser.add_argument("--interactive", action="store_true", help="Use interactive authentication for local admin runs")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without deploying")
     parser.add_argument("--tables-only", action="store_true", help="Deploy only tables")
     parser.add_argument("--roles-only", action="store_true", help="Deploy only security roles")
@@ -358,9 +361,12 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Fall back to environment variable for client secret
-    if not args.client_secret:
+    # legacy: dev-only — replace with managed identity in production
+    if args.client_id and not args.client_secret:
         args.client_secret = os.environ.get("FSW_CLIENT_SECRET")
+    if args.managed_identity_client_id and (args.client_id or args.client_secret):
+        print("Error: use either managed identity or legacy client-secret authentication, not both")
+        sys.exit(1)
 
     # Validate inputs
     if not args.environment_url.startswith("https://"):
@@ -387,16 +393,19 @@ def main() -> None:
             interactive=True,
             environment_url=args.environment_url
         )
-    elif args.client_id and args.client_secret:
+    elif args.client_id or args.client_secret:
         access_token = get_access_token(
             args.tenant_id,
             client_id=args.client_id,
             client_secret=args.client_secret,
-            environment_url=args.environment_url
+            environment_url=args.environment_url,
         )
     else:
-        print("Error: Specify --interactive or provide --client-id and --client-secret")
-        sys.exit(1)
+        access_token = get_access_token(
+            args.tenant_id,
+            managed_identity_client_id=args.managed_identity_client_id,
+            environment_url=args.environment_url,
+        )
 
     print("Authentication successful")
 

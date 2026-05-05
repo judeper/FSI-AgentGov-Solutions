@@ -6,7 +6,7 @@ Configure Microsoft Purview Communication Compliance to flag AI agent outputs fo
 
 Communication Compliance policies identify content in AI agent conversations that requires supervisory review based on:
 
-- Regulatory keywords (investment advice, guarantees, performance claims)
+- Regulatory phrase patterns (investment advice, performance claims, promissory language)
 - Sensitive information types (account numbers, NPI)
 - Custom classifiers (firm-specific terminology)
 
@@ -46,9 +46,9 @@ Communication Compliance policies identify content in AI agent conversations tha
 |---------|-------|
 | Name | `AI Agent Supervision - Zone 3` |
 | Description | Flag Zone 3 Copilot Studio agent outputs for FINRA 3110 review |
-| Supervised users | Select security group containing Zone 3 agents |
+| Supervised users | Select users or groups whose Microsoft 365/Copilot interactions are in scope; map Copilot Studio agent IDs through the agent inventory or transcript source |
 | Direction | Inbound and Outbound |
-| Locations | Microsoft 365 Copilot, Copilot Studio |
+| Locations | Microsoft 365 Copilot and supported communication locations where agent transcripts are captured (for example, Teams or Exchange Online journaling workflows) |
 
 ### Conditions
 
@@ -80,7 +80,7 @@ Create a custom classifier for firm-specific content:
 |---------|-------|
 | Reviewer | FSW Queue Manager security group |
 | Escalation | CCO or Senior Compliance Officer |
-| Retention | 7 years (firm policy; FINRA 4511 requires minimum 6 years) |
+| Retention | Use firm retention schedule; export reviewed evidence to locked WORM storage or apply Microsoft Purview records-management labels where required |
 
 ---
 
@@ -149,12 +149,16 @@ Assign it separately:
 2. Navigate to **Roles and administrators**
 3. Assign the **Compliance Administrator** role to the service principal
 
-### Client Secret
+### Managed identity-first connector authentication
 
-1. Go to **Certificates & secrets**
-2. Create new client secret
-3. Copy value immediately (shown only once)
-4. Store in Azure Key Vault as `FSW-CC-ClientSecret`
+Use managed identity wherever the connector path supports it:
+
+1. Enable a system-assigned managed identity for the Azure-hosted workflow component, or create a user-assigned managed identity for shared automation.
+2. Grant the managed identity the required Dataverse application-user role and any approved Communication Compliance access path.
+3. Configure the custom connector or **HTTP with Microsoft Entra ID (preauthorized)** connection to use managed identity rather than a client secret.
+4. Store only polling state such as `FSW-LastRunTime` in Key Vault; avoid storing application secrets for production flows.
+
+> **Legacy dev-only fallback:** If a lab environment cannot use managed identity, create a short-lived client secret and store it in Key Vault as `FSW-CC-ClientSecret`. Document an owner and rotation date, and replace this path with managed identity before production use.
 
 ---
 
@@ -207,9 +211,8 @@ Connect-IPPSSession
 # Verify policies are visible
 Get-SupervisoryReviewPolicy | Select-Object Name, Guid, Enabled | Format-Table
 
-# Verify app registration token acquisition
-$token = Get-MsalToken -ClientId $clientId -ClientSecret $secret -TenantId $tenantId
-Write-Host "Token acquired successfully: $($token.AccessToken.Substring(0,20))..."
+# Verify managed identity or connector authentication with a test run in Power Automate.
+# For local troubleshooting, use an interactive admin session rather than exporting secrets.
 ```
 
 ---
@@ -296,8 +299,8 @@ age
 |-------|-------|----------|
 | No alerts generated | Policy not enabled | Enable policy |
 | Alerts delayed > 1 hour | Service backlog | Wait or check service health |
-| API returns 403 | Insufficient permissions | Grant admin consent |
-| Missing agent messages | Agent not in scope | Add agent to supervised users |
+| API returns 403 | Insufficient permissions or unsupported alert API path | Verify Compliance Administrator assignment, connector identity, and supported Purview access path |
+| Missing agent messages | Source users, groups, or transcript locations not in scope | Add the supported communication source or inventory mapping to the policy scope |
 
 ---
 

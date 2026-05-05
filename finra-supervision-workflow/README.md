@@ -1,8 +1,8 @@
 # FINRA Supervision Workflow
 
-> **Status:** Preview (v1.0.1)
+> **Status:** Preview (v1.1.0)
 
-Automated **retrospective** supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance.
+Automated **retrospective** supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, append-only Dataverse audit logging, and WORM-ready evidence export fed by Microsoft Purview Communication Compliance.
 
 > **Scope of this solution:** This is the **retrospective supervision** arm of Control 2.12. It does **not** replace pre-delivery Human-in-the-Loop (HITL) review, which Control 2.12 requires for Zone 3 / customer-facing (retail communication) agents. For pre-delivery HITL on Zone 3 agents, deploy [hitl-workflow-governance](../hitl-workflow-governance/) alongside this solution.
 
@@ -15,7 +15,7 @@ Automated **retrospective** supervision workflow for AI agent outputs to support
 | License | Purpose |
 |---------|---------|
 | Power Apps Premium | Dataverse tables, model-driven app |
-| Power Automate Premium | HTTP connector, approval workflows |
+| Power Automate Premium | HTTP connector, scheduled flows; Approvals connector optional for Teams/Outlook review |
 | Power BI Pro (optional) | Supervision dashboard |
 | Microsoft 365 E5 Compliance | Communication Compliance integration |
 
@@ -45,7 +45,7 @@ Automated **retrospective** supervision workflow for AI agent outputs to support
 
 - **Routes** flagged AI agent outputs to designated supervisory principals
 - **Tracks** review status with configurable SLAs and escalation
-- **Helps enforce** supervision coverage by zone and agent tier
+- **Supports** supervision coverage tracking by zone and agent tier
 - **Documents** supervisory reviews for regulatory evidence
 - **Reports** supervision metrics via Power BI dashboard
 
@@ -100,7 +100,7 @@ Primary queue table for items requiring supervisory review.
 
 ### SupervisionLog Table
 
-Immutable audit trail for supervision actions.
+Append-only audit trail for supervision actions. Exported evidence becomes WORM-capable only after storage in locked immutable storage or with Microsoft Purview retention labels.
 
 | Column | Type | Purpose |
 |--------|------|---------|
@@ -137,14 +137,19 @@ See [docs/dataverse-schema.md](./docs/dataverse-schema.md) for complete schema.
 # Install dependencies
 pip install -r scripts/requirements.txt
 
-# Dry run first
+# Azure-hosted automation: system-assigned managed identity / workload identity
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --interactive \
     --dry-run
 
-# Full deployment
+# User-assigned managed identity
+python scripts/deploy.py \
+    --environment-url https://org.crm.dynamics.com \
+    --tenant-id <your-tenant-id> \
+    --managed-identity-client-id <managed-identity-client-id>
+
+# Local administrator workstation
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
@@ -159,7 +164,7 @@ Using `docs/dataverse-schema.md` as the spec, create every column on the three t
 
 1. Open Microsoft Purview compliance portal
 2. Navigate to Communication Compliance > Policies
-3. Create policy targeting Copilot Studio agent interactions
+3. Create policy targeting supported communication sources that contain AI/Copilot interactions
 4. Configure conditions for flagging (regulatory terms, sensitive data)
 5. Note the policy ID for flow configuration
 
@@ -269,10 +274,11 @@ Random Sample   |
 python scripts/export_supervision_evidence.py \
     --environment-url https://org.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
-    --interactive \
     --output-path ./exports \
     --start-date 2026-01-20 \
     --end-date 2026-01-26
+
+# Local administrator workstation: add --interactive
 ```
 
 Exports include:
@@ -282,6 +288,16 @@ Exports include:
 - `SupervisionConfig-{period}.json` - Effective supervision rules at export time
 - `manifest-{period}.json` - SHA-256 hashes for integrity (e.g., `manifest-Week04-2026.json`)
 - `manifest-{period}.sha256` - Manifest checksum for tamper-evident packaging
+
+### WORM and Retention Storage Guidance
+
+The Dataverse `fsi_supervisionlog` table is append-only by security role design and should have Dataverse auditing enabled. It is not, by itself, WORM storage. For SEC 17a-4 / FINRA 4511 evidence packages, export the queue, log, metrics, configuration, and manifest files, then store them in one of these Microsoft-supported recordkeeping locations:
+
+- Azure Blob Storage with a locked time-based immutability policy or legal hold for WORM retention.
+- Microsoft Purview Records Management with retention labels that mark items as records or regulatory records where supported.
+- Microsoft Purview eDiscovery case holds for supervision items subject to investigation or litigation hold.
+
+Reference Microsoft Learn guidance: [Azure Blob immutable storage](https://learn.microsoft.com/azure/storage/blobs/immutable-storage-overview), [Purview records management](https://learn.microsoft.com/purview/records-management), and [Graph eDiscovery case resources](https://learn.microsoft.com/graph/api/resources/security-ediscoverycase).
 
 ### FINRA 3120 Testing Evidence
 
@@ -297,8 +313,8 @@ Quarterly testing reports per FINRA Rule 3120:
 | **FINRA 3110** | Supervision of associated persons | Automated routing to principals, audit trail |
 | **FINRA 3120** | Testing supervisory controls | Quarterly evidence export, SLA metrics |
 | **FINRA 24-09** *(Regulatory Notice — guidance)* | Gen AI communication supervision | AI agent output review workflow |
-| **SEC 17a-3** | Recordkeeping | Immutable SupervisionLog |
-| **SEC 17a-4(b)(4)** | Record preservation — communications | **3-year retention** for communications under SEC 17a-4(b)(4) (first 2 years readily accessible). Export to WORM/compliant archival storage via `scripts/export_supervision_evidence.py` |
+| **SEC 17a-3** | Recordkeeping | Append-only SupervisionLog with Dataverse auditing enabled |
+| **SEC 17a-4(b)(4)** | Record preservation — communications | **3-year retention** for communications under SEC 17a-4(b)(4) (first 2 years readily accessible). Export to locked WORM or Microsoft Purview records-management storage via `scripts/export_supervision_evidence.py` |
 | **FINRA Rule 4511(b)** | Record retention — supervisory designations | **6-year retention** for FINRA-required records when no other period is specified by SEA Rule 17a-4 (e.g., supervisory system designations, written supervisory procedures). Firm policy may extend retention beyond regulatory minimums |
 
 ## Platform Update Notes
@@ -309,7 +325,7 @@ Microsoft has added new [Power Platform REST API](https://learn.microsoft.com/en
 
 **Impact on this solution:** FINRA Rule 4511 requires member firms to retain books and records for specified periods. The new DSR transcript endpoints introduce a potential conflict between privacy-driven deletion requests and regulatory retention obligations. Organizations should:
 
-- Ensure DSR deletion workflows check for active supervision holds before deleting Copilot Studio transcripts
+- Require DSR deletion workflows to check for active supervision holds before deleting Copilot Studio transcripts
 - Document retention-override policies that defer transcript deletion until the FINRA 4511 / SEC 17a-4 retention period expires
 - Consider adding a DSR hold check step to the supervision queue workflow to prevent premature evidence destruction
 
@@ -348,7 +364,7 @@ Implementation guidance in FSI-AgentGov:
 
 ## Version
 
-1.0.0 - February 2026
+1.1.0 - Microsoft Learn 2026-Q2 refresh
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 

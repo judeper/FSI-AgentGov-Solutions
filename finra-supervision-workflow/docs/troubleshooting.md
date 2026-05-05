@@ -309,9 +309,9 @@ Error: Interactive authentication required
 **Cause:** Running in non-interactive context without proper credentials.
 
 **Resolution:**
-1. Use `--client-id` and `--client-secret` flags for service principal authentication
-2. Or run interactively first to cache token
-3. Verify token cache location is writable
+1. In Azure-hosted automation, use the default managed identity path or pass `--managed-identity-client-id` for a user-assigned identity
+2. For local administrator runs, use `--interactive`
+3. Use `--client-id` and `--client-secret` only as a legacy dev-only fallback; prefer `FSW_CLIENT_SECRET` over command-line secrets
 
 ---
 
@@ -357,7 +357,7 @@ foreach ($item in $items) {
 }
 ```
 
-> **Important:** SupervisionLog records must NOT be deleted. The SupervisionLog table is an immutable audit trail required for SEC 17a-3/4 compliance. Deleting log records would violate recordkeeping requirements and undermine regulatory evidence integrity. If log cleanup is needed in a test environment, delete and recreate the entire test environment instead.
+> **Important:** SupervisionLog records must NOT be deleted. The SupervisionLog table is an append-only audit trail used for SEC 17a-3/4 evidence. Deleting log records would violate recordkeeping requirements and undermine regulatory evidence integrity. If log cleanup is needed in a test environment, delete and recreate the entire test environment instead.
 
 ### Reprocess Failed Items
 

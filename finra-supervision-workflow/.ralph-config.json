@@ -2,6 +2,6 @@
   "domainFacts": [
     "FINRA supervision reporting requires Monday-based week boundaries. DAX WEEKDAY(TODAY()) defaults to return type 1 (Sunday=1). Use WEEKDAY(TODAY(), 2) to specify Monday=1 week boundaries for all 'Items This Week' and 'WoW Change' Power BI measures.",
     "The sampling pseudocode `random() < reviewPercent/100` in docs/flow-configuration.md must use Power Automate expression syntax. Power Automate's div() operator performs integer division — div(25, 100) = 0, not 0.25. The correct sampling expression is `rand(1, 101) <= reviewPercent (Power Automate rand(min, max) upper bound is exclusive — use 101, not 100, to get inclusive 1..100)` where reviewPercent is an integer 0-100.",
-    "Python scripts (scripts/deploy.py and scripts/export_supervision_evidence.py) delegate all authentication to the auth module (auth.py). The direct MSAL imports `import msal (deploy.py and export_supervision_evidence.py do import msal at module top to validate availability; the actual class instantiation PublicClientApplication / ConfidentialClientApplication happens only inside scripts/auth.py)` in those files are unused and misleading — authentication is never called via these imported classes."
+    "Python scripts (scripts/deploy.py and scripts/export_supervision_evidence.py) delegate all authentication to auth.py, which uses managed identity/workload identity by default and keeps client-secret auth as a legacy dev-only fallback."
   ]
 }

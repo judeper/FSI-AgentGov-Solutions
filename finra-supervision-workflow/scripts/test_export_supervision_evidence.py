@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 
 # Ensure the scripts directory is on sys.path so we can import modules.
@@ -218,13 +219,32 @@ class TestAuthModule(unittest.TestCase):
         from auth import get_access_token
         self.assertTrue(callable(get_access_token))
 
-    def test_get_access_token_requires_credentials_for_non_interactive(self):
-        """Non-interactive auth exits when client_id/client_secret missing."""
+    def test_get_access_token_uses_managed_identity_by_default(self):
+        """Non-interactive auth uses managed identity when no legacy secret is provided."""
         from auth import get_access_token
+
+        credential = mock.Mock()
+        credential.get_token.return_value = mock.Mock(token="managed-token")
+        with mock.patch("auth.ManagedIdentityCredential", return_value=credential):
+            result = get_access_token(
+                tenant_id="00000000-0000-0000-0000-000000000000",
+                client_id=None,
+                client_secret=None,
+                interactive=False,
+                environment_url="https://example.crm.dynamics.com",
+            )
+
+        self.assertEqual(result, "managed-token")
+        credential.get_token.assert_called_once_with("https://example.crm.dynamics.com/.default")
+
+    def test_get_access_token_rejects_partial_legacy_credentials(self):
+        """Legacy client-secret auth requires both client ID and secret."""
+        from auth import get_access_token
+
         with self.assertRaises(SystemExit):
             get_access_token(
-                tenant_id="fake-tenant",
-                client_id=None,
+                tenant_id="00000000-0000-0000-0000-000000000000",
+                client_id="legacy-client-id",
                 client_secret=None,
                 interactive=False,
                 environment_url="https://example.crm.dynamics.com",

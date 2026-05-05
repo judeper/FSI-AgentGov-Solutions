@@ -7,7 +7,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 | Table | Purpose | Ownership | Records |
 |-------|---------|-----------|---------|
 | SupervisionQueue | Items requiring supervisory review | User-owned | Transactional |
-| SupervisionLog | Immutable audit trail | Organization-owned | Append-only |
+| SupervisionLog | Append-only audit trail | Organization-owned | Append-only |
 | SupervisionConfig | Zone/tier configuration | Organization-owned | Configuration |
 
 ---
@@ -89,7 +89,7 @@ Complete table and column definitions for the FINRA Supervision Workflow solutio
 **Ownership:** Organization
 **Primary Column:** `fsi_lognumber`
 
-> **Important:** This table is append-only. Security roles should NOT have Update or Delete privileges.
+> **Important:** This table is append-only by security role design. Enable Dataverse auditing and export evidence to WORM or Microsoft Purview records-management storage when regulatory retention requires immutable preservation.
 
 ### Columns
 

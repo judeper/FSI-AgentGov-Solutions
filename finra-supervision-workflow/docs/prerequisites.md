@@ -9,7 +9,7 @@ Complete requirements for deploying the FINRA Supervision Workflow solution.
 | License | Purpose | Users |
 |---------|---------|-------|
 | Power Apps Premium | Dataverse tables, model-driven app | Queue Managers, Admins |
-| Power Automate Premium | HTTP connector, scheduled flows | Service account |
+| Power Automate Premium | HTTP connector, scheduled flows, optional Approvals connector | Automation identity |
 | Microsoft 365 E5 Compliance | Communication Compliance | Compliance Admins |
 
 ### Optional Licenses
@@ -43,7 +43,7 @@ Expected output should include:
 | Power Platform Admin | PPAC | Environment and DLP management |
 | System Administrator | Dataverse | Table and security role creation |
 | Purview Compliance Admin | Purview | Communication Compliance access |
-| Application Administrator | Entra ID | App registration for service principal |
+| Application Administrator | Entra ID | Managed identity or app registration configuration |
 
 ### Operational Roles
 
@@ -129,7 +129,7 @@ If creating a new environment:
 | HTTP with Microsoft Entra ID (preauthorized) | Premium | Graph API calls |
 | Office 365 Outlook | Standard | Email notifications |
 | Microsoft Teams | Standard | Teams notifications |
-| Azure Key Vault | Premium | Credential storage |
+| Azure Key Vault | Premium | Polling state storage; client secrets only for legacy dev-only fallback |
 
 ---
 
@@ -137,13 +137,13 @@ If creating a new environment:
 
 ### Azure Key Vault
 
-Required for secure credential storage:
+Required for polling state and optional legacy secret storage:
 
 | Secret | Purpose |
 |--------|---------|
-| `FSW-ServicePrincipal-ClientId` | App registration client ID |
-| `FSW-ServicePrincipal-ClientSecret` | App registration secret |
 | `FSW-LastRunTime` | Polling state storage |
+| `FSW-ManagedIdentityClientId` | Optional user-assigned managed identity client ID |
+| `FSW-LegacyClientSecret` | Legacy dev-only fallback secret; avoid for production |
 
 ### Key Vault Configuration
 
@@ -245,7 +245,7 @@ Ensure audit logging is enabled:
 ### Azure
 - [ ] Key Vault created/identified
 - [ ] Access policies configured
-- [ ] Service principal created
+- [ ] Managed identity enabled and registered as a Dataverse application user
 
 ### Network
 - [ ] Outbound connectivity verified

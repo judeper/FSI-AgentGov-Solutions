@@ -183,7 +183,7 @@ If Conditional Access policies restrict API access:
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| FINRA Supervision Workflow | v1.0.1 | Supervision queue metrics |
+| FINRA Supervision Workflow | v1.1.0 | Supervision queue metrics |
 | Deny Event Correlation Report | v2.0.1 | DLP violation data |
 
 ---

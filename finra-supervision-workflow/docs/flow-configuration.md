@@ -112,7 +112,7 @@ Polls Communication Compliance API for new flagged items and creates Supervision
 |------------|------|---------|
 | Dataverse | Premium | Create queue records |
 | HTTP with Microsoft Entra ID (preauthorized) | Premium | Purview Communication Compliance API |
-| Azure Key Vault | Premium | Store lastRunTime, credentials |
+| Azure Key Vault | Premium | Store polling state such as lastRunTime; do not store production client secrets when managed identity is available |
 
 ### Error Handling
 
@@ -201,6 +201,48 @@ The AssignmentFlow leaves items in **Pending** state after assignment. The trans
 3. **Additional flow**: Trigger on SupervisionQueue row update when a supervisor writes review notes or changes any review field
 
 Without this transition, the EscalationFlow's filter on `fsi_state in (1, 2)` still captures these items, but the "My Queue" view filtering on InReview will not show newly assigned items until the state is updated.
+
+---
+
+
+## Optional Teams/Outlook Approval Surface
+
+The authoritative review record remains the Dataverse `fsi_supervisionqueue` row. If your deployment lets supervisors approve directly from Teams or Outlook, use current Power Automate Approvals and Adaptive Card patterns:
+
+- **Simple blocking path:** Use **Start and wait for an approval** when the flow should pause until the supervisor responds. Capture the current **Response**, **Responses Approver response**, and **Responses comments** outputs. `Approve` and `Reject` comparisons are case-sensitive.
+- **Teams adaptive card path:** Use **Create an approval**, post the adaptive card output to each supervisor with the Teams flow bot action, then use **Wait for an approval** before updating `fsi_reviewoutcome`, `fsi_reviewnotes`, `fsi_reviewedby`, and `fsi_revieweddate`.
+- **Parallel or dual-supervisor review:** Use **Approve/Reject - Everyone must approve** or **Custom Responses - Wait for all responses**. Add a condition in each branch or after **Wait for an approval** that checks the response output and writes a SupervisionLog entry for every approver response.
+- **Outlook actionable approval emails:** The built-in Approvals connector sends actionable emails. If you build a custom Outlook Actionable Message, the email body must be HTML with an `application/adaptivecard+json` script block, and production messages must include the provider `originator` value.
+- **Custom Teams cards:** New custom cards should use Adaptive Cards schema 1.5+ with `Action.Execute`, handle the `adaptiveCard/action` invoke (`card.action` in some Teams SDKs) in a bot, include `refresh.userIds` for Teams auto-refresh, and include `Action.Submit` fallback for older Teams clients.
+
+Minimal custom card shape for a bot-backed review action:
+
+```json
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "refresh": {
+    "action": { "type": "Action.Execute", "verb": "refreshReview" },
+    "userIds": ["<teams-user-mri>"]
+  },
+  "body": [
+    { "type": "TextBlock", "text": "Supervision item @{queueNumber}", "weight": "Bolder" },
+    { "type": "Input.Text", "id": "reviewNotes", "isMultiline": true }
+  ],
+  "actions": [
+    {
+      "type": "Action.Execute",
+      "title": "Approve",
+      "verb": "approveSupervisionItem",
+      "data": { "queueItemId": "@{triggerBody().fsi_supervisionqueueid}" },
+      "fallback": { "type": "Action.Submit", "title": "Approve" }
+    }
+  ]
+}
+```
+
+Microsoft Learn references: [Approvals actions](https://learn.microsoft.com/power-automate/get-started-approvals), [approval action differences](https://learn.microsoft.com/troubleshoot/power-platform/power-automate/approvals/differences-between-flow-approval-actions), [parallel approvals](https://learn.microsoft.com/power-automate/parallel-modern-approvals), [Teams Universal Actions](https://learn.microsoft.com/microsoftteams/platform/task-modules-and-cards/cards/universal-actions-for-adaptive-cards/work-with-universal-actions-for-adaptive-cards), and [Outlook Actionable Messages](https://learn.microsoft.com/outlook/actionable-messages/send-via-email).
 
 ---
 
@@ -338,17 +380,15 @@ Triggered when a supervisor completes a review (State changes to Approved/Reject
 
 ## Connection Security
 
-### Service Principal Authentication
+### Managed identity-first authentication
 
-All flows should use a dedicated service principal:
+Production flows should use a dedicated managed identity where the connector path supports it:
 
-1. Create app registration: `FSW-Automation-SP`
-2. Grant API permissions:
-   - Microsoft Graph: `User.Read.All`
-   - Dataverse: `user_impersonation`
-3. Assign directory role: **Compliance Administrator** via Entra ID > Enterprise applications > `FSW-Automation-SP` > Roles and administrators (this is an Entra ID directory role, not an API permission — see docs/communication-compliance-setup.md)
-4. Create client secret, store in Key Vault
-5. Use "HTTP with Microsoft Entra ID (preauthorized)" connector
+1. Enable a system-assigned managed identity for the Azure-hosted workflow component, or create a user-assigned managed identity for shared automation.
+2. Register the identity as a Dataverse application user and assign the FSW Admin security role.
+3. Assign approved Purview/Communication Compliance access to the connector identity where supported; the Compliance Administrator role is an Entra ID directory role, not a Graph API permission.
+4. Configure **HTTP with Microsoft Entra ID (preauthorized)** or a custom connector with managed identity OAuth instead of a stored client secret.
+5. Store polling state such as `FSW-LastRunTime` in Key Vault. Client secrets are a legacy dev-only fallback and must not be the production path.
 
 ### Least Privilege
 
