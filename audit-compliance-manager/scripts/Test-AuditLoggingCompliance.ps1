@@ -15,7 +15,7 @@
     Detection logic:
     - Dataverse environments: require BOTH Purview unified audit AND Dataverse org-level audit
     - Non-Dataverse environments: require Purview unified audit only
-    - Validates recent audit events via Search-UnifiedAuditLog (last 7 days)
+    - Records recent audit events via Search-UnifiedAuditLog when available (informational; not a compliance gate)
 
     This runbook NEVER uses interactive authentication or hardcoded credentials.
 
@@ -57,9 +57,9 @@
     Scans all environments, writes to Dataverse, and sends email with CSV attachment.
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires: Azure Automation with System-Assigned Managed Identity
-    Permissions: Power Platform Administrator, Exchange Administrator, Dataverse Application User, Mail.Send
+    Permissions: Power Platform Admin, Exchange Online Admin, Dataverse Application User, Mail.Send
 #>
 
 [CmdletBinding()]

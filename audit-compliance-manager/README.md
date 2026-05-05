@@ -1,6 +1,6 @@
 # Audit Compliance Manager (ACM)
 
-> **Version:** v1.0.3
+> **Version:** v1.0.4
 > **Status:** Completed
 
 Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the Audit Configuration Validator (ACV) and Audit Logging Compliance Automation (ALCA) into a single solution that validates audit configurations, detects compliance gaps, and remediates non-compliant environments.
@@ -13,9 +13,9 @@ Unified audit compliance solution for Microsoft 365 and Power Platform environme
 
 | License | Purpose |
 |---------|---------|
-| Microsoft 365 E3/E5 | Unified Audit Log, mailbox auditing |
-| Purview Compliance | Retention policies, advanced audit features |
-| Power Platform Admin | Environment enumeration, audit settings |
+| Microsoft 365 E3/E5 or eligible enterprise subscription | Microsoft Purview Audit (Standard/Premium), mailbox auditing |
+| Microsoft Purview Audit (Premium) | Audit retention policies, one-year defaults for eligible workloads, and optional 10-year add-on retention |
+| Power Platform Admin role | Environment enumeration, Power Platform and Dataverse audit settings |
 | Power Apps Premium | Dataverse tables for validation and compliance tracking |
 | Azure Automation | Runbook hosting with Managed Identity (ALCA remediation) |
 
@@ -54,7 +54,7 @@ pip install -r scripts/requirements.txt
 
 - **Validates** tenant-level audit configuration (Unified Audit Log, mailbox audit)
 - **Validates** environment-level audit configuration (Power Platform audit retention)
-- **Classifies** validation results by zone (Zone 1: 180d, Zone 2: 365d, Zone 3: 730d)
+- **Classifies** validation results by zone (Zone 1: 180d, Zone 2: 365d, Zone 3: 730d target; actual Microsoft 365 audit retention remains license-bounded)
 - **Stores** validation history in Dataverse (immutable, append-only)
 - **Detects** grace period violations (newly enabled audit configs)
 - **Tracks** environment registry with zone classification and override capability
@@ -114,10 +114,13 @@ python scripts/create_audit_compliance_schema.py \
 
 ```powershell
 # Validate tenant audit configuration against Zone 3 thresholds (default: 730 days target)
-# NOTE: Whether your tenant actually retains 730 days of UAL data depends on your
-# Microsoft 365 license. Audit Standard (E3) retains 90/180 days; Audit Premium (E5)
-# retains 1 year by default and up to 10 years with the audit log retention add-on.
-# This script reports the *configured* thresholds and flags shortfalls; it does not
+# NOTE: Whether your tenant actually retains 730 days of Unified Audit Log data
+# depends on licensing and Purview retention policies. Audit Standard retains
+# 180 days for records generated on or after 2023-10-17 (older records kept the
+# prior 90-day lifetime); Audit Premium/E5 retains Microsoft Entra ID, Exchange,
+# OneDrive, and SharePoint records for 1 year by default and supports custom
+# retention policies, with 10-year retention requiring the add-on license.
+# This script reports configured thresholds and flags shortfalls; it does not
 # extend retention beyond what your license permits.
 .\scripts\Invoke-TenantAuditValidation.ps1 -Zone Zone3 -Verbose
 
@@ -165,7 +168,7 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
 # Detect audit logging compliance gaps across environments
 .\scripts\Test-AuditLoggingCompliance.ps1 `
     -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
-    -TenantDomain "contoso.onmicrosoft.com"
+    -TenantDomain "<tenant>.onmicrosoft.com"
 ```
 
 ### Step 6: Remediate Non-Compliant Environments (ALCA)
@@ -174,12 +177,12 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
 # Dry run remediation
 .\scripts\Enable-AuditLogging.ps1 `
     -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
-    -TenantDomain "contoso.onmicrosoft.com" -WhatIf
+    -TenantDomain "<tenant>.onmicrosoft.com" -WhatIf
 
 # Execute remediation
 .\scripts\Enable-AuditLogging.ps1 `
     -DataverseEnvironmentUrl "https://org.crm.dynamics.com" `
-    -TenantDomain "contoso.onmicrosoft.com"
+    -TenantDomain "<tenant>.onmicrosoft.com"
 ```
 
 ### Step 7: Export Compliance Evidence
@@ -207,7 +210,7 @@ Zone classification determines minimum audit retention thresholds:
 | Zone 2 | 365 days | Team Collaboration | Department applications, team agents |
 | Zone 3 | 730 days (target) | Enterprise Managed | Production agents, customer-facing AI |
 
-> **Retention reality check:** The thresholds above are FSI Agent Governance Framework *targets*. Your actual M365 audit retention is set by your license: Audit Standard (E3) = 90/180 days; Audit Premium (E5) = 1 year by default, up to 10 years with the audit log retention add-on. This solution validates *configured* retention against zone thresholds and flags shortfalls — it does not change the underlying license-bounded retention.
+> **Retention reality check:** The thresholds above are FSI Agent Governance Framework *targets*. Microsoft Purview Audit (Standard) retains audit records for 180 days for records generated on or after 2023-10-17 (older records kept the prior 90-day lifetime). Audit Premium/E5 keeps Microsoft Entra ID, Exchange, OneDrive, and SharePoint audit records for 1 year by default and supports custom retention policies; 10-year retention requires the add-on license. This solution validates configured retention against zone thresholds and flags shortfalls — it does not change license-bounded retention.
 
 Zone thresholds are configurable via Dataverse environment variables:
 - `fsi_ACV_Zone1RetentionDays` (default: 180)
@@ -222,7 +225,7 @@ Zone thresholds are configurable via Dataverse environment variables:
 | Drift detection | ✅ SHA-256 evidence | — |
 | Remediation | — | ✅ Automated enablement |
 | Entity-level audit | — | ✅ 6 Copilot Studio entities |
-| Auth model | Certificate-based | Managed Identity |
+| Auth model | Managed identity first; certificate-based app-only fallback | Managed Identity |
 | Data pattern | Immutable history | Upsert per environment |
 | Approval workflow | — | ✅ Power Automate |
 | Evidence export | ✅ JSON + SHA-256 | — |
@@ -407,7 +410,7 @@ The following placeholder values in solution files must be replaced with your or
 
 | Placeholder | Replace With | Files |
 |------------|-------------|-------|
-| `contoso.onmicrosoft.com` | Your tenant domain | Flow variables (see `docs/FLOW_SETUP.md`) |
+| `<tenant>.onmicrosoft.com` | Your tenant domain | Flow variables (see `docs/FLOW_SETUP.md`) |
 | `compliance-alerts@example.com` | Your compliance team email | Flow variables (see `docs/FLOW_SETUP.md`) |
 | `governance-lead@example.com` | Your governance lead email | Flow variables (see `docs/FLOW_SETUP.md`) |
 | `compliance-team@example.com` | Your compliance team email | Flow variables (see `docs/FLOW_SETUP.md`) |
@@ -416,7 +419,7 @@ The following placeholder values in solution files must be replaced with your or
 ## Security Considerations
 
 - Validation history is **organization-owned** — security roles must remove Write/Delete privileges post-deployment
-- ACV uses certificate-based Service Principal authentication; ALCA uses System-Assigned Managed Identity
+- Use System-Assigned Managed Identity for production automation where supported; ACV certificate-based app-only authentication remains the unattended fallback for Exchange Online and Power Automate orchestration
 - Connection references bind at runtime — use managed identities in production
 - Grace period helps prevent false positives for newly enabled configurations (default: 24 hours)
 - ALCA **never** uses interactive authentication or hardcoded credentials

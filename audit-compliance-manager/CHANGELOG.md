@@ -5,6 +5,16 @@ All notable changes to the Audit Compliance Manager solution will be documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Bumped solution version to v1.0.4 for the Microsoft Learn 2026-Q2 technical refresh.
+- Updated Microsoft Purview Audit retention guidance to the current 180-day Audit Standard baseline for records generated on or after 2023-10-17, with Audit Premium/E5 and 10-year add-on licensing caveats.
+- Clarified that Unified Audit Log enablement is verified in Exchange Online PowerShell, while Purview retention policies use Security & Compliance PowerShell.
+- Refreshed authentication guidance to be managed-identity-first with certificate-based app-only fallback; client secrets are documented as legacy development-only.
+- Clarified Power Platform tenant audit logging, Dataverse org/table/column audit settings, and optional audit-event search evidence.
+
 ## [1.0.3] - 2026-04-16
 
 ### Fixed

@@ -33,7 +33,7 @@
     Microsoft Entra ID application (client) ID. Optional for interactive authentication.
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication. Must be provided as SecureString.
+    Legacy dev-only client secret for service principal authentication. Prefer certificate-based auth or managed identity where supported. Must be provided as SecureString.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication.
@@ -66,7 +66,7 @@
     Version: 1.0.2
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
 
-    IMPORTANT: Power Platform Administrator or Global Administrator role is required
+    IMPORTANT: Power Platform Admin or Entra Global Admin role is required
     for Get-AdminPowerAppEnvironment cmdlet. Users without these roles will receive
     an authorization error.
 
@@ -222,7 +222,7 @@ function Invoke-EnvironmentDiscovery {
             $discoveredEnvironments = Get-AdminPowerAppEnvironment -ErrorAction Stop
         }
         catch {
-            throw "Failed to enumerate environments. Ensure you have Power Platform Administrator or Global Administrator role. Error: $($_.Exception.Message)"
+            throw "Failed to enumerate environments. Ensure you have Power Platform Admin or Entra Global Admin role. Error: $($_.Exception.Message)"
         }
 
         $totalDiscovered = $discoveredEnvironments.Count

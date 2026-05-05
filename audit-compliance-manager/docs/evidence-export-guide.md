@@ -174,7 +174,7 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
       "severity": "Passed",
       "validationType": "UnifiedAuditLog",
       "rawValue": "AuditEnabled=true,RetentionDays=730",
-      "reason": "Unified Audit Log retention meets Zone 3 target threshold (730 days). NOTE: actual retention is bounded by license — Audit Standard (E3) = 90/180 days, Audit Premium (E5) = 1 year default / up to 10 years with retention add-on.",
+      "reason": "Unified Audit Log retention meets the configured Zone 3 target threshold (730 days). NOTE: actual retention is bounded by license — Audit Standard retains 180 days for records generated on or after 2023-10-17 (older records kept the prior 90-day lifetime); Audit Premium/E5 provides 1-year defaults for Microsoft Entra ID, Exchange, OneDrive, and SharePoint and up to 10 years with the retention add-on.",
       "timestamp": "2026-02-06T14:00:00Z"
     }
   ]
@@ -184,11 +184,12 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
 ### Field Descriptions
 
 **metadata**
-- `exportTimestamp` - When evidence file was created (UTC)
+- `exportedAt` - When evidence file was created (UTC)
 - `scope` - Tenant or Environment
-- `dateRange` - Validation records included (from/to dates in UTC)
-- `dataverseUrl` - Source Dataverse organization
-- `schema` - Evidence format version
+- `fromDate` / `toDate` - Validation records included (UTC)
+- `exportVersion` - Evidence export format version
+- `organizationUrl` - Source Dataverse organization URL
+- `dataverseUrl` and `_dateRange_legacy_only_keep_for_backcompat` - Backward-compatible aliases retained for older reviewers
 
 **summary**
 - `totalRecords` - Count of validation records in file

@@ -166,14 +166,14 @@ ACM-Solution-v1.0.2/
 
 ### 4. Email Template
 
-**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.2
+**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.4
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.3.
+Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.4.
 
 This solution provides enterprise-grade automated detection and remediation of audit logging
 gaps across Microsoft 365 and Power Platform environments with Azure Automation and Managed
@@ -235,8 +235,8 @@ Next Steps:
 1. Review the SOLUTION-DOCUMENTATION.md file (Section 2: Technical Details)
 2. Create Azure Automation Account with System-Assigned Managed Identity
 3. Assign Managed Identity permissions:
-   - Power Platform Administrator (Entra ID role)
-   - Exchange Administrator (Entra ID role)
+   - Power Platform Admin (Entra display name: Power Platform Administrator)
+   - Exchange Online Admin (Entra display name: Exchange Administrator)
    - Mail.Send (Microsoft Graph API permission)
    - Dataverse Application User (per environment, System Administrator role)
 4. Import PowerShell modules (Microsoft.PowerApps.Administration.PowerShell, ExchangeOnlineManagement)
@@ -300,7 +300,7 @@ Remind customer they will need:
 **Permissions:**
 - Entra Global Admin (for role assignments during setup)
 - Power Platform Admin (for environment enumeration and audit config)
-- Exchange Administrator (for MI auth and Search-UnifiedAuditLog)
+- Exchange Online Admin (for managed identity auth and Search-UnifiedAuditLog)
 - Dataverse System Administrator (per-environment for audit config modification)
 
 **Azure Resources:**
@@ -366,8 +366,8 @@ Azure Automation Setup:
 □ Managed Identity Object ID recorded for permission assignments
 
 Managed Identity Permissions:
-□ Power Platform Administrator role assigned (Entra ID)
-□ Exchange Administrator role assigned (Entra ID)
+□ Power Platform Admin role assigned (Entra display name: Power Platform Administrator)
+□ Exchange Online Admin role assigned (Entra display name: Exchange Administrator)
 □ Mail.Send permission assigned (Microsoft Graph API)
 □ Admin consent granted for Graph API permissions
 

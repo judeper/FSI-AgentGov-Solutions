@@ -78,10 +78,10 @@
     - Reason: Summary explanation
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires:
     - ExchangeOnlineManagement module v3.7.0 or later
-    - Exchange Online Administrator or Global Administrator role
+    - Exchange Online Admin or Entra Global Admin role
     - For service principal: Application with Exchange.ManageAsApp permission
 
     Regulatory context:
@@ -218,7 +218,7 @@ function Test-UnifiedAuditLog {
 
         if (-not $unifiedAuditEnabled) {
             Write-Host "FAILED: UnifiedAuditLogIngestionEnabled = False" -ForegroundColor Red
-            Write-Host "Audit log ingestion is disabled. Enable via M365 Compliance Center.`n" -ForegroundColor Red
+            Write-Host "Audit log ingestion is disabled. Enable in the Microsoft Purview portal or Exchange Online PowerShell.`n" -ForegroundColor Red
 
             $overallStatus = "Failed"
             $confidence = "High"

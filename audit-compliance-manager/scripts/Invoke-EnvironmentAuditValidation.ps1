@@ -40,11 +40,11 @@
     when using interactive authentication.
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication. Must be provided as SecureString.
+    Legacy dev-only client secret for service principal authentication. Prefer certificate-based auth or managed identity where supported. Must be provided as SecureString.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for service principal authentication (alternative to
-    client secret).
+    Certificate thumbprint for service principal authentication (preferred over
+    legacy dev-only client secret fallback).
 
 .PARAMETER Interactive
     Use interactive device code or browser-based authentication instead of service
@@ -115,7 +115,7 @@
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module v2.0 or later
     - PowerShell 7.0 or later
-    - Power Platform Administrator or Global Administrator role
+    - Power Platform Admin or Entra Global Admin role
     - System Administrator role in central Dataverse environment
 
     Performance considerations:

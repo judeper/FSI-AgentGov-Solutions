@@ -217,9 +217,9 @@
     "audit-compliance-manager": {
       "id": "audit-compliance-manager",
       "name": "Audit Compliance Manager",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "domain": "compliance-audit",
-      "tier": "3",
+      "tier": "2",
       "status": "live",
       "description": "Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the ACV and ALCA capabilities into one solution that validates audit configurations, detects gaps, and remediates non-compliant environments.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/audit-compliance-manager/",
@@ -231,7 +231,7 @@
       ],
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse System Administrator access in the target environment with the fsi publisher prefix.",
-        "compliance-admin": "Microsoft Purview Compliance Administrator for audit log review, retention policy checks, and evidence export."
+        "compliance-admin": "Purview Compliance Admin role for audit log review, retention policy checks, and evidence export."
       },
       "verification": "Verify rows land in AuditValidationHistory and EnvironmentRegistry in Dataverse after a validation run, and confirm the audit dashboard reflects the latest tenant or environment status.",
       "zones": [

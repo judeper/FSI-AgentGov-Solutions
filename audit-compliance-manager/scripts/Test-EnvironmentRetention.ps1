@@ -16,7 +16,7 @@
     Default thresholds if environment variables are not found:
     - Zone1 (Personal Productivity): 180 days
     - Zone2 (Team Collaboration): 365 days
-    - Zone3 (Enterprise Managed): 730 days (SEC 17a-4 requirement)
+    - Zone3 (Enterprise Managed): 730 days target (subject to product and license limits)
 
     This validation supports FSI-AgentGov Control 1.7 (Audit Trail Enablement) by
     verifying per-environment retention configuration.
@@ -55,7 +55,7 @@
         -EnvironmentName "Sales Production"
 
     Validates that the Sales Production environment meets Zone3 retention requirements
-    (730 days minimum) by reading the threshold from central Dataverse environment
+    (730 days target) by reading the threshold from central Dataverse environment
     variables and comparing against the environment's actual retention setting.
 
 .EXAMPLE
@@ -83,7 +83,7 @@
     - RemediationHint: Suggested fix if failed
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires PowerShell 7.0 or later.
 
     If the auditretentionperiodv2 field is not available or returns null, the validation
@@ -93,7 +93,7 @@
     Regulatory context:
     This validator supports compliance with:
     - FINRA Rule 4511 (audit trail retention)
-    - SEC Rule 17a-4 (2-year minimum retention for broker-dealer communications)
+    - SEC Rule 17a-4 (communications retention obligations; verify class-specific retention requirements with counsel)
     - GLBA 501(b) (audit logging requirements)
 #>
 

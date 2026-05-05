@@ -59,16 +59,15 @@ Assign these Entra ID roles to the Managed Identity:
 
 | Role | Purpose | How to Assign |
 |------|---------|---------------|
-| **Power Platform Administrator** | Environment enumeration, audit config access | Entra ID → Roles and administrators |
-| **Exchange Administrator** | Exchange Online Managed Identity auth, Search-UnifiedAuditLog | Entra ID → Roles and administrators |
+| **Power Platform Admin** (Entra display name: `Power Platform Administrator`) | Environment enumeration, audit config access | Microsoft Entra ID → Roles and administrators |
+| **Exchange Online Admin** (Entra display name: `Exchange Administrator`) | Exchange Online Managed Identity auth, `Get-AdminAuditLogConfig`, and `Search-UnifiedAuditLog` | Microsoft Entra ID → Roles and administrators |
 
 > **Least-Privilege Consideration:** The roles above are tenant-wide administrative roles,
 > which is broader than needed for audit compliance scanning (read-only operations).
 > For production deployments, consider these alternatives:
 >
-> - **Purview Compliance Admin** (Entra display name 'Compliance Administrator') instead of Exchange Online Admin — provides read access
->   to audit logs and compliance data without full Exchange administration rights.
-> - **Power Platform Administrator** can be scoped using Entra ID Administrative Units
+> - **Purview Compliance Admin** (Entra display name `Compliance Administrator`) is required for Purview retention policy checks via Security & Compliance PowerShell. Keep Unified Audit Log enablement verification in Exchange Online PowerShell.
+> - **Power Platform Admin** assignments can be scoped using Microsoft Entra administrative units
 >   if your organization has segmented governance.
 > - For environments that only need detection (not remediation), the Managed Identity
 >   does not require System Administrator in target Dataverse environments —
@@ -81,11 +80,11 @@ Assign these Entra ID roles to the Managed Identity:
 **Steps:**
 
 1. Navigate to **Microsoft Entra ID** → **Roles and administrators**
-2. Search for **Power Platform Administrator**
+2. Search for **Power Platform Administrator** (the Entra display name for the Power Platform Admin role)
 3. Click **+ Add assignments** → **Select members**
 4. Search for the Automation Account's system-assigned managed identity by its display name (the Automation Account name) or by its Object (principal) ID from the Azure portal
 5. Click **Select** → **Next** → **Assign**
-6. Repeat for **Exchange Administrator**
+6. Repeat for **Exchange Administrator** (the Entra display name for the Exchange Online Admin role)
 
 ### 2.2 Microsoft Graph API Permission (Mail.Send)
 
@@ -223,7 +222,7 @@ Import these modules from the PowerShell Gallery:
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0.180 | Environment enumeration, admin config |
-| `ExchangeOnlineManagement` | 3.0.0 | Exchange Online MI auth, audit log search |
+| `ExchangeOnlineManagement` | 3.0.0 | Exchange Online managed identity auth, Unified Audit Log enablement checks, audit log search |
 
 **For each module:**
 
@@ -326,4 +325,4 @@ See [Testing Scenarios](./testing-scenarios.md) for comprehensive test procedure
 
 ---
 
-*Updated: April 2026 | Version: v1.0.3*
+*Updated: April 2026 | Version: v1.0.4*

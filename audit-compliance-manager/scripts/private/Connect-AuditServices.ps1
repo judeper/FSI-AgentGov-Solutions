@@ -11,8 +11,10 @@
     and service principal (certificate-based) authentication.
 
     Exchange Online connection is required for Unified Audit Log configuration checks
-    (Get-AdminAuditLogConfig). Security & Compliance connection is required for Purview
-    retention policy validation (Get-UnifiedAuditLogRetentionPolicy).
+    (`Get-AdminAuditLogConfig`) and audit searches. Security & Compliance PowerShell
+    is used only for Purview retention policy validation
+    (`Get-UnifiedAuditLogRetentionPolicy`); do not use it to verify
+    `UnifiedAuditLogIngestionEnabled`.
 
 .PARAMETER TenantId
     Microsoft Entra ID tenant ID. Required for service principal authentication.
@@ -50,7 +52,7 @@
     Connects only to Exchange Online for Unified Audit Log checks.
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires ExchangeOnlineManagement module v3.7.0 or later.
 
     IMPORTANT: Get-AdminAuditLogConfig must be called via Exchange Online PowerShell,

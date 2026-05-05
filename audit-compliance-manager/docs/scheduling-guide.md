@@ -84,7 +84,7 @@ For organizations requiring more frequent monitoring:
 | `DataverseEnvironmentUrl` | Yes | String | — | Dataverse URL hosting compliance table |
 | `TenantDomain` | Yes | String | — | Tenant domain |
 | `EnvironmentId` | No | String | — | Specific environment GUID, or omit for all non-compliant |
-| `EnableTenantUnifiedAudit` | No | Switch | true | Enable tenant-wide Purview unified audit |
+| `EnableTenantUnifiedAudit` | No | Switch | true | Enable the Power Platform tenant audit governance flag; Microsoft 365 Unified Audit Log enablement is handled separately in Exchange Online/Purview |
 | `WhatIf` | No | Switch | false | Simulate remediation without making changes |
 
 ---
@@ -120,4 +120,4 @@ Configure Azure Monitor alerts for failed runbook jobs:
 
 ---
 
-*Updated: February 2026 | Version: v1.0.3*
+*Updated: April 2026 | Version: v1.0.4*

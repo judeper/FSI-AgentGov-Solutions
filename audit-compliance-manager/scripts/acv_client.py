@@ -37,10 +37,10 @@ class ACVClient:
         Initialize ACV client.
 
         Args:
-            tenant_id: Entra ID tenant ID
+            tenant_id: Microsoft Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
             client_id: Application (client) ID (required for all auth modes)
-            client_secret: Client secret value (required for SP auth)
+            client_secret: Legacy dev-only client secret value (prefer managed identity or certificate auth for production)
             interactive: Use interactive browser auth instead of SP
             dry_run: If True, log API calls without executing them
             solution_name: Solution unique name for MSCRM.SolutionUniqueName header
@@ -87,14 +87,15 @@ class ACVClient:
             if not client_id:
                 raise ValueError(
                     "client_id is required for interactive authentication. "
-                    "Register an app in Entra ID and provide --client-id."
+                    "Register an app in Microsoft Entra ID and provide --client-id."
                 )
             self._app = msal.PublicClientApplication(
                 client_id=client_id,
                 authority=f"https://login.microsoftonline.com/{tenant_id}",
             )
         else:
-            # Confidential client for service-to-service auth
+            # Confidential client for legacy service-to-service auth
+            # legacy: dev-only — replace with managed identity in production
             if not client_id or not client_secret:
                 raise ValueError("client_id and client_secret required for non-interactive auth")
             self._app = msal.ConfidentialClientApplication(
@@ -511,7 +512,7 @@ def main() -> None:
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("ACV_TENANT_ID"),
-        help="Entra ID tenant ID (or set ACV_TENANT_ID env var)",
+        help="Microsoft Entra ID tenant ID (or set ACV_TENANT_ID env var)",
     )
     parser.add_argument(
         "--client-id",
@@ -554,7 +555,8 @@ def main() -> None:
     if not args.client_id:
         parser.error("--client-id is required (or set ACV_CLIENT_ID env var)")
 
-    # For non-interactive mode, need client secret
+    # legacy: dev-only — replace with managed identity in production
+    # For the legacy non-interactive fallback, read a client secret from env var or prompt.
     client_secret = os.environ.get("ACV_CLIENT_SECRET")
     if not args.interactive:
         if not client_secret:

@@ -145,7 +145,7 @@ def main() -> None:
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("ACV_TENANT_ID"),
-        help="Entra ID tenant ID",
+        help="Microsoft Entra ID tenant ID",
     )
     parser.add_argument(
         "--client-id",
@@ -184,14 +184,15 @@ def main() -> None:
     if not args.interactive and not args.client_id:
         parser.error(
             "Either --interactive or --client-id is required.\n"
-            "Use --interactive for manual runs or provide Service Principal credentials."
+            "Use --interactive for manual runs or provide legacy dev-only service principal credentials."
         )
     if args.interactive and not args.client_id:
         parser.error(
             "--client-id is required for interactive authentication.\n"
-            "Register an app in Entra ID and provide --client-id."
+            "Register an app in Microsoft Entra ID and provide --client-id."
         )
 
+    # legacy: dev-only — replace with managed identity in production
     # Get client secret from env var or prompt (never via CLI arg to avoid shell history exposure)
     client_secret = os.environ.get("ACV_CLIENT_SECRET")
     if not args.interactive and args.client_id and not client_secret:
