@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q2 — Microsoft Learn technical refresh (35 solutions)
+
+Tracking summary: #119. All 35 catalog solutions reviewed against the latest Microsoft Learn documentation. agent-intake (still draft PR #42) is excluded.
+
+### Changed — per-solution version bumps (all merged to main)
+- **agent-config domain**: agent-communication-restriction-detector (#50), session-security-configurator (#54), credential-oversharing-detector (#55), generative-ai-config-auditor (#56), action-confirmation-auditor (#58).
+- **lifecycle-ops domain**: coi-testing (#63), agent-registry-automation (#64), agent-365-lifecycle-governance (#65), dr-testing-framework (#66), pipeline-governance-cleanup (#69), environment-lifecycle-management (#70), message-center-monitor (#74).
+- **access-identity domain**: agent-sharing-access-restriction-detector (#75), agent-access-monitor (#76), inactivity-timeout-enforcement (#80), cross-tenant-external-sharing-governance (#81), **conditional-access-automation v1.2.2 → v2.0.1 (major)** (#82).
+- **content-data domain**: agent-knowledge-source-scanner (#86), content-moderation-monitor (#87), unrestricted-agent-sharing-detector (#88), file-upload-security (#92), mime-type-restrictions (#93), rag-source-validator (#94).
+- **monitoring-analytics domain**: deny-event-correlation-report (#98), copilot-studio-analytics (#99), agent-observability-foundation (#100), hallucination-tracker (#103), scope-drift-monitor (#104).
+- **compliance-audit domain**: compliance-dashboard (#108), finra-supervision-workflow v1.0.1 → v1.1.0 (#109), audit-compliance-manager (#110), hitl-workflow-governance (#114), model-risk-management-automation (#115), **cross-solution-integration v2.0.0 → v2.0.2** (#116), **segregation-detector v1.1.0 → v1.2.0** (#118).
+
+### Changed — global / cross-solution
+- **`scripts/shared/dataverse_client.py`** — now exposes both `auth_mode` (interactive/managed-identity/workload-identity/certificate/client-secret) AND `access_token` (externally-acquired bearer takes precedence). All Phase 3 solutions migrated to managed-identity-first auth. Client secrets are clearly marked `# legacy: dev-only` everywhere they remain.
+- **`scripts/lint-odata-columns.py`** — flipped to `--strict`. CAA + CSI Dataverse logical-name bugs that necessitated the soft-gate are fixed.
+- Across all 35 solutions: PnP.PowerShell 3.x cmdlet renames applied (`Get-PnPAzureADGroupMember` → `Get-PnPEntraIDGroupMember`), "Azure AD" branding removed (kept only in CHANGELOG historical entries), forbidden compliance language removed ("ensures compliance", "guarantees", "will prevent", "eliminates risk"), Microsoft Graph endpoints aligned to v1.0 where GA, KQL queries refreshed against current Application Insights / Log Analytics tables.
+
+### Notes
+- ~70 `CONSIDER` items remain documented in per-solution tracking issues as future work — none are blocking.
+- agent-intake (PR #42) will get its own Microsoft Learn refresh once the draft is merged.
+
+---
+
 ## [Unreleased] - 2026-Q2 — Repo health sweep
 
 ### Added
