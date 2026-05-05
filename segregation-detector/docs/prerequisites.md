@@ -10,7 +10,7 @@ Complete requirements for deploying the Segregation of Duties Detector.
 
 | License | Quantity | Purpose |
 |---------|----------|---------|
-| **Power Platform Premium** | Per flow creator | PowerShell detection scripts; Power Automate flows (planned) |
+| **Power Platform admin access** | Per operator or workload identity | Environment and role enumeration for detection scripts |
 | **Dataverse capacity** | 500 MB minimum | Violation and rule storage |
 | **Microsoft Entra ID P1** | Included with M365 E3+ | Role assignment queries |
 
@@ -43,68 +43,60 @@ Complete requirements for deploying the Segregation of Duties Detector.
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `RoleManagement.Read.Directory` | Application | Read Entra ID role assignments |
-| `User.Read.All` | Application | Read user details |
-| `Directory.Read.All` | Application | Read directory information |
+| `RoleAssignmentSchedule.Read.Directory` | Application | Read active Entra role assignment schedule instances, including active PIM assignments |
+| `RoleManagement.Read.Directory` | Application | Read Entra role definitions and higher-privilege role management data |
+| `User.Read.All` | Application | Read expanded user details when Graph returns principals |
+| `Directory.Read.All` | Application | Read directory information and expanded principals |
+| `RoleEligibilitySchedule.Read.Directory` | Application | Optional: read PIM-eligible assignments for an extended eligibility scan |
 
 ---
 
-## Service Principal Setup
+## Authentication setup (managed-identity-first)
 
-### 1. Register Application
+Use the strongest authentication mode available in the runtime. The scripts accept `-AuthMode ManagedIdentity`, `-AuthMode WorkloadIdentity`, or `-AuthMode ClientSecret`.
 
-1. Navigate to **Microsoft Entra ID** > **App registrations**
-2. Click **New registration**
-3. Configure:
-   - Name: `FSI-AgentGov-SoDDetector`
-   - Supported account types: **Single tenant**
-4. Click **Register**
-5. Note the **Application (client) ID** and **Directory (tenant) ID**
+### Option A — Managed identity (recommended for Azure-hosted runs)
 
-### 2. Configure API Permissions
-
-1. Go to **API permissions**
-2. Click **Add a permission** > **Microsoft Graph**
-3. Select **Application permissions**
-4. Add:
-   - `RoleManagement.Read.Directory`
-   - `User.Read.All`
-   - `Directory.Read.All`
-5. Click **Grant admin consent**
-
-### 3. Create Client Secret
-
-1. Go to **Certificates & secrets**
-2. Click **New client secret**
-3. Configure:
-   - Description: `SoDDetector-Secret`
-   - Expiration: 24 months
-4. Copy and store the secret value securely
-
-### 4. Register Service Principal as Power Platform Admin
-
-The Power Platform BAP API (`/providers/Microsoft.BusinessAppPlatform/scopes/admin/...`)
-will return **403 Forbidden** for service principals that have not been registered as a
-Power Platform admin via the Power Platform Admin module — the **Power Platform
-Administrator** Entra role alone is **not** sufficient. Without this step,
-`Invoke-SoDScan.ps1` exits non-zero with the message "All N Power Platform environment
-role queries failed" (fail-closed).
+1. Enable a system-assigned or user-assigned managed identity on the Azure Automation account, Function, VM, or hosted runner.
+2. Grant the identity the Microsoft Graph application permissions listed above and admin consent.
+3. Register the identity for Power Platform administration when it calls the BAP admin API:
 
 ```powershell
-# Run as a tenant admin signed in to Power Platform CLI / module
 Install-Module Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser
 Add-PowerAppsAccount
-New-PowerAppManagementApp -ApplicationId <your-client-id>
+New-PowerAppManagementApp -ApplicationId <managed-identity-client-id>
+```
+
+4. Run the scanner. For a system-assigned identity, omit `-ManagedIdentityClientId`; for a user-assigned identity, pass its client ID or set `MANAGED_IDENTITY_CLIENT_ID`.
+
+```powershell
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -AuthMode ManagedIdentity
+```
+
+### Option B — Workload identity federation (recommended for CI)
+
+1. Configure a federated identity credential on the app registration or user-assigned managed identity used by the pipeline.
+2. Set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_FEDERATED_TOKEN_FILE` in the runner environment.
+3. Register the app or identity for Power Platform administration with `New-PowerAppManagementApp -ApplicationId <client-id>`.
+4. Run the scanner with `-AuthMode WorkloadIdentity`.
+
+```powershell
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -AuthMode WorkloadIdentity
+```
+
+### Option C — Client secret (legacy dev-only fallback)
+
+Client secrets are not recommended for production. Use this only for local development when managed identity and workload identity federation are unavailable. Mark any local automation using this mode as legacy and rotate the secret according to organizational policy.
+
+```powershell
+# legacy: dev-only — replace with managed identity in production
+$env:AZURE_TENANT_ID = "<tenant-id>"
+$env:AZURE_CLIENT_ID = "<app-client-id>"
+$env:FSI_CLIENT_SECRET = "<client-secret>"
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -AuthMode ClientSecret
 ```
 
 Reference: [Use service principal accounts to connect to Power Platform](https://learn.microsoft.com/en-us/power-platform/admin/powershell-create-service-principal).
-
-### 5. Store in Azure Key Vault
-
-```powershell
-# Create secret in Key Vault
-az keyvault secret set --vault-name "your-vault" --name "SoD-ClientSecret" --value "<secret-value>"
-```
 
 ---
 
@@ -172,11 +164,11 @@ az keyvault secret set --vault-name "your-vault" --name "SoD-ClientSecret" --val
 
 Before deployment, verify:
 
-- [ ] Power Platform Premium license available
+- [ ] Power Platform admin access available for the operator or workload identity
 - [ ] Dataverse environment with sufficient capacity
-- [ ] Service principal registered with required permissions
+- [ ] Managed identity or federated workload identity registered with required permissions
 - [ ] Admin consent granted for Graph API permissions
-- [ ] Client secret stored securely
+- [ ] ClientSecret mode avoided in production; any legacy dev secret is stored and rotated according to organizational policy
 - [ ] Network endpoints accessible
 - [ ] User accounts have appropriate Dataverse security roles
 
@@ -189,4 +181,4 @@ Before deployment, verify:
 
 ---
 
-*Segregation of Duties Detector v1.1.0*
+*Segregation of Duties Detector v1.2.0*

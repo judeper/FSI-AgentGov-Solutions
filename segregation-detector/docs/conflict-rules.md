@@ -12,10 +12,10 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 
 | Rule ID | Role A | Role B | Severity | Description |
 |---------|--------|--------|----------|-------------|
-| MC-001 | Agent Developer | Pipeline Approver | Critical | Prevents self-approval of agent changes |
+| MC-001 | Agent Developer | Pipeline Approver | Critical | Flags potential self-approval of agent changes |
 | MC-002 | Solution Developer | Solution Promoter | Critical | Requires independent promotion review |
-| MC-003 | Flow Creator | Flow Approver | High | Enforces flow change review |
-| MC-004 | DLP Policy Author | DLP Policy Approver | Critical | Prevents self-exemption |
+| MC-003 | Flow Creator | Flow Approver | High | Supports flow change review |
+| MC-004 | DLP Policy Author | DLP Policy Approver | Critical | Flags potential self-exemption |
 | MC-005 | Connection Creator | Connection Approver | High | Supports connection review |
 
 ### Segregation Rules (Category 2)
@@ -33,8 +33,8 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 | Rule ID | Role A | Role B | Severity | Description |
 |---------|--------|--------|----------|-------------|
 | PA-001 | Global Administrator | Agent Developer | Critical | Global admin shouldn't be maker |
-| PA-002 | Power Platform Admin | Basic User | High | Admin/user separation |
-| PA-003 | Privileged Role Admin | Application Admin | Critical | Privilege escalation prevention |
+| PA-002 | Power Platform Administrator | Basic User | High | Admin/user separation |
+| PA-003 | Privileged Role Administrator | Application Administrator | Critical | Privilege escalation review |
 | PA-004 | Break-Glass Account | Basic User | Critical | Emergency access only |
 
 > **Note:** "Break-Glass Account" is not a built-in Entra ID directory role. Organizations must create a custom directory role with this exact display name for this rule to match.
@@ -45,21 +45,21 @@ The following rules are provided as defaults for FSI organizations deploying AI 
 
 ### Rule Structure
 
-Each rule uses the `fsi_*` Dataverse field names. When importing via `-RuleFile`, provide a JSON array of rule objects:
+Each rule uses the `fsi_*` Dataverse logical names. When importing via `-RuleFile`, provide a JSON array of rule objects and use the numeric choice values from [dataverse-schema.md](dataverse-schema.md):
 
 ```json
 [
   {
     "fsi_name": "Agent Developer cannot be Pipeline Approver",
-    "fsi_category": 1,
+    "fsi_category": 100000000,
     "fsi_rolea": "Agent Developer",
-    "fsi_roleacontext": 4,
+    "fsi_roleacontext": 100000003,
     "fsi_roleb": "Pipeline Approver",
-    "fsi_rolebcontext": 4,
-    "fsi_severity": 1,
+    "fsi_rolebcontext": 100000003,
+    "fsi_severity": 100000000,
     "fsi_enabled": true,
     "fsi_allowexception": true,
-    "fsi_description": "Prevents self-approval of agent changes in deployment pipelines"
+    "fsi_description": "Flags potential self-approval of agent changes in deployment pipelines"
   }
 ]
 ```
@@ -95,12 +95,12 @@ Each rule uses the `fsi_*` Dataverse field names. When importing via `-RuleFile`
 ```powershell
 $customRule = @{
     fsi_name = "Custom Rule Name"
-    fsi_category = 1  # 1=Maker/Checker, 2=Segregation, 3=Privileged
+    fsi_category = 100000000      # Maker/Checker
     fsi_rolea = "Role A Name"
-    fsi_roleacontext = 4  # 1=Entra Dir, 2=Entra App, 3=PP Env, 4=Dataverse, 5=Custom
+    fsi_roleacontext = 100000003  # Dataverse Security Role
     fsi_roleb = "Role B Name"
-    fsi_rolebcontext = 4
-    fsi_severity = 2  # 1=Critical, 2=High, 3=Medium, 4=Low
+    fsi_rolebcontext = 100000003  # Dataverse Security Role
+    fsi_severity = 100000001      # High
     fsi_enabled = $true
     fsi_allowexception = $true
     fsi_description = "Rule description"
@@ -225,4 +225,4 @@ Validate rule syntax by importing with `-WhatIf`:
 
 ---
 
-*Segregation of Duties Detector v1.1.0*
+*Segregation of Duties Detector v1.2.0*

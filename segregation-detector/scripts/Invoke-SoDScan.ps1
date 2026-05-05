@@ -15,10 +15,19 @@
     Microsoft Entra ID tenant ID. If not specified, uses AZURE_TENANT_ID environment variable.
 
 .PARAMETER ClientId
-    Service principal client ID. If not specified, uses AZURE_CLIENT_ID environment variable.
+    Application (client) ID for WorkloadIdentity or legacy ClientSecret auth. If not specified, uses AZURE_CLIENT_ID.
+
+.PARAMETER AuthMode
+    Authentication mode. Defaults to ManagedIdentity. Use WorkloadIdentity for federated CI runners or ClientSecret only as a legacy dev fallback.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. If not specified, uses AZURE_CLIENT_ID when AuthMode is ManagedIdentity.
+
+.PARAMETER FederatedTokenFile
+    Federated token file path for WorkloadIdentity auth. If not specified, uses AZURE_FEDERATED_TOKEN_FILE.
 
 .PARAMETER ClientSecret
-    Service principal client secret. If not specified, uses AZURE_CLIENT_SECRET environment variable.
+    Legacy dev-only client secret. If not specified, uses FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET when AuthMode is ClientSecret.
 
 .PARAMETER DryRun
     Run scan without creating violation records.
@@ -46,6 +55,17 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet("ManagedIdentity", "WorkloadIdentity", "ClientSecret")]
+    [string]$AuthMode = ($env:FSI_AUTH_MODE ?? "ManagedIdentity"),
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = ($env:MANAGED_IDENTITY_CLIENT_ID ?? $env:AZURE_CLIENT_ID),
+
+    [Parameter(Mandatory = $false)]
+    [string]$FederatedTokenFile = $env:AZURE_FEDERATED_TOKEN_FILE,
+
+    [Parameter(Mandatory = $false)]
+    # legacy: dev-only — replace with managed identity in production
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
     # Note: do NOT use [ValidateNotNullOrEmpty()] here — the parameter resolves at bind time, before
@@ -73,6 +93,7 @@ $Environment = $Environment.TrimEnd('/')
 
 # Import shared helper functions (Invoke-WithRetry, Get-AccessToken, Get-BapApiBaseUrl)
 . (Join-Path $PSScriptRoot "SoDShared.ps1")
+$script:SoDChoices = Get-SoDChoiceValues
 
 # Structured audit logging (console only; Dataverse fsi_sodauditlog persistence is planned but not yet implemented)
 function Write-AuditLog {
@@ -97,13 +118,15 @@ function Get-EntraDirectoryRoleAssignments {
     }
 
     $assignments = [System.Collections.Generic.List[object]]::new()
-    $uri = "$GraphEndpoint/v1.0/roleManagement/directory/roleAssignments?`$expand=principal"
+    # Microsoft Graph v1.0 PIM schedule instances include active assignments made
+    # through PIM activation requests and direct role assignments.
+    $uri = "$GraphEndpoint/v1.0/roleManagement/directory/roleAssignmentScheduleInstances?`$expand=principal"
 
     do {
         try {
             $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Get }
         } catch {
-            Write-Warning "Failed to query Entra directory role assignments: $($_.Exception.Message)"
+            Write-Warning "Failed to query Entra active directory role assignment schedule instances: $($_.Exception.Message)"
             throw
         }
         $assignments.AddRange([object[]]$response.value)
@@ -237,8 +260,8 @@ function Get-DataverseSecurityRoleAssignments {
 
     $results = [System.Collections.Generic.List[hashtable]]::new()
     # Filter out application users (service principals provisioned as systemusers) — they would
-    # otherwise be merged into the user role map and reported as SoD violators against the SP's
-    # AAD object ID. (Council Opus #2)
+    # otherwise be merged into the user role map and reported as SoD violators against the
+    # service principal's Microsoft Entra object ID. (Council Opus #2)
     $nextLink = "$Environment/api/data/v9.2/systemusers?`$select=systemuserid,azureactivedirectoryobjectid,domainname,fullname&`$expand=systemuserroles_association(`$select=name,roleid)&`$filter=isdisabled eq false and applicationid eq null"
     while ($nextLink) {
         try {
@@ -306,7 +329,8 @@ function Get-ExistingViolations {
     }
 
     $results = [System.Collections.Generic.List[object]]::new()
-    $nextLink = "$Environment/api/data/v9.2/fsi_sodviolations?`$filter=fsi_status lt 5"
+    $activeStatusUpperBound = $script:SoDChoices.ViolationStatus['ResolvedRoleRemoved']
+    $nextLink = "$Environment/api/data/v9.2/fsi_sodviolations?`$filter=fsi_status lt $activeStatusUpperBound"
     while ($nextLink) {
         try {
             $response = Invoke-WithRetry { Invoke-RestMethod -Uri $nextLink -Headers $headers -Method Get }
@@ -360,7 +384,7 @@ function Test-RoleConflict {
     if ($matchesA.Count -gt 0 -and $matchesB.Count -gt 0) {
         # When both roles are Power Platform Environment roles, require same environment
         # and collect ALL matching environment pairs (not just the first)
-        if ($Rule.fsi_roleacontext -eq 3 -and $Rule.fsi_rolebcontext -eq 3) {
+        if ($Rule.fsi_roleacontext -eq $script:SoDChoices.RoleContext['PowerPlatformEnvironmentRole'] -and $Rule.fsi_rolebcontext -eq $script:SoDChoices.RoleContext['PowerPlatformEnvironmentRole']) {
             $conflicts = @()
             foreach ($roleA in $matchesA) {
                 foreach ($roleB in $matchesB) {
@@ -407,24 +431,47 @@ if ($DryRun) {
 
 Write-AuditLog -Message "SoD scan started for environment $Environment (DryRun=$DryRun)"
 
-# Validate parameters
-if (-not $ClientSecret) {
-    throw "ClientSecret is required. Set FSI_CLIENT_SECRET environment variable or pass -ClientSecret parameter."
+# Validate authentication parameters
+switch ($AuthMode) {
+    "ManagedIdentity" {
+        Write-Host "Authentication: ManagedIdentity" -ForegroundColor Gray
+    }
+    "WorkloadIdentity" {
+        if (-not $TenantId -or -not $ClientId) {
+            throw "TenantId and ClientId are required for WorkloadIdentity auth. Set AZURE_TENANT_ID / AZURE_CLIENT_ID or pass parameters."
+        }
+        if (-not $FederatedTokenFile) {
+            throw "FederatedTokenFile is required for WorkloadIdentity auth. Set AZURE_FEDERATED_TOKEN_FILE or pass -FederatedTokenFile."
+        }
+        Write-Host "Authentication: WorkloadIdentity" -ForegroundColor Gray
+    }
+    "ClientSecret" {
+        # legacy: dev-only — replace with managed identity in production
+        if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+            throw "TenantId, ClientId, and ClientSecret are required for legacy ClientSecret auth. Prefer -AuthMode ManagedIdentity or WorkloadIdentity for production."
+        }
+        Write-Warning "ClientSecret auth is legacy dev-only. Use ManagedIdentity for Azure-hosted runs or WorkloadIdentity for federated CI."
+    }
 }
-if (-not $TenantId -or -not $ClientId) {
-    throw "TenantId and ClientId are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID environment variables or pass parameters."
-}
-Write-Warning "For production use, store secrets in Azure Key Vault and use Managed Identity."
 
 Write-Host "Environment: $Environment"
-Write-Host "Tenant: $TenantId"
+if ($TenantId) { Write-Host "Tenant: $TenantId" }
 Write-Host ""
+
+$tokenParams = @{
+    TenantId                = $TenantId
+    ClientId                = $ClientId
+    ClientSecret            = $ClientSecret
+    AuthMode                = $AuthMode
+    ManagedIdentityClientId = $ManagedIdentityClientId
+    FederatedTokenFile      = $FederatedTokenFile
+}
 
 # Get tokens
 Write-Host "Acquiring access tokens..." -ForegroundColor Gray
 $graphEndpoint = Get-GraphEndpoint -EnvironmentUrl $Environment
-$graphToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$graphEndpoint/.default"
-$dataverseToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+$graphToken = Get-AccessToken @tokenParams -Scope "$graphEndpoint/.default"
+$dataverseToken = Get-AccessToken @tokenParams -Scope "$Environment/.default"
 Write-Host "  Tokens acquired successfully" -ForegroundColor Green
 
 # Get conflict rules
@@ -457,7 +504,7 @@ Write-Host ""
 Write-Host "Querying Entra ID directory roles..." -ForegroundColor Gray
 $directoryRoles = Get-EntraDirectoryRoles -Token $graphToken -GraphEndpoint $graphEndpoint
 $roleAssignments = Get-EntraDirectoryRoleAssignments -Token $graphToken -GraphEndpoint $graphEndpoint
-Write-Host "  Found $($roleAssignments.Count) role assignments" -ForegroundColor Green
+Write-Host "  Found $($roleAssignments.Count) active role assignment schedule instances" -ForegroundColor Green
 
 # Build hashtable for O(1) directory role lookup by ID
 $directoryRoleLookup = @{}
@@ -467,7 +514,7 @@ foreach ($dr in $directoryRoles) { $directoryRoleLookup[$dr.id] = $dr }
 Write-Host ""
 Write-Host "Querying Power Platform role assignments..." -ForegroundColor Gray
 $bapBaseUrl = Get-BapApiBaseUrl -EnvironmentUrl $Environment
-$ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$bapBaseUrl/.default"
+$ppToken = Get-AccessToken @tokenParams -Scope "$bapBaseUrl/.default"
 $ppRoleAssignments = Get-PowerPlatformRoleAssignments -Token $ppToken -EnvironmentUrl $Environment
 Write-Host "  Found $($ppRoleAssignments.Count) Power Platform role assignments" -ForegroundColor Green
 
@@ -498,7 +545,7 @@ foreach ($assignment in $roleAssignments) {
         $userRoleMap[$userId].Roles += @{
             RoleName = $role.displayName
             RoleId = $role.id
-            Context = 1  # Entra ID Directory Role
+            Context = $script:SoDChoices.RoleContext['EntraDirectoryRole']  # Entra ID Directory Role
             Assignment = $assignment.id
         }
     }
@@ -510,7 +557,7 @@ foreach ($assignment in $roleAssignments) {
 }
 
 if ($skippedAssignments -gt 0) {
-    Write-Warning "$skippedAssignments Entra role assignment(s) skipped (principal not expanded as user, deleted, or non-user principal). If this number is high, verify the service principal holds Directory.Read.All and that `?$expand=principal` returned data."
+    Write-Warning "$skippedAssignments Entra active role assignment schedule instance(s) skipped (principal not expanded as user, deleted, or non-user principal). If this number is high, verify the identity holds Directory.Read.All and RoleAssignmentSchedule.Read.Directory (or a higher privileged Graph permission) and that `?$expand=principal` returned data."
 }
 
 Write-Host "  Mapped roles for $($userRoleMap.Count) users" -ForegroundColor Green
@@ -536,7 +583,7 @@ foreach ($ppAssignment in $ppRoleAssignments) {
     $userRoleMap[$userId].Roles += @{
         RoleName      = $ppAssignment.RoleName
         RoleId        = $ppAssignment.RoleId
-        Context       = 3  # Power Platform Environment Role
+        Context       = $script:SoDChoices.RoleContext['PowerPlatformEnvironmentRole']  # Power Platform Environment Role
         EnvironmentId = $ppAssignment.EnvironmentId
         Assignment    = "$($ppAssignment.EnvironmentName):$($ppAssignment.RoleName)"
     }
@@ -574,13 +621,13 @@ foreach ($dvAssignment in $dvRoleAssignments) {
     $userRoleMap[$userId].Roles += @{
         RoleName = $dvAssignment.RoleName
         RoleId = $dvAssignment.RoleId
-        Context = 4  # Dataverse Security Role
+        Context = $script:SoDChoices.RoleContext['DataverseSecurityRole']  # Dataverse Security Role
         Assignment = "Dataverse:$($dvAssignment.RoleName)"
     }
 }
 Write-Host "  Merged Dataverse roles ($dvUsersAdded new users added)" -ForegroundColor Green
 
-# NOTE: Entra ID App Role assignments (context 2) and Custom Application Roles (context 5)
+# NOTE: Entra ID App Role assignments and Custom Application Roles
 # are not currently queried. Rules targeting these contexts will not match.
 # See Known Limitations in README.md.
 
@@ -621,9 +668,9 @@ foreach ($userId in $userRoleMap.Keys) {
                     fsi_userid = $user.UserPrincipalName
                     fsi_userobjectid = $userId
                     fsi_userdisplayname = $user.DisplayName
-                    fsi_roleaassignment = $(if ($match.RoleA.Context -eq 3) { $match.RoleA.Assignment } else { $match.RoleA.RoleName })
-                    fsi_rolebassignment = $(if ($match.RoleB.Context -eq 3) { $match.RoleB.Assignment } else { $match.RoleB.RoleName })
-                    fsi_status = 1  # Open
+                    fsi_roleaassignment = $(if ($match.RoleA.Context -eq $script:SoDChoices.RoleContext['PowerPlatformEnvironmentRole']) { $match.RoleA.Assignment } else { $match.RoleA.RoleName })
+                    fsi_rolebassignment = $(if ($match.RoleB.Context -eq $script:SoDChoices.RoleContext['PowerPlatformEnvironmentRole']) { $match.RoleB.Assignment } else { $match.RoleB.RoleName })
+                    fsi_status = $script:SoDChoices.ViolationStatus['Open']  # Open
                     fsi_detectedon = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
                 }
                 if ($matchEnvId) {

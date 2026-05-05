@@ -4,6 +4,20 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
+## [Unreleased] — 2026-Q2 Microsoft Learn refresh
+
+### Changed
+
+- Added managed-identity-first authentication with WorkloadIdentity support for `Invoke-SoDScan.ps1` and `Import-ConflictRules.ps1`; ClientSecret remains only as a legacy dev fallback.
+- Updated Entra role scanning to use Microsoft Graph v1.0 active role assignment schedule instances (`/roleManagement/directory/roleAssignmentScheduleInstances`) so active PIM assignments are covered.
+- Added `scripts/create_sd_dataverse_schema.py` as the schema source of truth and regenerated `docs/dataverse-schema.md` from it.
+- Aligned conflict-rule and violation choice values to Dataverse-style `100000000+` custom choice values used by the generated schema.
+- Updated prerequisite and troubleshooting guidance to prioritize managed identity and workload identity federation over client secrets.
+- Reworded default rule descriptions and documentation to avoid prevention/enforcement claims for detection-only capabilities.
+- Bumped solution manifest version to `1.2.0` for script behavior changes.
+
+---
+
 ## [1.1.0] - 2026-04-16
 
 ### Fixed (council review — Opus 4.7 + Goldeneye)

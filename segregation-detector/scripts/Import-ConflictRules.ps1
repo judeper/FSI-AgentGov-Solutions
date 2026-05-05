@@ -17,6 +17,15 @@
 .PARAMETER RuleFile
     Path to custom JSON rules file.
 
+.PARAMETER AuthMode
+    Authentication mode. Defaults to ManagedIdentity. Use WorkloadIdentity for federated CI runners or ClientSecret only as a legacy dev fallback.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID. If not specified, uses AZURE_CLIENT_ID when AuthMode is ManagedIdentity.
+
+.PARAMETER FederatedTokenFile
+    Federated token file path for WorkloadIdentity auth. If not specified, uses AZURE_FEDERATED_TOKEN_FILE.
+
 .EXAMPLE
     .\Import-ConflictRules.ps1 -Environment "https://contoso.crm.dynamics.com" -RuleSet "Default"
 
@@ -45,6 +54,17 @@ param(
     [string]$ClientId = $env:AZURE_CLIENT_ID,
 
     [Parameter(Mandatory = $false)]
+    [ValidateSet("ManagedIdentity", "WorkloadIdentity", "ClientSecret")]
+    [string]$AuthMode = ($env:FSI_AUTH_MODE ?? "ManagedIdentity"),
+
+    [Parameter(Mandatory = $false)]
+    [string]$ManagedIdentityClientId = ($env:MANAGED_IDENTITY_CLIENT_ID ?? $env:AZURE_CLIENT_ID),
+
+    [Parameter(Mandatory = $false)]
+    [string]$FederatedTokenFile = $env:AZURE_FEDERATED_TOKEN_FILE,
+
+    [Parameter(Mandatory = $false)]
+    # legacy: dev-only — replace with managed identity in production
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
     # Note: do NOT use [ValidateNotNullOrEmpty()] here — the validator runs at parameter binding
@@ -60,13 +80,31 @@ $Environment = $Environment.TrimEnd('/')
 
 # Import shared helper functions (Invoke-WithRetry, Get-AccessToken)
 . (Join-Path $PSScriptRoot "SoDShared.ps1")
+$script:SoDChoices = Get-SoDChoiceValues
+$Category = $script:SoDChoices.Category
+$Context = $script:SoDChoices.RoleContext
+$Severity = $script:SoDChoices.Severity
 
-# Validate credentials
-if (-not $TenantId -or -not $ClientId) {
-    throw "TenantId and ClientId are required. Set AZURE_TENANT_ID / AZURE_CLIENT_ID environment variables or pass parameters."
-}
-if (-not $ClientSecret) {
-    throw "ClientSecret is required. Set FSI_CLIENT_SECRET environment variable or pass -ClientSecret parameter."
+# Validate authentication parameters
+switch ($AuthMode) {
+    "ManagedIdentity" {
+        Write-Verbose "Using managed identity authentication."
+    }
+    "WorkloadIdentity" {
+        if (-not $TenantId -or -not $ClientId) {
+            throw "TenantId and ClientId are required for WorkloadIdentity auth. Set AZURE_TENANT_ID / AZURE_CLIENT_ID or pass parameters."
+        }
+        if (-not $FederatedTokenFile) {
+            throw "FederatedTokenFile is required for WorkloadIdentity auth. Set AZURE_FEDERATED_TOKEN_FILE or pass -FederatedTokenFile."
+        }
+    }
+    "ClientSecret" {
+        # legacy: dev-only — replace with managed identity in production
+        if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
+            throw "TenantId, ClientId, and ClientSecret are required for legacy ClientSecret auth. Prefer -AuthMode ManagedIdentity or WorkloadIdentity for production."
+        }
+        Write-Warning "ClientSecret auth is legacy dev-only. Use ManagedIdentity for Azure-hosted runs or WorkloadIdentity for federated CI."
+    }
 }
 
 # Default rule sets
@@ -74,48 +112,48 @@ $DefaultRules = @{
     MakerChecker = @(
         @{
             fsi_name = "Agent Developer cannot be Pipeline Approver"
-            fsi_category = 1
+            fsi_category = $Category['MakerChecker']
             fsi_rolea = "Agent Developer"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Pipeline Approver"
-            fsi_rolebcontext = 4
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $true
-            fsi_description = "Prevents self-approval of agent changes in deployment pipelines"
+            fsi_description = "Flags potential self-approval of agent changes in deployment pipelines"
         },
         @{
             fsi_name = "Solution Developer cannot be Solution Promoter"
-            fsi_category = 1
+            fsi_category = $Category['MakerChecker']
             fsi_rolea = "Solution Developer"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Solution Promoter"
-            fsi_rolebcontext = 4
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Requires independent review for solution promotions"
         },
         @{
             fsi_name = "Flow Creator cannot be Flow Approver"
-            fsi_category = 1
+            fsi_category = $Category['MakerChecker']
             fsi_rolea = "Flow Creator"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Flow Approver"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['High']
             fsi_enabled = $true
             fsi_allowexception = $true
-            fsi_description = "Enforces flow change review process"
+            fsi_description = "Supports flow change review by flagging creator/approver overlap"
         },
         @{
             fsi_name = "DLP Policy Author cannot be DLP Policy Approver"
-            fsi_category = 1
+            fsi_category = $Category['MakerChecker']
             fsi_rolea = "DLP Policy Author"
-            fsi_roleacontext = 3
+            fsi_roleacontext = $Context['PowerPlatformEnvironmentRole']
             fsi_roleb = "DLP Policy Approver"
-            fsi_rolebcontext = 3
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['PowerPlatformEnvironmentRole']
+            fsi_severity = $Severity['Critical']
             # Disabled by default: no public Power Platform role names "DLP Policy Author"
             # or "DLP Policy Approver" exist in the BAP role-assignment API surface that this
             # solution queries. Enable only after wiring a custom collector that emits these
@@ -123,16 +161,16 @@ $DefaultRules = @{
             # tenant). (Council Goldeneye #3)
             fsi_enabled = $false
             fsi_allowexception = $false
-            fsi_description = "Prevents self-exemption from DLP policies (DISABLED — requires custom DLP policy ownership collector; not produced by Power Platform BAP role-assignment API)"
+            fsi_description = "Flags potential self-exemption from DLP policies (DISABLED — requires custom DLP policy ownership collector; not produced by Power Platform BAP role-assignment API)"
         },
         @{
             fsi_name = "Connection Creator cannot be Connection Approver"
-            fsi_category = 1
+            fsi_category = $Category['MakerChecker']
             fsi_rolea = "Connection Creator"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Connection Approver"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['High']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Supports connection review by independent party"
@@ -142,48 +180,48 @@ $DefaultRules = @{
     Segregation = @(
         @{
             fsi_name = "Environment Admin cannot be Agent Publisher (same environment)"
-            fsi_category = 2
+            fsi_category = $Category['Segregation']
             fsi_rolea = "System Administrator"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Agent Publisher"
-            fsi_rolebcontext = 4
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin should not publish their own work"
         },
         @{
             fsi_name = "Security Administrator cannot be Agent Developer"
-            fsi_category = 2
+            fsi_category = $Category['Segregation']
             fsi_rolea = "Security Administrator"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Agent Developer"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['High']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Security role separation from development"
         },
         @{
             fsi_name = "Compliance Administrator cannot be Agent Developer"
-            fsi_category = 2
+            fsi_category = $Category['Segregation']
             fsi_rolea = "Compliance Administrator"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Agent Developer"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['High']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Compliance role separation from development"
         },
         @{
             fsi_name = "Environment Creator cannot be Environment Approver"
-            fsi_category = 2
+            fsi_category = $Category['Segregation']
             fsi_rolea = "Environment Creator"
-            fsi_roleacontext = 3
+            fsi_roleacontext = $Context['PowerPlatformEnvironmentRole']
             fsi_roleb = "Environment Approver"
-            fsi_rolebcontext = 3
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['PowerPlatformEnvironmentRole']
+            fsi_severity = $Severity['High']
             # Disabled by default: "Environment Approver" is not a Power Platform built-in
             # role name returned by the BAP role-assignment API. "Environment Maker" and
             # "Environment Admin" are the actual role names. Enable only after the customer
@@ -195,12 +233,12 @@ $DefaultRules = @{
         },
         @{
             fsi_name = "Data Steward cannot be Data Consumer for sensitive data"
-            fsi_category = 2
+            fsi_category = $Category['Segregation']
             fsi_rolea = "Data Steward"
-            fsi_roleacontext = 4
+            fsi_roleacontext = $Context['DataverseSecurityRole']
             fsi_roleb = "Data Consumer"
-            fsi_rolebcontext = 4
-            fsi_severity = 3
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Medium']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Data access separation for sensitive data"
@@ -210,50 +248,50 @@ $DefaultRules = @{
     Privileged = @(
         @{
             fsi_name = "Global Administrator should not have maker roles"
-            fsi_category = 3
+            fsi_category = $Category['PrivilegedAccess']
             fsi_rolea = "Global Administrator"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Agent Developer"
-            fsi_rolebcontext = 4
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Global admin should not be an agent developer"
         },
         @{
             fsi_name = "Power Platform Administrator should not be regular user"
-            fsi_category = 3
+            fsi_category = $Category['PrivilegedAccess']
             fsi_rolea = "Power Platform Administrator"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Basic User"
-            fsi_rolebcontext = 4
-            fsi_severity = 2
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['High']
             fsi_enabled = $true
             fsi_allowexception = $true
             fsi_description = "Admin/user role separation"
         },
         @{
             fsi_name = "Privileged Role Administrator cannot be Application Administrator"
-            fsi_category = 3
+            fsi_category = $Category['PrivilegedAccess']
             fsi_rolea = "Privileged Role Administrator"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Application Administrator"
-            fsi_rolebcontext = 1
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['EntraDirectoryRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $false
-            fsi_description = "Prevents privilege escalation paths"
+            fsi_description = "Flags potential privilege escalation paths"
         },
         @{
             # NOTE: "Break-Glass Account" is not a built-in Entra ID directory role.
             # Organizations must create a custom role with this exact name for this rule to match.
             fsi_name = "Break-Glass Account should not have non-emergency roles"
-            fsi_category = 3
+            fsi_category = $Category['PrivilegedAccess']
             fsi_rolea = "Break-Glass Account"
-            fsi_roleacontext = 1
+            fsi_roleacontext = $Context['EntraDirectoryRole']
             fsi_roleb = "Basic User"
-            fsi_rolebcontext = 4
-            fsi_severity = 1
+            fsi_rolebcontext = $Context['DataverseSecurityRole']
+            fsi_severity = $Severity['Critical']
             fsi_enabled = $true
             fsi_allowexception = $false
             fsi_description = "Emergency access accounts must not be used for routine operations"
@@ -333,22 +371,22 @@ if ($RuleFile) {
 
     # Validate required fields in each rule from the JSON file
     $requiredFields = @('fsi_name', 'fsi_category', 'fsi_rolea', 'fsi_roleacontext', 'fsi_roleb', 'fsi_rolebcontext', 'fsi_severity', 'fsi_enabled', 'fsi_allowexception')
-    $validCategories = 1..3
-    $validSeverities = 1..4
-    $validContexts = 1..5
+    $validCategories = @($Category.Values)
+    $validSeverities = @($Severity.Values)
+    $validContexts = @($Context.Values)
     foreach ($r in $rulesToImport) {
         foreach ($field in $requiredFields) {
             if (-not $r.ContainsKey($field)) {
                 throw "Rule '$($r.fsi_name ?? 'unknown')' is missing required field '$field'."
             }
         }
-        if ($r.fsi_category -notin $validCategories) { throw "Rule '$($r.fsi_name)': fsi_category must be 1-3." }
-        if ($r.fsi_severity -notin $validSeverities) { throw "Rule '$($r.fsi_name)': fsi_severity must be 1-4." }
-        if ($r.fsi_roleacontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_roleacontext must be 1-5." }
-        if ($r.fsi_rolebcontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_rolebcontext must be 1-5." }
-        $unsupportedContexts = @(2, 5)
+        if ($r.fsi_category -notin $validCategories) { throw "Rule '$($r.fsi_name)': fsi_category must use the Dataverse choice values from dataverse-schema.md." }
+        if ($r.fsi_severity -notin $validSeverities) { throw "Rule '$($r.fsi_name)': fsi_severity must use the Dataverse choice values from dataverse-schema.md." }
+        if ($r.fsi_roleacontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_roleacontext must use the Dataverse choice values from dataverse-schema.md." }
+        if ($r.fsi_rolebcontext -notin $validContexts) { throw "Rule '$($r.fsi_name)': fsi_rolebcontext must use the Dataverse choice values from dataverse-schema.md." }
+        $unsupportedContexts = @($Context['EntraAppRole'], $Context['CustomApplicationRole'])
         if ($r.fsi_roleacontext -in $unsupportedContexts -or $r.fsi_rolebcontext -in $unsupportedContexts) {
-            Write-Warning "Rule '$($r.fsi_name)' uses context 2 (Entra ID App Role) or 5 (Custom Application Role) which is not currently scanned by Invoke-SoDScan.ps1. This rule will not match any user until support is added."
+            Write-Warning "Rule '$($r.fsi_name)' uses Entra ID App Role or Custom Application Role context values, which Invoke-SoDScan.ps1 does not currently query. This rule will not match any user until support is added."
         }
     }
     Write-Host "  Schema validation passed" -ForegroundColor Green
@@ -372,7 +410,15 @@ Write-Host ""
 
 # Get token
 Write-Host "Authenticating..." -ForegroundColor Gray
-$token = Get-AccessToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret -Scope "$Environment/.default"
+$tokenParams = @{
+    TenantId                = $TenantId
+    ClientId                = $ClientId
+    ClientSecret            = $ClientSecret
+    AuthMode                = $AuthMode
+    ManagedIdentityClientId = $ManagedIdentityClientId
+    FederatedTokenFile      = $FederatedTokenFile
+}
+$token = Get-AccessToken @tokenParams -Scope "$Environment/.default"
 Write-Host "  Authenticated successfully" -ForegroundColor Green
 Write-Host ""
 
