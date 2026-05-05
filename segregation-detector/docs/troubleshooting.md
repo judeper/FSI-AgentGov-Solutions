@@ -19,24 +19,42 @@ Common issues and solutions for the Segregation of Duties Detector.
 
 ### "Access Denied" when querying Graph API
 
-**Cause:** Service principal lacks required permissions.
+**Cause:** The managed identity, workload identity, or legacy service principal lacks required permissions.
 
 **Solution:**
-1. Verify API permissions in app registration
+1. Verify API permissions in the managed identity or app registration
 2. Ensure admin consent is granted
 3. Check permissions:
+   - `RoleAssignmentSchedule.Read.Directory`
    - `RoleManagement.Read.Directory`
    - `User.Read.All`
    - `Directory.Read.All`
 
-### "Invalid client secret"
+### Managed identity token request fails
 
-**Cause:** Client secret expired or incorrect.
+**Cause:** The script is running with `-AuthMode ManagedIdentity` on a host without an enabled managed identity, or the user-assigned identity client ID is incorrect.
 
 **Solution:**
-1. Check secret expiration date
-2. Regenerate secret if expired
-3. Update stored secret value
+1. Verify the Azure resource has a system-assigned or user-assigned managed identity enabled.
+2. For user-assigned identities, pass `-ManagedIdentityClientId` or set `MANAGED_IDENTITY_CLIENT_ID`.
+3. Verify Graph and Dataverse permissions are granted to the identity and admin consent is complete.
+
+### Workload identity federation token exchange fails
+
+**Cause:** The federated credential issuer, subject, audience, or token file path does not match the runner configuration.
+
+**Solution:**
+1. Verify `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_FEDERATED_TOKEN_FILE`.
+2. Confirm the federated identity credential values are case-sensitive matches for the pipeline issuer and subject.
+3. Re-run with `-AuthMode WorkloadIdentity -Verbose`.
+
+### "Invalid client secret" (legacy dev-only mode)
+
+**Cause:** `-AuthMode ClientSecret` was explicitly selected and the local development secret expired or is incorrect.
+
+**Solution:**
+1. Prefer `-AuthMode ManagedIdentity` or `-AuthMode WorkloadIdentity` for production.
+2. For local development only, rotate the secret and update `FSI_CLIENT_SECRET`.
 
 ---
 
@@ -92,7 +110,7 @@ Common issues and solutions for the Segregation of Duties Detector.
 **Cause:** Insufficient Dataverse permissions.
 
 **Solution:**
-1. Verify service principal has System Administrator role
+1. Verify the managed identity, workload identity, or legacy service principal has the System Administrator role
 2. Or grant specific table permissions (Create on fsi_sodviolation)
 
 ---
@@ -151,7 +169,7 @@ Common issues and solutions for the Segregation of Duties Detector.
 | Error | Cause | Solution |
 |-------|-------|----------|
 | "AADSTS700016" | App not found in tenant | Verify client ID |
-| "AADSTS7000215" | Invalid client secret | Regenerate secret |
+| "AADSTS7000215" | Invalid client secret in legacy dev-only mode | Prefer ManagedIdentity or WorkloadIdentity; rotate local dev secret if ClientSecret mode is unavoidable |
 | "403 Forbidden" | Insufficient permissions | Grant required permissions |
 | "Resource not found" | Wrong environment URL | Verify Dataverse URL |
 | "Duplicate key" | Rule already exists | Use update instead of create |
@@ -167,4 +185,4 @@ For additional help:
 
 ---
 
-*Segregation of Duties Detector v1.1.0*
+*Segregation of Duties Detector v1.2.0*

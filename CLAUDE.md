@@ -66,8 +66,13 @@ git rev-parse --show-toplevel
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.2 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.2.0 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.2.0 |
+<<<<<<< HEAD
 | [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.2.1 |
 | [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.1.0 |
+=======
+| [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.2.0 |
+| [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker separation in agent pipelines | PowerShell/Python | v1.2.0 |
+>>>>>>> e86abf1 (tech-review(segregation-detector): refresh Microsoft Learn guidance)
 | [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.1.1 |
 | [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v2.0.0 |
 
@@ -107,7 +112,7 @@ git rev-parse --show-toplevel
 | pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
 | rag-source-validator | 2.16, 1.7, 2.13 | RAG knowledge source integrity validation |
 | scope-drift-monitor | 1.14, 1.4, 1.5 | Agent data access scope drift detection |
-| segregation-detector | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
+| segregation-detector | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker separation |
 | session-security-configurator | 1.23, 1.11 | Session security validation with drift detection |
 | unrestricted-agent-sharing-detector | 1.1, 3.8 | Overly permissive agent sharing detection and remediation |
 

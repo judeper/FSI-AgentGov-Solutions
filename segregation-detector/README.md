@@ -90,7 +90,7 @@ High-privilege roles that require additional controls.
 
 | Requirement | Purpose |
 |-------------|---------|
-| Power Platform Premium | PowerShell detection scripts; Power Automate flows (planned) |
+| Power Platform admin access | Environment and role enumeration for detection scripts |
 | Dataverse capacity | Conflict tracking storage |
 | Microsoft Entra ID P1+ | Role assignment queries |
 
@@ -112,20 +112,20 @@ High-privilege roles that require additional controls.
 
 ### 1. Deploy Dataverse Schema
 
-Create tables manually using [docs/dataverse-schema.md](docs/dataverse-schema.md).
+Use [docs/dataverse-schema.md](docs/dataverse-schema.md), regenerated from `scripts/create_sd_dataverse_schema.py`, to create tables with the exact SchemaNames, logical names, and choice values required by the scripts.
 
 ### 2. Configure Conflict Rules
 
 Load the default conflict rule set:
 
 ```powershell
-.\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com"
+.\scripts\Import-ConflictRules.ps1 -Environment "https://your-org.crm.dynamics.com" -AuthMode ManagedIdentity
 ```
 
 ### 3. Run Initial Scan
 
 ```powershell
-.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -Verbose
+.\scripts\Invoke-SoDScan.ps1 -Environment "https://your-org.crm.dynamics.com" -AuthMode ManagedIdentity -Verbose
 ```
 
 ### 4. Review Results
@@ -147,6 +147,7 @@ Review scan output for detected conflicts. A Power Apps dashboard for visual rev
 |--------|-------------|
 | `scripts/Invoke-SoDScan.ps1` | Scans for SoD violations across Entra ID, Power Platform, and Dataverse |
 | `scripts/Import-ConflictRules.ps1` | Imports conflict rule sets into Dataverse |
+| `scripts/create_sd_dataverse_schema.py` | Generates the Dataverse schema reference used as the table and choice-value source of truth |
 | `scripts/SoDShared.ps1` | Shared helper module (`Invoke-WithRetry`, `Get-AccessToken`, `Get-LoginEndpoint`, `Get-GraphEndpoint`, `Get-BapApiBaseUrl`) dot-sourced by both scripts |
 
 ## Detection Process
@@ -260,7 +261,7 @@ For supervision queue assignments:
 |---------------|----------------------|
 | Access Controls | Role assignment monitoring |
 | Change Management | Supports Maker/Checker via detection |
-| Segregation of Duties | Conflict detection (runtime prevention via pipeline gate is planned) |
+| Segregation of Duties | Conflict detection (native runtime blocking in Power Platform pipelines is planned) |
 
 ### COSO Framework
 
@@ -314,16 +315,18 @@ Microsoft has introduced new [REST API endpoints for RBAC role assignments](http
 | **No batch violation creation** | `New-Violation` creates individual Dataverse records via separate POST calls. Using the Dataverse `$batch` endpoint would reduce API round-trips and allow atomic creation. For environments with many new violations, this may cause throttling. |
 | **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` before production use. Contributions welcome. |
 | **Console-only audit log** | `Write-AuditLog` writes via `Write-Host`, which bypasses the PowerShell pipeline and **cannot be redirected** with `6>&1` to capture for SIEM ingestion. The shipped script does not persist records to the `fsi_sodauditlog` Dataverse table either. To get a durable audit trail you must rewrite `Write-AuditLog` to use `Write-Information -InformationAction Continue` (or `Write-Output` of structured objects) and capture the stream, or POST directly to `fsi_sodauditlogs` when not in `-DryRun`. |
-| **PIM-eligible roles not evaluated** | Only **active** Entra ID role assignments (`/roleManagement/directory/roleAssignments`) are queried. Users who are PIM-eligible (but not currently activated) for conflicting roles are **not** detected. To cover this gap, separately query `/roleManagement/directory/roleEligibilityScheduleInstances?$expand=principal` and merge the results, or document that eligibility activations must be reviewed via Entra PIM access reviews. |
-| **Unsupported role contexts** | Entra ID App Role assignments (context 2) and Custom Application Roles (context 5) are not queried. Rules targeting these contexts will not match. |
+| **PIM-eligible roles not evaluated** | Active Entra role assignments are queried through Microsoft Graph v1.0 `/roleManagement/directory/roleAssignmentScheduleInstances`, including active PIM assignment instances. Users who are PIM-eligible but not currently activated for conflicting roles are **not** detected. To cover this gap, separately query `/roleManagement/directory/roleEligibilityScheduleInstances?$expand=principal` and merge the results, or document that eligibility activations must be reviewed through Entra PIM access reviews. |
+| **Unsupported role contexts** | Entra ID App Role assignments and Custom Application Roles are not queried. Rules targeting these contexts will not match. |
 | **Group-based role assignments** | Entra ID role assignments through security groups are not expanded. Only direct user assignments are evaluated. Users who inherit conflicting roles via group membership will not be detected. |
 | **No auto-reconciliation** | Violations are not automatically closed when the underlying role conflict is removed. Stale violations accumulate with status "Open" until manually resolved. |
-| **Expired exception blindness** | Violations with approved exceptions (status 4) are not re-flagged after the exception's expiration date passes. Periodically query `fsi_sodexception` for records where `fsi_expirationdate < today` and `fsi_status = 4` to identify stale exceptions requiring review. |
+| **Expired exception blindness** | Violations with approved exceptions are not re-flagged after the exception's expiration date passes. Periodically query `fsi_sodexception` for records where `fsi_expirationdate < today` and `fsi_status = 100000003` (Approved) to identify stale exceptions requiring review. |
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2026-Q2 | Microsoft Learn refresh: managed-identity-first auth, Graph PIM schedule instances, schema source of truth |
+| 1.1.0 | April 2026 | Council review fixes |
 | 1.0.0 | February 2026 | Initial release |
 
 ## Troubleshooting
@@ -332,10 +335,10 @@ Microsoft has introduced new [REST API endpoints for RBAC role assignments](http
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Authentication failure | Expired token or wrong service principal permissions | Re-authenticate; verify Global Reader and Power Platform Administrator roles |
+| Authentication failure | Expired token or workload identity permissions | Re-authenticate; verify Global Reader and Power Platform Administrator roles plus required Graph application permissions |
 | No conflict rules found | Rules not imported or all disabled | Run `Import-ConflictRules.ps1`; verify `fsi_enabled` is `true` in Dataverse |
-| Empty scan results | No role assignments returned from Graph API | Check service principal has `Directory.Read.All` permission |
-| Violation creation fails | Dataverse schema missing or permission denied | Create tables manually per [dataverse-schema.md](docs/dataverse-schema.md); verify System Administrator role on Dataverse |
+| Empty scan results | No active role assignment schedule instances returned from Graph API | Check the identity has `RoleAssignmentSchedule.Read.Directory`, `RoleManagement.Read.Directory`, and `Directory.Read.All` (or higher privileged Graph permissions) |
+| Violation creation fails | Dataverse schema missing or permission denied | Create tables per [dataverse-schema.md](docs/dataverse-schema.md); verify System Administrator role on Dataverse |
 
 ### Logs
 
@@ -347,4 +350,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Segregation of Duties Detector v1.1.0*
+*FSI Agent Governance Framework - Segregation of Duties Detector v1.2.0*

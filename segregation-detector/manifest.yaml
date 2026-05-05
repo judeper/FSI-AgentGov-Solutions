@@ -1,7 +1,7 @@
 id: segregation-detector
 name: Segregation of Duties Detector
 description: Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines and helps address SOX Section 404 IT General Controls.
-version: 1.1.0
+version: 1.2.0
 status: live
 domain: compliance-audit
 tier: '2'
