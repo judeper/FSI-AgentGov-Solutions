@@ -766,7 +766,7 @@
     "model-risk-management-automation": {
       "id": "model-risk-management-automation",
       "name": "Model Risk Management Automation",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

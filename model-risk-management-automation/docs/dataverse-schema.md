@@ -22,7 +22,7 @@
 | fsi_ModelName | fsi_modelname | String | Yes | Display name from agent registry |  |
 | fsi_AgentId | fsi_agentid | String | Yes | Power Platform Bot ID — Alternate Key part 1 |  |
 | fsi_EnvironmentId | fsi_environmentid | String | Yes | Power Platform environment GUID — Alternate Key part 2 |  |
-| fsi_EntraAgentId | fsi_entraagentid | String | No | From Entra Agent Registry if enabled |  |
+| fsi_EntraAgentId | fsi_entraagentid | String | No | From Microsoft Entra Agent ID / Agent 365 registry when available |  |
 | fsi_ModelId | fsi_modelid | String | No | Auto Number format MRM-{YYYY}-{00000} — set by Dataverse |  |
 | fsi_BusinessFunction | fsi_businessfunction | Memo | No | Declared use case — drives MRM tier assignment |  |
 | fsi_MrmTier | fsi_mrmtier | Picklist | Yes |  | **fsi_mrm_mrmtier**: `100000001` = Tier 1 - Full MRM, `100000002` = Tier 2 - Enhanced MRM, `100000003` = Tier 3 - Standard MRM, `100000004` = Tier 4 - Minimal MRM |

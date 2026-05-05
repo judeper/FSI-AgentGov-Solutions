@@ -6,13 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.3] — 2026-05-05
+
+### Fixed
+
+- **MRM governance-zone mapping** — corrected Flow 1, Flow 2, and Agent Card instructions to map source `fsi_agentinventory.fsi_zone` into target `fsi_modelinventory.fsi_governancezone`, matching `create_mrm_dataverse_schema.py` and generated schema docs.
+- **Invalid Agent Card JSON sample** — removed the JavaScript-style comment and expanded the sample with Microsoft Learn 2026-Q2 evidence fields for Agent ID, Agent 365 package metadata, model card source details, Foundry evaluation runs, and Compliance Manager caveats.
+- **Agent registry API drift** — replaced the obsolete Agent Registry agents endpoint reference with current preview Agent 365 package APIs and legacy `/beta/agentRegistry/agentInstances` convergence notes.
+
+### Changed
+
+- **Managed-identity-first Python authentication** — added Azure Identity `DefaultAzureCredential` support for managed identity/workload identity, kept interactive auth for admin workstations, and marked client-secret authentication as legacy dev-only.
+- **Configurable risk thresholds** — added `fsi_MRM_RiskScoreCriticalThreshold`, `fsi_MRM_RiskScoreHighThreshold`, and `fsi_MRM_RiskScoreMediumThreshold` environment variables and updated Flow 2 guidance to use institution-calibrated thresholds.
+- **Power Automate approval guidance** — clarified Dataverse-backed split-flow patterns for validation approvals that can exceed the 30-day connector timeout.
+
+---
+
 ## [1.0.2] — 2026-04-16
 
 ### Fixed
 
 - **Dataverse column drift in flow-configuration.md** — corrected child-table OData filters to use lookup columns (`_fsi_modelinventory_lookup_value eq <guid>`, `_fsi_validationcycle_lookup_value eq <guid>`) instead of nonexistent FK fields like `fsi_modelinventoryid eq '<guid>'`; replaced row-create assignments with `@odata.bind` syntax for lookup relationships.
 - **Picklist values shown as text labels** — converted all `fsi_cyclestatus`, `fsi_validationstatus`, and `fsi_mrmstatus` references in flow-configuration.md from text labels (`"In Progress"`, `"Findings Issued"`) to integer option-set values (`100000003`, `100000004`) that match `create_mrm_dataverse_schema.py`. Includes inline notes for option sets that are 1-based vs 0-based.
-- **`fsi_governancezone` references** — corrected to `fsi_zone` (option set `fsi_acv_zone`), the actual column name in agent-registry-automation and MRM schema.
+- **Governance-zone references** — clarified that `fsi_agentinventory.fsi_zone` is the source column from agent-registry-automation and `fsi_modelinventory.fsi_governancezone` is the MRM target column, both using option set `fsi_acv_zone`.
 - **Agent Card section column drift** — fixed `model.fsi_agentid` → `model.fsi_modelid` in SharePoint folder/file paths; removed nonexistent `fsi_validatordisplayname`, `fsi_ownerdisplayname`, `fsi_environmentname`, `fsi_limitations`, `fsi_agentcardgenerateddate` references; aligned to schema columns with notes on resolving display names from Microsoft Graph at read time.
 - **Monitoring record column names** — `fsi_outofscopecount` → `fsi_outofscopetriggers`; `fsi_thresholdbreached` → `fsi_thresholdbreachflag`; `fsi_cycleopeneddate` → `fsi_submitteddate`; `fsi_cyclecloseddate` → `fsi_validationcompleteddate`.
 - **Control 3.1 mapping** — updated title from "Audit Logging" to "Agent Inventory and Metadata Management" (canonical FSI-AgentGov framework title) and corrected URL slug.

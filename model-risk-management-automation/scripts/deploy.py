@@ -39,7 +39,7 @@ Post-Deployment Steps
 
 2. LTR -- Enable Dataverse Long-Term Retention:
    - Enable on fsi_mrmcomplianceevent with 7-year retention policy
-   - Required for SOX 302/404 and SEC 17a-4 compliance
+   - Required to support SOX 302/404 and SEC 17a-4 recordkeeping
 
 3. ALTERNATE KEY -- Verify fsi_ModelInventoryUniqueKey status:
    - Navigate to Tables > Model Inventory > Keys
@@ -184,25 +184,25 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  # Full deployment with interactive auth\n"
-            "  python deploy.py --interactive\n\n"
-            "  # Dry run (preview all changes)\n"
-            "  python deploy.py --dry-run --interactive\n\n"
-            "  # Deploy only tables with service principal\n"
+            "  # Full deployment from Azure-hosted runner or Function using managed identity/workload identity\n"
+            "  python deploy.py --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Dry run from an admin workstation using interactive auth\n"
+            "  python deploy.py --dry-run --interactive --tenant-id $MRM_TENANT_ID \\\n"
+            "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Deploy only tables with hosted identity\n"
+            "  python deploy.py --tables-only --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Legacy dev-only client-secret fallback\n"
             "  python deploy.py --tables-only \\\n"
             "    --tenant-id $MRM_TENANT_ID \\\n"
             "    --client-id $MRM_CLIENT_ID \\\n"
             "    --client-secret $MRM_CLIENT_SECRET \\\n"
             "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
-            "  # Deploy only environment variables\n"
-            "  python deploy.py --vars-only --interactive\n\n"
-            "  # Deploy only connection references\n"
-            "  python deploy.py --refs-only --interactive\n\n"
             "Environment variables:\n"
-            "  MRM_TENANT_ID        Microsoft Entra ID tenant ID\n"
-            "  MRM_CLIENT_ID        Service principal app ID\n"
-            "  MRM_CLIENT_SECRET    Service principal secret\n"
             "  MRM_ENVIRONMENT_URL  Dataverse environment URL\n"
+            "  AZURE_CLIENT_ID      Optional user-assigned managed identity/client ID\n"
+            "  MRM_TENANT_ID        Microsoft Entra tenant ID for interactive or legacy auth\n"
+            "  MRM_CLIENT_ID        Legacy dev-only application ID\n"
+            "  MRM_CLIENT_SECRET    Legacy dev-only client secret\n"
         ),
     )
 
@@ -210,17 +210,17 @@ def main() -> None:
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("MRM_TENANT_ID"),
-        help="Microsoft Entra ID tenant ID (or set MRM_TENANT_ID env var)",
+        help="Microsoft Entra tenant ID for interactive or legacy auth (or MRM_TENANT_ID)",
     )
     parser.add_argument(
         "--client-id",
         default=os.environ.get("MRM_CLIENT_ID"),
-        help="Service principal app ID (or set MRM_CLIENT_ID env var)",
+        help="Legacy dev-only application ID (or set MRM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("MRM_CLIENT_SECRET"),
-        help="Service principal secret (or set MRM_CLIENT_SECRET env var)",
+        help="Legacy dev-only client secret (or set MRM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -262,17 +262,16 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or MRM_TENANT_ID required")
-        sys.exit(1)
+    # Validate required arguments. Hosted identity is preferred: when neither
+    # --interactive nor --client-secret is supplied, MRMClient uses Azure
+    # Identity DefaultAzureCredential (managed identity/workload identity).
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
         sys.exit(1)
-    if not args.interactive and (not args.client_id or not args.client_secret):
+    if args.client_secret and (not args.tenant_id or not args.client_id):
         print(
-            "ERROR: --client-id and --client-secret required "
-            "(or use --interactive)"
+            "ERROR: legacy client-secret auth requires --tenant-id, "
+            "--client-id, and --client-secret"
         )
         sys.exit(1)
 

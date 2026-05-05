@@ -28,7 +28,7 @@ All flows use connection references deployed by `create_mrm_connection_reference
 | `fsi_cr_dataverse_mrm` | Dataverse - MRM | Common Data Service | Model inventory CRUD, risk ratings, validation cycles, findings, monitoring, compliance events |
 | `fsi_cr_teams_mrm` | Teams - MRM | Microsoft Teams | Risk scoring cards, validation alerts, SLA breach alerts, revalidation requests |
 | `fsi_cr_approvals_mrm` | Approvals - MRM | Approvals | Validator assignment approval, revalidation confirmation, examiner alert choices |
-| `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Power Platform Bots API, Graph API user resolution, Entra Agent Registry |
+| `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Power Platform Bots API, Graph API user resolution, Agent 365 / Microsoft Entra Agent ID registry enrichment |
 | `fsi_cr_sharepoint_mrm` | SharePoint - MRM | SharePoint Online | Agent Card upload, folder creation, metadata updates |
 | `fsi_cr_wordonline_mrm` | Word Online - MRM | Word Online (Business) | Agent Card document generation from template |
 
@@ -39,7 +39,7 @@ All flows read configuration from environment variables deployed by `create_mrm_
 | Variable | Type | Default | Used By |
 |----------|------|---------|---------|
 | `fsi_MRM_IsMRMAutomationEnabled` | String | `"false"` | All flows — master kill switch |
-| `fsi_MRM_IsAgent365LifecycleEnabled` | String | `"false"` | Flow 1 — gates Entra Agent Registry calls |
+| `fsi_MRM_IsAgent365LifecycleEnabled` | String | `"false"` | Flow 1 — gates optional Agent 365 / Microsoft Entra Agent ID registry calls |
 | `fsi_MRM_GovernanceTeamEmail` | String | — | Flows 1–6 — fallback notification target |
 | `fsi_MRM_FlowAdministrators` | String | — | Flows 1, 5 — API failure / fallback alerts |
 | `fsi_MRM_EscalationApproverUPN` | String | — | Flow 4 — skip-level approver for SLA breaches |
@@ -49,8 +49,11 @@ All flows read configuration from environment variables deployed by `create_mrm_
 | `fsi_MRM_FSI_FRAMEWORK_VERSION` | String | `"FSI-AgentGov-v1.1"` | Flow 5 — framework version tag in Agent Card |
 | `fsi_MRM_MaterialChangeTextDiffThreshold` | Decimal | `30` | Flow 1 — business function diff threshold (%) |
 | `fsi_MRM_ValidationApproachingDaysLookahead` | Decimal | `30` | Flow 4 — days before due date for reminders |
+| `fsi_MRM_RiskScoreCriticalThreshold` | Decimal | `29` | Flow 2 — Critical composite rating threshold |
+| `fsi_MRM_RiskScoreHighThreshold` | Decimal | `22` | Flow 2 — High composite rating threshold |
+| `fsi_MRM_RiskScoreMediumThreshold` | Decimal | `15` | Flow 2 — Medium composite rating threshold |
 
-See `create_mrm_environment_variables.py` for the full list of 27 variables including monitoring thresholds and per-tier validation SLAs.
+See `create_mrm_environment_variables.py` for the full list of 30 variables including monitoring thresholds, configurable scoring thresholds, and per-tier validation SLAs.
 
 ### Dataverse Tables
 
@@ -87,7 +90,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 | Connection Reference | Purpose |
 |---------------------|---------|
 | `fsi_cr_dataverse_mrm` | Read agent inventory, upsert model inventory, create compliance events |
-| `fsi_cr_http_mrm` | Power Platform Bots API enrichment, Graph API owner resolution, Entra Agent Registry cross-reference |
+| `fsi_cr_http_mrm` | Power Platform Bots API enrichment, Graph API owner resolution, optional Agent 365 / Microsoft Entra Agent ID registry cross-reference |
 | `fsi_cr_teams_mrm` | API failure alerts to FlowAdministrators |
 
 ### Step-by-Step Build Instructions
@@ -153,9 +156,16 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 
    4.4 Condition: IsAgent365LifecycleEnabled == "true"
        If Yes:
-         4.4.1 HTTP - Cross-reference Entra Agent Registry
-               Purpose: Retrieve agent-365-lifecycle-governance metadata
+         4.4.1 HTTP - Cross-reference Agent 365 / Microsoft Entra Agent ID registry
+               Purpose: Retrieve optional agent identity/package metadata for Agent Card evidence
                Configure Run After: Continue on failure
+               Note: Microsoft Learn 2026-Q2 lists Agent 365 package APIs at
+                     `/beta/copilot/admin/catalog/packages` with delegated
+                     `CopilotPackages.Read.All`; the older beta
+                     `/agentRegistry/agentInstances` path remains available for
+                     identity-only cross-reference during registry convergence.
+                     Keep this step feature-flagged and use the API path your
+                     tenant has approved.
        If No: Skip
 
    4.5 Scope: Material Change Detection (existing records only)
@@ -169,8 +179,9 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
                   Compare against fsi_MRM_MaterialChangeTextDiffThreshold env var
                c. Data inputs changed:
                   @{not(equals(enrichedAgent.dataInputs, existingRecord.fsi_datainputs))}
-               d. Zone changed:
-                  @{not(equals(agent.fsi_zone, existingRecord.fsi_zone))}  // agent-registry-automation column is fsi_zone (option set fsi_acv_zone)
+               d. Governance zone changed:
+                  @{not(equals(agent.fsi_zone, existingRecord.fsi_governancezone))}
+                  // Source column is agent-registry-automation fsi_zone; MRM target column is fsi_governancezone. Both use option set fsi_acv_zone.
                e. Owner changed:
                   @{not(equals(agent.ownerid, existingRecord.fsi_ownerupn))}
 
@@ -186,7 +197,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
          - fsi_modelname: @{agent.fsi_agentname}
          - fsi_agentid: @{agent.fsi_agentid}
          - fsi_environmentid: @{agent.fsi_environmentid}
-         - fsi_zone: @{agent.fsi_zone}
+         - fsi_governancezone: @{agent.fsi_zone}  // map source fsi_agentinventory.fsi_zone to target fsi_modelinventory.fsi_governancezone
          - fsi_ownerupn: @{graphUser.userPrincipalName}
          - fsi_ownerdepartment: @{graphUser.department}
          - fsi_modelprovider: @{enrichedAgent.modelProvider} (if available)
@@ -239,7 +250,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 | Variable | Step | Purpose |
 |----------|------|---------|
 | `fsi_MRM_IsMRMAutomationEnabled` | 1 | Feature flag gate |
-| `fsi_MRM_IsAgent365LifecycleEnabled` | 4.4 | Entra Agent Registry gate |
+| `fsi_MRM_IsAgent365LifecycleEnabled` | 4.4 | Optional Agent 365 / Microsoft Entra Agent ID registry gate |
 | `fsi_MRM_FlowAdministrators` | 2.2.2 | API failure notification target |
 | `fsi_MRM_MaterialChangeTextDiffThreshold` | 4.5.1b | Business function diff threshold |
 | `fsi_MRM_DataverseEnvironmentUrl` | 2.1 | Dataverse HTTP endpoint |
@@ -308,9 +319,10 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
        to rationale: "Data sensitivity scored by keyword match — manual
        review recommended to verify classification."
 
-   3.3 User Population Score (based on fsi_zone)
-       @{if(equals(model.fsi_zone, 'Zone 3'), 5,
-         if(equals(model.fsi_zone, 'Zone 2'), 3, 1))}
+   3.3 User Population Score (based on fsi_governancezone)
+       @{if(equals(int(model.fsi_governancezone), 100000003), 5,
+         if(equals(int(model.fsi_governancezone), 100000002), 3, 1))}
+       // fsi_acv_zone: 100000003=Zone 3, 100000002=Zone 2, 100000001=Zone 1, 100000000=Unclassified
 
    3.4 Model Complexity Score (based on fsi_modelprovider)
        @{if(or(
@@ -333,9 +345,10 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
          if(equals(model.fsi_decisionoutputtype, 'Information Retrieval'), 2,
          1)))}
 
-   3.6 Regulatory Exposure Score (based on fsi_zone)
-       @{if(equals(model.fsi_zone, 'Zone 3'), 5,
-         if(equals(model.fsi_zone, 'Zone 2'), 3, 1))}
+   3.6 Regulatory Exposure Score (based on fsi_governancezone)
+       @{if(equals(int(model.fsi_governancezone), 100000003), 5,
+         if(equals(int(model.fsi_governancezone), 100000002), 3, 1))}
+       // fsi_acv_zone: 100000003=Zone 3, 100000002=Zone 2, 100000001=Zone 1, 100000000=Unclassified
 
    3.7 Change Frequency Score
        - List rows: fsi_mrmcomplianceevents
@@ -347,23 +360,32 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
          if(greaterOrEquals(changeCount, 2), 3, 1))}
 
 4. Calculate Composite Score and Rating
-   4.1 Compose: TotalScore
+   4.1 Compose: RatingThresholds
+       - CriticalThreshold: @{int(coalesce(env.fsi_MRM_RiskScoreCriticalThreshold, 29))}
+       - HighThreshold: @{int(coalesce(env.fsi_MRM_RiskScoreHighThreshold, 22))}
+       - MediumThreshold: @{int(coalesce(env.fsi_MRM_RiskScoreMediumThreshold, 15))}
+
+       Note: The defaults mirror the original 7-factor rubric. MRM officers
+       should calibrate thresholds to institutional policy, portfolio mix, and
+       validation outcomes before activating production flows.
+
+   4.2 Compose: TotalScore
        @{add(decisionImpact, dataSensitivity, userPopulation,
              modelComplexity, explainability, regulatoryExposure,
              changeFrequency)}
        Range: 7 (minimum) to 35 (maximum)
 
-   4.2 Compose: CompositeRating
-       @{if(greaterOrEquals(TotalScore, 29), 'Critical',
-         if(greaterOrEquals(TotalScore, 22), 'High',
-         if(greaterOrEquals(TotalScore, 15), 'Medium', 'Low')))}
+   4.3 Compose: CompositeRating
+       @{if(greaterOrEquals(TotalScore, CriticalThreshold), 'Critical',
+         if(greaterOrEquals(TotalScore, HighThreshold), 'High',
+         if(greaterOrEquals(TotalScore, MediumThreshold), 'Medium', 'Low')))}
 
        | Total Score | Composite Rating |
        |-------------|-----------------|
-       | 29–35 | Critical |
-       | 22–28 | High |
-       | 15–21 | Medium |
-       | 7–14 | Low |
+       | `>= CriticalThreshold` (default 29–35) | Critical |
+       | `>= HighThreshold` (default 22–28) | High |
+       | `>= MediumThreshold` (default 15–21) | Medium |
+       | below MediumThreshold (default 7–14) | Low |
 
 5. Assign MRM Tier
    Logic (evaluated in order — first match wins):
@@ -459,6 +481,9 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
 |----------|------|---------|
 | `fsi_MRM_IsMRMAutomationEnabled` | 1 | Feature flag gate |
 | `fsi_MRM_GovernanceTeamEmail` | 10 | Fallback notification target |
+| `fsi_MRM_RiskScoreCriticalThreshold` | 4.1 | Critical composite rating threshold |
+| `fsi_MRM_RiskScoreHighThreshold` | 4.1 | High composite rating threshold |
+| `fsi_MRM_RiskScoreMediumThreshold` | 4.1 | Medium composite rating threshold |
 
 ---
 
@@ -927,39 +952,63 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
          replace(model.fsi_agentcardversion, 'v', ''), '.'))), 1)), '.0')}
 
 4. Compose Agent Card JSON
-   Compose action with all SR 11-7 pillar evidence fields:
+   Compose action with SR 11-7 pillar evidence plus current Microsoft Learn
+   Agent ID, Agent 365 registry, model-card, and evaluation evidence fields:
    {
      "metadata": {
        "cardVersion": "@{NewVersion}",
        "generatedDate": "@{utcNow()}",
        "frameworkVersion": "@{env.fsi_MRM_FSI_FRAMEWORK_VERSION}",
-       "generatedBy": "MRM Automation"
+       "generatedBy": "MRM Automation",
+       "learnRefresh": "2026-Q2"
+     },
+     "agentIdentity": {
+       "powerPlatformAgentId": "@{model.fsi_agentid}",
+       "entraAgentId": "@{model.fsi_entraagentid}",
+       "agent365PackageId": "@{agent365.packageId}",
+       "manifestId": "@{agent365.manifestId}",
+       "registrySource": "agent-registry-automation plus optional Agent 365 / Agent ID enrichment",
+       "legacyAppRegistrationId": "@{agent365.legacyAppRegistrationId}"
      },
      "modelIdentification": {
        "agentName": "@{model.fsi_agentname}",
        "modelId": "@{model.fsi_modelid}",
        "environmentName": "@{agentRegRecord.fsi_environmentid}",
-       "zone": "@{model.fsi_zone}",
+       "governanceZone": "@{model.fsi_governancezone}",
+       "sourceZoneColumn": "fsi_agentinventory.fsi_zone",
+       "mrmZoneColumn": "fsi_modelinventory.fsi_governancezone",
        "mrmTier": "@{model.fsi_mrmtier}",
        "modelProvider": "@{model.fsi_modelprovider}",
+       "underlyingModel": "@{model.fsi_underlyingmodel}",
        "decisionOutputType": "@{model.fsi_decisionoutputtype}",
        "ownerUpn": "@{model.fsi_ownerupn}",
-       "ownerDepartment": "@{model.fsi_ownerdepartment}"
+       "ownerDepartment": "@{model.fsi_ownerdepartment}",
+       "connectorsAndTools": "@{agent365.connectors}",
+       "knowledgeSources": "@{agent365.knowledgeSources}"
+     },
+     "modelCardEvidence": {
+       "modelCardUrl": "@{foundry.modelCardUrl}",
+       "modelVersion": "@{foundry.modelVersion}",
+       "license": "@{foundry.license}",
+       "benchmarkSummary": "@{foundry.benchmarkSummary}",
+       "reviewedBy": "@{model.fsi_mrmofficerupn}",
+       "reviewDate": "@{utcNow()}"
      },
      "pillar1_Development": {
        "businessFunction": "@{model.fsi_businessfunction}",
        "dataInputs": "@{model.fsi_datainputs}",
        "modelProvider": "@{model.fsi_modelprovider}",
-       "stochasticBehaviorAcknowledgment": "This agent uses a large
-         language model (LLM) that produces non-deterministic outputs.
-         Identical inputs may yield different responses across
-         invocations. Validation and monitoring account for this
-         inherent variability.",
+       "stochasticBehaviorAcknowledgment": "This agent uses a large language model (LLM) that produces non-deterministic outputs. Identical inputs may yield different responses across invocations. Validation and monitoring account for this inherent variability.",
        "knownLimitations": "@{model.fsi_knownlimitations}"
      },
      "pillar2_Validation": {
        "riskRating": "@{rating.fsi_compositerating}",
        "totalScore": @{rating.fsi_totalscore},
+       "scoringThresholds": {
+         "critical": @{CriticalThreshold},
+         "high": @{HighThreshold},
+         "medium": @{MediumThreshold}
+       },
        "scoringDimensions": {
          "decisionImpact": @{rating.fsi_score_decisionimpact},
          "dataSensitivity": @{rating.fsi_score_datasensitivity},
@@ -968,6 +1017,14 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
          "explainability": @{rating.fsi_score_explainability},
          "regulatoryExposure": @{rating.fsi_score_regulatoryexposure},
          "changeFrequency": @{rating.fsi_score_changefrequency}
+       },
+       "foundryEvaluationEvidence": {
+         "evaluationRunId": "@{foundry.evaluationRunId}",
+         "qualityMetrics": "@{foundry.qualityMetrics}",
+         "safetyMetrics": "@{foundry.safetyMetrics}",
+         "riskSafetyCategories": ["hate_unfairness", "sexual", "violence", "self_harm", "protected_material", "code_vulnerability", "indirect_attack", "prohibited_actions", "sensitive_data_leakage"],
+         "severityThreshold": "@{foundry.severityThreshold}",
+         "region": "@{foundry.region}"
        },
        "lastValidatedDate": "@{model.fsi_lastvalidateddate}",
        "validationOutcome": "@{cycle.fsi_validationoutcome}",
@@ -979,7 +1036,12 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
        "mrmStatus": "@{model.fsi_mrmstatus}",
        "firstSubmitted": "@{model.fsi_firstsubmitted}",
        "materialChangeFlag": @{model.fsi_materialchangeflag},
-       "complianceEventCount": @{complianceEventCount}
+       "complianceEventCount": @{complianceEventCount},
+       "complianceManagerEvidence": {
+         "assessmentId": "@{purview.assessmentId}",
+         "improvementActionIds": "@{purview.improvementActionIds}",
+         "scoreCaveat": "Compliance Manager scores measure implementation progress for improvement actions and are not legal or regulatory determinations."
+       }
      }
    }
 
@@ -1231,9 +1293,10 @@ SLA environment variables are specified in business days, but Power Automate's `
 
 ### Approval Connector Timeout
 
-The Power Automate Approvals connector has a default timeout of 30 days. Validation cycles that span longer than 30 days require either:
-- Configuring extended timeout in the approval action settings
-- Splitting Flow 3 into multiple trigger-based sub-flows (Steps A–D) rather than a single long-running flow
+The Power Automate Approvals connector has a default timeout of 30 days. Validation cycles that can span longer than 30 days should use the Microsoft Learn long-running approval pattern: store approval state in Dataverse, create the approval in one flow, and handle the response in a separate trigger-based flow. Acceptable designs include:
+- Configuring an extended timeout only when the expected duration remains below connector limits
+- Splitting Flow 3 into multiple Dataverse-backed trigger flows (Steps A–D) rather than a single long-running flow
+- Persisting approval IDs, owners, due dates, and escalation state in Dataverse so a retry or resumed flow can continue from durable state
 
 ### Pagination on Large Inventories
 
@@ -1245,4 +1308,4 @@ Flow 5 requires a pre-deployed Word template at `/Templates/AgentCard-Template.d
 
 ---
 
-*Model Risk Management Automation v1.0.2*
+*Model Risk Management Automation v1.0.3*

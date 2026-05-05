@@ -2,8 +2,9 @@
 """MRMClient - Dataverse Web API client for Model Risk Management Automation.
 
 Provides authenticated access to Microsoft Dataverse (Power Platform)
-for schema deployment and data operations. Supports both interactive
-browser and service principal authentication via MSAL.
+for schema deployment and data operations. Supports Azure Identity
+DefaultAzureCredential for managed identity or workload identity, interactive
+browser authentication, and legacy dev-only client-secret authentication via MSAL.
 """
 
 import argparse
@@ -17,32 +18,46 @@ from urllib.parse import urljoin
 import msal
 import requests
 from requests.adapters import HTTPAdapter
+
+try:
+    from azure.identity import DefaultAzureCredential
+except ImportError:  # optional until managed identity auth is used
+    DefaultAzureCredential = None
 from urllib3.util.retry import Retry
 
 
 class MRMClient:
-    """Dataverse Web API client with MSAL authentication and retry logic."""
+    """Dataverse Web API client with hosted identity/MSAL auth and retry logic."""
 
     API_VERSION = "v9.2"
 
     def __init__(
         self,
-        tenant_id: str,
+        tenant_id: Optional[str],
         environment_url: str,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         interactive: bool = False,
         dry_run: bool = False,
+        default_credential: bool = False,
+        managed_identity_client_id: Optional[str] = None,
     ):
         """Initialize MRM client.
 
         Args:
-            tenant_id: Entra ID tenant ID
-            environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
-            client_id: Application (client) ID
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
-            dry_run: If True, log API calls without executing them
+            tenant_id: Microsoft Entra tenant ID. Required for legacy
+                client-secret auth; optional for interactive auth.
+            environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com).
+            client_id: Application (client) ID for interactive app selection or
+                legacy dev-only client-secret auth.
+            client_secret: Client secret value for legacy dev-only auth.
+            interactive: Use interactive browser auth instead of hosted identity.
+            dry_run: If True, log API calls without executing them.
+            default_credential: Force Azure Identity DefaultAzureCredential.
+                When no interactive or client-secret auth is selected, this is
+                used automatically for managed identity/workload identity.
+            managed_identity_client_id: Optional user-assigned managed identity
+                client ID. Defaults to AZURE_CLIENT_ID when present.
         """
         self.tenant_id = tenant_id
         self.environment_url = environment_url.rstrip("/")
@@ -52,28 +67,51 @@ class MRMClient:
         self.dry_run = dry_run
         self.base_url = f"{self.environment_url}/api/data/{self.API_VERSION}"
         self._token_cache = msal.SerializableTokenCache()
-
-        authority = f"https://login.microsoftonline.com/{tenant_id}"
         self.scopes = [f"{self.environment_url}/.default"]
+        self._azure_credential = None
+        self.app = None
 
-        if interactive:
-            app_id = client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d"
-            self.app = msal.PublicClientApplication(
-                app_id,
-                authority=authority,
-                token_cache=self._token_cache,
-            )
-        else:
-            if not client_id or not client_secret:
+        use_default_credential = default_credential or (
+            not interactive and not client_secret
+        )
+
+        if use_default_credential:
+            if DefaultAzureCredential is None:
                 raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
+                    "azure-identity is required for managed identity/workload "
+                    "identity auth. Install model-risk-management-automation/"
+                    "scripts/requirements.txt."
                 )
-            self.app = msal.ConfidentialClientApplication(
-                client_id,
-                client_credential=client_secret,
-                authority=authority,
-                token_cache=self._token_cache,
+            credential_client_id = managed_identity_client_id or os.environ.get(
+                "AZURE_CLIENT_ID"
             )
+            credential_kwargs = {}
+            if credential_client_id:
+                credential_kwargs["managed_identity_client_id"] = credential_client_id
+            self._azure_credential = DefaultAzureCredential(**credential_kwargs)
+        else:
+            authority_tenant = tenant_id or "organizations"
+            authority = f"https://login.microsoftonline.com/{authority_tenant}"
+            if interactive:
+                app_id = client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d"
+                self.app = msal.PublicClientApplication(
+                    app_id,
+                    authority=authority,
+                    token_cache=self._token_cache,
+                )
+            else:
+                # legacy: dev-only — replace with managed identity in production
+                if not tenant_id or not client_id or not client_secret:
+                    raise ValueError(
+                        "tenant_id, client_id, and client_secret are required "
+                        "for legacy dev-only client-secret auth"
+                    )
+                self.app = msal.ConfidentialClientApplication(
+                    client_id,
+                    client_credential=client_secret,
+                    authority=authority,
+                    token_cache=self._token_cache,
+                )
 
         # Retry strategy for transient failures
         self.session = requests.Session()
@@ -92,7 +130,7 @@ class MRMClient:
     # =========================================================================
 
     def _get_token(self) -> str:
-        """Acquire access token with silent cache fallback.
+        """Acquire access token with hosted identity or MSAL cache fallback.
 
         Returns:
             Access token string
@@ -100,6 +138,18 @@ class MRMClient:
         Raises:
             RuntimeError: If token acquisition fails
         """
+        if self._azure_credential is not None:
+            try:
+                return self._azure_credential.get_token(*self.scopes).token
+            except Exception as exc:
+                raise RuntimeError(
+                    "Token acquisition failed via Azure Identity "
+                    f"DefaultAzureCredential: {exc}"
+                ) from exc
+
+        if self.app is None:
+            raise RuntimeError("Token acquisition failed: no credential configured")
+
         accounts = self.app.get_accounts() if self.interactive else None
         result = self.app.acquire_token_silent(
             scopes=self.scopes,

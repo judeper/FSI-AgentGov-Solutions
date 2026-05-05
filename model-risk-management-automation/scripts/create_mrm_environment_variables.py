@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create Dataverse environment variables for Model Risk Management Automation.
 
-Deploys 27 environment variables with fsi_MRM_* prefix that control
+Deploys 30 environment variables with fsi_MRM_* prefix that control
 feature flags, notification targets, infrastructure, monitoring thresholds,
 validation SLAs, tenant configuration, material change detection, and
 validation cadence. All operations are idempotent — safe to re-run.
@@ -31,7 +31,10 @@ Variables consumed by Power Automate flows:
   - fsi_MRM_ValidationSLA_Tier3_Assignment: Tier 3 validator assignment SLA
   - fsi_MRM_ValidationSLA_Tier3_Findings: Tier 3 findings delivery SLA
   - fsi_MRM_ValidationSLA_Tier3_Remediation: Tier 3 remediation SLA
-  - fsi_MRM_TenantId: Microsoft Entra ID / Entra ID tenant ID
+  - fsi_MRM_TenantId: Microsoft Entra tenant ID for interactive or legacy auth
+  - fsi_MRM_RiskScoreCriticalThreshold: Critical composite score threshold
+  - fsi_MRM_RiskScoreHighThreshold: High composite score threshold
+  - fsi_MRM_RiskScoreMediumThreshold: Medium composite score threshold
   - fsi_MRM_MaterialChangeTextDiffThreshold: Material change text diff threshold
   - fsi_MRM_ValidationApproachingDaysLookahead: Validation due lookahead days
 """
@@ -75,7 +78,7 @@ ENV_VAR_DEFINITIONS = [
         "default_value": "false",
         "description": (
             "Cross-solution flag from agent-365-lifecycle-governance. "
-            "Gates Entra Agent Registry API calls."
+            "Gates Agent 365 / Microsoft Entra Agent ID registry calls."
         ),
     },
     # -------------------------------------------------------------------------
@@ -310,8 +313,41 @@ ENV_VAR_DEFINITIONS = [
         "type": 100000000,  # String
         "default_value": "",
         "description": (
-            "Microsoft Entra ID / Entra ID tenant ID for "
-            "service principal auth."
+            "Microsoft Entra tenant ID for interactive auth and "
+            "legacy dev-only client-secret auth."
+        ),
+    },
+    # -------------------------------------------------------------------------
+    # Risk Scoring Thresholds
+    # -------------------------------------------------------------------------
+    {
+        "schema_name": "fsi_MRM_RiskScoreCriticalThreshold",
+        "display_name": "MRM - Risk Score Critical Threshold",
+        "type": 100000001,  # Decimal Number
+        "default_value": "29",
+        "description": (
+            "Composite risk score threshold for Critical rating "
+            "(default: 29). Calibrate to institutional MRM policy."
+        ),
+    },
+    {
+        "schema_name": "fsi_MRM_RiskScoreHighThreshold",
+        "display_name": "MRM - Risk Score High Threshold",
+        "type": 100000001,  # Decimal Number
+        "default_value": "22",
+        "description": (
+            "Composite risk score threshold for High rating "
+            "(default: 22). Calibrate to institutional MRM policy."
+        ),
+    },
+    {
+        "schema_name": "fsi_MRM_RiskScoreMediumThreshold",
+        "display_name": "MRM - Risk Score Medium Threshold",
+        "type": 100000001,  # Decimal Number
+        "default_value": "15",
+        "description": (
+            "Composite risk score threshold for Medium rating "
+            "(default: 15). Calibrate to institutional MRM policy."
         ),
     },
     # -------------------------------------------------------------------------
@@ -408,7 +444,7 @@ def create_environment_variables(
 ) -> None:
     """Deploy all MRM environment variables to Dataverse.
 
-    Creates 27 fsi_MRM_* environment variables with their default
+    Creates 30 fsi_MRM_* environment variables with their default
     values. All operations are idempotent — safe to re-run.
 
     Args:
@@ -453,10 +489,14 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  # Dry run with interactive auth\n"
+            "  # Deploy with managed identity/workload identity (preferred)\n"
+            "  python create_mrm_environment_variables.py \\\n"
+            "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Dry run with interactive admin auth\n"
             "  python create_mrm_environment_variables.py "
-            "--dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "--dry-run --interactive --tenant-id $MRM_TENANT_ID \\\n"
+            "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Legacy dev-only client-secret fallback\n"
             "  python create_mrm_environment_variables.py \\\n"
             "    --tenant-id $MRM_TENANT_ID \\\n"
             "    --client-id $MRM_CLIENT_ID \\\n"
@@ -468,17 +508,17 @@ def main() -> None:
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("MRM_TENANT_ID"),
-        help="Microsoft Entra ID tenant ID (or set MRM_TENANT_ID env var)",
+        help="Microsoft Entra tenant ID for interactive or legacy auth (or MRM_TENANT_ID)",
     )
     parser.add_argument(
         "--client-id",
         default=os.environ.get("MRM_CLIENT_ID"),
-        help="Service principal app ID (or set MRM_CLIENT_ID env var)",
+        help="Legacy dev-only application ID (or set MRM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("MRM_CLIENT_SECRET"),
-        help="Service principal secret (or set MRM_CLIENT_SECRET env var)",
+        help="Legacy dev-only client secret (or set MRM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -498,12 +538,17 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or MRM_TENANT_ID required")
-        sys.exit(1)
+    # Validate required arguments. Hosted identity is preferred: when neither
+    # --interactive nor --client-secret is supplied, MRMClient uses Azure
+    # Identity DefaultAzureCredential (managed identity/workload identity).
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
+        sys.exit(1)
+    if args.client_secret and (not args.tenant_id or not args.client_id):
+        print(
+            "ERROR: legacy client-secret auth requires --tenant-id, "
+            "--client-id, and --client-secret"
+        )
         sys.exit(1)
 
     try:
