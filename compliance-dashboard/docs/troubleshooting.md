@@ -198,10 +198,10 @@ Solution:
    - Check user has CD Viewer security role
    - Verify environment access
 
-2. **Check Service Principal**
-   - Verify app registration is active
-   - Check client secret hasn't expired
-   - Confirm API permissions granted
+2. **Check automation identity**
+   - Verify managed identity, workload identity, or app registration is active
+   - Confirm API permissions and Dataverse application-user roles are granted
+   - If using the legacy dev-only client-secret fallback, check the secret has not expired and rotate it promptly
 
 3. **Conditional Access**
    - Check if CA policy blocks access
@@ -220,10 +220,10 @@ Solution:
    - Click "Edit credentials"
    - Sign in again
 
-2. **Service Principal Refresh**
-   - Check client secret expiration
-   - Rotate secret if expired
-   - Update connection credentials
+2. **Automation credential refresh**
+   - Verify managed identity or workload identity assignment is still valid
+   - For certificate-based app authentication, verify the certificate has not expired
+   - If using the legacy dev-only client-secret fallback, rotate the secret and update connection credentials
 
 ---
 
@@ -358,4 +358,4 @@ For issues not covered here:
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

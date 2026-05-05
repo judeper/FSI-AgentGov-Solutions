@@ -55,9 +55,10 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 | Source | Data Collected | Status | Refresh Frequency |
 |--------|----------------|--------|-------------------|
 | **Dataverse (Compliance Hub tables)** | Control master, assessments, scores, exceptions, evidence (populated by manual import or other solutions) | Implemented | On import |
-| **Exchange Online (Get-ExchangeComplianceData.ps1)** | External forwarding rules, DLP alerts, mailbox access, DL membership | Implemented (script run on schedule; JSON output imported manually) | Scheduled (manual import) |
-| **Purview Compliance Manager** | Compliance scores, assessment status | Planned (`CD-EvidenceCollector` flow not yet shipped) | — |
-| **Power Platform Admin Center** | Environment count, DLP policy status | Planned | — |
+| **Exchange Online (Get-ExchangeComplianceData.ps1)** | External forwarding rules, DLP alerts, mailbox indicators, DL membership | Implemented (script run on schedule; JSON output imported manually) | Scheduled (manual import) |
+| **Purview Compliance Manager** | Assessment exports and score snapshots from the Purview portal Excel export | Planned/manual import (`CD-EvidenceCollector` flow not yet shipped; no supported public Graph endpoint is documented for Compliance Manager assessment score export as of 2026-Q2) | Manual export cadence |
+| **Microsoft 365 admin center / Graph reports** | Usage reports, including Microsoft 365 Copilot and agent usage where available | Planned | Daily/weekly |
+| **Power Platform Admin Center** | Environment analytics, capacity, and DLP policy status | Planned | Daily/weekly |
 | **Environment Lifecycle Management** | Zone classification, governance status | Optional dependency — populates Dataverse via the ELM solution | Real-time |
 | **FINRA Supervision Workflow** | Queue metrics, review completion rates | Optional dependency — populates Dataverse via the FINRA solution | Hourly |
 | **Purview Audit Log** | Compliance-relevant events | Planned | — |
@@ -71,13 +72,13 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 | Power BI Pro or Premium | Dashboard hosting and sharing |
 | Dataverse capacity | Compliance data storage |
 | Power Automate Premium | Data collection flows |
-| Microsoft 365 E5 or E5 Compliance | Purview Compliance Manager access |
+| Microsoft 365 E5 or E5 Compliance | Purview Compliance Manager portal export and evidence review |
 
 ### Permissions
 
 | Role | Required For |
 |------|--------------|
-| Purview Compliance Admin | Purview Compliance Manager API access |
+| Purview Compliance Admin | Purview Compliance Manager portal assessment export and evidence review |
 | Power Platform Admin | Environment and DLP data |
 | Power BI Admin | Workspace creation and sharing |
 | System Administrator (Dataverse) | Table creation and data access |
@@ -86,9 +87,9 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.1.0+ | Zone classification data |
-| FINRA Supervision Workflow | v1.0.0+ | Supervision metrics (optional) |
-| Get-ExchangeComplianceData.ps1 | v1.0.3 | Exchange compliance signal collection (included) |
+| Environment Lifecycle Management | v1.2.0+ | Zone classification data |
+| FINRA Supervision Workflow | v1.0.1+ | Supervision metrics (optional) |
+| Get-ExchangeComplianceData.ps1 | v1.0.4 | Exchange compliance signal collection (included) |
 
 ## Quick Start
 
@@ -110,10 +111,10 @@ See [Dataverse Schema](docs/dataverse-schema.md) for table structure details.
 For demonstration and testing, load sample data:
 
 ```bash
-# Set authentication environment variables
+# Managed identity / DefaultAzureCredential authentication is used by default.
+# For user-assigned managed identity or workload identity, set AZURE_CLIENT_ID.
 export AZURE_TENANT_ID="your-tenant-id"
-export AZURE_CLIENT_ID="your-client-id"
-export AZURE_CLIENT_SECRET="your-client-secret"
+export AZURE_CLIENT_ID="optional-managed-identity-or-app-client-id"
 
 # Load control master data into Dataverse
 python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.com"
@@ -122,7 +123,7 @@ python scripts/load_sample_data.py --environment "https://your-org.crm.dynamics.
 python scripts/load_sample_data.py --export
 ```
 
-> **⚠️ Security Note:** Avoid setting `AZURE_CLIENT_SECRET` directly in shell commands, as it may be recorded in shell history. For production deployments, use [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/), [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential) from `azure-identity`, or managed identity instead.
+> **Authentication Note:** `load_sample_data.py` uses `DefaultAzureCredential` first, so managed identity, workload identity federation, developer CLI credentials, and other supported Azure Identity sources are preferred. `AZURE_CLIENT_SECRET` remains a legacy dev-only fallback; do not use it for production automation.
 
 > **Note:** The `--environment` mode currently uploads control master data only. Use `--export` to generate assessment, score, and exception JSON files, then import them via Power Apps or the Dataverse API.
 
@@ -191,6 +192,14 @@ The `Get-ExchangeComplianceData.ps1` script collects Exchange Online compliance 
 | External distribution list members | MEDIUM | Mail-enabled groups with guest or external members |
 
 **Configuration:** See `templates/exchange-config.sample.json` for scan scope, risk thresholds, and domain allow-list settings.
+
+### Microsoft Learn 2026-Q2 integration notes
+
+- Use Microsoft Graph Reports APIs with `Reports.Read.All` for Microsoft 365 usage signals. Microsoft 365 Copilot usage reports are available under the v1.0 `/copilot/reports/...` path where available; legacy `/beta/reports/...` endpoints should not be used for production dashboards.
+- Compliance Manager assessment and improvement-action exports remain portal-driven Excel exports in current Microsoft Learn guidance. Treat those files as evidence inputs until Microsoft publishes a supported Graph API or SDK for assessment score export.
+- Use Power BI semantic model refresh APIs for automation (`Dataset.ReadWrite.All`) and poll refresh status for API-triggered refreshes. For embedded or paginated compliance reporting, use embed token v2 and paginated `exportToFile` only on supported capacity SKUs.
+- Use Dataverse FetchXML aggregate queries or Web API `$apply=groupby(...,aggregate(...))` for cross-table score rollups, and partition large aggregations because Dataverse aggregate queries evaluate up to 50,000 records per query.
+- Use Security & Compliance PowerShell (`Connect-IPPSSession`) with certificate-based app authentication for eDiscovery, compliance search, and retention policy evidence that is not exposed through Microsoft Graph.
 
 **Output:** JSON evidence file at `./output/exchange-compliance-report.json` — import into `fsi_complianceevidence` via Power Automate or Dataverse API for dashboard integration.
 
@@ -294,7 +303,7 @@ This section documents limitations and design decisions for the v1.0.x release.
 |------------|-------------|------------|
 | **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop following [Power BI Template Specification](docs/power-bi-template-spec.md) | The specification provides step-by-step page-by-page build instructions |
 | **Manual flow build** | Power Automate flows must be built manually following [Flow Configuration](docs/flow-configuration.md); no exported flow JSON ships in this solution per repository content policy | Use the manual build instructions; build once and optionally export to your own managed solution |
-| **Sample dataset is 62 controls** | The shipped `sample-data/control-master.json` contains 62 controls (24 Pillar 1 + 21 Pillar 2 + 10 Pillar 3 + 7 Pillar 4); the validated framework baseline contains 78 | Extend `sample-data/control-master.json` and the `PillarDimension` `DATATABLE` in `docs/dax-measures.md` to your full control inventory |
+| **Sample dataset is 62 controls** | The shipped `sample-data/control-master.json` contains 62 controls (24 Pillar 1 + 21 Pillar 2 + 10 Pillar 3 + 7 Pillar 4); the validated framework baseline contains 78 | Load the validated 78-control baseline into Dataverse before using the dashboard for full-framework reporting; extend `PillarDimension` in `docs/dax-measures.md` to your full control inventory |
 | **Evidence collector flow not yet shipped** | The third flow `CD-EvidenceCollector` is documented as planned in `docs/flow-configuration.md` but not implemented | Import Exchange and other evidence JSON manually via Power Apps or the Dataverse Web API until the flow ships |
 | **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
 | **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX patterns |
@@ -354,6 +363,7 @@ See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rol
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.4 | May 2026 | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; Purview/Graph/Power BI/Dataverse guidance updates |
 | 1.0.2 | April 2026 | Removed stale ZIP import references; updated Exchange script version |
 | 1.0.1 | March 2026 | Removed exported Dataverse solution package per content policy |
 | 1.0.0 | February 2026 | Production release with complete deployment artifacts |
@@ -367,4 +377,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Compliance Dashboard v1.0.3*
+*FSI Agent Governance Framework - Compliance Dashboard v1.0.4*

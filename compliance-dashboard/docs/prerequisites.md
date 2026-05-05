@@ -14,7 +14,7 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 | **Power BI Premium** | 1 capacity (alternative) | Unlimited viewers, larger datasets |
 | **Power Platform Premium** | Per flow creator | Power Automate data collection flows |
 | **Dataverse capacity** | 1 GB minimum | Compliance data storage |
-| **Microsoft 365 E5** or **E5 Compliance** | 1 minimum | Purview Compliance Manager API access |
+| **Microsoft 365 E5** or **E5 Compliance** | 1 minimum | Purview Compliance Manager portal export and evidence review |
 
 ### Optional Licenses
 
@@ -31,7 +31,7 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 
 | Role | Required For | Minimum Scope |
 |------|--------------|---------------|
-| **Purview Compliance Admin** | Purview Compliance Manager API | Tenant |
+| **Purview Compliance Admin** | Compliance Manager assessment export and evidence review in the Purview portal | Tenant |
 | **Power Platform Admin** | Environment and DLP data access | Tenant |
 | **Global Reader** | Read-only access to configuration | Tenant |
 | **Exchange Online Admin** | Required for the Exchange data collector script (`Get-ExchangeComplianceData.ps1`) when running interactively | Tenant |
@@ -55,7 +55,7 @@ Complete prerequisites for deploying the Compliance Dashboard solution.
 
 ## Service Principal Setup
 
-The data collection flows use a service principal for API access.
+The data collection flows and scripts use managed identity or workload identity federation first. Use service principal client secrets only for legacy local development, and prefer certificate-based app authentication for Exchange Online Security & Compliance PowerShell automation.
 
 ### Required Permissions
 
@@ -63,7 +63,7 @@ The data collection flows use a service principal for API access.
 {
   "servicePrincipalPermissions": {
     "microsoftGraph": [
-      "ComplianceManager.Read.All",
+      "Reports.Read.All",
       "Directory.Read.All",
       "AuditLog.Read.All",
       "User.Read.All",
@@ -97,7 +97,7 @@ The data collection flows use a service principal for API access.
 
 1. Go to **API permissions** > **Add a permission**
 2. Add Microsoft Graph permissions:
-   - `ComplianceManager.Read.All` (Application)
+   - `Reports.Read.All` (Application) — Microsoft 365 usage reports, including Copilot usage reports where available
    - `Directory.Read.All` (Application)
    - `AuditLog.Read.All` (Application)
    - `User.Read.All` (Application) — license + UPN enumeration
@@ -115,13 +115,15 @@ After registering the app, grant it Dataverse access:
 2. Click **+ New app user** and select the app registration above
 3. Assign the **System Customizer** role (for table reads/writes performed by the dashboard flows) and **Basic User** for OData access
 
-### Client Secret
+### Authentication credentials
 
-1. Go to **Certificates & secrets**
-2. Click **New client secret**
-3. Description: `ComplianceDashboard-Secret`
-4. Expiration: 24 months (maximum)
-5. Store securely in Azure Key Vault
+Use the strongest available credential for the runtime:
+
+1. **Managed identity** for Azure-hosted jobs (system-assigned by default; set `AZURE_CLIENT_ID` for user-assigned managed identity).
+2. **Workload identity federation** for GitHub Actions or other CI jobs.
+3. **Certificate-based app authentication** for Exchange Online Security & Compliance PowerShell (`Connect-IPPSSession -AppId ... -CertificateThumbprint ... -Organization ...`).
+4. **Interactive/device-code sign-in** for one-off administrator workstation runs.
+5. **Client secret** only as a legacy dev-only fallback. If used, store it in Azure Key Vault, rotate it frequently, and remove it from production automation.
 
 ---
 
@@ -195,7 +197,7 @@ Before proceeding with deployment, verify:
 - [ ] Dataverse environment created with sufficient capacity
 - [ ] Service principal registered with required permissions
 - [ ] Admin consent granted for API permissions
-- [ ] Client secret stored in Azure Key Vault
+- [ ] Managed identity, workload identity, or certificate credential configured; any client secret is documented as legacy dev-only and stored in Azure Key Vault
 - [ ] Network endpoints accessible
 - [ ] Environment Lifecycle Management solution deployed (if using zone data)
 
@@ -211,4 +213,4 @@ Once prerequisites are met:
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

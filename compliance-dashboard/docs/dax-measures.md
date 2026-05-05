@@ -535,4 +535,4 @@ DATATABLE(
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

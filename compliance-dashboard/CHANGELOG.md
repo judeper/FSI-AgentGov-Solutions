@@ -4,6 +4,23 @@ All notable changes to the Compliance Dashboard solution.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Bumped solution metadata to v1.0.4 for the Microsoft Learn 2026-Q2 refresh.
+- Reframed Purview Compliance Manager integration as portal export/manual evidence import until Microsoft publishes a supported Compliance Manager Graph API or SDK for assessment score export.
+- Updated authentication guidance to managed identity / DefaultAzureCredential first, with client-secret fallback marked as legacy dev-only.
+- Added Microsoft Graph reports, Power BI REST, Dataverse aggregation, and Exchange Online Security & Compliance PowerShell guidance aligned with current Microsoft Learn documentation.
+- Corrected the manifest tier to Tier 2 and clarified that the dashboard reports across the 78-control baseline when those records are loaded.
+
+### Fixed
+
+- Removed instructions to store Power BI `.pbix` / `.pbit` binaries in the repository.
+- Updated Exchange collector metadata to include control 3.4 with the rest of the dashboard control mapping.
+
+---
+
 ## [1.0.3] - 2026-04-16
 
 ### Fixed (AI Council deep review)

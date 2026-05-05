@@ -13,18 +13,18 @@ Verify all prerequisites are met before starting deployment.
 - [ ] Power BI Pro or Premium license verified for target users
 - [ ] Dataverse capacity available in target environment (minimum 1 GB recommended)
 - [ ] Power Automate Premium license for automated data collection flows
-- [ ] Microsoft 365 E5 or E5 Compliance license for Purview Compliance Manager access
+- [ ] Microsoft 365 E5 or E5 Compliance license for Purview Compliance Manager portal export and evidence review
 
 ### Permissions
 
-- [ ] User has **Purview Compliance Admin** role (required for Purview Compliance Manager API access)
+- [ ] User has **Purview Compliance Admin** role (required for Compliance Manager assessment export and evidence review)
 - [ ] User has **Power Platform Admin** role (required for environment access and DLP policy data)
 - [ ] User has **Power BI Admin** role (required for workspace creation and sharing)
 - [ ] User has **System Administrator** role in target Dataverse environment (required for table creation)
 
 ### Dependencies
 
-- [ ] Environment Lifecycle Management solution v1.1.0+ deployed (provides zone classification data)
+- [ ] Environment Lifecycle Management solution v1.2.0+ deployed (provides zone classification data)
 - [ ] Network access to Dataverse environment confirmed (no firewall blocking)
 - [ ] Microsoft Entra ID tenant ID and Dataverse environment URL documented
 
@@ -102,20 +102,22 @@ Load sample data for demonstration and testing purposes.
 - [ ] Python 3.8+ installed
 - [ ] Required packages: `requests`, `msal` (install with `pip install -r requirements.txt`)
 
-### Set Environment Variables
+### Configure Authentication
+
+`load_sample_data.py` uses `DefaultAzureCredential` first. Use managed identity or workload identity for automation; set `AZURE_CLIENT_ID` only when a user-assigned managed identity or workload identity app ID is required.
 
 ```bash
 export AZURE_TENANT_ID="your-tenant-id"
-export AZURE_CLIENT_ID="your-client-id"
-export AZURE_CLIENT_SECRET="your-client-secret"
+export AZURE_CLIENT_ID="optional-managed-identity-or-app-client-id"
 ```
 
 Or on Windows:
 ```powershell
 $env:AZURE_TENANT_ID = "your-tenant-id"
-$env:AZURE_CLIENT_ID = "your-client-id"
-$env:AZURE_CLIENT_SECRET = "your-client-secret"
+$env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 ```
+
+`AZURE_CLIENT_SECRET` is supported only as a legacy dev-only fallback. Do not use client secrets for production automation.
 
 ### Run Sample Data Loader
 
@@ -425,4 +427,4 @@ After successful deployment:
 
 ---
 
-*Compliance Dashboard v1.0.3 - Deployment Checklist*
+*Compliance Dashboard v1.0.4 - Deployment Checklist*

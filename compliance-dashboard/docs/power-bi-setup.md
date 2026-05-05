@@ -275,6 +275,14 @@ For cloud-only deployments:
 - No gateway required
 - Use organizational account authentication
 
+### REST API refresh and embedding automation
+
+For automation outside the Power BI service schedule:
+
+- Use the Power BI REST API semantic model refresh endpoint (`POST /groups/{groupId}/datasets/{datasetId}/refreshes`) with `Dataset.ReadWrite.All`; the operation is asynchronous and returns a `Location` header that can be polled for status.
+- Use embed token v2 (`Generate token`) for embedded report scenarios; service principals must provide effective identities for RLS-protected semantic models.
+- Use paginated report `exportToFile` only for workspaces backed by Premium, Embedded, or Fabric capacity, and poll until the export job completes before downloading the file.
+
 ---
 
 ## Row-Level Security (RLS)
@@ -360,4 +368,4 @@ Recommended custom visuals:
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

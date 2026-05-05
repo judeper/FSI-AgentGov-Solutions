@@ -26,7 +26,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | agent-sharing-access-restriction-detector | v2.0.1 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.3 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.1.1 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.3 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| compliance-dashboard | v1.0.4 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v2.0.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.1.1 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
 | copilot-studio-analytics | v2.0.1 | 3.2 | Business impact analytics for Copilot Studio agents |

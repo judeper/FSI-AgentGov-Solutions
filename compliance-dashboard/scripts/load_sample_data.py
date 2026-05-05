@@ -9,7 +9,11 @@ Usage:
     python load_sample_data.py --dry-run
     python load_sample_data.py --export
 
-KNOWN LIMITATIONS (tracked in CHANGELOG v1.0.3):
+Authentication uses DefaultAzureCredential first (managed identity, workload
+identity federation, developer CLI credentials). AZURE_CLIENT_SECRET is a
+legacy dev-only fallback and should not be used for production automation.
+
+KNOWN LIMITATIONS (tracked in CHANGELOG v1.0.4):
 
 1. **Lookup binding for assessments/exceptions is not implemented.**
    The generators below emit a string field ``fsi_controlid`` on assessment and
@@ -38,37 +42,70 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 import random
 
 try:
+    from azure.identity import DefaultAzureCredential
     from msal import ConfidentialClientApplication
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
 except ImportError:
     print("Error: Required packages not installed.")
-    print("Run: pip install msal requests")
+    print("Run: pip install -r requirements.txt")
     sys.exit(1)
 
 
-def get_access_token(tenant_id: str, client_id: str, client_secret: str, environment_url: str = None) -> str:
-    """Acquire access token for Dataverse API."""
-    authority = f"https://login.microsoftonline.com/{tenant_id}"
-    # Use environment-specific scope; fall back to env var or error
+def get_access_token(
+    tenant_id: Optional[str] = None,
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
+    environment_url: Optional[str] = None,
+) -> str:
+    """Acquire an access token for the Dataverse API.
+
+    Uses DefaultAzureCredential first so managed identity, workload identity
+    federation, and administrator developer credentials are preferred. A client
+    secret is accepted only as a legacy development fallback.
+    """
     base_url = environment_url or os.environ.get("DATAVERSE_URL")
     if not base_url:
         raise ValueError(
             "Dataverse environment URL required. Pass --environment or set DATAVERSE_URL."
         )
-    scope = [f"{base_url.rstrip('/')}/.default"]
 
+    scope = f"{base_url.rstrip('/')}/.default"
+
+    credential = DefaultAzureCredential(
+        managed_identity_client_id=client_id if client_id and not client_secret else None,
+        exclude_environment_credential=bool(client_secret),
+    )
+
+    try:
+        return credential.get_token(scope).token
+    except Exception as default_error:
+        if not all([tenant_id, client_id, client_secret]):
+            raise RuntimeError(
+                "DefaultAzureCredential failed and no complete legacy client-secret "
+                "fallback was provided. Configure managed identity/workload identity, "
+                "run an Azure CLI sign-in for local testing, or set AZURE_TENANT_ID, "
+                "AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET for dev-only fallback."
+            ) from default_error
+
+    print(
+        "Warning: DefaultAzureCredential failed; using legacy dev-only client secret fallback.",
+        file=sys.stderr,
+    )
+    authority = f"https://login.microsoftonline.com/{tenant_id}"
+    # legacy: dev-only — replace with managed identity in production
     app = ConfidentialClientApplication(
         client_id,
         authority=authority,
-        client_credential=client_secret
+        client_credential=client_secret,
     )
 
-    result = app.acquire_token_for_client(scopes=scope)
+    result = app.acquire_token_for_client(scopes=[scope])
 
     if "access_token" not in result:
         raise Exception(f"Failed to acquire token: {result.get('error_description', 'Unknown error')}")
@@ -420,14 +457,19 @@ def main() -> None:
     client_id = os.environ.get("AZURE_CLIENT_ID")
     client_secret = os.environ.get("AZURE_CLIENT_SECRET")
 
-    if not all([tenant_id, client_id, client_secret]):
-        print("\nError: Missing environment variables:")
-        print("  AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET")
+    if client_secret and not all([tenant_id, client_id]):
+        print("\nError: legacy client-secret fallback requires AZURE_TENANT_ID and AZURE_CLIENT_ID")
         sys.exit(1)
 
     print(f"\nConnecting to: {args.environment}")
+    print("Authentication: DefaultAzureCredential first; AZURE_CLIENT_SECRET is legacy dev-only fallback.")
     try:
-        token = get_access_token(tenant_id, client_id, client_secret, environment_url=args.environment)
+        token = get_access_token(
+            tenant_id=tenant_id,
+            client_id=client_id,
+            client_secret=client_secret,
+            environment_url=args.environment,
+        )
         print("Authentication successful")
     except Exception as e:
         print(f"\nError: Authentication failed: {e}", file=sys.stderr)
