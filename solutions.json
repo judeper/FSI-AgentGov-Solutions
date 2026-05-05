@@ -581,11 +581,11 @@
     "finra-supervision-workflow": {
       "id": "finra-supervision-workflow",
       "name": "FINRA Supervision Workflow",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
-      "description": "Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and immutable audit logging fed by Microsoft Purview Communication Compliance.",
+      "description": "Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and append-only Dataverse audit logging and WORM-ready evidence export fed by Microsoft Purview Communication Compliance.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/finra-supervision-workflow/",
       "controls": [
         "2.12",

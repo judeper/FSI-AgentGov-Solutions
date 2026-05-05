@@ -2,6 +2,15 @@
 
 All notable changes to the FINRA Supervision Workflow solution are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- **Microsoft Learn 2026-Q2 refresh** — updated Power Automate Approvals, Teams Adaptive Cards, Outlook Actionable Messages, Purview Communication Compliance, eDiscovery, records-management, and WORM storage guidance.
+- **Managed identity-first authentication** — deployment and evidence export now default to managed identity/workload identity, with client-secret authentication marked as a legacy dev-only fallback.
+- **Evidence retention guidance** — clarified that Dataverse SupervisionLog is append-only by role design and that WORM preservation requires locked Azure Blob immutability policies or Microsoft Purview records-management labels.
+- **Review response capture** — documented current Approvals connector response outputs, parallel approval patterns, and Teams/Outlook Adaptive Card requirements.
+
 ## [1.0.1] - 2026-04-16
 
 ### Fixed

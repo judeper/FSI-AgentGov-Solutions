@@ -24,7 +24,6 @@ from datetime import datetime, timedelta, timezone
 
 try:
     import requests
-    import msal  # noqa: F401 — validate msal is installed (used by auth.py)
 except ImportError:
     print("Error: Required packages not installed.")
     print("Run: pip install -r requirements.txt")
@@ -193,18 +192,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export FINRA Supervision Workflow evidence")
     parser.add_argument("--environment-url", required=True, help="Dataverse environment URL")
     parser.add_argument("--tenant-id", required=True, help="Microsoft Entra ID tenant ID (GUID format: 12345678-1234-1234-1234-123456789abc)")
-    parser.add_argument("--client-id", help="Service principal client ID")
-    parser.add_argument("--client-secret", help="Service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
-    parser.add_argument("--interactive", action="store_true", help="Use interactive authentication")
+    parser.add_argument("--managed-identity-client-id", help="User-assigned managed identity client ID")
+    parser.add_argument("--client-id", help="Legacy service principal client ID (dev-only fallback)")
+    parser.add_argument("--client-secret", help="Legacy service principal client secret (prefer FSW_CLIENT_SECRET env var to avoid process list exposure)")
+    parser.add_argument("--interactive", action="store_true", help="Use interactive authentication for local admin runs")
     parser.add_argument("--output-path", required=True, help="Output directory for exports")
     parser.add_argument("--start-date", required=True, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", required=True, help="End date (YYYY-MM-DD)")
 
     args = parser.parse_args()
 
-    # Fall back to environment variable for client secret
-    if not args.client_secret:
+    # legacy: dev-only — replace with managed identity in production
+    if args.client_id and not args.client_secret:
         args.client_secret = os.environ.get("FSW_CLIENT_SECRET")
+    if args.managed_identity_client_id and (args.client_id or args.client_secret):
+        print("Error: use either managed identity or legacy client-secret authentication, not both")
+        sys.exit(1)
 
     # Validate tenant-id GUID format
     guid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
@@ -236,16 +239,19 @@ def main() -> None:
             interactive=True,
             environment_url=args.environment_url
         )
-    elif args.client_id and args.client_secret:
+    elif args.client_id or args.client_secret:
         access_token = get_access_token(
             args.tenant_id,
             client_id=args.client_id,
             client_secret=args.client_secret,
-            environment_url=args.environment_url
+            environment_url=args.environment_url,
         )
     else:
-        print("Error: Specify --interactive or provide --client-id and --client-secret")
-        sys.exit(1)
+        access_token = get_access_token(
+            args.tenant_id,
+            managed_identity_client_id=args.managed_identity_client_id,
+            environment_url=args.environment_url,
+        )
 
     print("Authentication successful")
 
@@ -284,7 +290,7 @@ def main() -> None:
             "start_date": args.start_date,
             "end_date": args.end_date,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "exported_by": "export_supervision_evidence.py v1.0.0",
+            "exported_by": "export_supervision_evidence.py v1.1.0",
             "status": "complete"
         },
         "files": []
@@ -385,21 +391,24 @@ def main() -> None:
     print("\n  *** SEC 17a-4 Evidence Integrity Notice ***")
     print("  The manifest records SHA-256 hashes for each exported file, and a companion")
     print("  .sha256 sidecar verifies the manifest itself. However, this alone is")
-    print("  insufficient for regulatory evidence. To ensure chain")
-    print("  of custody, store exports on WORM (Write Once Read Many) storage or")
-    print("  generate a detached digital signature for the manifest file.")
+    print("  insufficient for regulatory evidence. To support chain")
+    print("  of custody, store exports on locked WORM (Write Once Read Many) storage")
+    print("  or apply Microsoft Purview retention labels / regulatory records.")
+    print("  A detached digital signature for the manifest file is also recommended.")
     print("  Example: gpg --detach-sign --armor manifest-{}.json".format(period_suffix))
 
     print("\n" + "=" * 60)
     print("Export Complete")
     print("=" * 60)
     print(f"\nFiles exported to: {args.output_path}")
-    print(f"Total files: {len(manifest['files']) + 1}")  # +1 for manifest
+    print(f"Total files: {len(manifest['files']) + 2}")  # +2 for manifest and sidecar hash
     print("\nFor regulatory examination, provide:")
     print(f"  1. {os.path.basename(queue_filepath)}")
     print(f"  2. {os.path.basename(log_filepath)}")
     print(f"  3. {os.path.basename(metrics_filepath)}")
-    print(f"  4. {os.path.basename(manifest_filepath)} (integrity verification)")
+    print(f"  4. {os.path.basename(config_filepath)}")
+    print(f"  5. {os.path.basename(manifest_filepath)} (integrity verification)")
+    print(f"  6. {os.path.basename(hash_filepath)} (manifest hash sidecar)")
 
     if has_errors:
         print("\nWARNING: Export completed with errors. Data may be incomplete.")
