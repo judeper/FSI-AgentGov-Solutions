@@ -145,7 +145,7 @@ This guide covers common issues encountered during deployment and operation of t
 | "Inventory Sync Failed" compliance event logged | Check that `fsi_agentinventory` table is accessible and that `agent-registry-automation` is deployed and running |
 | Agents not appearing in MRM inventory | Verify filter conditions — Flow 1 syncs only agents with `fsi_registrationstatus = "Registered"` and `fsi_lifecyclestatus` in (`Active`, `Under Review`) |
 | Duplicate records created | Verify the alternate key `fsi_ModelInventoryUniqueKey` is active (see Alternate Key section above) |
-| Agent 365 cross-reference not populating | Confirm `IsAgent365LifecycleEnabled = "true"` and `AgentRegistry.Read.All` permission is granted |
+| Agent 365 cross-reference not populating | Confirm `IsAgent365LifecycleEnabled = "true"`, verify whether your tenant uses Agent 365 package APIs or beta `agentRegistry/agentInstances`, and check the matching role/permission model (`CopilotPackages.Read.All` delegated or `AgentInstance.Read.All`) |
 
 ### Flow 2 — Score-ModelRisk-OnSubmission
 

@@ -352,7 +352,7 @@ Provides MRM Officers with a full inventory table across all tiers and statuses.
      | Risk Rating | `fsi_currentriskrating` |
      | Validation Status | `fsi_validationstatus` |
      | Owner | `fsi_ownerupn` |
-     | MRM Officer | `fsi_mrmofficer upn` |
+     | MRM Officer | `fsi_mrmofficerupn` |
      | Next Validation Due | `fsi_nextvalidationdue` |
      | Last Validated | `fsi_lastvalidateddate` |
      | MRM Status | `fsi_mrmstatus` |

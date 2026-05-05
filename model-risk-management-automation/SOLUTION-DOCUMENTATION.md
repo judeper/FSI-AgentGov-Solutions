@@ -1,6 +1,6 @@
 # Solution Documentation — Model Risk Management Automation
 
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Solution Name:** `model-risk-management-automation`
 **Repository:** FSI-AgentGov-Solutions
 
@@ -84,18 +84,19 @@ This solution requires `agent-registry-automation` to be deployed in the same Da
 ### Required APIs
 
 1. **Power Platform Bots API** — `GET https://api.powerplatform.com/powervirtualagents/environments/{envId}/bots/{botId}?api-version=2022-03-01-preview`
-2. **Microsoft Graph — Agent Registry** — `GET https://graph.microsoft.com/beta/agentRegistry/agents/{agentId}` (feature-flagged)
-3. **Microsoft Graph — User Profile** — `GET https://graph.microsoft.com/v1.0/users/{userUPN}?$select=id,displayName,mail,jobTitle,department`
-4. **SharePoint REST API** — Agent Card list items and document upload
-5. **Dataverse Web API** — Upsert via alternate key `(fsi_agentid, fsi_environmentid)`
+2. **Microsoft Graph — Agent 365 package inventory (preview)** — `GET https://graph.microsoft.com/beta/copilot/admin/catalog/packages?$filter=supportedHosts/any(h:h eq 'Copilot')` for delegated administrator inventory exports when `IsAgent365LifecycleEnabled` is enabled
+3. **Microsoft Graph — Agent Registry agent instances (legacy/beta)** — `GET https://graph.microsoft.com/beta/agentRegistry/agentInstances/{agentInstanceId}` for identity-only cross-reference while Microsoft converges registry APIs into Agent 365
+4. **Microsoft Graph — User Profile** — `GET https://graph.microsoft.com/v1.0/users/{userUPN}?$select=id,displayName,mail,jobTitle,department`
+5. **SharePoint REST API** — Agent Card list items and document upload
+6. **Dataverse Web API** — Upsert via alternate key `(fsi_agentid, fsi_environmentid)`
 
 ### Authentication
 
-**Power Automate flows** use Power Platform connection references (Dataverse, SharePoint, Microsoft Teams, Office 365 Outlook). Service principal or delegated user authentication is configured per environment.
+**Power Automate flows** use Power Platform connection references (Dataverse, SharePoint, Microsoft Teams, Office 365 Outlook). Configure managed identity or delegated user authentication per connector capability and environment policy.
 
 **PowerShell scripts** (e.g., `Deploy-MRM-Baseline.ps1`, `Test-MRMCompliance.ps1`) use Azure managed identity in production (`Get-AzAccessToken`); for local development, run `Connect-AzAccount` first.
 
-**Python deployment scripts** (`create_mrm_*.py`) use MSAL with three supported auth modes: interactive (`--interactive`), service principal (`--client-id` + `--client-secret`), or device code. See README Quick Start for examples.
+**Python deployment scripts** (`create_mrm_*.py`) use Azure Identity `DefaultAzureCredential` by default for managed identity or workload identity. Use `--interactive` for admin-workstation runs. `--client-id` with `--client-secret` is retained only as a legacy dev-only fallback and should be replaced with managed identity or workload identity in production.
 
 ---
 
@@ -139,7 +140,7 @@ Full step-by-step build instructions are in [docs/flow-configuration.md](docs/fl
 
 ## 6. Environment Variables
 
-27 environment variables with `fsi_MRM_*` prefix. Deployed via `scripts/create_mrm_environment_variables.py`.
+30 environment variables with `fsi_MRM_*` prefix. Deployed via `scripts/create_mrm_environment_variables.py`, including configurable composite risk-score thresholds for institution-specific calibration.
 
 See [templates/mrm-config.sample.json](templates/mrm-config.sample.json) for all defaults.
 

@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "metadata": {
     "solution": "model-risk-management-automation",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "description": "Sample configuration for MRM Automation environment variables"
   },
   "featureFlags": {
@@ -19,7 +19,13 @@
     "MRMSiteUrl": "https://contoso.sharepoint.com/sites/MRM",
     "MRMAgentCardLibrary": "Agent Cards",
     "TenantId": "00000000-0000-0000-0000-000000000000",
-    "FSI_FRAMEWORK_VERSION": "FSI-AgentGov-v1.1"
+    "FSI_FRAMEWORK_VERSION": "FSI-AgentGov-v1.4"
+  },
+  "riskScoringThresholds": {
+    "CriticalThreshold": 29,
+    "HighThreshold": 22,
+    "MediumThreshold": 15,
+    "CalibrationNote": "Defaults mirror the 7-factor rubric; calibrate to institutional model-risk policy before enabling production flows."
   },
   "monitoringThresholds": {
     "ErrorRate_Warning": 5,
@@ -56,7 +62,8 @@
   "notes": {
     "1_featureFlags": "Set IsMRMAutomationEnabled to 'true' only after completing DELIVERY-CHECKLIST.md",
     "2_entitySetNames": "Confirm all Dataverse entity set names post-deployment — see DELIVERY-CHECKLIST.md",
-    "3_optionSetValues": "Confirm OptionSet integer values against deployed solution XML",
-    "4_prerequisite": "agent-registry-automation must be deployed before activating MRM flows"
+    "3_optionSetValues": "Confirm OptionSet integer values against generated dataverse-schema.md",
+    "4_prerequisite": "agent-registry-automation must be deployed before activating MRM flows",
+    "5_agent365": "Agent 365 registry enrichment remains optional and feature-flagged because preview Graph permission models vary by endpoint"
   }
 }

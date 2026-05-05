@@ -584,7 +584,7 @@ COLUMNS = {
                     description="Power Platform environment GUID — Alternate Key part 2"),
         _string_col(f"{PUBLISHER_PREFIX}_EntraAgentId", "Entra Agent ID",
                     max_length=100, required=False,
-                    description="From Entra Agent Registry if enabled"),
+                    description="From Microsoft Entra Agent ID / Agent 365 registry when available"),
         _string_col(f"{PUBLISHER_PREFIX}_ModelId", "Model ID",
                     max_length=50, required=False,
                     description="Auto Number format MRM-{YYYY}-{00000} — set by Dataverse"),
@@ -1160,11 +1160,11 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--tenant-id", default=os.environ.get("MRM_TENANT_ID"),
-                        help="Entra ID tenant ID (or set MRM_TENANT_ID env var)")
+                        help="Microsoft Entra tenant ID for interactive or legacy auth (or MRM_TENANT_ID)")
     parser.add_argument("--client-id", default=os.environ.get("MRM_CLIENT_ID"),
-                        help="Application (client) ID (or set MRM_CLIENT_ID env var)")
+                        help="Legacy dev-only application ID (or set MRM_CLIENT_ID env var)")
     parser.add_argument("--client-secret", default=os.environ.get("MRM_CLIENT_SECRET"),
-                        help="Client secret (or set MRM_CLIENT_SECRET env var)")
+                        help="Legacy dev-only client secret (or set MRM_CLIENT_SECRET env var)")
     parser.add_argument("--environment-url", default=os.environ.get("MRM_ENVIRONMENT_URL"),
                         help="Dataverse environment URL (or set MRM_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true",
@@ -1188,22 +1188,18 @@ def main() -> None:
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
-    if not args.tenant_id or not args.environment_url:
+    if not args.environment_url:
         parser.error(
-            "Missing required arguments. Provide --tenant-id and --environment-url "
-            "(or set MRM_TENANT_ID and MRM_ENVIRONMENT_URL env vars)"
+            "Missing required argument. Provide --environment-url "
+            "(or set MRM_ENVIRONMENT_URL env var)"
         )
-    if not args.client_id and not args.interactive:
+    if args.client_secret and (not args.tenant_id or not args.client_id):
         parser.error(
-            "--client-id is required (or set MRM_CLIENT_ID env var) "
-            "unless --interactive is specified"
+            "legacy client-secret auth requires --tenant-id, --client-id, "
+            "and --client-secret"
         )
 
     client_secret = args.client_secret
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
 
     try:
         client = MRMClient(

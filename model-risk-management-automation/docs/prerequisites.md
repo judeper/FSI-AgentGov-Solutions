@@ -20,37 +20,44 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 |------|--------------|
 | Power Platform Admin | Environment enumeration, Bots API access, and Managed Environment configuration |
 | System Administrator (Dataverse) | Dataverse table creation, solution import, and alternate key configuration |
-| Entra Global Admin or Application Administrator | Managed Identity creation and API permission grants |
+| Microsoft Entra Global Administrator or Application Administrator | Managed identity creation and API permission grants |
 | SharePoint Admin | MRM Governance site creation and permission configuration |
 
 > **Important:** These roles are required during initial deployment. Day-to-day operation requires only the service account / Managed Identity permissions listed below.
 
-## API Permissions (Managed Identity)
+## API Permissions (Managed Identity and Delegated Admin)
 
-Grant the following application permissions to the Managed Identity used by the Power Automate flows:
+Grant the following application permissions to the managed identity used by production Power Automate flows where the target API supports application permissions:
 
 | Permission | Type | Scope | Purpose |
 |-----------|------|-------|---------|
-| `AgentRegistry.Read.All` | Application | Microsoft Graph | Read agent identities for cross-reference with Entra Agent Registry |
 | `User.Read.All` | Application | Microsoft Graph | Resolve owner and validator UPNs to user profiles (department, display name) |
 | `Sites.ReadWrite.All` | Application | Microsoft Graph / SharePoint | Agent Card document creation, update, and folder management |
 | `PowerPlatform.Admin.Read.All` | Application | Power Platform API | Read agent metadata and environment configurations |
 
+Optional Agent 365 registry enrichment depends on which Microsoft Graph preview path your tenant uses:
+
+| Permission | Type | Scope | Purpose |
+|-----------|------|-------|---------|
+| `CopilotPackages.Read.All` | Delegated | Microsoft Graph beta Agent 365 package APIs | Inventory/export agents from `/beta/copilot/admin/catalog/packages`; current Microsoft Learn lists delegated permissions only and requires AI Admin or Global Admin role |
+| `AgentInstance.Read.All` | Application or Delegated | Microsoft Graph beta `/agentRegistry/agentInstances` | Identity-only cross-reference during Agent Registry convergence; feature-flag with `IsAgent365LifecycleEnabled` and plan migration to Agent 365 APIs |
+
 ### Granting Permissions
 
-1. Navigate to **Entra ID** → **Enterprise Applications** → locate the Managed Identity
+1. Navigate to **Microsoft Entra ID** → **Enterprise Applications** → locate the managed identity
 2. Select **API Permissions** → **Add a permission**
-3. Add each permission listed above
-4. Select **Grant admin consent** (requires Entra Global Admin or Application Administrator)
+3. Add the application permissions listed above
+4. Select **Grant admin consent** (requires Microsoft Entra Global Administrator or Application Administrator)
+5. For `CopilotPackages.Read.All`, use a delegated administrator connection or offline export until Microsoft supports application permissions for the Agent 365 package APIs.
 
-> **Note:** `AgentRegistry.Read.All` is only required when `IsAgent365LifecycleEnabled` is set to `"true"`. If Agent 365 / Frontier is not enabled in your tenant, this permission can be deferred.
+> **Note:** Agent 365 / Agent ID registry permissions are only required when `IsAgent365LifecycleEnabled` is set to `"true"`. If Agent 365 registry APIs are unavailable in your tenant or cloud, keep the flag disabled and rely on `agent-registry-automation` as the source of registered agents.
 
 ## Solution Dependencies
 
 | Dependency | Required | Notes |
 |-----------|----------|-------|
 | agent-registry-automation | **Yes (mandatory)** | Must be deployed first. Flow 1 reads from `fsi_agentinventory` to sync registered agents into the MRM inventory. |
-| agent-365-lifecycle-governance | No (optional) | If deployed, enables Entra Agent Registry cross-reference via `IsAgent365LifecycleEnabled` flag. Set flag to `"true"` only after confirming Agent 365 / Frontier is available. |
+| agent-365-lifecycle-governance | No (optional) | If deployed, enables Agent 365 / Microsoft Entra Agent ID cross-reference via `IsAgent365LifecycleEnabled`. Set the flag to `"true"` only after confirming the selected preview API path, roles, and permissions in your tenant. |
 
 ### Verifying agent-registry-automation
 
@@ -84,7 +91,7 @@ Feature flags are implemented as Dataverse environment variables. Both default t
 | Flag | Default | Purpose | When to Enable |
 |------|---------|---------|----------------|
 | `IsMRMAutomationEnabled` | `"false"` | Master switch for all MRM flows | Set to `"true"` only after all tables, connection references, environment variables, and SharePoint are configured |
-| `IsAgent365LifecycleEnabled` | `"false"` | Gates Entra Agent Registry API calls in Flow 1 | Set to `"true"` only when Agent 365 / Frontier is enabled in your tenant and `AgentRegistry.Read.All` permission is granted |
+| `IsAgent365LifecycleEnabled` | `"false"` | Gates optional Agent 365 / Microsoft Entra Agent ID registry calls in Flow 1 | Set to `"true"` only after confirming the selected registry API, role, and permission model for your tenant |
 
 > **Important:** Setting `IsMRMAutomationEnabled` to `"true"` before completing all configuration steps may result in flow failures. Follow the deployment guide sequentially and use the DELIVERY-CHECKLIST.md to track completion.
 

@@ -1,6 +1,6 @@
 # Model Risk Management Automation
 
-> **Status:** Production Ready (v1.0.2)
+> **Status:** Production Ready (v1.0.3)
 
 Automated OCC 2011-12 / Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
@@ -96,7 +96,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 | Dependency | Required | Notes |
 |-----------|----------|-------|
 | `agent-registry-automation` | **Yes (mandatory)** | Must be deployed first — Flow 1 reads from `fsi_agentinventory` |
-| `agent-365-lifecycle-governance` | No (optional) | Enables Entra Agent Registry cross-reference |
+| `agent-365-lifecycle-governance` | No (optional) | Enables Agent 365 / Microsoft Entra Agent ID cross-reference when preview registry APIs are available |
 
 ### Licensing
 
@@ -113,7 +113,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 |------|--------------|
 | **Power Platform Admin** | Environment enumeration and Bots API access |
 | **System Administrator** | Dataverse table creation and security role configuration |
-| **Entra Global Admin** or **Application Administrator** | Managed Identity API permission grants |
+| **Microsoft Entra Global Administrator** or **Application Administrator** | Managed identity API permission grants |
 
 See [Prerequisites](docs/prerequisites.md) for complete details.
 
@@ -135,35 +135,44 @@ See [Prerequisites](docs/prerequisites.md) for complete details.
 
 ## Quick Start
 
+Install Python dependencies first:
+
+```powershell
+python -m pip install -r scripts/requirements.txt
+```
+
 ### 1. Deploy Dataverse Schema
 
 ```powershell
-# Deploy tables, option sets, and alternate keys
+# Preferred for Azure-hosted runners/functions: managed identity or workload identity
+# Set AZURE_CLIENT_ID first when using a user-assigned managed identity.
+python scripts/create_mrm_dataverse_schema.py `
+    --environment-url "https://your-org.crm.dynamics.com"
+```
+
+For an admin workstation, use interactive authentication instead:
+
+```powershell
 python scripts/create_mrm_dataverse_schema.py `
     --environment-url "https://your-org.crm.dynamics.com" `
     --tenant-id "your-tenant-id" `
-    --client-id "your-client-id" `
-    --client-secret "your-client-secret"
+    --interactive
 ```
+
+> **Legacy fallback:** `--client-id` with `--client-secret` remains available for development-only validation. Replace client secrets with managed identity or workload identity in production.
 
 ### 2. Deploy Environment Variables
 
 ```powershell
 python scripts/create_mrm_environment_variables.py `
-    --environment-url "https://your-org.crm.dynamics.com" `
-    --tenant-id "your-tenant-id" `
-    --client-id "your-client-id" `
-    --client-secret "your-client-secret"
+    --environment-url "https://your-org.crm.dynamics.com"
 ```
 
 ### 3. Deploy Connection References
 
 ```powershell
 python scripts/create_mrm_connection_references.py `
-    --environment-url "https://your-org.crm.dynamics.com" `
-    --tenant-id "your-tenant-id" `
-    --client-id "your-client-id" `
-    --client-secret "your-client-secret"
+    --environment-url "https://your-org.crm.dynamics.com"
 ```
 
 ### 4. Configure SharePoint
@@ -240,6 +249,7 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 |---------|------|---------|
 | 1.0.0 | March 2026 | Initial release |
 | 1.0.1 | April 2026 | Option set defaults + PowerShell verb rename |
+| 1.0.3 | May 2026 | Microsoft Learn 2026-Q2 refresh — managed-identity-first Python auth, Agent 365 registry API alignment, MRM governance-zone mapping fix, configurable scoring thresholds, and Agent Card evidence updates |
 | 1.0.2 | April 2026 | AI Council technical-accuracy review — column-drift fixes (lookup columns, picklist integers), regulatory language softening (FINRA 25-07 framing, examiner-facing wording), control mapping corrections (3.1 title + pillar paths), Agent Card schema alignment, deployment script auth parameters |
 
 ## Support
@@ -252,4 +262,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Model Risk Management Automation v1.0.2*
+*FSI Agent Governance Framework — Model Risk Management Automation v1.0.3*

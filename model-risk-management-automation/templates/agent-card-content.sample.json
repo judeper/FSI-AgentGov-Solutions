@@ -1,28 +1,74 @@
 {
-  "agentCardVersion": "v1.0",
-  "agentCardFormat": "Word",
-  "generatedDate": "2026-03-20T05:00:00Z",
+  "agentCardVersion": "v1.1",
+  "agentCardFormat": "JSON",
+  "generatedDate": "2026-05-05T05:00:00Z",
+  "learnRefresh": "2026-Q2",
+  "frameworkVersion": "FSI-AgentGov-v1.4.0",
   "modelId": "MRM-2026-00001",
   "modelName": "Loan Officer Decision Assistant",
+  "agentIdentity": {
+    "powerPlatformAgentId": "bot-00000000-0000-0000-0000-000000000001",
+    "entraAgentId": "agent-11111111-1111-1111-1111-111111111111",
+    "agentIdentityType": "Microsoft Entra Agent ID",
+    "legacyAppRegistrationId": null,
+    "agent365PackageId": "P_19ae1zz1-56bc-505a-3d42-156df75a4xxy",
+    "manifestId": "contoso-loan-officer-assistant",
+    "registrySource": "agent-registry-automation plus optional Microsoft Agent 365 package details"
+  },
+  "governanceZone": "Zone 2",
+  "sourceColumns": {
+    "agentRegistryZone": "fsi_agentinventory.fsi_zone",
+    "mrmGovernanceZone": "fsi_modelinventory.fsi_governancezone"
+  },
   "mrmTier": "Tier 2 - Enhanced MRM",
   "riskRating": "Medium",
   "validationStatus": "Validated",
   "lastValidatedDate": "2026-02-15T14:30:00Z",
   "nextValidationDue": "2028-02-15T00:00:00Z",
   "businessFunction": "Assists licensed loan officers with credit decision recommendations by analyzing applicant financial profiles against institution lending criteria. Does not make autonomous lending decisions — all outputs require human review and approval before submission to the loan origination system.",
-  "underlyingModel": "GPT-5 Chat",
-  "modelProvider": "Microsoft",
-  "decisionOutputType": "Decision Support",
+  "underlyingModel": {
+    "name": "GPT-5 Chat",
+    "provider": "Microsoft",
+    "deploymentId": "loan-officer-assistant-prod",
+    "modelCardUrl": "https://ai.azure.com/model-catalog/models/example-gpt-5-chat",
+    "modelVersion": "2026-02-01",
+    "license": "Microsoft service terms",
+    "benchmarkSummary": "Reviewed benchmark and limitation sections from the Microsoft Foundry model card before production approval."
+  },
+  "connectorsAndTools": [
+    {
+      "name": "Dataverse Loan Policy Connector",
+      "permissionScope": "Read-only policy tables",
+      "dlpClassification": "Business"
+    },
+    {
+      "name": "SharePoint Knowledge Source",
+      "permissionScope": "Lending policy library",
+      "dlpClassification": "Business"
+    }
+  ],
+  "knowledgeSources": [
+    {
+      "name": "Consumer Lending Policy Library",
+      "sourceType": "SharePoint",
+      "authoritativeSource": true,
+      "lastReviewedDate": "2026-04-30"
+    }
+  ],
   "dataInputs": "Applicant financial profiles including income, credit score, employment history, and debt-to-income ratio. Internal lending policy documents. Historical loan performance data (aggregated, no PII). Rate sheets and product eligibility matrices.",
   "knownLimitations": "1. Model outputs are probabilistic — recommendations may vary across identical inputs. 2. Training data cutoff may not reflect current market conditions. 3. Model has no access to real-time rate feeds. 4. Cannot evaluate non-standard loan products not represented in training data. 5. Model performance may degrade for applicant profiles underrepresented in historical data.",
   "stochasticBehaviorAcknowledgment": "This agent uses a probabilistic foundation model. Outputs may vary across identical inputs. Stochastic behavior is disclosed per the 2021 Interagency RFI on AI, which confirmed that OCC 2011-12 / SR 11-7 model risk management principles apply to AI/ML systems. Application to large language models is an active area of supervisory guidance.",
   "intendedUsers": "Licensed loan officers — Zone 2",
   "ownerUPN": "jsmith@contoso.com",
   "ownerDepartment": "Consumer Lending",
-  "zone": "Zone 2",  // matches schema column fsi_zone (option set fsi_acv_zone)
   "riskScoring": {
     "totalScore": 19,
     "compositeRating": "Medium",
+    "thresholds": {
+      "critical": 29,
+      "high": 22,
+      "medium": 15
+    },
     "factors": {
       "decisionImpact": 3,
       "dataSensitivity": 5,
@@ -33,9 +79,38 @@
       "changeFrequency": 1
     }
   },
+  "foundryEvaluationEvidence": {
+    "evaluationRunId": "foundry-eval-2026-04-28-001",
+    "region": "East US 2",
+    "qualityMetrics": {
+      "groundedness": 4.3,
+      "relevance": 4.6,
+      "coherence": 4.5
+    },
+    "riskSafetyMetrics": {
+      "hateUnfairnessSeverityMax": 0,
+      "sexualSeverityMax": 0,
+      "violenceSeverityMax": 0,
+      "selfHarmSeverityMax": 0,
+      "protectedMaterialDetected": false,
+      "codeVulnerabilityDetected": false,
+      "indirectAttackDetected": false,
+      "prohibitedActionsDetected": false,
+      "sensitiveDataLeakageDetected": false,
+      "severityThreshold": 3
+    }
+  },
+  "complianceManagerEvidence": {
+    "assessmentId": "cm-assessment-optional",
+    "improvementActionIds": [
+      "ia-model-inventory",
+      "ia-validation-evidence"
+    ],
+    "scoreCaveat": "Compliance Manager scores measure progress completing improvement actions and are not legal or regulatory determinations."
+  },
   "scoringRationale": "Automated risk scoring on 2026-01-15. Score: 19/35 (Medium). MRM Tier assigned: Tier 2 - Enhanced MRM. Top scoring factors: Data Sensitivity (5/5 — processes applicant PII including credit scores and income) and Model Complexity (4/5 — GPT-5 Chat via Microsoft). Data sensitivity score confirmed by MRM officer review. Tier 2 assignment reflects Decision Support output type with Medium composite rating.",
-  "zoneWeightRationale": "fsi_zone drives both fsi_score_userpopulation and fsi_score_regulatoryexposure using identical mappings (Zone 3=5, Zone 2=3, Zone 1=1). This double weighting is intentional: governance zone is the strongest single governance signal available at inventory time, reflecting both the breadth of user exposure and the intensity of regulatory examination applicable to that zone. This design choice is disclosed to examiners in this field on every scoring record.",
-  "sr117Pillar1Evidence": "Agent Card documents model purpose, design rationale, data inputs, and known limitations per SR 11-7 Pillar 1 requirements. Stochastic behavior disclosed per the 2021 Interagency RFI on AI.",
-  "sr117Pillar2Evidence": "Validation status: Validated. Last validated: 2026-02-15. Independent validator from Risk Management department confirmed conceptual soundness and ongoing monitoring adequacy.",
+  "zoneWeightRationale": "fsi_governancezone drives both fsi_score_userpopulation and fsi_score_regulatoryexposure using identical mappings (Zone 3=5, Zone 2=3, Zone 1=1). Flow 1 maps source fsi_agentinventory.fsi_zone into target fsi_modelinventory.fsi_governancezone. This double weighting is intentional: governance zone is the strongest single governance signal available at inventory time, reflecting both the breadth of user exposure and the intensity of regulatory examination applicable to that zone. This design choice is disclosed to examiners in this field on every scoring record.",
+  "sr117Pillar1Evidence": "Agent Card documents model purpose, design rationale, data inputs, known limitations, model card review, and stochastic behavior per SR 11-7 Pillar 1 requirements.",
+  "sr117Pillar2Evidence": "Validation status: Validated. Last validated: 2026-02-15. Independent validator from Risk Management department confirmed conceptual soundness and ongoing monitoring adequacy, with Foundry evaluation evidence attached where available.",
   "sr117Pillar3Evidence": "Risk rating: Medium. MRM Tier: Tier 2. Governance zone: Zone 2. Three-lines-of-defense role separation: model owner (Consumer Lending), MRM officer / independent validator (Model Risk Management), auditor (Internal Audit)."
 }

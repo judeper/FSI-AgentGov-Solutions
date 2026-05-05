@@ -14,7 +14,7 @@ Connection References:
   - fsi_cr_approvals_mrm: Validator assignment approval, revalidation
     confirmation, and Tier 1 examiner alert choices
   - fsi_cr_http_mrm: Power Platform Bots API, Microsoft Graph API calls
-    for user profile resolution and Entra Agent Registry
+    for user profile resolution and Agent 365 / Microsoft Entra Agent ID registry
   - fsi_cr_sharepoint_mrm: Agent Card document upload, folder creation,
     and metadata updates in the Agent Card Library
   - fsi_cr_wordonline_mrm: Agent Card document generation from template;
@@ -70,7 +70,7 @@ CONNECTION_REF_DEFINITIONS = [
         "description": (
             "HTTP with Microsoft Entra ID connection for MRM. Used for Power "
             "Platform Bots API, Microsoft Graph API calls for user "
-            "profile resolution and Entra Agent Registry."
+            "profile resolution and Agent 365 / Microsoft Entra Agent ID registry."
         ),
     },
     {
@@ -191,10 +191,14 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  # Dry run with interactive auth\n"
+            "  # Deploy with managed identity/workload identity (preferred)\n"
+            "  python create_mrm_connection_references.py \\\n"
+            "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Dry run with interactive admin auth\n"
             "  python create_mrm_connection_references.py "
-            "--dry-run --interactive\n\n"
-            "  # Deploy with service principal\n"
+            "--dry-run --interactive --tenant-id $MRM_TENANT_ID \\\n"
+            "    --environment-url $MRM_ENVIRONMENT_URL\n\n"
+            "  # Legacy dev-only client-secret fallback\n"
             "  python create_mrm_connection_references.py \\\n"
             "    --tenant-id $MRM_TENANT_ID \\\n"
             "    --client-id $MRM_CLIENT_ID \\\n"
@@ -206,17 +210,17 @@ def main() -> None:
     parser.add_argument(
         "--tenant-id",
         default=os.environ.get("MRM_TENANT_ID"),
-        help="Microsoft Entra ID tenant ID (or set MRM_TENANT_ID env var)",
+        help="Microsoft Entra tenant ID for interactive or legacy auth (or MRM_TENANT_ID)",
     )
     parser.add_argument(
         "--client-id",
         default=os.environ.get("MRM_CLIENT_ID"),
-        help="Service principal app ID (or set MRM_CLIENT_ID env var)",
+        help="Legacy dev-only application ID (or set MRM_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("MRM_CLIENT_SECRET"),
-        help="Service principal secret (or set MRM_CLIENT_SECRET env var)",
+        help="Legacy dev-only client secret (or set MRM_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -236,12 +240,17 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or MRM_TENANT_ID required")
-        sys.exit(1)
+    # Validate required arguments. Hosted identity is preferred: when neither
+    # --interactive nor --client-secret is supplied, MRMClient uses Azure
+    # Identity DefaultAzureCredential (managed identity/workload identity).
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
+        sys.exit(1)
+    if args.client_secret and (not args.tenant_id or not args.client_id):
+        print(
+            "ERROR: legacy client-secret auth requires --tenant-id, "
+            "--client-id, and --client-secret"
+        )
         sys.exit(1)
 
     try:
