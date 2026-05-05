@@ -1,10 +1,10 @@
 # Authentication Guide — Audit Compliance Manager
 
-This guide covers all authentication methods used by the Audit Compliance Manager (ACM) solution, including Entra ID app registration, API permissions, certificate-based auth, client secrets, Managed Identity, and interactive authentication for development.
+This guide covers authentication methods used by the Audit Compliance Manager (ACM) solution, including Microsoft Entra ID app registrations, API permissions, Managed Identity, certificate-based app-only auth, legacy dev-only client secrets, and interactive authentication for development.
 
-## 1. Entra ID App Registration
+## 1. Microsoft Entra ID App Registration
 
-The ACV component uses a Service Principal (app registration) for certificate-based authentication. The ALCA component uses Managed Identity (see [Section 5](#5-managed-identity-setup-for-azure-automation)).
+Use managed identity first for production automation. The ALCA runbooks use a System-Assigned Managed Identity. The ACV component still uses a Microsoft Entra app registration for interactive bootstrap, Power Automate-triggered validation, and certificate-based app-only fallback when managed identity is not available for the execution host.
 
 ### 1.1 Create the App Registration
 
@@ -37,7 +37,8 @@ Navigate to **API permissions** → **+ Add a permission** and add the following
 | Permission | Type | Purpose |
 |-----------|------|---------|
 | `Mail.Send` | Application | Send compliance notification emails via shared mailbox |
-| `SecurityEvents.Read.All` | Application | Query Purview retention policies (tenant validation) |
+| `SecurityEvents.Read.All` | Application | Legacy Graph-based security event access used by earlier ACV validation paths |
+| `AuditLogsQuery.Read.All` | Application | Optional Microsoft Graph Audit Search API access for `/security/auditLog/queries` validation when your organization allows the current Graph audit query endpoint |
 
 ### 2.2 Dynamics CRM (Dataverse)
 
@@ -57,9 +58,13 @@ Navigate to **API permissions** → **+ Add a permission** and add the following
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
-| `Compliance.ManageAsApp` (Office 365 Exchange Online > Application permissions) | Application | Service principal access to `Connect-IPPSSession` for Purview retention validation (used by `Test-PurviewRetention.ps1` and `Connect-AuditServices.ps1`). Pair with the **Compliance Administrator** Entra role on the SP. |
+| `Compliance.ManageAsApp` (Office 365 Exchange Online > Application permissions) | Application | Service principal access to `Connect-IPPSSession` for Purview retention policy validation only (used by `Test-PurviewRetention.ps1` and `Connect-AuditServices.ps1`). Unified Audit Log enablement must still be verified in Exchange Online PowerShell with `Get-AdminAuditLogConfig`. Pair this permission with the **Purview Compliance Admin** role on the service principal. |
 
-### 2.5 Grant Admin Consent
+### 2.5 Microsoft Graph Audit Search API version note
+
+Microsoft Learn documents the Audit Search API under Microsoft Graph security audit log resources (`/security/auditLog/queries` and `/security/auditLog/queries/{id}/records`) with `AuditLogsQuery-*` permissions. Treat this as an optional query path for ACM until your tenant policy approves the Graph endpoint/version shown in the Microsoft Learn version selector; the shipped validators continue to use Exchange Online PowerShell for Unified Audit Log enablement verification.
+
+### 2.6 Grant Admin Consent
 
 After adding all permissions:
 
@@ -135,9 +140,9 @@ Certificates should be renewed before expiration:
 4. Update the `CertificateThumbprint` variable in all Power Automate flows
 5. Remove the old certificate after verifying the new one works
 
-## 4. Client Secret Authentication (Alternative)
+## 4. Client Secret Authentication (Legacy Development Fallback)
 
-Client secrets are simpler but less secure than certificates. Use only for development/testing or when certificate management is not feasible.
+Client secrets are a legacy development-only fallback. Use them only for local testing when managed identity or certificate-based app-only authentication is not feasible; replace them with managed identity or certificates before production use.
 
 ### 4.1 Create a Client Secret
 
@@ -152,6 +157,7 @@ Client secrets are simpler but less secure than certificates. Use only for devel
 ### 4.2 Usage in Scripts
 
 ```bash
+# legacy: dev-only — replace with managed identity in production
 # Use client secret instead of certificate for Python scripts
 python scripts/deploy.py \
     --environment-url https://org.crm.dynamics.com \
@@ -160,11 +166,11 @@ python scripts/deploy.py \
     --client-secret <your-secret-value>
 ```
 
-> **Security Warning:** Never commit client secrets to source control. Use environment variables or Azure Key Vault for production deployments.
+> **Security Warning:** Never commit client secrets to source control. Client-secret examples are for development only; use managed identity or certificate-based app-only authentication for production deployments.
 
 ## 5. Managed Identity Setup for Azure Automation
 
-The ALCA component (detection and remediation runbooks) uses System-Assigned Managed Identity for authentication. This is the recommended production authentication method — no certificates or secrets to manage.
+The ALCA component (detection and remediation runbooks) uses System-Assigned Managed Identity for authentication. This is the recommended production authentication method because there are no certificates or secrets to manage.
 
 ### 5.1 Enable System-Assigned Managed Identity
 
@@ -184,7 +190,7 @@ Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
 
 $miObjectId = "<managed-identity-object-id>"
 
-# Assign Power Platform Administrator role
+# Assign Power Platform Admin role (Entra display name: Power Platform Administrator)
 $ppAdminRole = Get-MgDirectoryRole -Filter "displayName eq 'Power Platform Administrator'"
 New-MgDirectoryRoleMember -DirectoryRoleId $ppAdminRole.Id `
     -BodyParameter @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$miObjectId" }
@@ -271,9 +277,9 @@ ALCA scripts (`Test-AuditLoggingCompliance.ps1`, `Enable-AuditLogging.ps1`) are 
 | `AADSTS7000215: Invalid client secret` | Client secret expired or incorrect | Regenerate the client secret and update the configuration |
 | `AADSTS700027: Certificate validation failed` | Certificate not uploaded to app registration or thumbprint mismatch | Re-upload the `.cer` file and verify the thumbprint |
 | `401 Unauthorized` on Dataverse API | Managed Identity or Service Principal not configured as Application User | Add the identity as an Application User with System Administrator role |
-| `403 Forbidden` on Exchange Online | Missing `Exchange.ManageAsApp` permission or Exchange Online Admin role | Add the API permission and assign the Exchange Online Admin (Exchange Administrator) Entra role |
-| `Connect-ExchangeOnline: Access denied` | Managed Identity missing Exchange Online Admin role | Assign the Exchange Online Admin (Exchange Administrator) Entra ID role to the MI |
-| `Get-AdminPowerAppEnvironment: Unauthorized` | Missing Power Platform Administrator role | Assign the Power Platform Administrator Entra ID role |
+| `403 Forbidden` on Exchange Online | Missing `Exchange.ManageAsApp` permission or Exchange Online Admin role | Add the API permission and assign the Exchange Online Admin role (Entra display name: `Exchange Administrator`) |
+| `Connect-ExchangeOnline: Access denied` | Managed Identity missing Exchange Online Admin role | Assign the Exchange Online Admin role (Entra display name: `Exchange Administrator`) to the MI |
+| `Get-AdminPowerAppEnvironment: Unauthorized` | Missing Power Platform Admin role | Assign the Power Platform Admin role (Entra display name: `Power Platform Administrator`) |
 | `Send-MgUserMail: Insufficient privileges` | Missing `Mail.Send` permission or admin consent not granted | Add Mail.Send (Application) permission and grant admin consent |
 | `Certificate not found in Automation Account` | Certificate not uploaded or name mismatch | Navigate to Automation Account → Certificates and verify upload |
 
@@ -292,6 +298,6 @@ Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $mi.Id | Format-Tabl
 
 ---
 
-**Version:** 1.0.2
-**Last Updated:** 2026-02-16
+**Version:** 1.0.4
+**Last Updated:** 2026-04-17
 **Solution:** Audit Compliance Manager (ACM)

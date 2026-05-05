@@ -33,7 +33,7 @@
     Zone affects retention validation thresholds:
     - Zone1: 180-day minimum retention
     - Zone2: 365-day minimum retention
-    - Zone3: 730-day minimum retention (SEC 17a-4 requirement)
+    - Zone3: 730-day target retention (subject to license and retention policy limits)
 
 .PARAMETER OutputPath
     Optional path for JSON output file. If specified, the complete validation
@@ -98,12 +98,12 @@
     - Reason: Summary of overall status
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires:
     - ExchangeOnlineManagement module v3.7.0 or later
     - PowerShell 7.0 or later
-    - Exchange Online Administrator or Global Administrator role
-    - Compliance Administrator role (for Purview Retention validation)
+    - Exchange Online Admin or Entra Global Admin role
+    - Purview Compliance Admin role (for Purview retention validation)
     - For service principal: Application with Exchange.ManageAsApp and Compliance.ManageAsApp permissions
 
     Regulatory context:
@@ -116,7 +116,7 @@
 
     License requirements:
     - Microsoft 365 E5 or E5 Compliance license for advanced audit features
-    - Basic audit features available in all M365 commercial licenses
+    - Audit Standard retention is 180 days for records generated on or after 2023-10-17; SMB/free-trial tenants may require manual audit enablement
 
     Performance considerations:
     - Full validation (with canary) takes 5-10 minutes

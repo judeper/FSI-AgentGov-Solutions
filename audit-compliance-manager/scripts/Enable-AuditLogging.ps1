@@ -35,15 +35,15 @@
     Dataverse for all environments with fsi_compliancestatus = Non-Compliant (100000001).
 
 .PARAMETER EnableTenantUnifiedAudit
-    Switch. If set, enables tenant-wide Purview unified audit via Set-AdminPowerAppTenantSettings.
-    Default: $true. This is a tenant-wide change — use with caution.
+    Switch. If set, enables the Power Platform tenant audit governance flag via Set-AdminPowerAppTenantSettings.
+    Default: $true. This is a tenant-wide Power Platform change; it does not enable Microsoft 365 Unified Audit Log ingestion.
 
 .PARAMETER WhatIf
     Switch. If set, simulates remediation without making changes.
     Outputs "[WHATIF] Would enable..." messages.
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires: PowerShell 7.2+, Azure Automation with System-Assigned MI
     Modules: Microsoft.PowerApps.Administration.PowerShell 2.0+, ExchangeOnlineManagement 3.0+
     ALCA Solution: Audit Logging Compliance Automation
@@ -410,7 +410,7 @@ try {
     }
 
     # =========================================================================
-    # Step 3: Tenant-Wide Power Platform Audit Logging
+    # Step 3: Tenant-Wide Power Platform Audit Logging (not Microsoft 365 UAL)
     # =========================================================================
     # NOTE: This step toggles the Power Platform tenant setting
     # `powerPlatform.governance.disableAuditLogging`. This setting controls

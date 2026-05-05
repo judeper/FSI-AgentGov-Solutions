@@ -13,7 +13,7 @@
     the pipeline, and per-environment drift detection for downstream alerting.
 
     Key differences from interactive orchestrator:
-    - Uses certificate or client secret authentication (no interactive prompts)
+    - Uses certificate authentication or a legacy dev-only client-secret fallback (no interactive prompts)
     - Outputs JSON to pipeline (captured by Get-AzAutomationJobOutput)
     - Includes per-environment drift detection via Compare-ValidationBaseline
     - Adds AlertRequired flag to each environment result
@@ -38,8 +38,8 @@
     uploaded to the Azure Automation account.
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication (alternative to certificate).
-    Must be stored as encrypted variable in Automation Account.
+    Legacy dev-only client secret for service principal authentication (fallback to certificate).
+    Must be stored as encrypted variable in Automation Account if used.
 
 .PARAMETER IncludeTrialDev
     Override to include Trial and Developer environments in validation.
@@ -82,7 +82,7 @@
     2. Upload certificate to Automation Account > Certificates (or store ClientSecret as encrypted variable)
     3. Install required modules: Microsoft.PowerApps.Administration.PowerShell, MSAL.PS
     4. Grant application permissions:
-       - Power Platform Administrator role
+       - Power Platform Admin role
        - Dataverse System Administrator role in central environment
     5. Schedule via Schedules or trigger via webhook
 

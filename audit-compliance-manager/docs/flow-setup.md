@@ -26,7 +26,7 @@ Before creating the flows, ensure you have:
 - [ ] **Azure subscription** with Automation Account containing:
   - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
   - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
-  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.7.0, Microsoft.PowerApps.Administration.PowerShell 2.0.0)
+  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.7.0+, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
   - Certificate uploaded for service principal authentication
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
@@ -37,7 +37,7 @@ Before creating the flows, ensure you have:
   - Microsoft Entra ID App Registration with certificate
   - Exchange.ManageAsApp API permission (tenant validation)
   - SecurityEvents.Read.All API permission (Purview retention)
-  - Power Platform Administrator role (environment validation)
+  - Power Platform Admin role (environment validation; Entra display name `Power Platform Administrator`)
   - Dataverse System Administrator role in central environment
 
 ## Architecture
@@ -84,7 +84,7 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 |--------|---------|---------|
 | MSAL.PS | 4.37.0 | Dataverse Web API token acquisition |
 | ExchangeOnlineManagement | 3.7.0 | Tenant-level audit configuration checks |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.0 | Environment discovery and validation |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Environment discovery and validation |
 
 **Important:** Wait for each module to finish importing before starting the next one (status = "Available").
 
@@ -128,7 +128,7 @@ Grant the App Registration (service principal) the following permissions:
 - Exchange.ManageAsApp (for Get-AdminAuditLogConfig, Get-OrganizationConfig)
 
 **Power Platform:**
-- Power Platform Administrator role (for Get-AdminPowerAppEnvironment)
+- Power Platform Admin role (for Get-AdminPowerAppEnvironment; Entra display name `Power Platform Administrator`)
 
 **Dataverse:**
 - System Administrator role in central governance environment (for validation history writes)

@@ -20,8 +20,11 @@
     3. Identifies record type coverage gaps (CopilotInteraction, PowerPlatformAdmin)
 
     IMPORTANT: Get-UnifiedAuditLogRetentionPolicy does NOT return the default
-    90-day retention policy. If no custom policies exist, the script assumes
-    90-day default retention and compares against the zone minimum.
+    retention policy. Microsoft Purview Audit (Standard) retains records for
+    180 days for records generated on or after 2023-10-17 (older records kept
+    the prior 90-day lifetime). Audit Premium/E5 provides one-year defaults for
+    Microsoft Entra ID, Exchange, OneDrive, and SharePoint records; other record
+    types need custom retention policies for longer retention.
 
     Record type coverage validation:
     - CopilotInteraction and PowerPlatformAdmin are critical for AI agent governance
@@ -68,11 +71,11 @@
     - Reason: Summary explanation
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
     Requires:
     - ExchangeOnlineManagement module v3.7.0 or later
-    - Security & Compliance PowerShell connection
-    - Compliance Administrator or Global Administrator role
+    - Security & Compliance PowerShell connection for retention policies
+    - Purview Compliance Admin or Entra Global Admin role
     - For service principal: Application with Compliance.ManageAsApp permission
 
     Regulatory context:
@@ -95,9 +98,11 @@
     - TenYears = 3650 days
 
     Default retention policy:
-    Microsoft provides a default 90-day retention for all audit logs. This policy
-    is NOT returned by Get-UnifiedAuditLogRetentionPolicy. If no custom policies
-    exist, the script assumes 90-day default retention.
+    Microsoft Purview Audit (Standard) retains audit records for 180 days for
+    records generated on or after 2023-10-17; older records kept the previous
+    90-day lifetime. The default policy is NOT returned by
+    Get-UnifiedAuditLogRetentionPolicy. This script uses 180 days as the current
+    baseline when no custom policy covers a record type.
 #>
 
 [CmdletBinding()]
@@ -165,8 +170,12 @@ function Test-PurviewRetention {
     $ZoneMinimumDays = @{
         "Zone1" = 180    # 6 months - Personal Productivity
         "Zone2" = 365    # 1 year - Team Collaboration
-        "Zone3" = 730    # 2 years - Enterprise Managed (SEC 17a-4 communications minimum)
+        "Zone3" = 730    # 2 years - Enterprise Managed target (license-bounded)
     }
+
+    # Current Microsoft Purview Audit (Standard) baseline for records generated
+    # on or after 2023-10-17. Older records retained the previous 90-day lifetime.
+    $DefaultAuditStandardRetentionDays = 180
 
     # Critical record types for AI agent governance
     $RequiredRecordTypes = @("CopilotInteraction", "PowerPlatformAdmin")
@@ -219,30 +228,30 @@ function Test-PurviewRetention {
 
         if ($null -eq $policies -or $policies.Count -eq 0) {
             Write-Host "⚠ No custom retention policies found." -ForegroundColor Yellow
-            Write-Host "  Default 90-day retention applies to all audit logs." -ForegroundColor Yellow
+            Write-Host "  Current Audit Standard baseline retention is $DefaultAuditStandardRetentionDays days for new audit records." -ForegroundColor Yellow
             Write-Host ""
 
             $checks += @{
                 Name         = "RetentionPoliciesExist"
                 Status       = "Warning"
                 PolicyCount  = 0
-                DefaultDays  = 90
+                DefaultDays  = $DefaultAuditStandardRetentionDays
             }
 
-            # Default 90-day retention check
-            if (90 -lt $minimumRequiredDays) {
+            # Default Audit Standard retention check
+            if ($DefaultAuditStandardRetentionDays -lt $minimumRequiredDays) {
                 $checks += @{
                     Name        = "RetentionMeetsMinimum"
                     Status      = "Failed"
-                    CurrentDays = 90
+                    CurrentDays = $DefaultAuditStandardRetentionDays
                     RequiredDays = $minimumRequiredDays
-                    Details     = "Default 90-day retention is below $Zone minimum of $minimumRequiredDays days"
+                    Details     = "Default Audit Standard retention ($DefaultAuditStandardRetentionDays days) is below $Zone minimum of $minimumRequiredDays days"
                 }
 
                 $gaps += [PSCustomObject]@{
                     RecordType           = "All (default policy)"
                     Issue                = "Retention below zone minimum"
-                    CurrentRetentionDays = 90
+                    CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                     RequiredRetentionDays = $minimumRequiredDays
                     Severity             = "Critical"
                     Recommendation       = "Create custom retention policy: New-UnifiedAuditLogRetentionPolicy -Name 'Zone $Zone Retention' -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
@@ -252,26 +261,26 @@ function Test-PurviewRetention {
                 $checks += @{
                     Name        = "RetentionMeetsMinimum"
                     Status      = "Passed"
-                    CurrentDays = 90
+                    CurrentDays = $DefaultAuditStandardRetentionDays
                     RequiredDays = $minimumRequiredDays
-                    Details     = "Default 90-day retention meets $Zone minimum"
+                    Details     = "Default Audit Standard retention meets $Zone minimum"
                 }
             }
 
-            # Check required record types (all will be gaps with default policy only)
+            # Check required record types (all use the default baseline unless covered by a custom policy)
             foreach ($recordType in $RequiredRecordTypes) {
-                if (90 -lt $minimumRequiredDays) {
+                if ($DefaultAuditStandardRetentionDays -lt $minimumRequiredDays) {
                     $checks += @{
                         Name         = "${recordType}Coverage"
                         Status       = "Failed"
-                        RetentionDays = 90
+                        RetentionDays = $DefaultAuditStandardRetentionDays
                         CoveredBy    = "Default policy"
                     }
 
                     $gaps += [PSCustomObject]@{
                         RecordType           = $recordType
-                        Issue                = "Retention below zone minimum (default policy only)"
-                        CurrentRetentionDays = 90
+                        Issue                = "Retention below zone minimum (default baseline only)"
+                        CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                         RequiredRetentionDays = $minimumRequiredDays
                         Severity             = "Critical"
                         Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
@@ -281,7 +290,7 @@ function Test-PurviewRetention {
                     $checks += @{
                         Name         = "${recordType}Coverage"
                         Status       = "Passed"
-                        RetentionDays = 90
+                        RetentionDays = $DefaultAuditStandardRetentionDays
                         CoveredBy    = "Default policy"
                     }
                 }
@@ -392,24 +401,24 @@ function Test-PurviewRetention {
                 }
 
                 if (-not $covered) {
-                    # Not covered by any policy - defaults to 90 days
-                    $retentionDays = 90
+                    # Not covered by any custom policy - current Audit Standard baseline applies
+                    $retentionDays = $DefaultAuditStandardRetentionDays
                     $coveredBy = "Default policy"
 
-                    Write-Host "  ⚠ $($recordType): Not explicitly covered (defaults to 90 days)" -ForegroundColor Yellow
+                    Write-Host "  ⚠ $($recordType): Not explicitly covered (uses default $DefaultAuditStandardRetentionDays-day baseline)" -ForegroundColor Yellow
 
-                    if (90 -lt $minimumRequiredDays) {
+                    if ($DefaultAuditStandardRetentionDays -lt $minimumRequiredDays) {
                         $checks += @{
                             Name         = "${recordType}Coverage"
                             Status       = "Failed"
-                            RetentionDays = 90
+                            RetentionDays = $DefaultAuditStandardRetentionDays
                             CoveredBy    = "Default policy"
                         }
 
                         $gaps += [PSCustomObject]@{
                             RecordType           = $recordType
-                            Issue                = "No explicit retention policy (defaults to 90 days)"
-                            CurrentRetentionDays = 90
+                            Issue                = "No explicit retention policy (uses default Audit Standard baseline)"
+                            CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                             RequiredRetentionDays = $minimumRequiredDays
                             Severity             = "High"
                             Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
@@ -419,7 +428,7 @@ function Test-PurviewRetention {
                         $checks += @{
                             Name         = "${recordType}Coverage"
                             Status       = "Warning"
-                            RetentionDays = 90
+                            RetentionDays = $DefaultAuditStandardRetentionDays
                             CoveredBy    = "Default policy"
                         }
                     }
@@ -470,7 +479,7 @@ function Test-PurviewRetention {
         }
         elseif ($warningChecks.Count -gt 0) {
             $overallStatus = "Warning"
-            $reason = "Found $($warningChecks.Count) warning(s). Some record types lack explicit retention policies but meet minimum via default 90-day retention."
+            $reason = "Found $($warningChecks.Count) warning(s). Some record types lack explicit retention policies but meet minimum via default Audit Standard baseline retention."
         }
         else {
             $overallStatus = "Passed"

@@ -626,6 +626,7 @@ Environment variables:
             "Register an app in Entra ID and provide --client-id."
         )
 
+    # legacy: dev-only — replace with managed identity in production
     # Get client secret from env var or prompt (never via CLI arg to avoid shell history exposure)
     client_secret = os.environ.get("ALCA_CLIENT_SECRET")
     if not args.interactive and args.client_id and not client_secret:

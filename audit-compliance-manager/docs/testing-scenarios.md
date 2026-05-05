@@ -22,7 +22,7 @@
 
 ### Scenario 2: Mixed Compliance (Compliant + Non-Compliant)
 
-**Setup:** At least one environment has Purview audit enabled and one does not. At least one Dataverse environment has org-level audit disabled.
+**Setup:** Tenant-level Microsoft Purview audit is enabled, but at least one Dataverse environment has org-level audit disabled. To test tenant-level Purview audit disabled, use a non-production tenant because that setting affects all environments.
 
 **Expected results:**
 - Mix of `Compliant` and `Non-Compliant` statuses
@@ -36,12 +36,12 @@
 
 ### Scenario 3: Purview Unified Audit Disabled
 
-**Setup:** Disable Purview unified audit log ingestion for a test environment via `Set-AdminAuditLogConfig`.
+**Setup:** Disable Microsoft Purview unified audit log ingestion in a non-production tenant via `Set-AdminAuditLogConfig`. This is a tenant-wide setting, not an environment-specific setting.
 
 **Expected results:**
 - Affected environment shows `Non-Compliant`
 - `fsi_auditenabled = false` in Dataverse record
-- Other environments unaffected
+- Other environments in the same tenant also lose Microsoft 365 unified audit ingestion until the tenant setting is restored
 
 **Verification:**
 1. Disable audit: `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $false`
@@ -168,7 +168,7 @@
 - Record has correct environment ID, name, audit status, and compliance status
 
 **Verification:**
-1. Verify environment has no existing record in `fsi_auditenvironmentcompliances`
+1. Verify the environment has no existing record in the Audit Environment Compliance table (`fsi_auditenvironmentcompliance`; OData entity set `fsi_auditenvironmentcompliances`)
 2. Run detection
 3. Verify new record created with correct field values
 
@@ -209,7 +209,7 @@
 
 ### Scenario 14: Fatal Authentication Failure
 
-**Setup:** Revoke Managed Identity permissions (e.g., remove Power Platform Administrator role).
+**Setup:** Revoke Managed Identity permissions (for example, remove the Power Platform Admin role).
 
 **Expected results:**
 - Authentication fails immediately at Step 1
@@ -251,13 +251,13 @@
 - Error: `Add-PowerAppsAccount : The token could not be acquired`
 
 **Possible causes:**
-- Managed Identity not assigned **Power Platform Administrator** role
+- Managed Identity not assigned the **Power Platform Admin** role
 - MI not enabled on the Automation Account
 - Incorrect tenant domain
 
 **Resolution:**
 1. Verify MI is enabled: **Automation Account** → **Identity** → Status = On
-2. Verify role: **Entra ID** → **Roles and administrators** → **Power Platform Administrator** → Check MI is listed
+2. Verify role: **Microsoft Entra ID** → **Roles and administrators** → **Power Platform Administrator** (Power Platform Admin display name) → Check MI is listed
 3. Test token acquisition in Test Pane: `Get-ManagedIdentityToken -Resource "https://api.bap.microsoft.com/"`
 
 ### Issue 2: Exchange Online Authentication Failure
@@ -314,7 +314,7 @@
 ### Issue 5: Dataverse Table Not Updated
 
 **Symptoms:**
-- Detection runs without errors but no records appear in `fsi_auditenvironmentcompliances`
+- Detection runs without errors but no records appear in the Audit Environment Compliance table (`fsi_auditenvironmentcompliance`; OData entity set `fsi_auditenvironmentcompliances`)
 - Or records appear but fields are not updated
 
 **Possible causes:**
@@ -389,8 +389,8 @@
 - Disk space issue in sandbox
 
 **Resolution:**
-1. Azure Automation runbooks have access to `$env:TEMP` by default
-2. If failing, use a hardcoded fallback: `$csvPath = "C:\Temp\AuditCompliance.csv"`
+1. Azure Automation runbooks typically have access to `$env:TEMP`; verify it is populated in the Test pane
+2. If failing, configure a tenant-approved export directory and create it before `Export-Csv` rather than relying on a hardcoded local path
 3. Verify the CSV is generated correctly in the Test Pane before scheduling
 
 ### Issue 10: WhatIf Not Working (Changes Still Applied)
@@ -411,4 +411,4 @@
 
 ---
 
-*Updated: February 2026 | Version: v1.0.3*
+*Updated: April 2026 | Version: v1.0.4*

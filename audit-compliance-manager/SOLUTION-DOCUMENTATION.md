@@ -136,7 +136,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 
 | Environment Type | Compliance Requirements | Validation |
 |------------------|------------------------|------------|
-| **Dataverse environments** | Purview unified audit enabled AND Dataverse org-level audit enabled | Validates recent audit events (last 7 days) via Search-UnifiedAuditLog |
+| **Dataverse environments** | Microsoft Purview unified audit enabled AND Dataverse org-level audit enabled | Verifies tenant audit configuration and records recent audit event presence as informational evidence |
 | **Non-Dataverse environments** | Purview unified audit enabled only | Validates unified audit log accessibility |
 
 **Process Flow:**
@@ -154,7 +154,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
    - **Check Purview Unified Audit:**
      - Query `Get-AdminAuditLogConfig` for tenant-level audit status
      - Validate `UnifiedAuditLogIngestionEnabled = true`
-     - Run `Search-UnifiedAuditLog` for recent events (last 7 days)
+     - Optionally query recent audit events (last 7 days) as informational evidence; absence of recent events is not a compliance gate by itself
    - **Check Dataverse Audit (if Dataverse environment):**
      - Query `/api/data/v9.2/organizations?$select=isauditenabled`
      - Validate `isauditenabled = true`
@@ -206,7 +206,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 
 | Action | Scope | API Method | Result |
 |--------|-------|------------|--------|
-| **Enable Purview Unified Audit** | Tenant-wide | `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true` | Enables unified audit log ingestion for all M365 services |
+| **Enable Microsoft 365 Unified Audit Log** | Tenant-wide | `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true` | Turns on unified audit log ingestion where the tenant is not already enabled; verify in Exchange Online PowerShell |
 | **Enable Dataverse Org Audit** | Per-environment | `PATCH /api/data/v9.2/organizations({orgId})` with `isauditenabled=true` | Enables organization-level Dataverse auditing |
 | **Enable Entity-Level Audit** | Per-environment | `PUT /api/data/v9.2/EntityDefinitions({entityId})` with `IsAuditEnabled=true` | Enables audit on 6 Copilot Studio entities |
 
@@ -314,7 +314,7 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 | `fsi_remediationdate` | DateTime (UTC) | Timestamp when remediation was applied |
 | `fsi_remediatedby` | Single Line Text (100) | Identity that performed remediation (e.g., "Azure Automation MI") |
 | `fsi_errormessage` | Multi-line Text (2000) | Error details if compliance check or remediation failed |
-| `fsi_lasteventcaptured` | DateTime (UTC) | Timestamp of most recent audit event from Search-UnifiedAuditLog |
+| `fsi_lasteventcaptured` | DateTime (UTC) | Timestamp of most recent audit event observed during optional audit search validation |
 
 **Choice Field:** `fsi_alca_compliancestatus`
 
@@ -465,8 +465,8 @@ python create_audit_compliance_schema.py \
 
 | Role/Permission | Required For | Scope | Assignment Method |
 |-----------------|--------------|-------|-------------------|
-| **Power Platform Administrator** | Environment enumeration, audit config access | Entra ID role | Entra ID → Roles and administrators |
-| **Exchange Administrator** | Exchange Online MI auth, Search-UnifiedAuditLog | Entra ID role | Entra ID → Roles and administrators |
+| **Power Platform Admin** (Entra display name: `Power Platform Administrator`) | Environment enumeration, audit config access | Microsoft Entra role | Microsoft Entra ID → Roles and administrators |
+| **Exchange Online Admin** (Entra display name: `Exchange Administrator`) | Exchange Online managed identity auth, `Get-AdminAuditLogConfig`, `Search-UnifiedAuditLog` | Microsoft Entra role | Microsoft Entra ID → Roles and administrators |
 | **Dataverse Application User** | Read/write compliance table, modify audit config | Per-environment | Power Platform Admin Center → Application users |
 | **Mail.Send (Graph API)** | Send email notifications | Microsoft Graph | PowerShell: New-MgServicePrincipalAppRoleAssignment |
 
@@ -503,9 +503,9 @@ python create_audit_compliance_schema.py \
 **Entra ID Roles:**
 
 1. Navigate to **Microsoft Entra ID** → **Roles and administrators**
-2. Assign **Power Platform Administrator**:
+2. Assign **Power Platform Admin** (search for Entra display name `Power Platform Administrator`):
    - Search for role → **+ Add assignments** → Select `FSI-AgentGov-Automation` MI → **Assign**
-3. Assign **Exchange Administrator**:
+3. Assign **Exchange Online Admin** (search for Entra display name `Exchange Administrator`):
    - Search for role → **+ Add assignments** → Select `FSI-AgentGov-Automation` MI → **Assign**
 
 **Microsoft Graph API Permission (Mail.Send):**
@@ -785,10 +785,10 @@ For each Power Platform environment with Dataverse:
 
 **Issue: Detection runbook fails with "Power Platform authentication failed"**
 
-**Cause:** Managed Identity lacks Power Platform Administrator role
+**Cause:** Managed Identity lacks Power Platform Admin role
 
 **Resolution:**
-1. Navigate to **Entra ID** → **Roles and administrators** → **Power Platform Administrator**
+1. Navigate to **Microsoft Entra ID** → **Roles and administrators** → **Power Platform Administrator** (Power Platform Admin display name)
 2. Verify `FSI-AgentGov-Automation` MI is assigned
 3. If missing, add assignment
 4. Wait 15 minutes for role propagation
@@ -796,13 +796,13 @@ For each Power Platform environment with Dataverse:
 
 **Issue: "Search-UnifiedAuditLog failed: The term 'Search-UnifiedAuditLog' is not recognized"**
 
-**Cause:** ExchangeOnlineManagement module not imported or MI lacks Exchange Administrator role
+**Cause:** ExchangeOnlineManagement module not imported or MI lacks Exchange Online Admin role
 
 **Resolution:**
 1. Verify module imported in Azure Automation:
    - **Modules** → Search `ExchangeOnlineManagement` → Status: Available
-2. Verify MI has Exchange Administrator role:
-   - **Entra ID** → **Roles and administrators** → **Exchange Administrator** → Verify assignment
+2. Verify MI has Exchange Online Admin role:
+   - **Microsoft Entra ID** → **Roles and administrators** → **Exchange Administrator** (Exchange Online Admin display name) → Verify assignment
 3. Re-run runbook
 
 **Issue: "Dataverse API call failed: Unauthorized (401)"**
@@ -883,7 +883,7 @@ For regulatory examinations, export compliance records from Dataverse:
 
 ```powershell
 # Option 1: Dataverse Web API query
-GET /api/data/v9.2/fsi_auditenvironmentcompliances
+GET /api/data/v9.2/fsi_auditenvironmentcompliances  # OData entity set for logical table fsi_auditenvironmentcompliance
   ?$select=fsi_environmentid,fsi_environmentname,fsi_auditenabled,fsi_dataverseauditenabled,fsi_compliancestatus,fsi_lastchecked
   &$filter=fsi_lastchecked ge 2025-11-14T00:00:00Z
   &$orderby=fsi_lastchecked desc
@@ -927,7 +927,7 @@ Evidence files should include:
 
 **Validation:**
 - `Get-AdminAuditLogConfig` returns `UnifiedAuditLogIngestionEnabled = $true`
-- `Search-UnifiedAuditLog` returns events from last 7 days
+- Optional audit search returns recent events when matching activity exists; event absence alone does not fail configuration validation
 - (Dataverse only) `/api/data/v9.2/organizations` returns `isauditenabled = true`
 - (Dataverse only) All 6 Copilot Studio entities have `IsAuditEnabled.Value = true`
 
@@ -1011,7 +1011,7 @@ Next Action: Await runbook completion and validation
 | "Forbidden (403)" | MI lacks System Administrator in environment | Add MI as app user with System Administrator role |
 | "NotFound (404)" | Environment deleted or ID incorrect | Remove compliance record or correct environment ID |
 | "Throttled (429)" | API rate limit exceeded | Retry after 60 seconds, reduce concurrent operations |
-| "Search-UnifiedAuditLog failed" | Exchange Online MI auth failed | Verify Exchange Administrator role assigned |
+| "Search-UnifiedAuditLog failed" | Exchange Online MI auth failed or audit search unavailable | Verify Exchange Online Admin role assignment and ExchangeOnlineManagement module availability |
 
 **Example:**
 ```
@@ -1087,7 +1087,7 @@ The ACM solution includes the **Audit Configuration Validator (ACV)** subsystem,
 
 ### ACV Authentication
 
-ACV uses MSAL for Dataverse authentication, supporting both interactive browser login (development) and service principal with client secret (automation). The `ACVClient` class in `acv_client.py` handles token acquisition, caching, and refresh.
+ACV uses MSAL for Dataverse authentication, supporting interactive browser login for bootstrap and legacy dev-only service principal client-secret authentication. Production automation should use managed identity where supported or certificate-based app-only authentication for Exchange Online/Power Automate orchestration. The `ACVClient` class in `acv_client.py` handles token acquisition, caching, and refresh.
 
 ### Relationship to ALCA
 
@@ -1097,7 +1097,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.3
+**Solution Version:** 1.0.4
 **Release Date:** April 2026
 **License:** MIT License
 
@@ -1112,6 +1112,7 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - **v1.0.1 (March 2026):** Issue-fix wave — see CHANGELOG
 - **v1.0.2 (April 2026):** Token-cache and OData filter bug fixes
 - **v1.0.3 (April 2026):** AI Council technical-accuracy pass (Opus 4.7 + Goldeneye + GPT-5.4)
+- **v1.0.4 (Unreleased):** Microsoft Learn 2026-Q2 refresh for Purview Audit retention, managed-identity-first authentication, and Power Platform/Dataverse audit terminology
 
 ---
 

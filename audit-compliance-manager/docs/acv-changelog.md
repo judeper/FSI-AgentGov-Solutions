@@ -170,7 +170,7 @@ No planned changes. Solution is feature-complete for v4 milestone.
 - 24-hour grace period for newly-enabled audit (prevents false warnings)
 - 5-minute default canary wait (configurable for speed/accuracy balance)
 - Zone-specific retention thresholds: Zone 1 = 180d, Zone 2 = 365d, Zone 3 = 730d
-- Default 90-day retention assumption when no custom Purview policies exist
+- Default 180-day Audit Standard retention assumption for records generated on or after 2023-10-17 when no custom Purview policies exist (older records kept the prior 90-day lifetime)
 - Catch-all policy detection (empty RecordTypes covers all record types)
 
 ## Version Notes

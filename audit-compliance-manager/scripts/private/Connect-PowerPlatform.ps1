@@ -10,7 +10,7 @@
 .DESCRIPTION
     Establishes authentication for both Power Platform Admin API (via PowerShell module)
     and Dataverse Web API (via MSAL token acquisition). Supports both interactive
-    authentication and service principal (certificate-based or client secret) authentication.
+    authentication and service principal authentication. Prefer certificate-based or managed identity paths; client-secret auth is a legacy dev-only fallback.
 
     Power Platform Admin API connection is required for environment discovery and
     administration operations. Dataverse Web API connection is required for direct
@@ -28,8 +28,8 @@
     Optional for interactive authentication(uses well-known Power Apps client ID if not provided).
 
 .PARAMETER ClientSecret
-    Client secret for service principal authentication. Must be provided as SecureString.
-    Required when using client secret authentication.
+    Legacy dev-only client secret for service principal authentication. Must be provided as SecureString.
+    Prefer certificate-based authentication or managed identity where supported.
 
 .PARAMETER CertificateThumbprint
     Certificate thumbprint for service principal authentication. Certificate must be
@@ -46,7 +46,7 @@
 .EXAMPLE
     $secret = ConvertTo-SecureString "client-secret" -AsPlainText -Force
     Connect-PowerPlatform -TenantId "contoso.onmicrosoft.com" -DataverseUrl "https://org.crm.dynamics.com" -ClientId "12345..." -ClientSecret $secret
-    Connects using service principal authentication with client secret.
+    Connects using legacy dev-only service principal client-secret authentication.
 
 .EXAMPLE
     Connect-PowerPlatform -TenantId "contoso.onmicrosoft.com" -DataverseUrl "https://org.crm.dynamics.com" -ClientId "12345..." -CertificateThumbprint "ABCDEF..."
@@ -57,7 +57,7 @@
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
     Requires MSAL.PS module for Dataverse token acquisition.
 
-    IMPORTANT: Power Platform Administrator or Global Administrator role is required
+    IMPORTANT: Power Platform Admin or Entra Global Admin role is required
     for environment discovery operations (Get-AdminPowerAppEnvironment).
 
     Well-known Power Apps client ID for interactive auth: 1950a258-227b-4e31-a9cf-717495945fc2
@@ -193,6 +193,7 @@ function Connect-PowerPlatform {
         $dataverseScope = "$DataverseUrl/.default"
 
         if ($authMethod -eq "ServicePrincipal-Secret") {
+            # legacy: dev-only — replace with managed identity in production
             # Use MSAL.PS for token acquisition with client secret
             try {
                 Import-Module MSAL.PS -ErrorAction Stop
