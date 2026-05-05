@@ -38,6 +38,7 @@ Calculates and stores daily compliance scores for trend analysis.
 2. List all control assessments (most recent per control)
    - Filter: Latest assessment per fsi_controlmasterid
    - Expand: fsi_controlmaster for weight and pillar
+   - For large datasets, prefer Dataverse FetchXML `aggregate='true'` or Web API `$apply=groupby(...,aggregate(...))` patterns partitioned by date/zone to avoid the Dataverse 50,000-record aggregate evaluation limit
 
 3. For each assessment:
    IF status != "Not Applicable" THEN
@@ -161,11 +162,12 @@ Collects compliance evidence from configured sources.
 
 | Source | API | Evidence Type |
 |--------|-----|---------------|
-| Purview Compliance Manager | Graph API | Assessment scores |
-| Power Platform Admin Center | Power Platform API | Environment status |
+| Purview Compliance Manager | Purview portal Excel export | Assessment score and improvement-action snapshots (manual import until a supported API is published) |
+| Microsoft 365 admin center reports | Microsoft Graph Reports API | Usage reports, Copilot usage, and agent usage where available |
+| Power Platform Admin Center | Power Platform API / admin center exports | Environment status, capacity, and DLP posture |
 | Microsoft Entra ID | Graph API | Conditional Access policy status |
 | Purview Audit Log | Office 365 Management API | Compliance events |
-| Exchange Online | Graph API (via Get-ExchangeComplianceData.ps1) | Forwarding rules, DLP alerts, mailbox access |
+| Exchange Online | Microsoft Graph plus Security & Compliance PowerShell | Forwarding rules, DLP alerts, mailbox indicators, compliance search, eDiscovery, and retention policy evidence |
 
 ### Logic
 
@@ -189,10 +191,23 @@ Collects compliance evidence from configured sources.
 ### API Calls
 
 **Purview Compliance Manager**
+
+Current Microsoft Learn guidance documents Compliance Manager assessment and improvement-action exports through the Purview portal Excel export workflow. Do not build the flow against undocumented Compliance Manager Graph endpoints or permissions for assessment score export as of 2026-Q2.
+
+Recommended interim pattern:
+
+1. Export assessment or improvement-action workbooks from Compliance Manager.
+2. Store the workbook in a governed SharePoint/OneDrive location with retention labels.
+3. Import normalized rows into `fsi_complianceevidence` and link them to `fsi_controlassessment`.
+
+**Microsoft 365 usage reports (Graph)**
 ```http
-GET https://graph.microsoft.com/v1.0/compliance/complianceManager/assessments
+GET https://graph.microsoft.com/v1.0/copilot/reports/getMicrosoft365CopilotUserCountSummary(period='D30')?$format=application/json
+GET https://graph.microsoft.com/v1.0/reports/getOffice365ActiveUserDetail(period='D30')
 Authorization: Bearer {token}
 ```
+
+Use `Reports.Read.All` and the least-privileged Microsoft Entra role required for delegated reads. For production dashboards, prefer the v1.0 `/copilot/reports/...` APIs when available instead of legacy beta `/reports/...` Copilot endpoints.
 
 **Power Platform Environments**
 ```http
@@ -212,7 +227,15 @@ GET https://graph.microsoft.com/v1.0/users/{id}/mailFolders/inbox/messageRules
 Authorization: Bearer {token}
 ```
 
-> **Note:** For comprehensive Exchange evidence collection, use `Get-ExchangeComplianceData.ps1` (in `scripts/`) which handles pagination, retry logic, and multi-signal aggregation. The CD-EvidenceCollector flow can invoke the script output JSON via a scheduled task or import the evidence file directly.
+**Exchange Online — eDiscovery, compliance search, and retention policy evidence**
+```powershell
+Connect-IPPSSession -AppId <app-id> -CertificateThumbprint <thumbprint> -Organization <tenant>.onmicrosoft.com
+Get-RetentionCompliancePolicy -DistributionDetail
+New-ComplianceSearch -Name "Agent Evidence Review" -ExchangeLocation All -ContentMatchQuery '<query>'
+Start-ComplianceSearch -Identity "Agent Evidence Review"
+```
+
+> **Note:** For Graph-backed Exchange evidence collection, use `Get-ExchangeComplianceData.ps1` (in `scripts/`) which handles pagination, retry logic, and multi-signal aggregation. Use Security & Compliance PowerShell with certificate-based app authentication for compliance search, eDiscovery, and retention evidence that Graph does not expose. The CD-EvidenceCollector flow can invoke script output JSON via a scheduled task or import the evidence file directly.
 
 ---
 
@@ -232,16 +255,16 @@ Authorization: Bearer {token}
 
 For Graph API and Power Platform API calls:
 
-1. Create connection using service principal
-2. Use client credentials flow
-3. Reference client ID and secret from Azure Key Vault
+1. Prefer managed identity for Azure-hosted flows or workload identity federation for CI.
+2. Use certificate-based app authentication for Exchange Online Security & Compliance PowerShell.
+3. Use client secrets only as a legacy dev-only fallback and store them in Azure Key Vault if temporarily required.
 
 ```json
 {
-  "connectionType": "servicePrincipal",
+  "connectionType": "managedIdentityOrWorkloadIdentity",
   "tenantId": "{tenant-id}",
-  "clientId": "{client-id}",
-  "clientSecret": "@Microsoft.KeyVault(SecretUri=https://vault.vault.azure.net/secrets/CD-ClientSecret)"
+  "clientId": "{managed-identity-or-app-client-id}",
+  "credential": "managed identity, workload identity federation, or certificate; client secret is legacy dev-only"
 }
 ```
 
@@ -336,4 +359,4 @@ The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'H
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

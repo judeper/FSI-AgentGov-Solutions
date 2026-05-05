@@ -93,7 +93,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
-| [Compliance Dashboard](./compliance-dashboard/) | 3 | v1.0.3 | enterprise |
+| [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.4 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.3 | enterprise |
@@ -191,6 +191,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | ✅ | ✅ | ✅ | confidential |
 | [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | — | ✅ | ✅ | confidential |
+| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
 | [Conditional Access Automation](./conditional-access-automation/) | — | ✅ | ✅ | confidential |
 | [Conflict of Interest Testing](./coi-testing/) | — | ✅ | ✅ | confidential |
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
@@ -221,7 +222,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
 | [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
-| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
 
 <!-- END:ZONE_ROADMAP -->
 

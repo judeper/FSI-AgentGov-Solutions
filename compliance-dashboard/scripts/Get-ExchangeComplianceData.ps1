@@ -10,9 +10,9 @@
     Data collected:
     - External forwarding rules (data exfiltration risk)
     - DLP policy match alerts for Exchange workload
-    - Shared mailboxes with broad access grants
+    - Inactive shared or disabled mailbox indicators
     - Distribution lists with external members
-    - Inactive shared mailboxes with lingering access
+    - Security & Compliance PowerShell can be used separately for compliance search, eDiscovery, and retention policy evidence
 
     Output is a JSON evidence file compatible with the Compliance Dashboard's
     fsi_complianceevidence table for import via Power Automate or Dataverse API.
@@ -74,12 +74,12 @@
     ExternalDistributionListRisks, InactiveSharedMailboxes, Summary
 
 .NOTES
-    Version:    1.0.3
+    Version:    1.0.4
     Author:     FSI Agent Governance
     Requires:   PowerShell 7.0+
     Requires:   Microsoft.Graph.Authentication 2.0.0+
     Framework:  FSI Agent Governance
-    Controls:   3.3, 3.1, 3.2
+    Controls:   3.3, 3.1, 3.2, 3.4
 #>
 
 #Requires -Version 7.0
@@ -535,7 +535,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Compliance Dashboard — Exchange Compliance Collector    ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.3                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.4                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -582,9 +582,9 @@ try {
             generatedAt     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             lookbackDays    = $config.retentionDays
             graphBaseUrl    = $GraphBaseUrl
-            version         = "1.0.3"
+            version         = "1.0.4"
             framework       = "FSI Agent Governance"
-            controlReference = "3.3, 3.1, 3.2"
+            controlReference = "3.3, 3.1, 3.2, 3.4"
         }
     }
 

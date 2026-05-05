@@ -339,4 +339,4 @@ Use the Power Apps maker portal or PAC CLI to create tables manually following t
 
 ---
 
-*Compliance Dashboard v1.0.3*
+*Compliance Dashboard v1.0.4*

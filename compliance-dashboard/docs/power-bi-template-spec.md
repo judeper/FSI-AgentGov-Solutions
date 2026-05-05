@@ -794,7 +794,7 @@ Provide these instructions in the template:
 2. Dialog appears: "Create Power BI Template"
 3. Enter description:
    ```
-   Compliance Dashboard for FSI Agent Governance Framework v1.0.3
+   Compliance Dashboard for FSI Agent Governance Framework v1.0.4
 
    Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains 62 controls; load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
 
@@ -809,13 +809,13 @@ Provide these instructions in the template:
    - Customers connect to their own environment
 5. Click **OK**
 6. Save as: `ComplianceDashboard.pbit`
-7. Location: `/templates/` directory in solution repository
+7. Location: an organization-controlled artifact store or workspace outside this repository. Do **not** commit `.pbit` or `.pbix` binaries to FSI-AgentGov-Solutions.
 
 ### Verify Template Export
 
 1. Close Power BI Desktop
-2. Navigate to `/templates/` directory
-3. Verify `ComplianceDashboard.pbit` file exists
+2. Navigate to the organization-controlled artifact store or workspace where you saved the template
+3. Verify `ComplianceDashboard.pbit` file exists outside the repository
 4. Check file size (should be <5 MB without sample data)
 
 ### Test Template Deployment
@@ -877,8 +877,8 @@ Update the .pbit template when:
 
 ### Version Control
 
-- Store both `.pbix` (working file) and `.pbit` (template) in repository
-- Tag template releases: `compliance-dashboard-v1.0.3`
+- Store `.pbix` working files and `.pbit` templates in an organization-controlled artifact store, not in this repository
+- Tag template releases: `compliance-dashboard-v1.0.4`
 - Document template changes in CHANGELOG.md
 
 ---
@@ -892,4 +892,4 @@ Update the .pbit template when:
 
 ---
 
-*Compliance Dashboard v1.0.3 - Power BI Template Specification*
+*Compliance Dashboard v1.0.4 - Power BI Template Specification*

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.3",
-  "description": "Configuration for Exchange Online compliance data collection. NOTE: scanScope and riskThresholds are reserved for future configurability — the v1.0.3 script does not yet branch on these values; risk levels are emitted as documented in the Get-ExchangeComplianceData.ps1 OUTPUTS section.",
+  "version": "1.0.4",
+  "description": "Configuration for Exchange Online compliance data collection. NOTE: scanScope and riskThresholds are reserved for future configurability — the v1.0.4 script does not yet branch on these values; risk levels are emitted as documented in the Get-ExchangeComplianceData.ps1 OUTPUTS section.",
   "scanScope": {
     "includeUserMailboxes": true,
     "includeSharedMailboxes": true,
@@ -15,7 +15,7 @@
   "retentionDays": 30,
   "metadata": {
     "controlReference": "3.3, 3.1, 3.2, 3.4",
-    "lastUpdated": "2026-04-17",
+    "lastUpdated": "2026-05-05",
     "framework": "FSI Agent Governance"
   }
 }

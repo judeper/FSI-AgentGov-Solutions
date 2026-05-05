@@ -1,10 +1,10 @@
 id: compliance-dashboard
 name: Compliance Dashboard
-description: Aggregated compliance reporting dashboard covering all 78 FSI Agent Governance Framework controls, with zone-based filtering and Dataverse-backed control records.
-version: 1.0.3
+description: Aggregated compliance reporting dashboard designed to report across the 78-control FSI Agent Governance Framework baseline when those control records are loaded into Dataverse, with zone-based filtering and Exchange evidence coverage.
+version: 1.0.4
 status: live
 domain: compliance-audit
-tier: '3'
+tier: '2'
 controls:
 - '3.3'
 - '3.1'
