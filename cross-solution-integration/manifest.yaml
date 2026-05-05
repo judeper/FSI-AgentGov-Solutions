@@ -1,10 +1,10 @@
 id: cross-solution-integration
 name: Cross-Solution Integration
 description: Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
-version: 2.0.1
+version: 2.0.2
 status: live
 domain: compliance-audit
-tier: '1'
+tier: '2'
 controls:
 - '1.7'
 - '1.23'
@@ -12,6 +12,7 @@ controls:
 - '3.8'
 - '1.8'
 - '1.14'
+- '1.18'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/cross-solution-integration/
 prerequisites:
   power-platform-admin: "Power Platform admin tenant role for Dataverse tables, Power Automate flows, and solution imports."

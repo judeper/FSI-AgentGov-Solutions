@@ -38,10 +38,16 @@
     Which solutions to export. Default: all (ACV,SSC,AAM,CMM,FUS,CAA).
 
 .PARAMETER ClientId
-    App registration client ID for service principal auth.
+    App registration client ID for legacy service principal auth.
 
 .PARAMETER ClientSecret
-    App registration client secret.
+    App registration client secret. Legacy dev-only fallback; use managed identity in production.
+
+.PARAMETER ManagedIdentity
+    Use system-assigned managed identity from an Azure-hosted worker.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID.
 
 .PARAMETER Interactive
     Use interactive authentication.
@@ -58,12 +64,16 @@
 
 .EXAMPLE
     .\Export-UnifiedComplianceEvidence.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
+        -TenantId "guid" -OutputPath "C:\evidence" -ManagedIdentity
+
+.EXAMPLE
+    .\Export-UnifiedComplianceEvidence.ps1 -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "guid" -Solutions ACV,SSC -StartDate "2026-01-01" -Interactive
 
 .NOTES
-    Version: 2.0.0
-    Date: 2026-04-16
-    Requires: IntegrationConfig.psm1 v2.0.0
+    Version: 2.0.2
+    Date: 2026-05-05
+    Requires: IntegrationConfig.psm1 v2.0.2
 #>
 
 #Requires -Version 7.0
@@ -89,13 +99,19 @@ param(
     [ValidateSet('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA')]
     [string[]]$Solutions = @('ACV', 'SSC', 'AAM', 'CMM', 'FUS', 'CAA'),
 
+    [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+    [switch]$ManagedIdentity,
+
+    [Parameter(ParameterSetName = 'ManagedIdentity')]
+    [string]$ManagedIdentityClientId,
+
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [string]$ClientId,
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [SecureString]$ClientSecret,
 
-    [Parameter(ParameterSetName = 'Interactive')]
+    [Parameter(ParameterSetName = 'Interactive', Mandatory)]
     [switch]$Interactive,
 
     [Parameter()]
@@ -125,8 +141,8 @@ $SolutionEvidence = @{
     ACV = @{
         Validations = @{
             EntitySet = 'fsi_auditvalidationhistories'
-            DateField = 'fsi_validationtime'
-            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_severity', 'fsi_zone', 'fsi_environmentname', 'fsi_summaryjson')
+            DateField = 'fsi_timestamp'
+            Fields    = @('fsi_runid', 'fsi_timestamp', 'fsi_severity', 'fsi_zone', 'fsi_environmentid', 'fsi_environmentname', 'fsi_validationtype', 'fsi_checkcount', 'fsi_reason')
         }
     }
     SSC = @{
@@ -147,21 +163,21 @@ $SolutionEvidence = @{
         Validations = @{
             EntitySet = 'fsi_moderationvalidationhistory'
             DateField = 'fsi_validationtime'
-            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_zone', 'fsi_overallstatus', 'fsi_totalagents', 'fsi_compliantcount', 'fsi_summaryjson')
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_overallstatus', 'fsi_totalagents', 'fsi_compliantcount', 'fsi_violationcount', 'fsi_summaryjson')
         }
     }
     FUS = @{
         Validations = @{
             EntitySet = 'fsi_fileuploadvalidationhistories'
             DateField = 'fsi_validationtime'
-            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_zone', 'fsi_compliancerate', 'fsi_summaryjson')
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_compliancerate', 'fsi_totalagents', 'fsi_compliantcount', 'fsi_violationcount', 'fsi_summaryjson')
         }
     }
     CAA = @{
         Validations = @{
             EntitySet = 'fsi_capolicyvalidationhistories'
             DateField = 'fsi_validationtime'
-            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_overallseverity', 'fsi_zone', 'fsi_totalpolicies', 'fsi_passedcount', 'fsi_warningcount', 'fsi_failedcount', 'fsi_driftcount')
+            Fields    = @('fsi_runid', 'fsi_validationtime', 'fsi_overallseverity', 'fsi_totalpolicies', 'fsi_passedcount', 'fsi_warningcount', 'fsi_failedcount', 'fsi_driftcount', 'fsi_tenantid')
         }
     }
 }
@@ -169,6 +185,36 @@ $SolutionEvidence = @{
 #endregion
 
 #region Query and Export Functions
+
+function Get-ResponseStatusCode {
+    param([System.Management.Automation.ErrorRecord]$ErrorRecord)
+
+    if ($null -ne $ErrorRecord.Exception.Response -and $null -ne $ErrorRecord.Exception.Response.StatusCode) {
+        return [int]$ErrorRecord.Exception.Response.StatusCode
+    }
+    return 0
+}
+
+function Get-RetryDelaySeconds {
+    param(
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [int]$RetryCount
+    )
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -ne $response -and $null -ne $response.Headers) {
+        try {
+            $retryAfter = ($response.Headers.GetValues('Retry-After') | Select-Object -First 1)
+            if ($retryAfter -and ($retryAfter -as [int])) {
+                return [int]$retryAfter
+            }
+        } catch {
+            # Header collection may not expose Retry-After on all exception types.
+        }
+    }
+
+    return [int]([math]::Pow(2, $RetryCount) * 5)
+}
 
 function Get-DataverseRecords {
     param([hashtable]$Connection, [string]$EntitySet, [string]$Filter, [string[]]$Fields, [string]$DateField)
@@ -190,13 +236,9 @@ function Get-DataverseRecords {
                 $success = $true
             } catch {
                 $retryCount++
-                $statusCode = if ($null -ne $_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
-                $retryAfter = $null
-                if ($null -ne $_.Exception.Response -and $_.Exception.Response.Headers -and $_.Exception.Response.Headers.Contains('Retry-After')) {
-                    $retryAfter = ($_.Exception.Response.Headers.GetValues('Retry-After') | Select-Object -First 1)
-                }
+                $statusCode = Get-ResponseStatusCode -ErrorRecord $_
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                    $delay = if ($retryAfter -and ($retryAfter -as [int])) { [int]$retryAfter } else { [math]::Pow(2, $retryCount) * 5 }
+                    $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                     Write-Warning "Transient error ($statusCode) querying $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                     Start-Sleep -Seconds $delay
                 } else {
@@ -265,9 +307,13 @@ if ($DryRun) {
 
 # Connect
 Write-Host "`nConnecting to Dataverse..." -ForegroundColor Gray
-if ($Interactive) {
+if ($ManagedIdentity) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ManagedIdentity -ManagedIdentityClientId $ManagedIdentityClientId -Cloud $Cloud
+} elseif ($Interactive) {
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
 } else {
+    # legacy: dev-only — replace with managed identity in production
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
         -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
 }
@@ -281,7 +327,8 @@ $manifest = @{
     periodStart   = $startStr
     periodEnd     = $EndDate.ToUniversalTime().ToString('yyyy-MM-dd')
     framework     = 'FSI Agent Governance Framework'
-    moduleVersion = '2.0.0'
+    frameworkVersion = 'v1.4.0'
+    moduleVersion    = '2.0.2'
     solutions     = @{}
     fileHashes    = @{}
     masterHash    = $null

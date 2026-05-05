@@ -18,10 +18,16 @@
     The Microsoft Entra tenant ID.
 
 .PARAMETER ClientId
-    App registration client ID for service principal authentication.
+    App registration client ID for legacy service principal authentication.
 
 .PARAMETER ClientSecret
-    App registration client secret (use SecureString in production).
+    App registration client secret. Legacy dev-only fallback; use managed identity in production.
+
+.PARAMETER ManagedIdentity
+    Use system-assigned managed identity from an Azure-hosted worker.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID.
 
 .PARAMETER Interactive
     Use interactive authentication (browser sign-in).
@@ -46,11 +52,15 @@
     .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -Interactive -DryRun
 
 .EXAMPLE
+    .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -ManagedIdentity
+
+.EXAMPLE
+    # legacy: dev-only — replace with managed identity in production
     .\Sync-SolutionAssessments.ps1 -DataverseUrl "https://org.crm.dynamics.com" -TenantId "guid" -ClientId "app-guid" -ClientSecret $secret
 
 .NOTES
-    Version: 2.0.0
-    Date: 2026-04-16
+    Version: 2.0.2
+    Date: 2026-05-05
     Requires: IntegrationConfig.psm1
 #>
 
@@ -63,6 +73,12 @@ param(
 
     [Parameter(Mandatory)]
     [string]$TenantId,
+
+    [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+    [switch]$ManagedIdentity,
+
+    [Parameter(ParameterSetName = 'ManagedIdentity')]
+    [string]$ManagedIdentityClientId,
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [string]$ClientId,
@@ -107,6 +123,37 @@ Import-Module $modulePath -Force
 
 #region Dataverse Operations
 
+
+function Get-ResponseStatusCode {
+    param([System.Management.Automation.ErrorRecord]$ErrorRecord)
+
+    if ($null -ne $ErrorRecord.Exception.Response -and $null -ne $ErrorRecord.Exception.Response.StatusCode) {
+        return [int]$ErrorRecord.Exception.Response.StatusCode
+    }
+    return 0
+}
+
+function Get-RetryDelaySeconds {
+    param(
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [int]$RetryCount
+    )
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -ne $response -and $null -ne $response.Headers) {
+        try {
+            $retryAfter = ($response.Headers.GetValues('Retry-After') | Select-Object -First 1)
+            if ($retryAfter -and ($retryAfter -as [int])) {
+                return [int]$retryAfter
+            }
+        } catch {
+            # Header collection may not expose Retry-After on all exception types.
+        }
+    }
+
+    return [int]([math]::Pow(2, $RetryCount) * 5)
+}
+
 function Invoke-DataverseQuery {
     param(
         [hashtable]$Connection,
@@ -131,9 +178,9 @@ function Invoke-DataverseQuery {
                 $success = $true
             } catch {
                 $retryCount++
-                $statusCode = $_.Exception.Response.StatusCode.value__
+                $statusCode = Get-ResponseStatusCode -ErrorRecord $_
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                    $delay = [math]::Pow(2, $retryCount) * 5
+                    $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                     Write-Warning "Transient error ($statusCode) querying $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                     Start-Sleep -Seconds $delay
                 } else {
@@ -164,9 +211,9 @@ function New-DataverseRecord {
             return $response
         } catch {
             $retryCount++
-            $statusCode = $_.Exception.Response.StatusCode.value__
+            $statusCode = Get-ResponseStatusCode -ErrorRecord $_
             if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                $delay = [math]::Pow(2, $retryCount) * 5
+                $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                 Write-Warning "Transient error ($statusCode) creating record in $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                 Start-Sleep -Seconds $delay
             } else {
@@ -196,9 +243,9 @@ function Update-DataverseRecord {
             return
         } catch {
             $retryCount++
-            $statusCode = $_.Exception.Response.StatusCode.value__
+            $statusCode = Get-ResponseStatusCode -ErrorRecord $_
             if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                $delay = [math]::Pow(2, $retryCount) * 5
+                $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                 Write-Warning "Transient error ($statusCode) updating record in $EntitySet — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                 Start-Sleep -Seconds $delay
             } else {
@@ -581,9 +628,13 @@ if ($DryRun) {
 
 # Connect
 Write-Host "Connecting to Dataverse..." -ForegroundColor Gray
-if ($Interactive) {
+if ($ManagedIdentity) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ManagedIdentity -ManagedIdentityClientId $ManagedIdentityClientId -Cloud $Cloud
+} elseif ($Interactive) {
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
 } else {
+    # legacy: dev-only — replace with managed identity in production
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
         -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
 }

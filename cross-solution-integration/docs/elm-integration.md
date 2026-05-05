@@ -25,7 +25,7 @@ This closes the lifecycle gap where new environments existed but were unknown to
 The `ELM-SolutionInitializer` flow triggers on new records in `fsi_provisioninglog` where:
 
 ```
-fsi_action eq 13 (ProvisioningCompleted) AND fsi_success eq true
+fsi_action eq 100000013 (ProvisioningCompleted) AND fsi_success eq true
 ```
 
 This event is written by ELM's Main Provisioning flow as the final step after all creation, configuration, and security group binding steps complete.
@@ -37,10 +37,12 @@ This event is written by ELM's Main Provisioning flow as the final step after al
 | `fsi_environmentid` | `fsi_environmentrequest` | Power Platform environment GUID |
 | `fsi_environmentname` | `fsi_environmentrequest` | Display name (DEPT-Purpose-TYPE) |
 | `fsi_environmenturl` | `fsi_environmentrequest` | Dataverse URL |
-| `fsi_zone` | `fsi_environmentrequest` | Zone classification (1/2/3) |
+| `fsi_zone` | `fsi_environmentrequest` | ELM zone option-set value (`100000001..100000003`) |
 | `fsi_securitygroupid` | `fsi_environmentrequest` | Entra security group (Zone 2/3) |
 | `fsi_requestnumber` | `fsi_environmentrequest` | ELM request reference |
-| `fsi_environmenttype` | `fsi_environmentrequest` | Sandbox/Production/Developer |
+| `fsi_environmenttype` | `fsi_environmentrequest` | ELM environment type option-set value |
+
+> ELM and ACV environment-type option sets overlap numerically but do not mean the same thing for every value. In scripts, the default `-EnvironmentTypeFormat LegacyOrElm` treats `100000002` as ELM Production and maps it to ACV Production (`100000000`). If you pass an ACV value directly, include `-EnvironmentTypeFormat Acv`.
 
 ---
 
@@ -82,9 +84,9 @@ For environments where Power Automate is not available, use `Register-Provisione
     -EnvironmentId "env-guid" `
     -EnvironmentName "TRADING-AgentOps-PROD" `
     -EnvironmentUrl "https://trading-agentops.crm.dynamics.com" `
-    -Zone 3 `
+    -Zone 100000003 `
     -EnvironmentType 1 `
-    -Interactive
+    -ManagedIdentity
 ```
 
 ---
@@ -96,12 +98,12 @@ The integration flow logs its actions back to ELM's `fsi_provisioninglog` table:
 | Field | Value |
 |-------|-------|
 | `fsi_name` | `INT-Init-{environmentName}` |
-| `fsi_action` | 11 (BaselineConfigApplied — reused for integration init) |
+| `fsi_action` | 100000011 (BaselineConfigApplied — reused for integration init) |
 | `fsi_actiondetails` | JSON with action, acvRegistered, zone, environmentId |
 | `fsi_actor` | `CrossSolutionIntegration` |
-| `fsi_actortype` | 3 (System) |
+| `fsi_actortype` | 100000003 (System) |
 | `fsi_success` | true/false |
 
 ---
 
-*ELM Integration Guide v2.0.0 — February 2026*
+*ELM Integration Guide v2.0.2 — May 2026*

@@ -1,4 +1,4 @@
-#Requires -Modules MSAL.PS
+# MSAL.PS is required only for Interactive and legacy ServicePrincipal authentication.
 
 <#
 .SYNOPSIS
@@ -12,14 +12,14 @@
     (ACV, SSC, AAM, CMM, FUS, CAA) and the Compliance Dashboard.
 
 .NOTES
-    Version: 2.0.0
-    Date: 2026-04-16
+    Version: 2.0.2
+    Date: 2026-05-05
     Solution: Cross-Solution Integration
 #>
 
 #region Constants
 
-# Canonical zone values (normalized from all solutions)
+# Compliance Dashboard zone values (fsi_controlassessment.fsi_zone)
 $script:ZoneValues = @{
     'Zone1' = 1
     'Zone2' = 2
@@ -57,10 +57,10 @@ $script:DashboardScores = @{
 # Evidence type for automated assessments
 $script:EvidenceTypeTestResult = 5
 
-# Zone value normalization. ACV/SSC/CAA/CMM/AAM/FUS store zone as the global
-# option set fsi_acv_zone (Unclassified=100000000, Zone1=100000001, ...).
-# Some legacy integrations also pass canonical small ints. Map both into
-# canonical 0/1/2/3 used throughout this module.
+# Zone value normalization. Tier 2 source tables store fsi_acv_zone option-set
+# values (Unclassified=100000000, Zone1=100000001, ...). Compliance Dashboard
+# assessments use their own fsi_zone choice values (Zone1=1, Zone2=2, Zone3=3).
+# Map both conventions into the Compliance Dashboard 0/1/2/3 values for sync.
 $script:ZoneNormalizationMap = @{
     100000000 = 0   # Unclassified
     100000001 = 1   # Zone1
@@ -70,6 +70,37 @@ $script:ZoneNormalizationMap = @{
     1         = 1
     2         = 2
     3         = 3
+}
+
+# ACV environment registry uses the fsi_acv_zone option set, not the Compliance
+# Dashboard fsi_zone values. Use this map when writing fsi_environmentregistry.
+$script:AcvZoneOptionSetMap = @{
+    0         = 100000000
+    1         = 100000001
+    2         = 100000002
+    3         = 100000003
+    100000000 = 100000000
+    100000001 = 100000001
+    100000002 = 100000002
+    100000003 = 100000003
+}
+
+# ACV environment type option values (fsi_acv_environmenttype). The ELM
+# request table uses a different option set, so 100000002/100000003 are
+# translated from ELM Production/Developer into ACV Production/Developer.
+# Legacy callers may pass 1=Production, 2=Sandbox, 3=Developer, 4=Trial,
+# 5=Default to avoid ambiguity.
+$script:AcvEnvironmentTypeMap = @{
+    1         = 100000000  # Legacy Production -> ACV Production
+    2         = 100000001  # Legacy Sandbox -> ACV Sandbox
+    3         = 100000002  # Legacy Developer -> ACV Developer
+    4         = 100000003  # Legacy Trial -> ACV Trial
+    5         = 100000004  # Legacy Default -> ACV Default
+    100000000 = 100000000  # ACV Production
+    100000001 = 100000001  # ELM/ACV Sandbox
+    100000002 = 100000000  # ELM Production -> ACV Production
+    100000003 = 100000002  # ELM Developer -> ACV Developer
+    100000004 = 100000004  # Default/fallback
 }
 
 #endregion
@@ -87,11 +118,17 @@ function Connect-DataverseApi {
     .PARAMETER TenantId
         The Microsoft Entra tenant ID.
 
+    .PARAMETER ManagedIdentity
+        Use system-assigned managed identity from an Azure-hosted worker.
+
+    .PARAMETER ManagedIdentityClientId
+        Optional user-assigned managed identity client ID.
+
     .PARAMETER ClientId
-        App registration client ID for service principal auth.
+        App registration client ID for legacy service principal auth.
 
     .PARAMETER ClientSecret
-        App registration client secret.
+        App registration client secret. Legacy dev-only fallback; use managed identity in production.
 
     .PARAMETER Interactive
         Use interactive (browser) authentication.
@@ -104,12 +141,18 @@ function Connect-DataverseApi {
     .OUTPUTS
         Hashtable with BaseUrl and Headers for Dataverse API calls.
     #>
-    [CmdletBinding(DefaultParameterSetName = 'ServicePrincipal')]
+    [CmdletBinding(DefaultParameterSetName = 'ManagedIdentity')]
     param(
         [Parameter(Mandatory)]
         [string]$Url,
-        [Parameter(Mandatory)]
+        [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+        [Parameter(ParameterSetName = 'Interactive', Mandatory)]
+        [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [string]$TenantId,
+        [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+        [switch]$ManagedIdentity,
+        [Parameter(ParameterSetName = 'ManagedIdentity')]
+        [string]$ManagedIdentityClientId,
         [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [string]$ClientId,
         [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
@@ -130,23 +173,54 @@ function Connect-DataverseApi {
         'Germany'   = 'https://login.microsoftonline.de'
     }
     $authority = "$($authorityHosts[$Cloud])/$TenantId"
+    $resource = $Url.TrimEnd('/')
+    $scope = "$resource/.default"
+    $accessToken = $null
 
-    $scope = "$($Url.TrimEnd('/'))/.default"
-
-    if ($PSCmdlet.ParameterSetName -eq 'Interactive') {
+    if ($PSCmdlet.ParameterSetName -eq 'ManagedIdentity') {
+        Write-Verbose "Authenticating with managed identity to $Url (cloud=$Cloud)"
+        $encodedResource = [System.Uri]::EscapeDataString($resource)
+        if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
+            $identityEndpoint = "$($env:IDENTITY_ENDPOINT)?api-version=2019-08-01&resource=$encodedResource"
+            if ($ManagedIdentityClientId) {
+                $identityEndpoint += "&client_id=$([System.Uri]::EscapeDataString($ManagedIdentityClientId))"
+            }
+            $miResponse = Invoke-RestMethod -Method Get -Uri $identityEndpoint -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER } -TimeoutSec 10
+        } else {
+            $identityEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$encodedResource"
+            if ($ManagedIdentityClientId) {
+                $identityEndpoint += "&client_id=$([System.Uri]::EscapeDataString($ManagedIdentityClientId))"
+            }
+            $miResponse = Invoke-RestMethod -Method Get -Uri $identityEndpoint -Headers @{ Metadata = 'true' } -TimeoutSec 10
+        }
+        $accessToken = $miResponse.access_token
+    } elseif ($PSCmdlet.ParameterSetName -eq 'Interactive') {
+        if (-not (Get-Command Get-MsalToken -ErrorAction SilentlyContinue)) {
+            throw "MSAL.PS is required for interactive authentication. Install MSAL.PS or use -ManagedIdentity from Azure-hosted automation."
+        }
         Write-Verbose "Authenticating interactively to $Url (cloud=$Cloud)"
         $interactiveClientId = if ($env:FSI_INT_InteractiveClientId) { $env:FSI_INT_InteractiveClientId } else { '51f81489-12ee-4a9e-aaae-a2591f45987d' }
         $token = Get-MsalToken -TenantId $TenantId -ClientId $interactiveClientId -Authority $authority -Scopes $scope -Interactive
+        $accessToken = $token.AccessToken
     } else {
-        Write-Verbose "Authenticating with service principal to $Url (cloud=$Cloud)"
+        if (-not (Get-Command Get-MsalToken -ErrorAction SilentlyContinue)) {
+            throw "MSAL.PS is required for legacy service principal authentication. Install MSAL.PS or use -ManagedIdentity from Azure-hosted automation."
+        }
+        # legacy: dev-only — replace with managed identity in production
+        Write-Verbose "Authenticating with legacy service principal secret to $Url (cloud=$Cloud)"
         $credential = New-Object System.Management.Automation.PSCredential($ClientId, $ClientSecret)
         $token = Get-MsalToken -TenantId $TenantId -ClientId $ClientId -Authority $authority -ClientCredential $credential -Scopes $scope
+        $accessToken = $token.AccessToken
+    }
+
+    if ([string]::IsNullOrWhiteSpace($accessToken)) {
+        throw "Authentication failed: no access token was returned for $Url using parameter set '$($PSCmdlet.ParameterSetName)'."
     }
 
     return @{
-        BaseUrl = "$($Url.TrimEnd('/'))/api/data/v9.2"
+        BaseUrl = "$resource/api/data/v9.2"
         Headers = @{
-            'Authorization'    = "Bearer $($token.AccessToken)"
+            'Authorization'    = "Bearer $accessToken"
             'OData-MaxVersion' = '4.0'
             'OData-Version'    = '4.0'
             'Accept'           = 'application/json'
@@ -219,12 +293,12 @@ function Get-SolutionTableConfig {
             EntitySet       = 'fsi_auditvalidationhistories'
             StatusField     = 'fsi_severity'
             StatusType      = 'Choice'          # Global option set fsi_acv_severity (100000000-based)
-            TimestampField  = 'fsi_validationtime'
+            TimestampField  = 'fsi_timestamp'
             RunIdField      = 'fsi_runid'
             ZoneField       = 'fsi_zone'
-            FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
+            FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
             SolutionName    = 'Audit Configuration Validator'
-            SolutionVersion = 'v1.0.2'
+            SolutionVersion = 'v1.0.4'
         }
         'SSC' = @{
             EntitySet       = 'fsi_validationhistories'
@@ -235,7 +309,7 @@ function Get-SolutionTableConfig {
             ZoneField       = 'fsi_zone'
             FilterLatest    = "`$orderby=fsi_timestamp desc&`$top=1"
             SolutionName    = 'Session Security Configurator'
-            SolutionVersion = 'v1.0.1'
+            SolutionVersion = 'v1.1.1'
         }
         'AAM' = @{
             # Explicit singular EntitySetName per AAM schema to avoid auto-plural
@@ -247,7 +321,7 @@ function Get-SolutionTableConfig {
             ZoneField       = 'fsi_zone'
             FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName    = 'Agent Access Governance Monitor'
-            SolutionVersion = 'v1.0.3'
+            SolutionVersion = 'v1.1.1'
         }
         'CMM' = @{
             # Explicit singular EntitySetName per CMM schema to avoid auto-plural
@@ -261,7 +335,7 @@ function Get-SolutionTableConfig {
             ZoneField        = 'fsi_zone'
             FilterLatest     = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName     = 'Content Moderation Governance Monitor'
-            SolutionVersion  = 'v1.0.3'
+            SolutionVersion  = 'v1.1.1'
         }
         'FUS' = @{
             EntitySet        = 'fsi_fileuploadvalidationhistories'
@@ -272,7 +346,7 @@ function Get-SolutionTableConfig {
             ZoneField        = 'fsi_zone'
             FilterLatest     = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName     = 'File Upload Security Configurator'
-            SolutionVersion  = 'v1.0.2'
+            SolutionVersion  = 'v1.1.1'
         }
         'CAA' = @{
             EntitySet       = 'fsi_capolicyvalidationhistories'
@@ -283,7 +357,7 @@ function Get-SolutionTableConfig {
             ZoneField       = 'fsi_zone'
             FilterLatest    = "`$orderby=fsi_validationtime desc&`$top=1"
             SolutionName    = 'Conditional Access Automation'
-            SolutionVersion = 'v1.2.1'
+            SolutionVersion = 'v2.0.1'
         }
     }
 }
@@ -425,13 +499,13 @@ function ConvertTo-DashboardStatus {
 function Get-CanonicalZoneValue {
     <#
     .SYNOPSIS
-        Normalizes zone values from different solution conventions to canonical 1/2/3 values.
+        Normalizes zone values to the Compliance Dashboard fsi_zone convention.
 
     .PARAMETER ZoneValue
         The zone value from any solution (may be 1, 2, 3 or 100000001, 100000002, 100000003).
 
     .OUTPUTS
-        Integer — canonical zone value (1, 2, or 3). Returns 0 for unknown/unclassified.
+        Integer — Compliance Dashboard zone value (1, 2, or 3). Returns 0 for unknown/unclassified.
 
     .EXAMPLE
         Get-CanonicalZoneValue -ZoneValue 100000002  # Returns 2
@@ -448,6 +522,70 @@ function Get-CanonicalZoneValue {
 
     Write-Warning "Unknown zone value: $ZoneValue — returning 0 (Unclassified)"
     return 0
+}
+
+function ConvertTo-AcvZoneValue {
+    <#
+    .SYNOPSIS
+        Converts a zone value to the ACV fsi_acv_zone option-set value.
+
+    .PARAMETER ZoneValue
+        Zone as Compliance Dashboard value (1/2/3) or ACV/ELM option-set value (100000001..100000003).
+
+    .OUTPUTS
+        Integer — ACV fsi_acv_zone option-set value.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [int]$ZoneValue
+    )
+
+    if ($script:AcvZoneOptionSetMap.ContainsKey($ZoneValue)) {
+        return $script:AcvZoneOptionSetMap[$ZoneValue]
+    }
+
+    Write-Warning "Unknown ACV zone value: $ZoneValue — returning 100000000 (Unclassified)"
+    return 100000000
+}
+
+function ConvertTo-AcvEnvironmentTypeValue {
+    <#
+    .SYNOPSIS
+        Converts environment type values to the ACV fsi_acv_environmenttype option-set value.
+
+    .PARAMETER EnvironmentType
+        Environment type value to convert.
+
+    .PARAMETER Source
+        Source value convention. Use LegacyOrElm for legacy small integers or ELM request option-set values; use Acv to pass through ACV option-set values.
+
+    .OUTPUTS
+        Integer — ACV fsi_acv_environmenttype option-set value.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [int]$EnvironmentType,
+
+        [Parameter()]
+        [ValidateSet('LegacyOrElm', 'Acv')]
+        [string]$Source = 'LegacyOrElm'
+    )
+
+    if ($Source -eq 'Acv') {
+        if (@(100000000, 100000001, 100000002, 100000003, 100000004) -contains $EnvironmentType) {
+            return $EnvironmentType
+        }
+        throw "Invalid ACV environment type value: $EnvironmentType. Expected 100000000..100000004."
+    }
+
+    if ($script:AcvEnvironmentTypeMap.ContainsKey($EnvironmentType)) {
+        return $script:AcvEnvironmentTypeMap[$EnvironmentType]
+    }
+
+    Write-Warning "Unknown ELM/legacy environment type: $EnvironmentType — returning 100000001 (Sandbox)"
+    return 100000001
 }
 
 #endregion
@@ -608,8 +746,12 @@ Export-ModuleMember -Function @(
     'Get-SolutionTableConfig'
     'ConvertTo-DashboardStatus'
     'Get-CanonicalZoneValue'
+    'ConvertTo-AcvZoneValue'
+    'ConvertTo-AcvEnvironmentTypeValue'
     'Get-EvidenceTypeId'
     'Get-EvidenceExportScripts'
     'Get-SolutionDirectories'
     'Get-DashboardTableConfig'
+    'Get-IsoUtcTimestamp'
+    'Get-IsoUtcDate'
 )

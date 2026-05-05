@@ -8,7 +8,7 @@ This document describes the required update to the existing Compliance Dashboard
 
 The `CD-ScoreCalculator` flow runs daily at 6:00 AM UTC and calculates weighted compliance scores per pillar and zone. Currently, it treats all `fsi_controlassessment` records equally. With the integration of Tier 2 solutions, the flow must distinguish between:
 
-- **Automated assessments** — sourced from solution validation (ACV, SSC, AAM, CMM, FUS)
+- **Automated assessments** — sourced from solution validation (ACV, SSC, AAM, CMM, FUS, CAA)
 - **Manual assessments** — entered by human assessors during review cycles
 
 ## Identification Method
@@ -27,9 +27,9 @@ All automated assessments include notes beginning with `Automated:` followed by 
 
 The simplest approach is to treat automated and manual assessments equally in scoring. Since automated assessments are always current (daily), they naturally reflect the latest compliance state.
 
-**Recommendation:** No weighting change in v1.0.0. Automated assessments have same weight as manual.
+**Recommendation:** No weighting change in v2.0.2. Automated assessments have same weight as manual.
 
-### Future Enhancement (v1.1.0+)
+### Future Enhancement (future release)
 
 If differentiation is desired:
 
@@ -42,7 +42,7 @@ If differentiation is desired:
 
 ### Score Calculation Update
 
-Current formula (unchanged for v1.0.0):
+Current formula (unchanged for v2.0.2):
 ```
 pillar_score = SUM(control_score * control_weight) / SUM(control_weight)
 ```
@@ -61,7 +61,7 @@ When both automated and manual assessments exist for the same control on the sam
 
 ## Implementation Steps
 
-### v1.0.0 (Current Release)
+### v2.0.2 (Current Release)
 
 No changes to CD-ScoreCalculator flow required. The flow already:
 1. Queries all assessments grouped by control
@@ -79,4 +79,4 @@ Automated assessments naturally appear as the latest records since they run dail
 
 ---
 
-*Score Calculator Update Guide v2.0.0 — February 2026*
+*Score Calculator Update Guide v2.0.2 — May 2026*

@@ -12,14 +12,18 @@ The zone option set classifies governance environments by security posture.
 
 | Value | Label | Description |
 |-------|-------|-------------|
-| 100000000 | Unclassified | Environments not yet zone-tagged; integration treats as Zone 1 by policy |
+| 100000000 | Unclassified | Environments not yet zone-tagged; integration writes no Compliance Dashboard zone when possible |
 | 100000001 | Zone 1 — Personal Productivity | Low-risk personal agents; standard M365 controls |
 | 100000002 | Zone 2 — Team Collaboration | Team-scoped agents; enhanced controls, approval required |
 | 100000003 | Zone 3 — Enterprise Managed | Enterprise-critical agents; maximum controls, change management |
 
 **Owner:** Audit Configuration Validator (ACV) solution defines this global option set (`fsi_acv_zone`). The legacy name `fsi_acvzone` does NOT exist.
 
-**Normalization:** All solutions store the raw `100000000`-based value. The integration layer keeps these values throughout — no remapping to 1/2/3 occurs. `IntegrationConfig.psm1`'s `Get-CanonicalZoneValue` returns the same value it receives.
+**Normalization:** Tier 2 source tables commonly store ACV-style `100000000`-based values. Compliance Dashboard assessments use `1`/`2`/`3` zone values. `IntegrationConfig.psm1` maps both conventions for assessment sync and uses `ConvertTo-AcvZoneValue` when writing ACV `fsi_environmentregistries`.
+
+### Environment Type (`fsi_acv_environmenttype`)
+
+ACV registry writes must use ACV environment-type values: Production `100000000`, Sandbox `100000001`, Developer `100000002`, Trial `100000003`, Default `100000004`. ELM request rows use a different option set for Production and Developer, so map ELM `100000002` Production to ACV `100000000`, and ELM `100000003` Developer to ACV `100000002`. `Register-ProvisionedEnvironment.ps1` defaults to ELM/legacy interpretation and exposes `-EnvironmentTypeFormat Acv` for direct ACV values.
 
 ### Severity Classification (`fsi_acv_severity`)
 
@@ -84,24 +88,26 @@ Every Tier 2 solution follows a consistent 3-table architecture:
 
 > ⚠️ **ACV `fsi_environmentregistry`.** The default plural is `fsi_environmentregistries` (consonant + y → ies). `Register-ProvisionedEnvironment.ps1` uses this form.
 
+> **Microsoft Learn Web API guidance:** Confirm entity set names from the Dataverse service document (`/api/data/v9.2/`) and use `$select` for the columns listed below to reduce payload size and avoid 400 responses from nonexistent columns.
+
 ### Per-Solution History Run-Level Columns
 
 | Solution | Status (run) | Timestamp | RunId | Notes |
 |----------|--------------|-----------|-------|-------|
-| ACV | `fsi_severity` (choice) | `fsi_validationtime` | `fsi_runid` | — |
+| ACV | `fsi_severity` (choice) | `fsi_timestamp` | `fsi_runid` | ACV history uses `fsi_timestamp` |
 | SSC | `fsi_severity` (choice) | `fsi_timestamp` | `fsi_runid` | — |
 | AAM | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` | String status — see mapping in `STATUS_MAPPING.md` |
 | CMM | `fsi_overallstatus` (string) **and** `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` | Status derived from rate |
 | FUS | `fsi_compliancerate` (% int) | `fsi_validationtime` (also `fsi_runtimestamp`) | `fsi_runid` | Status derived from rate |
-| CAA | `fsi_overallseverity` (choice) | `fsi_validationtime` | `fsi_runid` | **Underscores in field names — exception to rest of catalog** |
+| CAA | `fsi_overallseverity` (choice) | `fsi_validationtime` | `fsi_runid` | CAA v2.0.1+ follows standard logical-name convention |
 
 ### Validation-Type Filter
 
-The integration layer **does not** filter history rows by `fsi_validationtype`. That column does not exist on ACV, SSC, or CAA history tables. Any historical filter that relies on it must be removed before deploying v2.0.0.
+The integration layer **does not** filter history rows by `fsi_validationtype`. That column does not exist on ACV, SSC, or CAA history tables. Any historical filter that relies on it must be removed before deploying v2.0.2.
 
 ### Violation Tables
 
-The integration **registers run-level evidence only** as of v2.0.0. Per-finding violation rows are no longer exported through `Export-UnifiedComplianceEvidence.ps1` — they remain visible in each owning solution's own dashboards. This avoids exposing PII (agent names, owner UPNs) in the consolidated package and prevents drift between mutable violation records and immutable evidence hashes.
+The integration **registers run-level evidence only** as of v2.0.2. Per-finding violation rows are no longer exported through `Export-UnifiedComplianceEvidence.ps1` — they remain visible in each owning solution's own dashboards. This avoids exposing PII (agent names, owner UPNs) in the consolidated package and prevents drift between mutable violation records and immutable evidence hashes.
 
 ### Correlation
 
@@ -157,4 +163,4 @@ Each solution defines its own connection references (not shared):
 
 ---
 
-*Schema Contract v2.0.0 — April 2026*
+*Schema Contract v2.0.2 — May 2026*

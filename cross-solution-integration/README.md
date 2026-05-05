@@ -67,7 +67,7 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 - Compliance Dashboard deployed with `fsi_controlmaster` table populated
 - Environment Lifecycle Management deployed (for provisioning hooks)
 - PowerShell 7.x with Microsoft.PowerApps.Administration.PowerShell module
-- MSAL.PS module for Dataverse authentication
+- Managed identity for Azure-hosted automation; MSAL.PS only for interactive or legacy dev-only service principal authentication
 
 ### Steps
 
@@ -79,4 +79,4 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 ## Version
 
-v2.0.0 — April 2026
+v2.0.2 — May 2026
