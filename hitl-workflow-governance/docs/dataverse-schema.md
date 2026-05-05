@@ -15,7 +15,7 @@ Auto-generated schema documentation. Do not edit manually.
 
 | Option Set | Values |
 |-----------|--------|
-| fsi_HWG_checkpointtype | RequestForInformation (100000000), MultistageApproval (100000001), CustomHitl (100000002) |
+| fsi_HWG_checkpointtype | RequestForInformation (100000000), MultistageApproval (100000001), CustomHitl (100000002), AdvancedApprovalsGeneric (100000003), NotApplicable (100000004) |
 | fsi_HWG_checkpointstatus | Present (100000000), Missing (100000001), Partial (100000002), UnableToDetermine (100000003) |
 | fsi_HWG_violationstatus | Open (100000000), Acknowledged (100000001), Excepted (100000002), Resolved (100000003) |
 
@@ -62,8 +62,12 @@ Auto-generated schema documentation. Do not edit manually.
 | fsi_FlowName | String(500) | No | Agent flow name (optional filter) |
 | fsi_Zone | Picklist (fsi_acv_zone) | Yes | Zone this exception applies to |
 | fsi_ExceptionScope | String(200) | Yes | Scope (AllFlows, SpecificFlow, ReadOnlyActions) |
-| fsi_ApprovedBy | String(200) | Yes | UPN of approving administrator |
-| fsi_ApprovedAt | DateTime | Yes | When approved |
+| fsi_RequestedBy | String(200) | No | UPN of the exception requester |
+| fsi_RequestedAt | DateTime | No | When the exception was requested |
+| fsi_ApprovalStatus | String(50) | No | Pending/Approved/Rejected/TimedOut |
+| fsi_ApprovalNotes | Memo(5000) | No | Approver comments or timeout/rejection reason |
+| fsi_ApprovedBy | String(200) | No | UPN of approving or responding administrator |
+| fsi_ApprovedAt | DateTime | No | When the approval response was recorded |
 | fsi_ExpiresAt | DateTime | No | Exception expiration date (optional) |
 | fsi_Justification | Memo(5000) | No | Business justification for the exception |
 | fsi_IsActive | Boolean (default: true) | Yes | Whether this exception is currently active |
@@ -71,7 +75,7 @@ Auto-generated schema documentation. Do not edit manually.
 ### HITL Scan Run (`fsi_HitlScanRun`)
 
 **Ownership:** OrganizationOwned
-**Description:** Immutable scan execution audit trail for regulatory evidence (supports compliance with FINRA Rule 4511(a), SEC Rule 17a-3)
+**Description:** Immutable scan execution audit trail for regulatory evidence (supports compliance with FINRA Rule 4511(a) and SEC Rule 17a-3)
 
 | Column (SchemaName) | Type | Required | Description |
 |-------------------|------|----------|-------------|

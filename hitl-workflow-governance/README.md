@@ -1,15 +1,15 @@
 # HITL Workflow Governance
 
-> **Version:** v1.0.1
+> **Version:** v1.1.1
 > **Status:** Completed
 
-Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `advancedapprovals` connector.
+Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `shared_advancedapprovals` connector.
 
 ## Overview
 
 The HITL Workflow Governance solution (HWG) scans Power Platform environments for Copilot Studio agents and validates that their flows include required human review checkpoints. In regulated financial services environments, agent actions that modify data, initiate external communication, or process customer financial information may require human approval before execution. HWG identifies agents missing required HITL steps, classifies violations by severity based on zone and action type, tracks evidence of human review, and exports compliance evidence for regulatory examination.
 
-Microsoft introduced the **Request for Information** (RFI) action for Copilot Studio agent flows in public preview in July 2025. The `advancedapprovals` connector also provides **Run a Multistage Approval** for structured approval workflows. Both actions remain labeled as preview in the connector reference. Organizations should review the [Power Platform preview terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/) before using these actions with regulated data.
+Microsoft introduced the **Request for Information** (RFI) action for Copilot Studio agent flows in public preview in July 2025. The `shared_advancedapprovals` Human in the Loop connector also provides **Run a Multistage Approval** (`StartAndWaitForAnApprovalProcess`) for structured approval workflows. Both actions remain labeled as preview in Microsoft Learn. Organizations should review the [Power Platform preview terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/) before using these actions with regulated data.
 
 ## Related Controls
 
@@ -57,10 +57,10 @@ When a required HITL checkpoint is missing, severity is classified as:
 
 ## Features
 
-- **HITL Checkpoint Detection** — Scans agent flow definitions for Request for Information and Run a Multistage Approval actions from the `advancedapprovals` connector
-- **Zone-Based Policy Evaluation** — Enforces zone-specific HITL requirements using ELM zone classification
+- **HITL Checkpoint Detection** — Scans agent flow definitions for Request for Information and Run a Multistage Approval actions from the `shared_advancedapprovals` connector
+- **Zone-Based Policy Evaluation** — Applies zone-specific HITL requirements using ELM zone classification
 - **Reviewer Assignment Validation** — Verifies that HITL steps include designated reviewer configuration
-- **Input Configuration Verification** — Validates that RFI actions include required input parameters (question text, response options)
+- **Input Configuration Verification** — Validates that RFI actions include required parameters (`title`, Outlook `message`, `assignedTo`) and supported input definitions
 - **Dataverse Evidence Persistence** — Stores scan results, exceptions, and run history in three Dataverse tables
 - **SHA-256 Evidence Export** — Integrity-hashed evidence packages for regulatory examination
 - **Azure Automation Runbook** — Scheduled scan execution with drift detection
@@ -110,7 +110,7 @@ Power Automate flows are built manually using the instructions in [docs/flow-con
 
 - Microsoft 365 E5 or E5 Compliance
 - Power Platform environment with Dataverse
-- Power Automate Premium license (for cloud flows)
+- Power Automate licensing appropriate for Dataverse/Azure Automation connectors; Approvals, Human in the Loop, Teams, and Office 365 Outlook are documented as Standard connectors
 - Power Platform Admin or Entra Global Admin permissions
 - Python 3.9+ and PowerShell 7+ for setup and governance scripts
 - The Python setup scripts depend on a shared `DataverseClient` module located at `../scripts/shared/dataverse_client.py` (relative to the repository root). Ensure the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions) repository structure is intact, or install the `dataverse_client` module on `PYTHONPATH`.
@@ -119,9 +119,9 @@ See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
 
 ## Quick Start
 
-### 1. Register Entra ID Application
+### 1. Configure Authentication
 
-Register an app in Microsoft Entra ID with the following API permissions:
+For production automation, prefer managed identity, workload identity federation, or certificate-based authentication. Register an app in Microsoft Entra ID only when a service principal is required, then grant:
 - `Dynamics CRM > user_impersonation` (Dataverse access)
 - `PowerApps Service > User` (Power Platform admin queries)
 
@@ -173,14 +173,14 @@ python scripts/deploy.py \
 
 ### 6. Configure Scheduled Monitoring
 
-Deploy the Azure Automation runbook for recurring scans:
+Import `Start-HitlValidationRunbook.ps1` as the Azure Automation runbook entrypoint and schedule it with certificate-based authentication parameters:
 
 ```powershell
 ./scripts/Start-HitlValidationRunbook.ps1 `
-  -DataverseUrl "https://yourorg.crm.dynamics.com" `
-  -AutomationAccountName "fsi-governance-automation" `
-  -RunbookName "HitlCheckpointScan" `
-  -ScheduleFrequencyHours 24
+  -TenantId "<tenant-id>" `
+  -ClientId "<app-id>" `
+  -CertificateThumbprint "<certificate-thumbprint>" `
+  -DataverseUrl "https://yourorg.crm.dynamics.com"
 ```
 
 ## Configuration
@@ -198,7 +198,7 @@ The deploy script (`scripts/create_hwg_environment_variables.py`) provisions the
 | `fsi_HWG_IncludeSandbox` | Include Sandbox environments in scans (`true`/`false`) | false |
 | `fsi_HWG_IncludeDrafts` | Include unpublished draft flows in scans (`true`/`false`) | false |
 
-> Connection (Dataverse URL, tenant, client) is supplied via the runbook's connection reference and Automation account credentials, not as environment variables. Dry-run is controlled by passing `-WhatIf` to `Start-HitlValidationRunbook.ps1`.
+> Connection details (Dataverse URL, tenant, client, certificate or managed identity) are supplied through the runbook parameters and Automation account configuration, not as Dataverse environment variables. For dry runs, execute `Test-HitlWorkflowCompliance.ps1 -WhatIf` outside the scheduled runbook.
 
 Zone policy thresholds are configured in `scripts/private/Get-ExpectedHitlPolicy.ps1`. See [docs/flow-configuration.md](docs/flow-configuration.md) for Azure Automation setup details.
 
@@ -224,13 +224,20 @@ Zone policy thresholds are configured in `scripts/private/Get-ExpectedHitlPolicy
 
 - [Request information from humans in the loop](https://learn.microsoft.com/en-us/microsoft-copilot-studio/flows-request-for-information)
 - [Human in the loop connector reference](https://learn.microsoft.com/en-us/connectors/advancedapprovals/)
+- [Use multistage approvals in agent flows](https://learn.microsoft.com/en-us/microsoft-copilot-studio/flows-advanced-approvals)
+- [Power Automate approvals connector](https://learn.microsoft.com/en-us/connectors/approvals/)
+- [Copilot Studio audit logging in Microsoft Purview](https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-logging-copilot-studio)
+- [Universal Actions for Adaptive Cards in Teams](https://learn.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/Universal-actions-for-adaptive-cards/Work-with-Universal-Actions-for-Adaptive-Cards)
+- [Secretless authentication for Azure resources](https://learn.microsoft.com/en-us/azure/developer/intro/passwordless-overview)
 - [Power Platform and Dynamics 365 preview terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/)
 
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.0.1 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
+| v1.1.1 | May 2026 | Microsoft Learn 2026-Q2 refresh — current HITL connector operation IDs, secretless auth guidance, Teams card version, exception approval schema/docs |
+| v1.1.0 | April 2026 | Runtime reliability and Dataverse schema alignment fixes |
+| v1.0.0 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |
 
 See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 

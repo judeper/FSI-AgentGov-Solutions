@@ -159,12 +159,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("HWG_CLIENT_ID"),
-        help="Service principal app ID (or set HWG_CLIENT_ID env var)",
+        help="Service principal app ID, or user-assigned managed identity client ID when no secret is provided (or set HWG_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("HWG_CLIENT_SECRET"),
-        help="Service principal secret (or set HWG_CLIENT_SECRET env var)",
+        help="Client secret for legacy dev-only service principal auth; omit to use DefaultAzureCredential (or set HWG_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",

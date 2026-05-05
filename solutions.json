@@ -658,11 +658,11 @@
     "hitl-workflow-governance": {
       "id": "hitl-workflow-governance",
       "name": "HITL Workflow Governance",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
-      "description": "Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the advancedapprovals connector.",
+      "description": "Validates that Copilot Studio agent flows include required human-in-the-loop checkpoints per zone governance policy using the Request for Information and Run a Multistage Approval actions from the shared_advancedapprovals connector.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/hitl-workflow-governance/",
       "controls": [
         "2.12",

@@ -169,7 +169,11 @@ def main() -> None:
             "  python deploy.py --interactive\n\n"
             "  # Dry run (preview all changes)\n"
             "  python deploy.py --dry-run --interactive\n\n"
-            "  # Deploy only schema with service principal\n"
+            "  # Deploy only schema with managed identity/workload identity\n"
+            "  python deploy.py --schema-only \\\n"
+            "    --tenant-id $HWG_TENANT_ID \\\n"
+            "    --environment-url $HWG_ENVIRONMENT_URL\n\n"
+            "  # Legacy dev-only client-secret fallback\n"
             "  python deploy.py --schema-only \\\n"
             "    --tenant-id $HWG_TENANT_ID \\\n"
             "    --client-id $HWG_CLIENT_ID \\\n"
@@ -181,8 +185,8 @@ def main() -> None:
             "  python deploy.py --conn-refs-only --interactive\n\n"
             "Environment variables:\n"
             "  HWG_TENANT_ID        Microsoft Entra ID tenant ID\n"
-            "  HWG_CLIENT_ID        Service principal app ID\n"
-            "  HWG_CLIENT_SECRET    Service principal secret\n"
+            "  HWG_CLIENT_ID        Service principal app ID, or user-assigned managed identity client ID\n"
+            "  HWG_CLIENT_SECRET    Legacy dev-only service principal secret; omit for DefaultAzureCredential\n"
             "  HWG_ENVIRONMENT_URL  Dataverse environment URL\n"
         ),
     )
@@ -196,12 +200,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("HWG_CLIENT_ID"),
-        help="Service principal app ID (or set HWG_CLIENT_ID env var)",
+        help="Service principal app ID, or user-assigned managed identity client ID when no secret is provided (or set HWG_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("HWG_CLIENT_SECRET"),
-        help="Service principal secret (or set HWG_CLIENT_SECRET env var)",
+        help="Client secret for legacy dev-only service principal auth; omit to use DefaultAzureCredential (or set HWG_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
@@ -250,10 +254,10 @@ def main() -> None:
     if not args.environment_url:
         print("ERROR: --environment-url or HWG_ENVIRONMENT_URL required")
         sys.exit(1)
-    if not args.interactive and (not args.client_id or not args.client_secret):
+    if args.client_secret and not args.client_id:
         print(
-            "ERROR: --client-id and --client-secret required "
-            "(or use --interactive)"
+            "ERROR: --client-id is required when --client-secret is provided. "
+            "Omit both to use DefaultAzureCredential or use --interactive."
         )
         sys.exit(1)
 

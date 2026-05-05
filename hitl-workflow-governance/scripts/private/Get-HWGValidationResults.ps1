@@ -98,6 +98,8 @@ $intToCheckpointType = @{
     100000000 = 'RequestForInformation'
     100000001 = 'MultistageApproval'
     100000002 = 'CustomHitl'
+    100000003 = 'AdvancedApprovalsGeneric'
+    100000004 = 'NotApplicable'
 }
 
 $intToActionCategory = @{

@@ -2,8 +2,8 @@
 """HWGClient - Dataverse Web API client for HITL Workflow Governance.
 
 Provides authenticated access to Microsoft Dataverse (Power Platform)
-for schema deployment and data operations. Supports both interactive
-browser and service principal authentication via MSAL.
+for schema deployment and data operations. Supports secretless Azure
+credentials, interactive browser auth, and legacy client-secret auth.
 """
 
 import argparse
@@ -18,6 +18,11 @@ import msal
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+try:
+    from azure.identity import DefaultAzureCredential
+except ImportError:  # pragma: no cover - exercised only without optional dependency
+    DefaultAzureCredential = None
 
 
 class HWGClient:
@@ -39,9 +44,10 @@ class HWGClient:
         Args:
             tenant_id: Entra ID tenant ID
             environment_url: Dataverse environment URL (e.g., https://org.crm.dynamics.com)
-            client_id: Application (client) ID
-            client_secret: Client secret value (required for SP auth)
-            interactive: Use interactive browser auth instead of SP
+            client_id: Application (client) ID for MSAL auth, or user-assigned
+                managed identity client ID when client_secret is omitted
+            client_secret: Client secret value for legacy dev-only SP auth
+            interactive: Use interactive browser auth instead of unattended auth
             dry_run: If True, log API calls without executing them
         """
         self.tenant_id = tenant_id
@@ -57,27 +63,37 @@ class HWGClient:
         authority = f"https://login.microsoftonline.com/{tenant_id}"
         self.scopes = [f"{self.environment_url}/.default"]
 
+        self._credential = None
+
         if interactive:
             # Public client for interactive auth — use provided ID or Microsoft
-            # well-known public client ID as fallback
+            # well-known public client ID as fallback.
             app_id = client_id or "51f81489-12ee-4a9e-aaae-a2591f45987d"
             self.app = msal.PublicClientApplication(
                 app_id,
                 authority=authority,
                 token_cache=self._token_cache,
             )
-        else:
-            # Confidential client for service-to-service auth
-            if not client_id or not client_secret:
-                raise ValueError(
-                    "client_id and client_secret required for non-interactive auth"
-                )
+        elif client_id and client_secret:
+            # legacy: dev-only — replace with managed identity in production
             self.app = msal.ConfidentialClientApplication(
                 client_id,
                 client_credential=client_secret,
                 authority=authority,
                 token_cache=self._token_cache,
             )
+        else:
+            if DefaultAzureCredential is None:
+                raise ValueError(
+                    "azure-identity is required for secretless auth when "
+                    "--client-secret is omitted. Install requirements.txt "
+                    "or use --interactive for local setup."
+                )
+            credential_kwargs = {}
+            if client_id:
+                credential_kwargs["managed_identity_client_id"] = client_id
+            self._credential = DefaultAzureCredential(**credential_kwargs)
+            self.app = None
 
         # Setup retry strategy for transient failures
         self.session = requests.Session()
@@ -104,6 +120,14 @@ class HWGClient:
         Raises:
             RuntimeError: If token acquisition fails
         """
+        if self._credential is not None:
+            try:
+                return self._credential.get_token(*self.scopes).token
+            except Exception as exc:
+                raise RuntimeError(
+                    f"DefaultAzureCredential token acquisition failed: {exc}"
+                ) from exc
+
         accounts = self.app.get_accounts() if self.interactive else None
         result = self.app.acquire_token_silent(
             scopes=self.scopes,
@@ -575,12 +599,12 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("HWG_CLIENT_ID"),
-        help="Service principal app ID (or set HWG_CLIENT_ID env var)",
+        help="Service principal app ID, or user-assigned managed identity client ID when no secret is provided (or set HWG_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("HWG_CLIENT_SECRET"),
-        help="Service principal secret (or set HWG_CLIENT_SECRET env var)",
+        help="Client secret for legacy dev-only service principal auth; omit to use DefaultAzureCredential (or set HWG_CLIENT_SECRET env var)",
     )
     parser.add_argument(
         "--environment-url",
