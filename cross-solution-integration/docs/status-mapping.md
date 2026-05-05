@@ -27,16 +27,16 @@ This document defines the per-solution logic for translating Tier 2 governance s
 ### ACV → Control 1.7
 
 **Source table:** `fsi_auditvalidationhistories`
-**Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)` (represents overall run result)
+**Source field:** `fsi_severity` (Choice: 100000000-based)
+**Query:** Latest record ordered by `fsi_timestamp desc` (ACV uses `fsi_timestamp`, not `fsi_validationtime`)
 
 | ACV Severity | CD Status | CD Score | Logic |
 |-------------|-----------|----------|-------|
-| 1 (Passed) | 1 (Compliant) | 100 | All audit checks passed |
-| 2 (Warning) | 2 (Partial) | 50 | Minor audit gaps (e.g., retention below recommended) |
-| 3 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
-| 4 (Failed) | 3 (Non-Compliant) | 0 | Critical audit configuration failure |
-| 5 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
+| 100000000 (Passed) | 1 (Compliant) | 100 | All audit checks passed |
+| 100000001 (Warning) | 2 (Partial) | 50 | Minor audit gaps (e.g., retention below recommended) |
+| 100000002 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
+| 100000003 (Failed) | 3 (Non-Compliant) | 0 | Critical audit configuration failure |
+| 100000004 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
 
 **Score formula:** Direct mapping based on worst-case severity from latest orchestrator run.
 
@@ -45,8 +45,8 @@ This document defines the per-solution logic for translating Tier 2 governance s
 ### SSC → Controls 1.23, 1.11
 
 **Source table:** `fsi_validationhistories`
-**Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
+**Source field:** `fsi_severity` (Choice: 100000000-based)
+**Query:** Latest record ordered by `fsi_timestamp desc`
 
 SSC validates 6 dimensions. For dashboard purposes, the orchestrator-level severity is used.
 
@@ -55,11 +55,11 @@ Maps dimensions: SessionControls, AuthStrength, PIM
 
 | SSC Severity | CD Status | CD Score |
 |-------------|-----------|----------|
-| 1 (Passed) | 1 (Compliant) | 100 |
-| 2 (Warning) | 2 (Partial) | 50 |
-| 3 (GracePeriod) | 2 (Partial) | 50 |
-| 4 (Failed) | 3 (Non-Compliant) | 0 |
-| 5 (Error) | 3 (Non-Compliant) | 0 |
+| 100000000 (Passed) | 1 (Compliant) | 100 |
+| 100000001 (Warning) | 2 (Partial) | 50 |
+| 100000002 (GracePeriod) | 2 (Partial) | 50 |
+| 100000003 (Failed) | 3 (Non-Compliant) | 0 |
+| 100000004 (Error) | 3 (Non-Compliant) | 0 |
 
 **Control 1.11 (Conditional Access and MFA):**
 Same mapping — SSC orchestrator covers both controls. Both controls get the same assessment status from each SSC run.
@@ -68,9 +68,9 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 
 ### AAM → Control 3.8
 
-**Source table:** `fsi_accessvalidationhistories`
+**Source table:** `fsi_accessvalidationhistory` *(singular entity set)*
 **Source field:** `fsi_overallstatus` (String)
-**Query:** Latest record ordered by `fsi_timestamp desc`
+**Query:** Latest record ordered by `fsi_validationtime desc`
 
 | AAM Status | CD Status | CD Score | Logic |
 |-----------|-----------|----------|-------|
@@ -85,9 +85,9 @@ Same mapping — SSC orchestrator covers both controls. Both controls get the sa
 
 ### CMM → Control 1.8
 
-**Source table:** `fsi_moderationvalidationhistories`
+**Source table:** `fsi_moderationvalidationhistory` *(singular entity set)*
 **Source fields:** `fsi_compliantcount` (Integer), `fsi_totalagents` (Integer)
-**Query:** Latest record ordered by `fsi_timestamp desc`
+**Query:** Latest record ordered by `fsi_validationtime desc`
 
 **Compliance Rate Calculation:**
 ```
@@ -109,7 +109,7 @@ compliance_rate = (fsi_compliantcount / fsi_totalagents) * 100
 
 **Source table:** `fsi_fileuploadvalidationhistories`
 **Source field:** `fsi_compliancerate` (Decimal)
-**Query:** Latest record ordered by `fsi_timestamp desc`
+**Query:** Latest record ordered by `fsi_validationtime desc`
 
 | Compliance Rate | CD Status | CD Score | Logic |
 |----------------|-----------|----------|-------|
@@ -124,16 +124,16 @@ compliance_rate = (fsi_compliantcount / fsi_totalagents) * 100
 ### CAA → Controls 1.11, 1.23, 1.18
 
 **Source table:** `fsi_capolicyvalidationhistories`
-**Source field:** `fsi_severity` (Choice: 1-5)
-**Query:** Latest record where `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`, ordered by `fsi_timestamp desc`
+**Source field:** `fsi_overallseverity` (Choice: 100000000-based)
+**Query:** Latest record ordered by `fsi_validationtime desc`
 
 | CAA Severity | CD Status | CD Score | Logic |
 |-------------|-----------|----------|-------|
-| 1 (Passed) | 1 (Compliant) | 100 | All CA policies meet zone requirements |
-| 2 (Warning) | 2 (Partial) | 50 | Minor policy gaps (e.g., report-only mode) |
-| 3 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
-| 4 (Failed) | 3 (Non-Compliant) | 0 | CA policy compliance failure |
-| 5 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
+| 100000000 (Passed) | 1 (Compliant) | 100 | All CA policies meet zone requirements |
+| 100000001 (Warning) | 2 (Partial) | 50 | Minor policy gaps (e.g., report-only mode) |
+| 100000002 (GracePeriod) | 2 (Partial) | 50 | New environment within grace window |
+| 100000003 (Failed) | 3 (Non-Compliant) | 0 | CA policy compliance failure |
+| 100000004 (Error) | 3 (Non-Compliant) | 0 | Validation could not complete |
 
 **Control Mapping:**
 
@@ -172,7 +172,7 @@ When creating/updating `fsi_controlassessment` records:
 
 **Key behaviors:**
 - **Upsert logic:** Match on `fsi_controlmasterid` + date. Create new if no same-day record exists; update if exists.
-- **Zone handling:** If a solution validates across all zones, create one assessment per zone.
+- **Zone handling:** If a source validation row includes `fsi_zone`, normalize ACV-style values (`100000001..100000003`) to Compliance Dashboard zone values (`1..3`) before writing `fsi_controlassessments`. If the source omits zone, write a run-level assessment without `fsi_zone`.
 - **Notes field:** Include solution name, version, run ID, and raw status for audit trail.
 - **Next review date:** Set to tomorrow (daily feed cadence).
 
@@ -197,4 +197,4 @@ When Tier 2 solutions export evidence packages, register them in `fsi_compliance
 
 ---
 
-*Status Mapping Reference v2.0.0 — February 2026*
+*Status Mapping Reference v2.0.2 — May 2026*

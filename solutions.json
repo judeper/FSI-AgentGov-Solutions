@@ -406,9 +406,9 @@
     "cross-solution-integration": {
       "id": "cross-solution-integration",
       "name": "Cross-Solution Integration",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "compliance-audit",
-      "tier": "1",
+      "tier": "2",
       "status": "live",
       "description": "Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/cross-solution-integration/",
@@ -418,7 +418,8 @@
         "1.11",
         "3.8",
         "1.8",
-        "1.14"
+        "1.14",
+        "1.18"
       ],
       "dependencies": [
         "agent-observability-foundation"

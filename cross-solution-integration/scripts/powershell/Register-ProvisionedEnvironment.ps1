@@ -23,16 +23,25 @@
     The Dataverse URL for the environment.
 
 .PARAMETER Zone
-    The governance zone (1, 2, or 3).
+    The governance zone as 1/2/3 or fsi_acv_zone/fsi_er_zone option-set value (100000001..100000003).
 
 .PARAMETER EnvironmentType
-    The environment type (1=Production, 2=Sandbox, 3=Developer, 4=Trial, 5=Default).
+    The environment type as legacy 1=Production, 2=Sandbox, 3=Developer, 4=Trial, 5=Default, ELM option-set value, or ACV option-set value when -EnvironmentTypeFormat Acv is specified. The script writes the corresponding ACV option-set value.
+
+.PARAMETER EnvironmentTypeFormat
+    Indicates whether EnvironmentType uses legacy/ELM values (default) or ACV values. ELM Production (100000002) overlaps ACV Developer, so pass -EnvironmentTypeFormat Acv for direct ACV values.
+
+.PARAMETER ManagedIdentity
+    Use system-assigned managed identity from an Azure-hosted worker.
+
+.PARAMETER ManagedIdentityClientId
+    Optional user-assigned managed identity client ID.
 
 .PARAMETER ClientId
-    App registration client ID for service principal auth.
+    App registration client ID for legacy service principal auth.
 
 .PARAMETER ClientSecret
-    App registration client secret.
+    App registration client secret. Legacy dev-only fallback; use managed identity in production.
 
 .PARAMETER Interactive
     Use interactive authentication.
@@ -46,9 +55,9 @@
         -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
 
 .NOTES
-    Version: 2.0.0
-    Date: 2026-04-16
-    Requires: IntegrationConfig.psm1 v2.0.0
+    Version: 2.0.2
+    Date: 2026-05-05
+    Requires: IntegrationConfig.psm1 v2.0.2
 #>
 
 #Requires -Version 7.0
@@ -72,15 +81,25 @@ param(
     [string]$EnvironmentUrl,
 
     [Parameter(Mandatory)]
-    [ValidateSet(1, 2, 3)]
+    [ValidateSet(1, 2, 3, 100000001, 100000002, 100000003)]
     [int]$Zone,
 
     [Parameter()]
-    [ValidateSet(1, 2, 3, 4, 5)]
+    [ValidateSet(1, 2, 3, 4, 5, 100000000, 100000001, 100000002, 100000003, 100000004)]
     [int]$EnvironmentType = 2,
 
     [Parameter()]
+    [ValidateSet('LegacyOrElm', 'Acv')]
+    [string]$EnvironmentTypeFormat = 'LegacyOrElm',
+
+    [Parameter()]
     [string]$RequestNumber,
+
+    [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+    [switch]$ManagedIdentity,
+
+    [Parameter(ParameterSetName = 'ManagedIdentity')]
+    [string]$ManagedIdentityClientId,
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
     [string]$ClientId,
@@ -107,19 +126,56 @@ Import-Module $modulePath -Force
 
 #endregion
 
+
+function Get-ResponseStatusCode {
+    param([System.Management.Automation.ErrorRecord]$ErrorRecord)
+
+    if ($null -ne $ErrorRecord.Exception.Response -and $null -ne $ErrorRecord.Exception.Response.StatusCode) {
+        return [int]$ErrorRecord.Exception.Response.StatusCode
+    }
+    return 0
+}
+
+function Get-RetryDelaySeconds {
+    param(
+        [System.Management.Automation.ErrorRecord]$ErrorRecord,
+        [int]$RetryCount
+    )
+
+    $response = $ErrorRecord.Exception.Response
+    if ($null -ne $response -and $null -ne $response.Headers) {
+        try {
+            $retryAfter = ($response.Headers.GetValues('Retry-After') | Select-Object -First 1)
+            if ($retryAfter -and ($retryAfter -as [int])) {
+                return [int]$retryAfter
+            }
+        } catch {
+            # Header collection may not expose Retry-After on all exception types.
+        }
+    }
+
+    return [int]([math]::Pow(2, $RetryCount) * 5)
+}
+
 Write-Host "`nRegister-ProvisionedEnvironment" -ForegroundColor Cyan
 Write-Host "================================`n" -ForegroundColor Cyan
 
 # Connect
 Write-Host "Connecting to Dataverse..." -ForegroundColor Gray
-if ($Interactive) {
+if ($ManagedIdentity) {
+    $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
+        -ManagedIdentity -ManagedIdentityClientId $ManagedIdentityClientId -Cloud $Cloud
+} elseif ($Interactive) {
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId -Interactive -Cloud $Cloud
 } else {
+    # legacy: dev-only — replace with managed identity in production
     $connection = Connect-DataverseApi -Url $DataverseUrl -TenantId $TenantId `
         -ClientId $ClientId -ClientSecret $ClientSecret -Cloud $Cloud
 }
 
-$canonicalZone = Get-CanonicalZoneValue -ZoneValue $Zone
+$dashboardZone = Get-CanonicalZoneValue -ZoneValue $Zone
+$acvZone = ConvertTo-AcvZoneValue -ZoneValue $Zone
+$acvEnvironmentType = ConvertTo-AcvEnvironmentTypeValue -EnvironmentType $EnvironmentType -Source $EnvironmentTypeFormat
 
 # Check if environment already registered
 Write-Host "Checking ACV environment registry..." -ForegroundColor Gray
@@ -135,9 +191,9 @@ while ($true) {
         break
     } catch {
         $retryCount++
-        $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
+        $statusCode = Get-ResponseStatusCode -ErrorRecord $_
         if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-            $delay = [math]::Pow(2, $retryCount) * 5
+            $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
             Write-Warning "Transient error ($statusCode) checking registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
             Start-Sleep -Seconds $delay
         } else {
@@ -149,9 +205,9 @@ while ($true) {
 $record = @{
     'fsi_name'            = $EnvironmentName
     'fsi_environmentid'   = $EnvironmentId
-    'fsi_zone'            = $canonicalZone
+    'fsi_zone'            = $acvZone
     'fsi_status'          = 1  # Active
-    'fsi_environmenttype' = $EnvironmentType
+    'fsi_environmenttype' = $acvEnvironmentType
     'fsi_discoveredon'    = (Get-IsoUtcTimestamp)
     'fsi_notes'           = "Auto-registered via ELM provisioning$(if ($RequestNumber) { ". Request: $RequestNumber" })"
 }
@@ -175,9 +231,9 @@ if ($existing.Count -gt 0) {
                 break
             } catch {
                 $retryCount++
-                $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
+                $statusCode = Get-ResponseStatusCode -ErrorRecord $_
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
-                    $delay = [math]::Pow(2, $retryCount) * 5
+                    $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                     Write-Warning "Transient error ($statusCode) updating registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                     Start-Sleep -Seconds $delay
                 } else {
@@ -185,11 +241,11 @@ if ($existing.Count -gt 0) {
                 }
             }
         }
-        Write-Host "[Updated] Environment registry: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+        Write-Host "[Updated] Environment registry: $EnvironmentName (Zone $dashboardZone / ACV $acvZone)" -ForegroundColor Green
     }
 } else {
     if ($DryRun) {
-        Write-Host "[DryRun] Would CREATE new registry for: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Yellow
+        Write-Host "[DryRun] Would CREATE new registry for: $EnvironmentName (Zone $dashboardZone / ACV $acvZone)" -ForegroundColor Yellow
     } else {
         $createUrl = "$($connection.BaseUrl)/fsi_environmentregistries"
         $body = $record | ConvertTo-Json -Depth 5
@@ -202,7 +258,7 @@ if ($existing.Count -gt 0) {
                 break
             } catch {
                 $retryCount++
-                $statusCode = (if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 })
+                $statusCode = Get-ResponseStatusCode -ErrorRecord $_
                 if ($statusCode -in @(429, 503) -and $retryCount -lt $maxRetries) {
                     # Re-query before retry to avoid duplicate creation
                     try {
@@ -215,7 +271,7 @@ if ($existing.Count -gt 0) {
                     } catch {
                         Write-Warning "Duplicate-avoidance recheck also failed — proceeding with retry"
                     }
-                    $delay = [math]::Pow(2, $retryCount) * 5
+                    $delay = Get-RetryDelaySeconds -ErrorRecord $_ -RetryCount $retryCount
                     Write-Warning "Transient error ($statusCode) creating registry — retrying in ${delay}s (attempt $retryCount/$maxRetries)"
                     Start-Sleep -Seconds $delay
                 } else {
@@ -224,9 +280,9 @@ if ($existing.Count -gt 0) {
             }
         }
         if ($confirmedViaRecheck) {
-            Write-Host "[Created] Environment registry (confirmed on re-check): $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+            Write-Host "[Created] Environment registry (confirmed on re-check): $EnvironmentName (Zone $dashboardZone / ACV $acvZone)" -ForegroundColor Green
         } else {
-            Write-Host "[Created] Environment registry: $EnvironmentName (Zone $canonicalZone)" -ForegroundColor Green
+            Write-Host "[Created] Environment registry: $EnvironmentName (Zone $dashboardZone / ACV $acvZone)" -ForegroundColor Green
         }
         Write-Host "  Registry ID: $($created.fsi_environmentregistryid)" -ForegroundColor Gray
     }

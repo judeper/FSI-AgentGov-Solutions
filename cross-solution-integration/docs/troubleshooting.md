@@ -11,7 +11,7 @@
 **Resolution:**
 1. Verify all prerequisite solutions are deployed (see PREREQUISITES.md)
 2. Confirm the Dataverse URL points to the correct environment
-3. Check the entity set name matches — Dataverse pluralizes table names
+3. Check the entity set name against the Dataverse Web API service document; AAM and CMM use explicit singular entity sets
 
 ### No CD assessments created after sync
 
@@ -43,11 +43,11 @@
 
 **Resolution:**
 1. Verify the flow is activated in Power Automate
-2. Check the trigger condition: `fsi_action eq 13` (ProvisioningCompleted)
+2. Check the trigger condition: `fsi_action eq 100000013` (ProvisioningCompleted)
 3. Verify the flow's Dataverse connection reference has read access to `fsi_provisioninglog`
 4. Check flow run history for errors
 
-### Authentication errors with service principal
+### Authentication errors with managed identity or legacy service principal
 
 **Symptom:** `Connect-DataverseApi` fails with 401 or insufficient privileges.
 
@@ -55,13 +55,13 @@
 1. Verify the app registration has `user_impersonation` Dataverse API permission
 2. Confirm the service principal is added as an application user in Dataverse
 3. Check security role assignments on the application user
-4. For cross-environment scenarios, the SP must be registered in each environment
+4. For cross-environment scenarios, the managed identity or legacy service principal must be registered as an application user in each environment
 
 ### Zone value appears as 100000001 instead of 1
 
 **Symptom:** Assessment records show incorrect zone values.
 
-**Cause:** Some solutions (ACV, SSC) use Dataverse-native option set values (100000001+) while others use logical values (1/2/3).
+**Cause:** Tier 2 source tables can use Dataverse-native ACV option-set values (100000001+) while Compliance Dashboard assessments use logical values (1/2/3).
 
 **Resolution:** This is handled automatically by `Get-CanonicalZoneValue` in `IntegrationConfig.psm1`. If you see raw values, ensure you're importing the integration module before running sync operations.
 
@@ -112,9 +112,9 @@ All assessment upserts (ACV, SSC, AAM, CMM, FUS, CAA) use a non-atomic `ListReco
 
 If a Tier 2 solution stops producing validation records (e.g., broken flow, expired credentials, decommissioned environment), `CD-SolutionFeedCollector` silently skips it — the `{Solution}_Has_Records` condition evaluates to false and the empty else branch executes. The Compliance Dashboard continues showing the last known assessment with no indication of data age.
 
-**Recommended mitigation:** Compare the `fsi_timestamp` of each solution's latest validation record against a configurable staleness threshold (e.g., 48 hours). If the latest record is older than the threshold, write a `status=2` (Partial) assessment with notes indicating stale data, and send a Teams alert. This can be implemented as an additional check within each Sync scope, after the `Query_{Solution}_Latest` action, or as a separate scheduled flow.
+**Recommended mitigation:** Compare each solution's latest validation timestamp (`fsi_timestamp` for ACV/SSC, `fsi_validationtime` for AAM/CMM/FUS/CAA) against a configurable staleness threshold (e.g., 48 hours). If the latest record is older than the threshold, write a `status=2` (Partial) assessment with notes indicating stale data, and send a Teams alert. This can be implemented as an additional check within each Sync scope, after the `Query_{Solution}_Latest` action, or as a separate scheduled flow.
 
-**Monitoring workaround (no code changes):** Create a Dataverse view or Power BI report that shows `MAX(fsi_timestamp)` per solution table. Set a Power Automate alert if any solution's latest timestamp exceeds 48 hours.
+**Monitoring workaround (no code changes):** Create a Dataverse view or Power BI report that shows the maximum validation timestamp per solution table. Set a Power Automate alert if any solution's latest timestamp exceeds 48 hours.
 
 ### No centralized error aggregation
 
@@ -126,4 +126,4 @@ Each flow logs errors to separate mechanisms: `CD-SolutionFeedCollector` writes 
 
 ---
 
-*Troubleshooting Guide v2.0.0 — March 2026*
+*Troubleshooting Guide v2.0.2 — May 2026*

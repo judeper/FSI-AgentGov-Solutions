@@ -2,9 +2,23 @@
 
 All notable changes to this solution will be documented in this file.
 
-# Changelog — Cross-Solution Integration
 
-All notable changes to this solution will be documented in this file.
+## [2.0.2] — 2026-05-05 — Microsoft Learn refresh (Issue #113)
+
+### Fixed
+
+- Corrected ACV history references to use `fsi_timestamp` and removed the nonexistent `fsi_summaryjson` field from unified evidence export.
+- Updated evidence export field lists for CMM, FUS, and CAA so `$select` contains only columns present on each validation history table.
+- Updated ELM-to-ACV registration to write ACV option-set values for `fsi_zone` and `fsi_environmenttype` while still accepting legacy small integers from flow inputs.
+- Updated transient retry handling in sync, export, and registration scripts to honor `Retry-After` and avoid null dereferences on connection errors.
+
+### Changed
+
+- Added managed identity authentication to integration scripts and made MSAL.PS optional for interactive or legacy dev-only service principal authentication.
+- Refreshed flow and evidence documentation against 2026-Q2 Microsoft Learn guidance for Dataverse Web API `$select`, service-document entity set names, Power BI/Dataflows, Purview eDiscovery exports, and Graph batching/throttling considerations.
+- Reclassified this solution as Tier 2 in the manifest and added Control 1.18 to match the CAA feed mapping.
+
+---
 
 ## [2.0.1] — 2026-05-04 — CAA schema follow-up (Issue #36)
 

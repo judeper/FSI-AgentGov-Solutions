@@ -8,7 +8,7 @@ The integration layer uses the following environment variables (set via Datavers
 |----------|---------|-------------|
 | `fsi_INT_DataverseUrl` | — | Dataverse environment URL (required) |
 | `fsi_INT_TenantId` | — | Microsoft Entra tenant ID (required) |
-| `fsi_INT_ClientId` | — | App registration client ID for service principal auth |
+| `fsi_INT_ClientId` | — | App registration client ID for legacy dev-only service principal auth |
 | `fsi_INT_TeamsGroupId` | — | Teams group for alert notifications (optional) |
 | `fsi_INT_TeamsChannelId` | — | Teams channel for alert notifications (optional) |
 | `fsi_INT_IncludeSandbox` | `false` | Include sandbox environments in assessment sync (**not yet implemented** — reserved for future use; not referenced in any flow or script) |
@@ -26,7 +26,7 @@ All solutions deployed to the same environment. The integration layer queries ta
 $params = @{
     DataverseUrl = "https://org.crm.dynamics.com"
     TenantId     = "tenant-guid"
-    Interactive  = $true
+    ManagedIdentity = $true
 }
 .\Sync-SolutionAssessments.ps1 @params
 ```
@@ -49,7 +49,7 @@ $params = @{
 
 ## Security Roles
 
-The service principal or interactive user needs:
+The managed identity, legacy service principal, or interactive user needs:
 
 | Solution | Required Role | Access Level |
 |----------|--------------|-------------|
@@ -73,8 +73,8 @@ Use `Sync-SolutionAssessments.ps1` with Azure Automation:
 
 1. Import `IntegrationConfig.psm1` as module
 2. Create runbook importing the sync script
-3. Configure schedule and credentials
-4. Set `-DryRun` for initial testing
+3. Configure the Automation Account managed identity with Dataverse application-user access
+4. Run with `-ManagedIdentity -DryRun` for initial testing
 
 ### Manual Execution
 
@@ -85,4 +85,4 @@ Import-Module .\IntegrationConfig.psm1
 
 ---
 
-*Configuration Guide v2.0.0 — February 2026*
+*Configuration Guide v2.0.2 — May 2026*

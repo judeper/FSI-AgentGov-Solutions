@@ -1,6 +1,6 @@
 # Unified Evidence Export
 
-This document describes the unified compliance evidence export pipeline that aggregates governance data from all Tier 2 solutions into auditor-ready packages.
+This document describes the unified compliance evidence export pipeline that aggregates governance data from all Tier 2 solutions into regulatory examination packages.
 
 ---
 
@@ -8,10 +8,10 @@ This document describes the unified compliance evidence export pipeline that agg
 
 Financial services organizations require consolidated evidence packages for regulatory examinations. The unified export pipeline:
 
-1. Queries validation and violation records from 6 Tier 2 solutions
+1. Queries run-level validation records from 6 Tier 2 solutions
 2. Exports per-solution CSV files with standardized field sets
 3. Generates a master manifest with SHA-256 hash chain
-4. Produces a self-contained, tamper-evident evidence directory
+4. Produces a self-contained evidence directory with SHA-256 tamper-evidence metadata
 
 ---
 
@@ -21,23 +21,17 @@ Financial services organizations require consolidated evidence packages for regu
 evidence-export-YYYY-MM-DD-HHmmss/
 ├── manifest.json
 ├── acv/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 ├── ssc/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 ├── aam/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 ├── cmm/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 ├── fus/
-│   ├── validations.csv
-│   └── violations.csv
+│   └── validations.csv
 └── caa/
-    ├── validations.csv
-    └── violations.csv
+    └── validations.csv
 ```
 
 ---
@@ -51,17 +45,16 @@ evidence-export-YYYY-MM-DD-HHmmss/
     "periodStart": "YYYY-MM-DD",
     "periodEnd": "YYYY-MM-DD",
     "framework": "FSI Agent Governance Framework",
-    "frameworkVersion": "v1.2.38",
+    "frameworkVersion": "v1.4.0",
     "solutions": {
         "acv": {
             "validationCount": 150,
-            "violationCount": 3,
             "exportedAt": "ISO 8601 timestamp"
         }
     },
     "fileHashes": {
         "acv/validations.csv": "SHA-256 hex",
-        "acv/violations.csv": "SHA-256 hex"
+        "ssc/validations.csv": "SHA-256 hex"
     },
     "masterHash": "SHA-256 hex"
 }
@@ -98,13 +91,13 @@ This approach is consistent with the per-solution evidence export pattern used b
 
 ---
 
-## Data Sources Per Solution (v2.0.0 — validations only)
+## Data Sources Per Solution (v2.0.2 — validations only)
 
-> **Breaking change:** v2.0.0 exports **run-level validation rows only**. Per-finding violation rows are intentionally excluded — they live in each owning solution's own dashboards and frequently contain agent owner UPNs and other PII that should not be redistributed in a consolidated package. The `violations` array in the export schema is retained as `[]` for back-compat.
+> **Breaking change retained from v2.0.0:** v2.0.2 exports **run-level validation rows only**. Per-finding violation rows are intentionally excluded — they live in each owning solution's own dashboards and frequently contain agent owner UPNs and other PII that should not be redistributed in a consolidated package.
 
 | Solution | Validation Table EntitySet | Status Field | Timestamp Field | RunId Field |
 |----------|----------------------------|--------------|-----------------|-------------|
-| ACV | `fsi_auditvalidationhistories` | `fsi_severity` (choice, 100000000-based) | `fsi_validationtime` | `fsi_runid` |
+| ACV | `fsi_auditvalidationhistories` | `fsi_severity` (choice, 100000000-based) | `fsi_timestamp` | `fsi_runid` |
 | SSC | `fsi_validationhistories` | `fsi_severity` (choice, 100000000-based) | `fsi_timestamp` | `fsi_runid` |
 | AAM | **`fsi_accessvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` (string) | `fsi_validationtime` | `fsi_runid` |
 | CMM | **`fsi_moderationvalidationhistory`** *(singular — explicit `EntitySetName`)* | `fsi_overallstatus` + `fsi_compliantcount`/`fsi_totalagents` | `fsi_validationtime` | `fsi_runid` |
@@ -127,7 +120,17 @@ This approach is consistent with the per-solution evidence export pattern used b
     -Interactive
 ```
 
-### Filtered Export (Service Principal)
+### Full Export (Managed Identity)
+
+```powershell
+.\Export-UnifiedComplianceEvidence.ps1 `
+    -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "tenant-guid" `
+    -OutputPath "C:\evidence" `
+    -ManagedIdentity
+```
+
+### Filtered Export (Legacy Dev-Only Service Principal)
 
 ```powershell
 .\Export-UnifiedComplianceEvidence.ps1 `
@@ -175,6 +178,14 @@ This evidence export pipeline supports compliance with:
 
 ---
 
+## Microsoft Purview and Power BI Notes
+
+- Store exported packages in your organization's governed records repository. Hashes provide tamper evidence, but SEC 17a-4(f) / FINRA 4511 retention still depends on downstream immutable retention configuration.
+- Microsoft Purview eDiscovery review set exports package review-set content and reports; use this integration export as a governance evidence input, not as a replacement for Purview case export workflows.
+- For reporting, Power BI and Dataflows can use the Dataverse connector for curated tables. For bulk history extraction, evaluate Synapse Link or Fabric patterns rather than repeatedly pulling large Web API result sets.
+
+---
+
 ## Scheduling Recommendations
 
 | Frequency | Use Case |
@@ -184,8 +195,8 @@ This evidence export pipeline supports compliance with:
 | **On-demand** | Regulatory examination preparation |
 | **Weekly** | Organizations with heightened monitoring requirements |
 
-Automate with Task Scheduler or Azure Automation using service principal authentication.
+Automate with Azure Automation or an Azure-hosted worker using managed identity. Use service principal secrets only as a legacy dev-only fallback.
 
 ---
 
-*Evidence Export Guide v2.0.0 — February 2026*
+*Evidence Export Guide v2.0.2 — May 2026*

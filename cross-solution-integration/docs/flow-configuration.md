@@ -1,7 +1,7 @@
 # Flow Configuration Guide
 
 > **Solution:** Cross-Solution Integration
-> **Version:** v1.0.2
+> **Version:** v2.0.2
 
 This document provides step-by-step instructions for manually building the two Power Automate cloud flows required by the Cross-Solution Integration layer. These flows automate the daily Compliance Dashboard feed from Tier 2 solutions and the environment initialization cascade from ELM provisioning events.
 
@@ -16,7 +16,7 @@ Both flows use the same two connection references:
 | `fsi_cr_dataverse_int` | Dataverse — Integration | Microsoft Dataverse | Read validation history, upsert assessments, log errors |
 | `fsi_cr_teams_int` | Teams — Integration | Microsoft Teams | Post summary/notification messages to governance channel |
 
-Create these connection references in your solution before building the flows. Use a service account with Dataverse read/write access to all `fsi_*` tables and Teams channel posting permissions.
+Create these connection references in your solution before building the flows. Prefer a managed identity or governed service account with Dataverse read/write access to the required `fsi_*` tables and Teams channel posting permissions.
 
 ---
 
@@ -106,6 +106,9 @@ Each scope follows the same pattern with solution-specific differences in the so
 
 Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial interval, 1-minute maximum.
 
+> **Microsoft Learn alignment (2026-Q2):** When configuring Dataverse **List rows**, specify only the required columns in **Select columns**. Confirm entity set names from the Dataverse Web API service document (`/api/data/v9.2/`) or each solution schema script before hard-coding REST URLs. Power Automate Dataverse actions implement retry policy at the action level; use exponential retry and review `Retry-After` guidance for HTTP-triggered extensions.
+
+
 ---
 
 ##### Scope: Sync_ACV (Control 1.7)
@@ -116,7 +119,7 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
    - Table: `fsi_auditvalidationhistories`
    - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
    - Order by: `fsi_timestamp desc`
-   - Select: `fsi_severity,fsi_runid,fsi_timestamp`
+   - Select: `fsi_severity,fsi_runid,fsi_timestamp,fsi_zone`
    - Top count: `1`
 
 2. **Condition** — ACV Has Records
@@ -148,7 +151,7 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
    - Table: `fsi_validationhistories`
    - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
    - Order by: `fsi_timestamp desc`
-   - Select: `fsi_severity,fsi_runid,fsi_timestamp`
+   - Select: `fsi_severity,fsi_runid,fsi_timestamp,fsi_zone`
    - Top count: `1`
 
 2. **Condition** — SSC Has Records (same length check)
@@ -167,12 +170,12 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 ##### Scope: Sync_AAM (Control 3.8)
 
-**Source table:** `fsi_accessvalidationhistories`
+**Source table:** `fsi_accessvalidationhistory` *(singular entity set)*
 
 1. **List rows** — Query AAM Latest
-   - Table: `fsi_accessvalidationhistories`
-   - Order by: `fsi_timestamp desc`
-   - Select: `fsi_overallstatus,fsi_runid,fsi_timestamp`
+   - Table: `fsi_accessvalidationhistory`
+   - Order by: `fsi_validationtime desc`
+   - Select: `fsi_overallstatus,fsi_runid,fsi_validationtime,fsi_zone`
    - Top count: `1`
 
 2. **Condition** — AAM Has Records
@@ -191,12 +194,12 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 ##### Scope: Sync_CMM (Control 1.8)
 
-**Source table:** `fsi_moderationvalidationhistories`
+**Source table:** `fsi_moderationvalidationhistory` *(singular entity set)*
 
 1. **List rows** — Query CMM Latest
-   - Table: `fsi_moderationvalidationhistories`
-   - Order by: `fsi_timestamp desc`
-   - Select: `fsi_compliantcount,fsi_totalagents,fsi_runid,fsi_timestamp`
+   - Table: `fsi_moderationvalidationhistory`
+   - Order by: `fsi_validationtime desc`
+   - Select: `fsi_compliantcount,fsi_totalagents,fsi_runid,fsi_validationtime`
    - Top count: `1`
 
 2. **Condition** — CMM Has Records
@@ -223,8 +226,8 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 
 1. **List rows** — Query FUS Latest
    - Table: `fsi_fileuploadvalidationhistories`
-   - Order by: `fsi_timestamp desc`
-   - Select: `fsi_compliancerate,fsi_runid,fsi_timestamp`
+   - Order by: `fsi_validationtime desc`
+   - Select: `fsi_compliancerate,fsi_runid,fsi_validationtime`
    - Top count: `1`
 
 2. **Condition** — FUS Has Records
@@ -252,13 +255,13 @@ Configure **exponential retry** on all Dataverse actions: 3 retries, 10s initial
 1. **List rows** — Query CAA Latest
    - Table: `fsi_capolicyvalidationhistories`
    - Filter: `(removed in v2.0.0 — fsi_validationtype does not exist on history tables; query latest run by descending timestamp)`
-   - Order by: `fsi_timestamp desc`
-   - Select: `fsi_severity,fsi_runid,fsi_timestamp`
+   - Order by: `fsi_validationtime desc`
+   - Select: `fsi_overallseverity,fsi_runid,fsi_validationtime`
    - Top count: `1`
 
 2. **Condition** — CAA Has Records
 
-3. **If yes → Compose** — Map CAA Status (same severity mapping as ACV/SSC)
+3. **If yes → Compose** — Map CAA Status using `fsi_overallseverity` (same 100000000-based severity mapping as ACV/SSC)
 
 4. **If yes → Upsert for Control 1.11** (dual-feed worst-of-two):
    - Check existing assessment for `fsi_INT_ControlGuid_1_11` + today
@@ -327,8 +330,8 @@ Tier 2 Solutions                    This Flow                     Compliance Das
 ─────────────────                   ──────────                    ────────────────────
 ACV → fsi_auditvalidationhistories ──→ Map Severity ──→ Upsert ──→ fsi_controlassessments (1.7)
 SSC → fsi_validationhistories ──────→ Map Severity ──→ Upsert ──→ fsi_controlassessments (1.23, 1.11)
-AAM → fsi_accessvalidationhistories → Map Status   ──→ Upsert ──→ fsi_controlassessments (3.8)
-CMM → fsi_moderationvalidationhistories → Map Rate ──→ Upsert ──→ fsi_controlassessments (1.8)
+AAM → fsi_accessvalidationhistory → Map Status   ──→ Upsert ──→ fsi_controlassessments (3.8)
+CMM → fsi_moderationvalidationhistory → Map Rate ──→ Upsert ──→ fsi_controlassessments (1.8)
 FUS → fsi_fileuploadvalidationhistories → Map Rate  → Upsert ──→ fsi_controlassessments (1.14)
 CAA → fsi_capolicyvalidationhistories → Map Severity → Upsert ──→ fsi_controlassessments (1.11, 1.23, 1.18)
 ```
@@ -346,10 +349,10 @@ CAA → fsi_capolicyvalidationhistories → Map Severity → Upsert ──→ fs
 | Type | When a row is added (Dataverse webhook) |
 | Table | `fsi_provisioninglog` |
 | Scope | Organization |
-| Filter expression | `fsi_action eq 13 and fsi_success eq true` |
+| Filter expression | `fsi_action eq 100000013 and fsi_success eq true` |
 | Concurrency | Single instance |
 
-The trigger fires when a `fsi_provisioninglog` row is created with action = 13 (`ProvisioningCompleted`) and success = true.
+The trigger fires when a `fsi_provisioninglog` row is created with action `100000013` (`ProvisioningCompleted`) and success = true.
 
 ### Step-by-Step Build Instructions
 
@@ -381,10 +384,10 @@ Add a **Scope** that runs if Step 1 fails or times out:
 1. **Add a row (Dataverse)** — Log failure to `fsi_provisioninglogs`
    - `fsi_name`: `INT-Init-FAILED-GetRequest-{utcNow('yyyyMMddHHmmss')}`
    - `fsi_environmentrequest`: Lookup bound to `/fsi_environmentrequests({trigger request value})`
-   - `fsi_action`: `11` (SolutionInitialization)
+   - `fsi_action`: `100000011` (BaselineConfigApplied / initialization log)
    - `fsi_actiondetails`: JSON with error context and request value
    - `fsi_actor`: `CrossSolutionIntegration`
-   - `fsi_actortype`: `3` (System)
+   - `fsi_actortype`: `100000003` (System)
    - `fsi_success`: `false`
 
 2. **Post message in a chat or channel** — Notify Teams (runs after log succeeds, fails, or times out)
@@ -416,20 +419,22 @@ Add a **Scope** (`Register_In_ACV`) that runs after Step 4 succeeds:
 
 2. **Condition** — Environment not registered (length = 0)
 
+   > ELM and ACV use different environment-type option sets. Map ELM `100000001` Sandbox → ACV `100000001`, ELM `100000002` Production → ACV `100000000`, and ELM `100000003` Developer → ACV `100000002` before writing ACV registry rows.
+
 3. **If not registered → Add a row** — Create ACV registry entry
    - Table: `fsi_environmentregistries`
    - Fields:
      - `fsi_name`: environment name
      - `fsi_environmentid`: environment ID from ELM
-     - `fsi_zone`: zone from ELM request
+     - `fsi_zone`: ACV `fsi_acv_zone` value (`100000001` Zone1, `100000002` Zone2, `100000003` Zone3)
      - `fsi_status`: `1` (Active)
-     - `fsi_environmenttype`: from ELM request
+     - `fsi_environmenttype`: ACV `fsi_acv_environmenttype` value (`100000000` Production, `100000001` Sandbox, `100000002` Developer, `100000003` Trial, `100000004` Default)
      - `fsi_environmenturl`: from ELM request
      - `fsi_discoveredon`: `utcNow()`
      - `fsi_notes`: `Auto-registered via ELM provisioning. Request: {requestNumber}`
 
 4. **If already registered → Update a row** — Update existing ACV registry entry
-   - Update `fsi_zone`, set `fsi_status` = 1, update `fsi_notes` with re-provisioning context
+   - Update `fsi_zone` and `fsi_environmenttype` using the ACV option-set values above, set `fsi_status` = 1, update `fsi_notes` with re-provisioning context
 
 #### Step 6 — Log Initialization Success
 
@@ -439,10 +444,10 @@ After the Register_In_ACV scope succeeds:
 
 2. **Add a row (Dataverse)** — Log to `fsi_provisioninglogs`
    - `fsi_name`: `INT-Init-{environmentName}`
-   - `fsi_action`: `11`
+   - `fsi_action`: `100000011`
    - `fsi_actiondetails`: Stringified init details
    - `fsi_actor`: `CrossSolutionIntegration`
-   - `fsi_actortype`: `3`
+   - `fsi_actortype`: `100000003`
    - `fsi_success`: `true`
 
 #### Step 7 — Handle ACV Registration Failure
@@ -502,7 +507,7 @@ Both flows implement consistent error handling patterns:
 
 1. **Prerequisite:** ELM solution deployed with `fsi_provisioninglogs` and `fsi_environmentrequests` tables
 2. **Prerequisite:** ACV `fsi_environmentregistries` table exists
-3. **Test trigger:** Create a `fsi_provisioninglog` row with `fsi_action = 13` and `fsi_success = true` referencing a valid environment request
+3. **Test trigger:** Create a `fsi_provisioninglog` row with `fsi_action = 100000013` and `fsi_success = true` referencing a valid environment request
 4. **Verify:** Check `fsi_environmentregistries` for the new environment entry
 5. **Verify:** Check `fsi_provisioninglogs` for the `INT-Init-*` success entry
 6. **Verify:** Check Teams channel for initialization notification
@@ -519,3 +524,6 @@ Both flows implement consistent error handling patterns:
 - [CONFIGURATION.md](configuration.md) — Setup and configuration guide
 - [ELM_INTEGRATION.md](elm-integration.md) — ELM provisioning hook integration details
 - [TROUBLESHOOTING.md](troubleshooting.md) — Common issues and resolution
+- [Microsoft Learn — Dataverse Web API query data](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query-data-web-api)
+- [Microsoft Learn — Microsoft Graph batching and throttling](https://learn.microsoft.com/en-us/graph/json-batching)
+

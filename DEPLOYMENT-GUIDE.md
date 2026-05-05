@@ -65,7 +65,6 @@ These solutions provide shared infrastructure that other solutions depend on:
 | Solution | Role | Version |
 |----------|------|---------|
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.1 |
-| [Cross-Solution Integration](./cross-solution-integration/) | Integration layer that connects the Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow. | v2.0.1 |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -96,6 +95,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.4 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.0.1 | personal, team, enterprise |
+| [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.2 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.0.3 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
@@ -140,7 +140,7 @@ graph TD
     ARA[Agent Registry Automation<br/>Tier 3 root]
     UASD[Unrestricted Agent Sharing Detector<br/>Tier 2 root]
 
-    CSI[Cross-Solution Integration<br/>Tier 1]
+    CSI[Cross-Solution Integration<br/>Tier 2]
     CD[Compliance Dashboard<br/>Tier 3 — convergence]
 
     ACM[Audit Compliance Manager<br/>Tier 3]
@@ -178,7 +178,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
 | [Agent Observability Foundation](./agent-observability-foundation/) | ✅ | ✅ | ✅ | internal |
-| [Cross-Solution Integration](./cross-solution-integration/) | ✅ | ✅ | ✅ | internal |
 
 ### Tier 2 (Governance)
 
@@ -198,6 +197,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | ✅ | ✅ | ✅ | internal |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | ✅ | ✅ | ✅ | confidential |
+| [Cross-Solution Integration](./cross-solution-integration/) | ✅ | ✅ | ✅ | internal |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | — | — | ✅ | confidential |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | — | ✅ | ✅ | confidential |
 | [DR Testing Framework](./dr-testing-framework/) | — | — | ✅ | confidential |
