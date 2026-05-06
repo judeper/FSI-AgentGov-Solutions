@@ -12,8 +12,8 @@ prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.
 verification: Confirm Test-GenAIConfigCompliance.ps1 writes rows to `fsi_GACValidationHistory` and `fsi_GACViolation`.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   GenAI feature governance per zone; multi-user contexts
 zones:
 - team
 - enterprise

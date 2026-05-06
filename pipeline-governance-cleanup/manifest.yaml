@@ -14,8 +14,8 @@ prerequisites:
   security-admin: Entra Global Admin/Application Administrator for Graph permissions, app registration, and admin consent.
 verification: Confirm the custom pipelines host is set as default and no personal hosts remain in Deployment Pipeline Configuration.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   personal pipeline cleanup operates against team + enterprise pipeline ALM
 zones:
 - team
 - enterprise

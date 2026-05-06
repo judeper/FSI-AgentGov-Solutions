@@ -15,8 +15,8 @@ prerequisites:
   power-platform-admin: Power Platform/Dataverse admin for the fsi_coitestresults table, flow setup, and scheduled runner deployment.
 verification: Confirm run_coi_tests.py writes a row to fsi_coitestresults when executed with --allow-skipped.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   conflict-of-interest testing oversight; multi-user scope
 zones:
 - team
 - enterprise

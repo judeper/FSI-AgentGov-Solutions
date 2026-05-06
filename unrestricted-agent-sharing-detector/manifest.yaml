@@ -13,8 +13,8 @@ prerequisites:
   power-platform-admin: "Power Platform admin or Entra Global Admin for Dataverse schema, cloud flows, and remediation setup."
 verification: "Verify fsi_sharingviolations and fsi_sharingexceptions update after running the detection and remediation flows."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   agent sharing detection; personal sandboxes don't share
 zones:
 - team
 - enterprise

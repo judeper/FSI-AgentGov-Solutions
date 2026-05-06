@@ -15,8 +15,8 @@ prerequisites:
   power-platform-admin: Dataverse access to fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange for source registry and audit tracking.
 verification: Run Invoke-SourceValidation.ps1 and confirm fsi_knowledgesource, fsi_validationresult, and fsi_sourcechange records update with the expected fsi_result and fsi_lastvalidated values.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   per-agent RAG source integrity applies in every zone
 zones:
 - personal
 - team

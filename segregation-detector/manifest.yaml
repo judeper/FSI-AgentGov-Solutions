@@ -15,8 +15,8 @@ prerequisites:
   power-platform-admin: "Power Platform administrator access for Dataverse schema deployment and environment role queries."
 verification: "Run Invoke-SoDScan.ps1 and confirm rows are created in fsi_sodviolation for enabled records in fsi_conflictrule."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   Maker/Checker enforcement requires multiple users
 zones:
 - team
 - enterprise

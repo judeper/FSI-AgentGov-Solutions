@@ -17,8 +17,8 @@ prerequisites:
   m365-admin: Microsoft 365 admin for Teams notifications and owner-status lookups.
 verification: Confirm Test-AgentRegistryCompliance.ps1 succeeds and the inventory pipeline records a new compliance event.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   registry of all agents; spans every zone
 zones:
 - personal
 - team

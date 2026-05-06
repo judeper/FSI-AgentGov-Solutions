@@ -15,8 +15,8 @@ prerequisites:
   global-reader: Entra ID Reader or GroupMember.Read.All is required when resolving agent user scope from -AgentUserGroupId.
 verification: Run Get-KnowledgeSourceItemPermissions.ps1 and confirm RiskScore values in ./output/item-permissions-report.csv, then cross-check any flagged items in SharePoint Manage Access.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   scans per-agent SharePoint libraries; applies in any zone
 zones:
 - personal
 - team

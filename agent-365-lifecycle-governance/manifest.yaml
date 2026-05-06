@@ -20,8 +20,8 @@ prerequisites:
   power-platform-admin: Managed Dataverse environment, Power Automate Premium, and LTR-enabled schema deployment.
 verification: Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   Agent 365 + Entra ID Governance; tenant-wide enterprise capability
 zones:
 - enterprise
 dataClassification: confidential

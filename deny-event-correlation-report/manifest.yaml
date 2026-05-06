@@ -19,8 +19,8 @@ verification: Confirm the daily runbook produces CSV exports and current-day aud
 dependencies:
 - agent-observability-foundation
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   cross-app deny correlation; only meaningful for shared / org-scope events
 zones:
 - team
 - enterprise

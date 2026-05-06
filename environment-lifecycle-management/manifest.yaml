@@ -17,8 +17,8 @@ prerequisites:
   m365-admin: Microsoft 365 admin for cross-service notifications and governance operations.
 verification: Confirm a request provisions a managed environment and writes a provisioning log row to Dataverse.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   environment provisioning targets all zones (personal sandboxes, team envs, enterprise prod)
 zones:
 - personal
 - team

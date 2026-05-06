@@ -15,8 +15,8 @@ prerequisites:
   security-admin: Entra app registration/admin consent and Dataverse system administrator access for evidence writes.
 verification: Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   DR scope is organization-wide
 zones:
 - enterprise
 dataClassification: confidential

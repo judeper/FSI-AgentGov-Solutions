@@ -15,8 +15,8 @@ verification: "Verify rows land in AuditValidationHistory and EnvironmentRegistr
 dependencies:
 - agent-observability-foundation
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   audit governance; team + enterprise scope
 zones:
 - team
 - enterprise

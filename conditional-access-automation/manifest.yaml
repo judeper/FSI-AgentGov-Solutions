@@ -17,8 +17,8 @@ prerequisites:
   global-reader: "Global Reader for read-only audit and report validation."
 verification: "Confirm the compliance scan populates fsi_capolicyvalidationhistories and fsi_capolicyviolations, with active baselines in fsi_capolicybaselines."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   CA policy deployment; tenant / team scope
 zones:
 - team
 - enterprise

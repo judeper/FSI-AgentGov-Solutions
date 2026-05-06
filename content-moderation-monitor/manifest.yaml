@@ -13,8 +13,8 @@ prerequisites:
   power-platform-admin: Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and read bot records; Dataverse access requires System Administrator or System Customizer in each target environment.
 verification: Run Test-ContentModerationCompliance.ps1 -ExcludeSandbox and confirm new rows in fsi_moderationvalidationhistory and fsi_moderationviolations with a matching fsi_validationtime and fsi_runid.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   per-agent content rules apply regardless of zone
 zones:
 - personal
 - team

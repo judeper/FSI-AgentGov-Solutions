@@ -22,8 +22,8 @@ verification: "Run Sync-SolutionAssessments.ps1 and confirm rows are written or 
 dependencies:
 - agent-observability-foundation
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   wires Tier 2 solutions into Compliance Dashboard; spans all zones via dashboard scope
 zones:
 - personal
 - team

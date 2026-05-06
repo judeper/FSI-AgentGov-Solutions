@@ -14,8 +14,8 @@ prerequisites:
   m365-admin: "Teams administrator or delegated permissions for adaptive card delivery and notification posting."
 verification: "Confirm fsi_agentsharingcompliances and fsi_approvedsecuritygrouppolicies are populated after a sharing scan and remediation test."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   sharing policy enforcement; personal sandboxes don't share
 zones:
 - team
 - enterprise

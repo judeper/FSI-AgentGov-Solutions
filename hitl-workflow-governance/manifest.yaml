@@ -15,8 +15,8 @@ prerequisites:
   security-admin: "Entra Global Admin or Application Administrator permissions for app registration, consent, and service principal setup."
 verification: "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   per-agent HITL checkpoint governance applies wherever the agent has flows
 zones:
 - personal
 - team

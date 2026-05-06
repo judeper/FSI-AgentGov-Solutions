@@ -17,8 +17,8 @@ prerequisites:
   m365-admin: Azure subscription Contributor/User Access Admin scoped to the resource group for deployment and resource creation.
 verification: Confirm Copilot Studio telemetry arrives in Application Insights AppEvents or legacy customEvents within 24h and workbooks/alerts render without errors.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   foundational observability; required wherever agents run
 zones:
 - personal
 - team

@@ -16,8 +16,8 @@ prerequisites:
   m365-admin: Power BI workspace/admin setup for dashboard publishing and service access.
 verification: Run pattern analysis and verify the scorecard and query outputs populate for recent feedback records.
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   per-agent feedback aggregation applies anywhere agents respond
 zones:
 - personal
 - team

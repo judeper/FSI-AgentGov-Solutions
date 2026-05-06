@@ -16,8 +16,8 @@ prerequisites:
   security-admin: "Entra Application Administrator or equivalent for service principal registration and consent."
 verification: "Create a test queue item and confirm rows appear in fsi_supervisionqueue and fsi_supervisionlog, then verify the Power BI supervision report shows the new item."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   FINRA 3110 supervision queue; firm-level (enterprise) scope
 zones:
 - enterprise
 dataClassification: restricted

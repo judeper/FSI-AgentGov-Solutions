@@ -15,8 +15,8 @@ prerequisites:
   power-platform-admin: "Power Platform admin permissions with a Dataverse environment and Power Automate Premium license for the daily compliance flow."
 verification: "Check fsi_inactivitytimeoutcompliances for scan results and fsi_inactivitytimeouterrorlogs for any MissingPolicy or API error entries."
 
-# zones/dataClassification backfilled by scripts/_backfill-zones.py
-# INFERRED from domain/tier/controls — product team must review.
+# zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
+#   session security policy; team + enterprise contexts
 zones:
 - team
 - enterprise
