@@ -5,7 +5,7 @@ Walks every top-level folder, loads `manifest.yaml`, and emits the following
 deterministic artifacts from a single source of truth:
 
 * `solutions.json` (committed at repo root) — mirrors the framework
-  `solutions-lock.json` schema 1:1 so `refresh_solutions_lock.py --tag v1.4.x`
+  `solutions-lock.json` schema 1:1 so `refresh_solutions_lock.py --tag v1.5.x`
   in fsi-agentgov can consume the tagged release directly.
 * `README.md` solutions table inside `<!-- BEGIN:SOLUTIONS -->` /
   `<!-- END:SOLUTIONS -->` markers.
@@ -35,25 +35,31 @@ Usage:
 Schema evolution policy
 -----------------------
 
-`solutions.json.schemaVersion` is `1.4.x` for this branch. The contract is
-**additive-only** for the 1.4.x line: new optional fields MAY be introduced
-in 1.4.1+ without bumping the framework lock contract. Any of the following
-require a 1.5.0 bump AND a coordinated PR against fsi-agentgov:
+`solutions.json.schemaVersion` is `1.5.0` for this branch. The contract was
+**additive-only** for the 1.4.x line: new optional fields could be introduced
+in 1.4.1+ without bumping the framework lock contract. 1.5.0 is the first
+breaking change since 1.4.0 — it makes `zones` a REQUIRED field on every
+solution entry. Any of the following require a 1.6.0 bump AND a coordinated
+PR against fsi-agentgov:
 
 * renaming an existing field
 * removing or repurposing an existing field
 * changing the JSON shape of an existing field (string -> object, etc.)
 * adding a new REQUIRED field
 
-This guarantee lets the framework pin `v1.4.0` and consume any later 1.4.x
-patch release without code changes.
+The framework consumer (`fsi-agentgov/scripts/validate_solutions_lock.py`)
+was widened to accept both 1.4.x and 1.5.x in the companion PR before this
+change shipped.
 
-1.4.2 changelog (additive only):
+1.5.0 changelog (BREAKING):
+* `zones` is now REQUIRED on every solution entry. All 35 catalog
+  solutions already have `zones` populated and confirmed (commit
+  `ce82f83`); the schema change is a tightening, not a data change.
+
+1.4.2 changelog (additive only — historical):
 * Optional `zones` field — array of {personal, team, enterprise}.
 * Optional `dataClassification` field — public|internal|confidential|restricted.
 * Optional `dataResidency` and `retention` free-form notes.
-These will become REQUIRED in 1.5.0 once product-team review of the inferred
-zones is complete.
 
 Framework version pinning
 -------------------------
@@ -285,10 +291,10 @@ def project_to_lock(m: dict) -> dict:
         "prerequisites": dict(m["prerequisites"]),
         "verification": m["verification"],
     }
+    # zones is required as of schema 1.5.0; project always.
+    out["zones"] = list(m["zones"])
     # Additive 1.4.2 fields. Only project when present so absent manifests
     # remain valid for staged backfill.
-    if "zones" in m:
-        out["zones"] = list(m["zones"])
     if "dataClassification" in m:
         out["dataClassification"] = m["dataClassification"]
     if "dataResidency" in m:
@@ -300,7 +306,7 @@ def project_to_lock(m: dict) -> dict:
 
 def emit_solutions_json(
     manifests: dict[str, dict],
-    schema_version: str = "1.4.2",
+    schema_version: str = "1.5.0",
 ) -> str:
     """Return the canonical solutions.json content (deterministic)."""
     out = {
