@@ -327,7 +327,7 @@
       "zones": [
         "enterprise"
       ],
-      "dataClassification": "confidential"
+      "dataClassification": "restricted"
     },
     "conditional-access-automation": {
       "id": "conditional-access-automation",
@@ -686,7 +686,7 @@
         "team",
         "enterprise"
       ],
-      "dataClassification": "internal"
+      "dataClassification": "confidential"
     },
     "hitl-workflow-governance": {
       "id": "hitl-workflow-governance",
@@ -713,7 +713,7 @@
         "team",
         "enterprise"
       ],
-      "dataClassification": "internal"
+      "dataClassification": "confidential"
     },
     "inactivity-timeout-enforcement": {
       "id": "inactivity-timeout-enforcement",
