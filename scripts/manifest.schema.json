@@ -16,7 +16,8 @@
     "controls",
     "url",
     "prerequisites",
-    "verification"
+    "verification",
+    "zones"
   ],
   "properties": {
     "id": {
@@ -92,7 +93,7 @@
       "items": { "type": "string", "enum": ["personal", "team", "enterprise"] },
       "uniqueItems": true,
       "minItems": 1,
-      "description": "Governance zones in which this solution applies. 'personal' = individual maker/Default environment, 'team' = departmental/managed, 'enterprise' = regulated/Managed. Optional in 1.4.2 to allow staged backfill; will become REQUIRED in 1.5.0."
+      "description": "Governance zones in which this solution applies. 'personal' = individual maker/Default environment, 'team' = departmental/managed, 'enterprise' = regulated/Managed. Required as of schema 1.5.0."
     },
     "dataClassification": {
       "type": "string",

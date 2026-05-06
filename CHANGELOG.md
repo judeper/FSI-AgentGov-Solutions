@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q2 — Schema 1.5.0 (BREAKING)
+
+### Changed (BREAKING)
+- **schema 1.5.0**: `zones` is now a **required** field on every solution entry in `solutions.json`. Previously optional in 1.4.x (introduced in 1.4.2 as part of the additive zone-backfill). The schema 1.5.0 change is a tightening, not a data change — all 36 catalog solutions already have `zones` populated and confirmed (commit `ce82f83`).
+- **`scripts/manifest.schema.json`**: appended `"zones"` to `required[]`; tightened the field description so it no longer says "Optional in 1.4.2".
+- **`scripts/build-manifest.py`**: emits `schemaVersion: 1.5.0` (was `1.4.2`); `zones` is now projected unconditionally for every solution (was conditional on presence).
+- **`solutions.json`**: regenerated with `schemaVersion: 1.5.0`. No data fields changed for any solution.
+
+### Changed — documentation drift cleanup (same PR)
+- Updated schema-evolution paragraphs in `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md` to describe 1.5.0 as the current schema and 1.6.0 as the next breaking-change line.
+- Replaced stale "Update the `LATEST_TAG` env var" wording in the same three files with the current behavior (auto-derived from `gh api repos/{repo}/releases/latest --jq .tag_name`; see Issue #39).
+
+### Migration
+- Consumers needing the old behavior (e.g., a parser that expects `zones` to possibly be absent) must pin to a 1.4.x release tag. Latest 1.4.x: **`v1.4.1`** (`gh release list --repo judeper/FSI-AgentGov-Solutions`).
+- Consumers parsing `solutions.json` should expect `zones: string[]` (subset of `personal | team | enterprise`, `minItems: 1`) on every solution.
+- The companion validator in `judeper/fsi-agentgov` (`scripts/validate_solutions_lock.py`) was widened in [judeper/fsi-agentgov#195](https://github.com/judeper/fsi-agentgov/pull/195) to accept both 1.4.x and 1.5.x ahead of this change.
+
+### References
+- Closes #37 (AC #4)
+
+---
+
 ## [v1.5.0-preview] - Unreleased — agent-intake MVP (Express path)
 
 ### Added
