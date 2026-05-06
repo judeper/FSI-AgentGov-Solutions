@@ -193,7 +193,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | — | ✅ | ✅ | confidential |
 | [Audit Compliance Manager](./audit-compliance-manager/) | — | ✅ | ✅ | confidential |
-| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | confidential |
+| [Compliance Dashboard](./compliance-dashboard/) | — | — | ✅ | restricted |
 | [Conditional Access Automation](./conditional-access-automation/) | — | ✅ | ✅ | confidential |
 | [Conflict of Interest Testing](./coi-testing/) | — | ✅ | ✅ | confidential |
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
@@ -207,8 +207,8 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [File Upload Security](./file-upload-security/) | ✅ | ✅ | ✅ | internal |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | — | — | ✅ | restricted |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | — | ✅ | ✅ | internal |
-| [Hallucination Feedback Tracker](./hallucination-tracker/) | ✅ | ✅ | ✅ | internal |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | ✅ | ✅ | ✅ | internal |
+| [Hallucination Feedback Tracker](./hallucination-tracker/) | ✅ | ✅ | ✅ | confidential |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | ✅ | ✅ | ✅ | confidential |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | — | ✅ | ✅ | internal |
 | [Message Center Monitor](./message-center-monitor/) | — | — | ✅ | internal |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | ✅ | ✅ | ✅ | internal |

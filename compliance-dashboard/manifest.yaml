@@ -25,4 +25,4 @@ dependencies:
 #   enterprise reporting across the framework
 zones:
 - enterprise
-dataClassification: confidential
+dataClassification: restricted

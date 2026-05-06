@@ -22,4 +22,4 @@ zones:
 - personal
 - team
 - enterprise
-dataClassification: internal
+dataClassification: confidential
