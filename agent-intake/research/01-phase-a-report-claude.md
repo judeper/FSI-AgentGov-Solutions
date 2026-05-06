@@ -371,7 +371,7 @@ We surveyed (a) Microsoft primary documentation on Microsoft Learn and aka.ms; (
 ### What we deliberately did *not* assume
 - Any product Microsoft has only **announced or shown at Ignite/Build** is flagged "preview" or "announced" (e.g., Microsoft Agent 365 reached enrollment in Frontier in Nov 2025; Entra Agent ID Governance is still preview as of 02/19/2026)[12](https://learn.microsoft.com/en-us/entra/id-governance/agent-id-governance-overview).
 - We do **not** invent product names. Where the competitive intake UX is undocumented in primary sources, we say so.
-- We avoid the Microsoft-prohibited compliance overclaims ("ensures compliance" / "guarantees"). We use "supports compliance with", "helps meet", or "required for".
+- We avoid the Microsoft-prohibited compliance overclaims (prohibited compliance-overclaim phrases). We use "supports compliance with", "helps meet", or "required for".
 
 ---
 

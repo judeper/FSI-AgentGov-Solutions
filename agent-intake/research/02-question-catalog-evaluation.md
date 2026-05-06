@@ -111,7 +111,7 @@ Confirm these endpoints exist and have the documented response shape **before** 
 |---|---|---|
 | OCC 2026-13 excludes gen/agentic AI from regulatory MRM scope | Throughout (CT-005, SP-004, OQ-003) | ✅ Already verified in our prior counter-research — accurate |
 | SR 11-7 remains operative at the Federal Reserve | OQ-003 implication | ✅ Verified |
-| Entra Agent ID is GA May 1, 2026 | OQ-004 | ✅ Verified — GA tomorrow |
+| Entra Agent ID is feature availability should be verified in the target tenant/cloud | OQ-004 | ✅ Verified — GA tomorrow |
 | FINRA Notice 25-07 introduces additional supervision/recordkeeping requirements that may need new questions | OQ-002 | ⚠️ Open — flagged correctly as an item for the firm CCO. Worth a 30-min read of the Notice text before form build. |
 | Microsoft Entra Agent ID Administrator role mis-scoping CVE / security advisory (April 2026) | AT-007, CD-005, DS-012, DS-018, OH-012 reasoning text | ⚠️ **Verify** — referenced as "Microsoft patched an 'agent-only' role that was not (CSO Online, April 2026)". If this CVE is real, our `agent-access-monitor` solution should already track it; if invented, the citation needs to be removed. **Spot-check before form build.** |
 | Microsoft Purview DSPM-for-AI is GA | OQ-010 | ⚠️ Open — Claude self-flagged as needing confirmation. As of April 2026 the public docs show DSPM-for-AI in GA but specific API surfaces vary. |

@@ -13,7 +13,7 @@
 | **PPAC environments** (zone, SKU, Managed Env) | ✅ Verified | Use as primary auto-detect for environment placement and zone classification |
 | **PPAC DLP policies** | ✅ Verified — endpoint path corrected | Use as primary auto-detect for connector / DLP simulation |
 | **Microsoft Graph `/me` + `/me/manager`** | ✅ Verified | Use for sponsor pre-fill |
-| **Microsoft Graph beta retentionLabels** | ⚠️ Endpoint exists but requires `RecordsManagement.Read.All` admin scope | Mark as **manual** in Express MVP; auto-create label once via `setup_purview_retention_label.py` (one-time) |
+| **Microsoft Graph beta retentionLabels** | ⚠️ Endpoint exists but requires delegated `RecordsManagement.Read.All` admin scope | Mark as **manual** in Express MVP; auto-create label once via `setup_purview_retention_label.py` (one-time) |
 | **Purview catalog/datamap API** | ⚠️ Could not verify (no Purview account in spike subscription) | Path documented from MS Learn; mark as **manual** in Express MVP; runtime sensitivity-label inheritance is downstream concern handled by existing Purview labels on knowledge sources |
 
 The Express path of the MVP only **strictly requires** Graph `/me` + `/me/manager` and PPAC environments + DLP policies. Both verified. Purview and retentionLabels are nice-to-have and degrade gracefully.
@@ -180,10 +180,10 @@ The path Claude originally documented (`/catalog/api/search/query`) is the **leg
 
 **Result:** ✅ **API SHAPE CONFIRMED via Microsoft Graph beta**
 
-Per MS Learn (Entra Agent ID GA May 1, 2026):
+Per MS Learn (Entra Agent ID feature availability should be verified in the target tenant/cloud):
 ```http
-POST https://graph.microsoft.com/beta/identityGovernance/agentIdentities
-Authorization: Bearer <token with AgentIdentity.ReadWrite.All>
+POST https://graph.microsoft.com/v1.0/servicePrincipals/microsoft.graph.agentIdentity
+Authorization: Bearer <token with AgentIdentity.CreateAsManager or AgentIdentity.Create.All>
 Content-Type: application/json
 
 {
@@ -193,7 +193,7 @@ Content-Type: application/json
 }
 ```
 
-**Not exercised in spike** — required `AgentIdentity.ReadWrite.All` admin scope and a tenant with the Agent ID feature enabled.
+**Not exercised in spike** — required `AgentIdentity.CreateAsManager or AgentIdentity.Create.All` admin scope and a tenant with the Agent ID feature enabled.
 
 **MVP wiring:** `scripts/setup_entra_agent_id.py` invoked at handoff after approval, returns the `agentObjectId` which is written to `fsi_intakerequest.fsi_entraagentid` and propagated to `agent-registry-automation`.
 
@@ -208,7 +208,7 @@ Content-Type: application/json
 | DS-005, DS-006 | `https://api.bap.microsoft.com/providers/PowerPlatform.Governance/v2/policies?api-version=2018-01-01` | `https://api.bap.microsoft.com` | Power Platform Admin | ✅ Verified (path corrected) | Auto |
 | RR-001..005 | `https://graph.microsoft.com/beta/security/labels/retentionLabels` | `https://graph.microsoft.com` | `RecordsManagement.Read.All` | ⚠️ Auth gap | One-time setup script + manual at runtime |
 | DS-008 | `https://{account}.purview.azure.com/datamap/api/search/query?api-version=2023-09-01` | `https://purview.azure.net` | Purview Data Reader on the account | ⚠️ Not verified | Manual in Express; auto in v0.2 |
-| OH-001 | `https://graph.microsoft.com/beta/identityGovernance/agentIdentities` | `https://graph.microsoft.com` | `AgentIdentity.ReadWrite.All` | Documented only | Auto via setup script at handoff |
+| OH-001 | `https://graph.microsoft.com/v1.0/servicePrincipals/microsoft.graph.agentIdentity` | `https://graph.microsoft.com` | `AgentIdentity.CreateAsManager or AgentIdentity.Create.All` | Documented only | Auto via setup script at handoff |
 
 ---
 
@@ -229,9 +229,9 @@ These move into `docs/pilot-deployment-runbook.md` Phase B:
 
 - [ ] Power Platform Admin (or Service Principal with PPAC role) for the auto-detect scripts to query environments + DLP
 - [ ] Records Management Admin (one-time) to run `setup_purview_retention_label.py`
-- [ ] Records Management Admin app-role consent for `RecordsManagement.Read.All` if reviewer dashboard ever needs to read labels at runtime
+- [ ] Records Management Admin delegated consent for `RecordsManagement.Read.All` if reviewer dashboard ever needs to read labels at runtime
 - [ ] (Optional) Purview Data Reader on the Purview account — only required if customer wants v0.1 Express auto-classification of data sources; can defer to v0.2
-- [ ] Tenant with Microsoft Entra Agent ID feature enabled (GA May 1, 2026); admin consent for `AgentIdentity.ReadWrite.All`
+- [ ] Tenant with Microsoft Entra Agent ID feature enabled (feature availability should be verified in the target tenant/cloud); admin consent for `AgentIdentity.CreateAsManager or AgentIdentity.Create.All`
 
 ---
 

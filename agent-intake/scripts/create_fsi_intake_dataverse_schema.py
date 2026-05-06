@@ -2,7 +2,7 @@
 """Create Dataverse schema for Agent Intake (Express-path MVP).
 
 Defines 9 tables that capture the full intake decision pack for the Express
-path, plus 6 global option sets. All operations are idempotent.
+path, plus 7 global option sets. All operations are idempotent.
 
 Tables:
   - fsi_IntakeRequest (UserOwned): The maker's submitted request — parent record
@@ -82,6 +82,8 @@ INTAKE_OPTIONSETS = {
             ("Withdrawn", 100000006),
             ("Escalated", 100000007),
             ("AutoApproved", 100000008),
+            ("DeferredOutOfScope", 100000009),
+            ("SponsorTimeout", 100000010),
         ],
     },
     "fsi_intake_risktier": {
@@ -229,6 +231,23 @@ def _picklist_col(schema_name, display, global_optionset_name, required=True, de
     return defn
 
 
+def _optionset_metadata(optionset_def):
+    """Convert the compact option-set definition into Dataverse metadata."""
+    name = optionset_def["name"]
+    display_name = name.replace("fsi_", "").replace("_", " ").title()
+    return {
+        "Name": name,
+        "DisplayName": _label(display_name),
+        "Description": _label(f"Agent Intake option set {name}"),
+        "OptionSetType": "Picklist",
+        "IsGlobal": True,
+        "Options": [
+            {"Value": value, "Label": _label(label)}
+            for label, value in optionset_def["options"]
+        ],
+    }
+
+
 # =============================================================================
 # Table Column Definitions
 # =============================================================================
@@ -250,8 +269,28 @@ INTAKE_REQUEST_COLUMNS = [
                 description="Pre-filled from Microsoft Graph /me"),
     _string_col("fsi_MakerCountry", "Maker Country", 100, required=False,
                 description="Pre-filled from Microsoft Graph /me (usageLocation)"),
+    _string_col("fsi_MakerDisplayName", "Maker Display Name", 200, required=False,
+                description="Pre-filled from Microsoft Graph /me displayName"),
+    _string_col("fsi_MakerJobTitle", "Maker Job Title", 200, required=False,
+                description="Pre-filled from Microsoft Graph /me jobTitle"),
     _string_col("fsi_SponsorUpn", "Sponsor UPN", 200,
                 description="Sponsor user principal name (pre-filled from /me/manager when available)"),
+    _string_col("fsi_IntendedAudience", "Intended Audience", 100,
+                description="Maker-selected audience: Just me, My team, My department, Anyone in the firm, External users"),
+    _string_col("fsi_T1InitiatesFinancialTxn", "T1 Initiates Financial Transaction", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _string_col("fsi_T2CustomerFacing", "T2 Customer Facing", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _string_col("fsi_T3AutonomousUnmonitored", "T3 Autonomous Unmonitored", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _string_col("fsi_T4HandlesNpi", "T4 Handles NPI", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _string_col("fsi_T5HandlesMnpi", "T5 Handles MNPI", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _string_col("fsi_T6CrossborderData", "T6 Cross-Border Data", 20,
+                description="Trigger answer: Yes, No, or Not sure"),
+    _boolean_col("fsi_MakerAttestation", "Maker Attestation", default=False,
+                 description="Maker acknowledged the acceptable-use and accuracy attestation before submission"),
     _picklist_col("fsi_PathUsed", "Path Used", "fsi_intake_pathused",
                   description="Express / Standard / Full — set by routing rules"),
     _picklist_col("fsi_RiskTier", "Risk Tier", "fsi_intake_risktier",
@@ -264,8 +303,28 @@ INTAKE_REQUEST_COLUMNS = [
                   description="Lifecycle status of the intake request"),
     _string_col("fsi_TargetEnvironmentId", "Target Environment ID", 100, required=False,
                 description="Power Platform environment recommended/selected for the agent"),
+    _string_col("fsi_TargetEnvironmentName", "Target Environment Name", 200, required=False,
+                description="Display name of the recommended/selected environment"),
+    _boolean_col("fsi_EnvironmentManaged", "Environment Managed", default=False,
+                 description="True when PPAC reports a Managed Environment protection level"),
+    _string_col("fsi_DlpPolicyOutcome", "DLP Policy Outcome", 100, required=False,
+                description="Result from the Power Platform data policy simulation"),
+    _string_col("fsi_DecisionPath", "Decision Path", 100, required=False,
+                description="Express, DeferredOutOfScope, or DefaultDeny computed by routing rules"),
+    _integer_col("fsi_TriggerHitCount", "Trigger Hit Count", required=False,
+                 description="Count of trigger answers equal to Yes or Not sure"),
+    _string_col("fsi_DataResidencyCountry", "Data Residency Country", 100, required=False,
+                description="Maker-declared or detected residency for data sources"),
+    _integer_col("fsi_RetentionYears", "Retention Years", required=False,
+                 description="Effective retention period in years"),
+    _boolean_col("fsi_ImmutableStorage", "Immutable Storage", default=True,
+                 description="True when the decision pack is stamped with the WORM retention label"),
+    _boolean_col("fsi_PrivacyOverride", "Privacy Override", default=False,
+                 description="Set only by Privacy to override the cross-border default-deny rule"),
+    _memo_col("fsi_DeclaredDataSourcesJson", "Declared Data Sources JSON", 65536,
+              description="JSON snapshot of maker-declared data sources/connectors for drift comparison"),
     _string_col("fsi_EntraAgentId", "Entra Agent ID", 100, required=False,
-                description="Microsoft Entra Agent ID minted at handoff (GA May 1, 2026)"),
+                description="Microsoft Entra Agent ID service principal ID minted at handoff"),
     _string_col("fsi_RegistryRecordId", "Registry Record ID", 100, required=False,
                 description="ID of the corresponding agent-registry-automation record after handoff"),
     _datetime_col("fsi_SubmittedOn", "Submitted On", required=False,
@@ -296,8 +355,8 @@ INTAKE_RISKSIGNAL_COLUMNS = [
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
     _string_col("fsi_TriggerCode", "Trigger Code", 50,
                 description="T1..T7 trigger question identifier"),
-    _boolean_col("fsi_TriggerAnswer", "Trigger Answer", default=False,
-                 description="Maker's Yes/No answer"),
+    _string_col("fsi_TriggerAnswer", "Trigger Answer", 20,
+                description="Maker's answer: Yes, No, or Not sure"),
     _string_col("fsi_DerivedSignal", "Derived Signal", 200, required=False,
                 description="Any computed signal raised by the answer (e.g., 'CustomerFacing', 'MNPI')"),
     _datetime_col("fsi_CapturedOn", "Captured On",
@@ -631,7 +690,7 @@ def deploy(client, dry_run=False):
     print("\n[1/4] Option sets")
     for _, os_dict in [("shared", SHARED_OPTIONSETS), ("intake", INTAKE_OPTIONSETS)]:
         for _, os_def in os_dict.items():
-            client.create_option_set(os_def["name"], os_def["options"])
+            client.create_option_set(_optionset_metadata(os_def))
 
     print("\n[2/4] Tables and columns")
     for tname, tdef in TABLES.items():
@@ -668,7 +727,7 @@ def deploy(client, dry_run=False):
         else:
             print(f"  {tname}: already exists")
         for col in tdef["columns"]:
-            client.create_column(tname, col["SchemaName"], col["@odata.type"].split(".")[-1], col)
+            client.create_column(tname, col)
 
     print("\n[3/4] Alternate key (best-effort idempotent)")
     print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}")
@@ -686,17 +745,26 @@ def main():
         description="Create Dataverse schema for Agent Intake (Express-path MVP)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--tenant-id", default=os.environ.get("INTAKE_TENANT_ID"),
-                        help="Microsoft Entra ID tenant ID")
-    parser.add_argument("--client-id", default=os.environ.get("INTAKE_CLIENT_ID"),
-                        help="Service principal app ID")
-    # legacy: dev-only — replace with managed identity in production
-    parser.add_argument("--client-secret", default=os.environ.get("INTAKE_CLIENT_SECRET"),
-                        help="Service principal secret (dev-only fallback; prefer managed identity)")
-    parser.add_argument("--environment-url", default=os.environ.get("INTAKE_ENVIRONMENT_URL"),
+    parser.add_argument("--tenant-id", default=os.environ.get("INTAKE_TENANT_ID") or os.environ.get("DATAVERSE_TENANT_ID"),
+                        help="Microsoft Entra ID tenant ID; required for interactive, workload identity, certificate, and client-secret auth")
+    parser.add_argument("--client-id", default=os.environ.get("INTAKE_CLIENT_ID") or os.environ.get("DATAVERSE_CLIENT_ID") or os.environ.get("AZURE_CLIENT_ID"),
+                        help="Application/client ID or user-assigned managed identity client ID")
+    # legacy: dev-only — replace with managed identity, workload identity federation, or certificate auth in production
+    parser.add_argument("--client-secret", default=os.environ.get("INTAKE_CLIENT_SECRET") or os.environ.get("DATAVERSE_CLIENT_SECRET"),
+                        help="Service principal secret (dev-only fallback; prefer managed identity/workload identity/certificate)")
+    parser.add_argument("--access-token", default=os.environ.get("INTAKE_ACCESS_TOKEN") or os.environ.get("DATAVERSE_ACCESS_TOKEN"),
+                        help="Externally acquired Dataverse bearer token; takes precedence over other auth modes")
+    parser.add_argument("--environment-url", default=os.environ.get("INTAKE_ENVIRONMENT_URL") or os.environ.get("DATAVERSE_ENVIRONMENT_URL") or os.environ.get("DATAVERSE_ENV_URL"),
                         help="Dataverse environment URL")
     parser.add_argument("--interactive", action="store_true",
                         help="Use interactive browser authentication")
+    parser.add_argument("--auth-mode", choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"],
+                        default=os.environ.get("INTAKE_AUTH_MODE") or os.environ.get("DATAVERSE_AUTH_MODE"),
+                        help="Authentication mode; prefer managed-identity, workload-identity, or certificate")
+    parser.add_argument("--certificate-path", default=os.environ.get("INTAKE_CERTIFICATE_PATH") or os.environ.get("DATAVERSE_CERTIFICATE_PATH"),
+                        help="PEM/PFX certificate path for certificate auth")
+    parser.add_argument("--certificate-password-env", default="DATAVERSE_CERTIFICATE_PASSWORD",
+                        help="Environment variable containing certificate password")
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would be created without making changes")
     parser.add_argument("--output-docs", metavar="PATH",
@@ -713,20 +781,33 @@ def main():
               "Run from a checkout of the FSI-AgentGov-Solutions repo.", file=sys.stderr)
         sys.exit(1)
 
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or INTAKE_TENANT_ID required", file=sys.stderr)
-        sys.exit(1)
     if not args.environment_url:
-        print("ERROR: --environment-url or INTAKE_ENVIRONMENT_URL required", file=sys.stderr)
+        print("ERROR: --environment-url or INTAKE_ENVIRONMENT_URL/DATAVERSE_ENVIRONMENT_URL required", file=sys.stderr)
         sys.exit(1)
 
+    auth_mode = "interactive" if args.interactive else (args.auth_mode or ("client-secret" if args.client_secret else "managed-identity"))
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        print("ERROR: --client-id is required for the selected auth mode", file=sys.stderr)
+        sys.exit(1)
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.tenant_id:
+        print("ERROR: --tenant-id is required for the selected auth mode", file=sys.stderr)
+        sys.exit(1)
+    if auth_mode == "client-secret" and not args.client_secret:
+        print("ERROR: --client-secret is required for legacy client-secret auth", file=sys.stderr)
+        sys.exit(1)
+
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
     client = DataverseClient(
         tenant_id=args.tenant_id,
         environment_url=args.environment_url,
         client_id=args.client_id,
         client_secret=args.client_secret,
+        access_token=args.access_token,
         interactive=args.interactive,
         dry_run=args.dry_run,
+        auth_mode=auth_mode,
+        certificate_path=args.certificate_path,
+        certificate_password=certificate_password,
     )
 
     deploy(client, dry_run=args.dry_run)

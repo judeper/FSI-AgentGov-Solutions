@@ -64,6 +64,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 
 | Solution | Role | Version |
 |----------|------|---------|
+| [Agent Intake](./agent-intake/) | Pre-build user intake workflow for AI agent requests — captures business case, classifies risk, routes for sponsor approval, and hands off to agent-registry-automation. MVP supports the Express path (low-risk Tier-3/Zone-3 personal agents) with sponsor 1-click approval. | v0.2.0-preview |
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.1 |
 
 ### Layer 2: Tier 2 Governance Solutions
@@ -88,7 +89,6 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.1 | team, enterprise |
-| [Agent Intake](./agent-intake/) | 3 | v0.1.0-preview | personal, team, enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
@@ -178,6 +178,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 
 | Solution | Personal | Team | Enterprise | Data class |
 |----------|----------|------|------------|------------|
+| [Agent Intake](./agent-intake/) | ✅ | ✅ | ✅ | confidential |
 | [Agent Observability Foundation](./agent-observability-foundation/) | ✅ | ✅ | ✅ | internal |
 
 ### Tier 2 (Governance)
@@ -218,12 +219,6 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Segregation of Duties Detector](./segregation-detector/) | — | ✅ | ✅ | confidential |
 | [Session Security Configurator](./session-security-configurator/) | — | ✅ | ✅ | internal |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | — | ✅ | ✅ | confidential |
-
-### Tier 3 (Enterprise)
-
-| Solution | Personal | Team | Enterprise | Data class |
-|----------|----------|------|------------|------------|
-| [Agent Intake](./agent-intake/) | ✅ | ✅ | ✅ | confidential |
 
 <!-- END:ZONE_ROADMAP -->
 

@@ -1,6 +1,6 @@
 # Sponsor Cheat Sheet — Agent Intake (Express Path)
 
-**Audience:** A line-of-business manager (the **sponsor**) who has received a Teams adaptive card asking you to approve a team member's request to build an AI agent.
+**Audience:** A line-of-business manager (the **sponsor**) who has received a Teams adaptive card asking you to approve a direct report's request to build a personal-scope AI agent.
 
 **Time required:** ~2 minutes to review and click.
 
@@ -43,7 +43,7 @@ By clicking **Approve**, you confirm:
 |---|---|---|
 | **Right person** | Is the maker someone you actually supervise? | Cross-team requests — decline and ask the maker to use their actual manager |
 | **Right scope** | Does the purpose match work this person is paid to do? | Personal projects, side hustles, exploratory tools outside their role |
-| **Right audience** | Does the user-count claim feel realistic for "team scope"? | Counts >50 people typically should not be Express |
+| **Right audience** | Does the audience claim stay within personal scope for Express? | Team, department, firm-wide, or external audiences should not be Express |
 | **Right answers** | Look at the six trigger answers — do they ring true based on what you know about the person's work? | If you suspect a "No" should have been "Yes", decline and ask for re-submission |
 
 You are **not** attesting to technical safety, DLP correctness, or data-classification accuracy — those are auto-checked by the platform. You **are** attesting to business-purpose appropriateness and ongoing supervisory accountability.
@@ -59,7 +59,7 @@ You are **not** attesting to technical safety, DLP correctness, or data-classifi
 | Auto-escalates to your manager | Day 7 |
 | Final denial ("no sponsor response") | Day 11 |
 
-If you will be out of office, you can **delegate** by replying to the card with the email of your delegate (currently a v0.2 feature; for v0.1 ask the maker to re-submit naming your delegate as sponsor).
+If you will be out of office, you can **delegate** by replying to the card with the email of your delegate (a planned follow-up feature; for this preview ask the maker to re-submit naming your delegate as sponsor).
 
 ---
 

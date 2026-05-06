@@ -82,7 +82,7 @@ This document resolves the 10 open design questions (OQ-A through OQ-J) raised d
 
 **Question:** CSO Online (April 2026) reported a mis-scoping issue with the Entra Agent ID Administrator role. How should the design treat this?
 
-**Decision:** **Cite as advisory; do not depend on it for design integrity.** The MVP uses `AgentIdentity.ReadWrite.All` (application permission) for the handoff script, granted via admin consent. The CVE concerns over-broad delegated permissions for the Agent ID Administrator role; it does not affect application-permission flows.
+**Decision:** **Cite as advisory; do not depend on it for design integrity.** The MVP uses `AgentIdentity.CreateAsManager or AgentIdentity.Create.All` (application permission) for the handoff script, granted via admin consent. The CVE concerns over-broad delegated permissions for the Agent ID Administrator role; it does not affect application-permission flows.
 
 **Rationale:** Application permissions with managed identity are the recommended pattern (per repo policy: "managed-identity-first; client secrets are dev-only legacy"). The CVE is real but tangential; if Microsoft narrows the role scope post-GA, the script continues to work without change because it uses application permissions, not the role.
 

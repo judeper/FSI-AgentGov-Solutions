@@ -1,89 +1,93 @@
-# Policy lookup tables for agent-intake v0.1.0-preview Express path
+# Policy lookup tables for agent-intake v0.2.0-preview Express path
 #
-# IT administrators set these once during deployment. The classification
-# script (`scripts/seed_classification_rules.py`) and the router flow read
-# from this file (or its Dataverse counterpart `fsi_intakeretentionrecord`
-# + environment variables) to compute tier, zone, retention, and routing.
+# IT administrators set these once during deployment. The classification script
+# (`scripts/seed_classification_rules.py`) and the router flow read from this
+# file (or a customer-specific Dataverse/config store) to compute tier, zone,
+# retention, and routing.
 #
 # Defaults below reflect product-owner decisions captured in
-# `research/04-open-questions-resolved.md`. Customers should review and
-# override per their firm's policy before pilot.
+# `research/04-open-questions-resolved.md`. Customers should review and override
+# per their firm's policy before pilot.
 
-schema_version: "0.1.0-preview"
-last_updated_utc: "2026-05-02T00:00:00Z"
+schema_version: "0.2.0-preview"
+last_updated_utc: "2026-05-06T00:00:00Z"
 
-# OQ-D — cross-border data residency policy (default-deny if maker country
-# differs from data residency country; Privacy can override)
+# Cross-border data residency policy (default-deny if maker country differs
+# from data residency country; Privacy can override).
 data_residency:
   default_action: "deny"        # deny | allow | review
   privacy_override_enabled: true
   privacy_team_upn: "privacy@contoso.com"
   allowed_country_pairs: []     # e.g., [{maker: "US", data: "CA"}]
 
-# OQ-A — InfoSec passive sample rate for Express path
+# InfoSec passive sample rate for Express path.
 infosec_sampling:
-  express_path_sample_rate: 0.10   # 10% of approved Express requests get InfoSec post-review
+  express_path_sample_rate: 0.10
   notification_channel: "Teams"    # Teams | Email
   infosec_team_upn: "infosec-agent-review@contoso.com"
 
-# OQ-B — sponsor approval SLA (days). Beyond this, escalate to manager.
+# Sponsor approval SLA (days). Beyond this, escalate according to policy.
 sponsor_sla:
   initial_response_days: 3
   escalation_after_days: 7
-  escalate_to: "manager"           # manager | governance_lead | reject
+  escalate_to: "manager"           # manager | governance_lead | deny
 
-# OQ-C — retention class mapping (Tier -> Purview retention label)
+# Retention class mapping (Tier -> Purview retention label).
 retention_labels:
   tier_1: "FSI-AgentIntake-7yr"
   tier_2: "FSI-AgentIntake-7yr"
-  tier_3: "FSI-AgentIntake-7yr"   # Uniform 7yr per locked decision #5
-  decision_log: "FSI-AgentIntake-7yr-WORM"   # Immutable WORM (SEC 17a-4)
+  tier_3: "FSI-AgentIntake-7yr"
+  decision_log: "FSI-AgentIntake-7yr-WORM"
 
-# OQ-E — Managed-Environment requirement by tier
+# Managed-Environment requirement by tier.
 managed_environment:
   tier_1: "required"
   tier_2: "required"
-  tier_3: "recommended"            # Express path can use shared Default
+  tier_3: "recommended"
 
-# OQ-F — DLP connector group mapping by tier
+# Power Platform data policy connector group mapping by tier. Values mirror the
+# documented policy payload group names: businessDataOnly,
+# nonBusinessDataOnly, and blockedConnectors.
 dlp_connector_group:
-  tier_1: "Confidential"
-  tier_2: "Confidential"
-  tier_3: "General"
+  tier_1: "businessDataOnly"
+  tier_2: "businessDataOnly"
+  tier_3: "nonBusinessDataOnly"
 
-# OQ-G — Default zone classification rules (Zone 1 = Enterprise/highest-risk)
+# Default zone classification rules (Zone 1 = enterprise/highest-risk).
 zone_routing:
-  zone_1:                          # Enterprise
+  zone_1:
     sponsor_required: true
     infosec_required: true
     privacy_required: true
     compliance_required: true
     mrm_required_if_tier_1_or_2: true
-  zone_2:                          # Team
+  zone_2:
     sponsor_required: true
-    infosec_required: "sample"     # 10% per infosec_sampling
+    infosec_required: "sample"
     privacy_required: false
     compliance_required: false
-  zone_3:                          # Personal (Express path target)
+  zone_3:
     sponsor_required: true
     infosec_required: "sample"
     privacy_required: false
     compliance_required: false
 
-# OQ-H — Audience -> default zone (intake form Q3 maps to zone)
+# Audience -> default zone (intake form Q3 maps to zone). Express auto-approval
+# is personal-only in this preview; team and broader audiences are captured and
+# routed to the follow-up intake path.
 audience_to_zone:
   "Just me": 3
-  "My team": 3
+  "My team": 2
   "My department": 2
   "Anyone in the firm": 1
   "External users": 1
 
-# OQ-I — Modification-cutoff rules (post-approval changes)
+# Modification-cutoff rules (post-approval changes).
 modification_cutoff:
-  trigger_changes_force_re_review: true   # Any T1-T6 change = full re-review
+  trigger_changes_force_re_review: true
   descriptive_changes_require_sponsor_reconfirm: true
 
-# OQ-J — Sponsor attestation language (FINRA 3110)
+# Sponsor attestation language (FINRA 3110).
 sponsor_attestation:
   card_text: |
     By approving, you confirm that (1) you are the assigned business sponsor
@@ -96,7 +100,7 @@ sponsor_attestation:
   retention_years: 7
   immutable: true
 
-# Out-of-scope for v0.1.0-preview (placeholder for v0.2.0)
+# Out-of-scope for this preview.
 deferred:
   standard_path_questions: 20
   full_path_questions: 35

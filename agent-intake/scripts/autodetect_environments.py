@@ -113,6 +113,7 @@ def main() -> int:
     eligible = [c for c in classified if c["expressPathEligible"]]
     LOG.info("Express-path eligible: %d of %d", len(eligible), len(classified))
 
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(classified, indent=2), encoding="utf-8")
     LOG.info("Wrote %s", args.output)
     return 0

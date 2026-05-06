@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  End-to-end smoke test for agent-intake v0.1.0-preview Express path.
+  End-to-end smoke test for agent-intake v0.2.0-preview Express path.
 
 .DESCRIPTION
   Runs read-only checks that confirm the deployment is wired correctly:
@@ -24,7 +24,7 @@
   'mi' (managed identity, default) or 'cli' (azure-cli cache, dev fallback).
 
 .EXAMPLE
-  pwsh ./scripts/smoke_test.ps1 -EnvironmentUrl https://contoso.crm.dynamics.com -PortalUrl https://contoso-portal.powerappsportals.com
+  pwsh ./scripts/smoke_test.ps1 -EnvironmentUrl https://contoso.crm.dynamics.com -PortalUrl https://contoso.powerpages.microsoft.com
 #>
 [CmdletBinding()]
 param(
@@ -121,7 +121,9 @@ try {
 
 # 6. Environment auto-detect
 Write-Host "[6/7] Environment auto-detect..."
-$envOut = Join-Path $env:TEMP 'fsi-intake-envs.json'
+$smokeOutDir = Join-Path (Get-Location) '.agent-intake-smoke'
+New-Item -ItemType Directory -Path $smokeOutDir -Force | Out-Null
+$envOut = Join-Path $smokeOutDir 'fsi-intake-envs.json'
 $envScript = Join-Path $PSScriptRoot 'autodetect_environments.py'
 try {
     & $pyExe $envScript --output $envOut --token-source $TokenSource 2>&1 | Out-Null

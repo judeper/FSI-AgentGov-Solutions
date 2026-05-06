@@ -1,18 +1,18 @@
-# Architecture Decision Record — Agent Intake v0.1.0-preview
+# Architecture Decision Record — Agent Intake v0.2.0-preview
 
-This ADR consolidates the locked product-owner decisions that shape the v0.1.0-preview MVP. The full reasoning and override paths live in [`research/04-open-questions-resolved.md`](../research/04-open-questions-resolved.md); this document is the shippable summary for customer admins, reviewers, and auditors.
+This ADR consolidates the locked product-owner decisions that shape the v0.2.0-preview MVP. The full reasoning and override paths live in [`research/04-open-questions-resolved.md`](../research/04-open-questions-resolved.md); this document is the shippable summary for customer admins, reviewers, and auditors.
 
 > **All defaults are overridable** via [`templates/policy-lookup-tables.yaml`](../templates/policy-lookup-tables.yaml) without code changes.
 
 ---
 
-## ADR-001 — Express path is the only path in v0.1
+## ADR-001 — Express path is the only path in v0.2-preview
 
-**Decision:** v0.1.0-preview ships only the **Express path**: maker submits 10 questions, sponsor approves with one Teams click, system auto-provisions the agent identity. Standard and Full paths are deferred to v0.2 / v0.3.
+**Decision:** v0.2.0-preview ships only the **Express path**: maker submits 10 questions, sponsor approves with one Teams click, system auto-provisions the agent identity. Standard and Full paths are deferred to v0.3 / v0.4.
 
 **Why:** Shipping one full slice end-to-end produces real pilot data faster than shipping three half-built paths. The Express criteria are deliberately conservative (lowest tier + lowest zone + no risk signals), so the at-risk surface is narrow.
 
-**Impact:** Higher-risk requests (any trigger answered Yes / Not sure, or audience above team-scope) are saved as drafts with a "use full intake when available" message. Customers must continue using their existing high-risk workflow until v0.2/v0.3.
+**Impact:** Higher-risk requests (any trigger answered Yes / Not sure, or audience above personal scope) are saved as drafts with a "use full intake when available" message. Customers must continue using their existing high-risk workflow until v0.3/v0.4.
 
 ---
 
@@ -28,7 +28,7 @@ This ADR consolidates the locked product-owner decisions that shape the v0.1.0-p
 
 ## ADR-003 — 10% InfoSec passive sample on Express auto-approvals
 
-**Decision:** Express auto-approvals are recorded with a passive InfoSec notification log. InfoSec samples **10%** weekly for retrospective review. v0.1 sampling is manual against `fsi_intakerequest` filtered by `fsi_pathused='express' AND fsi_decision='auto_approved'`; the dashboard is deferred to v0.2.
+**Decision:** Express auto-approvals are recorded with a passive InfoSec notification log. InfoSec samples **10%** weekly for retrospective review. sampling is manual against `fsi_intakerequest` filtered by `fsi_pathused = Express` and `fsi_decisionoutcome = AutoApproved`; the dashboard is deferred to v0.3.
 
 **Why:** 10% balances assurance coverage against InfoSec workload and is consistent with NIST AI RMF and FFIEC AIO guidance for low-risk classes.
 
@@ -76,7 +76,7 @@ This ADR consolidates the locked product-owner decisions that shape the v0.1.0-p
 
 ## ADR-007 — Sponsor 1-click is sufficient FINRA 3110 evidence for Express only
 
-**Decision:** For Express-path requests (Tier 3 + Zone 3 + no triggers), the sponsor's 1-click approval in the Teams adaptive card with attestation language is recognized as sufficient FINRA 3110 supervisory evidence. Tier-1/2 paths in v0.2/v0.3 will require additional reviewer evidence (InfoSec, Compliance, Legal, MRM where applicable).
+**Decision:** For Express-path requests (Tier 3 + Zone 3 + no triggers), the sponsor's 1-click approval in the Teams adaptive card with attestation language is recognized as sufficient FINRA 3110 supervisory evidence. Tier-1/2 paths in v0.3/v0.4 will require additional reviewer evidence (InfoSec, Compliance, Legal, MRM where applicable).
 
 **Why:** FINRA 3110 requires evidence of supervisory review *proportional to risk*. For the lowest-risk class, a documented attestation by the accountable supervisor with timestamp, identity, and rendered card content captured immutably is consistent with how firms supervise comparable low-risk activities (e.g., personal-trading auto-approvals).
 
@@ -90,7 +90,7 @@ This ADR consolidates the locked product-owner decisions that shape the v0.1.0-p
 
 **Why:** Segregation of duties is a foundational supervisory principle. Allowing self-sponsorship even for low-risk agents would create a path that bypasses any human review.
 
-**Override:** None for v0.1. (No legitimate use case identified.)
+**Override:** None for this preview. (No legitimate use case identified.)
 
 ---
 

@@ -111,7 +111,7 @@ Items present in at least one report but absent from our pre-research plan, cate
 |---|---|
 | Both reports converge on Option B | Confidence boost — proceed with extend pattern |
 | Claude is more conservative on vendor (56) than GPT (64) | Adopt the more conservative posture for Phase B planning |
-| Claude flagged Entra Agent ID Preview risk; counter-research now confirms **GA May 1, 2026** | Update plan: design assumes GA, not preview (see Section 6) |
+| Claude flagged Entra Agent ID Preview risk; counter-research now confirms **feature availability should be verified in the target tenant/cloud** | Update plan: design assumes GA, not preview (see Section 6) |
 
 ---
 
@@ -205,7 +205,7 @@ Mapped to the five productivity goals from our plan:
 3. **Duplicate detection** against intake history + PPAC Agent Inventory
 4. **DSPM-for-AI sensitivity lookup** during triage
 5. **Parallel review routing** (InfoSec + Privacy + Compliance in parallel, not serial)
-6. **Auto-handoff payload** to existing `agent-registry-automation` + auto-provision via Foundry / Copilot Studio API + auto-mint Entra Agent ID (GA May 1, 2026)
+6. **Auto-handoff payload** to existing `agent-registry-automation` + auto-provision via Foundry / Copilot Studio API + auto-mint Entra Agent ID (feature availability should be verified in the target tenant/cloud)
 
 ### Anti-patterns to avoid
 - Long static form upfront (use progressive disclosure)
@@ -279,7 +279,7 @@ Mapped to the five productivity goals from our plan:
 **Rationale:**
 - We have **two converging research reports** with a clear Option B recommendation.
 - The synthesized "best-of" design (Section 7) is implementable as-is.
-- Counter-research surfaced **two material corrections** (OCC 2026-13 gen-AI exclusion; Entra Agent ID GA on May 1, 2026) that strengthen, not weaken, the recommendation.
+- Counter-research surfaced **two material corrections** (OCC 2026-13 gen-AI exclusion; Microsoft Entra Agent ID availability must be verified in the target tenant/cloud) that strengthen, not weaken, the recommendation.
 - The remaining unknowns are firm-policy choices, not technical research gaps.
 
 **Alternative:** If any answer surfaces a major gap (e.g., "we don't have AI Builder", or "the firm requires a vendor product"), we can commission a focused second-round mini-research on that one gap rather than redoing the whole study.
@@ -301,7 +301,7 @@ Mapped to the five productivity goals from our plan:
 ## Appendix B — Council review notes alignment
 
 This Fit Assessment respects the council-review lessons learned from the 2026-04-16 review:
-- Uses "Microsoft Entra ID" never "Azure AD"
-- Uses "supports compliance with" / "helps meet" never "ensures compliance" / "guarantees"
+- Uses current Microsoft Entra ID branding throughout
+- Uses "supports compliance with" / "helps meet" never prohibited compliance-overclaim phrases
 - Verifies all column names will be defined in `create_fsi_intake_dataverse_schema.py` as canonical source of truth (logical names: `fsi_intakerequest`, etc., NOT `fsi_intake_request`)
 - Will create `.ralph-config.json` with domain facts before any session work begins
