@@ -33,7 +33,7 @@ Microsoft Copilot Studio and Power Platform.
     <span class="metric-label">Solution Domains</span>
   </div>
   <div class="metric">
-    <span class="metric-number">2</span>
+    <span class="metric-number">3</span>
     <span class="metric-label">Deployment Tiers</span>
   </div>
 </div>
