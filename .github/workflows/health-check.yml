@@ -66,8 +66,11 @@ jobs:
           # Validate solutions.json shape
           if curl -sS --max-time 20 "https://raw.githubusercontent.com/judeper/FSI-AgentGov-Solutions/${LATEST_TAG}/solutions.json" -o lock.json; then
             count=$(python -c "import json; d=json.load(open('lock.json')); print(len(d.get('solutions',{})))")
-            if [ "$count" != "35" ]; then
-              errors+=("solutions.json count expected 35 got $count")
+            # Catalog is additive — fail only on regression (lost solutions) below the floor.
+            # Bump MIN_SOLUTIONS only when shipping a release that intentionally removes solutions.
+            MIN_SOLUTIONS=36
+            if [ -z "$count" ] || [ "$count" -lt "$MIN_SOLUTIONS" ]; then
+              errors+=("solutions.json count below floor: got $count, expected >= $MIN_SOLUTIONS (catalog regression)")
               fail=1
             fi
             schema=$(python -c "import json; print(json.load(open('lock.json')).get('schemaVersion',''))")

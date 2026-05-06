@@ -189,7 +189,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release** (auto-derived via `gh api repos/{repo}/releases/latest --jq .tag_name`; see Issue #39), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. No manual `LATEST_TAG` bump is required after a release.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release** (auto-derived via `gh api repos/{repo}/releases/latest --jq .tag_name`; see Issue #39), validates the lock file shape (count `>= MIN_SOLUTIONS` floor — currently 36, raise only when releasing intentional removals; non-empty `controls[]`; present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. No manual `LATEST_TAG` bump is required after a release.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
