@@ -24,7 +24,7 @@ Produce the **complete, deduplicated question catalog** that an IT admin (or an 
   - Tier-gated MRM as **firm policy** for all agent types (because OCC 2026-13 excludes gen/agentic AI from regulatory MRM)
   - 7-year retention on intake records
   - Maker UX order: Power Pages portal → M365 Copilot declarative agent → Teams sponsor app
-  - Microsoft Entra Agent ID is GA May 1, 2026 — auto-mint at handoff
+  - Microsoft Entra Agent ID is feature availability should be verified in the target tenant/cloud — auto-mint at handoff
   - Tier model 1/2/3 (highest/medium/lowest risk) and Zone model 1/2/3 (Personal / Team / Enterprise) are firm policy
 
 ### Decisions the question catalog must support

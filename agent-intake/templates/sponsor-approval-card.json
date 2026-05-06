@@ -4,98 +4,99 @@
   "version": "1.5",
   "body": [
     {
-      "type": "Container",
-      "style": "emphasis",
-      "items": [
-        {
-          "type": "TextBlock",
-          "text": "Agent intake — sponsor sign-off required",
-          "weight": "Bolder",
-          "size": "Medium",
-          "wrap": true
-        },
-        {
-          "type": "TextBlock",
-          "text": "Express path · Tier 3 · Zone 3 · No risk signals flagged",
-          "isSubtle": true,
-          "spacing": "None",
-          "wrap": true
-        }
-      ]
+      "type": "TextBlock",
+      "text": "Agent intake sponsor approval",
+      "weight": "Bolder",
+      "size": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Please review this Express-path request and record your FINRA Rule 3110 supervisory decision.",
+      "wrap": true
     },
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Agent name", "value": "${fsi_agentname}" },
-        { "title": "Maker", "value": "${fsi_makerdisplayname} (${fsi_makerupn})" },
-        { "title": "Department", "value": "${fsi_makerdepartment}" },
-        { "title": "Country", "value": "${fsi_makercountry}" },
-        { "title": "Intended audience", "value": "${fsi_intendedaudienceLabel}" },
-        { "title": "Submitted", "value": "${fsi_createdon}" }
-      ]
-    },
-    {
-      "type": "TextBlock",
-      "text": "Business purpose",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "${fsi_businesspurpose}",
-      "wrap": true
-    },
-    {
-      "type": "Container",
-      "style": "warning",
-      "spacing": "Medium",
-      "items": [
         {
-          "type": "TextBlock",
-          "text": "FINRA Rule 3110 supervisory attestation",
-          "weight": "Bolder",
-          "wrap": true
+          "title": "Request ID",
+          "value": "${fsi_requestid}"
         },
         {
-          "type": "TextBlock",
-          "text": "By approving, you confirm that (1) you are the assigned business sponsor for this agent, (2) the stated business purpose is legitimate and necessary, (3) you accept supervisory responsibility for the agent's operation under FINRA Rule 3110, and (4) you will be notified if the agent's risk profile materially changes. This approval is recorded as an immutable supervisory record retained for 7 years (FINRA 4511, SEC 17a-4, CFTC 1.31).",
-          "wrap": true,
-          "size": "Small"
+          "title": "Agent",
+          "value": "${fsi_agentdisplayname}"
+        },
+        {
+          "title": "Maker",
+          "value": "${fsi_makerdisplayname} (${fsi_makerupn})"
+        },
+        {
+          "title": "Audience",
+          "value": "${fsi_intendedaudience}"
+        },
+        {
+          "title": "Submitted",
+          "value": "${fsi_submittedon}"
+        },
+        {
+          "title": "Tier / Zone",
+          "value": "Tier ${fsi_risktier} / Zone ${fsi_zone}"
         }
       ]
     },
     {
+      "type": "TextBlock",
+      "text": "Business justification",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${fsi_businessjustification}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Sponsor attestation",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "By approving, you confirm that you are the assigned business sponsor; the stated purpose is legitimate and necessary; you accept supervisory responsibility for the agent under FINRA Rule 3110; and you will be notified if the risk profile materially changes. The decision is retained as a supervisory record for 7 years under FINRA 4511, SEC 17a-4, and CFTC 1.31.",
+      "wrap": true
+    },
+    {
       "type": "Input.Text",
       "id": "fsi_sponsornotes",
-      "label": "Optional notes (recorded with your decision)",
+      "label": "Decision notes (optional)",
       "isMultiline": true,
-      "maxLength": 1000
+      "maxLength": 1000,
+      "placeholder": "Add conditions, concerns, or rationale."
     }
   ],
   "actions": [
     {
-      "type": "Action.Http",
+      "type": "Action.Submit",
       "title": "Approve",
       "style": "positive",
-      "method": "POST",
-      "url": "${flowEndpointApprove}",
-      "body": "{\"requestId\":\"${fsi_intakerequestid}\",\"decision\":\"Approved\",\"notes\":\"{{fsi_sponsornotes.value}}\",\"sponsorUpn\":\"${sponsorUpn}\"}",
-      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+      "associatedInputs": "auto",
+      "data": {
+        "action": "sponsorDecision",
+        "decision": "Approved",
+        "requestId": "${fsi_requestid}"
+      }
     },
     {
-      "type": "Action.Http",
-      "title": "Reject",
+      "type": "Action.Submit",
+      "title": "Deny",
       "style": "destructive",
-      "method": "POST",
-      "url": "${flowEndpointReject}",
-      "body": "{\"requestId\":\"${fsi_intakerequestid}\",\"decision\":\"Rejected\",\"notes\":\"{{fsi_sponsornotes.value}}\",\"sponsorUpn\":\"${sponsorUpn}\"}",
-      "headers": [{ "name": "Content-Type", "value": "application/json" }]
-    },
-    {
-      "type": "Action.OpenUrl",
-      "title": "View full request",
-      "url": "${portalRequestUrl}"
+      "associatedInputs": "auto",
+      "data": {
+        "action": "sponsorDecision",
+        "decision": "Denied",
+        "requestId": "${fsi_requestid}"
+      }
     }
   ]
 }

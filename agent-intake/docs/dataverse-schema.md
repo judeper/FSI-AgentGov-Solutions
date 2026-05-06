@@ -32,14 +32,34 @@ Dataverse uses two names for every column:
 | `fsi_makerupn` | `fsi_MakerUpn` | String(200) | Yes | Maker user principal name |
 | `fsi_makerdepartment` | `fsi_MakerDepartment` | String(200) | No | Pre-filled from Microsoft Graph /me |
 | `fsi_makercountry` | `fsi_MakerCountry` | String(100) | No | Pre-filled from Microsoft Graph /me (usageLocation) |
+| `fsi_makerdisplayname` | `fsi_MakerDisplayName` | String(200) | No | Pre-filled from Microsoft Graph /me displayName |
+| `fsi_makerjobtitle` | `fsi_MakerJobTitle` | String(200) | No | Pre-filled from Microsoft Graph /me jobTitle |
 | `fsi_sponsorupn` | `fsi_SponsorUpn` | String(200) | Yes | Sponsor user principal name (pre-filled from /me/manager when available) |
+| `fsi_intendedaudience` | `fsi_IntendedAudience` | String(100) | Yes | Maker-selected audience: Just me, My team, My department, Anyone in the firm, External users |
+| `fsi_t1initiatesfinancialtxn` | `fsi_T1InitiatesFinancialTxn` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_t2customerfacing` | `fsi_T2CustomerFacing` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_t3autonomousunmonitored` | `fsi_T3AutonomousUnmonitored` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_t4handlesnpi` | `fsi_T4HandlesNpi` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_t5handlesmnpi` | `fsi_T5HandlesMnpi` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_t6crossborderdata` | `fsi_T6CrossborderData` | String(20) | Yes | Trigger answer: Yes, No, or Not sure |
+| `fsi_makerattestation` | `fsi_MakerAttestation` | Boolean | Yes | Maker acknowledged the acceptable-use and accuracy attestation before submission |
 | `fsi_pathused` | `fsi_PathUsed` | Choice (fsi_intake_pathused) | Yes | Express / Standard / Full — set by routing rules |
 | `fsi_risktier` | `fsi_RiskTier` | Choice (fsi_intake_risktier) | Yes | Tier 1 / 2 / 3 per SR 11-7 mapping; computed from trigger Qs |
 | `fsi_zone` | `fsi_Zone` | Choice (fsi_acv_zone) | Yes | Zone classification — Express MVP locks to Zone 3 |
 | `fsi_dataclassification` | `fsi_DataClassification` | Choice (fsi_intake_dataclassification) | Yes | Highest sensitivity of declared data sources (maker-declared in Express MVP) |
 | `fsi_status` | `fsi_Status` | Choice (fsi_intake_status) | Yes | Lifecycle status of the intake request |
 | `fsi_targetenvironmentid` | `fsi_TargetEnvironmentId` | String(100) | No | Power Platform environment recommended/selected for the agent |
-| `fsi_entraagentid` | `fsi_EntraAgentId` | String(100) | No | Microsoft Entra Agent ID minted at handoff (GA May 1, 2026) |
+| `fsi_targetenvironmentname` | `fsi_TargetEnvironmentName` | String(200) | No | Display name of the recommended/selected environment |
+| `fsi_environmentmanaged` | `fsi_EnvironmentManaged` | Boolean | Yes | True when PPAC reports a Managed Environment protection level |
+| `fsi_dlppolicyoutcome` | `fsi_DlpPolicyOutcome` | String(100) | No | Result from the Power Platform data policy simulation |
+| `fsi_decisionpath` | `fsi_DecisionPath` | String(100) | No | Express, DeferredOutOfScope, or DefaultDeny computed by routing rules |
+| `fsi_triggerhitcount` | `fsi_TriggerHitCount` | Integer | No | Count of trigger answers equal to Yes or Not sure |
+| `fsi_dataresidencycountry` | `fsi_DataResidencyCountry` | String(100) | No | Maker-declared or detected residency for data sources |
+| `fsi_retentionyears` | `fsi_RetentionYears` | Integer | No | Effective retention period in years |
+| `fsi_immutablestorage` | `fsi_ImmutableStorage` | Boolean | Yes | True when the decision pack is stamped with the WORM retention label |
+| `fsi_privacyoverride` | `fsi_PrivacyOverride` | Boolean | Yes | Set only by Privacy to override the cross-border default-deny rule |
+| `fsi_declareddatasourcesjson` | `fsi_DeclaredDataSourcesJson` | Memo(65536) | No | JSON snapshot of maker-declared data sources/connectors for drift comparison |
+| `fsi_entraagentid` | `fsi_EntraAgentId` | String(100) | No | Microsoft Entra Agent ID service principal ID minted at handoff |
 | `fsi_registryrecordid` | `fsi_RegistryRecordId` | String(100) | No | ID of the corresponding agent-registry-automation record after handoff |
 | `fsi_submittedon` | `fsi_SubmittedOn` | DateTime | No | Timestamp the request was submitted (set on transition Draft to Submitted) |
 | `fsi_decidedon` | `fsi_DecidedOn` | DateTime | No | Timestamp of final decision |
@@ -74,7 +94,7 @@ Dataverse uses two names for every column:
 |--------------|-------------|------|----------|-------------|
 | `fsi_requestid` | `fsi_RequestId` | String(100) | Yes | FK to fsi_IntakeRequest.fsi_RequestId |
 | `fsi_triggercode` | `fsi_TriggerCode` | String(50) | Yes | T1..T7 trigger question identifier |
-| `fsi_triggeranswer` | `fsi_TriggerAnswer` | Boolean | Yes | Maker's Yes/No answer |
+| `fsi_triggeranswer` | `fsi_TriggerAnswer` | String(20) | Yes | Maker's answer: Yes, No, or Not sure |
 | `fsi_derivedsignal` | `fsi_DerivedSignal` | String(200) | No | Any computed signal raised by the answer (e.g., 'CustomerFacing', 'MNPI') |
 | `fsi_capturedon` | `fsi_CapturedOn` | DateTime | Yes | Timestamp the signal was captured at intake |
 
@@ -224,6 +244,8 @@ All option sets are global (cross-table) so the same numeric value can be used i
 | Withdrawn | 100000006 |
 | Escalated | 100000007 |
 | AutoApproved | 100000008 |
+| DeferredOutOfScope | 100000009 |
+| SponsorTimeout | 100000010 |
 
 ### `fsi_intake_risktier`
 

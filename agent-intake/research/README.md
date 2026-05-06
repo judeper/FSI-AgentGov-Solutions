@@ -10,12 +10,12 @@ The proposed `agent-intake` solution would help Financial Services organizations
 |---|---|---|
 | 01a | `01-phase-a-report-gpt.md` | GPT-5.4 research report on prior art (Microsoft CoE Kit, Copilot Studio Kit, vendor offerings, ServiceNow / Salesforce competitive patterns) |
 | 01b | `01-phase-a-report-claude.md` | Claude Sonnet 4.6 Thinking research report on the same scope |
-| 01c | `01-phase-a-fit-assessment.md` | User-led synthesis of the two reports + counter-research (OCC 2026-13 gen-AI exclusion, Entra Agent ID GA May 1 2026) + 7 locked product-owner decisions |
+| 01c | `01-phase-a-fit-assessment.md` | User-led synthesis of the two reports + counter-research (OCC 2026-13 gen-AI exclusion, Entra Agent ID feature availability should be verified in the target tenant/cloud) + 7 locked product-owner decisions |
 | 02a | `02-question-catalog-research-prompt.md` | Research prompt drafted to elicit the question catalog needed to drive 12 admin decisions at intake |
 | 02b | `02-question-catalog-report-claude.md` | Claude's 137-question catalog response across 12 categories with auto-detect playbook, disqualifier rules, anti-patterns, and bibliography |
 | 02c | `02-question-catalog-evaluation.md` | Standalone evaluation of the catalog: A-J scorecard, 5 quality fixes, 8 missing questions, 3 API endpoints to verify, counter-research items |
 | 03 | `03-intake-form-design-v1.md` | **Primary deliverable.** Risk-tiered progressive form architecture (Express 10 Q / Standard 20 Q / Full 35 Q) with auto-classification rules, policy lookup tables, adoption metrics, and 10 open stakeholder questions |
-| 04a | `04-api-verification-spike.md` | API verification spike: PPAC env + DLP endpoints verified; Graph retention labels need `RecordsManagement.Read.All`; Purview catalog deferred to pilot |
+| 04a | `04-api-verification-spike.md` | API verification spike: PPAC env + DLP endpoints verified; Graph retention label reads need delegated `RecordsManagement.Read.All`; Purview catalog deferred to pilot |
 | 04b | `04-open-questions-resolved.md` | PO defaults for OQ-A through OQ-J + 7 stakeholder questions, all configurable via `../templates/policy-lookup-tables.yaml` |
 
 ## Locked product-owner decisions (carry into Phase B)
@@ -27,7 +27,7 @@ The proposed `agent-intake` solution would help Financial Services organizations
 5. **Records retention:** 7 years (covers SEC 17a-4 / FINRA 4511 / CFTC 1.31)
 6. **All five agent types in scope:** Copilot Studio classic, Agent Builder, declarative, custom-engine, Azure AI Foundry
 7. **Catalog placement:** v0.1.0-preview when scaffolded
-8. **Auto-mint Entra Agent ID at handoff** (GA May 1, 2026)
+8. **Auto-mint Entra Agent ID at handoff** (feature availability should be verified in the target tenant/cloud)
 
 ## Phase B status: COMPLETE — held as draft PR
 

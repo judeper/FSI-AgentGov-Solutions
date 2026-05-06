@@ -1,128 +1,75 @@
 # Agent Intake
 
-> **Status:** Preview (v0.1.0-preview) — Express path only. Standard and Full paths in roadmap (v0.2 and v0.3).
+> **Status:** Preview (v0.2.0-preview) — Express path only. Standard and Full paths remain on the roadmap.
 
 A pre-build user intake workflow for AI agent requests. Captures business case, classifies risk, routes for sponsor approval, and hands off to `agent-registry-automation` once approved.
 
 ## Why this solution exists
 
-When a user wants a new Copilot Studio agent, Agent Builder agent, declarative agent, custom-engine agent, or Azure AI Foundry agent, somebody has to make decisions:
+When a user wants a new Copilot Studio agent, Agent Builder agent, declarative agent, custom-engine agent, or Azure AI Foundry agent, somebody has to decide:
 
-- Is this agent low-risk enough to auto-approve, or does it need security/compliance/MRM review?
-- What zone, environment, retention class, and Entra Agent ID does it get?
+- Is this agent low-risk enough for Express approval, or does it need security/compliance/MRM review?
+- What zone, environment, retention class, and Microsoft Entra Agent ID does it get?
 - Is there a sponsor accountable for it (FINRA Rule 3110)?
 - What are the supervisory records (FINRA 4511, SEC 17a-4) of the decision?
 
-Without a structured intake, those decisions happen in chat threads, in tickets that never close, or not at all — and agents ship without records of who approved what. This solution closes that loop with a workflow proportional to risk: low-risk requests take three minutes and one sponsor click; high-risk requests get full review.
+Without a structured intake, those decisions can happen in chat threads, in tickets that never close, or not at all. This solution closes that loop with a workflow proportional to risk: low-risk personal-agent requests take minutes and one sponsor click; higher-risk requests are captured and routed to follow-up review.
 
 ## Status and external next steps
 
-This solution is **complete and self-deployable** at v0.1.0-preview. It is held as a **draft PR** ([#42](https://github.com/judeper/FSI-AgentGov-Solutions/pull/42)) pending external gates that are outside this repo's control.
+This solution is **self-deployable preview** content at v0.2.0-preview. It is suitable for pilot validation, not broad production rollout without customer governance sign-off.
 
-**What is done in this branch:**
+**What is shipped:**
 
 | Layer | Status |
 |---|---|
 | Manifest, README, CHANGELOG, ADR | ✅ Shipped |
 | 9-table Dataverse schema + auto-generated docs | ✅ Shipped |
-| Express-form spec, sponsor card, flow build instructions | ✅ Shipped |
-| Classification engine + auto-detect scripts (3/3 self-test PASS) | ✅ Shipped |
-| Handoff scripts (Entra Agent ID, Purview retention) | ✅ Shipped |
-| Smoke test, pilot deployment runbook (6-stage + rollback) | ✅ Shipped |
-| Adoption docs: maker quick-start, sponsor cheat-sheet, onboarding checklist, decisions ADR | ✅ Shipped |
-| Catalog registration + mkdocs nav + solutions.json (36 entries) | ✅ Shipped |
-
-**External gates before merge to `main`:**
-
-1. **Pilot-firm walkthrough** of the 10 PO-locked decisions captured in [`docs/decisions.md`](docs/decisions.md) — confirm or override the defaults
-2. **Governance review** of PR #42 by AI Governance Committee + InfoSec + Compliance + Legal + IT-architecture
-3. **Customer admin grants** of the 3 Microsoft Graph application permissions documented in `docs/onboarding-checklist.md` Stage 0
-4. **Purview retention label** (`FSI-AgentIntake-7yr`) created manually in the Purview portal (Graph does not yet support label creation)
-5. **Tag and release** `v1.5.0-preview` after PR merge — supports SBOM + provenance attestation per the repo's release workflow
+| Power Pages form spec, sponsor card, flow build instructions | ✅ Shipped |
+| Classification engine + auto-detect scripts | ✅ Shipped |
+| Handoff scripts (Microsoft Entra Agent ID, Purview retention) | ✅ Shipped |
+| Smoke test, pilot deployment runbook, onboarding docs | ✅ Shipped |
+| Catalog registration + generated site artifacts | ✅ Shipped |
 
 **External gates before scaling beyond pilot:**
 
-1. 30-day InfoSec sample-audit shows no undetected high-risk requests passed through Express
-2. Sponsor SLA adherence (≥90% of cards clicked within 3 business days)
-3. AI Governance Committee approves general availability for the next maker cohort
-4. v0.2 (Standard path) shipped to handle the requests this preview defers
+1. Pilot-firm walkthrough of the PO-locked decisions in [`docs/decisions.md`](docs/decisions.md).
+2. AI Governance Committee + InfoSec + Compliance + Legal + IT-architecture review.
+3. Customer admin consent for Microsoft Graph permissions documented in [`docs/onboarding-checklist.md`](docs/onboarding-checklist.md).
+4. Purview retention label (`FSI-AgentIntake-7yr`) created in the Purview portal or via Security & Compliance PowerShell; Graph beta create is preview/delegated-only guidance.
+5. 30-day InfoSec sample-audit shows no undetected high-risk requests passed through Express.
+6. v0.3 Standard path shipped for team and Tier-2 requests this preview defers.
 
-## What v0.1.0-preview ships (Express path only)
+## What v0.2.0-preview ships (Express path only)
 
-The MVP supports the **Express path** — for low-risk requests where the answers to all six trigger questions are "No" and the resulting tier/zone classification is the lowest. For these requests:
+The MVP supports the **Express path** — for low-risk personal-agent requests where the answers to all six trigger questions are "No" and the resulting classification is Tier 3 / Zone 3. For these requests:
 
-- Maker fills out **~10 questions** in a Power Pages portal (~3 minutes)
-- System auto-classifies tier, zone, retention, and recommended environment
-- Sponsor receives a **Teams adaptive card** with attestation language and approves with **one click**
-- On approval the request is **auto-approved** with an immutable decision-pack record retained 7 years
-- Handoff script provisions the **Microsoft Entra Agent ID** and creates the entry in `agent-registry-automation`
-- InfoSec gets a passive notification logged for **10% sample audit** (manual sampling in v0.1; dashboard in v0.2)
+- Maker fills out the Power Pages intake form.
+- System auto-classifies tier, zone, retention, and recommended environment.
+- Sponsor receives a Teams adaptive card with attestation language and approves with one click.
+- On approval the request is approved with an immutable decision-pack record retained 7 years.
+- Handoff script provisions the Microsoft Entra Agent ID service principal and creates the entry in `agent-registry-automation`.
+- InfoSec gets a passive notification logged for a 10% sample audit.
 
-Higher-risk requests (Standard and Full paths) are flagged for the maker as "this request needs the full intake; it is not yet supported by this version" — in v0.2/v0.3 those routes will activate. For v0.1 customers may continue to use their existing high-risk workflow.
+Higher-risk or wider-audience requests are captured with `DeferredOutOfScope` status and routed to the customer's existing full-review workflow until the Standard/Full paths ship.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    M[Maker] -->|10-Q Express form| PP[Power Pages Portal]
+    M[Maker] -->|Express form| PP[Power Pages Portal]
     PP --> CL[Auto-classification rules<br/>tier / zone / retention]
-    CL -->|T1-T6 all No<br/>+ Tier-3 + Zone-3| EX{Express path<br/>eligible?}
-    CL -->|Any Yes / Not sure| DEF[Saved as draft<br/>'Use full intake v0.2']
+    CL -->|T1-T6 all No<br/>+ Tier-3 + Zone-3| EX{Express eligible?}
+    CL -->|Any trigger hit<br/>or wider audience| DEF[DeferredOutOfScope<br/>Standard/Full follow-up]
     EX -->|Yes| FA[Power Automate flow]
     FA -->|Teams adaptive card<br/>FINRA 3110 attestation| SP[Sponsor]
-    SP -->|1-click approve| LOG[(Immutable<br/>fsi_intakedecisionlog<br/>FSI-AgentIntake-7yr label)]
-    SP -->|Deny / Timeout| ESC[Manager auto-escalation<br/>then maker notified]
+    SP -->|Approve| LOG[(fsi_intakedecisionlog<br/>FSI-AgentIntake-7yr label)]
+    SP -->|Deny / Timeout| ESC[Maker notified / escalation]
     LOG --> HO[Handoff script]
-    HO -->|Mints| EID[Entra Agent ID]
+    HO -->|Creates| EID[Microsoft Entra Agent ID]
     HO -->|Writes| REG[agent-registry-automation]
-    HO -->|Notifies| MN[Maker via Teams]
-    LOG -.->|Passive log<br/>10% sample| ISEC[InfoSec audit queue]
-    EID -.-> DRIFT[Drift integration:<br/>unrestricted-agent-sharing-detector<br/>scope-drift-monitor<br/>agent-access-monitor<br/>agent-365-lifecycle-governance]
-```
-
-ASCII fallback:
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                       Agent Intake (v0.1)                          │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│   Power Pages Portal (10 Q Express form)                           │
-│           │                                                        │
-│           ▼                                                        │
-│   Auto-classification rules ── computes tier / zone / retention    │
-│           │                                                        │
-│           ▼                                                        │
-│   ┌── Express path eligibility (T1-T6 all "No" + Tier-3 + Zone-3)? │
-│   │       Yes → continue                                           │
-│   │       No  → "Use full intake (v0.2)" message; saved as draft   │
-│   │                                                                │
-│   ▼                                                                │
-│   Power Automate flow → Teams adaptive card to Sponsor             │
-│           │                                                        │
-│           ▼                                                        │
-│   Sponsor 1-click approval (FINRA 3110 attestation)                │
-│           │                                                        │
-│           ├─── Approved ──► Immutable fsi_intakedecisionlog row    │
-│           │                 stamped with FSI-AgentIntake-7yr label │
-│           │                       │                                │
-│           │                       ▼                                │
-│           │                 Handoff script (Python)                │
-│           │                  • mints Entra Agent ID                │
-│           │                  • writes to agent-registry-automation │
-│           │                  • notifies maker via Teams            │
-│           │                                                        │
-│           └─── Denied / Timeout ──► Manager auto-escalation,       │
-│                                     then maker notified            │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-        Drift integration with 4 existing solutions:
-         • unrestricted-agent-sharing-detector (cross-checks at runtime)
-         • scope-drift-monitor (detects intake-vs-actual drift)
-         • agent-access-monitor (validates approved access set)
-         • agent-365-lifecycle-governance (links sponsor + Entra Agent ID)
+    LOG -.->|10% sample| ISEC[InfoSec audit queue]
+    EID -.-> DRIFT[Drift integration]
 ```
 
 ## Control mapping
@@ -132,30 +79,30 @@ ASCII fallback:
 | **1.2** | Agent Registry and Integrated Apps Management | Primary — Express MVP creates the registry entry on approval |
 | **1.7** | Comprehensive Audit Logging | Primary — immutable `fsi_intakedecisionlog` per intake decision |
 | **2.1** | Managed Environments | Secondary — auto-detects target environment per zone |
-| **2.13** | Documentation and Record Keeping | Primary — 9-entity Dataverse schema captures full decision pack |
+| **2.13** | Documentation and Record Keeping | Primary — 9-entity Dataverse schema captures decision-pack evidence |
 | **3.1** | Maker Onboarding and Training | Secondary — intake portal is the onboarding surface |
 
 ## Zone applicability
 
-| Zone | Express path coverage in v0.1 |
+| Zone | Express path coverage in v0.2 |
 |------|-------------------------------|
-| Personal (Zone 3) | ✅ Full coverage — auto-approve with sponsor sign-off |
-| Team (Zone 2) | ⚠️ v0.1 captures the request; routes to draft state with "Standard path coming v0.2" message |
-| Enterprise (Zone 1) | ⚠️ v0.1 captures the request; routes to draft state with "Full path coming v0.3" message |
+| Personal (Zone 3) | ✅ Full Express coverage with sponsor sign-off |
+| Team (Zone 2) | ⚠️ Captured; routed to Standard/follow-up review |
+| Enterprise (Zone 1) | ⚠️ Captured; routed to Full/follow-up review |
 
 ## Regulatory alignment
 
 | Regulation | How this solution helps |
 |------------|------------------------|
-| FINRA Rule 3110 (Supervision) | Required for documented supervisory approval; sponsor 1-click attestation captured with timestamp, IP, and rendered card content |
-| FINRA Rule 4511 (Books and Records) | Supports books-and-records expectation — every intake decision retained as `fsi_intakedecisionlog` |
-| SEC Rule 17a-3 / 17a-4 (Records) | Helps meet 7-year retention via Purview retention label `FSI-AgentIntake-7yr` (Records Admin one-time setup) |
-| OCC Bulletin 2026-13 (April 17, 2026) | Aids in firm-policy governance for AI agents (the bulletin explicitly excludes generative/agentic AI from formal MRM scope but reserves firm-level governance) |
-| Fed SR 11-7 | Supports model-risk tiering (Tier 3 in MVP; Tier 1/2 routed to v0.3 Full path) |
-| GLBA 501(b) | Helps meet safeguards expectation by capturing data-source declaration and routing connector inventory through DLP simulation at intake |
-| CFTC Rule 1.31 | Aids in 7-year records retention via the same FSI-AgentIntake-7yr Purview label |
+| FINRA Rule 3110 (Supervision) | Provides documented supervisory approval; sponsor attestation captured with timestamp and rendered card hash |
+| FINRA Rule 4511 (Books and Records) | Supports books-and-records expectations through retained intake decision logs |
+| SEC Rule 17a-3 / 17a-4 (Records) | Helps meet retention expectations via Purview retention label `FSI-AgentIntake-7yr` (Records Admin one-time setup) |
+| OCC Bulletin 2026-13 (April 17, 2026) | Aids firm-policy governance for AI agents |
+| Fed SR 11-7 | Supports internal model-risk tiering; Tier 1/2 route to fuller review |
+| GLBA 501(b) | Helps meet safeguards expectations by capturing data-source declarations and DLP simulation at intake |
+| CFTC Rule 1.31 | Aids in 7-year records retention via the same retention label |
 
-> Note on language: this solution **supports compliance with** the cited rules; it does not by itself ensure or guarantee compliance, which depends on customer-specific implementation, policy interpretation, and audit evidence.
+> Caveat: this solution **supports compliance with** the cited rules; customer-specific policy, legal interpretation, operational controls, and evidence retention determine compliance outcomes.
 
 ## Prerequisites
 
@@ -163,55 +110,55 @@ ASCII fallback:
 |------|-----|
 | Power Platform Admin | Deploy Dataverse schema; configure Power Pages portal; provision flows |
 | Microsoft 365 Records Management Admin | One-time creation of `FSI-AgentIntake-7yr` Purview retention label |
-| Microsoft Entra Global Admin or Application Administrator | Admin consent for `AgentIdentity.ReadWrite.All` (Entra Agent ID GA May 1, 2026) |
+| Microsoft Entra Agent ID Administrator / Cloud Application Administrator / Global Administrator | Consent `AgentIdentity.CreateAsManager` or `AgentIdentity.Create.All`, create/approve Agent Identity blueprint, and validate feature availability |
 | Microsoft 365 Admin | Teams adaptive card delivery channel; Graph `/me/manager` lookup |
 | Sponsor (line-of-business approver) | Per intake — receives the Teams card and attests |
 
 ## Deploy
 
-See `docs/pilot-deployment-runbook.md` for the full step-by-step. High level:
+See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for the full step-by-step. High level:
 
-1. **Schema** — `python scripts/create_fsi_intake_dataverse_schema.py --interactive --environment-url <url>` (or use a service principal)
-2. **Retention label** — `python scripts/setup_purview_retention_label.py` (one-time, by Records Admin)
-3. **Entra Agent ID admin consent** — `python scripts/setup_entra_agent_id.py --check-consent`
-4. **Power Pages portal** — follow `docs/portal-configuration.md` to build the 10-question Express form
-5. **Power Automate flows** — follow `docs/flow-configuration.md` to build the routing + sponsor card + handoff flows (manual build per repo policy — no exported flow JSON)
-6. **Validate** — `pwsh scripts/smoke_test.ps1`
+1. **Schema** — `python scripts/create_fsi_intake_dataverse_schema.py --auth-mode managed-identity --environment-url <url>` (or use `--interactive` for admin-workstation setup).
+2. **Retention label** — `python scripts/setup_purview_retention_label.py --output ./.agent-intake-smoke/label-spec.json` (one-time, by Records Admin).
+3. **Agent ID readiness** — `python scripts/setup_entra_agent_id.py --check-consent --token-source cli` and create/record an Agent Identity blueprint ID.
+4. **Power Pages portal** — follow [`docs/portal-configuration.md`](docs/portal-configuration.md).
+5. **Power Automate flows** — follow [`docs/flow-configuration.md`](docs/flow-configuration.md) (manual build per repo policy — no exported flow JSON).
+6. **Validate** — `pwsh scripts/smoke_test.ps1`.
 
 ## Documentation
 
 | Path | Purpose |
 |------|---------|
 | `docs/dataverse-schema.md` | Auto-generated schema reference (do not edit; regenerate via `--output-docs`) |
-| `docs/maker-quick-start.md` | 1-page maker-facing overview: the 10 questions and what happens after submit |
-| `docs/sponsor-cheat-sheet.md` | 1-page sponsor-facing guide: the Teams card, FINRA 3110 attestation, SLA |
-| `docs/onboarding-checklist.md` | Customer onboarding checklist (prereqs → setup → verify → go-live) |
-| `docs/decisions.md` | Architecture Decision Record consolidating PO-locked decisions |
+| `docs/maker-quick-start.md` | Maker-facing overview |
+| `docs/sponsor-cheat-sheet.md` | Sponsor-facing guide |
+| `docs/onboarding-checklist.md` | Customer onboarding checklist |
+| `docs/decisions.md` | Architecture Decision Record |
 | `docs/portal-configuration.md` | Power Pages Express form build instructions |
-| `docs/flow-configuration.md` | Power Automate flow build instructions (no exported JSON) |
-| `docs/auto-detect-playbook.md` | API endpoints used for auto-fill (Graph, PPAC) |
-| `docs/drift-detection-integration.md` | How this solution wires into the 4 existing drift detectors |
+| `docs/flow-configuration.md` | Power Automate flow build instructions |
+| `docs/auto-detect-playbook.md` | API endpoints used for auto-fill and checks |
+| `docs/drift-detection-integration.md` | How this solution wires into drift detectors |
 | `docs/pilot-deployment-runbook.md` | Full deployment runbook with rollback |
-| `templates/sponsor-approval-card.json` | Teams adaptive card template (FINRA 3110 attestation language) |
+| `templates/sponsor-approval-card.json` | Teams adaptive card template |
 | `templates/policy-lookup-tables.yaml` | Customer-overridable policy defaults |
-| `research/` | Phase A research, evaluation, design v1, API spike, resolved opens |
+| `research/` | Historical research artifacts; current implementation guidance is in `docs/` and `scripts/` |
 
 ## Related solutions
 
 | Solution | Relationship |
 |----------|--------------|
-| `agent-registry-automation` | **Downstream** — receives the approved intake handoff and creates the registry entry |
-| `agent-365-lifecycle-governance` | Downstream — owns the sponsor-revocation and 90-day inactivity flows |
+| `agent-registry-automation` | Downstream — receives the approved intake handoff and creates the registry entry |
+| `agent-365-lifecycle-governance` | Downstream — owns sponsor-revocation and inactivity flows |
 | `unrestricted-agent-sharing-detector` | Drift integration — confirms post-deployment sharing matches the intake declaration |
 | `scope-drift-monitor` | Drift integration — confirms post-deployment data scope matches |
-| `agent-access-monitor` | Drift integration — validates the approved access set |
+| `agent-access-monitor` | Drift integration — validates approved access |
 
 ## Roadmap
 
-- **v0.2** — Standard path (Tier-2/Zone-2 ~20 questions, InfoSec 10% sample dashboard, M365 declarative agent surface)
-- **v0.3** — Full path (Tier-1/Zone-1 ~35 questions, parallel reviewer dashboard, MRM/Compliance/Privacy/Legal routing)
-- **v0.4** — Sovereign cloud adaptation guide (GCC / GCC-High / DoD)
-- **v1.0** — GA after pilot-firm validation feedback incorporated
+- **v0.3** — Standard path (Tier-2/Zone-2 questions, InfoSec sample dashboard, M365 declarative agent surface)
+- **v0.4** — Full path (Tier-1/Zone-1 questions, parallel reviewer dashboard, MRM/Compliance/Privacy/Legal routing)
+- **v0.5** — Sovereign cloud adaptation guide (GCC / GCC-High / DoD)
+- **v1.0** — Live after pilot-firm validation feedback incorporated
 
 ## Changelog
 

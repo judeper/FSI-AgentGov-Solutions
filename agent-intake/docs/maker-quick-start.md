@@ -1,6 +1,6 @@
 # Maker Quick Start — Agent Intake (Express Path)
 
-**Audience:** A business user (the **maker**) who wants to build a low-risk personal or team-scope AI agent in Microsoft Agent Builder or Copilot Studio.
+**Audience:** A business user (the **maker**) who wants to build a low-risk personal AI agent in Microsoft Agent Builder or Copilot Studio.
 
 **Time required:** ~3 minutes to submit. Sponsor approval typically within 3 business days.
 
@@ -10,12 +10,12 @@
 
 Express is the fast lane for the lowest-risk agents — those that:
 
-- Are for **you or your team** (not customer-facing, not external)
+- Are for **you** (personal scope) (not customer-facing, not external)
 - Use **only data you already have access to** (no NPI, no MNPI, no restricted records)
 - Take **no autonomous financial actions** (no payments, no order entry, no irreversible external calls)
 - Are **not subject to enhanced regulatory routing** (e.g., not OCC/FINRA/SEC supervised activity flow)
 
-If any of those is not true, the form will tell you and save your draft for the Standard or Full path (available in v0.2 and v0.3).
+If any of those is not true, the form will tell you and save your draft for the Standard or Full path (available in v0.3 and v0.4).
 
 ---
 
@@ -70,7 +70,7 @@ If the sponsor does not respond in 3 business days, the request escalates to **t
 
 - Build your agent in **Agent Builder** or **Copilot Studio**
 - Use connectors that are allowed by your environment's DLP policy (the form already simulated this — anything that would have failed was flagged at submission)
-- Share your agent with the users you declared in BJ-002 (sharing beyond that count triggers a re-review via [`unrestricted-agent-sharing-detector`](../../unrestricted-agent-sharing-detector/))
+- Share your agent with the users you declared in the intake form (sharing beyond that count triggers a re-review via [`unrestricted-agent-sharing-detector`](../../unrestricted-agent-sharing-detector/))
 
 ## What stays on the record
 
@@ -80,5 +80,5 @@ Your sponsor's attestation, the trigger answers you gave, and the timestamp are 
 
 - Form not loading: [link to your portal admin contact]
 - Sponsor unsure how to approve: send them [`sponsor-cheat-sheet.md`](sponsor-cheat-sheet.md)
-- You need the full intake (Standard / Full path): [link to v0.2/v0.3 process when available]
+- You need the full intake (Standard / Full path): [link to v0.3/v0.4 process when available]
 - General governance questions: see the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/)

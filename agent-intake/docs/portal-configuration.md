@@ -1,76 +1,68 @@
-# Power Pages portal configuration — Express intake form
+# Power Pages Express form configuration
 
-> Build instructions for the maker-facing intake form. **No exported portal package is shipped** (per repo Solution Content Policy). Administrators build the page following these specs in Power Pages designer, then bind it to the `fsi_intakerequest` Dataverse table created by `scripts/create_fsi_intake_dataverse_schema.py`.
+Build this form in Power Pages design studio against the Dataverse table `fsi_intakerequest`. Use a **Form** component (or a **Multistep form** if your firm wants save/resume). Avoid exported portal packages; this repository provides manual build instructions only.
 
-## 1. Page metadata
+Use Dataverse **logical names** in table permissions, form metadata, and flow expressions. The logical name is the schema name lowercased with no extra underscores.
 
-| Setting | Value |
-|---|---|
-| Page name | `Request a new agent` |
-| URL slug | `/agent-intake` |
-| Web role | `Authenticated Users` (Microsoft Entra ID) |
-| Form mode | Insert (new request) |
-| Target table | `fsi_intakerequest` |
-| Layout | Single column, ~10 visible fields |
+## Table permissions
 
-## 2. M365 profile pre-fill (on page load)
-
-Use Power Pages Liquid + Microsoft Graph (via Power Automate "When a record is created" pre-handler) to pre-fill these fields from `me` and `me/manager`:
-
-| Field | Source | Editable? |
+| Table | Permission | Web role |
 |---|---|---|
-| `fsi_makerupn` | `Graph /me.userPrincipalName` | No (read-only) |
-| `fsi_makerdisplayname` | `Graph /me.displayName` | No |
-| `fsi_makerdepartment` | `Graph /me.department` | Yes (for cost-center fix-ups) |
-| `fsi_makercountry` | `Graph /me.usageLocation` | Yes (drives data-residency rule OQ-D) |
-| `fsi_sponsorupn` | `Graph /me/manager.userPrincipalName` (fallback to manual entry on 404) | Yes |
+| `fsi_intakerequest` | Create, Read own, Update own while Draft | Authenticated Users |
+| `fsi_intakedatasource` | Create, Read own, Update own while Draft | Authenticated Users |
+| `fsi_intakerisksignal` | Read own | Authenticated Users |
 
-If `Graph /me/manager` returns 404 (resolved per `research/04-api-verification-spike.md`), surface an explicit "Who is your sponsor?" people-picker and require entry before submit.
+Administrators/reviewers should use model-driven app security roles rather than broad portal write access.
 
-## 3. The 10 maker-facing questions (Express path)
+## Express intake fields
 
-Field order, label copy, input type, validation, and which Claude catalog ID each question realises.
+| Step | Dataverse logical name | Prompt | Control | Requirement |
+|---|---|---|---|---|
+| 1 | `fsi_agentdisplayname` | What should the agent be called? | Text (5–200 chars) | Required |
+| 2 | `fsi_businessoutcome` | What business outcome should this support? | Choice or text per customer policy | Required |
+| 3 | `fsi_businessjustification` | In one or two sentences, what will it do? | Multiline text (50–500 chars) | Required |
+| 4 | `fsi_agenttype` | What type of agent will you build? | Choice `fsi_intake_agenttype` | Required |
+| 5 | `fsi_intendedaudience` | Who will use it? | Choice: Just me / My team / My department / Anyone in the firm / External users | Required |
+| 6 | `fsi_t1initiatesfinancialtxn` | Will it initiate financial transactions or move money? | Yes / No / Not sure | Required |
+| 7 | `fsi_t2customerfacing` | Will it interact directly with customers or external parties? | Yes / No / Not sure | Required |
+| 8 | `fsi_t3autonomousunmonitored` | Can it act without a human reviewing each action? | Yes / No / Not sure | Required |
+| 9 | `fsi_t4handlesnpi` | Will it process customer nonpublic personal information (NPI)? | Yes / No / Not sure | Required |
+| 10 | `fsi_t5handlesmnpi` | Will it process material nonpublic information (MNPI) or information-barrier data? | Yes / No / Not sure | Required |
+| 11 | `fsi_t6crossborderdata` | Will data cross country or regional residency boundaries? | Yes / No / Not sure | Required |
+| 12 | `fsi_dataresidencycountry` | Where is the data expected to reside? | Country/region text or choice | Required when T6 is Yes/Not sure |
+| 13 | `fsi_makerattestation` | I confirm this request follows firm acceptable-use policy and is accurate to the best of my knowledge. | Checkbox | Required |
 
-| # | Field | Maker-facing label | Input type | Validation | Source Q |
-|---|---|---|---|---|---|
-| 1 | `fsi_agentname` | What will you call this agent? | Text (1–80 chars) | Required, unique within department | BJ-001 |
-| 2 | `fsi_businesspurpose` | In one or two sentences, what will it do? | Multiline text (50–500 chars) | Required | BJ-002, BJ-003 |
-| 3 | `fsi_intendedaudience` | Who will use it? | Choice: Just me / My team / My department / Anyone in the firm / External users | Required | ZN-001 |
-| 4 | `fsi_t1_initiates_financial_txn` | Will it initiate financial transactions or move money? | Yes / No / Not sure | Required; "Yes" or "Not sure" → Standard or Full path | RT-001 |
-| 5 | `fsi_t2_customer_facing` | Will customers (external) interact with it? | Yes / No | Required; "Yes" → Standard or Full | RT-004 |
-| 6 | `fsi_t3_autonomous_unmonitored` | Will it act on its own without a human reviewing each action? | Yes / No / Not sure | Required; "Yes" or "Not sure" → Full path | RT-006 |
-| 7 | `fsi_t4_handles_npi` | Will it read or write personally-identifiable customer info (NPI/PII)? | Yes / No / Not sure | Required; "Yes" → Standard | CT-001 |
-| 8 | `fsi_t5_handles_mnpi` | Will it touch material non-public information (MNPI) or research embargo data? | Yes / No / Not sure | Required; "Yes" → Full | CT-002 |
-| 9 | `fsi_t6_crossborder_data` | Will the data leave your country? | Yes / No / Not sure | Required; "Yes" + maker country mismatch → Privacy review (default-deny per OQ-D) | CT-003 |
-| 10 | `fsi_makerattestation` | I confirm the answers above are accurate to the best of my knowledge. | Checkbox | Required | OH-001 |
+> `fsi_businessoutcome` is the canonical schema column. If you prefer a separate customer-specific choice for expected outcome, add it as a managed customization and include it in `fsi_decisionpackjson`.
 
-Progressive disclosure: Q4–Q9 render in a single grid with help-text bubbles; on any "Yes" or "Not sure" the form surfaces a banner ("Based on your answers, this request will go through additional review — about 7-20 minutes more") rather than blocking.
+## Auto-filled fields
 
-## 4. Routing on submit
+Populate these before submission using Graph `/me` and `/me/manager`, or a pre-submit Power Automate cloud flow:
 
-Server-side Power Automate `Router` flow (see `flow-configuration.md`) reads the 6 trigger answers and computes:
-
-| All 6 trigger answers = "No"? | Path |
+| Dataverse logical name | Source |
 |---|---|
-| Yes | **Express** → fsi_intakeapproval auto-created with `fsi_status=PendingSponsor`; Teams card to sponsor |
-| Any "Yes" or "Not sure" | **Standard** or **Full** (deferred to v0.2.0; for v0.1.0-preview, surface a "This request needs the full review process — please contact your governance lead" banner and create the record with `fsi_status=DeferredOutOfScope`) |
+| `fsi_makerupn` | `/me.userPrincipalName` |
+| `fsi_makerdisplayname` | `/me.displayName` |
+| `fsi_makerdepartment` | `/me.department` |
+| `fsi_makerjobtitle` | `/me.jobTitle` |
+| `fsi_makercountry` | `/me.usageLocation` or country |
+| `fsi_sponsorupn` | `/me/manager.userPrincipalName`; allow maker override if no manager is returned |
+| `fsi_requestid` | New GUID generated on form load or in Flow 1 |
+| `fsi_status` | `Draft` until submit; `Submitted` when maker clicks Submit |
+| `fsi_policyversionapplied` | `0.2.0-preview` or customer policy version |
 
-## 5. Status surface
+## Routing banner
 
-Add a second Power Pages page `/agent-intake/status` that lists the maker's submitted requests (filtered by `fsi_makerupn eq @user.upn`) showing `fsi_status`, `fsi_decisionpath`, and the latest `fsi_intakedecisionlog` entry.
+After Flow 1 runs, surface a read-only status page to the maker:
 
-## 6. Accessibility & mobile
+| Condition | Message |
+|---|---|
+| `fsi_decisionpath = Express` | Request submitted. Your sponsor will receive a Teams approval card. |
+| `fsi_decisionpath = DeferredOutOfScope` | This request needs the Standard or Full intake path. It has been captured, and your governance lead will follow up. |
+| `fsi_decisionpath = DefaultDeny` | This request cannot proceed through Express because it conflicts with the configured data-residency policy. |
 
-- WCAG AA contrast on all custom CSS
-- Field labels associated via `<label for>` (Power Pages default)
-- Mobile-friendly: Power Pages Bootstrap grid; tested at 375px viewport
-- Save-and-resume: enable Power Pages "Save for later" on the entity form
+## Power Pages notes
 
-## 7. Out of scope for v0.1.0-preview
-
-Not yet built (deferred to v0.2.0+):
-- Conversational intake via M365 Copilot declarative agent (planned UX channel #2)
-- Standard / Full path detail pages
-- Reviewer queue UI for InfoSec / Privacy / Compliance / MRM
-- Localization
-- Save-and-resume across browser sessions (only within-session for v0.1.0-preview)
+- Configure table permissions narrowly; do not grant makers organization-wide read access to intake tables.
+- For save/resume, use a Multistep form and keep records in `Draft` until the final submit step.
+- If your site uses custom JavaScript to call Graph, use delegated user context and document consent in customer change control.
+- Keep all approval and decision logic in Power Automate/Dataverse; the portal should only collect maker inputs and show status.
