@@ -225,6 +225,18 @@ nav:
       - Credential Oversharing Detector: solutions/credential-oversharing-detector/index.md
     - Lifecycle & Operations:
       - Agent 365 Lifecycle Governance: solutions/agent-365-lifecycle-governance/index.md
+      - Agent Intake:
+        - solutions/agent-intake/index.md
+        - Maker Quick Start: solutions/agent-intake/maker-quick-start.md
+        - Sponsor Cheat Sheet: solutions/agent-intake/sponsor-cheat-sheet.md
+        - Onboarding Checklist: solutions/agent-intake/onboarding-checklist.md
+        - Decisions (ADR): solutions/agent-intake/decisions.md
+        - Portal Configuration: solutions/agent-intake/portal-configuration.md
+        - Flow Configuration: solutions/agent-intake/flow-configuration.md
+        - Dataverse Schema: solutions/agent-intake/dataverse-schema.md
+        - Auto-detect Playbook: solutions/agent-intake/auto-detect-playbook.md
+        - Drift Detection Integration: solutions/agent-intake/drift-detection-integration.md
+        - Pilot Deployment Runbook: solutions/agent-intake/pilot-deployment-runbook.md
       - Agent Registry Automation:
         - solutions/agent-registry-automation/index.md
         - Prerequisites: solutions/agent-registry-automation/prerequisites.md

@@ -1,0 +1,101 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Agent intake — sponsor sign-off required",
+          "weight": "Bolder",
+          "size": "Medium",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Express path · Tier 3 · Zone 3 · No risk signals flagged",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Agent name", "value": "${fsi_agentname}" },
+        { "title": "Maker", "value": "${fsi_makerdisplayname} (${fsi_makerupn})" },
+        { "title": "Department", "value": "${fsi_makerdepartment}" },
+        { "title": "Country", "value": "${fsi_makercountry}" },
+        { "title": "Intended audience", "value": "${fsi_intendedaudienceLabel}" },
+        { "title": "Submitted", "value": "${fsi_createdon}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Business purpose",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${fsi_businesspurpose}",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "style": "warning",
+      "spacing": "Medium",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "FINRA Rule 3110 supervisory attestation",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "By approving, you confirm that (1) you are the assigned business sponsor for this agent, (2) the stated business purpose is legitimate and necessary, (3) you accept supervisory responsibility for the agent's operation under FINRA Rule 3110, and (4) you will be notified if the agent's risk profile materially changes. This approval is recorded as an immutable supervisory record retained for 7 years (FINRA 4511, SEC 17a-4, CFTC 1.31).",
+          "wrap": true,
+          "size": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "fsi_sponsornotes",
+      "label": "Optional notes (recorded with your decision)",
+      "isMultiline": true,
+      "maxLength": 1000
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Http",
+      "title": "Approve",
+      "style": "positive",
+      "method": "POST",
+      "url": "${flowEndpointApprove}",
+      "body": "{\"requestId\":\"${fsi_intakerequestid}\",\"decision\":\"Approved\",\"notes\":\"{{fsi_sponsornotes.value}}\",\"sponsorUpn\":\"${sponsorUpn}\"}",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "type": "Action.Http",
+      "title": "Reject",
+      "style": "destructive",
+      "method": "POST",
+      "url": "${flowEndpointReject}",
+      "body": "{\"requestId\":\"${fsi_intakerequestid}\",\"decision\":\"Rejected\",\"notes\":\"{{fsi_sponsornotes.value}}\",\"sponsorUpn\":\"${sponsorUpn}\"}",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "View full request",
+      "url": "${portalRequestUrl}"
+    }
+  ]
+}

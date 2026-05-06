@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.5.0-preview] - Unreleased — agent-intake MVP (Express path)
+
+### Added
+- **`agent-intake` v0.1.0-preview** — new solution (lifecycle-ops domain, controls 1.2/1.7/2.1/2.13/3.1) implementing the Express-path MVP for FSI maker intake.
+  - **Maker surface:** 10-question Power Pages form spec (`docs/portal-configuration.md`) + Teams adaptive card with FINRA 3110 sponsor attestation (`templates/sponsor-approval-card.json`).
+  - **Workflow:** 3-flow Power Automate build instructions (`docs/flow-configuration.md`) — router, sponsor card, handoff. No exported flow JSON shipped (per Solution Content Policy).
+  - **Dataverse schema:** 9 entities (`fsi_intakerequest`, `fsi_intakedatasource`, `fsi_intakerisksignal`, `fsi_intakereview`, `fsi_intakeapproval`, `fsi_intakedecisionlog`, `fsi_intakesponsorship`, `fsi_intakeauditevent`, `fsi_intakeretentionrecord`) + 7 global option sets. Decision log designed for FINRA 4511 / SEC 17a-4 / CFTC 1.31 7-year retention via Purview `FSI-AgentIntake-7yr` label.
+  - **Classification engine:** `scripts/seed_classification_rules.py` computes tier/zone/decision-path from the 6 trigger answers; ships with `--self-test` (3/3 pass).
+  - **Auto-detect (verified endpoints):** `autodetect_environments.py`, `autodetect_dlp_simulation.py`, `autodetect_purview.py`.
+  - **Handoff:** `setup_entra_agent_id.py` mints Entra Agent ID on approval (GA May 1, 2026); `setup_purview_retention_label.py` emits one-time label spec + manual setup steps.
+  - **Validation & ops:** `scripts/smoke_test.ps1` (7 read-only checks), `docs/pilot-deployment-runbook.md` (6-stage deploy + rollback), `docs/drift-detection-integration.md` (wires intake to four peer solutions).
+  - **Research record preserved** under `agent-intake/research/` (Phase A reports, question catalog evaluation, intake form design, API verification spike, PO-resolved opens).
+  - **Adoption polish** (added in same preview): `docs/maker-quick-start.md` (1-page maker guide), `docs/sponsor-cheat-sheet.md` (1-page sponsor guide with FINRA 3110 attestation walkthrough), `docs/onboarding-checklist.md` (Stage 0–8 customer admin checklist + rollback), `docs/decisions.md` (ADR consolidating 10 PO-locked decisions + OCC 2026-13 framing), Mermaid architecture diagram in `agent-intake/README.md`.
+  - **Status & external gates** clearly enumerated at the top of `agent-intake/README.md` so reviewers can see what is shipped vs. what external steps remain (pilot walkthrough, governance review, customer admin Graph consents, Purview label creation, release tag).
+- **Catalog updates:** README, AGENTS.md, CLAUDE.md, .github/copilot-instructions.md, mkdocs.yml nav (Lifecycle & Operations section), solutions.json lock file (now 36 entries, schemaVersion 1.4.2).
+
+### Status
+- Held as **draft PR** pending pilot-firm walkthrough. Out of scope for v0.1.0-preview: Standard / Full review paths, conversational intake via M365 Copilot declarative agent, reviewer queue Power App, automated environment provisioning. Targeted for v0.2.0+.
+
+---
+
 ## [Unreleased] - 2026-Q2 — Microsoft Learn technical refresh (35 solutions)
 
 Tracking summary: #119. All 35 catalog solutions reviewed against the latest Microsoft Learn documentation. agent-intake (still draft PR #42) is excluded.

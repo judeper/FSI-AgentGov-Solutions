@@ -1,0 +1,104 @@
+# Policy lookup tables for agent-intake v0.1.0-preview Express path
+#
+# IT administrators set these once during deployment. The classification
+# script (`scripts/seed_classification_rules.py`) and the router flow read
+# from this file (or its Dataverse counterpart `fsi_intakeretentionrecord`
+# + environment variables) to compute tier, zone, retention, and routing.
+#
+# Defaults below reflect product-owner decisions captured in
+# `research/04-open-questions-resolved.md`. Customers should review and
+# override per their firm's policy before pilot.
+
+schema_version: "0.1.0-preview"
+last_updated_utc: "2026-05-02T00:00:00Z"
+
+# OQ-D — cross-border data residency policy (default-deny if maker country
+# differs from data residency country; Privacy can override)
+data_residency:
+  default_action: "deny"        # deny | allow | review
+  privacy_override_enabled: true
+  privacy_team_upn: "privacy@contoso.com"
+  allowed_country_pairs: []     # e.g., [{maker: "US", data: "CA"}]
+
+# OQ-A — InfoSec passive sample rate for Express path
+infosec_sampling:
+  express_path_sample_rate: 0.10   # 10% of approved Express requests get InfoSec post-review
+  notification_channel: "Teams"    # Teams | Email
+  infosec_team_upn: "infosec-agent-review@contoso.com"
+
+# OQ-B — sponsor approval SLA (days). Beyond this, escalate to manager.
+sponsor_sla:
+  initial_response_days: 3
+  escalation_after_days: 7
+  escalate_to: "manager"           # manager | governance_lead | reject
+
+# OQ-C — retention class mapping (Tier -> Purview retention label)
+retention_labels:
+  tier_1: "FSI-AgentIntake-7yr"
+  tier_2: "FSI-AgentIntake-7yr"
+  tier_3: "FSI-AgentIntake-7yr"   # Uniform 7yr per locked decision #5
+  decision_log: "FSI-AgentIntake-7yr-WORM"   # Immutable WORM (SEC 17a-4)
+
+# OQ-E — Managed-Environment requirement by tier
+managed_environment:
+  tier_1: "required"
+  tier_2: "required"
+  tier_3: "recommended"            # Express path can use shared Default
+
+# OQ-F — DLP connector group mapping by tier
+dlp_connector_group:
+  tier_1: "Confidential"
+  tier_2: "Confidential"
+  tier_3: "General"
+
+# OQ-G — Default zone classification rules (Zone 1 = Enterprise/highest-risk)
+zone_routing:
+  zone_1:                          # Enterprise
+    sponsor_required: true
+    infosec_required: true
+    privacy_required: true
+    compliance_required: true
+    mrm_required_if_tier_1_or_2: true
+  zone_2:                          # Team
+    sponsor_required: true
+    infosec_required: "sample"     # 10% per infosec_sampling
+    privacy_required: false
+    compliance_required: false
+  zone_3:                          # Personal (Express path target)
+    sponsor_required: true
+    infosec_required: "sample"
+    privacy_required: false
+    compliance_required: false
+
+# OQ-H — Audience -> default zone (intake form Q3 maps to zone)
+audience_to_zone:
+  "Just me": 3
+  "My team": 3
+  "My department": 2
+  "Anyone in the firm": 1
+  "External users": 1
+
+# OQ-I — Modification-cutoff rules (post-approval changes)
+modification_cutoff:
+  trigger_changes_force_re_review: true   # Any T1-T6 change = full re-review
+  descriptive_changes_require_sponsor_reconfirm: true
+
+# OQ-J — Sponsor attestation language (FINRA 3110)
+sponsor_attestation:
+  card_text: |
+    By approving, you confirm that (1) you are the assigned business sponsor
+    for this agent, (2) the stated business purpose is legitimate and
+    necessary, (3) you accept supervisory responsibility for the agent's
+    operation under FINRA Rule 3110, and (4) you will be notified if the
+    agent's risk profile materially changes. This approval is recorded as an
+    immutable supervisory record retained for 7 years (FINRA 4511, SEC 17a-4,
+    CFTC 1.31).
+  retention_years: 7
+  immutable: true
+
+# Out-of-scope for v0.1.0-preview (placeholder for v0.2.0)
+deferred:
+  standard_path_questions: 20
+  full_path_questions: 35
+  parallel_reviewer_routing: true
+  conversational_intake_via_copilot_studio: true

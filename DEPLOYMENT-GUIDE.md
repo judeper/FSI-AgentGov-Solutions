@@ -88,6 +88,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.1.1 | team, enterprise |
+| [Agent Intake](./agent-intake/) | 3 | v0.1.0-preview | personal, team, enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.1 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
@@ -218,32 +219,19 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Session Security Configurator](./session-security-configurator/) | — | ✅ | ✅ | internal |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | — | ✅ | ✅ | confidential |
 
+### Tier 3 (Enterprise)
+
+| Solution | Personal | Team | Enterprise | Data class |
+|----------|----------|------|------------|------------|
+| [Agent Intake](./agent-intake/) | ✅ | ✅ | ✅ | confidential |
+
 <!-- END:ZONE_ROADMAP -->
 
-## Post-Release Operations
+## Related Documentation
 
-After publishing a new tagged release (`vX.Y.Z`), the published-artifact health probe automatically targets the new tag — no manual workflow edit is required.
-
-### Health probe ([`.github/workflows/health-check.yml`](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/.github/workflows/health-check.yml))
-
-- Runs every 30 minutes on cron and on demand via `gh workflow run health-check.yml`.
-- Probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release**, resolved dynamically via `gh api repos/${{ github.repository }}/releases/latest --jq .tag_name`.
-- Validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`).
-- Opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if any check fails.
-
-If the workflow logs `No published release found`, tag and publish at least one release for the repository — the probe requires at least one release to compare against.
-
-### Recommended post-release checklist
-
-1. Tag the release (`git tag -a vX.Y.Z -m "release notes" && git push origin vX.Y.Z`).
-2. Publish a GitHub Release pointing at the tag (the `release.yml` workflow attaches SBOMs + provenance attestations).
-3. Trigger the health probe manually to confirm the new artifacts are reachable: `gh workflow run health-check.yml`.
-4. Update the entry count in `health-check.yml` (currently `35`) only if the manifest count changes; this is the one value still hardcoded.
-
-
+- [Solutions Index](https://judeper.github.io/FSI-AgentGov/reference/solutions-index/) — Detailed descriptions and framework alignment
 - [Solutions Coverage Gaps](https://judeper.github.io/FSI-AgentGov/reference/solutions-coverage-gaps/) — Coverage analysis across the 78-control baseline
 - [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov) — Full framework documentation
 - [SECURITY.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/SECURITY.md) — Vulnerability disclosure and supported versions
 - [THREAT-MODEL.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/THREAT-MODEL.md) — Cross-solution threat model and trust boundaries
-- [RELEASING.md](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/RELEASING.md) — Maintainer release procedure, schema evolution policy, and Issue #37 unblock steps
 

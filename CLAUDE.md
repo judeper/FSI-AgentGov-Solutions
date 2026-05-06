@@ -35,45 +35,41 @@ git rev-parse --show-toplevel
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
-| [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.1 |
+| [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
+| [agent-intake](./agent-intake/) | Pre-build maker intake — Express-path MVP with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff | PowerShell/Python/Docs | v0.1.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
-| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.1 |
-| [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication, zone boundary violations, and maker/checker violations in Copilot Studio multi-agent orchestration | PowerShell/Python | v1.1.1 |
-| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for SharePoint libraries backing agent knowledge sources | PowerShell | v1.1.1 |
+| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
+| [ |
+| [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.1.0 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.2.0 |
-| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.1.0 |
-| [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v2.0.1 |
-| [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.4 |
-| [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.1.1 |
-| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.4 |
-| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v2.0.1 |
-| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.1.1 |
-| [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v2.0.1 |
-| [credential-oversharing-detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | PowerShell/Python | v2.0.1 |
-| [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v2.0.1 |
-| [cross-tenant-external-sharing-governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | PowerShell/Python | v1.0.3 |
-| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.3 |
+| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.0.0 |
+| [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v2.0.0 |
+| [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.3 |
+| [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.1.0 |
+| [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.3 |
+| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.2.2 |
+| [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.1.0 |
+| [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v2.0.0 |
+| [credential-oversharing-detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | PowerShell/Python | v2.0.0 |
+| [cross-solution-integration](./cross-solution-integration/) | Wires Tier 2 solutions into Compliance Dashboard with unified evidence export | Python/Docs | v2.0.0 |
+| [cross-tenant-external-sharing-governance](./cross-tenant-external-sharing-governance/) | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) | PowerShell/Python | v1.0.2 |
+| [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.2 |
 | [dr-testing-framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | PowerShell/Python | v2.0.0 |
-| [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.2.1 |
-| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.1.1 |
-| [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.1.0 |
-| [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.1.1 |
-| [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.2.0 |
-| [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.1.1 |
-| [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.1.1 |
-| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.5.1 |
-| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.2.1 |
+| [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.2.0 |
+| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.1.0 |
+| [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.0.1 |
+| [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.1.0 |
+| [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.1.0 |
+| [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.1.0 |
+| [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.1.0 |
+| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.3.0 |
+| [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.1.0 |
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.2 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.2.0 |
 | [rag-source-validator](./rag-source-validator/) | Integrity validation for RAG knowledge sources with change detection | Python/Docs | v1.2.0 |
-<<<<<<< HEAD
-| [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.2.1 |
-| [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.1.0 |
-=======
 | [scope-drift-monitor](./scope-drift-monitor/) | Detect agent data access beyond declared operational scope | PowerShell/Python | v1.2.0 |
-| [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker separation in agent pipelines | PowerShell/Python | v1.2.0 |
->>>>>>> e86abf1 (tech-review(segregation-detector): refresh Microsoft Learn guidance)
-| [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.1.1 |
+| [segregation-detector](./segregation-detector/) | Role conflict detection for Maker/Checker enforcement in agent pipelines | PowerShell/Python | v1.1.0 |
+| [session-security-configurator](./session-security-configurator/) | Session security validation per governance zone with drift detection | PowerShell/Python | v1.1.0 |
 | [unrestricted-agent-sharing-detector](./unrestricted-agent-sharing-detector/) | Continuous detection of overly permissive agent sharing with automated remediation | PowerShell/Python | v2.0.0 |
 
 ## Control Implementations
@@ -81,10 +77,11 @@ git rev-parse --show-toplevel
 | Solution | Primary Controls | Description |
 |----------|-----------------|-------------|
 | action-confirmation-auditor | 2.12, 1.10 | HITL confirmation node validation in Copilot Studio agent topics; FINRA 3110 supervision evidence |
+| agent-intake | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake with risk-tiered routing, sponsor attestation (FINRA 3110), immutable decision log (FINRA 4511 / SEC 17a-4) |
 | agent-365-lifecycle-governance | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Agent lifecycle governance with sponsor enforcement and access reviews |
 | agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
-| agent-knowledge-source-scanner | 4.3, 1.4, 1.5 | Item-level permission scanning for SharePoint libraries backing agent knowledge sources |
+| agent-knowledge-source-scanner | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source libraries |
 | agent-observability-foundation | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure |
 | agent-registry-automation | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance |
 | agent-sharing-access-restriction-detector | 1.18, 2.8 | Zone-based sharing policy enforcement |
@@ -106,13 +103,13 @@ git rev-parse --show-toplevel
 | hallucination-tracker | 3.10, 2.9, 2.12 | Hallucination pattern analysis and feedback aggregation |
 | hitl-workflow-governance | 2.12, 2.17, 1.10 | Zone-based HITL checkpoint governance for agent flows |
 | inactivity-timeout-enforcement | 2.22, 1.23, 3.7, 3.8 | Inactivity timeout validation with zone-based durations |
-| message-center-monitor | 2.3 | M365 Message Center platform change monitoring |
+| message-center-monitor | 2.3, 2.10 | M365 Message Center platform change monitoring |
 | mime-type-restrictions | 1.5, 1.13, 1.25, 3.3, 3.7 | MIME type configuration with server-side validation |
 | model-risk-management-automation | 2.6, 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 | OCC 2011-12 / SR 11-7 model risk management |
 | pipeline-governance-cleanup | 2.3, 2.1 | Personal pipeline cleanup and ALM governance |
 | rag-source-validator | 2.16, 1.7, 2.13 | RAG knowledge source integrity validation |
 | scope-drift-monitor | 1.14, 1.4, 1.5 | Agent data access scope drift detection |
-| segregation-detector | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker separation |
+| segregation-detector | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | session-security-configurator | 1.23, 1.11 | Session security validation with drift detection |
 | unrestricted-agent-sharing-detector | 1.1, 3.8 | Overly permissive agent sharing detection and remediation |
 
@@ -192,7 +189,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### Continuous health monitoring
 
-`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the **latest published GitHub release** (auto-derived via `gh api repos/.../releases/latest --jq .tag_name`; see Issue #39), validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. No manual `LATEST_TAG` bump is required after a release; see `DEPLOYMENT-GUIDE.md` "Post-Release Operations" for the full checklist.
+`.github/workflows/health-check.yml` runs every 30 minutes on a cron (and on demand via `gh workflow run health-check.yml`). It probes the published Pages URLs and the raw `solutions.json` at the latest tag, validates the lock file shape (35 entries, non-empty `controls[]`, present `schemaVersion`), and **opens or comments on a GitHub issue titled "Health check failure: published artifacts not healthy" if anything fails**. Update the `LATEST_TAG` env var in that workflow whenever a new release is tagged so the lock-file probe stays current.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.
 
