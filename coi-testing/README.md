@@ -1,3 +1,10 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5]
+applicable_drivers:
+  - ai_governance
+coe_function: govern
+---
 # Conflict of Interest Testing
 
 > **Status:** Scaffold (Preview) — scenario library and persistence pipeline are

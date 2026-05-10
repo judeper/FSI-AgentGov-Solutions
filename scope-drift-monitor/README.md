@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P2, P4]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: optimize
+---
 # Scope Drift Monitor
 
 > **Status:** Completed (v1.2.1)

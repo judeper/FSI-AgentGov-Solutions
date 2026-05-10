@@ -1,3 +1,12 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P2, P4]
+applicable_drivers:
+  - ai_governance
+  - ai_strategy
+  - technology_data
+coe_function: enable
+---
 # Agent Registry Automation
 
 > **Status:** Production Ready (v2.1.0)

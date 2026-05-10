@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P2, P3]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # MIME Type Restrictions for File Uploads
 
 > **Version:** v1.2.1

@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P5]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # Cross-Tenant and External Sharing Governance
 
 > **Version:** v1.0.3

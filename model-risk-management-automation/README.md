@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5, P6]
+applicable_drivers:
+  - ai_governance
+  - ai_strategy
+coe_function: govern
+---
 # Model Risk Management Automation
 
 > **Status:** Production Ready (v1.0.3)
