@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P2]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # RAG Source Validator
 
 > **Status:** Completed (v1.3.0)

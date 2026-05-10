@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5, P6]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: scale
+---
 # Cross-Solution Integration
 
 Integration layer that connects the 6 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.

@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P3, P4]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # Credential Oversharing Detector
 
 > **Version:** v2.0.1 | **Controls:** 1.14, 1.4, 1.18 | **Status:** Public Preview

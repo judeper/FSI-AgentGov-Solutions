@@ -1,3 +1,12 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5, P6]
+applicable_drivers:
+  - ai_governance
+  - ai_strategy
+  - technology_data
+coe_function: enable
+---
 # Agent 365 Lifecycle Governance
 
 > **Status:** v1.1.4 — GA (Microsoft Agent 365 generally available for Commercial segment as of May 1, 2026)

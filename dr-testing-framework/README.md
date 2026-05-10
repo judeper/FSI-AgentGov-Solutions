@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # DR Readiness Validation Framework (DR-Testing-Framework)
 
 > **Version:** 2.0.1 | **Controls:** 2.4, 2.1, 1.9

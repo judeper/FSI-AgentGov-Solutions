@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P4]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: optimize
+---
 # Agent Access Governance Monitor
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.

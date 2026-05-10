@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P6]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # Agent Communication Restriction Detector
 
 Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration.

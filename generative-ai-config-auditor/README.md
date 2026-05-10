@@ -1,3 +1,10 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P2, P4]
+applicable_drivers:
+  - ai_governance
+coe_function: govern
+---
 # Generative AI Config Auditor
 
 Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.

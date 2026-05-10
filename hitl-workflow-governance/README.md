@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5, P6]
+applicable_drivers:
+  - ai_governance
+  - organization_culture
+coe_function: govern
+---
 # HITL Workflow Governance
 
 > **Version:** v1.1.1

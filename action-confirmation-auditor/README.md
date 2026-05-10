@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5, P6]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # Action Confirmation Auditor
 
 > **Version:** v1.1.1

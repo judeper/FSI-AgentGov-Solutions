@@ -1,3 +1,11 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P1, P4, P5]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # Session Security Configurator
 
 > **Status:** v1.1.1 — Complete

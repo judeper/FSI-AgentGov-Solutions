@@ -1,3 +1,12 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5]
+applicable_drivers:
+  - ai_governance
+  - business_strategy
+  - organization_culture
+coe_function: govern
+---
 # FINRA Supervision Workflow
 
 > **Status:** Preview (v1.1.0)
