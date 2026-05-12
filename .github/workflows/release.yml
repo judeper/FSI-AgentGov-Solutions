@@ -56,7 +56,7 @@ jobs:
             --configuration Release \
             --no-restore \
             --nologo \
-            /p:TreatWarningsAsErrors=true
+            -p:TreatWarningsAsErrors=true
 
       - name: Stage and hash plugin artifacts
         id: layout
