@@ -132,6 +132,23 @@ Full requirements: [docs/prerequisites.md](./docs/prerequisites.md)
    .\scripts\Test-LifecycleCompliance.ps1 -DataverseEnvironmentUrl "https://org.crm.dynamics.com"
    ```
 
+## Environment Variables
+
+All configurable thresholds and settings are stored as Dataverse environment variables, deployed by `scripts/create_alg_environment_variables.py`. Key variables:
+
+| SchemaName | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `fsi_ALG_IsAgent365LifecycleEnabled` | String | `false` | Feature flag gating all Agent 365 API calls |
+| `fsi_ALG_InactivityThresholdZone1` | Decimal | 180 | Inactivity threshold (days) for Zone 1 agents |
+| `fsi_ALG_InactivityThresholdZone2` | Decimal | 90 | Inactivity threshold (days) for Zone 2 agents |
+| `fsi_ALG_InactivityThresholdZone3` | Decimal | 30 | Inactivity threshold (days) for Zone 3 agents |
+| `fsi_ALG_DeletionHoldDays` | Decimal | 30 | Grace period (days) before agent deletion executes after deactivation approval. Zone 3 agents typically override to 90. |
+| `fsi_ALG_AgentRegistryApiVersion` | String | `v1.0` | Graph API version pinning for Agent Registry (`agentInstances`) calls. Pin to a known-good version to avoid breaking changes during preview-to-GA transitions. |
+
+> **Tip:** To override `fsi_ALG_DeletionHoldDays` for Zone 3 agents, the deactivation flow reads this variable as the default and applies the zone-specific override (90 days for Zone 3) from the zone applicability table above. Adjust the variable value when your organization's retention policy differs from the default.
+
+> **Tip:** Pin `fsi_ALG_AgentRegistryApiVersion` to `beta` only during non-production validation of preview Agent Registry API features. In production, use `v1.0` or the latest GA version.
+
 ## Regulatory Alignment
 
 | Regulation | Requirement | How This Solution Helps |
