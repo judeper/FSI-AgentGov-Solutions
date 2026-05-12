@@ -2,6 +2,12 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [1.2.0] - 2026-05-12
+
+### Added
+
+- **Purview DLP and sensitivity label evidence** (`Get-PurviewDLPEvidence.ps1`): Queries Purview Compliance Manager for DLP policies covering generative AI scope (Microsoft 365 Copilot location), reads sensitivity labels applied to AI-related Dataverse tables and SharePoint knowledge sources, and generates a SHA-256 integrity-hashed audit evidence document with policy IDs, label IDs, and application timestamps. Reference: [DLP for Microsoft 365 Copilot](https://learn.microsoft.com/purview/dlp-microsoft365-copilot-location-learn-about).
+
 ## [1.1.1] - 2026-05-04
 
 ### Fixed

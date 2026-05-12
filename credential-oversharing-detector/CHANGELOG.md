@@ -2,6 +2,14 @@
 
 All notable changes to this solution are documented here.
 
+## [2.1.0] — 2026-05-12
+
+### Added
+
+- **Workload identity CA policy detection** (`Get-WorkloadIdentityCAPolicy.ps1`): Enumerates Conditional Access policies targeting workload identities (managed identities, service principals) and cross-references with agent service principals to identify those without location-based restrictions or risk-based blocking. Reference: [Conditional Access for workload identities](https://learn.microsoft.com/entra/identity/conditional-access/workload-identity).
+- **Certificate/MI auth detection** (`Test-AgentAuthMethod.ps1`): Inspects agent service principals to classify authentication methods as ManagedIdentity, Certificate, FederatedCredential, or ClientSecret. Flags client-secret usage as legacy/risky and recommends migration to managed identity. Records evidence to Dataverse for audit trail. Reference: [Power Platform authentication](https://learn.microsoft.com/power-platform/admin/programmability-authentication).
+- **Name-level OAuth scope baseline** (`Compare-OAuthScopeBaseline.ps1`): Compares actual OAuth scopes against approved baseline at the individual scope name level (e.g., `Mail.Read`, `Files.ReadWrite.All`) using the `fsi_approvedscopes` / `fsi_actualscopes` columns in `fsi_agentconnectorscopes`. Detects excess scopes, sensitive scopes requiring elevated approval, and scope drift from the documented baseline. Replaces the prior count-only heuristic.
+
 ## [2.0.1] — 2026-05-04
 
 ### Fixed

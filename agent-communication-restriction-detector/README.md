@@ -62,6 +62,8 @@ Each governance zone defines which agent-to-agent communication patterns are per
 | **Teams/Email Alerting** | Adaptive card alerts with severity classification and regulatory context |
 | **Evidence Export** | SHA-256 integrity-hashed JSON evidence for regulatory examinations |
 | **Approved Route Import** | CSV-based governance import for approved communication routes |
+| **Cross-Tenant Entra Correlation** | Correlates cross-tenant violations with Entra cross-tenant access policies and B2B direct connect settings |
+| **Child-Agent Payload Size Checks** | Validates child-agent input/output declarations against the documented 1 MB Copilot Studio limit |
 
 ## Solution Components
 
@@ -85,6 +87,8 @@ agent-communication-restriction-detector/
 │   ├── Test-EvidenceIntegrity.ps1
 │   ├── Start-CommRestrictionValidationRunbook.ps1
 │   ├── Get-AgentSkillRegistrations.ps1
+│   ├── Get-CrossTenantAccessCorrelation.ps1
+│   ├── Test-ChildAgentPayloadSize.ps1
 │   ├── private/
 │   │   ├── ACRDClient.psm1
 │   │   ├── Connect-EnvironmentDataverse.ps1

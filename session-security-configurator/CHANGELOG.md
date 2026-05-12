@@ -2,6 +2,12 @@
 
 All notable changes to the Session Security Configurator solution are documented here.
 
+## [1.2.0] - 2026-05-12
+
+### Added
+
+- **CAE configuration tracking** (`Get-CAEConfiguration.ps1`): Reads tenant Continuous Access Evaluation configuration from Microsoft Graph Conditional Access policies, tracks which policies have CAE enabled (default) vs. explicitly disabled, determines CAE eligibility for agent sessions per governance zone, and generates a CAE rollout posture report. Reference: [Continuous Access Evaluation](https://learn.microsoft.com/entra/identity/conditional-access/concept-continuous-access-evaluation).
+
 ## [1.1.1] - 2026-05-04
 
 ### Fixed (Microsoft Learn refresh — 2026-Q2)

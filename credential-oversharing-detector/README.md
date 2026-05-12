@@ -40,6 +40,9 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 - **Evidence export** — SHA-256 hash-verified JSON for regulatory examinations
 - **Dry-run mode** — preview changes before Dataverse writes
 - **Multiple output formats** — Table, JSON, or PowerShell object
+- **Workload identity CA detection** — identifies agent service principals without Conditional Access policies (location or risk-based)
+- **Auth method detection** — flags client-secret usage as legacy/risky and recommends managed identity or certificate migration
+- **Name-level OAuth scope baseline** — compares actual scopes against approved baseline at the individual scope name level, detecting excess and sensitive scopes
 
 ## Architecture
 
@@ -130,6 +133,9 @@ Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build 
 | `scripts/governance/Get-ExpectedCredentialPolicy.ps1` | Zone policy lookup |
 | `scripts/governance/Export-CredentialEvidence.ps1` | Evidence export with SHA-256 |
 | `scripts/governance/Test-EvidenceIntegrity.ps1` | Evidence hash verification |
+| `scripts/governance/Get-WorkloadIdentityCAPolicy.ps1` | Workload identity CA policy coverage analysis |
+| `scripts/governance/Test-AgentAuthMethod.ps1` | Agent authentication method detection (MI/cert/secret) |
+| `scripts/governance/Compare-OAuthScopeBaseline.ps1` | Name-level OAuth scope baseline comparison |
 
 ### Templates
 | Template | Purpose |
