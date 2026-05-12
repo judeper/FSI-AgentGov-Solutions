@@ -22,6 +22,9 @@ Thumbs.db
 # Solution artifacts (local testing)
 *.zip
 
+# Per-solution scan output (customer data — never commit)
+**/output/
+
 # Copilot review logs
 .copilot-logs/
 

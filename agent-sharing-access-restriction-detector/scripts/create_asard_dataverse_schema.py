@@ -6,6 +6,11 @@ Creates AgentSharingCompliance and ApprovedSecurityGroupPolicy tables with all
 columns, choice fields, and supporting option sets. Reuses shared ACV option set
 (fsi_acv_zone) when present.
 
+ApprovedSecurityGroupPolicy includes admission gate columns (SecurityEnabled,
+MailEnabled, GroupTypes) to enforce that only proper Entra security groups are
+admitted — mail-enabled distribution groups and security-disabled groups are
+rejected at admission time.
+
 Deployment order: option sets → tables → columns.
 """
 
@@ -409,6 +414,40 @@ COLUMNS = {
                 "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
                 "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
             },
+        },
+        # H4: Group type admission gate columns
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_SecurityEnabled",
+            "RequiredLevel": {"Value": "ApplicationRequired"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Security Enabled", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Whether the Entra group has securityEnabled=true at admission time. Groups with securityEnabled=false are rejected.", "LanguageCode": 1033}]},
+            "DefaultValue": True,
+            "OptionSet": {
+                "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+                "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+            },
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_MailEnabled",
+            "RequiredLevel": {"Value": "ApplicationRequired"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Mail Enabled", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Whether the Entra group has mailEnabled at admission time. Mail-enabled distribution groups are rejected.", "LanguageCode": 1033}]},
+            "DefaultValue": False,
+            "OptionSet": {
+                "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+                "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+            },
+        },
+        {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": f"{PUBLISHER_PREFIX}_GroupTypes",
+            "RequiredLevel": {"Value": "None"},
+            "DisplayName": {"LocalizedLabels": [{"Label": "Group Types", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Comma-separated Entra groupTypes values at admission (e.g. DynamicMembership, Unified)", "LanguageCode": 1033}]},
+            "MaxLength": 500,
+            "FormatName": {"Value": "Text"},
         },
         {
             "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",

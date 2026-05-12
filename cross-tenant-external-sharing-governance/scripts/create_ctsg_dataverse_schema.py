@@ -12,7 +12,9 @@ Tables:
   - fsi_TenantIsolationRecord (OrganizationOwned): Tenant isolation configuration
     audit history — one record per daily Flow 1 run
   - fsi_EntraCTARecord (OrganizationOwned): Entra cross-tenant access settings
-    audit history — one record per weekly Flow 3 run
+    audit history — one record per weekly Flow 3 run.  Includes explicit columns
+    for automaticUserConsentSettings and inboundTrust CTA policy fields to
+    support direct audit/evidence queries without parsing snapshot JSON.
   - fsi_CrossTenantComplianceEvent (OrganizationOwned): Immutable audit log of all
     cross-tenant governance events — no delete for non-admins
 """
@@ -495,6 +497,21 @@ ENTRA_CTA_RECORD_COLUMNS = [
                   description="CTA compliance assessment result"),
     _integer_col("fsi_FindingsCreated", "Findings Created",
                  description="Number of findings created during this audit run"),
+    # H1: Explicit CTA policy columns for audit/evidence query surface
+    _memo_col("fsi_AutomaticUserConsentSettings", "Automatic User Consent Settings",
+              10000, required=False,
+              description=(
+                  "JSON snapshot of crossTenantAccessPolicyConfiguration "
+                  "automaticUserConsentSettings for this partner — captures "
+                  "inboundAllowed and outboundAllowed consent flags"
+              )),
+    _memo_col("fsi_InboundTrust", "Inbound Trust", 10000, required=False,
+              description=(
+                  "JSON snapshot of crossTenantAccessPolicyConfiguration "
+                  "inboundTrust settings for this partner — captures "
+                  "isMfaAccepted, isCompliantDeviceAccepted, and "
+                  "isHybridAzureADJoinedDeviceAccepted flags"
+              )),
 ]
 
 COMPLIANCE_EVENT_COLUMNS = [
