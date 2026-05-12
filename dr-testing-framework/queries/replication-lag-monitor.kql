@@ -1,0 +1,48 @@
+// ============================================================================
+// Cross-Region Replication Lag — Dataverse / Power Platform
+// ============================================================================
+//
+// Purpose:
+//   Measures replication lag indicators for Dataverse and Power Platform
+//   resources across Azure regions. Monitors Application Insights telemetry
+//   from Dataverse for request latency anomalies that may indicate
+//   cross-region replication delays during or after a DR event.
+//
+// Data source:
+//   Application Insights connected to Dataverse / Power Platform tenant.
+//   Requires Dataverse Application Insights integration enabled.
+//   See: https://learn.microsoft.com/power-platform/admin/telemetry-events-dataverse
+//
+// Parameters:
+//   TimeRange       — Lookback window (default: 24 hours)
+//   LatencyThreshold — Request duration threshold in ms indicating lag (default: 5000)
+//   BinSize         — Time aggregation bucket (default: 5 minutes)
+//
+// Expected output schema:
+//   | Column             | Type     | Description                            |
+//   |--------------------|----------|----------------------------------------|
+//   | TimeBucket         | datetime | Aggregation time bucket                |
+//   | AvgDurationMs      | real     | Average request duration (ms)          |
+//   | P95DurationMs      | real     | 95th percentile duration (ms)          |
+//   | MaxDurationMs      | real     | Maximum request duration (ms)          |
+//   | RequestCount       | long     | Total requests in bucket               |
+//   | HighLatencyCount   | long     | Requests exceeding threshold           |
+//   | HighLatencyPct     | real     | Percentage of high-latency requests    |
+// ============================================================================
+
+let TimeRange = 24h;
+let LatencyThreshold = 5000;  // milliseconds
+let BinSize = 5m;
+requests
+| where timestamp > ago(TimeRange)
+| where client_Type == "PC"  // server-side requests
+| extend DurationMs = duration
+| summarize
+    AvgDurationMs      = avg(DurationMs),
+    P95DurationMs      = percentile(DurationMs, 95),
+    MaxDurationMs      = max(DurationMs),
+    RequestCount       = count(),
+    HighLatencyCount   = countif(DurationMs > LatencyThreshold)
+    by TimeBucket = bin(timestamp, BinSize)
+| extend HighLatencyPct = round(100.0 * HighLatencyCount / RequestCount, 2)
+| order by TimeBucket desc
