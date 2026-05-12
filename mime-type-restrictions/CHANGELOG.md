@@ -4,8 +4,15 @@ All notable changes to MIME Type Restrictions for File Uploads are documented he
 
 ## [1.2.1] — Unreleased — Microsoft Learn 2026-Q2 refresh
 
+### Added
+
+- **WebP RIFF offset-8 validation.** The `mime-config.json` allowlist entry for `image/webp` now includes an `offsetValidation` field documenting the required WEBP signature at byte offset 8. Naive RIFF-only prefix checks (bytes 0-3) collide with WAV, AVI, and other RIFF-based formats. Downstream consumers should check bytes 8-11 for `WEBP` after confirming the `RIFF` header.
+- **Unit test suite.** New `tests/test_mime_parser.py` with pytest tests covering WebP RIFF offset-8 validation (positive + negative: WAV/AVI should NOT match), TIFF detection (little-endian II + big-endian MM magic numbers), GIF detection (GIF87a + GIF89a), animated GIF detection (NETSCAPE2.0 marker), and edge cases (file <12 bytes, all-zero file, valid header with truncated body, cross-type mismatches).
+
 ### Changed
 
+- **TIFF removed from Enterprise Managed default allowlist.** TIFF supports multi-page documents and complex metadata that can carry malicious payloads; it is not a supported Copilot Studio user file input type. Organizations requiring TIFF should add it to their zone-specific allowlist with explicit risk acceptance documentation.
+- **GIF policy: non-animated retained, animated flagged.** Non-animated GIF remains in the allowlist. Animated GIFs (containing NETSCAPE2.0 application extension) are flagged for review via the new `animatedGifPolicy` config field due to potential visual prompt injection via embedded text frames.
 - Aligned `manifest.yaml` control coverage with the five controls documented in v1.1.0: **1.5, 1.13, 1.25, 3.3, 3.7**.
 - Clarified that `templates/dlp-policy-template.json` is a connector-classification reference and not an importable MIME or extension enforcement policy.
 - Updated Copilot Studio file-upload caveats for current user file input and knowledge-source limits.

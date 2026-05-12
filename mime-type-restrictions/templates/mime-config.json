@@ -27,13 +27,19 @@
       "mimeType": "image/gif",
       "extensions": [".gif"],
       "magicBytes": "47 49 46 38",
-      "description": "Graphics Interchange Format"
+      "description": "Graphics Interchange Format — non-animated only (animated GIFs with NETSCAPE2.0 extension require separate review; see CHANGELOG)",
+      "animatedGifPolicy": "flag-for-review"
     },
     {
-      "mimeType": "image/tiff",
-      "extensions": [".tif", ".tiff"],
-      "magicBytes": ["49 49 2A 00", "4D 4D 00 2A"],
-      "description": "Tagged Image File Format (little-endian and big-endian)"
+      "mimeType": "image/webp",
+      "extensions": [".webp"],
+      "magicBytes": "52 49 46 46",
+      "description": "WebP image — RIFF container; requires WEBP signature at offset 8 (bytes 8-11). Naive RIFF-only checks collide with WAV/AVI.",
+      "offsetValidation": {
+        "offset": 8,
+        "signature": "57 45 42 50",
+        "description": "WEBP signature at byte offset 8"
+      }
     },
     {
       "mimeType": "text/plain",
