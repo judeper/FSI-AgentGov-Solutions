@@ -148,6 +148,17 @@ The script automatically captures baselines on first run for sources without an 
 
 > **Development fallback:** Client-secret authentication remains available for local development only by setting `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` or by passing `-ClientSecret`. Do not use client secrets for production scheduled validation.
 
+### Schema Migration (Upgrading Existing Deployments)
+
+The schema deployment script (`create_rsv_dataverse_schema.py`) is additive — re-running it on an existing deployment adds new columns without affecting existing data. To upgrade:
+
+1. Re-run `python scripts/create_rsv_dataverse_schema.py` with the same Dataverse connection parameters
+2. The script creates any missing columns (`fsi_etag`, `fsi_ctag`, `fsi_deltalink`, `fsi_searchconnectorid`, `fsi_lineageuri`) and skips those that already exist
+3. Existing rows are unaffected — new columns default to null
+4. Optionally regenerate schema documentation: `python scripts/create_rsv_dataverse_schema.py --output-docs`
+
+> **Note:** No data migration is required. The new columns are informational metadata fields that enhance change detection and provenance tracking. Populate them through Microsoft Graph delta queries, connector metadata APIs, or manual entry.
+
 ## Documentation
 
 | Document | Description |
@@ -185,7 +196,17 @@ Validates that content is current and not stale by comparing `fsi_lastmodified` 
 
 > **Note:** The validation script reads `fsi_lastmodified` but does not update it. This field must be maintained externally (e.g., via Power Automate flows, SharePoint webhooks, Microsoft Graph change notifications, Graph delta queries, or manual updates in the model-driven app).
 
-For SharePoint and OneDrive sources, current Microsoft Graph guidance favors delta queries and change notifications for efficient change tracking. Production designs should store and replay `@odata.deltaLink` values where available, and compare `eTag`, `cTag`, and `lastModifiedDateTime` metadata before downloading and hashing large content payloads. SHA-256 hashing remains useful for audit evidence and tamper-evident baselines.
+For SharePoint and OneDrive sources, current Microsoft Graph guidance favors delta queries and change notifications for efficient change tracking. The schema includes dedicated columns for this metadata:
+
+| Column (Logical Name) | Purpose |
+|----------------------|---------|
+| `fsi_etag` | Document eTag from SharePoint/OneDrive for change detection |
+| `fsi_ctag` | Document cTag (catalog tag) for content-level change tracking |
+| `fsi_deltalink` | Microsoft Graph delta query link for incremental traversal |
+| `fsi_searchconnectorid` | Microsoft Search connector identifier for Copilot connector sources |
+| `fsi_lineageuri` | Source lineage URI for RAG provenance tracking |
+
+Production designs should store and replay `@odata.deltaLink` values where available, and compare `eTag`, `cTag`, and `lastModifiedDateTime` metadata before downloading and hashing large content payloads. SHA-256 hashing remains useful for audit evidence and tamper-evident baselines.
 
 | Condition | Status |
 |-----------|--------|

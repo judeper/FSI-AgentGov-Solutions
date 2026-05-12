@@ -330,6 +330,22 @@ COLUMNS = {
                  min_val=0, max_val=365),
         _datetime_col(f"{PUBLISHER_PREFIX}_LastModified", "Last Modified",
                       description="Timestamp of last detected source modification"),
+        # ── Change detection and provenance columns (H5) ───────────────
+        _string_col(f"{PUBLISHER_PREFIX}_eTag", "eTag",
+                    max_length=255,
+                    description="Document eTag from SharePoint/OneDrive for change detection"),
+        _string_col(f"{PUBLISHER_PREFIX}_cTag", "cTag",
+                    max_length=255,
+                    description="Document cTag from SharePoint/OneDrive (catalog tag)"),
+        _string_col(f"{PUBLISHER_PREFIX}_DeltaLink", "Delta Link",
+                    max_length=2048, format_name="Url",
+                    description="Microsoft Graph delta query link for incremental change tracking"),
+        _string_col(f"{PUBLISHER_PREFIX}_SearchConnectorId", "Search Connector ID",
+                    max_length=100,
+                    description="Microsoft Search connector identifier"),
+        _string_col(f"{PUBLISHER_PREFIX}_LineageUri", "Lineage URI",
+                    max_length=2048, format_name="Url",
+                    description="Source lineage URI for RAG provenance tracking"),
     ],
 
     # ── fsi_validationresult ────────────────────────────────────────────
