@@ -64,6 +64,7 @@ Each governance zone defines which generative AI features are permitted and unde
 | **Teams/Email Alerting** | Adaptive card alerts with severity classification and regulatory context |
 | **Evidence Export** | SHA-256 integrity-hashed JSON evidence for regulatory examinations |
 | **Approved Connection Import** | CSV-based governance import for approved AOAI connections |
+| **Purview DLP Evidence** | Collects DLP policies covering Microsoft 365 Copilot location and sensitivity labels applied to AI knowledge sources |
 
 ## Solution Components
 
