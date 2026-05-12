@@ -16,7 +16,7 @@ No solution code changes since v1.7.1.
 
 ---
 
-## [Unreleased] - 2026-Q3 — H-item adoption wave (5 domains, 35 H items)
+## [v1.7.0] - 2026-05-12 — H-item adoption wave (5 domains, 35 H items)
 
 Tracking summary: 6 triage aggregate issues #124, #125, #126, #127, #129, #130. This wave implements the **H-priority** consider-adopting items from each — shipping Microsoft Learn 2026-Q2 patterns as enforced code/schema across 22 solutions in 5 PRs. M-priority and Defer items remain in the aggregate issues for the next cycle.
 
