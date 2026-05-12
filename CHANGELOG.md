@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [v1.7.2] - 2026-Q3 — CI fix (no functional change)
+
+Patch release ensuring the Release pipeline (CycloneDX SBOM + Sigstore signing + Dataverse plugin DLL) ships with the v1.7.0 H-item wave content. Tag v1.7.0 and v1.7.1 are unchanged but their Release pipeline runs failed with `MSB1008: Only one project can be specified` due to Git Bash on Windows runners stripping the leading `/` from `/p:TreatWarningsAsErrors=true` (MSYS path conversion). v1.7.2 ships the same content as v1.7.1 plus the workflow fix (`-p:` form), so the Release pipeline now succeeds and attaches signed plugin + SBOM artifacts.
+
+- **Fixed:** `.github/workflows/release.yml` — `dotnet build` now uses `-p:TreatWarningsAsErrors=true` (POSIX-style flag, not subject to MSYS path conversion). `ci-dotnet.yml` is unaffected because it uses PowerShell (backtick line continuations).
+
+No solution code changes since v1.7.1.
+
+---
+
 ## [Unreleased] - 2026-Q3 — H-item adoption wave (5 domains, 35 H items)
 
 Tracking summary: 6 triage aggregate issues #124, #125, #126, #127, #129, #130. This wave implements the **H-priority** consider-adopting items from each — shipping Microsoft Learn 2026-Q2 patterns as enforced code/schema across 22 solutions in 5 PRs. M-priority and Defer items remain in the aggregate issues for the next cycle.
