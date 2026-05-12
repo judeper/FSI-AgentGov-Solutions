@@ -1,0 +1,5 @@
+# coi-testing/output/
+# This directory holds JSON output from Get-CoiInventory.ps1.
+# Contents are gitignored — do not commit customer tenant data.
+*.json
+!.gitignore

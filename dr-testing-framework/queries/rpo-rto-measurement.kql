@@ -1,0 +1,75 @@
+// ============================================================================
+// Recovery Time Measurements — RPO/RTO Instrumentation
+// ============================================================================
+//
+// Purpose:
+//   Provides evidence for Recovery Point Objective (RPO) and Recovery Time
+//   Objective (RTO) measurements during DR test cycles. Correlates the last
+//   successful write before an outage (RPO marker) with the first successful
+//   read/write after recovery (RTO marker) to compute actual recovery metrics.
+//
+//   This query does NOT perform a restore — it measures the time gap between
+//   the last pre-outage operation and the first post-recovery operation as
+//   observed in Application Insights telemetry.
+//
+// Data source:
+//   Application Insights connected to Dataverse.
+//   Requires customEvents with DR test markers (recommended) or falls back
+//   to requests table for general write/read operations.
+//
+// Parameters:
+//   OutageStartUtc  — Approximate UTC start of the outage/DR event
+//   OutageEndUtc    — Approximate UTC end of the outage/DR event
+//   EntityFilter    — Dataverse entity logical name to scope (default: all)
+//
+// Expected output schema:
+//   | Column                  | Type     | Description                        |
+//   |-------------------------|----------|------------------------------------|
+//   | MetricName              | string   | "RPO" or "RTO"                     |
+//   | ReferenceTimestamp      | datetime | Last write (RPO) or first read (RTO)|
+//   | OutageBoundary          | datetime | Outage start (RPO) or end (RTO)   |
+//   | GapMinutes              | real     | Minutes between reference and boundary |
+//   | GapHours                | real     | Hours between reference and boundary |
+//   | OperationName           | string   | Operation that produced the marker |
+//   | EntityName              | string   | Dataverse entity (if available)    |
+// ============================================================================
+
+let OutageStartUtc = datetime(2026-01-01T00:00:00Z);  // Replace with actual outage start
+let OutageEndUtc   = datetime(2026-01-01T06:00:00Z);  // Replace with actual outage end
+let EntityFilter   = "";  // Set to e.g. "fsi_agentlifecyclerecord" to scope
+// ── RPO: last successful write before outage ────────────────────────────────
+let LastWriteBeforeOutage =
+    requests
+    | where timestamp < OutageStartUtc
+    | where timestamp > OutageStartUtc - 24h  // limit lookback
+    | where success == true
+    | where name has_any ("POST", "PATCH", "PUT", "DELETE")
+    | where EntityFilter == "" or url has EntityFilter
+    | top 1 by timestamp desc
+    | project
+        MetricName         = "RPO",
+        ReferenceTimestamp  = timestamp,
+        OutageBoundary      = OutageStartUtc,
+        GapMinutes          = datetime_diff('minute', OutageStartUtc, timestamp),
+        GapHours            = round(datetime_diff('second', OutageStartUtc, timestamp) / 3600.0, 2),
+        OperationName       = name,
+        EntityName          = tostring(parse_url(url).Path);
+// ── RTO: first successful operation after recovery ──────────────────────────
+let FirstReadAfterRecovery =
+    requests
+    | where timestamp > OutageEndUtc
+    | where timestamp < OutageEndUtc + 24h  // limit forward search
+    | where success == true
+    | where EntityFilter == "" or url has EntityFilter
+    | top 1 by timestamp asc
+    | project
+        MetricName         = "RTO",
+        ReferenceTimestamp  = timestamp,
+        OutageBoundary      = OutageEndUtc,
+        GapMinutes          = datetime_diff('minute', timestamp, OutageEndUtc),
+        GapHours            = round(datetime_diff('second', timestamp, OutageEndUtc) / 3600.0, 2),
+        OperationName       = name,
+        EntityName          = tostring(parse_url(url).Path);
+// ── Combined output ─────────────────────────────────────────────────────────
+union LastWriteBeforeOutage, FirstReadAfterRecovery
+| order by MetricName asc

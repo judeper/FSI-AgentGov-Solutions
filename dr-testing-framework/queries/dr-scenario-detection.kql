@@ -1,0 +1,52 @@
+// ============================================================================
+// DR Scenario Detection — Azure Region Failover Events
+// ============================================================================
+//
+// Purpose:
+//   Detects Azure region failover and service degradation events from Azure
+//   Monitor / Azure Resource Health that may trigger DR validation runs.
+//   Use this query to identify when a DR test should be initiated or to
+//   correlate observed outages with DR evidence windows.
+//
+// Data source:
+//   Azure Monitor — AzureActivity and ResourceHealthResources tables.
+//   Requires Log Analytics workspace with Azure Activity logs ingested.
+//
+// Parameters:
+//   TimeRange    — Lookback window (default: 7 days)
+//   RegionFilter — Target Azure region (default: all regions)
+//
+// Expected output schema:
+//   | Column            | Type     | Description                              |
+//   |-------------------|----------|------------------------------------------|
+//   | TimeGenerated     | datetime | Event timestamp                          |
+//   | ResourceProvider  | string   | Azure resource provider                  |
+//   | OperationName     | string   | Operation that triggered the event       |
+//   | Level             | string   | Event severity (Warning, Error, Critical)|
+//   | ResourceGroup     | string   | Affected resource group                  |
+//   | ResourceRegion    | string   | Azure region where event occurred        |
+//   | Status            | string   | Event status                             |
+//   | Description       | string   | Event description                        |
+// ============================================================================
+
+let TimeRange = 7d;
+let RegionFilter = "";  // Set to e.g. "eastus" to filter; empty = all regions
+AzureActivity
+| where TimeGenerated > ago(TimeRange)
+| where CategoryValue == "ResourceHealth"
+    or CategoryValue == "ServiceHealth"
+    or OperationNameValue has_any ("Microsoft.ResourceHealth", "Microsoft.ServiceHealth")
+| where Level in ("Warning", "Error", "Critical")
+| where RegionFilter == "" or Properties_d has RegionFilter
+| extend ResourceRegion = tostring(parse_json(Properties_d).region)
+| extend Description = tostring(parse_json(Properties_d).cause)
+| project
+    TimeGenerated,
+    ResourceProvider,
+    OperationNameValue,
+    Level,
+    ResourceGroup,
+    ResourceRegion,
+    ActivityStatusValue,
+    Description
+| order by TimeGenerated desc

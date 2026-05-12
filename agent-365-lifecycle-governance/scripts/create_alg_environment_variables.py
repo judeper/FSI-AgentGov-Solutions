@@ -112,6 +112,20 @@ ENV_VARIABLES = [
         "type": "Decimal",
         "defaultvalue": "30",
     },
+    {
+        "schemaname": "fsi_ALG_DeletionHoldDays",
+        "displayname": "ALG - Deletion Hold Days",
+        "description": "Grace period in days before agent deletion executes after deactivation approval. Zone 3 agents typically use 90; Zone 1/2 use 30. Adjust per organizational retention policy.",
+        "type": "Decimal",
+        "defaultvalue": "30",
+    },
+    {
+        "schemaname": "fsi_ALG_AgentRegistryApiVersion",
+        "displayname": "ALG - Agent Registry API Version",
+        "description": "Microsoft Graph API version for Agent Registry (agentInstances) calls. Pin to a known-good version to avoid breaking changes during preview-to-GA transitions.",
+        "type": "String",
+        "defaultvalue": "v1.0",
+    },
 ]
 
 
@@ -216,6 +230,8 @@ Environment variables created:
   - fsi_ALG_InactivityThresholdZone1 (180 days)
   - fsi_ALG_InactivityThresholdZone2 (90 days)
   - fsi_ALG_InactivityThresholdZone3 (30 days)
+  - fsi_ALG_DeletionHoldDays (30 days)
+  - fsi_ALG_AgentRegistryApiVersion (v1.0)
 
 Examples:
   # Interactive authentication
