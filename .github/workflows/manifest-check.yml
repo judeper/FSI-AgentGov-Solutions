@@ -39,3 +39,7 @@ jobs:
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py --check
+
+      - name: Verify AGENTS.md and copilot-instructions.md inventory tables match solutions.json
+        working-directory: solutions
+        run: python scripts/sync-agent-md-versions.py --check
