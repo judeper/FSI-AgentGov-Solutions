@@ -237,7 +237,7 @@ function Restore-AgentSharing {
     if (-not $sharingConfig) {
         Add-AuditEntry -Action 'RESTORE_SKIP' -AgentId $agentId -EnvironmentId $envId `
             -Status 'Skipped' -Details 'No previous sharing configuration in evidence'
-        Write-Warning "  Agent $agentId: No previous sharing config — skipping"
+        Write-Warning "  Agent ${agentId}: No previous sharing config — skipping"
         return
     }
 
@@ -254,7 +254,7 @@ function Restore-AgentSharing {
     if ($DryRun) {
         Add-AuditEntry -Action 'RESTORE_DRYRUN' -AgentId $agentId -EnvironmentId $envId `
             -Status 'DryRun' -Details "Would restore sharing to: $($sharingConfig | ConvertTo-Json -Compress)"
-        Write-Host "  [DRY-RUN] Agent $agentId: Would restore sharing config" -ForegroundColor Yellow
+        Write-Host "  [DRY-RUN] Agent ${agentId}: Would restore sharing config" -ForegroundColor Yellow
         return
     }
 
@@ -272,7 +272,7 @@ function Restore-AgentSharing {
         if (-not $lookupResponse.value -or $lookupResponse.value.Count -eq 0) {
             Add-AuditEntry -Action 'RESTORE_FAIL' -AgentId $agentId -EnvironmentId $envId `
                 -Status 'Failed' -Details "Agent not found in Dataverse"
-            Write-Warning "  Agent $agentId: Not found in Dataverse — skipping"
+            Write-Warning "  Agent ${agentId}: Not found in Dataverse — skipping"
             return
         }
 
@@ -287,7 +287,7 @@ function Restore-AgentSharing {
         if ($principalIds.Count -eq 0) {
             Add-AuditEntry -Action 'RESTORE_SKIP' -AgentId $agentId -EnvironmentId $envId `
                 -Status 'Skipped' -Details 'No valid principal IDs in previous sharing config'
-            Write-Warning "  Agent $agentId: No valid principals to restore — skipping"
+            Write-Warning "  Agent ${agentId}: No valid principals to restore — skipping"
             return
         }
 
@@ -319,7 +319,7 @@ function Restore-AgentSharing {
                 $restoredCount++
             } catch {
                 $failedCount++
-                Write-Warning "  Agent $agentId: Failed to restore principal $principalId — $($_.Exception.Message)"
+                Write-Warning "  Agent ${agentId}: Failed to restore principal $principalId — $($_.Exception.Message)"
             }
         }
 
@@ -328,12 +328,12 @@ function Restore-AgentSharing {
             -Status $status `
             -Details "Restored $restoredCount of $($sharingConfig.Count) principals (failed: $failedCount)"
 
-        Write-Host "  Agent $agentId: Restored $restoredCount principal(s)" -ForegroundColor Green
+        Write-Host "  Agent ${agentId}: Restored $restoredCount principal(s)" -ForegroundColor Green
 
     } catch {
         Add-AuditEntry -Action 'RESTORE_FAIL' -AgentId $agentId -EnvironmentId $envId `
             -Status 'Failed' -ErrorMessage $_.Exception.Message
-        Write-Error "  Agent $agentId: Restore failed — $($_.Exception.Message)"
+        Write-Error "  Agent ${agentId}: Restore failed — $($_.Exception.Message)"
     }
 }
 
