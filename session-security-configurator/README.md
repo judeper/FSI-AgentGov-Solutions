@@ -57,6 +57,7 @@ Install-Module Microsoft.Graph.Authentication, `
 - **Detects** configuration drift with Teams and email alerting
 - **Exports** compliance evidence to JSON with SHA-256 integrity hashing
 - **Verifies** evidence file integrity for audit examination submissions
+- **Tracks** Continuous Access Evaluation (CAE) configuration posture per zone, identifying policies with CAE explicitly disabled and documenting CAE eligibility for AI agent sessions
 
 **This is a session security compliance solution** — it helps organizations maintain session controls that support compliance with FINRA 4511/3110, SEC 17a-3/4, GLBA 501(b), and SOX 302/404.
 
