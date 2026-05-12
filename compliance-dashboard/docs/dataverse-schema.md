@@ -9,7 +9,7 @@ Table definitions for the Compliance Dashboard data model.
 ```
 ┌─────────────────────┐     ┌─────────────────────┐
 │  fsi_controlmaster  │────<│ fsi_controlassessment│
-│  (62 sample / 78 baseline)      │     │  (assessments)       │
+│  (78 baseline controls)         │     │  (assessments)       │
 └─────────────────────┘     └─────────────────────┘
                                     │          │
                                     │          │
@@ -30,7 +30,7 @@ Table definitions for the Compliance Dashboard data model.
 
 ## Table: fsi_controlmaster
 
-Master list of controls. The shipped sample dataset contains 62 controls; the validated FSI Agent Governance Framework baseline contains 78. Load whichever set matches your environment.
+Master list of controls. The baseline dataset contains all 78 controls from the FSI Agent Governance Framework v1.6.0 (29 Security + 26 Management + 14 Reporting + 9 SharePoint).
 
 ### Columns
 
