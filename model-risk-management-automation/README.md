@@ -242,6 +242,75 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 > **Note:** This solution currently governs Copilot Studio and Agent Builder agents only. Desktop flow AI capabilities (including self-healing) are not yet within scope. Organizations with significant desktop flow deployments should evaluate whether their MRM framework requires separate inventory and validation processes for AI-enabled RPA.
 
+## Agent ID Migration Evidence
+
+### Background
+
+Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for OCC 2011-12 / SR 11-7 model risk examinations.
+
+The MRM model inventory (`fsi_modelinventory`) stores an `fsi_agentid` column that references the agent's identity. When migrating from a legacy Bot Framework app registration to an Entra Agent ID, the old and new identifiers must be linked to preserve the validation history chain.
+
+### Migration Evidence Requirements
+
+Examiners require documentation showing:
+
+1. **Complete mapping** — Every legacy Agent ID mapped to its replacement Entra Agent ID
+2. **Temporal continuity** — Validation history before and after migration linked to the same logical agent
+3. **Authorization chain** — Who approved the migration and when
+4. **No inventory gaps** — No agents lost during the transition
+
+### Evidence Format
+
+Store migration evidence as JSON records in `fsi_mrmcomplianceevent` with `fsi_eventtype = "AgentIdMigration"`. Export for examiner review using the sample formats below.
+
+#### JSON Evidence Record
+
+```json
+{
+  "fsi_eventtype": "AgentIdMigration",
+  "fsi_timestamp": "2026-06-15T14:30:00Z",
+  "fsi_agentname": "Customer Service Assistant",
+  "fsi_details": {
+    "legacyAgentId": "cr8a5_customerServiceBot",
+    "legacyAppRegistrationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "newEntraAgentId": "urn:ms:agent:contoso:customer-service-assistant",
+    "migrationDate": "2026-06-15T14:30:00Z",
+    "approvedBy": "mrm-officer@contoso.com",
+    "approvalTicket": "CHG-2026-0451",
+    "validationHistoryPreserved": true,
+    "preMigrationValidationCount": 4,
+    "postMigrationVerification": "Passed"
+  },
+  "fsi_outcome": "Success",
+  "fsi_zone": 3
+}
+```
+
+#### CSV Export Format (Examiner-Facing)
+
+```csv
+AgentName,LegacyAgentId,LegacyAppRegistrationId,NewEntraAgentId,MigrationDate,ApprovedBy,ApprovalTicket,ValidationHistoryPreserved,PreMigrationValidations,PostMigrationVerification
+Customer Service Assistant,cr8a5_customerServiceBot,a1b2c3d4-e5f6-7890-abcd-ef1234567890,urn:ms:agent:contoso:customer-service-assistant,2026-06-15T14:30:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,4,Passed
+Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901,urn:ms:agent:contoso:loan-officer-assist,2026-06-15T15:00:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,2,Passed
+```
+
+### Generating Migration Evidence
+
+1. **Before migration**: Export current `fsi_modelinventory` records with `fsi_agentid` values
+2. **During migration**: Log each Agent ID change as an `AgentIdMigration` compliance event
+3. **After migration**: Run `Test-MRMCompliance.ps1` to verify all inventory records have valid Entra Agent IDs and linked validation history
+
+### SR 11-7 Alignment
+
+| SR 11-7 Requirement | How Migration Evidence Helps |
+|---------------------|------------------------------|
+| Complete model inventory | Migration records help demonstrate no agents were lost during identity transition |
+| Audit trail for model changes | `fsi_mrmcomplianceevent` with `AgentIdMigration` type provides timestamped change records |
+| Ongoing monitoring continuity | `validationHistoryPreserved` flag helps confirm pre-migration validation cycles remain linked |
+| Governance approval | `approvedBy` and `approvalTicket` fields help document authorization chain |
+
+> **Note:** The migration evidence format is advisory. Organizations should adapt the schema to match their specific MRM policy requirements and examiner expectations.
+
 ## Known Limitations
 
 - **Copilot Studio telemetry:** Agent usage telemetry may not expose granular error and escalation rates via Power Platform API. Flow 4 creates monitoring records with `fsi_datasource = "Not Available"` to preserve cadence evidence.
