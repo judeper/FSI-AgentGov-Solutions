@@ -4,6 +4,10 @@ All notable changes to the File Upload Security Configurator will be documented 
 
 ## [Unreleased]
 
+### Added
+
+- **Downstream attachment validation guide.** New `docs/downstream-validation.md` documents how downstream consumers should validate file attachments after upload, covering file magic-number validation, Microsoft Defender for Cloud integration checks, and sensitivity label inheritance verification with PowerShell and Python code examples.
+
 ### Changed
 
 - Bumped target version to 1.1.1 for the Microsoft Learn 2026-Q2 refresh.

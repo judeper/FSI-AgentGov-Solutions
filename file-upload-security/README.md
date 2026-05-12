@@ -122,6 +122,7 @@ Import-Module ./scripts/private/FUSClient.psm1
 - [SCHEMA.md](docs/schema.md) — Dataverse table definitions
 - [EVIDENCE_EXPORT.md](docs/evidence-export.md) — Evidence export and integrity verification
 - [FLOW_SETUP.md](docs/flow-setup.md) — Power Automate flow deployment
+- [Downstream Validation](docs/downstream-validation.md) — Post-upload attachment validation examples
 - [TROUBLESHOOTING.md](docs/troubleshooting.md) — Common issues and resolution
 
 ## Configuration Placeholders
