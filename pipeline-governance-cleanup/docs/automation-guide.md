@@ -136,6 +136,54 @@ Sends governance notification emails to environment/pipeline owners.
 
 ---
 
+## Managed Environment Governance Configuration
+
+Use `pac admin set-governance-config` to enforce governance policies on production Managed Environments. This is recommended before enabling deployment pipelines to prevent unvetted solutions from being imported.
+
+**Required role:** Power Platform Admin (or Dynamics 365 admin with environment-level permissions).
+
+### Recommended configuration
+
+```powershell
+# Apply FSI-recommended governance settings
+.\scripts\Set-GovernanceConfig.ps1 `
+    -EnvironmentId "00000000-0000-0000-0000-000000000000" `
+    -SolutionCheckerMode "warn" `
+    -EnablePipelines
+
+# For stricter enforcement (blocks imports with critical solution checker findings)
+.\scripts\Set-GovernanceConfig.ps1 `
+    -EnvironmentId "00000000-0000-0000-0000-000000000000" `
+    -SolutionCheckerMode "block" `
+    -DisableUnmanagedCustomizations `
+    -EnablePipelines
+```
+
+**Script location:** [`scripts/Set-GovernanceConfig.ps1`](../scripts/Set-GovernanceConfig.ps1)
+
+### Configuration flags
+
+| Flag | Effect |
+|------|--------|
+| `--solution-checker-mode warn` | Logs solution checker findings without blocking import |
+| `--solution-checker-mode block` | Prevents import of solutions with critical findings |
+| `--disable-unmanaged-customizations` | Blocks unmanaged customizations in the environment |
+| `--enable-pipelines` | Enables deployment pipelines for ALM governance |
+
+### Verification
+
+After applying configuration, verify with:
+
+```powershell
+pac admin governance-config get --environment "00000000-0000-0000-0000-000000000000"
+```
+
+If the CLI verification command is unavailable, verify in PPAC: **Environments** → select environment → **Settings** → **Governance**.
+
+> **Note:** Start with `warn` mode in non-production environments to assess solution checker impact before enforcing `block` in production.
+
+---
+
 ## Authentication for Unattended Automation
 
 Use the strongest authentication pattern available in the runtime that hosts the automation. Microsoft Learn documents `pac auth create --managedIdentity` for Azure Identity-capable environments and federation switches for GitHub/Azure DevOps service-principal auth.
